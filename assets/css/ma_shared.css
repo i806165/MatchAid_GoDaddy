@@ -1,0 +1,1498 @@
+/* /assets/css/ma_shared.css
+    ==========================================================================
+   Chrome Footer (Status + iOS-like Bottom Nav)
+   ========================================================================== */
+
+:root {
+  /* Typography */
+  --fontFamilyBase: "Montserrat", Arial, sans-serif;
+  
+  /* Brand */
+  --brandPrimary: #07432A;
+  --brandSecondary: #3F7652;
+  --brandAccent: #0b5fff;
+  --brandPrimaryText: #ffffff;
+  --brandSecondaryText: #ffffff;
+  --danger: #c62828;
+  --warn: #f6d365;
+  --success: #0aa45c;
+
+  /* Surfaces */
+  --brandPrimaryBg: rgba(7,67,42,.08);
+  --brandSecondaryBg: #ffffff;
+  --surfaceApp: #f7f7f7;
+  --surfaceChrome: #ffffff;
+
+  /* Borders / shadows */
+  --borderSubtle: rgba(0,0,0,.12);
+  --shadowSubtle: 0 1px 0 rgba(0,0,0,.06);
+  
+  /* Spacing */
+  --spaceSm: 6px;
+  --spaceMd: 10px;
+  
+  /* Chrome (Header/Footer) */
+  --chromePad: 10px;
+  --chromeGap: 10px;
+  --chromeBg: var(--surfaceChrome);
+  --chromeBorder: var(--borderSubtle);
+  --chromeShadow: var(--shadowSubtle);
+  --chromeTitleText: var(--brandPrimary);
+  --chromeTitleSize: 18px;
+  --chromeSubtitleText: var(--brandSecondary);
+  --chromeSubtitleSize: 12px;
+  --chromeBtnFontSize: 13px;
+
+  /* Status / Messaging */
+  --chromeStatusHeight: 28px;
+  --chromeStatusFontSize: 13px;
+  --statusInfoBg: #ffffff;
+  --statusInfoText: #1f2a37;
+  --statusSuccessBg: var(--success);
+  --statusSuccessText: #ffffff;
+  --statusWarnBg: var(--warn);
+  --statusWarnText: #111111;
+  --statusDangerBg: var(--danger);
+  --statusDangerText:  #ffffff;
+
+  /* Tab bar */
+  --tabBarHeight: 56px;
+  --tabBarBg: #ffffff;
+
+  --tabItemText: #4b5563;
+  --tabItemActiveText: var(--brandAccent);
+  --tabItemFontSize: 11px;
+
+  /* ==========================================================================
+     Segmented controls + Actions menu
+     ========================================================================== */
+
+  /* Common ink/surfaces (aliases so components don't hardcode colors) */
+  --bg: var(--surfaceChrome);
+  --surface: var(--surfaceChrome);
+  --ink: #111111;
+  --mutedText: rgba(17,17,17,.62);
+  --border: var(--borderSubtle);
+
+    /* ======================================================================
+     Buttons — canonical tokens
+     ====================================================================== */
+  --btnHeight: 34px;                 /* maps to your legacy controlHeight */
+  --btnPadX: 12px;                   /* maps to legacy controlPadX */
+  --btnRadius: var(--controlRadius); /* consistent rounding */
+  --btnBorder: var(--controlBorder);
+  --btnFontSize: var(--fieldValueSize);
+  --btnFontWeight: 800;
+  --btnBg: var(--bg);
+  --btnText: var(--ink);
+  --btnPrimaryBg: var(--bg);
+  --btnPrimaryText: var(--ink);
+  --btnPrimaryBorder: var(--btnBorder);
+  --btnSecondaryBg: var(--brandSecondary);
+  --btnSecondaryText: var(--brandPrimaryText);
+  --btnSecondaryBorder: color-mix(in srgb, var(--brandSecondary) 70%, black);
+  --btnLinkText: var(--brandAccent);
+  --btnHoverBg: rgba(0,0,0,.04);
+  --btnPressedBg: var(--pressedBg);
+  
+  /* Navigation ICONS */
+  --navIconSize: 18px;
+
+
+  /* Controls */
+  --controlBorder: var(--borderSubtle);
+  --controlRadius: 14px;
+  
+  --radiusMd: 10px;
+  --radiusLg: 12px;
+
+  /* Segmented controls */
+  --chipHeight: 34px;
+  --chipLabelSize: 12px;
+  --chipLabelWeight: 800;
+  --segmentSelectedBg: #F1D7B7;
+  --segmentSelectedText: var(--ink);
+
+    /* ======================================================================
+     Chips / Pills / Segmented — canonical tokens
+     ====================================================================== */
+
+  /* Pills (informational chips) */
+  --pillRadius: 12px;
+  --pillPadX: 10px;
+  --pillPadY: 6px;
+  --pillBg: rgba(0,0,0,.06);            /* reuses your prior chip-bg intent */
+  --pillText: var(--ink);
+  --pillLabelText: var(--mutedText);
+  --pillLabelSize: 10px;
+  --pillValueSize: 12px;
+  --pillValueWeight: 900;
+  --pillMinHeight: 34px;
+  --pillTitleSize: 11px;
+
+  /* Choice chips (enum selections / toggles) */
+  --choiceChipRadius: 12px;
+  --choiceChipBorder: var(--controlBorder);
+  --choiceChipBg: var(--surface);
+  --choiceChipText: var(--ink);
+  --choiceChipSelectedBg: var(--segmentSelectedBg);
+  --choiceChipSelectedText: var(--segmentSelectedText);
+  --choiceChipSelectedBorder: color-mix(in srgb, var(--segmentSelectedBg) 55%, black);
+
+  /* Segmented control (tabs) */
+  --segRadius: var(--controlRadius);
+  --segBorder: var(--controlBorder);
+  --segBg: var(--surface);
+  --segBtnHeight: var(--chipHeight);
+  --segBtnFontSize: 13px;
+  --segBtnWeight: 800;
+  --segBtnText: var(--mutedText);
+  --segActiveBg: var(--segmentSelectedBg);
+  --segActiveText: var(--segmentSelectedText);
+
+
+  /* Actions menu (modal) */
+  --overlayBg: rgba(0,0,0,.35);
+  --modalSurface: var(--surfaceChrome);
+  --drawerRadius: var(--controlRadius);
+  --modalHeaderBg: var(--brandSecondary);
+  --modalHeaderText: var(--brandSecondaryText);
+
+  /* Menu typography */
+  --fieldValueSize: 12px;
+  --fieldValueSublineSize: 11px;
+
+  /* Interaction */
+  --pressedBg: rgba(0,0,0,.06);
+
+  /* Panel shell */
+  --panelGap: 12px;
+  --panelPad: 12px;
+  --panelBg: var(--bg);
+  --panelBorder: var(--border);
+  --panelRadius: 14px;
+  --panelShadow: 0 1px 0 rgba(0,0,0,.02);
+
+  /* Panel regions */
+  --panelHdrBg: var(--panelBg);
+  --panelHdrText: var(--ink);
+  --panelHdrBorder: var(--panelBorder);
+
+  --panelControlsBg: color-mix(in srgb, var(--panelBg) 96%, black);
+  --panelControlsBorder: var(--panelBorder);
+
+  --panelFtrBg: var(--panelBg);
+  --panelFtrBorder: var(--panelBorder);
+
+  /* Overlay family */
+  --overlayZ: 99990;
+  --overlayBgDim: var(--overlayBg);
+  --overlayBlur: 2px;
+
+  /* Modal shell */
+  --modalMaxW: 520px;
+  --modalRadius: 18px;
+  --modalShadow: 0 14px 34px rgba(0,0,0,.18);
+
+  /* Drawer shell */
+  --drawerMaxW: 720px;
+  --drawerTopRadius: 18px;
+  --drawerMaxH: 92dvh;
+
+    /* Card shell */
+  --cardBg: var(--panelBg);
+  --cardBorder: var(--panelBorder);
+  --cardRadius: var(--panelRadius);
+  --cardShadow: var(--panelShadow);
+
+    /* Card spacing (compact defaults) */
+  --cardsGap: 6px;        /* vertical space BETWEEN cards */
+  --cardPad: 8px;         /* padding inside card body */
+  --cardHdrPadY: 8px;     /* padding inside card header (Y) */
+  --cardHdrPadX: 10px;    /* padding inside card header (X) */
+
+  /* Card header */
+  --cardHdrBg: var(--cardBg);
+  --cardHdrText: var(--ink);
+  --cardHdrBorder: var(--cardBorder);
+  --cardTitleSize: 13px;
+
+  /* Card header actions (icon buttons) */
+  --cardActionSize: 34px;
+  --cardActionRadius: 10px;
+  --cardActionBg: transparent;
+  --cardActionHoverBg: rgba(0,0,0,.04);
+  --cardActionPressedBg: var(--pressedBg);
+  --cardActionText: var(--btnLinkText);
+  --cardActionGap: 6px;
+}
+
+html, body { 
+  font-family: var(--fontFamilyBase);
+  height: 100%; 
+  margin: 0; 
+}
+body {
+  display: flex; 
+  flex-direction: column; 
+  background: var(--surfaceApp); 
+}
+
+.maPage{
+  flex: 1 1 auto;
+  overflow-y: auto; /* body scroll must be internal to page content */
+  padding: var(--spaceMd);
+  display: block;
+  flex-direction: column;
+  min-height: 0;
+  padding: var(--spaceMd);
+  -webkit-overflow-scrolling: touch;
+}
+
+.maChrome__hdr{
+  background: var(--chromeBg);
+  border-bottom: 1px solid var(--chromeBorder);
+  box-shadow: var(--chromeShadow);
+  padding: var(--chromePad);
+}
+.maChrome__hdrRow{
+  display:flex;
+  align-items:center;
+  gap: var(--chromeGap);
+}
+
+.maChrome__brand{
+  width: 48px; height: 48px;
+  border-radius: var(--radiusMd);
+  background: var(--brandPrimaryBg);
+  display:flex; align-items:center; justify-content:center;
+  overflow:hidden;
+  flex: 0 0 auto;
+}
+.maChrome__brand img{ width:100%; height:100%; object-fit:cover; }
+.maChrome__titles{
+  flex: 1 1 auto; 
+  min-width: 0; 
+}
+
+.maChrome__title{
+  font-family: var(--fontFamilyBase);
+  font-weight: 700;
+  color: var(--chromeTitleText);
+  font-size: var(--chromeTitleSize);
+  line-height: 1.2;
+}
+
+.maChrome__subtitle{
+  font-family: var(--fontFamilyBase);
+  color: var(--chromeSubtitleText);
+  font-size: var(--chromeSubtitleSize);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+
+/* Footer shell */
+.maChrome__ftr{
+  background: var(--chromeBg);
+  border-top: 1px solid var(--chromeBorder);
+}
+
+/* Status line */
+.maChrome__status{
+  font-family: var(--fontFamilyBase);
+  min-height: var(--chromeStatusHeight, 28px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spaceSm) var(--spaceMd);
+  font-size: var(--chromeStatusFontSize, 13px);
+  line-height: 1.2;
+  text-align: center;
+  border-bottom: 1px solid var(--chromeBorder);
+  user-select: none;
+}
+
+/* Status variants (driven by MA.setStatus -> status-* classes) */
+.maChrome__status.status-info{
+  background: var(--statusInfoBg, #e9eef5);
+  color: var(--statusInfoText, #1f2a37);
+}
+.maChrome__status.status-success{
+  background: var(--statusSuccessBg, #e7f7ee);
+  color: var(--statusSuccessText, #0f5132);
+}
+.maChrome__status.status-warn{
+  background: var(--statusWarnBg, #fff7db);
+  color: var(--statusWarnText, #664d03);
+}
+.maChrome__status.status-danger{
+  background: var(--statusDangerBg, #fde7ea);
+  color: var(--statusDangerText, #842029);
+}
+
+/* iOS-like tab bar */
+.maChrome__bottomNav{
+  /* iOS tab bar feel */
+  height: var(--tabBarHeight, 56px);
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: var(--tabBarBg);
+}
+
+/* Each nav button: icon stacked over label */
+.maNavBtn{
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 4px;
+  margin: 0;
+  border: 1px solid var(--controlBorder);
+  background: transparent;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  color: var(--tabItemText);
+}
+
+/* Icon block */
+.maNavIcon{
+  /* size + alignment */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  font-size: var(--navIconSize); /* for emoji placeholders */
+  line-height: 1;
+}
+
+/* Label */
+.maNavLabel{
+  font-size: var(--tabItemFontSize, 11px);
+  line-height: 1.1;
+  letter-spacing: .2px;
+  white-space: nowrap;
+}
+
+/* Press feedback (mobile + desktop) */
+.maNavBtn:active{
+  transform: scale(.98);
+  background: rgba(0,0,0,.06);
+}
+
+/* Disabled state (including “current tab disabled”) */
+.maNavBtn:disabled{
+  opacity: .55;
+  transform: none;
+  background: transparent;
+  cursor: default;
+}
+
+/* Active tab: iOS-style “selected” */
+.maNavBtn.is-active{
+  color: var(--tabItemActiveText);
+}
+
+/* Optional: subtle active indicator line */
+.maNavBtn.is-active::after{
+  content: "";
+  width: 18px;
+  height: 2px;
+  border-radius: 999px;
+  margin-top: 2px;
+  background: var(--tabItemActiveText);
+}
+/* ======================================================================
+   Bottom Nav: compact mode (1–2 visible items centered)
+   ====================================================================== */
+.maChrome__bottomNav.is-compact{
+  justify-content: center;
+  gap: 18px;
+}
+
+.maChrome__bottomNav.is-compact .maNavBtn{
+  flex: 0 0 auto;
+  min-width: 74px;
+}
+/* ======================================================================
+   Chrome Header: action button styling + 3rd line
+   ====================================================================== */
+
+.maChrome__hdrLeft,
+.maChrome__hdrRight{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.maChrome__hdrBtn{
+  height: 34px;
+  min-width: 72px;
+  padding: 0 10px;
+  border-radius: var(--radiusMd);
+  border: 1px solid var(--chromeBorder);
+  background: var(--chromeBg);
+  font-family: var(--fontFamilyBase);
+  font-weight: 700;
+  font-size: var(--chromeBtnFontSize);
+  color: var(--brandPrimary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.maChrome__hdrBtn:active{
+  transform: scale(.98);
+}
+
+/* 3rd header line (matches subtitle feel) */
+.maChrome__subtitle2{
+  font-family: var(--fontFamilyBase);
+  color: var(--chromeSubtitleText);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: .9;
+}
+
+/* ========= Actions menu (modal overlay + panel)============ */
+.actionMenuOverlay{
+  position: fixed;
+  inset: 0;
+  background: var(--overlayBg);
+  display: none;
+  z-index: 99999;
+  backdrop-filter: blur(2px);
+
+  /* CENTER THE PANEL (panel centered, not the text) */
+  align-items: center;
+  justify-content: center;
+  padding: 18px; /* breathing room so it never hits the edges */
+}
+
+.actionMenuOverlay.open{
+  display: flex; /* was block */
+}
+
+.actionMenu{
+  /* panel */
+  position: relative; /* was absolute */
+  min-width: 260px;
+  width: min(360px, 100%); /* ensures it fits smaller screens */
+  max-width: 360px;
+
+  background: var(--modalSurface);
+  border: 1px solid var(--controlBorder);
+  border-radius: var(--drawerRadius);
+  overflow: hidden;
+  box-shadow: 0 14px 34px rgba(0,0,0,.18);
+
+  padding: 0; /* remove bottom padding so list rows are flush */
+}
+
+.actionMenu_header{
+  position: sticky;
+  top: 0;
+  background: var(--modalHeaderBg);
+  color: var(--modalHeaderText);
+  padding: 12px 14px;
+  z-index: 2;
+}
+
+.actionMenu_headerRow{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.actionMenu_title{
+  font-weight: 900;
+  font-size: var(--fieldValueSize);
+  line-height: 1.15;
+}
+
+.actionMenu_subtitle{
+  margin-top: 2px;
+  font-weight: 800;
+  font-size: var(--fieldValueSublineSize);
+  opacity: .9;
+}
+
+.actionMenu_closeBtn{
+  border: 0;
+  background: rgba(255,255,255,.20);
+  color: var(--bg);
+  border-radius: var(--radiusLg);
+  width: 30px;
+  height: 28px;
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.actionMenu_closeBtn:hover{
+  background: rgba(255,255,255,.28);
+}
+
+/* LIST ROWS (not pills) */
+.actionMenu_item{
+  width: 100%;
+  border: 0;
+  border-radius: 0;          /* kill pill rounding */
+  margin: 0;                 /* kill pill margins */
+  padding: 14px 16px;        /* list row padding */
+  background: transparent;
+
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+
+  font-weight: 900;
+  font-size: var(--fieldValueSize);
+  color: var(--ink);
+
+  cursor: pointer;
+  user-select: none;
+
+  border-bottom: 1px solid rgba(0,0,0,.10); /* subtle list separators */
+}
+
+.actionMenu_item:hover{
+  background: var(--pressedBg);
+}
+
+.actionMenu_item.disabled{
+  opacity: .50;
+  cursor: default;
+  color: var(--mutedText);
+}
+
+.actionMenu_item.danger{
+  color: var(--danger);
+}
+
+/* divider between groups (full width like a list separator) */
+.actionMenu_divider{
+  height: 1px;
+  background: var(--border);
+  margin: 0; /* full width */
+}
+
+/* Mobile: keep centered but allow near-full width */
+@media (max-width: 520px){
+  .actionMenu{
+    width: 100%;
+    max-width: none;
+  }
+}
+
+/* ======================================================================
+   Pills (informational chips)
+   - Non-tab, informational display (e.g., Time / Players / Status)
+   ====================================================================== */
+.maPills{
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.maPill{
+  background: var(--pillBg);
+  color: var(--pillText);
+  border-radius: var(--pillRadius);
+  padding: var(--pillPadY) var(--pillPadX);
+  font-size: var(--pillValueSize);
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  min-height: var(--pillMinHeight);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* Optional: 2-line label/value pill */
+.maPillKV{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--pillMinHeight);
+}
+
+.maPillLabel{
+  font-size: var(--pillLabelSize);
+  font-weight: 800;
+  color: var(--pillLabelText);
+  line-height: 1;
+}
+
+.maPillValue{
+  font-size: var(--pillValueSize);
+  font-weight: var(--pillValueWeight);
+  line-height: 1.1;
+  color: var(--pillText);
+}
+
+/* Status variants (optional) */
+.maPill--success{ color: var(--success); }
+.maPill--warn{ color: var(--warn); }
+.maPill--danger{ color: var(--danger); }
+
+/* ======================================================================
+   Choice chips (enum selection / toggle chips)
+   - Use for multi/single select chip groups (not panel tabs)
+   ====================================================================== */
+.maChoiceChips{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.maChoiceChip{
+  border: 1px solid var(--choiceChipBorder);
+  background: var(--choiceChipBg);
+  color: var(--choiceChipText);
+  border-radius: var(--choiceChipRadius);
+  padding: 8px 12px;
+  font-weight: 800;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+}
+
+.maChoiceChip.is-selected{
+  background: var(--choiceChipSelectedBg);
+  color: var(--choiceChipSelectedText);
+  border-color: var(--choiceChipSelectedBorder);
+}
+
+.maChoiceChip.is-disabled{
+  opacity: .55;
+  cursor: default;
+}
+
+/* ======================================================================
+   Segmented control (tabs)
+   - Use for switching panels (single select)
+   ====================================================================== */
+.maSeg{
+  display: flex;
+  width: 100%;
+  border: 1px solid var(--segBorder);
+  border-radius: var(--segRadius);
+  overflow: hidden;
+  background: var(--segBg);
+}
+
+.maSegBtn{
+  flex: 1;
+  min-height: var(--segBtnHeight);
+  border: 0;
+  background: transparent;
+  font-size: var(--segBtnFontSize);
+  font-weight: var(--segBtnWeight);
+  cursor: pointer;
+  color: var(--segBtnText);
+  padding: var(--spaceSm) calc(var(--spaceMd) + 2px);
+  user-select: none;
+}
+
+.maSegBtn.is-active{
+  background: var(--segActiveBg);
+  color: var(--segActiveText);
+}
+
+.maSegBtn:disabled{
+  opacity: .55;
+  cursor: default;
+}
+
+/* ======================================================================
+   Buttons (shared)
+   - Supports legacy class names from gameslistview.php
+   ====================================================================== */
+
+/* Base button */
+.btn{
+  border: 1px solid var(--btnBorder);
+  background: var(--btnBg);
+  color: var(--btnText);
+  border-radius: var(--btnRadius);
+  min-height: var(--btnHeight);
+  padding: 0 var(--btnPadX);
+  font-family: var(--fontFamilyBase);
+  font-size: var(--btnFontSize);
+  font-weight: var(--btnFontWeight);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.btn:active{
+  background: var(--btnPressedBg);
+  transform: scale(.98);
+}
+
+.btn:disabled,
+.btn.disabled{
+  opacity: .55;
+  cursor: default;
+  transform: none;
+}
+
+/* Primary = default (ink on light surface). Kept as semantic marker. */
+.btnPrimary{
+  background: var(--btnPrimaryBg);
+  color: var(--btnPrimaryText);
+  border-color: var(--btnPrimaryBorder);
+}
+
+/* Secondary = filled brand button (white on brandSecondary). */
+.btnSecondary{
+  background: var(--btnSecondaryBg);
+  color: var(--btnSecondaryText);
+  border-color: var(--btnSecondaryBorder);
+}
+
+.btnSecondary:active{
+  filter: brightness(.96);
+}
+
+/* Link button = text-only action (e.g., MANAGE). */
+.btnLink,
+.btn.btnLink{
+  border: 0;
+  background: transparent;
+  padding: 0;
+  min-height: 0;
+  height: auto;
+  min-width: 0;
+  justify-content: flex-start;
+  color: var(--btnLinkText);
+  font-weight: var(--btnFontWeight);
+}
+
+.btnLink:hover,
+.btn.btnLink:hover{
+  text-decoration: underline;
+}
+
+/* Close button (used in modals) */
+.closeBtn{
+  border: 1px solid var(--btnBorder);
+  background: var(--btnBg);
+  color: var(--btnText);
+  border-radius: var(--radiusMd);
+  padding: 7px 10px;
+  cursor: pointer;
+  font-weight: 700;
+  font-family: var(--fontFamilyBase);
+}
+
+/* Square icon button (calendar, etc.) */
+.iconBtn{
+  width: var(--btnHeight);
+  height: var(--btnHeight);
+  padding: 0;
+  border-radius: var(--btnRadius);
+  border: 1px solid var(--btnBorder);
+  background: var(--btnBg);
+  color: var(--btnText);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.iconBtn:active{
+  background: var(--btnPressedBg);
+  transform: scale(.98);
+}
+
+/* Pill button (rounded action chip) */
+.pillBtn{
+  border: 1px solid var(--btnBorder);
+  background: var(--btnBg);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--fontFamilyBase);
+  font-size: 13px;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  user-select: none;
+}
+
+.pillBtn:active{
+  background: var(--btnPressedBg);
+  transform: scale(.98);
+}
+
+/* Hover (desktop) */
+@media (hover:hover){
+  .btn:hover,
+  .iconBtn:hover,
+  .pillBtn:hover{
+    background: var(--btnHoverBg);
+  }
+}
+
+/* Hover (desktop) */
+@media (hover:hover){
+  .maNavBtn:hover{
+    background: rgba(0,0,0,.04);
+  }
+}
+/* ==========================================================================
+   PAGE TYPES + PANELS + OVERLAY FAMILY
+   --------------------------------------------------------------------------
+   Coding terminology:
+     - Page types:
+         * Standard Page:      uses .maPage (already in ma_shared.css)
+         * Multi-Panel Page:   .maPage--multi + .maPanels + .maPanel (2/3/4)
+     - Panel:
+         * Desktop: Left/Right (or A/B/C/D)
+         * Mobile: Primary is inline; Secondary is presented as a Drawer overlay
+     - Overlay family:
+         * Action Menu: quick list of actions
+         * Modal: capture/edit filters/settings
+         * Drawer: “secondary panel” surface (mobile)
+
+   Refactor rule:
+     - Shared CSS contains ONLY canonical classes.
+     - Each page must update its HTML to use these canonical classes.
+     - No support for legacy class names in ma_shared.css.
+   ========================================================================== */
+
+
+
+/* ==========================================================================
+   MULTI-PANEL PAGE (2/3/4 panels)
+   Expected markup:
+     <main class="maPage maPage--multi">
+       <div class="maPanels maPanels--2"> (or --3 / --4)
+         <section class="maPanel maPanel--primary">...</section>
+         <section class="maPanel maPanel--secondary">...</section>
+       </div>
+     </main>
+   ========================================================================== */
+
+.maPage--multi{
+  padding: var(--spaceMd);
+}
+
+.maPanels{
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  gap: var(--panelGap);
+  grid-template-columns: 1fr; /* mobile default */
+}
+
+@media (min-width: 900px){
+  .maPanels--2{ grid-template-columns: 1fr 1fr; }
+  .maPanels--3{ grid-template-columns: 1fr 1fr 1fr; }
+  .maPanels--4{ grid-template-columns: 1fr 1fr 1fr 1fr; }
+}
+
+/* Panel shell */
+.maPanel{
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+
+  background: var(--panelBg);
+  border: 1px solid var(--panelBorder);
+  border-radius: var(--panelRadius);
+  box-shadow: var(--panelShadow);
+  overflow: hidden;
+}
+
+/* Panel regions */
+.maPanel__hdr{
+  flex: 0 0 auto;
+  background: var(--panelHdrBg);
+  color: var(--panelHdrText);
+  padding: var(--panelPad);
+  border-bottom: 1px solid var(--panelHdrBorder);
+}
+
+.maPanel__controls{
+  flex: 0 0 auto;
+  background: var(--panelControlsBg);
+  padding: var(--panelPad);
+  border-bottom: 1px solid var(--panelControlsBorder);
+}
+
+.maPanel__body{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--panelPad);
+  overscroll-behavior: contain;
+}
+
+.maPanel__ftr{
+  flex: 0 0 auto;
+  background: var(--panelFtrBg);
+  padding: var(--panelPad);
+  border-top: 1px solid var(--panelFtrBorder);
+}
+
+/* ==========================================================================
+   DRAWER (Secondary Panel on Mobile)
+   Expected markup:
+     <div class="maDrawerOverlay is-open">
+       <section class="maDrawer">
+         <header class="maPanel__hdr">...</header>
+         <div class="maPanel__controls">...</div> (optional)
+         <div class="maPanel__body">...</div>
+         <footer class="maPanel__ftr">...</footer>
+       </section>
+     </div>
+   ========================================================================== */
+
+.maDrawerOverlay{
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 10px;
+  background: var(--overlayBgDim);
+  z-index: var(--overlayZ);
+  backdrop-filter: blur(var(--overlayBlur));
+}
+
+.maDrawerOverlay.is-open{ display: flex; }
+
+.maDrawer{
+  width: min(var(--drawerMaxW), 100%);
+  max-height: var(--drawerMaxH);
+
+  background: var(--panelBg);
+  border: 1px solid var(--panelBorder);
+  border-radius: var(--drawerTopRadius) var(--drawerTopRadius) 0 0;
+  box-shadow: var(--modalShadow);
+  overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ==========================================================================
+   MODAL (capture/edit filters/settings)
+   Expected markup:
+     <div class="maModalOverlay is-open">
+       <section class="maModal" role="dialog" aria-modal="true">
+         <header class="maModal__hdr">...</header>
+         <div class="maModal__controls">...</div> (optional)
+         <div class="maModal__body">...</div>
+         <footer class="maModal__ftr">...</footer>
+       </section>
+     </div>
+   ========================================================================== */
+
+.maModalOverlay{
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: var(--overlayBgDim);
+  z-index: var(--overlayZ);
+  backdrop-filter: blur(var(--overlayBlur));
+}
+
+.maModalOverlay.is-open{ display: flex; }
+
+.maModal{
+  width: min(var(--modalMaxW), 96vw);
+  max-height: calc(100dvh - 36px);
+
+  background: var(--modalSurface);
+  border: 1px solid var(--border);
+  border-radius: var(--modalRadius);
+  box-shadow: var(--modalShadow);
+  overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.maModal__hdr{
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 12px 14px;
+  background: var(--modalHeaderBg);
+  color: var(--modalHeaderText);
+  border-bottom: 1px solid rgba(255,255,255,.18);
+}
+
+/* Optional controls strip inside modal */
+.maModal__controls{
+  flex: 0 0 auto;
+  padding: 12px 14px;
+  background: var(--panelControlsBg);
+  border-bottom: 1px solid var(--panelControlsBorder);
+}
+
+.maModal__body{
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px;
+}
+
+.maModal__ftr{
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 96%, black);
+}
+/* ==========================================================================
+   CARDS 
+   --------------------------------------------------------------------------
+   Use for repeatable surfaces inside a page/panel.
+   Regions:
+     - .maCard__hdr      optional (title left, actions right)
+     - .maCard__body     required
+   ========================================================================== */
+.maCards{
+  display: flex;
+  flex-direction: column;
+  gap: var(--cardsGap);
+  min-width: 0;
+}
+
+/* Optional: when the card list is the scroll region (common) */
+.maCards--scroll{
+  overflow: visible;
+  max-height: none;
+}
+
+.maCard{
+  background: var(--cardBg);
+  border: 1px solid var(--cardBorder);
+  border-radius: var(--cardRadius);
+  box-shadow: var(--cardShadow);
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* Header: left title, right actions (0–3) */
+.maCard__hdr{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: var(--cardHdrPadY) var(--cardHdrPadX);
+  background: var(--cardHdrBg);
+  color: var(--cardHdrText);
+  border-bottom: 1px solid var(--cardHdrBorder);
+}
+
+/* Left title block (left-aligned, truncates) */
+.maCard__title{
+  min-width: 0;
+  flex: 1 1 auto;
+  font-family: var(--fontFamilyBase);
+  font-size: var(--cardTitleSize);
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Right actions area */
+.maCard__actions{
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--cardActionGap);
+}
+
+/* Icon action button (0–3) */
+.maCard__actionBtn{
+  width: var(--cardActionSize);
+  height: var(--cardActionSize);
+  border-radius: var(--cardActionRadius);
+
+  border: 0;
+  background: var(--cardActionBg);
+  color: var(--cardActionText);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.maCard__actionBtn:active{
+  background: var(--cardActionPressedBg);
+  transform: scale(.98);
+}
+
+.maCard__actionBtn:disabled{
+  opacity: .55;
+  cursor: default;
+  transform: none;
+}
+
+/* Body */
+.maCard__body{
+  padding: var(--cardPad);
+  min-width: 0;
+}
+/* ==========================================================================
+   ADMIN GAMES LIST — PAGE COMPONENTS
+   (Used by /app/admin_games/gameslistview.php + /assets/pages/admin_games_list.js)
+   ========================================================================== */
+
+/* Empty state */
+.maEmptyState{
+  margin: 10px 0;
+  padding: 16px 14px;
+  text-align: center;
+  color: var(--mutedText);
+  font-weight: 800;
+  border: 1px dashed var(--borderSubtle);
+  border-radius: var(--radiusLg);
+  background: var(--cardBg);
+}
+
+/* Modal title + tab panels */
+.maModal__title{
+  font-size: var(--chromeSubtitleSize);
+  font-weight: 900;
+  letter-spacing: .2px;
+}
+
+.maTabPanel{ display: none; }
+.maTabPanel.is-active{ display: block; }
+
+/* Field layout */
+.maFieldRow{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.maField{
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.maLabel{
+  display: block;
+  margin: 0 0 6px 2px;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--mutedText);
+}
+
+.maInputWrap{
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.maTextInput{
+  width: 100%;
+  min-height: var(--btnHeight);
+  padding: 0 12px;
+  border-radius: var(--controlRadius);
+  border: 1px solid var(--controlBorder);
+  background: #fff;
+  color: var(--ink);
+  font-family: var(--fontFamilyBase);
+  font-size: 13px;
+  font-weight: 800;
+  outline: none;
+  min-width: 0;
+}
+
+.maTextInput:focus{
+  border-color: var(--brandSecondary);
+  box-shadow: 0 0 0 3px rgba(0,0,0,.06);
+}
+
+/* Calendar */
+.maCalWrap{
+  display: none; /* opened by JS with .open */
+  margin-top: 12px;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--radiusLg);
+  overflow: hidden;
+  background: #fff;
+}
+
+.maCalWrap.open{ display: block; }
+
+.maCalHeader{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--panelHdrBg);
+  color: var(--panelHdrText);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+
+.maCalHint{
+  font-size: 12px;
+  font-weight: 900;
+  opacity: .95;
+}
+
+.maCalLeft{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.maCalMonthLabel{
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  padding: 0 6px;
+}
+
+.maCalNavBtn{
+  min-width: 40px;
+}
+
+.maCalMiniBtn{
+  padding: 0 10px;
+}
+
+.maCalRight{ display: none; } /* legacy pills kept in DOM */
+
+.maCalDow{
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  padding: 10px 10px 0 10px;
+  color: var(--mutedText);
+  font-weight: 900;
+  font-size: 11px;
+}
+
+.maCalGrid{
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  padding: 10px;
+}
+
+.maCalDay{
+  min-height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--borderSubtle);
+  background: var(--cardBg);
+  color: var(--ink);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.maCalDay:hover{
+  background: var(--pressedBg);
+}
+
+.maCalDay.muted{
+  opacity: .45;
+}
+
+.maCalDay.today{
+  border-color: var(--brandSecondary);
+}
+
+.maCalDay.selected{
+  background: var(--brandSecondary);
+  border-color: var(--brandSecondary);
+  color: #fff;
+}
+
+.maCalDay.inRange{
+  background: rgba(48, 110, 230, .10);
+  border-color: rgba(48, 110, 230, .10);
+}
+
+.maCalDay.from,
+.maCalDay.to{
+  background: var(--brandSecondary);
+  border-color: var(--brandSecondary);
+  color: #fff;
+}
+
+/* Admin picker list (in Filters modal) */
+.maAdminPick__top{
+  margin-top: 12px;
+}
+
+.maAdminPick{
+  margin-top: 10px;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--radiusLg);
+  overflow: hidden;
+  background: #fff;
+}
+
+.maAdminPick__hdr{
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  background: var(--panelHdrBg);
+  color: var(--panelHdrText);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+
+.maAdminPick__hdrBtn{
+  height: 36px;
+  width: 44px;
+  border: 1px solid rgba(255,255,255,.25);
+  background: rgba(255,255,255,.10);
+  border-radius: 12px;
+  color: inherit;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.maAdminPick__hdrBtn:hover{
+  background: rgba(255,255,255,.18);
+}
+
+.maAdminPick__hdrName{
+  font-weight: 900;
+  letter-spacing: .2px;
+}
+
+.maAdminPick__rows{
+  max-height: 360px;
+  overflow: auto;
+}
+
+.maAdminRow{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--borderSubtle);
+  cursor: pointer;
+  user-select: none;
+}
+
+.maAdminRow:hover{
+  background: var(--pressedBg);
+}
+
+.maAdminRow__left{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.maAdminRow__check{
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  border: 1px solid var(--borderSubtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--mutedText);
+  flex: 0 0 auto;
+}
+
+.maAdminRow__check.on{
+  background: var(--brandSecondary);
+  border-color: var(--brandSecondary);
+  color: #fff;
+}
+
+.maAdminRow__name{
+  font-weight: 900;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.maAdminRow__right{
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.maAdminRow__heart{
+  font-size: 18px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  color: var(--mutedText);
+  cursor: pointer;
+}
+
+.maAdminRow__heart:hover{
+  background: var(--pressedBg);
+}
+
+.maAdminRow__heart.on{
+  color: var(--danger);
+}
+
+/* Modal footer */
+.maModal__ftrActions{
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  align-items: center;
+  width: 100%;
+}

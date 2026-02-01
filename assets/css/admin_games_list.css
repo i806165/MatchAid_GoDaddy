@@ -1,0 +1,198 @@
+/* /assets/css/admin_games_list.css
+   Admin Games List — page-specific styles
+   - ma_shared.css owns global primitives (chrome, buttons, card shell)
+   - this file owns ONLY page overrides + card interior layout for Admin Games
+*/
+
+/* ==========================================================================
+   1) Card header override (green header, white title)
+   ========================================================================== */
+.maCard__hdr{
+  background: var(--brandPrimary);
+  color: var(--brandPrimaryText);
+  border-bottom-color: color-mix(in srgb, var(--brandPrimary) 70%, black);
+}
+
+.maCard__title{
+  color: var(--brandPrimaryText);
+}
+
+/* GGID after title (muted, no label) */
+.maCard__titleGgid{
+  margin-left: 6px;
+  color: rgba(255,255,255,.78); /* stays readable on green header */
+  font-weight: 800;
+}
+
+/* ==========================================================================
+   2) “MANAGE” action button look (text link, no pill)
+   - Uses existing canonical class maCard__actionBtn
+   ========================================================================== */
+.maCard__actionBtn{
+  width: auto;
+  height: auto;
+  padding: 0;
+  border-radius: 0;
+  border: 0;
+  background: transparent;
+
+  font-family: var(--fontFamilyBase);
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+
+  color: var(--brandAccent); /* legacy blue */
+  cursor: pointer;
+}
+
+.maCard__actionBtn:active{
+  background: transparent;
+  transform: scale(.98);
+}
+
+@media (hover:hover){
+  .maCard__actionBtn:hover{
+    background: transparent;
+    text-decoration: underline;
+  }
+}
+
+/* ==========================================================================
+   3) Card body layout (legacy-like compact, 2 lines of text + badge)
+   ========================================================================== */
+.maGameCard__body{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.maGameCard__top{
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+}
+
+/* Meta block (right side of badge) */
+.maGameCard__meta{
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Line 1: Course/Facility (ellipsis) + MANAGE (desktop only) */
+.maGameCard__line1{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.maGameCard__courseWrap{
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.maGameCard__facilityName{
+  color: var(--mutedText);
+  font-weight: 900;
+}
+
+/* Line 2: Facts (left) + Admin (right) */
+.maGameCard__line2{
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.maGameCard__facts{
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--mutedText);
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.maGameCard__admin{
+  flex: 0 0 auto;
+  max-width: 42%;
+  text-align: right;
+  font-weight: 800;
+  color: var(--mutedText);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   4) Date badge (legacy style)
+   ========================================================================== */
+.maDateBadge{
+  width: 62px;
+  flex: 0 0 auto;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--radiusLg);
+  overflow: hidden;
+  background: var(--cardBg);
+
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+
+  padding: 0;
+  line-height: 1;
+}
+
+/* Top stripe (DOW) */
+.maDateBadge__top{
+  background: var(--brandSecondary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .3px;
+  text-align: center;
+  padding: 6px 0 5px;
+}
+
+/* Big day number */
+.maDateBadge__mid{
+  color: var(--ink);
+  font-size: 22px;
+  font-weight: 950;
+  text-align: center;
+  padding: 8px 0 2px;
+}
+
+/* Bottom month */
+.maDateBadge__bot{
+  color: var(--mutedText);
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+  padding: 0 0 8px;
+}
+
+/* ==========================================================================
+   5) Mobile rules
+   - Hide MANAGE on mobile; rely on card tap
+   - Slightly relax admin width to avoid wrap/crowding
+   ========================================================================== */
+@media (max-width: 520px){
+  .maGameCard__manageBtn{ display: none; } /* keep if JS uses manageBtn class */
+  .maCard__actionBtn{ display: none; }     /* if MANAGE is rendered as actionBtn */
+  .maGameCard__admin{ max-width: 45%; }
+}
