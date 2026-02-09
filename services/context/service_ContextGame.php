@@ -34,11 +34,9 @@ final class ServiceContextGame
    * Return hydrated game context for the current session.
    * - Uses SessionStoredGGID (set by Admin Games list for Edit mode).
    */
-  public static function getGameContext(?PDO $pdo = null): array
+  public static function getGameContext(): array
   {
-    if ($pdo === null) {
-      $pdo = Db::pdo();
-    }
+    $pdo = Db::pdo();
 
     $ggid = self::getStoredGGID();
     if (!$ggid) {

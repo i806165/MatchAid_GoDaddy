@@ -7,7 +7,6 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 }
 
 require_once __DIR__ . "/../../bootstrap.php";
-require_once MA_API_LIB . "/Db.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
@@ -29,10 +28,6 @@ if (!$ctx || empty($ctx["ok"])) {
   exit;
 }
 
-// DB handle (for game hydration + saves)
-$config = ma_config();
-$pdo = Db::pdo($config["db"]);
-
 // 2) GAME context hydration (Rule-2 for pages)
 $modeParam = strtolower(trim((string)($_GET["mode"] ?? "")));
 $storedGGID = $_SESSION["SessionStoredGGID"] ?? "";
@@ -45,7 +40,7 @@ if ($modeParam === "" && trim((string)$storedGGID) === "") {
 
 try {
   if ($mode === "edit") {
-    $gc = ServiceContextGame::getGameContext($pdo);
+    $gc = ServiceContextGame::getGameContext();
     $game = $gc["game"];
     $ggid = $gc["ggid"];
   } else {
