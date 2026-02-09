@@ -6,6 +6,7 @@ declare(strict_types=1);
 // NOTE: This file is designed to be callable from APIs and other services.
 
 require_once MA_SVC_DB . "/service_dbGames.php";
+require_once MA_API_LIB . "/Db.php";
 require_once MA_API_LIB . "/Logger.php";
 
 final class ServiceContextGame
@@ -33,8 +34,10 @@ final class ServiceContextGame
    * Return hydrated game context for the current session.
    * - Uses SessionStoredGGID (set by Admin Games list for Edit mode).
    */
-  public static function getGameContext(PDO $pdo): array
+  public static function getGameContext(): array
   {
+    $pdo = Db::pdo();
+
     $ggid = self::getStoredGGID();
     if (!$ggid) {
       throw new RuntimeException("No game is selected (SessionStoredGGID not set).");
