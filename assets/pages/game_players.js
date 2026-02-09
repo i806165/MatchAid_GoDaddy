@@ -48,7 +48,7 @@
     if (MA.chrome && MA.chrome.setHeaderLines) MA.chrome.setHeaderLines(["ADMIN PORTAL", "Game Players", `GGID ${safe(init.ggid)}`]);
     if (MA.chrome && MA.chrome.setActions) {
       MA.chrome.setActions({
-        left: { show:true, label:"Back", onClick:()=>MA.routerGo && MA.routerGo("edit") },
+        //left: { show:true, label:"Back", onClick:()=>MA.routerGo && MA.routerGo("edit") },
         right: { show:false }
       });
     }
