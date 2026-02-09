@@ -1,0 +1,2119 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Registrations</title>
+
+    <!-- REGISTRATIONS VIEW -->
+    <!-- CHANGE LOG -->
+    <!--  2025-12-21a  Enhanced Roster for Mobile display. -->
+    <!--  + Enhanced Roster for Mobile display. -->
+    <!--  + Made menu chips horizontal scroll for Mobile display. -->
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* ----------------------------
+               MatchAid Tokens (Appendix-C)
+               ---------------------------- */
+
+            /* Brand */
+            --brandPrimary: #07432A;
+            /* Primary header */
+            --brandSecondary: #3F7652;
+            /* Secondary header / tray header */
+            --segmentSelectedBg: #CDB278;
+
+            --onBrandText: #FFFFFF;
+            --brandBlue: #1e5bd7;
+            /* for hearts and links buttons */
+
+            /* Surfaces */
+            --appBg: #FFFFFF;
+            --surface: #FFFFFF;
+            --surfaceRaised: #FFFFFF;
+
+            /* Inks (3-inks rule) */
+            --onSurfaceText: #111111;
+            --onSurfaceMutedText: rgba(17, 17, 17, .62);
+            --onSurfaceSoftText: rgba(17, 17, 17, .45);
+
+            /* Borders / dividers */
+            --border: rgba(0, 0, 0, .12);
+            --divider: rgba(0, 0, 0, .10);
+            --controlBorder: rgba(0, 0, 0, .15);
+
+            /* Status */
+            --danger: #c62828;
+            --warn: #f6d365;
+            --success: #0aa45c;
+
+            --statusSuccessBg: var(--success);
+            --statusSuccessText: #ffffff;
+            --statusWarnBg: var(--warn);
+            --statusWarnText: #111111;
+            --statusErrorBg: var(--danger);
+            --statusErrorText: #ffffff;
+
+            /* Layout */
+            --controlsBg: color-mix(in srgb, var(--brandSecondary) 6%, var(--appBg));
+            --pagePad: 12px;
+            --bodyPad: 12px;
+            --cardPad: 12px;
+            --cardRadius: 14px;
+            --rowPadTop: 10px;
+            /* padding ABOVE drives rhythm */
+            --rowPadBottom: 8px;
+            --rowPadTopTight: 8px;
+            --rowPadBottomTight: 7px;
+            /* Favorites density + separators (token extensions) */
+            --padXs: 4px;
+            --padSm: 8px;
+            --padMd: 12px;
+
+            --gapSm: 10px;
+            --gapMd: 12px;
+
+            --sepH: 1px;
+            --sepGapTop: 10px;
+
+
+            /* Controls */
+            --controlH: 36px;
+            --controlRadius: 14px;
+            --chipH: 36px;
+            --chipRadius: 14px;
+
+            /* Footer */
+            --footerHeight: 24px;
+            --footerHeightSm: 18px;
+            --footerTopLine: rgba(0, 0, 0, .22);
+            --footerShadow: 0 -8px 18px rgba(0, 0, 0, .10);
+
+            /* Modal / tray */
+            --overlayBg: rgba(0, 0, 0, .35);
+            --elevationModal: 0 10px 28px rgba(0, 0, 0, .18);
+            --drawerRadius: 14px;
+            --drawerHandleH: 6px;
+
+            /* Typography (Montserrat) */
+            --fs-title: 18px;
+            --fs-subtitle: 12px;
+            --fs-body: 13px;
+            --fs-caption: 12px;
+            --fs-micro: 11px;
+
+            --fw-regular: 400;
+            --fw-semibold: 600;
+            --fw-bold: 700;
+            --fw-black: 800;
+
+            --stackGapTight: 3px;
+
+            --lh-body-tight: 1.12;
+            --lh-caption-tight: 1.15;
+
+            --iconMd: 16px;
+            --iconPad: 4px;
+            --iconRadius: 8px;
+            --iconGap: 8px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        .controls {
+            position: relative;
+            top: auto;
+            z-index: 25;
+            background: var(--controlsBg, var(--appBg));
+            border-bottom: 1px solid var(--divider);
+        }
+
+        body {
+            margin: 0;
+            font-family: Montserrat, Arial, sans-serif;
+            background: var(--appBg);
+            color: var(--onSurfaceText);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Your main content wrapper */
+        .content {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: auto;
+            padding: var(--bodyPad);
+            padding-bottom: var(--bodyPad);
+        }
+
+        /* Footer pinned by flex layout */
+        .footerBar {
+            z-index: 20;
+            height: var(--footerHeight);
+            display: flex;
+            align-items: center;
+            padding: 0 var(--pagePad);
+            background: var(--surface);
+            border-top: 1px solid var(--footerTopLine);
+            box-shadow: var(--footerShadow);
+            font-size: var(--fs-caption);
+            color: var(--onSurfaceText);
+        }
+
+        button,
+        input,
+        select {
+            font-family: inherit;
+        }
+
+        /* ---- Page Header (2-tier) ------- */
+        .pageHeader {
+            position: relative;
+            top: 0;
+            z-index: 30;
+            background: var(--brandPrimary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .hdrInner {
+            padding: 10px var(--pagePad) 8px var(--pagePad);
+        }
+
+        .title {
+            font-size: var(--fs-title);
+            font-weight: var(--fw-black);
+            line-height: 1.15;
+            color: var(--onBrandText);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .subtitle {
+            margin-top: 2px;
+            font-size: var(--fs-subtitle);
+            font-weight: var(--fw-semibold);
+            color: rgba(255, 255, 255, .88);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ----------------------------
+           Typography roles (Appendix-C)
+           ---------------------------- */
+        .text-title {
+            font-size: var(--fs-title);
+            line-height: 1.15;
+            font-weight: var(--fw-black);
+        }
+
+        .text-subtitle {
+            font-size: var(--fs-subtitle);
+            line-height: 1.2;
+            font-weight: var(--fw-semibold);
+        }
+
+        .text-body {
+            font-size: var(--fs-body);
+            line-height: 1.25;
+            font-weight: var(--fw-regular);
+        }
+
+        .text-body-bold {
+            font-size: var(--fs-body);
+            line-height: 1.25;
+            font-weight: var(--fw-bold);
+        }
+
+        .text-caption {
+            font-size: var(--fs-caption);
+            line-height: 1.25;
+            font-weight: var(--fw-regular);
+        }
+
+        .text-caption-strong {
+            font-size: var(--fs-caption);
+            line-height: 1.25;
+            font-weight: var(--fw-semibold);
+        }
+
+        .text-micro {
+            font-size: var(--fs-micro);
+            line-height: 1.2;
+            font-weight: var(--fw-semibold);
+        }
+
+        .ink-brand {
+            color: var(--onBrandText);
+        }
+
+        .ink-muted {
+            color: var(--onSurfaceMutedText);
+        }
+
+        .ink-soft {
+            color: var(--onSurfaceSoftText);
+        }
+
+        .ink-default {
+            color: var(--onSurfaceText);
+        }
+
+        /* Utility */
+        .nowrap {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .rowNoWrap {
+            flex-wrap: nowrap;
+            gap: var(--gapSm);
+        }
+
+        .mt0 {
+            margin-top: 0;
+        }
+
+        .mt10 {
+            margin-top: 10px;
+        }
+
+        /* Container for per-view controls (Favorites filters, etc.) */
+        .viewControls {
+            padding: 0 var(--pagePad) 4px var(--pagePad);
+        }
+
+        /* ------ Segmented control tabs ----- */
+        .tabsWrap {
+            position: relative;
+            /* keeps fadeRight::after positioning valid */
+            background: transparent;
+            border-bottom: none;
+        }
+
+        /* Right-edge fade hint (only when overflowing) */
+        .tabsWrap.fadeRight::after {
+            content: "›";
+            /* chevron hint */
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 28px;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 6px;
+            color: var(--onSurfaceMutedText);
+            font-size: 20px;
+            background: linear-gradient(to left,
+                    var(--appBg) 55%,
+                    rgba(255, 255, 255, 0) 100%);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0;
+            padding: 10px var(--pagePad);
+            overflow-x: auto;
+            flex-wrap: nowrap;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .chip {
+            position: relative;
+            flex: 0 0 auto;
+            min-width: max-content;
+            height: var(--chipH);
+            padding: 0 14px;
+            border: 1px solid var(--controlBorder);
+            border-right: none;
+            border-radius: 0;
+            background: var(--surface);
+            cursor: pointer;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--fs-caption);
+            font-weight: var(--fw-semibold);
+            color: var(--onSurfaceText);
+        }
+
+        .chip:first-child {
+            border-top-left-radius: var(--chipRadius);
+            border-bottom-left-radius: var(--chipRadius);
+        }
+
+        .chip:last-child {
+            border-right: 1px solid var(--controlBorder);
+            border-top-right-radius: var(--chipRadius);
+            border-bottom-right-radius: var(--chipRadius);
+        }
+
+        .chip.active {
+            background: var(--segmentSelectedBg);
+            color: var(--onSurfaceText);
+            border-color: color-mix(in srgb, var(--segmentSelectedBg) 55%, var(--controlBorder));
+        }
+
+        /* Pointer under selected tab */
+        .chip.active::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: -10px;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 10px solid var(--segmentSelectedBg);
+        }
+
+        .chip:disabled {
+            opacity: .45;
+            cursor: default;
+        }
+
+        /* -------  Roster rows (tappable)-- */
+        .card {
+            border: 1px solid var(--border);
+            border-radius: var(--cardRadius);
+            padding: var(--cardPad);
+            margin-bottom: 10px;
+            background: var(--surfaceRaised);
+        }
+
+        .rosterRow {
+            border: 0;
+            border-radius: 0;
+            border-top: 1px solid var(--divider);
+            background: var(--surface);
+            margin-bottom: 0;
+            overflow: visible;
+        }
+
+        .rosterRowInner {
+            padding: var(--rowPadTopTight) var(--bodyPad) var(--rowPadBottomTight) var(--bodyPad);
+            cursor: pointer;
+        }
+
+        .rowTop {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: var(--gapSm);
+        }
+
+        .name {
+            font-size: var(--fs-body);
+            font-weight: var(--fw-bold);
+            line-height: var(--lh-body-tight);
+            color: var(--onSurfaceText);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .meta {
+            margin-top: 4px;
+            font-size: var(--fs-caption);
+            font-weight: var(--fw-regular);
+            line-height: var(--lh-caption-tight);
+            color: var(--onSurfaceMutedText);
+        }
+
+        .rowBottom {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--gapSm);
+            margin-top: 3px;
+        }
+
+        .rowBottom .meta {
+            margin-top: 0;
+            min-width: 0;
+            flex: 1 1 auto;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .btnCol {
+            flex: 0 0 auto;
+            display: flex;
+            align-items: center;
+            gap: var(--iconGap);
+        }
+
+        .iconBtn {
+            border: 0;
+            background: transparent;
+            padding: var(--iconPad);
+            border-radius: var(--iconRadius);
+            cursor: pointer;
+            line-height: 0;
+            color: var(--onSurfaceMutedText);
+        }
+
+        .iconBtn:hover {
+            background: rgba(0, 0, 0, .05);
+        }
+
+        .iconBtn.danger:hover {
+            background: rgba(198, 40, 40, .08);
+        }
+
+        .iconBtn.heartBtn {
+            color: var(--brandBlue);
+        }
+
+        .iconBtn.heartBtn.isOff {
+            color: var(--onSurfaceMutedText);
+            /* outline/disabled look */
+        }
+
+        .iconSvg {
+            width: var(--iconMd);
+            height: var(--iconMd);
+            display: block;
+        }
+
+        /* ----------------------------
+           Forms (Non-rated / GHIN / Favorites)
+           ---------------------------- */
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field label {
+            font-size: var(--fs-caption);
+            font-weight: var(--fw-semibold);
+            color: var(--onSurfaceMutedText);
+        }
+
+        .ctrl,
+        .field input,
+        .field select {
+            height: var(--controlH);
+            border: 1px solid var(--controlBorder);
+            border-radius: var(--controlRadius);
+            padding: 0 12px;
+            font-size: var(--fs-body);
+            color: var(--onSurfaceText);
+            background: var(--surface);
+            outline: none;
+        }
+
+        .field input::placeholder {
+            color: var(--onSurfaceSoftText);
+        }
+
+        .inline {
+            display: flex;
+            gap: var(--gapSm);
+            flex-wrap: nowrap;
+        }
+
+        .btn {
+            height: var(--controlH);
+            border: 1px solid var(--controlBorder);
+            border-radius: var(--controlRadius);
+            padding: 0 14px;
+            background: var(--surface);
+            font-size: var(--fs-body);
+            font-weight: var(--fw-semibold);
+            cursor: pointer;
+            color: var(--onSurfaceText);
+        }
+
+        .btn.primary {
+            border-color: var(--brandSecondary);
+            box-shadow: 0 0 0 1px color-mix(in srgb, var(--brandSecondary) 35%, transparent) inset;
+        }
+
+        .btn:disabled {
+            opacity: .5;
+            cursor: default;
+        }
+
+        .favFilters {
+            padding: var(--padSm) 0 var(--padXs) 0;
+        }
+
+        .favList {
+            max-height: none;
+            overflow: visible;
+            padding-right: 2px;
+        }
+
+        /* Favorites list: flat rows + dividers */
+        .favRow {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--gapMd);
+            padding: var(--rowPadTopTight) var(--bodyPad) var(--rowPadBottomTight) var(--bodyPad);
+            border-bottom: var(--sepH) solid var(--divider);
+            border-radius: 0;
+            background: transparent;
+            margin: 0;
+        }
+
+        .favRow.disabled {
+            opacity: 0.55;
+        }
+
+        .favList .favRow:last-child {
+            border-bottom: 0;
+        }
+
+        /* GHIN results table-ish */
+        .tableCard {
+            border: 1px solid var(--border);
+            border-radius: var(--cardRadius);
+            background: var(--surface);
+            overflow: hidden;
+        }
+
+        .tableCols {
+            margin-top: 0;
+            border-top: 0;
+            padding: var(--rowPadTopTight) var(--bodyPad) var(--rowPadBottomTight) var(--bodyPad);
+            display: flex;
+            gap: var(--gapSm);
+            font-size: var(--fs-caption);
+            font-weight: var(--fw-semibold);
+            background: var(--brandSecondary);
+            color: var(--onBrandText);
+        }
+
+        .ghRow {
+            display: flex;
+            flex-direction: column;
+            gap: var(--gapSm);
+            padding: var(--rowPadTopTight) var(--bodyPad) var(--rowPadBottomTight) var(--bodyPad);
+            border-top: 1px solid var(--border);
+            align-items: stretch;
+            cursor: pointer;
+            font-size: var(--fs-body);
+            background: var(--surface);
+        }
+
+        .ghRow.disabled {
+            opacity: .55;
+            cursor: default;
+        }
+
+        .ghRowTop {
+            display: grid;
+            width: 100%;
+            grid-template-columns: 1fr 54px 34px;
+            align-items: center;
+            column-gap: var(--gapSm);
+        }
+
+        .ghRowTop .inline {
+            min-width: 0;
+        }
+
+        .ghStamp {
+            grid-column: 2 / 4;
+            text-align: right;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .ghName {
+            flex: 1 1 auto;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: var(--fw-bold);
+        }
+
+        .ghRowBottom {
+            margin-top: 2px;
+            display: none;
+        }
+
+        .ghLoc {
+            width: auto;
+            min-width: 0;
+            flex: 1 1 auto;
+            max-width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ghHI {
+            width: 40px;
+            text-align: right;
+        }
+
+        .ghG {
+            width: 30px;
+            text-align: right;
+        }
+
+        .ghinControls {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .ghinControlsRow {
+            display: flex;
+            align-items: center;
+            gap: var(--gapSm);
+            flex-wrap: nowrap;
+            /* desktop: force one line */
+        }
+
+        .ghinLastField,
+        .ghinFirstField {
+            flex: 1 1 220px;
+            min-width: 160px;
+        }
+
+        .ghinStateField {
+            flex: 0 0 64px;
+            min-width: 64px;
+        }
+
+        .ghinSearchBtn {
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+
+        /* Non-Rated controls layout */
+        .nrControls {
+            display: flex;
+            flex-direction: column;
+            gap: var(--padXs);
+        }
+
+        .nrRow {
+            display: flex;
+            align-items: flex-end;
+            gap: var(--gapSm);
+            flex-wrap: wrap;
+        }
+
+        .nrFirstField,
+        .nrLastField {
+            flex: 1 1 220px;
+            min-width: 150px;
+        }
+
+        .nrGenderField {
+            flex: 0 0 95px;
+            min-width: 95px;
+        }
+
+        .nrHIField {
+            flex: 0 0 55px;
+            min-width: 55px;
+        }
+
+        .nrFindBtn {
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+
+        /* ------  Tee Tray (Drawer)------ */
+        .modalBackdrop {
+            position: fixed;
+            inset: 0;
+            background: var(--overlayBg);
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 60;
+        }
+
+        .modal {
+            width: min(860px, 100%);
+            background: var(--surface);
+            border-top-left-radius: 18px;
+            border-top-right-radius: 18px;
+            box-shadow: var(--elevationModal);
+            max-height: 78vh;
+            overflow: hidden;
+        }
+
+        .drawerHandle {
+            width: 54px;
+            height: var(--drawerHandleH);
+            background: rgba(255, 255, 255, .55);
+            border-radius: 999px;
+            margin: 10px auto 6px auto;
+        }
+
+        .modalHeader {
+            background: var(--brandSecondary);
+            color: var(--onBrandText);
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: var(--gapSm);
+        }
+
+        .modalHeader .ttlWrap {
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .modalTitle {
+            font-weight: var(--fw-black);
+            font-size: var(--fs-body);
+            line-height: 1.15;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .modalSub {
+            margin-top: 2px;
+            font-size: var(--fs-micro);
+            color: rgba(255, 255, 255, .88);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .modalHeader .btn {
+            height: 32px;
+            border-radius: 999px;
+            border-color: rgba(255, 255, 255, .55);
+            color: var(--onBrandText);
+            background: transparent;
+        }
+
+        .teeList {
+            padding: 10px 12px 14px 12px;
+            overflow: auto;
+            max-height: calc(78vh - 74px);
+            background: var(--surface);
+        }
+
+        .teeItem {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 10px 12px;
+            margin-top: 10px;
+            cursor: pointer;
+            position: relative;
+            background: var(--surface);
+        }
+
+        .teeItem:first-child {
+            margin-top: 0;
+        }
+
+        .teeLine1 {
+            font-weight: var(--fw-bold);
+            font-size: var(--fs-body);
+        }
+
+        .teeLine2 {
+            margin-top: 4px;
+            font-size: var(--fs-caption);
+            color: var(--onSurfaceMutedText);
+        }
+
+        .teeItem.selected {
+            border-color: color-mix(in srgb, var(--brandSecondary) 55%, var(--border));
+            box-shadow: 0 0 0 2px color-mix(in srgb, var(--brandSecondary) 18%, transparent);
+        }
+
+        .teeItem.selected::after {
+            content: "Selected";
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: var(--fs-micro);
+            font-weight: var(--fw-bold);
+            color: var(--brandSecondary);
+            background: var(--surface);
+            border: 1px solid color-mix(in srgb, var(--brandSecondary) 30%, var(--border));
+            border-radius: 999px;
+            padding: 3px 8px;
+        }
+
+
+        /* Favorites controls layout */
+        .favControlsRow {
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .favHint {
+            margin-top: 6px;
+            display: none;
+        }
+
+        .favGroupField {
+            width: 170px;
+        }
+
+        .favSearchField {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+
+        .ghinRowsBox {
+            max-height: none;
+            overflow: visible;
+        }
+
+        /* GHIN table columns (replaces inline) */
+        .colFlex {
+            flex: 1 1 auto;
+        }
+
+        .colLoc {
+            width: 280px;
+        }
+
+        .colHI {
+            width: 40px;
+            text-align: right;
+        }
+
+        .colG {
+            width: 30px;
+            text-align: right;
+        }
+
+        /* Reusable: input with right-side clear button */
+        .inputWithClear {
+            position: relative;
+            min-width: 0;
+            width: 100%;
+        }
+
+        .inputWithClear .ctrl {
+            width: 100%;
+            max-width: none;
+            /* overrides any older max-width */
+            box-sizing: border-box;
+        }
+
+        .clearBtn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 22px;
+            height: 22px;
+            border-radius: 999px;
+
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+
+            border: 1px solid var(--divider);
+            background: var(--surface);
+            color: var(--onSurfaceText);
+            cursor: pointer;
+            line-height: 1;
+            font-size: 16px;
+            padding: 0;
+        }
+
+        .clearBtn:hover {
+            background: var(--surface2, var(--surface));
+        }
+
+        .clearBtn:active {
+            transform: translateY(-50%) scale(0.98);
+        }
+
+        .clearBtn.isHidden {
+            display: none;
+        }
+
+        .tabs {
+            overflow-x: hidden;
+        }
+
+        .chip {
+            flex: 1 1 0;
+            min-width: 0;
+            text-align: center;
+        }
+
+
+        @media (max-width: 520px) {
+            :root {
+                --pagePad: 4px;
+                --bodyPad: var(--padXs);
+                --fs-title: 16px;
+            }
+
+            .subtitle {
+                font-size: var(--fs-subtitle);
+            }
+
+            .footerBar {
+                height: var(--footerHeightSm);
+                font-size: var(--fs-micro);
+            }
+
+            .colLoc {
+                width: 180px;
+            }
+
+            /* Tabs: mobile scroll again */
+            .tabs {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .chip {
+                flex: 0 0 auto;
+                min-width: max-content;
+            }
+
+            .ghLoc {
+                width: 180px;
+                line-height: var(--lh-caption-tight);
+            }
+
+            .ghRow {
+                align-items: stretch;
+                gap: var(--stackGapTight);
+                padding-left: var(--padXs);
+                padding-right: var(--padXs);
+                padding-top: var(--rowPadTopTight);
+            }
+
+            .ghRowTop .ghLoc {
+                display: none;
+            }
+
+            .ghRowTop {
+                width: 100%;
+                column-gap: var(--padXs);
+            }
+
+            .ghRowBottom {
+                width: 100%;
+                margin-top: 0px;
+                display: block;
+            }
+
+            .ghinControlsRow {
+                flex-wrap: wrap;
+                gap: var(--padXs);
+            }
+
+            .ghinLastField,
+            .ghinFirstField {
+                flex: 1 1 calc(50% - var(--padXs));
+                min-width: 0;
+            }
+
+            .ghinStateField {
+                flex: 0 0 72px;
+                min-width: 72px;
+            }
+
+            .ghinSearchBtn {
+                flex: 1 1 auto;
+                min-width: 0;
+            }
+
+        }
+    </style>
+
+</head>
+
+<body>
+    <div class="pageHeader">
+        <div class="hdrInner">
+            <div class="title text-title ink-brand nowrap" id="hdrTitle">Registrations</div>
+            <div class="subtitle text-subtitle ink-brand nowrap" id="hdrSub">Loading…</div>
+        </div>
+    </div>
+
+    <div class="controls" id="controls">
+        <div class="tabsWrap" id="tabsWrap">
+            <div id="tabs" class="tabs"></div>
+        </div>
+
+        <!-- Per-view controls render here (Favorites filters, etc.) -->
+        <div class="viewControls" id="viewControls"></div>
+    </div>
+
+    <!-- Body -->
+    <div class="content" id="content"></div>
+
+    <!-- Footer -->
+    <footer class="footerBar" id="footerBar">
+        <span id="statusText">Ready</span>
+    </footer>
+
+    <!-- Tee Picker -->
+    <div class="modalBackdrop" id="teeBackdrop">
+        <div class="modal">
+            <div class="drawerHandle" aria-hidden="true"></div>
+            <div class="modalHeader">
+                <div class="ttlWrap">
+                    <div class="modalTitle" id="teeTitle">Pick a Tee Set</div>
+                    <div class="modalSub" id="teeSubTitle">Player Name</div>
+                </div>
+                <button class="btn" id="teeClose">Cancel</button>
+            </div>
+            <div id="teeList" class="teeList"></div>
+        </div>
+    </div>
+
+    <script>
+        // ---------- State ----------
+        const state = {
+            mode: "player",
+            intent: "",
+            game: null,
+            activeView: "roster", // roster | self | favorites | ghin | nonRated
+            roster: [],
+            favorites: [],
+            favoritesSet: new Set(),
+            ghinResults: [],
+            userState: "",
+            enrolledGhinSet: new Set(),
+            pendingPlayer: null,    // { source, playerKey?, favoriteId?, displayName? }
+            teeOptions: [],
+            selfAutoLaunchArmed: false,
+            selectedTeeSetId: null,
+            favGroup: "__ALL__",
+            favSearch: "",
+            favGroupOptions: ["__ALL__"],
+            nrFirst: "",
+            nrLast: "",
+            nrGender: "M",
+            nrHI: ""
+        };
+
+        // ---------- Elements ----------
+        const tabsEl = document.getElementById("tabs");
+        const contentEl = document.getElementById("content");
+        const viewControlsEl = document.getElementById("viewControls");
+        const footerBarEl = document.getElementById("footerBar");
+        const statusTextEl = document.getElementById("statusText");
+        const hdrTitleEl = document.getElementById("hdrTitle");
+        const hdrSubEl = document.getElementById("hdrSub");
+
+        const teeBackdrop = document.getElementById("teeBackdrop");
+        const teeTitleEl = document.getElementById("teeTitle");
+        const teeSubTitleEl = document.getElementById("teeSubTitle");
+        const teeListEl = document.getElementById("teeList");
+        const teeCloseBtn = document.getElementById("teeClose");
+
+        function setStatus(message, level) {
+            if (!footerBarEl || !statusTextEl) return;
+
+            // status text only
+            statusTextEl.textContent = message || "";
+
+            // reset inline overrides (returns to CSS default when no level)
+            footerBarEl.style.backgroundColor = "";
+            footerBarEl.style.color = "";
+            footerBarEl.style.borderTopColor = "";
+
+            const lvl = String(level || "").toLowerCase();
+
+            if (lvl === "success" || lvl === "green") {
+                footerBarEl.style.backgroundColor = "var(--statusSuccessBg)";
+                footerBarEl.style.color = "var(--statusSuccessText)";
+                footerBarEl.style.borderTopColor = "var(--statusSuccessBg)";
+            } else if (lvl === "warn" || lvl === "warning" || lvl === "yellow") {
+                footerBarEl.style.backgroundColor = "var(--statusWarnBg)";
+                footerBarEl.style.color = "var(--statusWarnText)";
+                footerBarEl.style.borderTopColor = "var(--statusWarnBg)";
+            } else if (lvl === "error" || lvl === "danger" || lvl === "red") {
+                footerBarEl.style.backgroundColor = "var(--statusErrorBg)";
+                footerBarEl.style.color = "var(--statusErrorText)";
+                footerBarEl.style.borderTopColor = "var(--statusErrorBg)";
+            } else {
+                // neutral: no inline overrides
+            }
+        }
+
+
+        function setFavorites(items) {
+            state.favorites = Array.isArray(items) ? items : [];
+
+            // Build dropdown options from dbFav_PlayerTags
+            state.favGroupOptions = buildFavoriteGroupOptions(state.favorites);
+
+            // Keep selection valid
+            if (!state.favGroupOptions.includes(state.favGroup)) state.favGroup = "__ALL__";
+
+            // Build a fast lookup set for roster hearts
+            state.favoritesSet = new Set(
+                state.favorites
+                    .map(f => String(f?.dbFav_PlayerGHIN || "").trim())
+                    .filter(Boolean)
+            );
+        }
+
+        // ---------- Messaging ----------
+        function postToWix(msg) {
+            window.parent.postMessage(msg, "*");
+        }
+
+        // ---------- Tabs ----------
+        function buildTabs() {
+            const rosterCnt = Array.isArray(state.roster) ? state.roster.length : 0;
+
+            const tabs = [
+                { id: "roster", label: `Roster:${rosterCnt}` },
+                { id: "self", label: "Add Self" },
+                { id: "favorites", label: "Favorites" },
+                { id: "ghin", label: "GHIN" },
+                { id: "nonRated", label: "Non-Rated" }
+            ];
+            setStatus("Ready"); // resets status message on tab switch
+
+            tabsEl.innerHTML = "";
+            tabs.forEach(t => {
+                const b = document.createElement("button");
+                b.className = "chip" + (state.activeView === t.id ? " active" : "");
+                b.textContent = t.label;
+                b.onclick = () => {
+                    if (state.activeView === t.id) return;
+                    state.activeView = t.id;
+                    if (t.id === "self") state.selfAutoLaunchArmed = true;   // NEW
+                    if (t.id === "favorites" && state.favorites.length === 0) {
+                        setStatus("Loading favorites…");
+                        postToWix({ type: "LOAD_FAVORITES" });
+                    }
+                    buildTabs();
+                    render();
+                    //postToWix({ type: "NAV", view: t.id });
+                };
+                tabsEl.appendChild(b);
+            });
+            updateTabsFade();
+        }
+
+        // ---------- Header ----------
+        function renderHeader() {
+            if (!state.game) {
+                hdrTitleEl.textContent = "Registrations";
+                hdrSubEl.textContent = "Loading…";
+                return;
+            }
+
+            const viewLabel = (() => {
+                switch (state.activeView) {
+                    case "roster": return "Roster";
+                    case "self": return "Self";
+                    case "favorites": return "Favorites";
+                    case "ghin": return "GHIN";
+                    case "nonRated": return "Non Rated";
+                    default: return "Registrations";
+                }
+            })();
+
+            hdrTitleEl.textContent = `${state.game.title || "Game"}`;
+
+            const dateText = state.game.playDate ? String(state.game.playDate).slice(0, 10) : "";
+            const course = state.game.courseName || "";
+            const ggid = state.game.gameId.replace(/^0+/, "");
+            hdrSubEl.textContent = `${dateText} • ${course} • ${ggid}`.trim();
+        }
+        // ---------- Placeholders for Phase 2 ----------
+        function renderPlaceholder(title) {
+            contentEl.innerHTML = `
+      <div class="card">
+        <div class="name">${escapeHtml(title)}</div>
+        <div class="meta">We’ll wire this view next (Phase 2).</div>
+      </div>
+    `;
+        }
+
+        // ---------- Roster View ----------
+        function renderRoster() {
+            if (!state.roster || state.roster.length === 0) {
+                contentEl.innerHTML = `<div class="meta">No players enrolled yet.</div>`;
+                return;
+            }
+
+            contentEl.innerHTML = "";
+            state.roster.forEach(p => {
+                const card = document.createElement("div");
+                card.className = "rosterRow";
+
+                const name = (p.displayName || `${p.firstName || ""} ${p.lastName || ""}`).trim();
+                const tee = p.teeSetName ? `• ${p.teeSetName}` : "";
+                const ch = (p.ch !== undefined && p.ch !== null && String(p.ch).length) ? `• CH ${p.ch}` : "";
+                const line1 = `${name} ${tee} ${ch}`.trim();
+
+                const line2 = [
+                    (p.hi !== undefined && p.hi !== null && String(p.hi).length) ? `HI ${p.hi}` : "",
+                    (p.ph !== undefined && p.ph !== null && String(p.ph).length) ? `PH ${p.ph}` : "",
+                    (p.so !== undefined && p.so !== null && String(p.so).length) ? `SO ${p.so}` : "",
+                    p.pairingId ? `Pair ${p.pairingId}` : ""
+                ].filter(Boolean).join(" • ");
+
+                const isFav = state.favoritesSet?.has(String(p.playerGHIN || p.ghin || "")) || false;
+
+                card.innerHTML = `
+  <div class="rosterRowInner">
+    <div class="rowTop">
+      <div class="name text-body-bold ink-default nowrap">${escapeHtml(line1)}</div>
+    </div>
+
+    <div class="rowBottom">
+      <div class="meta text-caption ink-muted nowrap">${escapeHtml(line2)}</div>
+      <div class="btnCol">
+        <button class="iconBtn heartBtn ${isFav ? "" : "isOff"}" title="Favorite" aria-label="Favorite">
+            ${heartSvg(isFav)}
+        </button>
+        <button class="iconBtn danger" title="Remove" aria-label="Remove">
+          <svg class="iconSvg" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4l1-2zm1 6h2v10h-2V9zm4 0h2v10h-2V9zM7 9h2v10H7V9zm-1 14h12a2 2 0 0 0 2-2V7H4v14a2 2 0 0 0 2 2z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+`; const favBtn = card.querySelector(".btnCol .iconBtn:not(.danger)");
+                const rmBtn = card.querySelector(".btnCol .iconBtn.danger");
+
+                favBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    const ghin = String(p.playerGHIN || p.ghin || "").trim();
+                    if (!ghin) return;
+
+                    // Always route to Favorites form (A1). No insert here (B2).
+                    postToWix({
+                        type: "FAVORITE_TAP",
+                        source: "roster",
+                        ghin,
+                        fullName: name,
+                        firstName: p.firstName || "",
+                        lastName: p.lastName || "",
+                        hiText: String(p.hi ?? ""),
+                        gender: p.gender || "",
+
+                        // optional if you have them on roster rows
+                        email: p.email || "",
+                        mobile: p.mobile || "",
+                        memberId: p.memberId || "",
+                        club_name: p.clubName || ""
+                    });
+                };
+
+                card.onclick = () => {
+                    const pk = p.playerKey || p._id;
+                    state.pendingPlayer = { source: "roster", playerKey: pk, displayName: name };
+
+                    // NEW: highlight existing tee (if present on roster row)
+                    state.selectedTeeSetId = String(p.teeSetId || p.teeSetID || "");
+
+                    setStatus("Loading tee options…");
+                    postToWix({ type: "SELECT_PLAYER", source: "roster", playerKey: pk, ghin: String(p.playerGHIN || p.ghin || ""), overlay: String(p.playerGHIN || p.ghin || "").startsWith("NH") ? { fullName: name, firstName: p.firstName || "", lastName: p.lastName || "", gender: p.gender || "", hiText: String(p.hi ?? "") } : null });
+                };
+
+
+                rmBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    const pk = p.playerKey || p._id;
+                    setStatus("Removing…");
+                    postToWix({ type: "REMOVE_PLAYER", playerKey: pk });
+                };
+
+                contentEl.appendChild(card);
+            });
+        }
+
+        // ---------- Self View ----------
+        function renderSelf() {
+            // Blank view (tee picker is the UI)
+            contentEl.innerHTML = "";
+
+            // Auto-launch tee selector when view is opened (once per entry)
+            if (state.selfAutoLaunchArmed) {
+                state.selfAutoLaunchArmed = false;
+                state.pendingPlayer = { source: "self", playerKey: null, displayName: state.selfName || "Self" };
+                state.selectedTeeSetId = null;
+                setStatus("Preparing tee options…");
+                postToWix({ type: "SELECT_PLAYER", source: "self", ghin: state.selfGhin });
+            }
+        }
+
+        // ---------- Favorites View ----------
+        function renderFavorites() {
+            if (!state.favorites || state.favorites.length === 0) {
+                if (viewControlsEl) viewControlsEl.innerHTML = "";
+                contentEl.innerHTML = `<div class="meta">No favorites yet (or still loading).</div>`;
+                return;
+            }
+
+            // Controls (now in the Controls section) + list container (in Body)
+            contentEl.innerHTML = `<div id="favList" class="favList"></div>`;
+
+            if (viewControlsEl) {
+                viewControlsEl.innerHTML = `
+      <div class="favFilters">
+        <div class="favControlsRow inline rowNoWrap">
+          <div class="field favGroupField mt0">
+            <select id="favGroup" class="ctrl">
+              ${(state.favGroupOptions || ["__ALL__"]).map(g => {
+                    const label = (g === "__ALL__") ? "All groups" : g;
+                    const sel = (g === state.favGroup) ? "selected" : "";
+                    return `<option value="${escapeHtml(g)}" ${sel}>${escapeHtml(label)}</option>`;
+                }).join("")}
+            </select>
+          </div>
+
+        <div class="field favSearchField mt0">
+        <div class="inputWithClear">
+            <input id="favSearch" class="ctrl" type="text"
+                placeholder="Search favorites…"
+                value="${escapeHtml(state.favSearch || "")}" />
+            <button id="favSearchClear" class="clearBtn" type="button" aria-label="Clear search" tabindex="-1">×</button>
+        </div>
+        </div>
+
+        <div class="meta favHint" id="favHint">
+          No match in selected group — showing all groups.
+        </div>
+
+      </div>
+    `;
+            }
+
+            // Wire controls (same wiring as before)
+            document.getElementById("favGroup").onchange = (e) => {
+                const raw = (e.target.value || "").trim();
+                state.favGroup = (raw === "__ALL__" || raw === "All groups") ? "__ALL__" : raw;
+                renderFavorites();
+            };
+
+            document.getElementById("favSearch").oninput = (e) => {
+                const val = e.target.value || "";
+                const caret = e.target.selectionStart ?? val.length;
+
+                state.favSearch = val;
+                renderFavorites();
+
+                // restore focus + caret after re-render
+                const el = document.getElementById("favSearch");
+                if (el) {
+                    el.focus();
+                    try { el.setSelectionRange(caret, caret); } catch (_) { }
+                }
+            };
+            wireClearX({
+                inputId: "favSearch",
+                buttonId: "favSearchClear",
+                getValue: () => state.favSearch || "",
+                setValue: (v) => { state.favSearch = v; },
+                onCleared: () => renderFavorites()
+            });
+            // Apply filters
+            let broadened = false;
+            const group = state.favGroup || "__ALL__";
+            const q = (state.favSearch || "").trim();
+
+            let filtered = (state.favorites || []).filter(f => {
+                const tags = Array.isArray(f.dbFav_PlayerTags) ? f.dbFav_PlayerTags : [];
+                const inGroup = (group === "__ALL__")
+                    ? true
+                    : tags.map(t => String(t || "").trim()).includes(group);
+                return inGroup && favoriteMatchesSearch(f, q);
+            });
+
+            // Option A: auto-broaden to All groups if searching yields nothing in current group
+            if (q && filtered.length === 0 && group !== "__ALL__") {
+                broadened = true;
+                state.favGroup = "__ALL__";
+                filtered = (state.favorites || []).filter(f => favoriteMatchesSearch(f, q));
+            }
+
+            const listEl = document.getElementById("favList");
+            const hintEl = document.getElementById("favHint");
+            if (hintEl && broadened) hintEl.style.display = "block";
+            //if (hintEl) hintEl.style.display = broadened ? "block" : "none";
+
+            if (!listEl) return;
+
+            if (filtered.length === 0) {
+                const msg = q ? "No favorites match your search." : "No favorites match your filter.";
+                listEl.innerHTML = `<div class="meta">${escapeHtml(msg)}</div>`;
+                return;
+            }
+
+            // Cards
+            listEl.innerHTML = "";
+            filtered.forEach(f => {
+                const ghin = String(f.dbFav_PlayerGHIN || "");
+                if (!ghin) {
+                    console.warn("[HTML] Favorite missing dbFav_PlayerGHIN", f);
+                    return;
+                }
+
+                const enrolled = state.enrolledGhinSet.has(ghin);
+
+                const card = document.createElement("div");
+                card.className = "favRow";
+
+                const favoriteId = f._id;
+
+                // *** Do not change these assignments (per request) ***
+                const firstName = String(f.dbFav_PlayerName || "").trim();
+                const lastName = String(f.dbFav_PlayerLName || "").trim();
+                const fullName = String(f.dbFav_PlayerName || "").trim();
+
+                const hi = String(f.dbFav_PlayerHI ?? "");
+                const gender = String(f.dbFav_PlayerGender ?? "");
+
+                const meta = `GHIN ${ghin} • HI ${hi} • ${gender}`.trim();
+                const maskedGHIN = ghin.startsWith("NH") ? ghin : maskGHIN(ghin);
+                const lastTeeName = String(f?.lastCourse?.teeSetName || "").trim();
+
+                card.innerHTML = `
+  <div class="left inline rowNoWrap">
+    <span class="nm text-body-bold ink-default nowrap">${escapeHtml(fullName)}</span>
+    <span class="gh text-caption ink-muted nowrap"> • ${escapeHtml(maskedGHIN)}</span>
+    ${lastTeeName ? `<span class="gh text-caption ink-muted nowrap"> • ${escapeHtml(lastTeeName)}</span>` : ""}
+  </div>
+  <div class="right text-caption ink-default nowrap">${enrolled ? "Enrolled" : ""}</div>
+`;
+
+
+                card.classList.toggle("disabled", enrolled);
+
+                card.onclick = () => {
+                    if (enrolled) return;
+
+                    state.pendingPlayer = { source: "favorite", favoriteId, displayName: fullName };
+                    state.selectedTeeSetId = null;
+                    setStatus("Preparing tee options…");
+
+                    postToWix({
+                        type: "SELECT_PLAYER",
+                        source: "favorite",
+                        favoriteId,
+                        ghin,
+                        overlay: ghin.startsWith("NH")
+                            ? { fullName, firstName, lastName, gender, hiText: hi }
+                            : null
+                    });
+                };
+
+                listEl.appendChild(card);
+            });
+        }
+
+        function buildFavoriteGroupOptions(favorites) {
+            const set = new Set();
+            (favorites || []).forEach(f => {
+                const tags = Array.isArray(f.dbFav_PlayerTags) ? f.dbFav_PlayerTags : [];
+                tags.forEach(t => {
+                    const v = String(t || "").trim();
+                    if (v) set.add(v);
+                });
+            });
+            return ["__ALL__", ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+        }
+
+        function favoriteMatchesSearch(f, q) {
+            if (!q) return true;
+            const hay = [
+                f.dbFav_PlayerName,
+                f.dbFav_PlayerLName,
+                f.dbFav_PlayerGHIN,
+                ...(Array.isArray(f.dbFav_PlayerTags) ? f.dbFav_PlayerTags : [])
+            ].map(x => String(x || "").toLowerCase()).join(" ");
+            return hay.includes(q.toLowerCase());
+        }
+
+        function renderNonRated() {
+            // Persist defaults
+            state.nrFirst = state.nrFirst ?? "";
+            state.nrLast = state.nrLast ?? "";
+            state.nrGender = state.nrGender ?? "M";
+            state.nrHI = state.nrHI ?? "";
+
+            // -----------------------------
+            // Controls section (sticky area)
+            // -----------------------------
+            if (viewControlsEl) {
+                viewControlsEl.innerHTML = `
+      <div class="nrControls">
+        <div class="nrRow">
+          <div class="field nrFirstField mt0">
+            <label>First</label>
+            <div class="inputWithClear">
+              <input id="nrFirst" class="ctrl" type="text" placeholder="First" />
+              <button id="nrFirstClear" class="clearBtn isHidden" type="button" aria-label="Clear first name"  tabindex="-1">×</button>
+            </div>
+          </div>
+
+          <div class="field nrLastField mt0">
+            <label>Last</label>
+            <div class="inputWithClear">
+              <input id="nrLast" class="ctrl" type="text" placeholder="Last (required)" />
+              <button id="nrLastClear" class="clearBtn isHidden" type="button" aria-label="Clear last name"  tabindex="-1">×</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="nrRow">
+          <div class="field nrGenderField mt0">
+            <label>Gender</label>
+            <select id="nrGender" class="ctrl">
+              <option value="M">Male</option>
+              <option value="F">Female</option>
+            </select>
+          </div>
+
+          <div class="field nrHIField mt0">
+            <label>Index</label>
+            <input id="nrHI" class="ctrl" type="text" inputmode="decimal" placeholder="e.g. 12.3" />
+          </div>
+
+          <button class="btn primary nrFindBtn" id="btnNonRatedTees">Find Tee Sets</button>
+        </div>
+
+        <div class="meta">The player is added only after you choose a tee.</div>
+      </div>
+    `;
+            }
+
+            // -----------------------------
+            // Body section (empty)
+            // -----------------------------
+            contentEl.innerHTML = ``;
+
+            // Restore values + wire updates
+            const firstEl = document.getElementById("nrFirst");
+            const lastEl = document.getElementById("nrLast");
+            const genderEl = document.getElementById("nrGender");
+            const hiEl = document.getElementById("nrHI");
+
+            if (firstEl) {
+                firstEl.value = state.nrFirst;
+                firstEl.oninput = () => { state.nrFirst = firstEl.value; };
+            }
+            if (lastEl) {
+                lastEl.value = state.nrLast;
+                lastEl.oninput = () => { state.nrLast = lastEl.value; };
+            }
+            if (genderEl) {
+                genderEl.value = state.nrGender || "M";
+                genderEl.onchange = () => { state.nrGender = genderEl.value || "M"; };
+            }
+            if (hiEl) {
+                hiEl.value = state.nrHI;
+                hiEl.oninput = () => { state.nrHI = hiEl.value; };
+            }
+
+            // Reusable clears (X)
+            wireClearX({
+                inputId: "nrFirst",
+                buttonId: "nrFirstClear",
+                getValue: () => state.nrFirst,
+                setValue: (v) => { state.nrFirst = v; }
+            });
+
+            wireClearX({
+                inputId: "nrLast",
+                buttonId: "nrLastClear",
+                getValue: () => state.nrLast,
+                setValue: (v) => { state.nrLast = v; }
+            });
+
+            // Find Tee Sets
+            const btn = document.getElementById("btnNonRatedTees");
+            if (btn) btn.onclick = () => {
+                const firstName = String(state.nrFirst || "").trim();
+                const lastName = String(state.nrLast || "").trim();
+                const gender = String(state.nrGender || "M").trim();
+                const hiText = String(state.nrHI || "").trim();
+                const hiInfo = normalizeHandicapIndexText(state.nrHI);
+
+                if (!firstName) { setStatus("First name required", "warn"); return; }
+                if (!lastName) { setStatus("Last name required", "warn"); return; }
+
+                //const hi = Number(hiText);
+                //if (!Number.isFinite(hi)) { setStatus("Enter a valid Index", "warn"); return; }
+                if (!hiInfo.ok) { setStatus("Enter a valid Index", "warn"); return; }
+
+                state.pendingPlayer = { source: "nonRated", playerKey: null, displayName: `${firstName} ${lastName}`.trim() };
+                state.selectedTeeSetId = null;
+
+                setStatus("Looking up tees…");
+
+                const ts = Math.floor(Date.now() / 1000);
+                const rand = Math.floor(1000 + Math.random() * 9000);
+                const nhGHIN = `NH${ts}${rand}`;
+
+                postToWix({
+                    type: "SELECT_PLAYER",
+                    source: "nonRated",
+                    ghin: nhGHIN,
+                    overlay: {
+                        fullName: `${firstName} ${lastName}`.trim(),
+                        firstName,
+                        lastName,
+                        gender,
+                        hiText: hiInfo.display,          // what user typed, e.g. "+1.2"
+                        handicap_index: hiInfo.canonical // what GHIN math should use, e.g. "-1.2"
+                    }
+                });
+            };
+        }
+
+        function renderGHIN() {
+            const defaultState = (state.userState || "") || "";
+            // persist field values across renders
+            state.ghinLast = state.ghinLast ?? "";
+            state.ghinFirst = state.ghinFirst ?? "";
+            state.ghinState = state.ghinState ?? defaultState;
+
+            // -----------------------------
+            // Controls section (sticky area)
+            // -----------------------------
+            if (viewControlsEl) {
+                viewControlsEl.innerHTML = `
+                    <div class="ghinControls">
+
+                    <div class="ghinControlsRow">
+                        <div class="field ghinLastField mt0">
+                        <div class="inputWithClear">
+                            <input id="ghinLast" class="ctrl" type="text" placeholder="Last name (required)" />
+                            <button id="ghinLastClear" class="clearBtn isHidden" type="button" aria-label="Clear last name"  tabindex="-1">×</button>
+                        </div>
+                        </div>
+
+                        <div class="field ghinFirstField mt0">
+                        <div class="inputWithClear">
+                            <input id="ghinFirst" class="ctrl" type="text" placeholder="First name" />
+                            <button id="ghinFirstClear" class="clearBtn isHidden" type="button" aria-label="Clear first name"  tabindex="-1">×</button>
+                        </div>
+                        </div>
+
+                        <div class="field ghinStateField mt0">
+                        <input id="ghinState" class="ctrl" type="text" maxlength="2" placeholder="ST" />
+                        </div>
+
+                        <button class="btn primary ghinSearchBtn" id="btnGhinSearch">Search</button>
+                    </div>
+                    </div>
+                `;
+            }
+
+            // -----------------------------
+            // Body section (scrolling list)
+            // -----------------------------
+            contentEl.innerHTML = `
+  <div class="tableCard">
+    <div class="tableCols">
+      <div class="colFlex">Name</div>
+      <div class="colHI">HI</div>
+      <div class="colG">G</div>
+    </div>
+
+    <div id="ghinRows" class="ghinRowsBox"></div>
+  </div>
+    `;
+
+            // Restore values + wire updates
+            const lastEl = document.getElementById("ghinLast");
+            const firstEl = document.getElementById("ghinFirst");
+            const stEl = document.getElementById("ghinState");
+
+            if (lastEl) {
+                lastEl.value = state.ghinLast;
+                lastEl.oninput = () => { state.ghinLast = lastEl.value; };
+            }
+            if (firstEl) {
+                firstEl.value = state.ghinFirst;
+                firstEl.oninput = () => { state.ghinFirst = firstEl.value; };
+            }
+            if (stEl) {
+                stEl.value = String(state.ghinState || "").toUpperCase();
+                stEl.oninput = () => { state.ghinState = stEl.value.toUpperCase(); };
+            }
+
+            // Reusable clears (X)
+            wireClearX({
+                inputId: "ghinLast",
+                buttonId: "ghinLastClear",
+                getValue: () => state.ghinLast,
+                setValue: (v) => { state.ghinLast = v; }
+            });
+
+            wireClearX({
+                inputId: "ghinFirst",
+                buttonId: "ghinFirstClear",
+                getValue: () => state.ghinFirst,
+                setValue: (v) => { state.ghinFirst = v; }
+            });
+
+            // Search / Clear buttons
+            document.getElementById("btnGhinSearch").onclick = () => {
+                const lastName = String(state.ghinLast || "").trim();
+                const firstName = String(state.ghinFirst || "").trim();
+                const st = String(state.ghinState || "").trim().toUpperCase();
+
+                if (!lastName) { setStatus("Last name required", "warn"); return; }
+
+                setStatus("Searching GHIN…");
+                postToWix({ type: "SEARCH_GHIN", lastName, firstName, state: st });
+            };
+
+            // If we already have results in memory, show them
+            setGHINResults(state.ghinResults || [], state.ghinIsTruncated);
+        }
+
+
+        function setGHINResults(results, isTruncated) {
+            state.ghinResults = Array.isArray(results) ? results : [];
+            state.ghinIsTruncated = !!isTruncated;
+            console.log("is truncated?", state.ghinIsTruncated)
+
+            const rowsEl = document.getElementById("ghinRows");
+            if (!rowsEl) return;
+
+            const cnt = state.ghinResults.length;
+            const msg = state.ghinIsTruncated
+                ? `Results: ${cnt}+ found" Adjust first name to narrow search`
+                : `Results: ${cnt} found`;
+            const txtMsgseverity = state.ghinIsTruncated ? "warn" : "";
+
+            setStatus(msg, txtMsgseverity);
+
+            rowsEl.innerHTML = "";
+
+            state.ghinResults.forEach(r => {
+                const enrolled = state.enrolledGhinSet.has(String(r.ghin || ""));
+
+                const hiText = String(r.hi ?? "").trim();
+                const noIndex = (hiText.toUpperCase() === "NH");
+
+                const disabled = enrolled || noIndex;
+
+                const row = document.createElement("div");
+                row.className = "ghRow" + (disabled ? " disabled" : "");
+
+                const locationText = [
+                    String(r.city || "").trim(),
+                    String(r.state || "").trim()
+                ].filter(Boolean).join(", ");
+
+                const gText = String(r.gender ?? "").trim();
+
+                // (Optional) enrolled stamp, keep NH as-is
+                const hiCell = enrolled ? "ENR" : hiText;
+                const gCell = enrolled ? "" : gText;
+
+                const tailHtml = enrolled
+                    ? `<div class="ghStamp text-body ink-default nowrap">Enrolled</div>`
+                    : `<div class="ghHI text-body ink-default nowrap">${escapeHtml(hiText)}</div>
+     <div class="ghG  text-body ink-default nowrap">${escapeHtml(gText)}</div>`;
+
+                row.innerHTML = `
+  <div class="ghRowTop">
+    <div class="inline rowNoWrap">
+      <div class="ghName text-body-bold ink-default nowrap">${escapeHtml(r.name)}</div>
+      <div class="ghLoc text-caption ink-default nowrap">${escapeHtml(locationText)}</div>
+    </div>
+    ${tailHtml}
+  </div>
+  <div class="ghRowBottom">
+    <div class="ghLoc text-caption ink-default nowrap">${escapeHtml(locationText)}</div>
+  </div>
+`;
+
+                if (!disabled) {
+                    row.onclick = () => {
+                        state.pendingPlayer = { source: "ghin", playerKey: null, displayName: r.name, ghin: String(r.ghin) };
+                        state.selectedTeeSetId = null;
+                        setStatus("Loading tee options…");
+                        postToWix({ type: "SELECT_PLAYER", source: "ghin", ghin: String(r.ghin) });
+                    };
+                } else {
+                    row.onclick = null; // explicit no-op (belt & suspenders)
+                }
+
+                rowsEl.appendChild(row);
+            });
+
+        }
+
+
+        // ---------- Tee Modal ----------
+        function openTeeModal(teeOptions, title, selectedTeeSetId) {
+            state.teeOptions = Array.isArray(teeOptions) ? teeOptions : [];
+            teeTitleEl.textContent = title || "Pick a Tee Set";
+            if (teeSubTitleEl) teeSubTitleEl.textContent = state.pendingPlayer?.displayName || "Player";
+            teeListEl.innerHTML = "";
+            if (selectedTeeSetId !== undefined && selectedTeeSetId !== null) {
+                state.selectedTeeSetId = String(selectedTeeSetId);
+            }
+
+            if (state.teeOptions.length === 0) {
+
+                teeListEl.innerHTML = `<div class="meta mt10">No tee options returned.</div>`;
+            } else {
+                state.teeOptions.forEach(opt => {
+                    const div = document.createElement("div");
+                    div.className = "teeItem";
+                    const optId = String(opt.teeSetId ?? "");
+                    if (state.selectedTeeSetId && optId && optId === String(state.selectedTeeSetId)) {
+                        div.classList.add("selected");
+                    }
+                    div.innerHTML = `
+          <div class="teeLine1 text-body-bold ink-default">${escapeHtml(opt.name || "Tee")}${opt.ch !== undefined ? ` • CH ${escapeHtml(opt.ch)}` : ""}</div>
+          <div class="teeLine2 text-caption ink-muted">${escapeHtml(`${opt.yards ?? ""} yds • Slope ${opt.slope ?? ""} • CR ${opt.rating ?? ""}`)}</div>
+        `;
+                    div.onclick = () => {
+                        setStatus("Saving…");
+                        postToWix({
+                            type: "ASSIGN_TEE",
+                            teeSetId: opt.teeSetId,
+                            playerKey: state.pendingPlayer?.playerKey || null
+                        });
+                        closeTeeModal();
+                        if (state.pendingPlayer?.source === "self") {
+                            state.activeView = "roster";
+                            buildTabs();
+                            render();
+                        }
+                    };
+                    teeListEl.appendChild(div);
+                });
+            }
+
+            teeBackdrop.style.display = "flex";
+        }
+        function closeTeeModal() {
+            teeBackdrop.style.display = "none";
+        }
+        teeCloseBtn.onclick = () => closeTeeModal();
+        teeBackdrop.onclick = (e) => { if (e.target === teeBackdrop) closeTeeModal(); };
+
+        // ---------- Main Render ----------
+        function render() {
+            renderHeader();
+            if (viewControlsEl) viewControlsEl.innerHTML = "";
+            if (state.activeView === "roster") return renderRoster();
+            if (state.activeView === "self") return renderSelf();
+            if (state.activeView === "favorites") return renderFavorites();
+            if (state.activeView === "ghin") return renderGHIN();
+            if (state.activeView === "nonRated") return renderNonRated();
+        }
+
+        // ---------- Incoming messages from Wix ----------
+        window.addEventListener("message", (event) => {
+            const msg = event.data || {};
+            if (!msg.type) return;
+
+            if (msg.type === "INIT") {
+                state.mode = msg.mode || "player";
+                state.selfGhin = msg.selfGhin || "";
+                state.selfName = msg.selfName || "";
+                state.intent = msg.intent || "";
+                state.game = msg.game || null;
+                state.userState = msg.userState || "";   // ← ADD THIS
+                state.roster = msg.roster || [];
+                state.enrolledGhinSet = new Set(msg.enrolledGhinSet || []);
+                setFavorites(msg.favorites || []);
+                buildTabs();
+                render();
+                // Optional quick-enroll: bounce directly to Self
+                if (state.intent === "quickEnrollSelf") {
+                    state.activeView = "self";
+                    state.selfAutoLaunchArmed = true;
+                    buildTabs();
+                    render();
+                }
+
+                setStatus("Ready");
+                return;
+            }
+
+            if (msg.type === "ROSTER_UPDATE") {
+                state.roster = msg.roster || [];
+                state.enrolledGhinSet = new Set(msg.enrolledGhinSet || []);
+                buildTabs();
+                render();
+                setStatus("Roster updated", "success");
+                return;
+            }
+
+            if (msg.type === "FAVORITES_UPDATE") {
+                setFavorites(msg.favorites);
+                if (state.activeView === "favorites") renderFavorites();
+                render(); // <-- IMPORTANT: updates roster hearts too
+                setStatus("Favorites loaded");
+                return;
+            }
+
+
+            if (msg.type === "TEE_OPTIONS") {
+                openTeeModal(msg.teeOptions || [], msg.title || "Pick Tee Set", msg.selectedTeeSetId || null);
+                setStatus("Pick a tee");
+                return;
+            }
+
+            if (msg.type === "STATUS") {
+                setStatus(msg.message || "", msg.level);
+                return;
+            }
+            if (msg.type === "GHIN_RESULTS") {
+                setGHINResults(msg.results || [], !!msg.isTruncated);
+                return;
+            }
+        });
+
+        function updateTabsFade() {
+            const wrap = document.getElementById("tabsWrap");
+            if (!wrap) return;
+
+            const el = tabsEl;
+            if (!el) return;
+
+            const hasOverflow = el.scrollWidth > el.clientWidth + 1;
+            const atEnd = (el.scrollLeft + el.clientWidth) >= (el.scrollWidth - 1);
+
+            wrap.classList.toggle("fadeRight", hasOverflow && !atEnd);
+        }
+
+        function maskGHIN(ghin) {
+            const s = String(ghin || "");
+            if (s.length <= 3) return s;
+            return "*".repeat(s.length - 3) + s.slice(-3);
+        }
+
+        function escapeHtml(s) {
+            return String(s ?? "")
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
+
+        function heartSvg(isOn) {
+            // Uses currentColor so CSS controls the color
+            return isOn
+                ? `<svg class="iconSvg" viewBox="0 0 24 24" aria-hidden="true">
+         <path fill="currentColor" d="M12 21s-6.7-4.35-9.33-7.24C.6 11.44 1.1 8.5 3.1 6.9c1.7-1.36 4.2-1.2 5.8.37L12 10.5l3.1-3.23c1.6-1.57 4.1-1.73 5.8-.37 2 1.6 2.5 4.54.43 6.86C18.7 16.65 12 21 12 21z"/>
+       </svg>`
+                : `<svg class="iconSvg" viewBox="0 0 24 24" aria-hidden="true">
+         <path fill="none" stroke="currentColor" stroke-width="2" d="M12 20s-6.6-4.2-9.2-7C.7 10.7 1.2 8 3.1 6.6c1.8-1.3 4.2-1 5.7.6L12 10.5l3.2-3.3c1.5-1.6 3.9-1.9 5.7-.6 1.9 1.4 2.4 4.1.3 6.4-2.6 2.8-9.2 7-9.2 7z"/>
+       </svg>`;
+        }
+
+        function normalizeHandicapIndexText(raw) {
+            const s = String(raw ?? "").trim();
+            if (!s) return { ok: false, display: "", numeric: null, canonical: "" };
+
+            // Accept forms: 1.2, -1.2, +1.2
+            if (!/^[+-]?\d+(\.\d+)?$/.test(s)) {
+                return { ok: false, display: s, numeric: null, canonical: "" };
+            }
+
+            // Golf meaning: "+1.2" == numeric -1.2
+            if (s.startsWith("+")) {
+                const v = Number(s.slice(1));
+                return { ok: Number.isFinite(v), display: s, numeric: -v, canonical: `-${v}` };
+            }
+
+            const v = Number(s);
+            return { ok: Number.isFinite(v), display: s, numeric: v, canonical: String(v) };
+        }
+
+
+        function wireClearX({ inputId, buttonId, getValue, setValue, onCleared, focusAfterClear = true }) {
+            const inputEl = document.getElementById(inputId);
+            const btnEl = document.getElementById(buttonId);
+            if (!inputEl || !btnEl) return;
+
+            const updateVisibility = () => {
+                const v = (getValue ? getValue() : inputEl.value) || "";
+                btnEl.classList.toggle("isHidden", v.trim().length === 0);
+            };
+
+            // Click: clear state, rerender, restore focus
+            btnEl.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (setValue) setValue("");
+                inputEl.value = "";          // ALWAYS clear the visible field
+                updateVisibility();
+
+                if (typeof onCleared === "function") onCleared();
+
+                if (focusAfterClear) {
+                    const el = document.getElementById(inputId);
+                    if (el) {
+                        el.focus();
+                        try { el.setSelectionRange(0, 0); } catch (_) { }
+                    }
+                }
+            };
+
+            // Keep visibility synced with typing / programmatic changes
+            inputEl.addEventListener("input", updateVisibility);
+
+            // Initial state
+            updateVisibility();
+
+            // Return updater so callers can invoke it after rerenders if needed
+            return updateVisibility;
+        }
+
+
+        // Kickoff handshake
+
+        tabsEl.addEventListener("scroll", updateTabsFade, { passive: true });
+        window.addEventListener("resize", updateTabsFade);
+
+        postToWix({ type: "READY" });
+    </script>
+</body>
+
+</html>
