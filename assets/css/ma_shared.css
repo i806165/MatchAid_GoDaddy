@@ -6,12 +6,15 @@
 :root {
   /* Typography */
   --fontFamilyBase: "Montserrat", Arial, sans-serif;
+  --inputTextSize: 16px;
+  --labelTextSize: 15px;
   
   /* Brand */
   --brandPrimary: #07432A;
   --brandSecondary: #3F7652;
   --brandAccent: #0b5fff;
   --brandPrimaryText: #ffffff;
+  --brandPrimaryTextMuted: rgba(255,255,255,.78);
   --brandSecondaryText: #ffffff;
   --danger: #c62828;
   --warn: #f6d365;
@@ -43,6 +46,9 @@
   --chromeSubtitleSize: 12px;
   --chromeBtnFontSize: 13px;
 
+  --ControlAreaBg: color-mix(in srgb, var(--panelBg) 96%, black);
+  --ControlAreaBorder: var(--panelBorder);
+
   /* Status / Messaging */
   --chromeStatusHeight: 28px;
   --chromeStatusFontSize: 13px;
@@ -58,7 +64,6 @@
   /* Tab bar */
   --tabBarHeight: 56px;
   --tabBarBg: #ffffff;
-
   --tabItemText: #4b5563;
   --tabItemActiveText: var(--brandAccent);
   --tabItemFontSize: 11px;
@@ -75,7 +80,7 @@
   --border: var(--borderSubtle);
 
     /* ======================================================================
-     Buttons — canonical tokens
+     Buttons canonical tokens
      ====================================================================== */
   --btnHeight: 34px;                 /* maps to your legacy controlHeight */
   --btnPadX: 12px;                   /* maps to legacy controlPadX */
@@ -98,11 +103,9 @@
   /* Navigation ICONS */
   --navIconSize: 18px;
 
-
   /* Controls */
   --controlBorder: var(--borderSubtle);
   --controlRadius: 14px;
-  
   --radiusMd: 10px;
   --radiusLg: 12px;
 
@@ -166,8 +169,8 @@
   --pressedBg: rgba(0,0,0,.06);
 
   /* Panel shell */
-  --panelGap: 12px;
-  --panelPad: 12px;
+  --panelGap: 8px;
+  --panelPad: 8px;
   --panelBg: var(--bg);
   --panelBorder: var(--border);
   --panelRadius: 14px;
@@ -238,6 +241,13 @@ body {
   background: var(--surfaceApp); 
 }
 
+.maControlArea{
+  flex: 0 0 auto;            /* peer band, never scrolls */
+  padding: var(--spaceMd);   /* align with maPage horizontal padding */
+  background: var(--ControlAreaBg);
+  border-bottom: 1px solid var(--ControlAreaBorder); /* or keep full border if you prefer */
+}
+
 .maPage{
   flex: 1 1 auto;
   overflow-y: auto; /* body scroll must be internal to page content */
@@ -247,6 +257,11 @@ body {
   min-height: 0;
   padding: var(--spaceMd);
   -webkit-overflow-scrolling: touch;
+}
+
+.maOverlayOpen .maPage{
+  /* This ensures the underlying page does not scroll when overlay opens */
+  overflow: hidden;
 }
 
 .maChrome__hdr{
@@ -307,7 +322,7 @@ body {
   align-items: center;
   justify-content: center;
   padding: var(--spaceSm) var(--spaceMd);
-  font-size: var(--chromeStatusFontSize, 13px);
+  font-size: var(--chromeStatusFontSize);
   line-height: 1.2;
   text-align: center;
   border-bottom: 1px solid var(--chromeBorder);
@@ -374,7 +389,7 @@ body {
 
 /* Label */
 .maNavLabel{
-  font-size: var(--tabItemFontSize, 11px);
+  font-size: var(--tabItemFontSize);
   line-height: 1.1;
   letter-spacing: .2px;
   white-space: nowrap;
@@ -440,7 +455,7 @@ body {
   background: var(--chromeBg);
   font-family: var(--fontFamilyBase);
   font-weight: 700;
-  font-size: var(--chromeBtnFontSize);
+  font-size: var(--btnFontSize);
   color: var(--brandPrimary);
   cursor: pointer;
   user-select: none;
@@ -454,7 +469,7 @@ body {
 .maChrome__subtitle2{
   font-family: var(--fontFamilyBase);
   color: var(--chromeSubtitleText);
-  font-size: 12px;
+  font-size: var(--chromeSubtitleSize);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -469,8 +484,8 @@ body {
   display: none;
   z-index: 99999;
   backdrop-filter: blur(2px);
+  touch-action: none;
 
-  /* CENTER THE PANEL (panel centered, not the text) */
   align-items: center;
   justify-content: center;
   padding: 18px; /* breathing room so it never hits the edges */
@@ -481,7 +496,6 @@ body {
 }
 
 .actionMenu{
-  /* panel */
   position: relative; /* was absolute */
   min-width: 260px;
   width: min(360px, 100%); /* ensures it fits smaller screens */
@@ -514,14 +528,14 @@ body {
 
 .actionMenu_title{
   font-weight: 900;
-  font-size: var(--fieldValueSize);
+  font-size: var(--chromeTitleSize);
   line-height: 1.15;
 }
 
 .actionMenu_subtitle{
   margin-top: 2px;
   font-weight: 800;
-  font-size: var(--fieldValueSublineSize);
+  font-size: var(--chromeSubtitleSize);
   opacity: .9;
 }
 
@@ -532,7 +546,7 @@ body {
   border-radius: var(--radiusLg);
   width: 30px;
   height: 28px;
-  font-size: 20px;
+  font-size: var(--btnFontSize);
   line-height: 1;
   font-weight: 900;
   cursor: pointer;
@@ -550,19 +564,15 @@ body {
   margin: 0;                 /* kill pill margins */
   padding: 14px 16px;        /* list row padding */
   background: transparent;
-
   display: flex;
   align-items: center;
   justify-content: flex-start;
   gap: 10px;
-
   font-weight: 900;
   font-size: var(--fieldValueSize);
   color: var(--ink);
-
   cursor: pointer;
   user-select: none;
-
   border-bottom: 1px solid rgba(0,0,0,.10); /* subtle list separators */
 }
 
@@ -670,7 +680,7 @@ body {
   border-radius: var(--choiceChipRadius);
   padding: 8px 12px;
   font-weight: 800;
-  font-size: 12px;
+  font-size: var(--pillTitleSize);
   line-height: 1;
   cursor: pointer;
   user-select: none;
@@ -839,7 +849,7 @@ body {
   font-weight: 700;
   cursor: pointer;
   font-family: var(--fontFamilyBase);
-  font-size: 13px;
+  font-size: var(--btnFontSize);
   display: inline-flex;
   gap: 8px;
   align-items: center;
@@ -881,14 +891,19 @@ body {
          * Modal: capture/edit filters/settings
          * Drawer: “secondary panel” surface (mobile)
 
-   Refactor rule:
-     - Shared CSS contains ONLY canonical classes.
-     - Each page must update its HTML to use these canonical classes.
-     - No support for legacy class names in ma_shared.css.
+    (maModal__overlay)
+      1)	(maModal__dialog)           ← flex column, constrained height
+        a)	(maModal__header)       ← title bar (pinned)
+            i)	(maModal__title)
+            ii)	Button
+        b)	(maModal__controls)     ← CONTROLS BAND (pinned) 
+            i)	control fields (i.e. filter, search)
+        c)	(maModal__body) ← RESULTS REGION (scroll container)
+            i)	results header row and results rows
+            ii)	cards and card contents
+        d)	(maModal__footer)       ← status/footer (pinned)
+            i)	message
    ========================================================================== */
-
-
-
 /* ==========================================================================
    MULTI-PANEL PAGE (2/3/4 panels)
    Expected markup:
@@ -1023,24 +1038,30 @@ body {
   display: none;
   align-items: center;
   justify-content: center;
-  padding: 18px;
+  padding:
+        calc(10px + env(safe-area-inset-top))
+        6px
+        calc(10px + env(safe-area-inset-bottom))
+        6px;
   background: var(--overlayBgDim);
   z-index: var(--overlayZ);
   backdrop-filter: blur(var(--overlayBlur));
+  touch-action: none;
 }
 
 .maModalOverlay.is-open{ display: flex; }
 
 .maModal{
-  width: min(var(--modalMaxW), 96vw);
-  max-height: calc(100dvh - 36px);
+  width: 100%;
+  max-width: none;
+  max-height: calc(100dvh - (20px + env(safe-area-inset-top) + env(safe-area-inset-bottom)));
 
   background: var(--modalSurface);
   border: 1px solid var(--border);
   border-radius: var(--modalRadius);
   box-shadow: var(--modalShadow);
   overflow: hidden;
-
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -1072,6 +1093,8 @@ body {
   min-height: 0;
   overflow: auto;
   padding: 14px;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .maModal__ftr{
@@ -1226,7 +1249,7 @@ body {
 .maLabel{
   display: block;
   margin: 0 0 6px 2px;
-  font-size: 12px;
+  font-size: var(--labelTextSize);
   font-weight: 900;
   color: var(--mutedText);
 }
@@ -1247,7 +1270,7 @@ body {
   background: #fff;
   color: var(--ink);
   font-family: var(--fontFamilyBase);
-  font-size: 13px;
+  font-size: var(--inputTextSize);
   font-weight: 800;
   outline: none;
   min-width: 0;
@@ -1367,126 +1390,6 @@ body {
   color: #fff;
 }
 
-/* Admin picker list (in Filters modal) */
-.maAdminPick__top{
-  margin-top: 12px;
-}
-
-.maAdminPick{
-  margin-top: 10px;
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--radiusLg);
-  overflow: hidden;
-  background: #fff;
-}
-
-.maAdminPick__hdr{
-  display: grid;
-  grid-template-columns: 44px 1fr 44px;
-  gap: 8px;
-  align-items: center;
-  padding: 10px;
-  background: var(--panelHdrBg);
-  color: var(--panelHdrText);
-  border-bottom: 1px solid var(--borderSubtle);
-}
-
-.maAdminPick__hdrBtn{
-  height: 36px;
-  width: 44px;
-  border: 1px solid rgba(255,255,255,.25);
-  background: rgba(255,255,255,.10);
-  border-radius: 12px;
-  color: inherit;
-  cursor: pointer;
-  font-weight: 900;
-}
-
-.maAdminPick__hdrBtn:hover{
-  background: rgba(255,255,255,.18);
-}
-
-.maAdminPick__hdrName{
-  font-weight: 900;
-  letter-spacing: .2px;
-}
-
-.maAdminPick__rows{
-  max-height: 360px;
-  overflow: auto;
-}
-
-.maAdminRow{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--borderSubtle);
-  cursor: pointer;
-  user-select: none;
-}
-
-.maAdminRow:hover{
-  background: var(--pressedBg);
-}
-
-.maAdminRow__left{
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.maAdminRow__check{
-  width: 22px;
-  height: 22px;
-  border-radius: 7px;
-  border: 1px solid var(--borderSubtle);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 900;
-  color: var(--mutedText);
-  flex: 0 0 auto;
-}
-
-.maAdminRow__check.on{
-  background: var(--brandSecondary);
-  border-color: var(--brandSecondary);
-  color: #fff;
-}
-
-.maAdminRow__name{
-  font-weight: 900;
-  color: var(--ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.maAdminRow__right{
-  display: flex;
-  align-items: center;
-  flex: 0 0 auto;
-}
-
-.maAdminRow__heart{
-  font-size: 18px;
-  padding: 6px 8px;
-  border-radius: 12px;
-  color: var(--mutedText);
-  cursor: pointer;
-}
-
-.maAdminRow__heart:hover{
-  background: var(--pressedBg);
-}
-
-.maAdminRow__heart.on{
-  color: var(--danger);
-}
 
 /* Modal footer */
 .maModal__ftrActions{
@@ -1495,4 +1398,54 @@ body {
   justify-content: flex-end;
   align-items: center;
   width: 100%;
+}
+
+/* ======================================================================
+   List Rows (shared)
+   - Lightweight rows for search/recent lists (course picker, etc.)
+   ====================================================================== */
+.maListRows{
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+.maListRow{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 12px;
+  background: #fff;
+  border-bottom: 1px solid var(--borderSubtle);
+  cursor: pointer;
+  user-select: none;
+}
+
+.maListRow:hover{
+  background: rgba(0,0,0,.02);
+}
+
+.maListRow:active{
+  background: rgba(0,0,0,.04);
+}
+
+.maListRow__col{
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.maListRow__col--muted{
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--mutedText);
+}
+
+.maListRow__col--right{
+  text-align: right;
 }

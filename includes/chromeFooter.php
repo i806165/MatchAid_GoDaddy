@@ -34,7 +34,7 @@
     </button>
 
     <button type="button" class="maNavBtn" data-nav="pairings" aria-label="Pairings">
-      <span class="maNavIcon" aria-hidden="true">⇄</span>
+      <span class="maNavIcon" aria-hidden="true">🔗</span>
       <span class="maNavLabel">Pairings</span>
     </button>
 
@@ -44,8 +44,13 @@
     </button>
 
     <button type="button" class="maNavBtn" data-nav="summary" aria-label="Summary">
-      <span class="maNavIcon" aria-hidden="true">✓</span>
+      <span class="maNavIcon" aria-hidden="true">🗏</span>
       <span class="maNavLabel">Summary</span>
+    </button>
+    
+    <button class="maNavBtn" data-nav="import" aria-label="Import Games">
+      <span class="maNavIcon" aria-hidden="true">⭳</span>
+      <span class="maNavLabel">Import</span>
     </button>
   </nav>
 </footer>

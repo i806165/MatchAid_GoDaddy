@@ -1,0 +1,164 @@
+/* /assets/css/favorite_players.css
+ * Page-specific rules (minimal; prefer ma_shared.css).
+ */
+
+/* (Optional) simple check icon style reused in GHIN list rows */
+.maIconCheck {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0,0,0,0.2);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.blue-checkmark {
+  color: var(--brandAccent);  /* Set the color to blue */
+  font-size: 20px;  /* Adjust size if needed */
+}
+
+
+/* (Optional) disabled list row state */
+.maListRow.is-disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+
+/* ------------------------------------------------------
+   Favorite Players list rows
+   Standard classes only: maListRow + maListRow__col
+   Desktop/tablet: one line
+   True mobile: two lines
+   Also tighten row height (less empty space)
+   ------------------------------------------------------ */
+
+/* Default (desktop/tablet): ONE line + tighter padding */
+main.maPage .maListRow {
+  flex-wrap: nowrap;
+  align-items: center;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+/* Columns stay on one line; meta can truncate */
+main.maPage .maListRow__col {
+  width: auto;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+main.maPage .maListRow__col--muted {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.maGHINSearchModal .maModal__body{
+  padding-top: 0;
+}
+
+/* GHIN Search Modal: sticky results header + column sizing */
+.maResultsHdr{
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  margin: 0; /* cancels .maModal__body padding */
+  padding: 10px 14px;
+  background: var(--brandSecondary);
+  color: #fff;
+  border-bottom: 1px solid var(--border);
+  font-weight: 800;
+}
+
+/* Header row styling */
+.maListRow--hdr{
+  opacity: 0.95;
+}
+
+/* Column widths (tune as needed) */
+.ghinColName{ flex: 1 1 auto; }
+.ghinColHI{ flex: 0 0 56px; text-align: right; }
+.ghinColG{  flex: 0 0 40px; text-align: center; }
+.ghinColMark{ flex: 0 0 34px; }
+
+/* GHIN search controls layout */
+.ghinSearchRow{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Default (desktop): one line: Last | First | State | Search */
+.ghinFieldLast{  flex: 1 1 320px; }
+.ghinFieldFirst{ flex: 1 1 220px; }
+.ghinFieldState{ flex: 0 0 90px; }
+.ghinFieldBtn{   flex: 0 0 auto; }
+
+/* Make inputs/buttons consistent height if needed */
+.ghinFieldBtn .btn{ white-space: nowrap; }
+
+/* Mobile behavior: Line 1 = Last | State | Search ; Line 2 = First (full width) */
+@media (max-width: 640px){
+  .ghinFieldLast{ flex: 1 1 220px; order: 1; }   /* grows, but stays on line 1 */
+  .ghinFieldState{ flex: 0 0 72px; order: 2;}    /* compact 2-char state */
+  .ghinFieldBtn{ flex: 0 0 auto; order: 3;}    /* stays on line 1 */
+  .ghinFieldFirst{ flex: 1 1 100%; order: 10; } /* forces to line 2 after the others */
+}
+
+.ghinFieldState input{
+  text-transform: uppercase;
+}
+
+/* Mobile Favorites list: single-line row (Name + icons), hide GHIN + groups */
+@media (max-width: 640px){
+  main.maPage .maListRow{
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  /* Hide the “••••1234 • Group1, Group2” column */
+  main.maPage .maListRow__col--muted{
+    display: none;
+  }
+
+  /* Name should take remaining space and truncate */
+  main.maPage .maListRow__col:first-child{
+    flex: 1 1 auto;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Keep icon buttons from shrinking */
+  main.maPage .iconBtn{
+    flex: 0 0 auto;
+  }
+}
+
+@media (min-width: 980px){
+  /* 1) Desktop backdrop ("outside the canvas") */
+  body{
+    background:
+      radial-gradient(1200px circle at 18% 8%,
+        color-mix(in srgb, var(--brandPrimary) 16%, transparent),
+        transparent 58%),
+      radial-gradient(900px circle at 82% 0%,
+        color-mix(in srgb, var(--brandSecondary) 16%, transparent),
+        transparent 60%),
+      linear-gradient(180deg,
+        color-mix(in srgb, var(--surfaceApp) 96%, black),
+        var(--surfaceApp));
+    background-attachment: fixed;
+  }
+
+  /* 2) Center the page content column */
+  .maPage{
+    display: flex;
+    justify-content: center;
+  }
+}

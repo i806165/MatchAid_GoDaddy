@@ -42,27 +42,29 @@ $doRedirect = (string)($in["redirect"] ?? "") === "1";
 // ----------------------------
 $ROUTES = [
     // General
-    "home"        => "/",
-    "login"       => "/app/login/login.php",            // <-- set to your actual login page
-    "adminGames"  => "/app/admin_games/gameslist.php",  // <-- Games List page (shell that loads your HTML)
-    "importGames" => "/app/admin/importGames.php",
-    "gameReview"  => "/app/game/gameReview.php",
-    "scorecard"   => "/app/game/scorecard.php",
-
-    // Admin maintenance
-    "gameMaintenance" => "/app/admin/gameMaintenance.php", // expects mode=add|edit
-
-    // Stages
-    "roster"    => "/app/game/roster.php",
-    "pairings"  => "/app/game/pairings.php",
-    "teetimes"  => "/app/game/teetimes.php",
-
-    // Optional
-    "settings"  => "/app/game/settings.php",
+    "home"  => "/",
+    "login" => "/app/login.php",
+    "admin"    => "/app/admin_games/gameslist.php",
+    "favorites"   => "/app/favorite_players/favoriteplayers.php",
+    "edit"     => "/app/game_maintenance/gamemaint.php",   // expects mode=add|edit (if your router appends it)
+    "roster"   => "/app/game_roster/gameroster.php",
+    "pairings" => "/app/game_pairings/gamepairings.php",
+    "teetimes" => "/app/game_teetimes/gameteetimes.php",
+    "summary"  => "/app/game_review/gameReview.php",
+    "import" => "/app/game_import/import_games.php",
+    "gameReview"  => "/app/game_review/gameReview.php",
+    "scorecard"   => "/app/game_scorecard/scorecard.php",
+    "settings"    => "/app/game_settings/gamesettings.php",
 ];
+
 
 // Unknown action guard
 if ($action === "" || !isset($ROUTES[$action])) {
+    error_log("[MA][pageRouter] UNKNOWN action=" . ($action ?? "") .
+          " method=" . ($_SERVER["REQUEST_METHOD"] ?? "") .
+          " uri=" . ($_SERVER["REQUEST_URI"] ?? "") .
+          " userGHIN=" . ($_SESSION["SessionGHINLogonID"] ?? ""));
+
     ma_respond(400, [
         "ok" => false,
         "error" => "Unknown or missing action",

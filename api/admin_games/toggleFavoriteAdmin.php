@@ -31,11 +31,13 @@ $pdo = Db::pdo();
 $res = ServiceDbFavAdmins::upsertFavoriteAdmin($pdo, [
   "userGHIN" => $userGHIN,
   "adminKey" => $adminKey,
-  // Optional enrich fields if you pass them from UI:
-  "adminLName" => strval($payload["adminLName"] ?? ""),
-  "facilityId" => strval($payload["facilityId"] ?? ""),
-  "facilityName" => strval($payload["facilityName"] ?? "")
+  "adminLName"      => strval($payload["adminLName"] ?? ""),
+  "facilityId"      => strval($payload["facilityId"] ?? ""),
+  "facilityName"    => strval($payload["facilityName"] ?? ""),
+  "adminAssocId"    => strval($payload["adminAssocId"] ?? ""),
+  "adminAssocName"  => strval($payload["adminAssocName"] ?? "")
 ]);
+
 
 echo json_encode([
   "ok" => true,

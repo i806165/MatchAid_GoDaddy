@@ -19,18 +19,44 @@
       body: JSON.stringify(bodyObj || {}),
       credentials: "same-origin",
     });
-    const text = await res.text();
-    let data = null;
-    try { data = text ? JSON.parse(text) : null; } catch { /* keep null */ }
 
-    if (!res.ok) {
-      const err = new Error((data && data.error) ? data.error : ("HTTP " + res.status));
-      err.httpStatus = res.status;
-      err.body = data;
-      throw err;
+    const text = await res.text();
+
+    // Always attempt to parse JSON; keep raw text for debugging if it fails.
+    let data = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = { ok: false, error: "NON_JSON_RESPONSE", raw: text };
     }
+
+    // Centralized auth failure behavior (used by every page)
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        // Preferred: explicit login URL provided by the page
+        const loginUrl =
+          (window.MA && MA.routes && MA.routes.login) ? MA.routes.login : null;
+
+        if (loginUrl) {
+          window.location.assign(loginUrl);
+        } else if (MA.paths && MA.paths.routerApi) {
+          // Fallback: use router to land on login
+          window.location.assign(MA.paths.routerApi + "?action=login&redirect=1");
+        }
+
+        throw new Error("AUTH_REQUIRED");
+      }
+
+      // Non-auth failures: throw the best available message
+      const msg =
+        (data && (data.error || data.message)) ? (data.error || data.message) :
+        `Request failed (${res.status})`;
+      throw new Error(msg);
+    }
+
     return data;
   }
+
 
   // Chrome status line writer (single footer)
   function setStatus(message, level) {
@@ -55,6 +81,20 @@
     const url = base.replace(/\/$/, "") + "/" + endpointFile.replace(/^\//, "");
     return postJson(url, { payload: payload || {} });
   }
+  
+  async function apiImportGames(endpointFile, payload) {
+    const base = MA.paths.apiImportGames;
+    if (!base) throw new Error("MA.paths.apiImportGames missing");
+    const url = base.replace(/\/$/, "") + "/" + endpointFile.replace(/^\//, "");
+    return postJson(url, { payload: payload || {} });
+  }
+
+  async function apiFavPlayers(endpointFile, payload) {
+  const base = MA.paths.apiFavPlayers; // e.g. "/api/favorite_players"
+  if (!base) throw new Error("MA.paths.apiFavPlayers missing");
+  const url = base.replace(/\/$/, "") + "/" + endpointFile.replace(/^\//, "");
+  return postJson(url, { payload: payload || {} });
+}
 
   // Session API wrapper
   async function apiSession(endpointFile, payload) {
@@ -86,6 +126,8 @@
   MA.postJson = postJson;
   MA.setStatus = setStatus;
   MA.apiAdminGames = apiAdminGames;
+  MA.apiImportGames = apiImportGames;
+  MA.apiFavPlayers = apiFavPlayers
   MA.apiSession = apiSession;
   MA.routerGo = routerGo;
     // ----------------------------------------------------------------------------
@@ -136,23 +178,28 @@
     apply(rightBtn, cfg.right);
   };
 
-  // Bottom nav: show/hide items + compact centering when <=2 visible
+  // Bottom nav: show/hide items + disabled/current-stage + compact centering when <=2 visible
   MA.chrome.setBottomNav = function (state) {
     const nav = document.getElementById("chromeBottomNav");
     if (!nav) return;
 
     const visible = new Set((state && state.visible) ? state.visible : []);
+    const disabled = new Set((state && state.disabled) ? state.disabled : []);
     const active = state && state.active ? String(state.active) : "";
     const onNavigate = (state && typeof state.onNavigate === "function") ? state.onNavigate : null;
 
     let visibleCount = 0;
 
-    nav.querySelectorAll(".maNavBtn[data-nav]").forEach(btn => {
+    nav.querySelectorAll(".maNavBtn[data-nav]").forEach((btn) => {
       const id = String(btn.getAttribute("data-nav") || "");
 
       const isVisible = visible.size ? visible.has(id) : true;
       btn.style.display = isVisible ? "" : "none";
       if (isVisible) visibleCount++;
+
+      const isDisabled = disabled.has(id) || (active && id === active);
+      btn.classList.toggle("is-disabled", isDisabled);
+      btn.disabled = isDisabled;
 
       btn.classList.toggle("is-active", active && id === active);
 
@@ -160,6 +207,8 @@
       if (!btn.__ma_bound) {
         btn.__ma_bound = true;
         btn.addEventListener("click", () => {
+          // Never navigate when disabled/current stage
+          if (btn.disabled) return;
           if (onNavigate) onNavigate(id);
         });
       }
@@ -167,5 +216,6 @@
 
     nav.classList.toggle("is-compact", visibleCount <= 2);
   };
+
 
 })();

@@ -1,0 +1,20 @@
+.maCard__hdr{
+  color: var(--brandSecondaryText);
+  background: var(--brandSecondary);
+}
+/* Make the paste area open full width */
+#rowsText,
+textarea.maTextArea,
+textarea.maTextInput,
+textarea{
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-height: 220px; /* adjust to taste */
+}
+
+/* If your fields sit in a 2-col row, force the rows field to span full width */
+.maIG__rows,
+.maField--rows{
+  grid-column: 1 / -1;
+}

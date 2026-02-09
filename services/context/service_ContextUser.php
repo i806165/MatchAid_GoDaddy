@@ -91,7 +91,7 @@ public static function getUserContext(): ?array {
     $ghinId = trim((string)($_SESSION["SessionGHINLogonID"] ?? ""));
     if ($ghinId === "") return null;
 
-    // Optional: enforce the same 360-minute policy if SessionLoginTime is present
+    // enforce the same 360-minute policy if SessionLoginTime is present
     $loginTime = trim((string)($_SESSION["SessionLoginTime"] ?? ""));
     if ($loginTime !== "") {
         $loginTs = strtotime($loginTime);
@@ -115,26 +115,41 @@ public static function getUserContext(): ?array {
     // Derive clubId / clubName safely
     $clubId = "";
     $clubName = "";
+    $assocId = "";
+    $assocName = "";
+    $userState = "";
 
     if (is_array($profile)) {
         // direct keys (cover multiple shapes)
+        $userState   = (string)($profile["state"] ?? $profile["state"] ?? $profile["state"] ?? $profile["state"] ?? "");
         $clubId   = (string)($profile["club_id"] ?? $profile["clubId"] ?? $profile["clubID"] ?? $profile["ClubID"] ?? "");
         $clubName = (string)($profile["club_name"] ?? $profile["clubName"] ?? $profile["ClubName"] ?? "");
+        $assocId   = (string)($profile["assoc_id"] ?? $profile["assocId"] ?? $profile["assocID"] ?? $profile["AssociationID"] ?? $profile["AssociationId"] ?? "");
+        $assocName = (string)($profile["assoc_name"] ?? $profile["assocName"] ?? $profile["AssociationName"] ?? "");
 
         // nested GHIN-ish shape (if present)
         if ($clubId === "" && isset($profile["profileJson"]["golfers"][0]) && is_array($profile["profileJson"]["golfers"][0])) {
             $g0 = $profile["profileJson"]["golfers"][0];
+            $userState   = (string)($g0["state"] ?? "");
             $clubId   = (string)($g0["club_id"] ?? "");
             $clubName = (string)($g0["club_name"] ?? "");
+            $assocId   = (string)($g0["association_id"] ?? $g0["assoc_id"] ?? $assocId);
+            $assocName = (string)($g0["association_name"] ?? $g0["assoc_name"] ?? $assocName);
         }
     }
 
     // Cache frequently used values in session (no client trust)
     $_SESSION["SessionUserToken"]  = $userToken;
     $_SESSION["SessionAdminToken"] = $adminToken;
+    if ($userState !== "") $_SESSION["SessionUserState"] = $userState;
     if ($userName !== "") $_SESSION["SessionUserName"] = $userName;
     if ($clubId !== "")   $_SESSION["SessionClubID"]   = $clubId;
     if ($clubName !== "") $_SESSION["SessionClubName"] = $clubName;
+    if ($assocId !== "")   $_SESSION["SessionAdminAssocID"]   = $assocId;
+    if ($assocName !== "") $_SESSION["SessionAdminAssocName"] = $assocName;
+    if ($clubId !== "")    $_SESSION["SessionAdminClubID"]    = $clubId;
+    if ($clubName !== "")  $_SESSION["SessionAdminClubName"]  = $clubName;
+
 
     return [
         "ok" => true,

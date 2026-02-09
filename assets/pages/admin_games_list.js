@@ -36,6 +36,19 @@
     const d = String(dt.getDate()).padStart(2, "0");
     return `${y}-${m}-${d}`;
   }
+ 
+  // ---- Overlay scroll/interaction lock (make underlying page inert) ----
+  function setOverlayLock(on) {
+    const root = document.documentElement;
+    if (!root) return;
+    root.classList.toggle("maOverlayOpen", !!on);
+  }
+
+  function updateOverlayLock() {
+    const menuOpen = !!document.getElementById("menuOverlay")?.classList.contains("open");
+    const modalOpen = !!document.getElementById("modalOverlay")?.classList.contains("is-open");
+    setOverlayLock(menuOpen || modalOpen);
+  }
 
 function badgeParts(ymd) {
   const dt = parseYmd(ymd);
@@ -60,8 +73,7 @@ function badgeParts(ymd) {
       searchText: ""
     },
     games: {
-      vm: [],
-      raw: []
+      dbRows: []
     },
     filters: {
       dateFrom: "",
@@ -108,11 +120,16 @@ function badgeParts(ymd) {
       state.admins.selectedKeys = new Set(f.selectedAdminKeys.filter(Boolean));
     }
 
-    const payloadGames = {
-      dateFrom: state.filters.dateFrom || "",
-      dateTo: state.filters.dateTo || "",
-      selectedAdminKeys: computeQueryAdminKeys()
-    };
+ const payloadGames = {
+  dateFrom: state.filters.dateFrom || "",
+  dateTo: state.filters.dateTo || "",
+  selectedAdminKeys: computeQueryAdminKeys(),
+  // So queryGames.php can persist the *intent* (and not lose ALL)
+  adminScope: state.filters.adminScope || "ME",
+  // Always the UI selection (includes all admin keys when scope=ALL)
+  uiSelectedAdminKeys: computeUiAdminKeys()
+};
+
 
     const payloadAdmins = {
       // For UI selection markings, always send the UI-selected keys
@@ -144,7 +161,7 @@ function badgeParts(ymd) {
   function applyInit(payload) {
     cachedInit = payload || {};
 //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    console.log("[MA][INIT] games.vm len:", Array.isArray(cachedInit?.games?.vm) ? cachedInit.games.vm.length : "no vm",
+    console.log("[MA][INIT] games.raw len:", Array.isArray(cachedInit?.games?.vm) ? cachedInit.games.vm.length : "no vm",
             "games.raw len:", Array.isArray(cachedInit?.games?.raw) ? cachedInit.games.raw.length : "no raw");
 //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     try {
@@ -163,7 +180,7 @@ function badgeParts(ymd) {
       if (MA.chrome && typeof MA.chrome.setActions === "function") {
         MA.chrome.setActions({
           left:  { show: false },
-          right: { show: true, label: "Actions" } // click wired in wireFiltersModal()
+          right: { show: true, label: "Actions" } // 
         });
       }
 
@@ -228,72 +245,71 @@ function renderGames(payload) {
   const emptyEl = document.getElementById("emptyState");
   if (!cardsEl) return;
 
-  const vm = Array.isArray(payload?.games?.vm) ? payload.games.vm : [];
-  const raw = Array.isArray(payload?.games?.raw) ? payload.games.raw : [];
+const dbRows = Array.isArray(payload?.games?.raw) ? payload.games.raw : [];
+state.games.dbRows = dbRows;
 
-  state.games.vm = vm;
-  state.games.raw = raw;
+if (!state.games.dbRows.length) {
+  cardsEl.innerHTML = "";
+  if (emptyEl) emptyEl.style.display = "block";
+  return;
+}
+if (emptyEl) emptyEl.style.display = "none";
 
-  if (!state.games.vm.length) {
-    cardsEl.innerHTML = "";
-    if (emptyEl) emptyEl.style.display = "block";
-    return;
-  }
-  if (emptyEl) emptyEl.style.display = "none";
+cardsEl.innerHTML = state.games.dbRows
+  .map((r) => {
+    const playDate = String(r.dbGames_PlayDate || "").trim();
+    const b = badgeParts(playDate);
 
-  cardsEl.innerHTML = state.games.vm
-    .map((g) => {
-      const b = badgeParts(g.playDate);
+    const course = String(r.dbGames_CourseName || "").trim();
+    const facility = String(r.dbGames_FacilityName || "").trim();
+    const adminName = String(r.dbGames_AdminName || r.dbGames_AdminGHIN || "").trim();
 
-      const course = String(g.courseName || "").trim();
-      const facility = String(g.facilityName || "").trim();
-      const adminName = String(g.adminName || g.adminGHIN || "").trim();
+    const playTimeDb = String(r.dbGames_PlayTime || "").trim();      // "09:51:00"
+    const playTime = playTimeDb ? playTimeDb.substring(0, 5) : "";   // "09:51"
 
-      const playTime = String(g.playTimeText || "").trim();
-      const privacy = String(g.privacy || "").trim();
-      const holes = String(g.holes || "").trim();
+    const privacy = String(r.dbGames_Privacy || "").trim();
+    const holes = String(r.dbGames_Holes || "").trim();
 
-      const playerCount = Number(g.playerCount ?? 0);
-      const teeCnt = Number(g.teeTimeCnt ?? 0);
-      const totalSlots = teeCnt > 0 ? teeCnt * 4 : 0;
-      const playersText = totalSlots > 0 ? `${playerCount}/${totalSlots}` : `${playerCount}`;
-     
-      const line2 = [
-        playTime, holes
-      ].filter(Boolean).join(" • ");
-      
-      const line3 = [
-        (playersText ? `Registered ${playersText}` : null),
-        privacy || null,
-      ].filter(Boolean).join(" • ");
+    // playerCount may or may not exist in raw depending on your SQL.
+    // Use it if present; otherwise 0.
+    const playerCount = Number(r.playerCount ?? r.dbGames_PlayerCount ?? 0);
 
-      const title = String(g.title || "").trim();
-      const ggid = String(g.ggid || "").trim();
+    const teeCnt = Number(r.dbGames_TeeTimeCnt ?? 0);
+    const totalSlots = teeCnt > 0 ? teeCnt * 4 : 0;
+    const playersText = totalSlots > 0 ? `${playerCount}/${totalSlots}` : `${playerCount}`;
 
-      return `
-        <div class="maCard maGameCard" data-ggid="${esc(ggid)}">
-          <div class="maCard__hdr">
-            <div class="maCard__title">
-              <span class="maCard__titleText">${esc(title)}</span>
-              <span class="maCard__titleGgid">${esc(ggid)}</span>
-            </div>
+    const line2 = [playTime, holes].filter(Boolean).join(" • ");
 
-            <!-- Admin name in header (right-justified by ma_shared.css) -->
-            <div class="maCard__actions">
-              <div class="maGameCard__hdrAdmin" title="${esc(adminName)}">${esc(adminName)}</div>
-            </div>
+    const line3 = [
+      (playersText ? `Registered ${playersText}` : null),
+      (privacy ? `Accessible by ${privacy}` : null),
+    ].filter(Boolean).join(" • ");
+
+    const title = String(r.dbGames_Title || "").trim();
+    const ggid = String(r.dbGames_GGID ?? "").trim();
+
+    return `
+      <div class="maCard maGameCard" data-ggid="${esc(ggid)}">
+        <div class="maCard__hdr">
+          <div class="maCard__title">
+            <span class="maCard__titleText">${esc(title)}</span>
+            <span class="maCard__titleGgid">${esc(ggid)}</span>
           </div>
 
+          <div class="maCard__actions">
+            <div class="maGameCard__hdrAdmin" title="${esc(adminName)}">${esc(adminName)}</div>
+          </div>
+        </div>
 
-          <div class="maCard__body maGameCard__body">
-            <div class="maGameCard__top">
-              <div class="maDateBadge">
-                <div class="maDateBadge__top">${esc(b.mon)}</div>
-                <div class="maDateBadge__mid">${esc(b.day)}</div>
-                <div class="maDateBadge__bot">${esc(b.dow)}</div>
-              </div>
-
-              <div class="maGameCard__meta">
+        <div class="maCard__body maGameCard__body">
+          <div class="maGameCard__top">
+            <div class="maDateBadge">
+              <div class="maDateBadge__top">${esc(b.top)}</div>
+              <div class="maDateBadge__mid">${esc(b.day)}</div>
+              <div class="maDateBadge__bot">${esc(b.bot)}</div>
+            </div>
+            
+            <div class="maGameCard__meta">
                 <div class="maGameCard__line1">
                   <div class="maGameCard__courseWrap" title="${esc([course, facility].filter(Boolean).join(" • "))}">
                     <span class="maGameCard__courseName">${esc(course)}</span>
@@ -331,21 +347,21 @@ function renderGames(payload) {
       if (e.target.closest("button,a,input,label")) return;
 
       const ggid = card.getAttribute("data-ggid");
-      const g = state.games.vm.find((x) => String(x.ggid) === String(ggid)) || null;
-      if (!g) return;
-      openGameMenu(g);
+      const r = state.games.dbRows.find((x) => String(x.dbGames_GGID) === String(ggid)) || null;
+      if (!r) return;
+      openGameMenu(r);
     });
   });
 
   // 2) MANAGE button: same behavior as card tap, but stop bubbling
-  cardsEl.querySelectorAll('button[data-action="menu"]').forEach((btn) => {
+  cardsEl.querySelectorAll('button[data-game-action="menu"]').forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
       const ggid = btn.getAttribute("data-ggid");
-      const g = state.games.vm.find((x) => String(x.ggid) === String(ggid)) || null;
-      if (!g) return;
-      openGameMenu(g);
+      const r = state.games.dbRows.find((x) => String(x.dbGames_GGID) === String(ggid)) || null;
+      if (!r) return;
+      openGameMenu(r);
     });
   });
 }
@@ -445,11 +461,13 @@ function renderGames(payload) {
 
     // Admin-level actions not requiring game context
     if (action === "addGame") {
-      await routerGo("gameMaintenance", { mode: "add" });
+      await routerGo("edit", { mode: "add" });
       return;
     }
+
     if (action === "import") {
-      await routerGo("gameImport", {});
+      // route key is "import" per pageRouter ($ROUTES)
+      await routerGo("import", {});
       return;
     }
     if (action === "filters") {
@@ -462,10 +480,7 @@ function renderGames(payload) {
       return;
     }
 
-    // 1) set game session
-    await apiSession("setGameSession.php", { ggid });
-
-    // 2) authorization for actions (server decides OK/NotOK)
+    // 1) authorization for actions (server decides OK/NotOK)
     const requiresAuth = new Set(["editGame", "deleteGame", "roster", "pairings", "teetimes", "settings", "viewGame", "viewScoreCard", "calendar"]);
     if (requiresAuth.has(action)) {
       const auth = await apiSession("getGameAuthorizations.php", { ggid, action });
@@ -476,21 +491,26 @@ function renderGames(payload) {
       }
     }
 
-    // 3) route keys (final destinations set in pageRouter.php)
-    if (action === "editGame") return routerGo("gameMaintenance", { mode: "edit" });
+    // 2) Initialize game session and route for all non-game relevant actions
+    //nothing here
+    
+    
+    // 3) Set game session and route for all game relevant actions
+    await apiAdmin("setGameSession.php", { ggid });
+    if (action === "editGame") return routerGo("edit", { mode: "edit" });  
     if (action === "viewGame") return routerGo("gameReview", {});
-    if (action === "viewScoreCard") return routerGo("gameScorecard", {});
-    if (action === "pairings") return routerGo("gamePairings", {});
-    if (action === "teetimes") return routerGo("gameTeetimes", {});
-    if (action === "settings") return routerGo("gameSettings", {});
+    if (action === "roster") return routerGo("roster", {});
+    if (action === "viewScoreCard") return routerGo("scorecard", {});
+    if (action === "pairings") return routerGo("pairings", {});
+    if (action === "teetimes") return routerGo("teetimes", {});
+    if (action === "settings") return routerGo("settings", {});
     if (action === "calendar") return routerGo("gameCalendar", {});
-    if (action === "roster") return routerGo("gameRoster", {});
-
     if (action === "deleteGame") {
       setStatus("Delete not wired yet (needs endpoint).", "warn");
       return;
     }
 
+    console.warn("[MA] Unknown game action:", action, "payload=", payload);
     setStatus("Unknown action: " + action, "warn");
   }
 
@@ -503,11 +523,13 @@ function renderGames(payload) {
     host.innerHTML = html;
     overlay.classList.add("open");
     overlay.setAttribute("aria-hidden", "false");
+    updateOverlayLock();   ///Scrolling
 
     const close = () => {
       overlay.classList.remove("open");
       overlay.setAttribute("aria-hidden", "true");
       host.innerHTML = "";
+      updateOverlayLock(); ///Scrolling
     };
 
     overlay.addEventListener(
@@ -668,7 +690,7 @@ function applyPreset(presetKey) {
   }
 
   function openGameMenu(g) {
-    const dt = parseYmd(g.playDate);
+    const dt = parseYmd(g.dbGames_PlayDate);
     const dateLine = dt ? dt.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "2-digit", year: "numeric" }) : "";
 
     const html = `
@@ -676,8 +698,8 @@ function applyPreset(presetKey) {
         <div class="actionMenu_header">
           <div class="actionMenu_headerRow">
             <div>
-              <div class="actionMenu_title">${esc(g.title || "Game")}</div>
-              <div class="actionMenu_subtitle">${esc(dateLine)} ${esc(g.playTimeText || "")}</div>
+              <div class="actionMenu_title">${esc(g.dbGames_Title || "Game")}</div>
+              <div class="actionMenu_subtitle">${esc(dateLine)} ${esc(g.dbGames_PlayTime || "")}</div>
             </div>
             <button class="actionMenu_closeBtn" type="button" data-closemenu="1">✕</button>
           </div>
@@ -701,7 +723,7 @@ function applyPreset(presetKey) {
 
     host.querySelectorAll("[data-menuclick]").forEach((el) => {
       el._onMenuClick = async (action) => {
-        await handleGameAction({ action, ggid: g.ggid });
+        await handleGameAction({ action, ggid: g.dbGames_GGID });
       };
     });
   }
@@ -992,15 +1014,22 @@ function wireFiltersModal() {
   // ------------------------------------------------------------
   // modal open/close helpers (preserve + revert behavior)
   // ------------------------------------------------------------
+  //let pendingFrom = '';
+  //let pendingTo = '';
+  //let pendingAdmin = '';
+  //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
   let pendingFrom = '';
   let pendingTo = '';
-  let pendingAdmin = '';
+  let pendingScope = 'ME';
+  let pendingSelectedKeys = [];
 
   const openModal = () => {
     // snapshot current filter state so Cancel/Close can revert
     pendingFrom = String(state.filters?.dateFrom || '');
     pendingTo = String(state.filters?.dateTo || '');
-    pendingAdmin = String(state.filters?.adminGhin || '');
+    //pendingAdmin = String(state.filters?.adminGhin || '');
+    //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    pendingSelectedKeys = Array.from(state.admins?.selectedKeys || []);
 
     // seed UI from current state
     if (dateFromEl) dateFromEl.value = pendingFrom;
@@ -1012,6 +1041,7 @@ function wireFiltersModal() {
     // open modal
     modalOverlay.classList.add('is-open');
     modalOverlay.setAttribute('aria-hidden', 'false');
+    updateOverlayLock(); ////Scrolling
 
     // calendar starts closed until user hits a picker (matches legacy look)
     closeCalendar();
@@ -1027,6 +1057,7 @@ function wireFiltersModal() {
 
     closeCalendar();
     modalOverlay.classList.remove('is-open');
+    updateOverlayLock();
     modalOverlay.setAttribute('aria-hidden', 'true');
   };
 
@@ -1061,10 +1092,6 @@ function wireFiltersModal() {
         });
   }
 
-  // Click-outside overlay closes (revert), like legacy
-  modalOverlay.addEventListener('click', (e) => {
-    if (e.target === modalOverlay) closeModal(true);
-  });
 }
 
   // ---- Boot ----
@@ -1074,11 +1101,20 @@ function wireFiltersModal() {
     // Chrome bottom nav: Home + Favorites only, centered
     if (MA.chrome && typeof MA.chrome.setBottomNav === "function") {
       MA.chrome.setBottomNav({
-        visible: ["home", "favorites"],
-        active: "", // none selected on this page (since admin tab hidden here)
-        onNavigate: (key) => {
-          if (key === "home") window.location.href = "/";
-          if (key === "favorites") window.location.href = "/app/favorites/favorites.php"; // TODO: confirm actual route
+        visible: ["home", "admin", "favorites", "import"],
+        active: "admin",
+        onNavigate: (id) => {
+          try {
+            if (typeof MA.routerGo === "function") {
+              MA.routerGo(id); // expects pageRouter actions: home, admin, import
+              return;
+            }
+            // last resort fallback (should not be hit if MA.routerGo is present)
+            const router = MA.paths?.routerApi || "/api/session/pageRouter.php";
+            window.location.assign(router + "?action=" + encodeURIComponent(id) + "&redirect=1");
+          } catch (e) {
+            console.error(e);
+          }
         }
       });
     }

@@ -62,16 +62,79 @@ Logger::info("GAMESLIST_USERCTX", [
   "profileType" => is_array($context["userProfile"] ?? null) ? "array" : gettype($context["userProfile"] ?? null),
 ]);
 
-// 2) Default filters (Current by default: today → today+30)
-$today = new DateTimeImmutable("today");
+// 2) Default filters
+//    - First-time fresh: use hard-coded presets (today → today+30, ME)
+//    - Return to page: if AP_* session filters exist, restore those
+$today  = new DateTimeImmutable("today");
 $plus30 = $today->modify("+30 days");
 
-$defaultFilters = [
-  "mode" => "current", // 'current' | 'past' (UI toggle)
-  "dateFrom" => $today->format("Y-m-d"),
-  "dateTo" => $plus30->format("Y-m-d"),
-  "selectedAdminKeys" => [ strval($context["userGHIN"] ?? "") ], // default: "me"
-];
+// Hard-coded "fresh" defaults
+$defaultMode = "current";
+$defaultDateFrom = $today->format("Y-m-d");
+$defaultDateTo   = $plus30->format("Y-m-d");
+$defaultScope    = "ME";
+$defaultSelected = [ strval($context["userGHIN"] ?? "") ];
+
+// Session restore (Return path)
+$sessDf    = trim((string)($_SESSION["AP_FILTERDATEFROM"] ?? ""));
+$sessDt    = trim((string)($_SESSION["AP_FILTERDATETO"] ?? ""));
+$sessScope = strtoupper(trim((string)($_SESSION["AP_FILTERADMINSCOPE"] ?? "")));
+if (!in_array($sessScope, ["ME", "ALL", "CUSTOM"], true)) $sessScope = "";
+
+// AP_FILTER_ADMINS is stored as JSON array string
+$sessAdminsJson = (string)($_SESSION["AP_FILTER_ADMINS"] ?? "");
+$sessAdmins = [];
+if ($sessAdminsJson !== "") {
+  $tmp = json_decode($sessAdminsJson, true);
+  if (is_array($tmp)) $sessAdmins = array_values(array_filter(array_map("strval", $tmp)));
+}
+
+// Decide fresh vs return:
+// - If we have BOTH dates and a scope in session, treat as "Return"
+$isReturn = ($sessDf !== "" && $sessDt !== "" && $sessScope !== "");
+
+if ($isReturn) {
+  $dateFrom = $sessDf;
+  $dateTo   = $sessDt;
+  $scope    = $sessScope;
+  $selected = !empty($sessAdmins) ? $sessAdmins : $defaultSelected;
+
+  // Infer "mode" from the restored window (only used for fallback windows)
+  $mode = ($dateTo < $today->format("Y-m-d")) ? "past" : "current";
+
+  $defaultFilters = [
+    "mode" => $mode,
+    "dateFrom" => $dateFrom,
+    "dateTo" => $dateTo,
+    "adminScope" => $scope,
+    // IMPORTANT: this is the UI selection set (even when adminScope=ALL)
+    "selectedAdminKeys" => $selected,
+  ];
+
+  Logger::info("GAMESLIST_FILTERS_RESTORE", [
+    "path" => "return",
+    "dateFrom" => $dateFrom,
+    "dateTo" => $dateTo,
+    "adminScope" => $scope,
+    "selectedCount" => count($selected),
+  ]);
+} else {
+  $defaultFilters = [
+    "mode" => $defaultMode,
+    "dateFrom" => $defaultDateFrom,
+    "dateTo" => $defaultDateTo,
+    "adminScope" => $defaultScope,
+    "selectedAdminKeys" => $defaultSelected,
+  ];
+
+  Logger::info("GAMESLIST_FILTERS_RESTORE", [
+    "path" => "fresh",
+    "dateFrom" => $defaultDateFrom,
+    "dateTo" => $defaultDateTo,
+    "adminScope" => $defaultScope,
+    "selectedCount" => count($defaultSelected),
+  ]);
+}
 
 // 3) Hydrate INIT payload (admins + games + header)
 $initPayload = hydrateAdminGamesList($context, $defaultFilters);

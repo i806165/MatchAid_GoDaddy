@@ -1,0 +1,163 @@
+/* /assets/css/game_maintenance.css
+   Local, page-specific rules for Game Maintenance.
+   Shared tokens/layout live in /assets/css/ma_shared.css.
+*/
+
+.maCard__hdr{
+  color: var(--brandSecondaryText);
+  background: var(--brandSecondary);
+}
+
+.gmCourseRow{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.gmCourseRow .gmCourseSummary{
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.gmTimeRow{
+  display:flex;
+  gap: 8px;
+  align-items:center;
+}
+.gmTimeSel{
+  flex: 1 1 0;
+}
+
+.gmChoiceRow{
+  display:flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.gmChoiceBtn{
+  border: 1px solid var(--controlBorder);
+  background: #fff;
+  color: var(--ink);
+  border-radius: 999px;
+  min-height: 34px;
+  padding: 0 12px;
+  font-family: var(--fontFamilyBase);
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.gmChoiceBtn.is-on{
+  background: var(--segmentSelectedBg);
+  color: var(--segmentSelectedText, var(--ink));
+  border-color: transparent;
+}
+
+.gmStepper{
+  display:flex;
+  gap: 8px;
+  align-items:center;
+}
+.gmStepBtn{
+  min-width: 40px;
+  padding: 0;
+}
+.gmStepInput{
+  text-align:center;
+}
+
+.gmHint{
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--mutedText);
+}
+
+.gmCourseSummary{
+  display:flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.gmCourseLine1{
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--ink);
+}
+.gmCourseLine2{
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--mutedText);
+}
+
+.gmCourseSearchControls{
+  margin-top: 10px;
+}
+.gmCourseSearchRow{
+  display:flex;
+  gap: 12px;
+  align-items:flex-end;
+  flex-wrap: wrap;
+}
+.gmStateField{ flex: 0 0 90px; }
+.gmSearchBtnWrap{ flex: 0 0 auto; }
+
+.gmListHdr{
+  display:flex;
+  gap: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--mutedText);
+  border-bottom: 1px solid var(--borderSubtle);
+  background: var(--panelHdrBg);
+}
+.gmColFac{ flex: 1 1 40%; min-width: 0; }
+.gmColCourse{ flex: 1 1 40%; min-width: 0; }
+.gmColCity{ flex: 0 0 20%; min-width: 72px; text-align:right; }
+
+.gmEmpty{
+  padding: 18px;
+  text-align:center;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--mutedText);
+}
+/* ==========================================================================
+   Desktop-only canvas + centered page width (Game Maintenance)
+   Canvas style #1 (locked): soft branded wash + subtle depth
+   ========================================================================== */
+@media (min-width: 980px){
+
+  /* 1) Desktop backdrop ("outside the canvas") */
+  body{
+    background:
+      radial-gradient(1200px circle at 18% 8%,
+        color-mix(in srgb, var(--brandPrimary) 16%, transparent),
+        transparent 58%),
+      radial-gradient(900px circle at 82% 0%,
+        color-mix(in srgb, var(--brandSecondary) 16%, transparent),
+        transparent 60%),
+      linear-gradient(180deg,
+        color-mix(in srgb, var(--surfaceApp) 96%, black),
+        var(--surfaceApp));
+    background-attachment: fixed;
+  }
+
+  /* 2) Center the page content column */
+  .maPage{
+    display: flex;
+    justify-content: center;
+  }
+
+  /* 3) "Canvas" surface behind the cards */
+  .maPage > .maCards{
+    width: min(980px, 100%);
+    margin: 0 auto;
+
+    background: rgba(255,255,255,.72);
+    border: 1px solid rgba(0,0,0,.06);
+    border-radius: 18px;
+    padding: 14px;
+
+    box-shadow: 0 10px 30px rgba(0,0,0,.08);
+  }
+}
