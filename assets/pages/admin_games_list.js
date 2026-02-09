@@ -705,12 +705,13 @@ function applyPreset(presetKey) {
           </div>
         </div>
 
-        <button class="actionMenu_item" type="button" data-menuclick="editGame">Edit</button>
-        <button class="actionMenu_item" type="button" data-menuclick="pairings">Pairings</button>
-        <button class="actionMenu_item" type="button" data-menuclick="teetimes">Tee Times</button>
-        <button class="actionMenu_item" type="button" data-menuclick="settings">Settings</button>
+        <button class="actionMenu_item" type="button" data-menuclick="editGame">Edit Game</button>
+        <button class="actionMenu_item" type="button" data-menuclick="settings">Game Settings</button>
+        <button class="actionMenu_item" type="button" data-menuclick="roster">Player Roster</button>
+        <button class="actionMenu_item" type="button" data-menuclick="pairings">Pair Players</button>
+        <button class="actionMenu_item" type="button" data-menuclick="teetimes">Set TeeTimes</button>
         <div class="actionMenu_divider"></div>
-        <button class="actionMenu_item" type="button" data-menuclick="viewGame">Review</button>
+        <button class="actionMenu_item" type="button" data-menuclick="viewGame">Review Game</button>
         <button class="actionMenu_item" type="button" data-menuclick="viewScoreCard">Scorecard</button>
         <button class="actionMenu_item" type="button" data-menuclick="calendar">Calendar</button>
       </div>
