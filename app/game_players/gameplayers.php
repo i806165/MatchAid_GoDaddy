@@ -4,6 +4,7 @@ declare(strict_types=1);
 if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 
 require_once __DIR__ . "/../../bootstrap.php";
+require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
 
@@ -11,6 +12,13 @@ $_SESSION["SessionPortal"] = "ADMIN PORTAL";
 $_SESSION["SessionFavLaunchMode"] = "registrations";
 $_SESSION["SessionFavReturnAction"] = "roster";
 $_SESSION["SessionFavPlayerGHIN"] = "";
+
+Logger::info("GAMEPLAYERS_ENTRY", [
+  "uri" => $_SERVER["REQUEST_URI"] ?? "",
+  "ghin" => $_SESSION["SessionGHINLogonID"] ?? "",
+  "ggid" => $_SESSION["SessionStoredGGID"] ?? "",
+  "loginTime" => $_SESSION["SessionLoginTime"] ?? "",
+]);
 
 $uc = ServiceUserContext::getUserContext();
 if (!$uc || empty($uc["ok"])) {
@@ -38,20 +46,23 @@ try {
   exit;
 }
 
+
 $paths = [
   "routerApi" => MA_ROUTE_API_ROUTER,
-  "gamePlayersGet" => "/api/game_players/getGamePlayers.php",
-  "gamePlayersUpsert" => "/api/game_players/upsertGamePlayers.php",
-  "gamePlayersDelete" => "/api/game_players/deleteGamePlayers.php",
-  "favPlayersInit" => "/api/favorite_players/initFavPlayers.php",
-  "ghinPlayerSearch" => "/api/GHIN/searchPlayers.php",
-  "ghinGetTeeSets" => "/api/GHIN/getTeeSets.php",
+  "apiGHIN" => MA_ROUTE_API_GHIN,
+  "apiGamePlayers" => MA_ROUTE_API_GAME_PLAYERS,
+  "apiFavoritePlayers" => MA_ROUTE_API_FAVORITE_PLAYERS,
+  "gamePlayersGet" => MA_ROUTE_API_GAME_PLAYERS . "/getGamePlayers.php",
+  "gamePlayersUpsert" => MA_ROUTE_API_GAME_PLAYERS . "/upsertGamePlayers.php",
+  "gamePlayersDelete" => MA_ROUTE_API_GAME_PLAYERS . "/deleteGamePlayers.php",
+  "favPlayersInit" => MA_ROUTE_API_FAVORITE_PLAYERS . "/initFavPlayers.php",
+  "ghinPlayerSearch" => MA_ROUTE_API_GHIN . "/searchPlayers.php",
+  "ghinGetTeeSets" => MA_ROUTE_API_GHIN . "/getTeeSets.php",
 ];
 
-$maChromeLogoUrl = "/assets/images/MatchAidLogoSquare.jpeg";
-$maChromeTitleLine1 = "Game Players";
-$maChromeTitleLine2 = "GGID " . (string)$ggid;
-$maChromeTitleLine3 = "";
+$maChromeTitle = "Game Players";
+$maChromeSubtitle = "GGID " . (string)$ggid;
+$maChromeLogoUrl = null;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -59,18 +70,23 @@ $maChromeTitleLine3 = "";
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MatchAid • Game Players</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="/assets/css/ma_shared.css">
   <link rel="stylesheet" href="/assets/css/game_players.css?v=1">
 </head>
 <body>
 <?php include __DIR__ . "/../../includes/chromeHeader.php"; ?>
 
-<div class="maControlArea gpControlsBand" id="gpControlsBand">
-  <div id="gpTabStrip" class="gpTabs" role="tablist" aria-label="Player registration tabs"></div>
-  <div id="gpTabControls" class="gpTabControls"></div>
-</div>
-
 <main class="maPage" role="main">
+  <div class="maControlArea gpControlsBand" id="gpControlsBand">
+    <div id="gpTabStrip" class="gpTabs" role="tablist" aria-label="Player registration tabs"></div>
+    <div id="gpTabControls" class="gpTabControls"></div>
+  </div>
+
   <?php include __DIR__ . "/gameplayers_view.php"; ?>
 </main>
 
@@ -81,7 +97,12 @@ window.MA = window.MA || {};
 window.MA.paths = <?= json_encode($paths, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 window.__INIT__ = <?= json_encode($initPayload, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 window.__MA_INIT__ = window.__INIT__;
-window.MA.routes = { router: window.MA.paths.routerApi, login: <?= json_encode(MA_ROUTE_LOGIN) ?> };
+window.MA.routes = {
+  router: window.MA.paths.routerApi,
+  login: <?= json_encode(MA_ROUTE_LOGIN) ?>,
+  apiGHIN: window.MA.paths.apiGHIN,
+  apiGamePlayers: window.MA.paths.apiGamePlayers
+};
 </script>
 <script src="/assets/js/ma_shared.js"></script>
 <script src="/assets/modules/ghin_player_search.js"></script>
