@@ -320,7 +320,7 @@ cardsEl.innerHTML = state.games.dbRows
                   <button
                     type="button"
                     class="maCard__actionBtn maGameCard__manageBtn"
-                    data-action="menu"
+                    data-game-action="menu"
                     data-ggid="${esc(ggid)}"
                     aria-label="Manage"
                   >MANAGE</button>
