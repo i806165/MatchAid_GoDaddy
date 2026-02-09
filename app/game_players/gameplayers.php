@@ -13,6 +13,16 @@ $_SESSION["SessionFavLaunchMode"] = "registrations";
 $_SESSION["SessionFavReturnAction"] = "roster";
 $_SESSION["SessionFavPlayerGHIN"] = "";
 
+$queryGGID = (int)($_GET["ggid"] ?? 0);
+if ($queryGGID > 0) {
+  ServiceContextGame::setGameContext($queryGGID);
+}
+
+$returnTo = trim((string)($_GET["returnTo"] ?? ""));
+if ($returnTo === "" || strpos($returnTo, "/") !== 0) {
+  $returnTo = "/app/admin_games/gameslist.php";
+}
+
 Logger::info("GAMEPLAYERS_ENTRY", [
   "uri" => $_SERVER["REQUEST_URI"] ?? "",
   "ghin" => $_SESSION["SessionGHINLogonID"] ?? "",
@@ -42,7 +52,13 @@ try {
     ]
   ];
 } catch (Throwable $e) {
-  header("Location: " . MA_ROUTE_LOGIN);
+  Logger::error("GAMEPLAYERS_INIT_FAIL", [
+    "err" => $e->getMessage(),
+    "ghin" => $_SESSION["SessionGHINLogonID"] ?? "",
+    "ggid" => $_SESSION["SessionStoredGGID"] ?? "",
+    "returnTo" => $returnTo
+  ]);
+  header("Location: " . $returnTo);
   exit;
 }
 
