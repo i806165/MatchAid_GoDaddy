@@ -1,0 +1,26 @@
+.gpControlsBand{ padding: 8px 10px; }
+.gpTabs{ display:flex; gap:6px; margin-bottom:6px; flex-wrap:wrap; }
+.gpTabBtn{ border:1px solid var(--controlBorder); background:#fff; border-radius:8px; padding:6px 8px; font-size:12px; font-weight:700; }
+.gpTabBtn.is-on{ background: var(--brandPrimaryBg); color:#fff; border-color: var(--brandPrimaryBg); }
+.gpTabControls .maFieldRow{ gap:6px; }
+.gpTabControls .maTextInput{ min-height:36px; padding:6px 8px; }
+.gpBody{ display:flex; flex-direction:column; gap:8px; }
+.gpSection{ background:#fff; border:1px solid var(--borderSubtle); border-radius:10px; overflow:hidden; }
+.gpSection__hdr{ padding:6px 8px; font-size:12px; font-weight:800; border-bottom:1px solid var(--borderSubtle); }
+.gpRows{ display:flex; flex-direction:column; }
+.gpRow{ display:grid; grid-template-columns:1fr auto auto auto auto auto; gap:6px; align-items:center; padding:8px 8px; border-bottom:1px solid var(--borderSubtle); font-size:12px; }
+.gpRow:last-child{ border-bottom:0; }
+.gpRow .btnIcon{ border:1px solid var(--controlBorder); background:#fff; border-radius:8px; min-height:34px; min-width:34px; font-size:16px; }
+.gpStack{ display:flex; flex-direction:column; min-width:0; }
+.gpName{ font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.gpMeta{ font-size:11px; color:var(--mutedText); }
+.gpEmpty{ padding:10px; font-size:12px; color:var(--mutedText); }
+.gpTeeRow{ display:flex; justify-content:space-between; gap:8px; padding:10px; border-bottom:1px solid var(--borderSubtle); cursor:pointer; }
+.gpTeeRow.is-on{ background:#eef5ff; }
+.gpAddBtn{ min-height:36px; }
+
+@media (max-width: 680px){
+  .maPage{ padding:8px; }
+  .gpRow{ grid-template-columns:1fr auto auto; }
+  .gpHideSm{ display:none; }
+}
