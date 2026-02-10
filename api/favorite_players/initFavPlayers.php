@@ -10,6 +10,9 @@ header("Content-Type: application/json; charset=utf-8");
 
 require_once MA_SERVICES . "/database/service_dbFavPlayers.php";
 
+$in = ma_json_in();
+$courseId = trim((string)($in["courseId"] ?? ""));
+
 $userGHIN  = (string)($_SESSION["SessionGHINLogonID"] ?? "");
 $userState = (string)($_SESSION["SessionUserState"] ?? ""); // use your actual key if different
 
@@ -28,7 +31,7 @@ if ($returnAction === "") {
 }
 
 // NEW PATTERN: endpoint orchestrates; service owns DB reads/writes
-$favorites = service_dbFavPlayers::getFavoritesForUser($userGHIN); // SELECT * happens inside service
+$favorites = service_dbFavPlayers::getFavoritesForUser($userGHIN, $courseId); // SELECT * happens inside service
 $groups    = service_dbFavPlayers::getGroupsForUser($userGHIN);
 
 echo json_encode([
