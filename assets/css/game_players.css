@@ -1,0 +1,105 @@
+.gpControlsBand{ padding:6px 8px 4px; border-bottom:1px solid var(--borderSubtle); background:#fff; }
+.gpTabs{ display:flex; overflow:auto; -webkit-overflow-scrolling:touch; gap:4px; padding-bottom:2px; }
+.gpTabs::-webkit-scrollbar{ display:none; }
+.gpTabBtn{
+  border:1px solid var(--controlBorder);
+  background:#fff;
+  border-radius:999px;
+  padding:6px 10px;
+  font-size:12px;
+  font-weight:700;
+  line-height:1.1;
+  white-space:nowrap;
+}
+.gpTabBtn.is-on{ background:var(--brandPrimaryBg); color:var(--brandPrimary); border-color:var(--brandPrimaryBg); }
+
+.gpTabControls{ margin-top:6px; }
+.gpTabControls .maFieldRow{ gap:6px; align-items:center; }
+.gpTabControls .maTextInput{ min-height:34px; padding:5px 8px; font-size:12px; }
+.gpAddBtn{ min-height:34px; padding:0 10px; font-size:12px; }
+
+.gpBody{ display:flex; flex-direction:column; min-height:0; overflow:auto; }
+.gpList{ display:flex; flex-direction:column; border-top:1px solid var(--borderSubtle); border-bottom:1px solid var(--borderSubtle); background:#fff; }
+.gpListHdr,
+.gpListRow{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 52px 52px 32px 32px;
+  align-items:center;
+  column-gap:6px;
+  padding:6px 8px;
+}
+.gpListHdr{ font-size:11px; font-weight:700; color:var(--mutedText); background:#fafafa; border-bottom:1px solid var(--borderSubtle); }
+.gpListRow{ font-size:12px; border-bottom:1px solid var(--borderSubtle); }
+.gpListRow:last-child{ border-bottom:0; }
+.gpName{ font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.gpMeta{ font-size:11px; color:var(--mutedText); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.gpStat{ font-size:12px; font-variant-numeric:tabular-nums; text-align:right; }
+.gpEmpty{ padding:10px 8px; font-size:12px; color:var(--mutedText); }
+.gpTapHint{ font-size:10px; color:var(--mutedText); text-align:right; white-space:nowrap; }
+.gpRowClickable{ cursor:pointer; }
+.gpRowClickable:hover{ background:rgba(0,0,0,.02); }
+
+.gpIconBtn,
+.iconBtn.gpIconBtn{
+  width:30px;
+  min-width:30px;
+  height:30px;
+  min-height:30px;
+  border-radius:7px;
+  font-size:14px;
+  padding:0;
+}
+.gpIconBtn.is-off{ opacity:.45; }
+
+.clearBtn{
+  border:0;
+  background:transparent;
+  color:var(--mutedText);
+  width:24px;
+  height:24px;
+  line-height:1;
+  border-radius:12px;
+  cursor:pointer;
+}
+.clearBtn:hover{ background:rgba(0,0,0,.06); }
+
+#gpTeeOverlay .maModal{ max-width:560px; width:min(96vw,560px); }
+#gpTeeOverlay .maModal__hdr{
+  background:#2f6b44;
+  color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:10px 12px;
+}
+.gpTeeHdrText{ min-width:0; display:flex; flex-direction:column; }
+.gpTeeHdrText .maModal__title{ color:#fff; font-size:22px; line-height:1.05; }
+.gpTeeSubTitle{ margin-top:2px; font-size:18px; color:rgba(255,255,255,.92); line-height:1.1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.gpTeeCancelBtn{ min-height:32px; border-radius:999px; padding:0 14px; }
+#gpTeeRows{ display:flex; flex-direction:column; gap:6px; }
+.gpTeeCard{
+  border:1px solid var(--borderSubtle);
+  border-radius:8px;
+  background:#fff;
+  padding:8px;
+  cursor:pointer;
+}
+.gpTeeCard.is-on{ border-color:#7ea489; background:#f5faf6; box-shadow:0 0 0 1px rgba(126,164,137,.45) inset; }
+.gpTeeLine1{ font-size:13px; font-weight:700; line-height:1.2; }
+.gpTeeLine2{ margin-top:2px; font-size:11px; color:var(--mutedText); line-height:1.25; }
+.gpSelectedPill{ margin-left:8px; display:inline-flex; align-items:center; height:22px; padding:0 10px; border-radius:999px; border:1px solid #9dbca6; color:#3f6a4f; background:#edf6ef; font-size:12px; font-weight:700; }
+
+@media (max-width: 760px){
+  .maPage{ padding:6px; }
+  .gpListHdr,
+  .gpListRow{ grid-template-columns:minmax(0,1fr) 48px 48px 30px 30px; padding:6px; }
+  .gpMeta{ font-size:10px; }
+  .gpIconBtn,
+  .iconBtn.gpIconBtn{ width:28px; min-width:28px; height:28px; min-height:28px; }
+}
+
+@media (max-width: 560px){
+  .gpListHdr,
+  .gpListRow{ grid-template-columns:minmax(0,1fr) 44px 44px 28px 28px; column-gap:4px; }
+}
