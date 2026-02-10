@@ -22,7 +22,7 @@ function pr_input(): array {
     }
 
     // Merge GET
-    foreach (["action","ggid","mode","returnTo","redirect"] as $k) {
+    foreach (["action","ggid","mode","returnTo","redirect","favPlayerGHIN"] as $k) {
         if (isset($_GET[$k]) && $_GET[$k] !== "") $data[$k] = $_GET[$k];
     }
 
@@ -36,6 +36,7 @@ $ggid     = trim((string)($in["ggid"] ?? ""));
 $mode     = trim((string)($in["mode"] ?? ""));
 $returnTo = trim((string)($in["returnTo"] ?? ""));
 $doRedirect = (string)($in["redirect"] ?? "") === "1";
+$favPlayerGHIN = trim((string)($in["favPlayerGHIN"] ?? ""));
 
 // ----------------------------
 // EDIT THESE ROUTES TO MATCH YOUR /app FILES
@@ -47,7 +48,7 @@ $ROUTES = [
     "admin"    => "/app/admin_games/gameslist.php",
     "favorites"   => "/app/favorite_players/favoriteplayers.php",
     "edit"     => "/app/game_maintenance/gamemaint.php",   // expects mode=add|edit (if your router appends it)
-    "roster"   => "/app/game_roster/gameroster.php",
+    "roster"   => "/app/game_players/gameplayers.php",
     "pairings" => "/app/game_pairings/gamepairings.php",
     "teetimes" => "/app/game_teetimes/gameteetimes.php",
     "summary"  => "/app/game_review/gameReview.php",
@@ -70,6 +71,13 @@ if ($action === "" || !isset($ROUTES[$action])) {
         "error" => "Unknown or missing action",
         "action" => $action
     ]);
+}
+
+// Favorites launch context
+if ($action === "favorites") {
+    $_SESSION["SessionFavLaunchMode"] = ($mode !== "") ? $mode : "favorites";
+    $_SESSION["SessionFavReturnAction"] = ($returnTo !== "") ? $returnTo : "favorites";
+    $_SESSION["SessionFavPlayerGHIN"] = $favPlayerGHIN;
 }
 
 // ----------------------------
