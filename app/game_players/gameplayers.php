@@ -94,7 +94,7 @@ $maChromeLogoUrl = null;
   <link rel="stylesheet" href="/assets/css/ma_shared.css">
   <link rel="stylesheet" href="/assets/css/game_players.css?v=1">
 </head>
-<body class="gpPage">
+<body>
 <?php include __DIR__ . "/../../includes/chromeHeader.php"; ?>
 
 <div class="maControlArea gpControlsBand" id="gpControlsBand">
@@ -106,9 +106,21 @@ $maChromeLogoUrl = null;
 
 <main class="maPage" role="main">
   <div class="gpShell gpShell--body">
-    <?php include __DIR__ . "/gameplayers_view.php"; ?>
+    <div id="gpBody" class="maPanel__body" style="padding:0;"></div>
   </div>
 </main>
+
+<div id="maTeeOverlay" class="maModalOverlay" aria-hidden="true">
+  <div class="maModal" role="dialog" aria-modal="true">
+    <header class="maModal__hdr">
+      <div class="maModal__titles"><div class="maModal__title">Select Tee</div><div id="maTeeSubTitle" class="maModal__subtitle"></div></div>
+      <button id="maTeeCancel" class="closeBtn" type="button">Cancel</button>
+    </header>
+    <div class="maModal__body">
+      <div id="maTeeRows" class="maCards"></div>
+    </div>
+  </div>
+</div>
 
 <?php include __DIR__ . "/../../includes/chromeFooter.php"; ?>
 

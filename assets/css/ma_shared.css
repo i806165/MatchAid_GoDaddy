@@ -244,8 +244,10 @@ body {
 .maControlArea{
   flex: 0 0 auto;            /* peer band, never scrolls */
   padding: var(--spaceMd);   /* align with maPage horizontal padding */
+  margin: 0 var(--spaceMd) var(--spaceMd) var(--spaceMd); /* Indented sides/bottom */
   background: var(--ControlAreaBg);
-  border-bottom: 1px solid var(--ControlAreaBorder); /* or keep full border if you prefer */
+  border: 1px solid var(--ControlAreaBorder);
+  border-radius: var(--radiusLg);
 }
 
 .maPage{

@@ -37,10 +37,9 @@
     tabStrip: document.getElementById("gpTabStrip"),
     controls: document.getElementById("gpTabControls"),
     body: document.getElementById("gpBody"),
-    teeOverlay: document.getElementById("gpTeeOverlay"),
-    teeRows: document.getElementById("gpTeeRows"),
-    teeCancel: document.getElementById("gpTeeCancel"),
-    teeStatus: document.getElementById("gpTeeStatus"),
+    teeOverlay: document.getElementById("maTeeOverlay"),
+    teeRows: document.getElementById("maTeeRows"),
+    teeCancel: document.getElementById("maTeeCancel"),
   };
 
   function safe(v){ return v == null ? "" : String(v); }
@@ -81,7 +80,7 @@
     if (MA.chrome && MA.chrome.setHeaderLines) MA.chrome.setHeaderLines(["ADMIN PORTAL", "Game Players", `GGID ${safe(init.ggid)}`]);
     if (MA.chrome && MA.chrome.setActions) {
       MA.chrome.setActions({
-        left: { show:true, label:"Back", onClick:()=>MA.routerGo && MA.routerGo("edit") },
+        left: { show:false },
         right: { show:false }
       });
     }
@@ -231,9 +230,9 @@
       const status = state.ghinStatus ? `<div class="gpInlineStatus">${esc(state.ghinStatus)}</div>` : "";
       const trunc = state.ghinTruncated ? `<div class="gpInlineStatus">Results truncated. Refine your search.</div>` : "";
       const empty = (!rows && !status) ? `<div class="gpEmpty">Enter search criteria above, then Search.</div>` : "";
-      el.body.innerHTML = `<section class="gpPanel">
-        <div class="maListRow gpListHeader gpRow--ghin"><div class="maListRow__col">GHIN Lookup</div><div class="maListRow__col maListRow__col--right">HI</div><div class="maListRow__col maListRow__col--right">G</div><div class="maListRow__col"></div></div>
-        <div class="maListRows gpListRows">${status}${trunc}${rows}${empty}</div>
+      el.body.innerHTML = `<section class="maPanel">
+        <div class="maListRow maListRow--hdr gpRow--ghin"><div class="maListRow__col">GHIN Lookup</div><div class="maListRow__col maListRow__col--right">HI</div><div class="maListRow__col maListRow__col--right">G</div><div class="maListRow__col"></div></div>
+        <div class="maListRows">${status}${trunc}${rows}${empty}</div>
       </section>`;
       el.body.querySelectorAll("[data-act='ghin-row']").forEach((row)=>{
         row.onclick = ()=>{
@@ -245,9 +244,9 @@
     }
 
     if (state.activeTab === "nonrated") {
-      el.body.innerHTML = `<section class="gpPanel">
-        <div class="maListRow gpListHeader gpRow--five"><div class="maListRow__col">Add Non-Rated</div><div class="maListRow__col maListRow__col--right">HI</div><div class="maListRow__col maListRow__col--right">G</div><div class="maListRow__col"></div><div class="maListRow__col"></div></div>
-        <div class="maListRows gpListRows"><div class="maListRow gpRow--five">
+      el.body.innerHTML = `<section class="maPanel">
+        <div class="maListRow maListRow--hdr gpRow--favs"><div class="maListRow__col">Add Non-Rated</div><div class="maListRow__col maListRow__col--right">HI</div><div class="maListRow__col maListRow__col--right">G</div><div class="maListRow__col"></div><div class="maListRow__col"></div></div>
+        <div class="maListRows"><div class="maListRow gpRow--favs">
           <div class="maListRow__col">New Non-Rated Player</div>
           <div class="maListRow__col maListRow__col--right">—</div>
           <div class="maListRow__col maListRow__col--right">—</div>
@@ -261,9 +260,9 @@
     if (state.activeTab === "self") {
       const selfName = safe(state.context.userName || "Current User");
       const exists = state.players.some((p) => safe(p.dbPlayers_PlayerGHIN) === safe(state.context.userGHIN));
-      el.body.innerHTML = `<section class="gpPanel">
-        <div class="maListRow gpListHeader gpRow--five"><div class="maListRow__col">Add Self</div><div class="maListRow__col maListRow__col--right">HI</div><div class="maListRow__col maListRow__col--right">CH</div><div class="maListRow__col"></div><div class="maListRow__col"></div></div>
-        <div class="maListRows gpListRows"><div class="maListRow gpRow gpRow--five gpRowClickable" data-act="selftee">
+      el.body.innerHTML = `<section class="maPanel">
+        <div class="maListRow maListRow--hdr gpRow--favs"><div class="maListRow__col">Add Self</div><div class="maListRow__col maListRow__col--right">HI</div><div class="maListRow__col maListRow__col--right">CH</div><div class="maListRow__col"></div><div class="maListRow__col"></div></div>
+        <div class="maListRows"><div class="maListRow gpRow gpRow--favs gpRowClickable" data-act="selftee">
           <div class="maListRow__col">${esc(selfName)}<div class="maListRow__col--muted gpSub">${exists ? "Already in roster." : "Not in roster yet."}</div></div>
           <div class="maListRow__col maListRow__col--right">—</div>
           <div class="maListRow__col maListRow__col--right">—</div>
@@ -307,7 +306,7 @@
         const n = safe(f.name || f.playerName);
         const enrolled = enrolledSet.has(g);
         const lastTee = safe(f.lastCourse?.teeSetName || "");
-        return `<div class="maListRow gpRow gpRow--five ${enrolled ? "" : "gpRowClickable"}" data-fav-ghin="${esc(g)}" data-act="addfav" data-disabled="${enrolled ? "1" : "0"}">
+        return `<div class="maListRow gpRow gpRow--favs ${enrolled ? "" : "gpRowClickable"}" data-fav-ghin="${esc(g)}" data-act="addfav" data-disabled="${enrolled ? "1" : "0"}">
           <div class="maListRow__col">${esc(n)}<div class="maListRow__col--muted gpSub">${esc(lastTee)}</div></div>
           <div class="maListRow__col maListRow__col--right">${esc(f.gender || "")}</div>
           <div class="maListRow__col maListRow__col--right maListRow__col--muted">${esc(lastTee || "")}</div>
@@ -315,9 +314,9 @@
           <div class="maListRow__col"></div>
         </div>`;
       }).join("");
-      el.body.innerHTML = `<section class="gpPanel">
-        <div class="maListRow gpListHeader gpRow--five"><div class="maListRow__col">Favorites</div><div class="maListRow__col maListRow__col--right">G</div><div class="maListRow__col maListRow__col--right">Last Tee</div><div class="maListRow__col"></div><div class="maListRow__col"></div></div>
-        <div class="maListRows gpListRows">${favRows || `<div class="gpEmpty">No favorites found.</div>`}</div>
+      el.body.innerHTML = `<section class="maPanel">
+        <div class="maListRow maListRow--hdr gpRow--favs"><div class="maListRow__col">Favorites</div><div class="maListRow__col maListRow__col--right">G</div><div class="maListRow__col maListRow__col--right">Last Tee</div><div class="maListRow__col"></div><div class="maListRow__col"></div></div>
+        <div class="maListRows">${favRows || `<div class="gpEmpty">No favorites found.</div>`}</div>
       </section>`;
       el.body.querySelectorAll("[data-act='addfav']").forEach(r=>r.onclick = (e) => {
         if (r.getAttribute("data-disabled") === "1") return;
@@ -337,18 +336,16 @@
       const meta = [hi && `HI ${hi}`, ch && `CH ${ch}`, ph && `PH ${ph}`, pairing].filter(Boolean).join(" · ");
       const teeName = safe(p.dbPlayers_TeeSetName || "");
       const nameLine = teeName ? `${safe(p.dbPlayers_Name)} · ${teeName}` : safe(p.dbPlayers_Name);
-      return `<div class="maListRow gpRow gpRow--five" data-ghin="${esc(ghin)}">
+      return `<div class="maListRow gpRow gpRow--roster" data-ghin="${esc(ghin)}">
         <div class="maListRow__col">${esc(nameLine)}<div class="maListRow__col--muted gpSub">${esc(meta)}</div></div>
-        <div class="maListRow__col maListRow__col--right">${esc(hi || "—")}</div>
-        <div class="maListRow__col maListRow__col--right">${esc(ch || "—")}</div>
         <button class="iconBtn gpIconBtn ${isFav?"is-fav":""}" data-act="fav" title="Favorites" aria-label="Favorites">${isFav?"♥":"♡"}</button>
         <button class="iconBtn gpIconBtn" data-act="del" title="Remove" aria-label="Remove">✕</button>
       </div>`;
     }).join("");
 
-    const html = `<section class="gpPanel">
-      <div class="maListRow gpListHeader gpRow--five"><div class="maListRow__col">Roster (${state.players.length})</div><div class="maListRow__col maListRow__col--right">HI</div><div class="maListRow__col maListRow__col--right">CH</div><div class="maListRow__col"></div><div class="maListRow__col"></div></div>
-      <div class="maListRows gpListRows">${rows || `<div class="gpEmpty">No players registered yet.</div>`}</div>
+    const html = `<section class="maPanel">
+      <div class="maListRow maListRow--hdr gpRow--roster"><div class="maListRow__col">Roster (${state.players.length})</div><div class="maListRow__col"></div><div class="maListRow__col"></div></div>
+      <div class="maListRows">${rows || `<div class="gpEmpty">No players registered yet.</div>`}</div>
     </section>`;
 
     el.body.innerHTML = html;
@@ -480,14 +477,14 @@
   }
 
   function openTeeModal(){
-    const sub = document.getElementById("gpTeeSubTitle");
+    const sub = document.getElementById("maTeeSubTitle");
     if (sub) sub.textContent = `${safe(state.pendingPlayer?.first_name)} ${safe(state.pendingPlayer?.last_name)}`.trim();
     el.teeRows.innerHTML = state.teeOptions.map((t, idx) => {
       const id = safe(t.teeSetID || t.value);
       const isSelected = state.selectedTee && safe(state.selectedTee.teeSetID || state.selectedTee.value) === id;
       const line1 = `${safe(t.teeSetName || t.name || "Tee Set")} • CH ${safe(t.playerCH || t.ch || "")}`;
       const line2 = `${safe(t.teeSetYards || t.yards || "")} yds • Slope ${safe(t.teeSetSlope || t.slope || "")} • CR ${safe(t.teeSetRating || t.rating || "")}`;
-      return `<div class="gpTeeCard gpTeeRow ${isSelected?"is-on":""}" data-tee-id="${esc(id)}"><div class="gpTeeLine1">${esc(line1)}${isSelected ? '<span class="gpSelectedPill">Selected</span>' : ''}</div><div class="gpTeeLine2">${esc(line2)}</div></div>`;
+      return `<div class="maCard gpTeeRow ${isSelected?"is-on":""}" data-tee-id="${esc(id)}"><div class="gpTeeLine1">${esc(line1)}${isSelected ? '<span class="gpSelectedPill">Selected</span>' : ''}</div><div class="gpTeeLine2">${esc(line2)}</div></div>`;
     }).join("");
     el.teeRows.querySelectorAll(".gpTeeRow").forEach(row => row.onclick = async () => {
       el.teeRows.querySelectorAll(".gpTeeRow").forEach(r=>r.classList.remove("is-on"));
