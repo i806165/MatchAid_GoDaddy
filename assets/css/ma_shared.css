@@ -47,7 +47,7 @@
   --chromeBtnFontSize: 13px;
 
   --ControlAreaBg: color-mix(in srgb, var(--panelBg) 88%, black);
-  --ControlAreaBorder: var(--panelBorder);
+  --ControlAreaBorder: rgba(0,0,0,0.18);
 
   /* Status / Messaging */
   --chromeStatusHeight: 28px;
@@ -257,7 +257,6 @@ body {
   display: block;
   flex-direction: column;
   min-height: 0;
-  padding: var(--spaceMd);
   -webkit-overflow-scrolling: touch;
 }
 
@@ -716,6 +715,7 @@ body {
   flex: 1;
   min-height: var(--segBtnHeight);
   border: 0;
+  border-right: 1px solid var(--segBorder);
   background: transparent;
   font-size: var(--segBtnFontSize);
   font-weight: var(--segBtnWeight);
@@ -723,6 +723,10 @@ body {
   color: var(--segBtnText);
   padding: var(--spaceSm) calc(var(--spaceMd) + 2px);
   user-select: none;
+}
+
+.maSegBtn:last-child{
+  border-right: 0;
 }
 
 .maSegBtn.is-active{
