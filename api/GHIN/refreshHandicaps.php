@@ -6,7 +6,6 @@ declare(strict_types=1);
 if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 
 require_once __DIR__ . "/../../bootstrap.php";
-require_once MA_API_LIB . "/Db.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
 
 // Your workflow file is function-based (not a class)
@@ -15,10 +14,7 @@ require_once MA_SERVICES . "/workflows/WorkFlow_Handicaps.php";
 $auth = ma_api_require_auth();
 
 try {
-  $cfg = ma_config();
-  $pdo = Db::pdo($cfg["db"]);
-
-  $gc = ServiceContextGame::getGameContext($pdo);
+  $gc = ServiceContextGame::getGameContext();
   $game = $gc["game"];
   $ggid = (string)($gc["ggid"] ?? "");
 
