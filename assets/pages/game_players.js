@@ -12,9 +12,11 @@
     groups: [],
     favGroupFilter: "All groups",
     favNameFilter: "",
+    favBroadened: false,
     pendingPlayer: null,
     teeOptions: [],
     selectedTee: null,
+    selfAutoLaunched: false,
   };
 
   const tabs = [
@@ -48,10 +50,18 @@
     };
   }
 
+  function favoriteMatchesSearch(f, q){
+    const needle = safe(q).trim().toLowerCase();
+    if (!needle) return true;
+    const hay = `${safe(f.name || f.playerName)} ${safe(f.lname || "")}`.toLowerCase();
+    return hay.includes(needle);
+  }
+
   async function boot(){
     applyChrome();
     wireModal();
     await refreshPlayers();
+    await refreshFavorites();
     renderTabs();
     render();
   }
@@ -89,6 +99,7 @@
     el.tabStrip.querySelectorAll(".gpTabBtn").forEach(btn=>btn.addEventListener("click", async ()=>{
       state.activeTab = btn.dataset.tab;
       if (state.activeTab === "favorites") await refreshFavorites();
+      if (state.activeTab !== "self") state.selfAutoLaunched = false;
       renderTabs();
       render();
     }));
@@ -119,6 +130,7 @@
         </div>
         <div class="maField" style="flex:0 0 auto;"><button id="gpBtnFavoritesPage" class="btn btnSecondary gpAddBtn" type="button">Manage Favorites</button></div>
       </div>`;
+      el.controls.innerHTML += `<div class="maFieldRow"><div class="maField"><div id="gpFavHint" class="gpMeta" style="display:${state.favBroadened ? "" : "none"};">No match in selected group — showing all groups.</div></div></div>`;
       const sel = document.getElementById("gpFavGroup");
       if (sel) {
         sel.value = state.favGroupFilter;
@@ -157,13 +169,10 @@
       return;
     }
     if (state.activeTab === "self") {
-      el.controls.innerHTML = `<div class="maFieldRow">
-        <button id="gpBtnAddSelf" class="btn btnPrimary gpAddBtn" type="button">Find Tee Sets</button>
-      </div>`;
-      document.getElementById("gpBtnAddSelf").onclick = addSelf;
+      el.controls.innerHTML = `<div class="maFieldRow"><div class="maField"><div class="gpMeta">Your player record will open tee selection automatically.</div></div></div>`;
       return;
     }
-    el.controls.innerHTML = `<div class="maFieldRow"><div class="maField"><div class="gpMeta">Tap ♥ to route to Favorites.</div></div></div>`;
+    el.controls.innerHTML = `<div class="maFieldRow"><div class="maField"><div class="gpMeta">Tap ♥ to manage favorites.</div></div></div>`;
   }
 
   function renderBody(){
@@ -200,15 +209,19 @@
         <div class="gpListRow gpRowClickable" data-act="selftee">
           <div>
             <div class="gpName">${esc(selfName)}</div>
-            <div class="gpMeta">${exists ? "Already in roster. Tap Find Tee Sets to change tee." : "Not in roster yet."}</div>
+            <div class="gpMeta">${exists ? "Already in roster." : "Not in roster yet."}</div>
           </div>
           <div class="gpStat">—</div>
           <div class="gpStat">—</div>
-          <div class="gpTapHint">Tap row</div><div></div>
+          <div></div><div></div>
         </div>
       </section>`;
       const selfRow = el.body.querySelector("[data-act='selftee']");
       if (selfRow) selfRow.onclick = addSelf;
+      if (!state.selfAutoLaunched) {
+        state.selfAutoLaunched = true;
+        setTimeout(() => { addSelf(); }, 0);
+      }
       return;
     }
 
@@ -216,23 +229,36 @@
       const enrolledSet = new Set((state.players || []).map((p) => safe(p.dbPlayers_PlayerGHIN)));
       const q = safe(state.favNameFilter).trim().toLowerCase();
       const grp = safe(state.favGroupFilter || "All groups");
-      const favRows = (state.favorites || []).filter((f) => {
+      state.favBroadened = false;
+      let filtered = (state.favorites || []).filter((f) => {
         const tags = Array.isArray(f.groups) ? f.groups : [];
         const inGroup = grp === "All groups" ? true : tags.includes(grp);
         if (!inGroup) return false;
-        if (!q) return true;
-        return safe(f.name || f.playerName).toLowerCase().includes(q);
-      }).map((f) => {
+        return favoriteMatchesSearch(f, q);
+      });
+
+      if (q && filtered.length === 0 && grp !== "All groups") {
+        state.favBroadened = true;
+        state.favGroupFilter = "All groups";
+        filtered = (state.favorites || []).filter((f) => favoriteMatchesSearch(f, q));
+      }
+
+      const grpEl = document.getElementById("gpFavGroup");
+      if (grpEl && grpEl.value !== state.favGroupFilter) grpEl.value = state.favGroupFilter;
+      const hintEl = document.getElementById("gpFavHint");
+      if (hintEl) hintEl.style.display = state.favBroadened ? "" : "none";
+
+      const favRows = filtered.map((f) => {
         const g = safe(f.playerGHIN);
         const n = safe(f.name || f.playerName);
         const enrolled = enrolledSet.has(g);
         const lastTee = safe(f.lastCourse?.teeSetName || "");
         return `<div class="gpListRow ${enrolled ? "" : "gpRowClickable"}" data-fav-ghin="${esc(g)}" data-act="addfav" data-disabled="${enrolled ? "1" : "0"}">
-          <div><div class="gpName">${esc(n)}</div><div class="gpMeta">${esc(lastTee || "No prior tee on this course")}</div></div>
+          <div><div class="gpName">${esc(n)}</div><div class="gpMeta">${esc(lastTee)}</div></div>
           <div class="gpStat">${esc(f.gender || "")}</div>
           <div class="gpMeta">${esc(lastTee || "")}</div>
-          <div class="gpTapHint">${enrolled ? "👤✕" : "Tap row"}</div>
-          <div class="gpTapHint">${enrolled ? "Enrolled" : ""}</div>
+          <div class="gpTapHint">${enrolled ? "☑" : ""}</div>
+          <div class="gpTapHint">${enrolled ? "" : ""}</div>
         </div>`;
       }).join("");
       el.body.innerHTML = `<section class="gpList">
@@ -246,17 +272,23 @@
       return;
     }
 
+    const favoriteSet = new Set((state.favorites || []).map((f) => safe(f.playerGHIN)));
     const rows = state.players.map((p) => {
       const ghin = safe(p.dbPlayers_PlayerGHIN);
-      const isFav = false;
+      const isFav = favoriteSet.has(ghin);
+      const hi = safe(p.dbPlayers_HI || "");
+      const ch = safe(p.dbPlayers_CH || "");
+      const ph = safe(p.dbPlayers_PlayingHcp || p.dbPlayers_PH || "");
+      const pairing = safe(p.dbPlayers_PairingID || "");
+      const meta = [hi && `HI ${hi}`, ch && `CH ${ch}`, ph && `PH ${ph}`, pairing].filter(Boolean).join(" · ");
       return `<div class="gpListRow gpRow" data-ghin="${esc(ghin)}">
         <div>
           <div class="gpName">${esc(p.dbPlayers_Name)}</div>
-          <div class="gpMeta">${esc(p.dbPlayers_TeeSetName || "No tee selected")}</div>
+          <div class="gpMeta">${esc(meta)}</div>
         </div>
-        <div class="gpStat">${esc(p.dbPlayers_HI || "0")}</div>
-        <div class="gpStat">${esc(p.dbPlayers_CH || "0")}</div>
-        <button class="iconBtn gpIconBtn ${isFav?"":"is-off"}" data-act="fav" title="Favorites" aria-label="Favorites">♥</button>
+        <div class="gpStat">${esc(hi || "—")}</div>
+        <div class="gpStat">${esc(ch || "—")}</div>
+        <button class="iconBtn gpIconBtn ${isFav?"is-fav":""}" data-act="fav" title="Favorites" aria-label="Favorites">${isFav?"♥":"♡"}</button>
         <button class="iconBtn gpIconBtn" data-act="del" title="Remove" aria-label="Remove">✕</button>
       </div>`;
     }).join("");
@@ -401,6 +433,7 @@
     if (safe(state.pendingPlayer.ghin).startsWith("NH")) MA.ghinSearch.close && MA.ghinSearch.close();
     state.pendingPlayer = null;
     await refreshPlayers();
+    await refreshFavorites();
     renderBody();
     MA.setStatus("Player added/updated.", "success");
   }
@@ -411,6 +444,7 @@
     const res = await MA.postJson(MA.paths.gamePlayersDelete, { playerGHIN: ghin });
     if (!res?.ok) return MA.setStatus("Unable to delete player", "danger");
     await refreshPlayers();
+    await refreshFavorites();
     renderBody();
   }
 

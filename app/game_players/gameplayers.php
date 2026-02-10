@@ -97,12 +97,12 @@ $maChromeLogoUrl = null;
 <body>
 <?php include __DIR__ . "/../../includes/chromeHeader.php"; ?>
 
-<main class="maPage" role="main">
-  <div class="maControlArea gpControlsBand" id="gpControlsBand">
-    <div id="gpTabStrip" class="gpTabs" role="tablist" aria-label="Player registration tabs"></div>
-    <div id="gpTabControls" class="gpTabControls"></div>
-  </div>
+<div class="maControlArea gpControlsBand" id="gpControlsBand">
+  <div id="gpTabStrip" class="gpTabs" role="tablist" aria-label="Player registration tabs"></div>
+  <div id="gpTabControls" class="gpTabControls"></div>
+</div>
 
+<main class="maPage" role="main">
   <?php include __DIR__ . "/gameplayers_view.php"; ?>
 </main>
 
