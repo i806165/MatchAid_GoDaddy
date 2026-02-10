@@ -35,6 +35,7 @@
 
   function safe(v){ return v == null ? "" : String(v); }
   function num(v){ const n = Number(v); return Number.isFinite(n) ? n : 0; }
+  function esc(v){ return safe(v).replace(/[&<>"']/g, (c)=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
 
   async function boot(){
     applyChrome();
@@ -71,7 +72,8 @@
   }
 
   function renderTabs(){
-    el.tabStrip.innerHTML = tabs.map(t=>`<button class="gpTabBtn ${state.activeTab===t.id?"is-on":""}" data-tab="${t.id}" role="tab">${t.label}</button>`).join("");
+    el.tabStrip.classList.add("maSeg");
+    el.tabStrip.innerHTML = tabs.map(t=>`<button class="gpTabBtn maSegBtn ${state.activeTab===t.id?"is-on is-active":""}" data-tab="${t.id}" role="tab" aria-selected="${state.activeTab===t.id?"true":"false"}">${esc(t.label)}</button>`).join("");
     el.tabStrip.querySelectorAll(".gpTabBtn").forEach(btn=>btn.addEventListener("click", async ()=>{
       state.activeTab = btn.dataset.tab;
       if (state.activeTab === "favorites") await refreshFavorites();
@@ -87,12 +89,12 @@
 
   function renderControls(){
     if (state.activeTab === "ghin") {
-      el.controls.innerHTML = `<div class="maFieldRow"><button id="gpBtnSearchGhin" class="maBtn gpAddBtn" type="button">Add from GHIN</button></div>`;
+      el.controls.innerHTML = `<div class="maFieldRow"><button id="gpBtnSearchGhin" class="btn btnPrimary gpAddBtn" type="button">Add from GHIN</button></div>`;
       document.getElementById("gpBtnSearchGhin").onclick = openGHINSearch;
       return;
     }
     if (state.activeTab === "favorites") {
-      el.controls.innerHTML = `<div class="maFieldRow"><button id="gpBtnFavoritesPage" class="maBtn gpAddBtn" type="button">Open Favorites</button></div>`;
+      el.controls.innerHTML = `<div class="maFieldRow"><button id="gpBtnFavoritesPage" class="btn btnSecondary gpAddBtn" type="button">Open Favorites</button></div>`;
       document.getElementById("gpBtnFavoritesPage").onclick = () => MA.routerGo("favorites");
       return;
     }
@@ -100,46 +102,67 @@
       el.controls.innerHTML = `<div class="maFieldRow">
         <div class="maField"><input id="gpNrFirst" class="maTextInput" placeholder="First name"></div>
         <div class="maField"><input id="gpNrLast" class="maTextInput" placeholder="Last name"></div>
-        <div class="maField" style="flex:0 0 78px;"><input id="gpNrHi" class="maTextInput" placeholder="HI"></div>
-        <div class="maField" style="flex:0 0 72px;"><select id="gpNrGender" class="maTextInput"><option>M</option><option>F</option></select></div>
-        <div class="maField" style="flex:0 0 auto;"><button id="gpNrAdd" class="maBtn gpAddBtn" type="button">Add</button></div>
+        <div class="maField" style="flex:0 0 68px;"><input id="gpNrHi" class="maTextInput" placeholder="HI"></div>
+        <div class="maField" style="flex:0 0 62px;"><select id="gpNrGender" class="maTextInput"><option>M</option><option>F</option></select></div>
+        <div class="maField" style="flex:0 0 auto;"><button id="gpNrAdd" class="btn btnPrimary gpAddBtn" type="button">Find Tee Sets</button></div>
       </div>`;
       document.getElementById("gpNrAdd").onclick = addNonRated;
       return;
     }
     if (state.activeTab === "self") {
-      el.controls.innerHTML = `<div class="maFieldRow"><button id="gpBtnAddSelf" class="maBtn gpAddBtn" type="button">Add Me</button></div>`;
+      el.controls.innerHTML = `<div class="maFieldRow"><button id="gpBtnAddSelf" class="btn btnPrimary gpAddBtn" type="button">Add Self</button></div>`;
       document.getElementById("gpBtnAddSelf").onclick = addSelf;
       return;
     }
-    el.controls.innerHTML = `<div class="maFieldRow"><div class="maField"><div class="gpMeta">Tap ♥ on a roster row to jump to Favorites.</div></div></div>`;
+    el.controls.innerHTML = `<div class="maFieldRow"><div class="maField"><div class="gpMeta">Tap ♥ to route to Favorites.</div></div></div>`;
   }
 
   function renderBody(){
-    let html = `<section class="gpSection"><div class="gpSection__hdr">Current Roster (${state.players.length})</div><div class="gpRows">`;
-    if (!state.players.length) html += `<div class="gpEmpty">No players registered yet.</div>`;
-    html += state.players.map(p => {
+    const rows = state.players.map((p) => {
       const ghin = safe(p.dbPlayers_PlayerGHIN);
-      return `<div class="gpRow" data-ghin="${ghin}">
-        <div class="gpStack"><div class="gpName">${safe(p.dbPlayers_Name)}</div><div class="gpMeta">${ghin} • ${safe(p.dbPlayers_TeeSetName)}</div></div>
-        <div class="gpHideSm">HI ${safe(p.dbPlayers_HI)}</div>
-        <div class="gpHideSm">CH ${safe(p.dbPlayers_CH)}</div>
-        <button class="btnIcon" data-act="fav" title="Favorites">♥</button>
-        <button class="btnIcon" data-act="tee" title="Change Tee">⛳</button>
-        <button class="btnIcon" data-act="del" title="Remove">✕</button>
+      const isFav = false;
+      return `<div class="gpListRow gpRow" data-ghin="${esc(ghin)}">
+        <div>
+          <div class="gpName">${esc(p.dbPlayers_Name)}</div>
+          <div class="gpMeta">${esc(p.dbPlayers_TeeSetName || "No tee selected")}</div>
+        </div>
+        <div class="gpStat">${esc(p.dbPlayers_HI || "0")}</div>
+        <div class="gpStat">${esc(p.dbPlayers_CH || "0")}</div>
+        <button class="iconBtn gpIconBtn ${isFav?"":"is-off"}" data-act="fav" title="Favorites" aria-label="Favorites">♥</button>
+        <button class="iconBtn gpIconBtn" data-act="tee" title="Change Tee" aria-label="Change Tee">⛳</button>
+        <button class="iconBtn gpIconBtn" data-act="del" title="Remove" aria-label="Remove">✕</button>
       </div>`;
     }).join("");
-    html += `</div></section>`;
+
+    let html = `<section class="gpList">
+      <div class="gpListHdr">
+        <div>Roster (${state.players.length})</div>
+        <div class="gpStat">HI</div>
+        <div class="gpStat">CH</div>
+        <div></div><div></div><div></div>
+      </div>
+      ${rows || `<div class="gpEmpty">No players registered yet.</div>`}
+    </section>`;
 
     if (state.activeTab === "favorites") {
-      html += `<section class="gpSection"><div class="gpSection__hdr">Favorite Players</div><div class="gpRows">`;
-      html += (state.favorites || []).map(f => `<div class="gpRow"><div class="gpStack"><div class="gpName">${safe(f.name || f.playerName)}</div><div class="gpMeta">${safe(f.playerGHIN)}</div></div><button class="btnIcon" data-fav-ghin="${safe(f.playerGHIN)}" data-act="addfav">＋</button></div>`).join("");
-      if (!state.favorites.length) html += `<div class="gpEmpty">No favorites found.</div>`;
-      html += `</div></section>`;
+      const favRows = (state.favorites || []).map((f) => {
+        const g = safe(f.playerGHIN);
+        const n = safe(f.name || f.playerName);
+        return `<div class="gpListRow">
+          <div><div class="gpName">${esc(n)}</div><div class="gpMeta">Favorite player</div></div>
+          <div class="gpStat">${esc(f.hi || "")}</div>
+          <div class="gpStat">${esc(f.gender || "")}</div>
+          <button class="iconBtn gpIconBtn" data-fav-ghin="${esc(g)}" data-act="addfav" title="Add" aria-label="Add">＋</button>
+          <div></div><div></div>
+        </div>`;
+      }).join("");
+      html += `<section class="gpList">
+        <div class="gpListHdr"><div>Favorites</div><div class="gpStat">HI</div><div class="gpStat">G</div><div></div><div></div><div></div></div>
+        ${favRows || `<div class="gpEmpty">No favorites found.</div>`}
+      </section>`;
     }
 
     el.body.innerHTML = html;
-
     el.body.querySelectorAll("button[data-act='del']").forEach(b=>b.onclick = onDeleteRow);
     el.body.querySelectorAll("button[data-act='tee']").forEach(b=>b.onclick = onChangeTee);
     el.body.querySelectorAll("button[data-act='fav']").forEach(b=>b.onclick = onRowFavorite);
@@ -209,7 +232,14 @@
   }
 
   function openTeeModal(){
-    el.teeRows.innerHTML = state.teeOptions.map((t, idx) => `<div class="gpTeeRow ${idx===0?"is-on":""}" data-tee-id="${safe(t.teeSetID || t.value)}"><span>${safe(t.label)}</span><span>${safe(t.teeSetSlope)}</span></div>`).join("");
+    const sub = document.getElementById("gpTeeSubTitle");
+    if (sub) sub.textContent = `${safe(state.pendingPlayer?.first_name)} ${safe(state.pendingPlayer?.last_name)}`.trim();
+    el.teeRows.innerHTML = state.teeOptions.map((t, idx) => {
+      const id = safe(t.teeSetID || t.value);
+      const line1 = `${safe(t.teeSetName || t.name || "Tee Set")} • CH ${safe(t.playerCH || t.ch || "")}`;
+      const line2 = `${safe(t.teeSetYards || t.yards || "")} yds • Slope ${safe(t.teeSetSlope || t.slope || "")} • CR ${safe(t.teeSetRating || t.rating || "")}`;
+      return `<div class="gpTeeCard gpTeeRow ${idx===0?"is-on":""}" data-tee-id="${esc(id)}"><div class="gpTeeLine1">${esc(line1)}</div><div class="gpTeeLine2">${esc(line2)}</div></div>`;
+    }).join("");
     el.teeRows.querySelectorAll(".gpTeeRow").forEach(row => row.onclick = () => {
       el.teeRows.querySelectorAll(".gpTeeRow").forEach(r=>r.classList.remove("is-on"));
       row.classList.add("is-on");
