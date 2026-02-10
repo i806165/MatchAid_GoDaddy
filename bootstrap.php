@@ -28,6 +28,8 @@ define('MA_ROUTE_API_SESSION',     '/api/session');
 define('MA_ROUTE_API_ROUTER',      '/api/session/pageRouter.php');
 define('MA_ROUTE_API_GHIN',          '/api/GHIN');
 define('MA_ROUTE_API_GAME_MAINT',    '/api/game_maintenance');
+define('MA_ROUTE_API_GAME_PLAYERS',  '/api/game_players');
+define('MA_ROUTE_API_FAVORITE_PLAYERS', '/api/favorite_players');
 
 ini_set("log_errors", "1");
 ini_set("error_log", MA_ROOT . "/logs/matchaid.log");
@@ -97,4 +99,3 @@ function ma_api_require_auth(int $ttlMinutes = 360): array
     "clubName" => $clubName
   ];
 }
-
