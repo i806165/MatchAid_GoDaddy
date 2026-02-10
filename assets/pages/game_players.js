@@ -98,12 +98,12 @@
 
   function renderControls(){
     if (state.activeTab === "ghin") {
-      el.controls.innerHTML = `<div class="maFieldRow"><button id="gpBtnSearchGhin" class="btn btnPrimary gpAddBtn" type="button">Add from GHIN</button></div>`;
+      el.controls.innerHTML = `<div class="maFieldRow"><button id="gpBtnSearchGhin" class="btn btnPrimary gpAddBtn" type="button">Search GHIN</button></div>`;
       document.getElementById("gpBtnSearchGhin").onclick = openGHINSearch;
       return;
     }
     if (state.activeTab === "favorites") {
-      el.controls.innerHTML = `<div class="maFieldRow"><button id="gpBtnFavoritesPage" class="btn btnSecondary gpAddBtn" type="button">Open Favorites</button></div>`;
+      el.controls.innerHTML = `<div class="maFieldRow"><button id="gpBtnFavoritesPage" class="btn btnSecondary gpAddBtn" type="button">Manage Favorites</button></div>`;
       document.getElementById("gpBtnFavoritesPage").onclick = () => MA.routerGo("favorites");
       return;
     }
@@ -133,17 +133,19 @@
       const selfName = safe(state.context.userName || "Current User");
       const exists = state.players.some((p) => safe(p.dbPlayers_PlayerGHIN) === safe(state.context.userGHIN));
       el.body.innerHTML = `<section class="gpList">
-        <div class="gpListHdr"><div>Add Self</div><div class="gpStat">HI</div><div class="gpStat">CH</div><div></div><div></div><div></div></div>
-        <div class="gpListRow">
+        <div class="gpListHdr"><div>Add Self</div><div class="gpStat">HI</div><div class="gpStat">CH</div><div></div><div></div></div>
+        <div class="gpListRow gpRowClickable" data-act="selftee">
           <div>
             <div class="gpName">${esc(selfName)}</div>
             <div class="gpMeta">${exists ? "Already in roster. Tap Find Tee Sets to change tee." : "Not in roster yet."}</div>
           </div>
           <div class="gpStat">—</div>
           <div class="gpStat">—</div>
-          <div></div><div></div><div></div>
+          <div class="gpTapHint">Tap row</div><div></div>
         </div>
       </section>`;
+      const selfRow = el.body.querySelector("[data-act='selftee']");
+      if (selfRow) selfRow.onclick = addSelf;
       return;
     }
 
@@ -158,7 +160,6 @@
         <div class="gpStat">${esc(p.dbPlayers_HI || "0")}</div>
         <div class="gpStat">${esc(p.dbPlayers_CH || "0")}</div>
         <button class="iconBtn gpIconBtn ${isFav?"":"is-off"}" data-act="fav" title="Favorites" aria-label="Favorites">♥</button>
-        <button class="iconBtn gpIconBtn" data-act="tee" title="Change Tee" aria-label="Change Tee">⛳</button>
         <button class="iconBtn gpIconBtn" data-act="del" title="Remove" aria-label="Remove">✕</button>
       </div>`;
     }).join("");
@@ -168,7 +169,7 @@
         <div>Roster (${state.players.length})</div>
         <div class="gpStat">HI</div>
         <div class="gpStat">CH</div>
-        <div></div><div></div><div></div>
+        <div></div><div></div>
       </div>
       ${rows || `<div class="gpEmpty">No players registered yet.</div>`}
     </section>`;
@@ -177,25 +178,41 @@
       const favRows = (state.favorites || []).map((f) => {
         const g = safe(f.playerGHIN);
         const n = safe(f.name || f.playerName);
-        return `<div class="gpListRow">
+        return `<div class="gpListRow gpRowClickable" data-fav-ghin="${esc(g)}" data-act="addfav">
           <div><div class="gpName">${esc(n)}</div><div class="gpMeta">Favorite player</div></div>
           <div class="gpStat">${esc(f.hi || "")}</div>
           <div class="gpStat">${esc(f.gender || "")}</div>
-          <button class="iconBtn gpIconBtn" data-fav-ghin="${esc(g)}" data-act="addfav" title="Add" aria-label="Add">＋</button>
-          <div></div><div></div>
+          <div class="gpTapHint">Tap row</div>
+          <div></div>
         </div>`;
       }).join("");
       html += `<section class="gpList">
-        <div class="gpListHdr"><div>Favorites</div><div class="gpStat">HI</div><div class="gpStat">G</div><div></div><div></div><div></div></div>
+        <div class="gpListHdr"><div>Favorites</div><div class="gpStat">HI</div><div class="gpStat">G</div><div></div><div></div></div>
         ${favRows || `<div class="gpEmpty">No favorites found.</div>`}
       </section>`;
     }
 
     el.body.innerHTML = html;
     el.body.querySelectorAll("button[data-act='del']").forEach(b=>b.onclick = onDeleteRow);
-    el.body.querySelectorAll("button[data-act='tee']").forEach(b=>b.onclick = onChangeTee);
     el.body.querySelectorAll("button[data-act='fav']").forEach(b=>b.onclick = onRowFavorite);
-    el.body.querySelectorAll("button[data-act='addfav']").forEach(b=>b.onclick = onAddFavoriteRow);
+    el.body.querySelectorAll("[data-act='addfav']").forEach(r=>r.onclick = onAddFavoriteRow);
+    el.body.querySelectorAll(".gpRow").forEach(row => {
+      row.addEventListener("click", (e) => {
+        const actionBtn = e.target.closest("button[data-act]");
+        if (actionBtn) return;
+        const ghin = row.getAttribute("data-ghin");
+        if (!ghin) return;
+        const p = state.players.find(x => safe(x.dbPlayers_PlayerGHIN) === safe(ghin));
+        if (!p) return;
+        beginTeeFlow({
+          ghin: safe(p.dbPlayers_PlayerGHIN),
+          first_name: safe(p.dbPlayers_Name).split(" ").slice(0,-1).join(" "),
+          last_name: safe(p.dbPlayers_LName),
+          gender: safe(p.dbPlayers_Gender),
+          hi: safe(p.dbPlayers_HI)
+        });
+      });
+    });
   }
 
   async function onAddFavoriteRow(e){
@@ -313,19 +330,6 @@
     if (!res?.ok) return MA.setStatus("Unable to delete player", "danger");
     await refreshPlayers();
     renderBody();
-  }
-
-  async function onChangeTee(e){
-    const ghin = e.currentTarget.closest(".gpRow")?.getAttribute("data-ghin");
-    const p = state.players.find(x => safe(x.dbPlayers_PlayerGHIN) === safe(ghin));
-    if (!p) return;
-    await beginTeeFlow({
-      ghin: safe(p.dbPlayers_PlayerGHIN),
-      first_name: safe(p.dbPlayers_Name).split(" ").slice(0,-1).join(" "),
-      last_name: safe(p.dbPlayers_LName),
-      gender: safe(p.dbPlayers_Gender),
-      hi: safe(p.dbPlayers_HI)
-    });
   }
 
   function onRowFavorite(e){
