@@ -36,6 +36,15 @@
   function safe(v){ return v == null ? "" : String(v); }
   function num(v){ const n = Number(v); return Number.isFinite(n) ? n : 0; }
   function esc(v){ return safe(v).replace(/[&<>"']/g, (c)=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+  function splitName(full){
+    const s = safe(full).trim();
+    if (!s) return { first:"", last:"" };
+    const parts = s.split(/\s+/);
+    return {
+      first: parts.slice(0, -1).join(" ") || parts[0],
+      last: parts.length > 1 ? parts[parts.length - 1] : ""
+    };
+  }
 
   async function boot(){
     applyChrome();
@@ -49,7 +58,7 @@
     if (MA.chrome && MA.chrome.setHeaderLines) MA.chrome.setHeaderLines(["ADMIN PORTAL", "Game Players", `GGID ${safe(init.ggid)}`]);
     if (MA.chrome && MA.chrome.setActions) {
       MA.chrome.setActions({
-        //left: { show:true, label:"Back", onClick:()=>MA.routerGo && MA.routerGo("edit") },
+        left: { show:true, label:"Back", onClick:()=>MA.routerGo && MA.routerGo("edit") },
         right: { show:false }
       });
     }
@@ -110,7 +119,9 @@
       return;
     }
     if (state.activeTab === "self") {
-      el.controls.innerHTML = `<div class="maFieldRow"><button id="gpBtnAddSelf" class="btn btnPrimary gpAddBtn" type="button">Add Self</button></div>`;
+      el.controls.innerHTML = `<div class="maFieldRow">
+        <button id="gpBtnAddSelf" class="btn btnPrimary gpAddBtn" type="button">Find Tee Sets</button>
+      </div>`;
       document.getElementById("gpBtnAddSelf").onclick = addSelf;
       return;
     }
@@ -118,6 +129,24 @@
   }
 
   function renderBody(){
+    if (state.activeTab === "self") {
+      const selfName = safe(state.context.userName || "Current User");
+      const exists = state.players.some((p) => safe(p.dbPlayers_PlayerGHIN) === safe(state.context.userGHIN));
+      el.body.innerHTML = `<section class="gpList">
+        <div class="gpListHdr"><div>Add Self</div><div class="gpStat">HI</div><div class="gpStat">CH</div><div></div><div></div><div></div></div>
+        <div class="gpListRow">
+          <div>
+            <div class="gpName">${esc(selfName)}</div>
+            <div class="gpMeta">${exists ? "Already in roster. Tap Find Tee Sets to change tee." : "Not in roster yet."}</div>
+          </div>
+          <div class="gpStat">—</div>
+          <div class="gpStat">—</div>
+          <div></div><div></div><div></div>
+        </div>
+      </section>`;
+      return;
+    }
+
     const rows = state.players.map((p) => {
       const ghin = safe(p.dbPlayers_PlayerGHIN);
       const isFav = false;
@@ -180,10 +209,15 @@
   }
 
   async function addSelf(){
+    if (!safe(state.context.userGHIN)) {
+      MA.setStatus("Missing user GHIN context.", "warn");
+      return;
+    }
+    const nm = splitName(state.context.userName);
     await beginTeeFlow({
       ghin: safe(state.context.userGHIN),
-      first_name: safe(state.context.userName).split(" ").slice(0,-1).join(" "),
-      last_name: safe(state.context.userName).split(" ").slice(-1).join(""),
+      first_name: nm.first,
+      last_name: nm.last,
       gender: "M"
     });
   }
