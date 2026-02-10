@@ -1,7 +1,7 @@
 <?php declare(strict_types=1); ?>
 <section id="gpBody" class="gpBody" aria-live="polite"></section>
 
-<div id="gpTeeOverlay" class="maModalOverlay" aria-hidden="true">
+<div id="gpTeeOverlay" class="maModalOverlay gpTeeOverlay" aria-hidden="true">
   <div class="maModal" role="dialog" aria-modal="true" aria-labelledby="gpTeeTitle">
     <div class="maModal__hdr">
       <div class="gpTeeHdrText">
@@ -12,7 +12,7 @@
     </div>
     <div class="maModal__body">
       <div id="gpTeeStatus" class="maInlineAlert" style="display:none;"></div>
-      <div id="gpTeeRows"></div>
+      <div id="gpTeeRows" class="gpTeeRows"></div>
     </div>
   </div>
 </div>

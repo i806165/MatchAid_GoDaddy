@@ -17,6 +17,12 @@
     teeOptions: [],
     selectedTee: null,
     selfAutoLaunched: false,
+    ghinState: "",
+    ghinLast: "",
+    ghinFirst: "",
+    ghinRows: [],
+    ghinTruncated: false,
+    ghinStatus: "",
   };
 
   const tabs = [
@@ -50,6 +56,10 @@
     };
   }
 
+  function normalizeState(v){
+    return safe(v).trim().toUpperCase().slice(0,2);
+  }
+
   function favoriteMatchesSearch(f, q){
     const needle = safe(q).trim().toLowerCase();
     if (!needle) return true;
@@ -62,6 +72,7 @@
     wireModal();
     await refreshPlayers();
     await refreshFavorites();
+    if (!state.ghinState) state.ghinState = normalizeState(state.context.userState || "");
     renderTabs();
     render();
   }
@@ -112,8 +123,21 @@
 
   function renderControls(){
     if (state.activeTab === "ghin") {
-      el.controls.innerHTML = `<div class="maFieldRow"><button id="gpBtnSearchGhin" class="btn btnPrimary gpAddBtn" type="button">Search GHIN</button></div>`;
-      document.getElementById("gpBtnSearchGhin").onclick = openGHINSearch;
+      el.controls.innerHTML = `<div class="maFieldRow">
+        <div class="maField gpFieldState"><div class="maInputWrap"><input id="gpGhinState" class="maTextInput" maxlength="2" placeholder="State" value="${esc(state.ghinState)}"></div></div>
+        <div class="maField gpFieldLast"><div class="maInputWrap"><input id="gpGhinLast" class="maTextInput" placeholder="Last name or GHIN#" value="${esc(state.ghinLast)}"></div></div>
+        <div class="maField gpFieldFirst"><div class="maInputWrap"><input id="gpGhinFirst" class="maTextInput" placeholder="First name (optional)" value="${esc(state.ghinFirst)}"></div></div>
+        <div class="maField gpFieldBtn"><button id="gpBtnSearchGhin" class="btn btnPrimary gpAddBtn" type="button">Search</button></div>
+      </div>`;
+      const inpState = document.getElementById("gpGhinState");
+      const inpLast = document.getElementById("gpGhinLast");
+      const inpFirst = document.getElementById("gpGhinFirst");
+      const doSearch = ()=>searchGHINTab();
+      if (inpState) inpState.oninput = ()=>{ state.ghinState = normalizeState(inpState.value); inpState.value = state.ghinState; };
+      if (inpLast) inpLast.oninput = ()=>{ state.ghinLast = safe(inpLast.value); };
+      if (inpFirst) inpFirst.oninput = ()=>{ state.ghinFirst = safe(inpFirst.value); };
+      [inpState, inpLast, inpFirst].forEach((n)=>{ if (!n) return; n.onkeydown = (e)=>{ if (e.key === "Enter") doSearch(); }; });
+      document.getElementById("gpBtnSearchGhin").onclick = doSearch;
       return;
     }
     if (state.activeTab === "favorites") {
@@ -177,10 +201,30 @@
 
   function renderBody(){
     if (state.activeTab === "ghin") {
-      el.body.innerHTML = `<section class="gpList">
-        <div class="gpListHdr"><div>GHIN Lookup</div><div class="gpStat">HI</div><div class="gpStat">G</div><div></div><div></div></div>
-        <div class="gpEmpty">Use <strong>Search GHIN</strong> above, then tap a result row in the search overlay to launch tee selection.</div>
+      const enrolled = new Set((state.players || []).map((p) => safe(p.dbPlayers_PlayerGHIN)));
+      const rows = (state.ghinRows || []).map((r) => {
+        const ghin = safe(r.ghin);
+        const isEnrolled = enrolled.has(ghin);
+        return `<div class="maListRow gpGhinRow ${isEnrolled ? "" : "gpRowClickable"}" data-act="ghin-row" data-ghin="${esc(ghin)}" data-disabled="${isEnrolled ? "1" : "0"}">
+          <div class="maListRow__col">${esc(r.name || ghin)}</div>
+          <div class="maListRow__col maListRow__col--right">${esc(r.hi || "")}</div>
+          <div class="maListRow__col maListRow__col--right">${esc(r.gender || "")}</div>
+          <div class="maListRow__col maListRow__col--right gpEnrolledMark">${isEnrolled ? "☑" : ""}</div>
+        </div>`;
+      }).join("");
+      const status = state.ghinStatus ? `<div class="gpInlineStatus">${esc(state.ghinStatus)}</div>` : "";
+      const trunc = state.ghinTruncated ? `<div class="gpInlineStatus">Results truncated. Refine your search.</div>` : "";
+      const empty = (!rows && !status) ? `<div class="gpEmpty">Enter search criteria above, then Search.</div>` : "";
+      el.body.innerHTML = `<section class="gpList gpGhinPanel">
+        <div class="gpListHdr"><div>GHIN Lookup</div><div class="gpStat">HI</div><div class="gpStat">G</div><div class="gpMeta"></div></div>
+        <div class="maListRows gpGhinRows">${status}${trunc}${rows}${empty}</div>
       </section>`;
+      el.body.querySelectorAll("[data-act='ghin-row']").forEach((row)=>{
+        row.onclick = ()=>{
+          if (row.getAttribute("data-disabled") === "1") return;
+          onSelectGHINRow(row.getAttribute("data-ghin"));
+        };
+      });
       return;
     }
 
@@ -361,21 +405,56 @@
     await beginTeeFlow({ ghin, first_name:first, last_name:last, gender, hi });
   }
 
-  function openGHINSearch(){
-    const existing = new Set(state.players.map(p => safe(p.dbPlayers_PlayerGHIN)));
-    MA.ghinSearch.open({
-      title: "Add Player from GHIN",
-      defaultState: safe(state.context.userState).toUpperCase(),
-      existingGHINs: existing,
-      onSelect: async (row) => {
-        await beginTeeFlow({
-          ghin: safe(row.ghin),
-          first_name: safe(row.name).split(" ").slice(0,-1).join(" "),
-          last_name: safe(row.name).split(" ").slice(-1).join(""),
-          gender: safe(row.gender),
-          hi: safe(row.hi)
-        });
-      }
+  async function searchGHINTab(){
+    state.ghinStatus = "";
+    const lastOrId = safe(state.ghinLast).trim();
+    const first = safe(state.ghinFirst).trim();
+    const stateCode = normalizeState(state.ghinState);
+    state.ghinState = stateCode;
+    if (!lastOrId) {
+      state.ghinRows = [];
+      state.ghinTruncated = false;
+      state.ghinStatus = "Enter last name or GHIN#.";
+      renderBody();
+      return;
+    }
+    const mode = /^\d+$/.test(lastOrId) ? "id" : "name";
+    if (mode === "name" && !stateCode) {
+      state.ghinRows = [];
+      state.ghinTruncated = false;
+      state.ghinStatus = "Enter state for name search.";
+      renderBody();
+      return;
+    }
+    state.ghinStatus = "Searching…";
+    renderBody();
+    const payload = (mode === "id")
+      ? { mode, ghin: lastOrId }
+      : { mode, state: stateCode, lastName: lastOrId, firstName: first };
+    const res = await MA.postJson(MA.paths.ghinPlayerSearch, payload);
+    if (!res?.ok) {
+      state.ghinRows = [];
+      state.ghinTruncated = false;
+      state.ghinStatus = res?.message || "GHIN search failed.";
+      renderBody();
+      return;
+    }
+    state.ghinRows = Array.isArray(res.payload?.rows) ? res.payload.rows : [];
+    state.ghinTruncated = !!res.payload?.truncated;
+    state.ghinStatus = state.ghinRows.length ? "" : "No players found.";
+    renderBody();
+  }
+
+  async function onSelectGHINRow(ghin){
+    const row = (state.ghinRows || []).find((r)=>safe(r.ghin) === safe(ghin));
+    if (!row) return;
+    const nm = splitName(row.name || "");
+    await beginTeeFlow({
+      ghin: safe(row.ghin),
+      first_name: nm.first,
+      last_name: nm.last,
+      gender: safe(row.gender),
+      hi: safe(row.hi)
     });
   }
 
