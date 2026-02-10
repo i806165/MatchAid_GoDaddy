@@ -129,6 +129,31 @@
   }
 
   function renderBody(){
+    if (state.activeTab === "ghin") {
+      el.body.innerHTML = `<section class="gpList">
+        <div class="gpListHdr"><div>GHIN Lookup</div><div class="gpStat">HI</div><div class="gpStat">G</div><div></div><div></div></div>
+        <div class="gpEmpty">Use <strong>Search GHIN</strong> above, then tap a result row in the search overlay to launch tee selection.</div>
+      </section>`;
+      return;
+    }
+
+    if (state.activeTab === "nonrated") {
+      el.body.innerHTML = `<section class="gpList">
+        <div class="gpListHdr"><div>Add Non-Rated</div><div class="gpStat">HI</div><div class="gpStat">G</div><div></div><div></div></div>
+        <div class="gpListRow">
+          <div>
+            <div class="gpName">New Non-Rated Player</div>
+            <div class="gpMeta">Enter first/last name, optional HI, and gender, then tap <strong>Find Tee Sets</strong>.</div>
+          </div>
+          <div class="gpStat">—</div>
+          <div class="gpStat">—</div>
+          <div class="gpTapHint">Controls above</div>
+          <div></div>
+        </div>
+      </section>`;
+      return;
+    }
+
     if (state.activeTab === "self") {
       const selfName = safe(state.context.userName || "Current User");
       const exists = state.players.some((p) => safe(p.dbPlayers_PlayerGHIN) === safe(state.context.userGHIN));
@@ -149,6 +174,26 @@
       return;
     }
 
+    if (state.activeTab === "favorites") {
+      const favRows = (state.favorites || []).map((f) => {
+        const g = safe(f.playerGHIN);
+        const n = safe(f.name || f.playerName);
+        return `<div class="gpListRow gpRowClickable" data-fav-ghin="${esc(g)}" data-act="addfav">
+          <div><div class="gpName">${esc(n)}</div><div class="gpMeta">Favorite player</div></div>
+          <div class="gpStat">${esc(f.hi || "")}</div>
+          <div class="gpStat">${esc(f.gender || "")}</div>
+          <div class="gpTapHint">Tap row</div>
+          <div></div>
+        </div>`;
+      }).join("");
+      el.body.innerHTML = `<section class="gpList">
+        <div class="gpListHdr"><div>Favorites</div><div class="gpStat">HI</div><div class="gpStat">G</div><div></div><div></div></div>
+        ${favRows || `<div class="gpEmpty">No favorites found.</div>`}
+      </section>`;
+      el.body.querySelectorAll("[data-act='addfav']").forEach(r=>r.onclick = onAddFavoriteRow);
+      return;
+    }
+
     const rows = state.players.map((p) => {
       const ghin = safe(p.dbPlayers_PlayerGHIN);
       const isFav = false;
@@ -164,7 +209,7 @@
       </div>`;
     }).join("");
 
-    let html = `<section class="gpList">
+    const html = `<section class="gpList">
       <div class="gpListHdr">
         <div>Roster (${state.players.length})</div>
         <div class="gpStat">HI</div>
@@ -173,24 +218,6 @@
       </div>
       ${rows || `<div class="gpEmpty">No players registered yet.</div>`}
     </section>`;
-
-    if (state.activeTab === "favorites") {
-      const favRows = (state.favorites || []).map((f) => {
-        const g = safe(f.playerGHIN);
-        const n = safe(f.name || f.playerName);
-        return `<div class="gpListRow gpRowClickable" data-fav-ghin="${esc(g)}" data-act="addfav">
-          <div><div class="gpName">${esc(n)}</div><div class="gpMeta">Favorite player</div></div>
-          <div class="gpStat">${esc(f.hi || "")}</div>
-          <div class="gpStat">${esc(f.gender || "")}</div>
-          <div class="gpTapHint">Tap row</div>
-          <div></div>
-        </div>`;
-      }).join("");
-      html += `<section class="gpList">
-        <div class="gpListHdr"><div>Favorites</div><div class="gpStat">HI</div><div class="gpStat">G</div><div></div><div></div></div>
-        ${favRows || `<div class="gpEmpty">No favorites found.</div>`}
-      </section>`;
-    }
 
     el.body.innerHTML = html;
     el.body.querySelectorAll("button[data-act='del']").forEach(b=>b.onclick = onDeleteRow);
