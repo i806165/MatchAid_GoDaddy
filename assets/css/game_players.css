@@ -1,3 +1,21 @@
+.gpPage{ --gpContentMax: 1280px; }
+
+.gpShell{
+  width: min(100%, var(--gpContentMax));
+  margin-inline: auto;
+}
+
+.gpPage .maChrome__hdrRow,
+.gpPage .maChrome__status,
+.gpPage .maChrome__bottomNav{
+  width: min(100%, var(--gpContentMax));
+  margin-inline: auto;
+}
+
+.gpPage .maChrome__hdr{ padding-inline: var(--spaceSm); }
+.gpPage .maControlArea{ padding-inline: var(--spaceSm); }
+.gpPage .maPage{ padding-inline: var(--spaceSm); }
+
 .gpControlsBand{
   position: relative;
   z-index: 5;
@@ -127,4 +145,8 @@
 @media (max-width: 560px){
   .gpRow--five{ grid-template-columns: minmax(0,1fr) 38px minmax(0,88px) 26px 50px; }
   .gpRow--ghin{ grid-template-columns: minmax(0,1fr) 50px 42px 30px; }
+}
+
+@media (min-width: 1600px){
+  .gpPage{ --gpContentMax: 1360px; }
 }

@@ -94,16 +94,20 @@ $maChromeLogoUrl = null;
   <link rel="stylesheet" href="/assets/css/ma_shared.css">
   <link rel="stylesheet" href="/assets/css/game_players.css?v=1">
 </head>
-<body>
+<body class="gpPage">
 <?php include __DIR__ . "/../../includes/chromeHeader.php"; ?>
 
 <div class="maControlArea gpControlsBand" id="gpControlsBand">
-  <div id="gpTabStrip" class="gpTabs" role="tablist" aria-label="Player registration tabs"></div>
-  <div id="gpTabControls" class="gpTabControls"></div>
+  <div class="gpShell">
+    <div id="gpTabStrip" class="gpTabs" role="tablist" aria-label="Player registration tabs"></div>
+    <div id="gpTabControls" class="gpTabControls"></div>
+  </div>
 </div>
 
 <main class="maPage" role="main">
-  <?php include __DIR__ . "/gameplayers_view.php"; ?>
+  <div class="gpShell gpShell--body">
+    <?php include __DIR__ . "/gameplayers_view.php"; ?>
+  </div>
 </main>
 
 <?php include __DIR__ . "/../../includes/chromeFooter.php"; ?>
