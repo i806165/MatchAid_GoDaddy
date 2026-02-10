@@ -46,7 +46,7 @@
   --chromeSubtitleSize: 12px;
   --chromeBtnFontSize: 13px;
 
-  --ControlAreaBg: color-mix(in srgb, var(--panelBg) 96%, black);
+  --ControlAreaBg: color-mix(in srgb, var(--panelBg) 88%, black);
   --ControlAreaBorder: var(--panelBorder);
 
   /* Status / Messaging */
