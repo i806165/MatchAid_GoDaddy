@@ -158,7 +158,13 @@ main.maPage .maListRow__col--muted {
 
   /* 2) Center the page content column */
   .maPage{
-    display: flex;
-    justify-content: center;
+    display: block;
+  }
+
+  #fpList,
+  #fpForm,
+  #fpControls {
+    width: min(100%, 1280px);
+    margin-inline: auto;
   }
 }
