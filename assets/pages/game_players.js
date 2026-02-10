@@ -28,7 +28,6 @@
     body: document.getElementById("gpBody"),
     teeOverlay: document.getElementById("gpTeeOverlay"),
     teeRows: document.getElementById("gpTeeRows"),
-    teeSave: document.getElementById("gpTeeSave"),
     teeCancel: document.getElementById("gpTeeCancel"),
     teeStatus: document.getElementById("gpTeeStatus"),
   };
@@ -236,7 +235,8 @@
           first_name: safe(p.dbPlayers_Name).split(" ").slice(0,-1).join(" "),
           last_name: safe(p.dbPlayers_LName),
           gender: safe(p.dbPlayers_Gender),
-          hi: safe(p.dbPlayers_HI)
+          hi: safe(p.dbPlayers_HI),
+          selectedTeeSetId: safe(p.dbPlayers_TeeSetID)
         });
       });
     });
@@ -300,13 +300,13 @@
     if (!res?.ok) return MA.setStatus(res?.message || "Unable to get tee sets", "danger");
     state.pendingPlayer.hi = safe(res.payload?.hi);
     state.teeOptions = Array.isArray(res.payload?.teeSets) ? res.payload.teeSets : [];
-    state.selectedTee = state.teeOptions[0] || null;
+    const preferred = safe(state.pendingPlayer?.selectedTeeSetId);
+    state.selectedTee = state.teeOptions.find(t => safe(t.teeSetID || t.value) === preferred) || state.teeOptions[0] || null;
     openTeeModal();
   }
 
   function wireModal(){
     el.teeCancel.onclick = closeTeeModal;
-    el.teeSave.onclick = commitPending;
   }
 
   function openTeeModal(){
@@ -314,15 +314,17 @@
     if (sub) sub.textContent = `${safe(state.pendingPlayer?.first_name)} ${safe(state.pendingPlayer?.last_name)}`.trim();
     el.teeRows.innerHTML = state.teeOptions.map((t, idx) => {
       const id = safe(t.teeSetID || t.value);
+      const isSelected = state.selectedTee && safe(state.selectedTee.teeSetID || state.selectedTee.value) === id;
       const line1 = `${safe(t.teeSetName || t.name || "Tee Set")} • CH ${safe(t.playerCH || t.ch || "")}`;
       const line2 = `${safe(t.teeSetYards || t.yards || "")} yds • Slope ${safe(t.teeSetSlope || t.slope || "")} • CR ${safe(t.teeSetRating || t.rating || "")}`;
-      return `<div class="gpTeeCard gpTeeRow ${idx===0?"is-on":""}" data-tee-id="${esc(id)}"><div class="gpTeeLine1">${esc(line1)}</div><div class="gpTeeLine2">${esc(line2)}</div></div>`;
+      return `<div class="gpTeeCard gpTeeRow ${isSelected?"is-on":""}" data-tee-id="${esc(id)}"><div class="gpTeeLine1">${esc(line1)}${isSelected ? '<span class="gpSelectedPill">Selected</span>' : ''}</div><div class="gpTeeLine2">${esc(line2)}</div></div>`;
     }).join("");
-    el.teeRows.querySelectorAll(".gpTeeRow").forEach(row => row.onclick = () => {
+    el.teeRows.querySelectorAll(".gpTeeRow").forEach(row => row.onclick = async () => {
       el.teeRows.querySelectorAll(".gpTeeRow").forEach(r=>r.classList.remove("is-on"));
       row.classList.add("is-on");
       const id = row.getAttribute("data-tee-id");
       state.selectedTee = state.teeOptions.find(t => safe(t.teeSetID || t.value) === safe(id)) || null;
+      await commitPending();
     });
     el.teeOverlay.classList.add("is-open");
     el.teeOverlay.setAttribute("aria-hidden", "false");
