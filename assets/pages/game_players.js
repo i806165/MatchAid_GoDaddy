@@ -106,8 +106,8 @@
 
   function renderTabs(){
     el.tabStrip.classList.add("maSeg");
-    el.tabStrip.innerHTML = tabs.map(t=>`<button class="gpTabBtn maSegBtn ${state.activeTab===t.id?"is-on is-active":""}" data-tab="${t.id}" role="tab" aria-selected="${state.activeTab===t.id?"true":"false"}">${esc(t.label)}</button>`).join("");
-    el.tabStrip.querySelectorAll(".gpTabBtn").forEach(btn=>btn.addEventListener("click", async ()=>{
+    el.tabStrip.innerHTML = tabs.map(t=>`<button class="maSegBtn ${state.activeTab===t.id?"is-active":""}" data-tab="${t.id}" role="tab" aria-selected="${state.activeTab===t.id?"true":"false"}">${esc(t.label)}</button>`).join("");
+    el.tabStrip.querySelectorAll(".maSegBtn").forEach(btn=>btn.addEventListener("click", async ()=>{
       state.activeTab = btn.dataset.tab;
       if (state.activeTab === "favorites") await refreshFavorites();
       if (state.activeTab !== "self") state.selfAutoLaunched = false;
@@ -124,18 +124,22 @@
   function renderControls(){
     if (state.activeTab === "ghin") {
       el.controls.innerHTML = `<div class="maFieldRow">
-        <div class="maField gpFieldState"><div class="maInputWrap"><input id="gpGhinState" class="maTextInput" maxlength="2" placeholder="State" value="${esc(state.ghinState)}"></div></div>
-        <div class="maField gpFieldLast"><div class="maInputWrap"><input id="gpGhinLast" class="maTextInput" placeholder="Last name or GHIN#" value="${esc(state.ghinLast)}"></div></div>
-        <div class="maField gpFieldFirst"><div class="maInputWrap"><input id="gpGhinFirst" class="maTextInput" placeholder="First name (optional)" value="${esc(state.ghinFirst)}"></div></div>
-        <div class="maField gpFieldBtn"><button id="gpBtnSearchGhin" class="btn btnPrimary gpAddBtn" type="button">Search</button></div>
+        <div class="maField gpFieldState"><div class="maInputWrap gpInputClearWrap"><input id="gpGhinState" class="maTextInput" maxlength="2" placeholder="State" value="${esc(state.ghinState)}"></div></div>
+        <div class="maField gpFieldLast"><div class="maInputWrap gpInputClearWrap"><input id="gpGhinLast" class="maTextInput" placeholder="Last name or GHIN#" value="${esc(state.ghinLast)}"><button id="gpGhinLastClear" class="clearBtn ${state.ghinLast ? "" : "isHidden"}" type="button" aria-label="Clear last name">×</button></div></div>
+        <div class="maField gpFieldFirst"><div class="maInputWrap gpInputClearWrap"><input id="gpGhinFirst" class="maTextInput" placeholder="First name (optional)" value="${esc(state.ghinFirst)}"><button id="gpGhinFirstClear" class="clearBtn ${state.ghinFirst ? "" : "isHidden"}" type="button" aria-label="Clear first name">×</button></div></div>
+        <div class="maField gpFieldBtn"><button id="gpBtnSearchGhin" class="btn btnPrimary" type="button">Search</button></div>
       </div>`;
       const inpState = document.getElementById("gpGhinState");
       const inpLast = document.getElementById("gpGhinLast");
       const inpFirst = document.getElementById("gpGhinFirst");
+      const clrLast = document.getElementById("gpGhinLastClear");
+      const clrFirst = document.getElementById("gpGhinFirstClear");
       const doSearch = ()=>searchGHINTab();
       if (inpState) inpState.oninput = ()=>{ state.ghinState = normalizeState(inpState.value); inpState.value = state.ghinState; };
-      if (inpLast) inpLast.oninput = ()=>{ state.ghinLast = safe(inpLast.value); };
-      if (inpFirst) inpFirst.oninput = ()=>{ state.ghinFirst = safe(inpFirst.value); };
+      if (inpLast) inpLast.oninput = ()=>{ state.ghinLast = safe(inpLast.value); if (clrLast) clrLast.classList.toggle("isHidden", !state.ghinLast); };
+      if (inpFirst) inpFirst.oninput = ()=>{ state.ghinFirst = safe(inpFirst.value); if (clrFirst) clrFirst.classList.toggle("isHidden", !state.ghinFirst); };
+      if (clrLast) clrLast.onclick = ()=>{ state.ghinLast=""; if (inpLast) inpLast.value=""; clrLast.classList.add("isHidden"); inpLast && inpLast.focus(); };
+      if (clrFirst) clrFirst.onclick = ()=>{ state.ghinFirst=""; if (inpFirst) inpFirst.value=""; clrFirst.classList.add("isHidden"); inpFirst && inpFirst.focus(); };
       [inpState, inpLast, inpFirst].forEach((n)=>{ if (!n) return; n.onkeydown = (e)=>{ if (e.key === "Enter") doSearch(); }; });
       document.getElementById("gpBtnSearchGhin").onclick = doSearch;
       return;
@@ -143,18 +147,18 @@
     if (state.activeTab === "favorites") {
       const opts = ["All groups"].concat(state.groups || []).map(g => `<option value="${esc(g)}">${esc(g)}</option>`).join("");
       el.controls.innerHTML = `<div class="maFieldRow">
-        <div class="maField" style="max-width: 220px;">
+        <div class="maField gpFieldGroup">
           <select id="gpFavGroup" class="maTextInput">${opts}</select>
         </div>
         <div class="maField">
-          <div class="maInputWrap">
+          <div class="maInputWrap gpInputClearWrap">
             <input id="gpFavFilter" class="maTextInput" placeholder="Player name" value="${esc(state.favNameFilter)}">
             <button id="gpFavSearchClear" class="clearBtn ${state.favNameFilter ? "" : "isHidden"}" type="button" aria-label="Clear filter">×</button>
           </div>
         </div>
-        <div class="maField" style="flex:0 0 auto;"><button id="gpBtnFavoritesPage" class="btn btnSecondary gpAddBtn" type="button">Manage Favorites</button></div>
+        <div class="maField gpFieldBtn"><button id="gpBtnFavoritesPage" class="btn btnSecondary" type="button">Manage Favorites</button></div>
       </div>`;
-      el.controls.innerHTML += `<div class="maFieldRow"><div class="maField"><div id="gpFavHint" class="gpMeta" style="display:${state.favBroadened ? "" : "none"};">No match in selected group — showing all groups.</div></div></div>`;
+      el.controls.innerHTML += `<div class="maFieldRow"><div class="maField"><div id="gpFavHint" class="maHelpText gpHint ${state.favBroadened ? "" : "isHidden"}">No match in selected group — showing all groups.</div></div></div>`;
       const sel = document.getElementById("gpFavGroup");
       if (sel) {
         sel.value = state.favGroupFilter;
@@ -182,21 +186,33 @@
       return;
     }
     if (state.activeTab === "nonrated") {
-      el.controls.innerHTML = `<div class="maFieldRow">
-        <div class="maField"><input id="gpNrFirst" class="maTextInput" placeholder="First name"></div>
-        <div class="maField"><input id="gpNrLast" class="maTextInput" placeholder="Last name"></div>
-        <div class="maField" style="flex:0 0 68px;"><input id="gpNrHi" class="maTextInput" placeholder="HI"></div>
-        <div class="maField" style="flex:0 0 62px;"><select id="gpNrGender" class="maTextInput"><option>M</option><option>F</option></select></div>
-        <div class="maField" style="flex:0 0 auto;"><button id="gpNrAdd" class="btn btnPrimary gpAddBtn" type="button">Find Tee Sets</button></div>
+      el.controls.innerHTML = `<div class="maFieldRow gpNrRow">
+        <div class="maField gpFieldFirst"><div class="maInputWrap gpInputClearWrap"><input id="gpNrFirst" class="maTextInput" placeholder="First name"><button id="gpNrFirstClear" class="clearBtn isHidden" type="button" aria-label="Clear first name">×</button></div></div>
+        <div class="maField gpFieldLast"><div class="maInputWrap gpInputClearWrap"><input id="gpNrLast" class="maTextInput" placeholder="Last name"><button id="gpNrLastClear" class="clearBtn isHidden" type="button" aria-label="Clear last name">×</button></div></div>
+        <div class="maField gpFieldHi"><div class="maInputWrap gpInputClearWrap"><input id="gpNrHi" class="maTextInput" placeholder="HI"><button id="gpNrHiClear" class="clearBtn isHidden" type="button" aria-label="Clear HI">×</button></div></div>
+        <div class="maField gpFieldGender"><select id="gpNrGender" class="maTextInput"><option>M</option><option>F</option></select></div>
+        <div class="maField gpFieldBtn"><button id="gpNrAdd" class="btn btnPrimary" type="button">Find Tee Sets</button></div>
       </div>`;
+      const nrFirst = document.getElementById("gpNrFirst");
+      const nrLast = document.getElementById("gpNrLast");
+      const nrHi = document.getElementById("gpNrHi");
+      const nrFirstClr = document.getElementById("gpNrFirstClear");
+      const nrLastClr = document.getElementById("gpNrLastClear");
+      const nrHiClr = document.getElementById("gpNrHiClear");
+      if (nrFirst) nrFirst.oninput = ()=> nrFirstClr && nrFirstClr.classList.toggle("isHidden", !safe(nrFirst.value));
+      if (nrLast) nrLast.oninput = ()=> nrLastClr && nrLastClr.classList.toggle("isHidden", !safe(nrLast.value));
+      if (nrHi) nrHi.oninput = ()=> nrHiClr && nrHiClr.classList.toggle("isHidden", !safe(nrHi.value));
+      if (nrFirstClr) nrFirstClr.onclick = ()=>{ if (nrFirst) nrFirst.value=""; nrFirstClr.classList.add("isHidden"); nrFirst && nrFirst.focus(); };
+      if (nrLastClr) nrLastClr.onclick = ()=>{ if (nrLast) nrLast.value=""; nrLastClr.classList.add("isHidden"); nrLast && nrLast.focus(); };
+      if (nrHiClr) nrHiClr.onclick = ()=>{ if (nrHi) nrHi.value=""; nrHiClr.classList.add("isHidden"); nrHi && nrHi.focus(); };
       document.getElementById("gpNrAdd").onclick = addNonRated;
       return;
     }
     if (state.activeTab === "self") {
-      el.controls.innerHTML = `<div class="maFieldRow"><div class="maField"><div class="gpMeta">Your player record will open tee selection automatically.</div></div></div>`;
+      el.controls.innerHTML = `<div class="maFieldRow"><div class="maField"><div class="maHelpText">Your player record will open tee selection automatically.</div></div></div>`;
       return;
     }
-    el.controls.innerHTML = `<div class="maFieldRow"><div class="maField"><div class="gpMeta">Tap ♥ to manage favorites.</div></div></div>`;
+    el.controls.innerHTML = `<div class="maFieldRow"><div class="maField"><div class="maHelpText">Tap ♥ to manage favorites.</div></div></div>`;
   }
 
   function renderBody(){
@@ -205,7 +221,7 @@
       const rows = (state.ghinRows || []).map((r) => {
         const ghin = safe(r.ghin);
         const isEnrolled = enrolled.has(ghin);
-        return `<div class="maListRow gpGhinRow ${isEnrolled ? "" : "gpRowClickable"}" data-act="ghin-row" data-ghin="${esc(ghin)}" data-disabled="${isEnrolled ? "1" : "0"}">
+        return `<div class="maListRow gpRow gpRow--ghin ${isEnrolled ? "" : "gpRowClickable"}" data-act="ghin-row" data-ghin="${esc(ghin)}" data-disabled="${isEnrolled ? "1" : "0"}">
           <div class="maListRow__col">${esc(r.name || ghin)}</div>
           <div class="maListRow__col maListRow__col--right">${esc(r.hi || "")}</div>
           <div class="maListRow__col maListRow__col--right">${esc(r.gender || "")}</div>
@@ -215,9 +231,9 @@
       const status = state.ghinStatus ? `<div class="gpInlineStatus">${esc(state.ghinStatus)}</div>` : "";
       const trunc = state.ghinTruncated ? `<div class="gpInlineStatus">Results truncated. Refine your search.</div>` : "";
       const empty = (!rows && !status) ? `<div class="gpEmpty">Enter search criteria above, then Search.</div>` : "";
-      el.body.innerHTML = `<section class="gpList gpGhinPanel">
-        <div class="gpListHdr"><div>GHIN Lookup</div><div class="gpStat">HI</div><div class="gpStat">G</div><div class="gpMeta"></div></div>
-        <div class="maListRows gpGhinRows">${status}${trunc}${rows}${empty}</div>
+      el.body.innerHTML = `<section class="gpPanel">
+        <div class="maListRow gpListHeader gpRow--ghin"><div class="maListRow__col">GHIN Lookup</div><div class="maListRow__col maListRow__col--right">HI</div><div class="maListRow__col maListRow__col--right">G</div><div class="maListRow__col"></div></div>
+        <div class="maListRows gpListRows">${status}${trunc}${rows}${empty}</div>
       </section>`;
       el.body.querySelectorAll("[data-act='ghin-row']").forEach((row)=>{
         row.onclick = ()=>{
@@ -229,18 +245,15 @@
     }
 
     if (state.activeTab === "nonrated") {
-      el.body.innerHTML = `<section class="gpList">
-        <div class="gpListHdr"><div>Add Non-Rated</div><div class="gpStat">HI</div><div class="gpStat">G</div><div></div><div></div></div>
-        <div class="gpListRow">
-          <div>
-            <div class="gpName">New Non-Rated Player</div>
-            <div class="gpMeta">Enter first/last name, optional HI, and gender, then tap <strong>Find Tee Sets</strong>.</div>
-          </div>
-          <div class="gpStat">—</div>
-          <div class="gpStat">—</div>
-          <div class="gpTapHint">Controls above</div>
-          <div></div>
-        </div>
+      el.body.innerHTML = `<section class="gpPanel">
+        <div class="maListRow gpListHeader gpRow--five"><div class="maListRow__col">Add Non-Rated</div><div class="maListRow__col maListRow__col--right">HI</div><div class="maListRow__col maListRow__col--right">G</div><div class="maListRow__col"></div><div class="maListRow__col"></div></div>
+        <div class="maListRows gpListRows"><div class="maListRow gpRow--five">
+          <div class="maListRow__col">New Non-Rated Player</div>
+          <div class="maListRow__col maListRow__col--right">—</div>
+          <div class="maListRow__col maListRow__col--right">—</div>
+          <div class="maListRow__col maListRow__col--muted">Controls above</div>
+          <div class="maListRow__col"></div>
+        </div></div>
       </section>`;
       return;
     }
@@ -248,17 +261,14 @@
     if (state.activeTab === "self") {
       const selfName = safe(state.context.userName || "Current User");
       const exists = state.players.some((p) => safe(p.dbPlayers_PlayerGHIN) === safe(state.context.userGHIN));
-      el.body.innerHTML = `<section class="gpList">
-        <div class="gpListHdr"><div>Add Self</div><div class="gpStat">HI</div><div class="gpStat">CH</div><div></div><div></div></div>
-        <div class="gpListRow gpRowClickable" data-act="selftee">
-          <div>
-            <div class="gpName">${esc(selfName)}</div>
-            <div class="gpMeta">${exists ? "Already in roster." : "Not in roster yet."}</div>
-          </div>
-          <div class="gpStat">—</div>
-          <div class="gpStat">—</div>
-          <div></div><div></div>
-        </div>
+      el.body.innerHTML = `<section class="gpPanel">
+        <div class="maListRow gpListHeader gpRow--five"><div class="maListRow__col">Add Self</div><div class="maListRow__col maListRow__col--right">HI</div><div class="maListRow__col maListRow__col--right">CH</div><div class="maListRow__col"></div><div class="maListRow__col"></div></div>
+        <div class="maListRows gpListRows"><div class="maListRow gpRow gpRow--five gpRowClickable" data-act="selftee">
+          <div class="maListRow__col">${esc(selfName)}<div class="maListRow__col--muted gpSub">${exists ? "Already in roster." : "Not in roster yet."}</div></div>
+          <div class="maListRow__col maListRow__col--right">—</div>
+          <div class="maListRow__col maListRow__col--right">—</div>
+          <div class="maListRow__col"></div><div class="maListRow__col"></div>
+        </div></div>
       </section>`;
       const selfRow = el.body.querySelector("[data-act='selftee']");
       if (selfRow) selfRow.onclick = addSelf;
@@ -290,24 +300,24 @@
       const grpEl = document.getElementById("gpFavGroup");
       if (grpEl && grpEl.value !== state.favGroupFilter) grpEl.value = state.favGroupFilter;
       const hintEl = document.getElementById("gpFavHint");
-      if (hintEl) hintEl.style.display = state.favBroadened ? "" : "none";
+      if (hintEl) hintEl.classList.toggle("isHidden", !state.favBroadened);
 
       const favRows = filtered.map((f) => {
         const g = safe(f.playerGHIN);
         const n = safe(f.name || f.playerName);
         const enrolled = enrolledSet.has(g);
         const lastTee = safe(f.lastCourse?.teeSetName || "");
-        return `<div class="gpListRow ${enrolled ? "" : "gpRowClickable"}" data-fav-ghin="${esc(g)}" data-act="addfav" data-disabled="${enrolled ? "1" : "0"}">
-          <div><div class="gpName">${esc(n)}</div><div class="gpMeta">${esc(lastTee)}</div></div>
-          <div class="gpStat">${esc(f.gender || "")}</div>
-          <div class="gpMeta">${esc(lastTee || "")}</div>
-          <div class="gpTapHint">${enrolled ? "☑" : ""}</div>
-          <div class="gpTapHint">${enrolled ? "" : ""}</div>
+        return `<div class="maListRow gpRow gpRow--five ${enrolled ? "" : "gpRowClickable"}" data-fav-ghin="${esc(g)}" data-act="addfav" data-disabled="${enrolled ? "1" : "0"}">
+          <div class="maListRow__col">${esc(n)}<div class="maListRow__col--muted gpSub">${esc(lastTee)}</div></div>
+          <div class="maListRow__col maListRow__col--right">${esc(f.gender || "")}</div>
+          <div class="maListRow__col maListRow__col--right maListRow__col--muted">${esc(lastTee || "")}</div>
+          <div class="maListRow__col maListRow__col--right gpEnrolledMark">${enrolled ? "☑" : ""}</div>
+          <div class="maListRow__col"></div>
         </div>`;
       }).join("");
-      el.body.innerHTML = `<section class="gpList">
-        <div class="gpListHdr"><div>Favorites</div><div class="gpStat">G</div><div class="gpMeta">Last Tee</div><div></div><div></div></div>
-        ${favRows || `<div class="gpEmpty">No favorites found.</div>`}
+      el.body.innerHTML = `<section class="gpPanel">
+        <div class="maListRow gpListHeader gpRow--five"><div class="maListRow__col">Favorites</div><div class="maListRow__col maListRow__col--right">G</div><div class="maListRow__col maListRow__col--right">Last Tee</div><div class="maListRow__col"></div><div class="maListRow__col"></div></div>
+        <div class="maListRows gpListRows">${favRows || `<div class="gpEmpty">No favorites found.</div>`}</div>
       </section>`;
       el.body.querySelectorAll("[data-act='addfav']").forEach(r=>r.onclick = (e) => {
         if (r.getAttribute("data-disabled") === "1") return;
@@ -325,33 +335,26 @@
       const ph = safe(p.dbPlayers_PlayingHcp || p.dbPlayers_PH || "");
       const pairing = safe(p.dbPlayers_PairingID || "");
       const meta = [hi && `HI ${hi}`, ch && `CH ${ch}`, ph && `PH ${ph}`, pairing].filter(Boolean).join(" · ");
-      return `<div class="gpListRow gpRow" data-ghin="${esc(ghin)}">
-        <div>
-          <div class="gpName">${esc(p.dbPlayers_Name)}</div>
-          <div class="gpMeta">${esc(meta)}</div>
-        </div>
-        <div class="gpStat">${esc(hi || "—")}</div>
-        <div class="gpStat">${esc(ch || "—")}</div>
+      const teeName = safe(p.dbPlayers_TeeSetName || "");
+      const nameLine = teeName ? `${safe(p.dbPlayers_Name)} · ${teeName}` : safe(p.dbPlayers_Name);
+      return `<div class="maListRow gpRow gpRow--five" data-ghin="${esc(ghin)}">
+        <div class="maListRow__col">${esc(nameLine)}<div class="maListRow__col--muted gpSub">${esc(meta)}</div></div>
+        <div class="maListRow__col maListRow__col--right">${esc(hi || "—")}</div>
+        <div class="maListRow__col maListRow__col--right">${esc(ch || "—")}</div>
         <button class="iconBtn gpIconBtn ${isFav?"is-fav":""}" data-act="fav" title="Favorites" aria-label="Favorites">${isFav?"♥":"♡"}</button>
         <button class="iconBtn gpIconBtn" data-act="del" title="Remove" aria-label="Remove">✕</button>
       </div>`;
     }).join("");
 
-    const html = `<section class="gpList">
-      <div class="gpListHdr">
-        <div>Roster (${state.players.length})</div>
-        <div class="gpStat">HI</div>
-        <div class="gpStat">CH</div>
-        <div></div><div></div>
-      </div>
-      ${rows || `<div class="gpEmpty">No players registered yet.</div>`}
+    const html = `<section class="gpPanel">
+      <div class="maListRow gpListHeader gpRow--five"><div class="maListRow__col">Roster (${state.players.length})</div><div class="maListRow__col maListRow__col--right">HI</div><div class="maListRow__col maListRow__col--right">CH</div><div class="maListRow__col"></div><div class="maListRow__col"></div></div>
+      <div class="maListRows gpListRows">${rows || `<div class="gpEmpty">No players registered yet.</div>`}</div>
     </section>`;
 
     el.body.innerHTML = html;
     el.body.querySelectorAll("button[data-act='del']").forEach(b=>b.onclick = onDeleteRow);
     el.body.querySelectorAll("button[data-act='fav']").forEach(b=>b.onclick = onRowFavorite);
-    el.body.querySelectorAll("[data-act='addfav']").forEach(r=>r.onclick = onAddFavoriteRow);
-    el.body.querySelectorAll(".gpRow").forEach(row => {
+    el.body.querySelectorAll(".gpRow[data-ghin]").forEach(row => {
       row.addEventListener("click", (e) => {
         const actionBtn = e.target.closest("button[data-act]");
         if (actionBtn) return;
@@ -387,11 +390,14 @@
       return;
     }
     const nm = splitName(state.context.userName);
+    const existing = state.players.find((p)=>safe(p.dbPlayers_PlayerGHIN) === safe(state.context.userGHIN));
     await beginTeeFlow({
       ghin: safe(state.context.userGHIN),
       first_name: nm.first,
       last_name: nm.last,
-      gender: "M"
+      gender: safe(existing?.dbPlayers_Gender || "M"),
+      hi: safe(existing?.dbPlayers_HI || ""),
+      selectedTeeSetId: safe(existing?.dbPlayers_TeeSetID || "")
     });
   }
 
