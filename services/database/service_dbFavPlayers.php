@@ -37,7 +37,7 @@ final class service_dbFavPlayers
             : ["status" => "NOT FOUND"];
     }
 
-    public static function getFavoritesForUser(string $userGHIN): array
+    public static function getFavoritesForUser(string $userGHIN, string $courseId = ""): array
 {
     $userGHIN = trim($userGHIN);
     if ($userGHIN === "") return [];
@@ -73,8 +73,37 @@ final class service_dbFavPlayers
             "gender"     => (string)($r["dbFav_PlayerGender"] ?? ""),
             "lname"      => (string)($r["dbFav_PlayerLName"] ?? ""),
             "groups"     => array_values(array_filter(array_map("strval", $groups))),
+            "lastCourse" => null,
         ];
     }
+
+    $courseId = trim($courseId);
+    if ($courseId === "" || !$favorites) return $favorites;
+
+    foreach ($favorites as &$f) {
+        $ghin = trim((string)($f["playerGHIN"] ?? ""));
+        if ($ghin === "") continue;
+
+        $sqlLast = "SELECT dbPlayers_GGID, dbPlayers_TeeSetID, dbPlayers_TeeSetName, _createdDate
+                    FROM db_Players
+                    WHERE dbPlayers_PlayerGHIN = :ghin
+                      AND dbPlayers_CourseID = :course
+                    ORDER BY _createdDate DESC
+                    LIMIT 1";
+        $stLast = $pdo->prepare($sqlLast);
+        $stLast->execute([":ghin" => $ghin, ":course" => $courseId]);
+        $last = $stLast->fetch(PDO::FETCH_ASSOC);
+
+        if (is_array($last)) {
+            $f["lastCourse"] = [
+                "ggid" => $last["dbPlayers_GGID"] ?? null,
+                "teeSetId" => $last["dbPlayers_TeeSetID"] ?? null,
+                "teeSetName" => (string)($last["dbPlayers_TeeSetName"] ?? ""),
+                "when" => $last["_createdDate"] ?? null,
+            ];
+        }
+    }
+    unset($f);
 
     return $favorites;
 }
