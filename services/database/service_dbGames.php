@@ -25,6 +25,8 @@ public static function queryGames(PDO $pdo, array $args): array {
   if (!is_array($selectedKeys)) $selectedKeys = [];
   $selectedKeys = array_values(array_unique(array_filter(array_map("strval", $selectedKeys))));
 
+  $includeCounts = !empty($args["includePlayerCounts"]);
+
   // Legacy inputs (fallback)
   $adminGhin = trim((string)($args["adminGhin"] ?? ""));
   $bucket    = trim((string)($args["bucket"] ?? "")); // current|past
@@ -36,6 +38,11 @@ public static function queryGames(PDO $pdo, array $args): array {
 
   $where = [];
   $params = [];
+
+  $selectSql = "SELECT *";
+  if ($includeCounts) {
+    $selectSql .= ", (SELECT COUNT(*) FROM db_Players WHERE dbPlayers_GGID = db_Games.dbGames_GGID) as playerCount";
+  }
 
   if ($hasNew) {
     // Club constraint (recommended)
@@ -80,7 +87,7 @@ public static function queryGames(PDO $pdo, array $args): array {
     $sortPast = ($dateTo !== "" && $dateTo < $today);
     $orderDir = $sortPast ? "DESC" : "ASC";
 
-    $sql = "SELECT * FROM db_Games";
+    $sql = "$selectSql FROM db_Games";
     if ($where) $sql .= " WHERE " . implode(" AND ", $where);
     $sql .= " ORDER BY dbGames_PlayDate {$orderDir}, dbGames_PlayTime ASC";
   } else {
@@ -99,7 +106,7 @@ public static function queryGames(PDO $pdo, array $args): array {
     }
     $params[":today"] = $today;
 
-    $sql = "SELECT * FROM db_Games";
+    $sql = "$selectSql FROM db_Games";
     if ($where) $sql .= " WHERE " . implode(" AND ", $where);
     $sql .= " ORDER BY dbGames_PlayDate " . ($bucket === "past" ? "DESC" : "ASC") . ", dbGames_PlayTime ASC";
   }
