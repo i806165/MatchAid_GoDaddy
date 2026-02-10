@@ -2,7 +2,7 @@
 // /public_html/api/services/GHIN_API_Handicaps.php
 declare(strict_types=1);
 
-require_once __DIR__ . "/../lib/HttpClient.php";
+require_once MA_API_LIB . "/HttpClient.php";
 
 /**
  * PHP refactor of Wix:
