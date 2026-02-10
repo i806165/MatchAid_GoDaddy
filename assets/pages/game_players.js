@@ -9,6 +9,9 @@
     context: init.context || {},
     players: [],
     favorites: [],
+    groups: [],
+    favGroupFilter: "All groups",
+    favNameFilter: "",
     pendingPlayer: null,
     teeOptions: [],
     selectedTee: null,
@@ -75,8 +78,9 @@
   }
 
   async function refreshFavorites(){
-    const res = await MA.postJson(MA.paths.favPlayersInit, {});
+    const res = await MA.postJson(MA.paths.favPlayersInit, { courseId: safe(state.game?.dbGames_CourseID) });
     state.favorites = Array.isArray(res?.payload?.favorites) ? res.payload.favorites : [];
+    state.groups = Array.isArray(res?.payload?.groups) ? res.payload.groups : [];
   }
 
   function renderTabs(){
@@ -102,7 +106,42 @@
       return;
     }
     if (state.activeTab === "favorites") {
-      el.controls.innerHTML = `<div class="maFieldRow"><button id="gpBtnFavoritesPage" class="btn btnSecondary gpAddBtn" type="button">Manage Favorites</button></div>`;
+      const opts = ["All groups"].concat(state.groups || []).map(g => `<option value="${esc(g)}">${esc(g)}</option>`).join("");
+      el.controls.innerHTML = `<div class="maFieldRow">
+        <div class="maField" style="max-width: 220px;">
+          <select id="gpFavGroup" class="maTextInput">${opts}</select>
+        </div>
+        <div class="maField">
+          <div class="maInputWrap">
+            <input id="gpFavFilter" class="maTextInput" placeholder="Player name" value="${esc(state.favNameFilter)}">
+            <button id="gpFavSearchClear" class="clearBtn ${state.favNameFilter ? "" : "isHidden"}" type="button" aria-label="Clear filter">×</button>
+          </div>
+        </div>
+        <div class="maField" style="flex:0 0 auto;"><button id="gpBtnFavoritesPage" class="btn btnSecondary gpAddBtn" type="button">Manage Favorites</button></div>
+      </div>`;
+      const sel = document.getElementById("gpFavGroup");
+      if (sel) {
+        sel.value = state.favGroupFilter;
+        sel.onchange = () => {
+          state.favGroupFilter = safe(sel.value) || "All groups";
+          renderBody();
+        };
+      }
+      const inp = document.getElementById("gpFavFilter");
+      const clr = document.getElementById("gpFavSearchClear");
+      if (inp) {
+        inp.oninput = () => {
+          state.favNameFilter = safe(inp.value);
+          if (clr) clr.classList.toggle("isHidden", !state.favNameFilter);
+          renderBody();
+        };
+      }
+      if (clr) clr.onclick = () => {
+        state.favNameFilter = "";
+        if (inp) inp.value = "";
+        clr.classList.add("isHidden");
+        renderBody();
+      };
       document.getElementById("gpBtnFavoritesPage").onclick = () => MA.routerGo("favorites");
       return;
     }
@@ -174,22 +213,36 @@
     }
 
     if (state.activeTab === "favorites") {
-      const favRows = (state.favorites || []).map((f) => {
+      const enrolledSet = new Set((state.players || []).map((p) => safe(p.dbPlayers_PlayerGHIN)));
+      const q = safe(state.favNameFilter).trim().toLowerCase();
+      const grp = safe(state.favGroupFilter || "All groups");
+      const favRows = (state.favorites || []).filter((f) => {
+        const tags = Array.isArray(f.groups) ? f.groups : [];
+        const inGroup = grp === "All groups" ? true : tags.includes(grp);
+        if (!inGroup) return false;
+        if (!q) return true;
+        return safe(f.name || f.playerName).toLowerCase().includes(q);
+      }).map((f) => {
         const g = safe(f.playerGHIN);
         const n = safe(f.name || f.playerName);
-        return `<div class="gpListRow gpRowClickable" data-fav-ghin="${esc(g)}" data-act="addfav">
-          <div><div class="gpName">${esc(n)}</div><div class="gpMeta">Favorite player</div></div>
-          <div class="gpStat">${esc(f.hi || "")}</div>
+        const enrolled = enrolledSet.has(g);
+        const lastTee = safe(f.lastCourse?.teeSetName || "");
+        return `<div class="gpListRow ${enrolled ? "" : "gpRowClickable"}" data-fav-ghin="${esc(g)}" data-act="addfav" data-disabled="${enrolled ? "1" : "0"}">
+          <div><div class="gpName">${esc(n)}</div><div class="gpMeta">${esc(lastTee || "No prior tee on this course")}</div></div>
           <div class="gpStat">${esc(f.gender || "")}</div>
-          <div class="gpTapHint">Tap row</div>
-          <div></div>
+          <div class="gpMeta">${esc(lastTee || "")}</div>
+          <div class="gpTapHint">${enrolled ? "👤✕" : "Tap row"}</div>
+          <div class="gpTapHint">${enrolled ? "Enrolled" : ""}</div>
         </div>`;
       }).join("");
       el.body.innerHTML = `<section class="gpList">
-        <div class="gpListHdr"><div>Favorites</div><div class="gpStat">HI</div><div class="gpStat">G</div><div></div><div></div></div>
+        <div class="gpListHdr"><div>Favorites</div><div class="gpStat">G</div><div class="gpMeta">Last Tee</div><div></div><div></div></div>
         ${favRows || `<div class="gpEmpty">No favorites found.</div>`}
       </section>`;
-      el.body.querySelectorAll("[data-act='addfav']").forEach(r=>r.onclick = onAddFavoriteRow);
+      el.body.querySelectorAll("[data-act='addfav']").forEach(r=>r.onclick = (e) => {
+        if (r.getAttribute("data-disabled") === "1") return;
+        onAddFavoriteRow(e);
+      });
       return;
     }
 
