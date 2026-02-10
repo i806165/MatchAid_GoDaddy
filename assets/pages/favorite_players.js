@@ -181,6 +181,11 @@
 
   function openForm(fav, suppressFooter) {
     applyChromeHeader();
+    
+    // If we are opening the form from the list (not a direct "registrations" launch),
+    // ensure we return to the list, not the roster.
+    if (state.launchMode !== "registrations") state.returnAction = "list";
+
     // Build current object
     state.current = {
       playerGHIN: safe(fav.playerGHIN),
@@ -335,11 +340,10 @@
       if (MA.setStatus) MA.setStatus("Saved.", "info");
 
       // Requirement: Save routes back to calling page using returnAction (header buttons)
-      if (state.returnAction) {
+      if (state.returnAction === "roster") {
         await MA.routerGo(state.returnAction);
         return;
       }
-      // fallback to list
       showList();
     } catch (e) {
       console.error(e);
@@ -348,7 +352,7 @@
   }
 
   async function doCancel() {
-    if (state.returnAction) {
+    if (state.returnAction === "roster") {
       await MA.routerGo(state.returnAction);
       return;
     }

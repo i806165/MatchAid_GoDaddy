@@ -181,7 +181,7 @@
         clr.classList.add("isHidden");
         renderBody();
       };
-      document.getElementById("gpBtnFavoritesPage").onclick = () => MA.routerGo("favorites");
+      document.getElementById("gpBtnFavoritesPage").onclick = () => MA.routerGo("favorites", { returnTo: "roster" });
       return;
     }
     if (state.activeTab === "nonrated") {

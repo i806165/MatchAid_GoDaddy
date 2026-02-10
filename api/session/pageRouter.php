@@ -18,7 +18,9 @@ function pr_input(): array {
     if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $raw = file_get_contents("php://input");
         $json = json_decode($raw ?: "{}", true);
-        if (is_array($json)) $data = $json;
+        if (is_array($json)) {
+            $data = (isset($json['payload']) && is_array($json['payload'])) ? $json['payload'] : $json;
+        }
     }
 
     // Merge GET
