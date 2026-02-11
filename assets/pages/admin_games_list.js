@@ -497,7 +497,8 @@ cardsEl.innerHTML = state.games.dbRows
     
     // 3) Set game session and route for all game relevant actions
     await apiAdmin("setGameSession.php", { ggid });
-    if (action === "editGame") return routerGo("edit", { mode: "edit" });  
+    if (action === "editGame") return routerGo("edit", { mode: "edit" });
+    if (action === "settings") return routerGo("settings", {});
     if (action === "viewGame") return routerGo("gameReview", {});
     if (action === "roster") return routerGo("roster", {});
     if (action === "viewScoreCard") return routerGo("scorecard", {});
