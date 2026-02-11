@@ -27,8 +27,7 @@ try {
   $game = $gameCtx["game"];
 
   // 3. Get Roster
-  $pdo = Db::pdo();
-  $roster = ServiceDbPlayers::getPlayersByGGID($pdo, $ggid);
+  $roster = ServiceDbPlayers::getGamePlayers((string)$ggid);
 
   // 4. Get Course Pars (placeholder)
   $coursePars = []; // TODO: Implement course par fetching

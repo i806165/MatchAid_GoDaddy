@@ -36,14 +36,12 @@ final class ServiceContextGame
    */
   public static function getGameContext(): array
   {
-    $pdo = Db::pdo();
-
     $ggid = self::getStoredGGID();
     if (!$ggid) {
       throw new RuntimeException("No game is selected (SessionStoredGGID not set).");
     }
 
-    $game = ServiceDbGames::getGameByGGID($pdo, $ggid);
+    $game = ServiceDbGames::getGameByGGID($ggid);
     if (!$game) {
       throw new RuntimeException("Selected game not found.");
     }

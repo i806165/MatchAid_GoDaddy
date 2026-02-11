@@ -13,8 +13,9 @@ final class ServiceDbGames
   // -----------------------------
   // Existing Admin Games List APIs
   // -----------------------------
-public static function queryGames(PDO $pdo, array $args): array {
+public static function queryGames(array $args): array {
   // New-contract inputs (preferred)
+  $pdo = Db::pdo();
   $clubId   = trim((string)($args["clubId"] ?? ""));
   $dateFrom = trim((string)($args["dateFrom"] ?? ""));
   $dateTo   = trim((string)($args["dateTo"] ?? ""));
@@ -140,8 +141,9 @@ public static function queryGames(PDO $pdo, array $args): array {
 }
 
 
-  public static function queryAdmins(PDO $pdo, array $args): array {
+  public static function queryAdmins(array $args): array {
     // Placeholder: admin list is handled elsewhere in your stack.
+    $pdo = Db::pdo();
     return [];
   }
 
@@ -149,15 +151,16 @@ public static function queryGames(PDO $pdo, array $args): array {
   // Game Maintenance Helpers
   // -----------------------------
 
-  public static function getGameByGGID(PDO $pdo, int $ggid): ?array
+  public static function getGameByGGID(int $ggid): ?array
   {
+    $pdo = Db::pdo();
     $stmt = $pdo->prepare("SELECT * FROM db_Games WHERE dbGames_GGID = :ggid LIMIT 1");
     $stmt->execute([":ggid" => $ggid]);
     $row = $stmt->fetch();
     return $row ? $row : null;
   }
 
-  public static function saveGame(PDO $pdo, string $mode, array $patch, array $sessionCtx): array
+  public static function saveGame(string $mode, array $patch, array $sessionCtx): array
   {
     $mode = strtolower($mode) === "add" ? "add" : "edit";
 
@@ -165,7 +168,7 @@ public static function queryGames(PDO $pdo, array $args): array {
     if ($mode === "edit") {
       $ggid = (int)($sessionCtx["ggid"] ?? 0);
       if ($ggid <= 0) throw new RuntimeException("Missing GGID in session context.");
-      $existing = self::getGameByGGID($pdo, $ggid);
+      $existing = self::getGameByGGID($ggid);
       if (!$existing) throw new RuntimeException("Game not found.");
       $base = $existing;
     } else {
@@ -197,8 +200,8 @@ public static function queryGames(PDO $pdo, array $args): array {
         (int)($updated["dbGames_TeeTimeInterval"] ?? 9)
       );
 
-      $newGGID = self::insertGame($pdo, $updated);
-      $saved = self::getGameByGGID($pdo, $newGGID) ?? $updated;
+      $newGGID = self::insertGame($updated);
+      $saved = self::getGameByGGID($newGGID) ?? $updated;
       $saved["dbGames_GGID"] = $newGGID;
       return ["ggid" => $newGGID, "game" => $saved, "mode" => "edit"];
     }
@@ -213,8 +216,8 @@ public static function queryGames(PDO $pdo, array $args): array {
     );
 
     // edit
-    self::updateGame($pdo, $ggid, $updated);
-    $saved = self::getGameByGGID($pdo, $ggid) ?? $updated;
+    self::updateGame($ggid, $updated);
+    $saved = self::getGameByGGID($ggid) ?? $updated;
     $saved["dbGames_GGID"] = $ggid;
     return ["ggid" => $ggid, "game" => $saved, "mode" => "edit"];
   }
@@ -359,10 +362,11 @@ public static function queryGames(PDO $pdo, array $args): array {
     $g["dbGames_HCEffectivityDate"] = $dt;
   }
 
-  private static function insertGame(PDO $pdo, array $g): int
+  private static function insertGame(array $g): int
   {
     // Build insert columns from $g, but exclude null GGID.
     // Keep it safe by inserting only known keys present in $g.
+    $pdo = Db::pdo();
     $cols = [];
     $vals = [];
     $params = [];
@@ -384,8 +388,9 @@ public static function queryGames(PDO $pdo, array $args): array {
     return (int)$pdo->lastInsertId();
   }
 
-  private static function updateGame(PDO $pdo, int $ggid, array $g): void
+  public static function updateGame(int $ggid, array $g): bool
   {
+    $pdo = Db::pdo();
     $sets = [];
     $params = [":ggid" => $ggid];
 
@@ -396,11 +401,11 @@ public static function queryGames(PDO $pdo, array $args): array {
       $params[":" . $k] = $v;
     }
 
-    if (!$sets) return;
+    if (!$sets) return true;
 
     $sql = "UPDATE db_Games SET " . implode(", ", $sets) . " WHERE dbGames_GGID = :ggid LIMIT 1";
     $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
+    return $stmt->execute($params);
   }
 
   private static function buildTeeTimeList(string $playTime, int $cnt, int $intervalMin): string

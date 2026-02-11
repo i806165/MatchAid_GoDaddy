@@ -37,14 +37,13 @@ try {
   // 4. TODO: Server-side validation of the patch data
 
   // 5. Save to database
-  $pdo = Db::pdo();
-  $success = ServiceDbGames::updateGame($pdo, $ggid, $patch);
+  $success = ServiceDbGames::updateGame($ggid, $patch);
   if (!$success) {
     throw new Exception("Database update failed.");
   }
 
   // 6. Return updated game object
-  $updatedGame = ServiceDbGames::getGameByGGID($pdo, $ggid);
+  $updatedGame = ServiceDbGames::getGameByGGID($ggid);
 
   $payload = [
     "ggid" => $ggid,
