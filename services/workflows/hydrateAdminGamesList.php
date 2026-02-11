@@ -16,8 +16,6 @@ require_once __DIR__ . '/../database/service_dbGames.php';
  * @return array INIT payload (matches existing HTML contract)
  */
 function hydrateAdminGamesList(array $context, array $filters): array {
-  $pdo = Db::pdo();
-
   $userGhin = strval($context["userGHIN"] ?? "");
   $clubId   = strval($context["clubId"] ?? ($context["clubID"] ?? ""));
 
@@ -64,7 +62,7 @@ function hydrateAdminGamesList(array $context, array $filters): array {
   $uiSelected = array_values(array_unique(array_filter(array_map("strval", $uiSelected))));
 
 
-  $adminsAll = ServiceDbFavAdmins::queryFavoriteAdmins($pdo, [
+  $adminsAll = ServiceDbFavAdmins::queryFavoriteAdmins([
     "userGHIN" => $userGhin,
     "clubId" => $clubId,
     "selectedAdminKeys" => $uiSelected,
@@ -74,7 +72,7 @@ function hydrateAdminGamesList(array $context, array $filters): array {
   error_log("[MA][HYDRATE] clubId={$clubId} userGHIN={$userGhin} dateFrom={$dateFrom} dateTo={$dateTo} uiSelectedCount=" . (is_array($uiSelected) ? count($uiSelected) : 0) . " adminScope={$adminScope} queryKeyCount=" . (is_array($selectedForQuery) ? count($selectedForQuery) : 0));
 //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-  $games = ServiceDbGames::queryGames($pdo, [
+  $games = ServiceDbGames::queryGames([
     "clubId" => $clubId,
     "dateFrom" => $dateFrom,
     "dateTo" => $dateTo,
