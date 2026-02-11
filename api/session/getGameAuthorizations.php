@@ -10,9 +10,6 @@ require_once MA_SERVICES . "/context/service_ContextGame.php";
 header('Content-Type: application/json; charset=utf-8');
 
 try {
-  $config = ma_config();
-  $pdo = Db::pdo($config["db"]);
-
   $body = json_decode(file_get_contents("php://input"), true) ?: [];
   $payload = $body["payload"] ?? [];
 
@@ -50,7 +47,7 @@ try {
   // Used by the “Open game at same facility” rule (Wix SessionGHINFacilityID)
   $userFacilityId = (string)($_SESSION["SessionGHINFacilityID"] ?? "");
 
-  $auth = ServiceContextGame::computeGameAuthorizations($pdo, [
+  $auth = ServiceContextGame::computeGameAuthorizations([
     "userGHIN" => $userGHIN,
     "ggid" => $ggid,
     "action" => $action,

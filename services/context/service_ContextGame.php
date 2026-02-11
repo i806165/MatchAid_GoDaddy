@@ -69,7 +69,7 @@ final class ServiceContextGame
    * Wix-canonical authorization rules.
    * Returns: {status: Authorized|Unauthorized|Error, role: ...}
    */
-  public static function computeGameAuthorizations(PDO $pdo, array $args): array
+  public static function computeGameAuthorizations(array $args): array
   {
     $userGHIN = trim((string)($args["userGHIN"] ?? ""));
     $ggid = (int)($args["ggid"] ?? 0);
@@ -85,7 +85,7 @@ final class ServiceContextGame
       ];
     }
 
-    $game = ServiceDbGames::getGameByGGID($pdo, $ggid);
+    $game = ServiceDbGames::getGameByGGID($ggid);
     if (!$game) {
       return [
         "status" => "Error",
@@ -98,6 +98,8 @@ final class ServiceContextGame
     $facilityId = trim((string)($game["dbGames_FacilityID"] ?? ""));
     $privacy    = trim((string)($game["dbGames_Privacy"] ?? ""));
     $adminGHIN  = trim((string)($game["dbGames_AdminGHIN"] ?? ""));
+
+    $pdo = Db::pdo();
 
     try {
       // 1) Site Admin (FacilityID = "00000")

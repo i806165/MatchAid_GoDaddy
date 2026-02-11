@@ -22,9 +22,6 @@ try {
     exit;
   }
 
-  $config = ma_config();
-  $pdo = Db::pdo($config["db"]);
-
   $userGhin = trim((string)($_SESSION["SessionGHINLogonID"] ?? ""));
   $userName = trim((string)($_SESSION["SessionUserName"] ?? ""));
   if ($userGhin === "") {
@@ -33,7 +30,7 @@ try {
     echo json_encode(["ok" => false, "error" => "AUTH_REQUIRED"]);
     exit;
   }
-$favs = ServiceDbFavAdmins::getFavoriteAdmins($pdo, ["userGHIN" => $userGhin]);
+$favs = ServiceDbFavAdmins::getFavoriteAdmins(["userGHIN" => $userGhin]);
 
 $adminOptions = [];
 
@@ -68,6 +65,7 @@ $adminOptions = array_values(array_filter($adminOptions, function($a) use (&$see
 
   // --- Load user profile JSON (db_Users.dbUser_Profile) ---
   $profileJson = null;
+  $pdo = Db::pdo();
   $stmt = $pdo->prepare("SELECT dbUser_Profile FROM db_Users WHERE dbUser_GHIN = :u LIMIT 1");
   $stmt->execute([":u" => $userGhin]);
   $row = $stmt->fetch(PDO::FETCH_ASSOC);

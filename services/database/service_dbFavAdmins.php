@@ -17,15 +17,16 @@ final class ServiceDbFavAdmins {
  *
  * Required inputs: userGHIN, clubId
  */
-public static function queryFavoriteAdmins(PDO $pdo, array $args): array {
+public static function queryFavoriteAdmins(array $args): array {
   $userGHIN = strval($args["userGHIN"] ?? "");
   $clubId   = strval($args["clubId"] ?? "");
   $selected = $args["selectedAdminKeys"] ?? [];
   if (!is_array($selected)) $selected = [];
 
   // --- Use helpers ---
-  $allAdmins = self::getAllGameAdmins($pdo, ["clubId" => $clubId]);   // [{key,name}]
-  $favorites = self::getFavoriteAdmins($pdo, ["userGHIN" => $userGHIN]); // [{key,name,assocId,assocName}]
+  // Note: helpers now instantiate their own PDO, so we don't pass it.
+  $allAdmins = self::getAllGameAdmins(["clubId" => $clubId]);   // [{key,name}]
+  $favorites = self::getFavoriteAdmins(["userGHIN" => $userGHIN]); // [{key,name,assocId,assocName}]
 
   // Build lookup sets and assoc meta from favorites
   $favSet  = [];  // key => true
@@ -71,9 +72,10 @@ public static function queryFavoriteAdmins(PDO $pdo, array $args): array {
   ];
 }
 
-public static function getAllGameAdmins(PDO $pdo, array $args): array {
+public static function getAllGameAdmins(array $args): array {
   $clubId = strval($args["clubId"] ?? "");
   if ($clubId === "") return [];
+  $pdo = Db::pdo();
 
   $sqlAll = "
     SELECT DISTINCT
@@ -99,9 +101,10 @@ public static function getAllGameAdmins(PDO $pdo, array $args): array {
 }
 
 
-public static function getFavoriteAdmins(PDO $pdo, array $args): array {
+public static function getFavoriteAdmins(array $args): array {
   $userGHIN = strval($args["userGHIN"] ?? "");
   if ($userGHIN === "") return [];
+  $pdo = Db::pdo();
 
   $sqlFav = "
     SELECT
@@ -135,13 +138,14 @@ public static function getFavoriteAdmins(PDO $pdo, array $args): array {
    * Toggles favorite state for a given adminGhin for the current user.
    * Returns: { isFavorite: bool, message: string }
    */
-  public static function upsertFavoriteAdmin(PDO $pdo, array $args): array {
+  public static function upsertFavoriteAdmin(array $args): array {
     $user = strval($args["userGHIN"] ?? "");
     $adminKey = strval($args["adminKey"] ?? "");
     if ($user === "" || $adminKey === "") {
       return ["ok" => false, "message" => "Missing user or adminKey."];
     }
 
+    $pdo = Db::pdo();
     // Does favorite exist?
 $chk = $pdo->prepare("
   SELECT 1 AS found

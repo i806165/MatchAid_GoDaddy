@@ -26,9 +26,7 @@ $dateTo   = strval($payload["dateTo"] ?? "");
 $selected = $payload["selectedAdminKeys"] ?? [];
 if (!is_array($selected)) $selected = [];
 
-$pdo = Db::pdo();
-
-$res = ServiceDbGames::queryGames($pdo, [
+$res = ServiceDbGames::queryGames([
   "clubId" => $clubId,
   "dateFrom" => $dateFrom,
   "dateTo" => $dateTo,

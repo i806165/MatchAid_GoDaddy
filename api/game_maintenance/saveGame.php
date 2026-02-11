@@ -21,9 +21,6 @@ $patch = $payload["patch"] ?? [];
 if (!is_array($patch)) $patch = [];
 
 try {
-  $cfg = ma_config();
-  $pdo = Db::pdo($cfg["db"]);
-
   $sessionCtx = [
     "ggid" => (int)(ServiceContextGame::getStoredGGID() ?? 0),
     "adminGhin" => (string)($auth["ghinId"] ?? ""),
@@ -35,7 +32,7 @@ try {
     "adminClubName"  => (string)($_SESSION["SessionAdminClubName"] ?? ""),
   ];
 
-  $result = ServiceDbGames::saveGame($pdo, $mode, $patch, $sessionCtx);
+  $result = ServiceDbGames::saveGame($mode, $patch, $sessionCtx);
 
   // IMPORTANT RULE: only set SessionStoredGGID after ADD succeeds
   $newGGID = (int)($result["ggid"] ?? 0);
