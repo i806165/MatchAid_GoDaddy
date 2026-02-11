@@ -134,3 +134,84 @@ function be_getTeeSetByID(string $parmTeeSetID, ?string $parmToken = null): arra
         "Authorization: Bearer " . $myToken,
     ]);
 }
+
+/**
+ * Flattens raw GHIN TeeSets response into a simplified array of hole pars.
+ * Ported from Wix Velo flattenCoursePars(raw).
+ */
+function flattenCoursePars(array $raw): array
+{
+    $teeSets = $raw['TeeSets'] ?? [];
+    if (!is_array($teeSets) || empty($teeSets)) {
+        return [];
+    }
+
+    // Filter by gender
+    $maleSets = array_filter($teeSets, fn($ts) => strtolower((string)($ts['Gender'] ?? '')) === 'male');
+    $femaleSets = array_filter($teeSets, fn($ts) => strtolower((string)($ts['Gender'] ?? '')) === 'female');
+
+    // Helper to find preferred set (18 holes, else > 0 holes)
+    $findPreferred = function (array $sets) {
+        foreach ($sets as $ts) {
+            $holes = $ts['Holes'] ?? [];
+            if (is_array($holes) && count($holes) >= 18) return $ts;
+        }
+        foreach ($sets as $ts) {
+            $holes = $ts['Holes'] ?? [];
+            if (is_array($holes) && count($holes) > 0) return $ts;
+        }
+        return null;
+    };
+
+    $malePreferred = $findPreferred($maleSets);
+    $femalePreferred = $findPreferred($femaleSets);
+
+    $maleHoles = $malePreferred['Holes'] ?? [];
+    $femaleHoles = $femalePreferred['Holes'] ?? [];
+
+    // Build maps: holeNum -> par
+    $mMap = [];
+    foreach ($maleHoles as $h) {
+        $num = (int)($h['Number'] ?? 0);
+        $par = (int)($h['Par'] ?? 0);
+        if ($num > 0 && $par > 0) $mMap[$num] = $par;
+    }
+
+    $fMap = [];
+    foreach ($femaleHoles as $h) {
+        $num = (int)($h['Number'] ?? 0);
+        $par = (int)($h['Par'] ?? 0);
+        if ($num > 0 && $par > 0) $fMap[$num] = $par;
+    }
+
+    // Union of holes
+    $allHoles = array_unique(array_merge(array_keys($mMap), array_keys($fMap)));
+    sort($allHoles);
+
+    $result = [];
+    foreach ($allHoles as $holeNum) {
+        $parM = $mMap[$holeNum] ?? null;
+        $parF = $fMap[$holeNum] ?? null;
+
+        $parText = "Par ?";
+        if ($parM !== null && $parF !== null) {
+            $parText = ($parM === $parF) ? "Par $parM" : "Par $parM/$parF";
+        } elseif ($parM !== null) {
+            $parText = "Par $parM";
+        } elseif ($parF !== null) {
+            $parText = "Par $parF";
+        }
+
+        $par = $parM ?? $parF;
+
+        $result[] = [
+            "hole" => $holeNum,
+            "par" => $par,
+            "parM" => $parM,
+            "parF" => $parF,
+            "parText" => $parText
+        ];
+    }
+
+    return $result;
+}

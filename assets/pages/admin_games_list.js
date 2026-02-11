@@ -503,7 +503,7 @@ cardsEl.innerHTML = state.games.dbRows
     if (action === "viewScoreCard") return routerGo("scorecard", {});
     if (action === "pairings") return routerGo("pairings", {});
     if (action === "teetimes") return routerGo("teetimes", {});
-    if (action === "settings") return routerGo("settings", {});
+    
     if (action === "calendar") return routerGo("gameCalendar", {});
     if (action === "deleteGame") {
       setStatus("Delete not wired yet (needs endpoint).", "warn");
@@ -710,10 +710,10 @@ function applyPreset(presetKey) {
         <button class="actionMenu_item" type="button" data-menuclick="roster">Player Roster</button>
         <button class="actionMenu_item" type="button" data-menuclick="pairings">Pair Players</button>
         <button class="actionMenu_item" type="button" data-menuclick="teetimes">Set TeeTimes</button>
-        <div class="actionMenu_divider"></div>
         <button class="actionMenu_item" type="button" data-menuclick="viewGame">Review Game</button>
         <button class="actionMenu_item" type="button" data-menuclick="viewScoreCard">Scorecard</button>
-        <button class="actionMenu_item" type="button" data-menuclick="calendar">Calendar</button>
+        <div class="actionMenu_divider"></div>
+        <button class="actionMenu_item" type="button" data-menuclick="calendar">Add to Calendar</button>
       </div>
     `;
 

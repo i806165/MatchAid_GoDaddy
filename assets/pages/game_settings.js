@@ -24,6 +24,22 @@
     // General Tab
     competitionType: document.getElementById("gsCompetitionType"),
     gameFormat: document.getElementById("gsGameFormat"),
+    // Scoring Tab
+    scoringSystem: document.getElementById("gsScoringSystem"),
+    scoringMethod: document.getElementById("gsScoringMethod"),
+    scoringBasis: document.getElementById("gsScoringBasis"),
+    cardPoints: document.getElementById("gsCardPoints"),
+    points: {
+      bogey: document.getElementById("gsPointsBogey"),
+      par: document.getElementById("gsPointsPar"),
+      birdie: document.getElementById("gsPointsBirdie"),
+      eagle: document.getElementById("gsPointsEagle"),
+    },
+    // Handicaps Tab
+    hcMethod: document.getElementById("gsHCMethod"),
+    allowance: document.getElementById("gsAllowance"),
+    strokeDistribution: document.getElementById("gsStrokeDistribution"),
+    blindPlayer: document.getElementById("gsBlindPlayer"),
     // Add other element IDs here as we build them
   };
 
@@ -107,6 +123,26 @@
     const patch = {
       dbGames_Competition: readChoice(el.competitionType),
       dbGames_GameFormat: el.gameFormat.value,
+      dbGames_ScoringSystem: el.scoringSystem.value,
+      dbGames_ScoringMethod: el.scoringMethod.value,
+      dbGames_ScoringBasis: el.scoringBasis.value,
+      dbGames_HCMethod: el.hcMethod.value,
+      
+      // Clamp allowance 0-100
+      dbGames_Allowance: Math.max(0, Math.min(100, parseInt(el.allowance.value || "100", 10))),
+      
+      dbGames_StrokeDistribution: el.strokeDistribution.value,
+      
+      // Blind player: array of 1 GHIN string or empty array
+      dbGames_BlindPlayers: el.blindPlayer.value ? [el.blindPlayer.value] : [],
+      
+      // Stableford points (only if Basis is Points, but safe to save always)
+      dbGames_StablefordPoints: [
+        parseInt(el.points.bogey.value || "1", 10),
+        parseInt(el.points.par.value || "2", 10),
+        parseInt(el.points.birdie.value || "3", 10),
+        parseInt(el.points.eagle.value || "4", 10)
+      ]
     };
     return patch;
   }
@@ -116,6 +152,29 @@
     const g = state.game || {};
     pickChoice(el.competitionType, g.dbGames_Competition);
     el.gameFormat.value = g.dbGames_GameFormat || "StrokePlay";
+
+    el.scoringSystem.value = g.dbGames_ScoringSystem || "BestBall";
+    el.scoringMethod.value = g.dbGames_ScoringMethod || "NET";
+    el.scoringBasis.value = g.dbGames_ScoringBasis || "Strokes";
+
+    // Points defaults
+    const pts = Array.isArray(g.dbGames_StablefordPoints) && g.dbGames_StablefordPoints.length >= 4
+      ? g.dbGames_StablefordPoints
+      : [1, 2, 3, 4];
+    el.points.bogey.value = pts[0];
+    el.points.par.value = pts[1];
+    el.points.birdie.value = pts[2];
+    el.points.eagle.value = pts[3];
+
+    el.hcMethod.value = g.dbGames_HCMethod || "CH";
+    el.allowance.value = g.dbGames_Allowance ?? 100;
+    el.strokeDistribution.value = g.dbGames_StrokeDistribution || "Standard";
+
+    // Blind player (first item in array)
+    const bp = Array.isArray(g.dbGames_BlindPlayers) ? g.dbGames_BlindPlayers[0] : "";
+    el.blindPlayer.value = bp || "";
+
+    togglePointsCard();
   }
 
   function setActiveTab(tabId) {
@@ -145,6 +204,11 @@
     return on ? on.dataset.value : "";
   }
 
+  function togglePointsCard() {
+    const isPoints = el.scoringBasis.value === "Points";
+    if (el.cardPoints) el.cardPoints.style.display = isPoints ? "" : "none";
+  }
+
   // ---- Event Wiring ----
   function wireEvents() {
     el.tabs.addEventListener("click", (e) => {
@@ -172,6 +236,19 @@
 
     wireChoiceDirty(el.competitionType);
     wireDirty(el.gameFormat);
+    wireDirty(el.scoringSystem);
+    wireDirty(el.scoringMethod);
+    wireDirty(el.scoringBasis);
+    wireDirty(el.points.bogey);
+    wireDirty(el.points.par);
+    wireDirty(el.points.birdie);
+    wireDirty(el.points.eagle);
+    wireDirty(el.hcMethod);
+    wireDirty(el.allowance);
+    wireDirty(el.strokeDistribution);
+    wireDirty(el.blindPlayer);
+
+    el.scoringBasis.addEventListener("change", togglePointsCard);
   }
 
   // ---- Init ----
@@ -184,6 +261,22 @@
     state.ggid = init.ggid;
     state.game = init.game;
     state.roster = init.roster || [];
+
+    populateBlindPlayerSelect();
+  }
+
+  function populateBlindPlayerSelect() {
+    el.blindPlayer.innerHTML = '<option value="">(None)</option>';
+    if (!state.roster || !state.roster.length) return;
+
+    // Sort roster by name
+    const sorted = [...state.roster].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    sorted.forEach(p => {
+      const opt = document.createElement("option");
+      opt.value = p.ghin || ""; // Assuming roster objects have 'ghin'
+      opt.textContent = p.name || p.ghin;
+      el.blindPlayer.appendChild(opt);
+    });
   }
 
   function initialize() {

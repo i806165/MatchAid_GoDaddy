@@ -11,6 +11,7 @@ require_once MA_API_LIB . '/Logger.php';
 require_once MA_SERVICES . '/context/service_ContextUser.php';
 require_once MA_SERVICES . '/context/service_ContextGame.php';
 require_once MA_SVC_DB . '/service_dbPlayers.php';
+require_once MA_SERVICES . "/GHIN/GHIN_API_Courses.php";
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -30,7 +31,20 @@ try {
   $roster = ServiceDbPlayers::getGamePlayers((string)$ggid);
 
   // 4. Get Course Pars (placeholder)
-  $coursePars = []; // TODO: Implement course par fetching
+  $coursePars = [];
+  $courseId = (string)($game["dbGames_CourseID"] ?? "");
+  if ($courseId !== "") {
+      // Try admin token first, then user token
+      $token = $_SESSION["SessionAdminToken"] ?? $_SESSION["SessionUserToken"] ?? null;
+      if ($token) {
+          try {
+              $rawTeeSets = be_getCourseTeeSets($courseId, $token);
+              $coursePars = flattenCoursePars($rawTeeSets);
+          } catch (Throwable $e) {
+              Logger::warning("API_INIT_PARS_FAIL", ["err" => $e->getMessage()]);
+          }
+      }
+  }
 
   // 5. Build payload
   $payload = [

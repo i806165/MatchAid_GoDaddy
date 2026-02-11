@@ -10,6 +10,8 @@ require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
+require_once MA_SVC_DB . '/service_dbPlayers.php';
+require_once MA_SERVICES . "/GHIN/GHIN_API_Courses.php";
 
 // Portal context (required convention)
 $_SESSION["SessionPortal"] = "ADMIN PORTAL";
@@ -33,13 +35,30 @@ try {
   $game = $gc["game"];
   $ggid = $gc["ggid"];
 
+  // Fetch the roster for the blind player dropdown
+  $roster = ServiceDbPlayers::getGamePlayers((string)$ggid);
+  
+  // Fetch course pars
+  $coursePars = [];
+  $courseId = (string)($game["dbGames_CourseID"] ?? "");
+  if ($courseId !== "") {
+      $token = $_SESSION["SessionAdminToken"] ?? $_SESSION["SessionUserToken"] ?? null;
+      if ($token) {
+          try {
+              $rawTeeSets = be_getCourseTeeSets($courseId, $token);
+              $coursePars = flattenCoursePars($rawTeeSets); // flattenCoursePars is available from the included service
+          } catch (Throwable $e) {
+              Logger::warning("GAMESETTINGS_PARS_FAIL", ["err" => $e->getMessage()]);
+          }
+      }
+  }
+
   $initPayload = [
     "ok" => true,
     "ggid" => $ggid,
     "game" => $game,
-    // TODO: Add roster and course pars from initGameSettings logic
-    "roster" => [],
-    "coursePars" => [],
+    "roster" => $roster,
+    "coursePars" => $coursePars,
     "header" => [
       "subtitle" => $game["dbGames_Title"] ?? ("GGID " . (string)$ggid)
     ]
