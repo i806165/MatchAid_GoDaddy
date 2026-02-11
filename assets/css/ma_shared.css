@@ -235,6 +235,14 @@ html, body {
   height: 100%; 
   margin: 0; 
 }
+
+/* Fix for iOS zoom on focus: inputs must be at least 16px */
+input,
+select,
+textarea {
+  font-size: var(--inputTextSize, 16px);
+}
+
 body {
   display: flex; 
   flex-direction: column; 
