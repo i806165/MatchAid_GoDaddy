@@ -8,6 +8,10 @@
   background: var(--brandSecondary);
 }
 
+#gmTitle {
+  font-size: 16px !important;
+}
+
 .gmCourseRow{
   display:flex;
   align-items:flex-start;
@@ -27,6 +31,9 @@
 }
 .gmTimeSel{
   flex: 1 1 0;
+}
+.gmTimeSel select {
+  font-size: 16px !important;
 }
 
 .gmChoiceRow{
@@ -63,6 +70,7 @@
 }
 .gmStepInput{
   text-align:center;
+  font-size: 16px !important;
 }
 
 .gmHint{
@@ -98,6 +106,9 @@
   flex-wrap: wrap;
 }
 .gmStateField{ flex: 0 0 90px; }
+.gmStateField input {
+  font-size: 16px !important;
+}
 .gmSearchBtnWrap{ flex: 0 0 auto; }
 
 .gmListHdr{
