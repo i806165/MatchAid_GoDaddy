@@ -240,7 +240,7 @@ html, body {
 input,
 select,
 textarea {
-  font-size: var(--inputTextSize, 16px);
+  font-size: var(--inputTextSize, 16px) !important;
 }
 
 body {
