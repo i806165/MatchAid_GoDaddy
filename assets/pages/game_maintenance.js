@@ -512,6 +512,12 @@ function applyChrome() {
 
       if (!state.game) throw new Error("Missing init.game in __INIT__.");
 
+      // Default search state to user's state if available
+      if (el.searchState && !el.searchState.value) {
+        const ctx = init.context || {};
+        if (ctx.userState) el.searchState.value = ctx.userState;
+      }
+
       // Mirror ISO helpers for UI where needed
       if (!state.game.playDateISO && state.game.dbGames_PlayDate) {
         state.game.playDateISO = state.game.dbGames_PlayDate;

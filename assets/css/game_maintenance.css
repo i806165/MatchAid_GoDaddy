@@ -111,7 +111,14 @@
   align-items:flex-end;
   flex-wrap: wrap;
 }
-.gmStateField{ flex: 0 0 90px; }
+.gmCourseSearchRow > *:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+#gmSearchText {
+  min-width: 0;
+}
+.gmStateField{ flex: 0 0 60px; }
 .gmStateField input {
   font-size: 16px !important;
 }
