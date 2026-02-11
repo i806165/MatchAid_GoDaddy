@@ -515,7 +515,8 @@ function applyChrome() {
       // Default search state to user's state if available
       if (el.searchState && !el.searchState.value) {
         const ctx = init.context || {};
-        if (ctx.userState) el.searchState.value = ctx.userState;
+        const us = ctx.userState || init.userState;
+        if (us) el.searchState.value = us;
       }
 
       // Mirror ISO helpers for UI where needed
@@ -716,15 +717,17 @@ function buildPatchFromUI() {
 
     // Fix for iPhone layout: ensure Title/GGID row wraps
     if (el.title) {
-      let p = el.title.parentElement;
-      for (let i = 0; i < 3; i++) {
-        if (!p) break;
-        if (window.getComputedStyle(p).display === "flex") {
-          p.style.flexWrap = "wrap";
-          break;
+      let p = el.title.closest(".maFieldRow");
+      if (!p) {
+        p = el.title.parentElement;
+        for (let i = 0; i < 3; i++) {
+          if (!p) break;
+          const s = window.getComputedStyle(p);
+          if (s.display === "flex" || s.display === "inline-flex") break;
+          p = p.parentElement;
         }
-        p = p.parentElement;
       }
+      if (p) p.style.flexWrap = "wrap";
     }
   }
 
