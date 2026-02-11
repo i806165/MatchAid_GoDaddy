@@ -707,6 +707,19 @@ function buildPatchFromUI() {
     populateTimeSelects();
     wireInputs();
     loadContext();
+
+    // Fix for iPhone layout: ensure Title/GGID row wraps
+    if (el.title) {
+      let p = el.title.parentElement;
+      for (let i = 0; i < 3; i++) {
+        if (!p) break;
+        if (window.getComputedStyle(p).display === "flex") {
+          p.style.flexWrap = "wrap";
+          break;
+        }
+        p = p.parentElement;
+      }
+    }
   }
 
   if (document.readyState === "loading") {
