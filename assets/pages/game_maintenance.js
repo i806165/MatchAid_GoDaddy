@@ -314,7 +314,11 @@ function applyChrome() {
     const g = state.game || {};
 
     el.title.value = g.dbGames_Title || "";
-    if (el.ggid) el.ggid.value = String(state.ggid || g.dbGames_GGID || "");
+    if (el.ggid) {
+      const val = String(state.ggid || g.dbGames_GGID || "");
+      if (el.ggid.tagName === "INPUT") el.ggid.value = val;
+      else el.ggid.textContent = val;
+    }
 
     el.playDate.value = (g.playDateISO || g.dbGames_PlayDate || "") || "";
     setTimeFromDb(g.dbGames_PlayTime || g.playTimeText || "");
@@ -708,9 +712,27 @@ function buildPatchFromUI() {
     }
   }
 
+  function moveGgidToHeader() {
+    if (!el.ggid || el.ggid.tagName !== "INPUT") return;
+    const titleEl = document.querySelector(".maCard__hdr .maCard__title");
+    if (!titleEl) return;
+
+    const span = document.createElement("span");
+    span.style.marginLeft = "10px";
+    span.style.opacity = "0.7";
+    titleEl.appendChild(span);
+
+    const field = el.ggid.closest(".maField");
+    if (field) field.remove();
+    else el.ggid.remove();
+
+    el.ggid = span;
+  }
+
   // ---- Init ----
   function init() {
     applyChrome();
+    moveGgidToHeader();
     populateTimeSelects();
     wireInputs();
     loadContext();
