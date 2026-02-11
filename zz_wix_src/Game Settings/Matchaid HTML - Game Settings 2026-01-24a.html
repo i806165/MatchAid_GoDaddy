@@ -1,0 +1,1945 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MatchAid • Game Settings</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* ---  MatchAid Tokens (Canonical)-- */
+            /* Brand */
+            --brandPrimary: #07432A;
+            --brandSecondary: #3F7652;
+            --segmentSelectedBg: #CDB278;
+            --onBrandText: #FFFFFF;
+
+            /* Surfaces */
+            --appBg: #FFFFFF;
+            --surface: #FFFFFF;
+            --surfaceRaised: #FFFFFF;
+
+            /* Inks (3-inks rule) */
+            --onSurfaceText: #111111;
+            --onSurfaceMutedText: rgba(17, 17, 17, .62);
+            --onSurfaceSoftText: rgba(17, 17, 17, .45);
+
+            /* Borders / dividers */
+            --border: rgba(0, 0, 0, .12);
+            --divider: rgba(0, 0, 0, .10);
+            --controlBorder: rgba(0, 0, 0, .15);
+
+            /* Status */
+            --danger: #c62828;
+            --warn: #f6d365;
+            --success: #0aa45c;
+            --statusSuccessBg: var(--success);
+            --statusSuccessText: #ffffff;
+            --statusWarnBg: var(--warn);
+            --statusWarnText: #111111;
+            --statusErrorBg: var(--danger);
+            --statusErrorText: #ffffff;
+            --statusInfoBg: var(--brandSecondary);
+            --statusInfoText: #ffffff;
+
+            /* Layout */
+            --pagePad: 12px;
+            --cardPad: 12px;
+            --cardRadius: 14px;
+            --rowPadX: 12px;
+            --rowPadTop: 10px;
+            /* padding ABOVE drives rhythm */
+            --rowPadBottom: 8px;
+
+            /* Controls */
+            --controlsBg: color-mix(in srgb, var(--brandSecondary) 6%, var(--appBg));
+            --controlH: 36px;
+            --controlRadius: 14px;
+            --chipH: 36px;
+            --chipRadius: 14px;
+
+            /* Footer */
+            --footerBarH: 30px;
+            --footerTopLine: rgba(0, 0, 0, .22);
+            --footerShadow: 0 -8px 18px rgba(0, 0, 0, .10);
+
+            /* Modal / overlay */
+            --overlayBg: rgba(0, 0, 0, .35);
+            --elevationModal: 0 10px 28px rgba(0, 0, 0, .18);
+            --drawerRadius: 14px;
+            --drawerHandleH: 6px;
+
+            /* Typography (Montserrat) */
+            --fs-title: 18px;
+            --fs-subtitle: 15px;
+            --fs-section: 16px;
+            --fs-body: 13px;
+            --fs-label: 13px;
+            --fs-input: 13px;
+            --fs-caption: 11px;
+            --fs-micro: 10px;
+
+            --fw-regular: 400;
+            --fw-medium: 500;
+            --fw-semibold: 600;
+
+            --lh-tight: 1.15;
+            --lh-normal: 1.35;
+
+            /* Z scale */
+            --zBase: 0;
+            --zHeader: 100;
+            --zControls: 105;
+            --zFooter: 110;
+            --zOverlay: 1000;
+            --zDialog: 1010;
+
+            /* Aliases to match shell snippet naming */
+            --bodyPad: var(--pagePad);
+            --footerHeight: var(--footerBarH);
+            --pagePadX: var(--pagePad);
+            --pagePadY: var(--pagePad);
+            --focusRing: rgba(0, 120, 212, 0.35);
+            --focusRingW: 3px;
+        }
+
+        html,
+        body {
+            height: 100%;
+        }
+
+        body {
+            margin: 0;
+            font-family: Montserrat, Arial, sans-serif;
+            background: var(--appBg);
+            color: var(--onSurfaceText);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Text roles */
+        .text--title {
+            font-size: var(--fs-title);
+            line-height: var(--lh-tight);
+            font-weight: var(--fw-semibold);
+        }
+
+        .text--subtitle {
+            font-size: var(--fs-subtitle);
+            line-height: var(--lh-normal);
+            font-weight: var(--fw-medium);
+        }
+
+        .text--section {
+            font-size: var(--fs-section);
+            line-height: var(--lh-tight);
+            font-weight: var(--fw-semibold);
+        }
+
+        .text--body {
+            font-size: var(--fs-body);
+            line-height: var(--lh-normal);
+            font-weight: var(--fw-regular);
+        }
+
+        .text--label {
+            font-size: var(--fs-label);
+            line-height: var(--lh-tight);
+            font-weight: var(--fw-medium);
+        }
+
+        .text--input {
+            font-size: var(--fs-input);
+            line-height: var(--lh-tight);
+            font-weight: var(--fw-regular);
+        }
+
+        .text--caption {
+            font-size: var(--fs-caption);
+            line-height: var(--lh-normal);
+            font-weight: var(--fw-regular);
+        }
+
+        .text--micro {
+            font-size: var(--fs-micro);
+            line-height: var(--lh-normal);
+            font-weight: var(--fw-regular);
+        }
+
+        .ink--brand {
+            color: var(--onBrandText);
+        }
+
+        .ink--default {
+            color: var(--onSurfaceText);
+        }
+
+        .ink--muted {
+            color: var(--onSurfaceMutedText);
+        }
+
+        .ink--soft {
+            color: var(--onSurfaceSoftText);
+        }
+
+        /* Shell */
+        .pageHeader {
+            position: relative;
+            top: 0;
+            z-index: var(--zHeader);
+            background: var(--brandPrimary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .hdrLeft {
+            position: relative;
+            /* NEW: anchor for absolute centering */
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px var(--pagePad);
+        }
+
+        .hdrTitleWrap {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            min-width: 0;
+            max-width: 62%;
+            pointer-events: none;
+        }
+
+        .hdrTitle {
+            margin: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .hdrSub {
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .hdrRight {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex: 0 0 auto;
+        }
+
+        .controls {
+            position: relative;
+            top: auto;
+            z-index: var(--zControls);
+            background: var(--controlsBg, var(--appBg));
+            border-bottom: 1px solid var(--divider);
+        }
+
+        .tabsWrap {
+            position: relative;
+            padding: 10px var(--pagePad) 6px var(--pagePad);
+        }
+
+        .viewControls {
+            padding: 0 var(--pagePad) 10px var(--pagePad);
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .controlsInner {
+            padding: 10px var(--pagePad);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .content {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: auto;
+            padding: var(--bodyPad);
+            padding-bottom: var(--bodyPad);
+        }
+
+        .footerBar {
+            z-index: 20;
+            height: var(--footerHeight);
+            display: flex;
+            align-items: center;
+            padding: 0 var(--pagePad);
+            background: var(--surface);
+            border-top: 1px solid var(--footerTopLine);
+            box-shadow: var(--footerShadow);
+            font-size: var(--fs-caption);
+            color: var(--onSurfaceText);
+        }
+
+        /* Buttons */
+        .btn {
+            height: var(--controlH);
+            padding: 0 12px;
+            border-radius: var(--controlRadius);
+            border: 1px solid var(--controlBorder);
+            background: var(--surface);
+            color: var(--onSurfaceText);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: var(--fs-label);
+            font-weight: var(--fw-medium);
+            line-height: var(--lh-tight);
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 var(--focusRingW) var(--focusRing);
+        }
+
+        .btn:disabled {
+            opacity: .55;
+            cursor: not-allowed;
+        }
+
+        .btn--hdr {
+            border-color: var(--controlBorder);
+            background: var(--appBg);
+            color: var(--ink);
+        }
+
+        /* Segmented control (tabs) */
+        /* Segmented control (tabs) */
+        .segWrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .seg {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            border: 1px solid var(--controlBorder);
+            border-radius: var(--chipRadius);
+            background: var(--surface);
+            padding: 2px;
+            width: 100%;
+            overflow: auto hidden;
+            scrollbar-width: none;
+        }
+
+        .seg::-webkit-scrollbar {
+            height: 0;
+        }
+
+        .segBtn {
+            height: calc(var(--chipH) - 4px);
+            padding: 0 12px;
+            border-radius: calc(var(--chipRadius) - 2px);
+            border: 0;
+            background: transparent;
+            color: var(--onSurfaceText);
+            cursor: pointer;
+            white-space: nowrap;
+            font-size: var(--fs-label);
+            font-weight: var(--fw-medium);
+            line-height: var(--lh-tight);
+        }
+
+        .segBtn.is-selected {
+            background: var(--segmentSelectedBg);
+            color: var(--onSurfaceText);
+        }
+
+        /* pointer under selected segment */
+        .segBtn.is-selected::after {
+            content: "";
+            position: absolute;
+            left: 50%;
+            bottom: -10px;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 10px solid var(--segmentSelectedBg);
+        }
+
+
+
+        .segBtn:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 var(--focusRingW) var(--focusRing);
+        }
+
+        .segOverflowCue {
+            display: none;
+            flex: 0 0 auto;
+            height: var(--chipH);
+            width: 22px;
+            align-items: center;
+            justify-content: center;
+            color: var(--onSurfaceMutedText);
+            user-select: none;
+        }
+
+        .segWrap.is-overflow .segOverflowCue {
+            display: inline-flex;
+        }
+
+        /* Cards / sections */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--cardRadius);
+            padding: var(--cardPad);
+        }
+
+        .card+.card {
+            margin-top: 10px;
+        }
+
+        .cardHdr {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .cardHdr .hint {
+            white-space: nowrap;
+        }
+
+        /* Form grid */
+        .formGrid {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 10px 12px;
+            align-items: center;
+        }
+
+        .rowLabel {
+            color: var(--onSurfaceText);
+        }
+
+        .ctrl {
+            height: var(--controlH);
+            border-radius: var(--controlRadius);
+            border: 1px solid var(--controlBorder);
+            background: var(--surface);
+            padding: 0 10px;
+            font-size: var(--fs-input);
+            line-height: var(--lh-tight);
+            color: var(--onSurfaceText);
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        select.ctrl {
+            padding-right: 30px;
+        }
+
+        .ctrl:focus {
+            outline: none;
+            box-shadow: 0 0 0 var(--focusRingW) var(--focusRing);
+        }
+
+        .ctrl:disabled {
+            background: rgba(0, 0, 0, .03);
+            color: var(--onSurfaceMutedText);
+        }
+
+        .rowInline {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .chk {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            user-select: none;
+        }
+
+        .chk input {
+            width: 18px;
+            height: 18px;
+        }
+
+        /* Repeater-like lists */
+        .list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .listRow {
+            display: grid;
+            grid-template-columns: 1fr 140px;
+            gap: 10px;
+            align-items: center;
+            padding: var(--rowPadTop) var(--rowPadX) var(--rowPadBottom) var(--rowPadX);
+            border: 1px solid var(--border);
+            border-radius: var(--cardRadius);
+            background: var(--surfaceRaised);
+        }
+
+        .holeDeclCell select.ctrl option {
+            color: var(--onSurfaceText);
+            -webkit-text-fill-color: var(--onSurfaceText);
+            text-align-last: center;
+            /* centers selected value in most browsers */
+        }
+
+        /* Hole Declaration */
+        .holeDeclGrid {
+            display: grid;
+            grid-template-columns: repeat(9, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .holeDeclCell {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: stretch;
+            padding: var(--rowPadTop) var(--rowPadX) var(--rowPadBottom) var(--rowPadX);
+            border: 1px solid var(--border);
+            border-radius: var(--cardRadius);
+            background: var(--surfaceRaised);
+            min-width: 0;
+        }
+
+        .holeDeclLabel {
+            display: flex;
+            flex-direction: column;
+            /* stack Hole / Par */
+            align-items: center;
+            /* center horizontally */
+            justify-content: center;
+            /* center vertically (within label's own height) */
+            gap: 2px;
+            text-align: center;
+            color: var(--onSurfaceText);
+            /* ensure NOT muted */
+        }
+
+        .holeDeclLabel__par {
+            white-space: nowrap;
+            text-align: center;
+        }
+
+
+        @media (max-width: 520px) {
+            :root {
+                --fs-title: 12px;
+                --fs-subtitle: 10px;
+                --fs-section: 11px;
+                --fs-body: 11px;
+                --fs-label: 11px;
+                --fs-input: 11px;
+                --fs-caption: 9px;
+                --fs-micro: 8px;
+
+                --rowPadX: 6px;
+                --rowPadTop: 6px;
+                --rowPadBottom: 6px;
+                --controlH: 34px;
+                --chipH: 34px;
+                --footerBarH: 22px;
+            }
+
+            .formGrid {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
+            .listRow {
+                grid-template-columns: 1fr 120px;
+            }
+
+            .holeDeclGrid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+
+            .holeDeclLabel__par {
+                display: block;
+                width: 100%;
+                white-space: normal;
+            }
+
+            .holeDeclLabel {
+                white-space: normal;
+                /* allows wrap on mobile */
+                overflow-wrap: anywhere;
+                /* protects against overflow */
+                line-height: 1.15;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Overlay host (optional confirm/reset) */
+        .overlayHost {
+            position: fixed;
+            inset: 0;
+            z-index: var(--zOverlay);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .overlayHost.is-hidden {
+            display: none;
+        }
+
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: var(--overlayBg);
+        }
+
+        .dialog {
+            position: relative;
+            z-index: var(--zDialog);
+            width: min(680px, calc(100vw - 24px));
+            max-height: 90vh;
+            background: var(--surface);
+            border-radius: var(--drawerRadius);
+            box-shadow: var(--elevationModal);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .dialog__hdr {
+            padding: 12px var(--pagePad);
+            background: var(--brandSecondary);
+            color: var(--onBrandText);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .dialog__body {
+            padding: 12px var(--pagePad);
+            overflow: auto;
+            min-height: 0;
+        }
+
+        .dialog__ftr {
+            padding: 10px var(--pagePad);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            border-top: 1px solid var(--divider);
+            background: var(--surface);
+        }
+
+        /* Small utility */
+        .nowrap {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="pageHeader" role="banner">
+        <div class="hdrLeft">
+            <button id="btnCancel" class="btn btn--hdr" type="button" aria-label="Cancel and close">Cancel</button>
+
+            <div class="hdrTitleWrap">
+                <div id="title" class="hdrTitle text--title ink--brand">Game Settings</div>
+                <div id="subtitle" class="hdrSub text--subtitle ink--brand">Loading…</div>
+            </div>
+
+            <div class="hdrRight">
+                <button id="btnSave" class="btn btn--hdr" type="button" aria-label="Save game settings"
+                    disabled>Save</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="controls" id="controls">
+        <div class="tabsWrap" id="tabsWrap">
+            <div class="segWrap" id="segWrap">
+                <div class="seg" id="segTabs" role="tablist" aria-label="Settings tabs">
+                    <button class="segBtn is-selected" type="button" role="tab" aria-selected="true"
+                        data-tab="general">General</button>
+                    <button class="segBtn" type="button" role="tab" aria-selected="false"
+                        data-tab="scoring">Scoring</button>
+                    <button class="segBtn" type="button" role="tab" aria-selected="false"
+                        data-tab="handicaps">Handicaps</button>
+                </div>
+                <div class="segOverflowCue text--micro" aria-hidden="true">&gt;</div>
+            </div>
+        </div>
+
+        <div class="viewControls" id="viewControls">
+            <span id="chipDirty" class="text--caption ink--default hidden">There are unsaved changes</span>
+        </div>
+    </div>
+
+
+    <main class="content" id="content" role="main">
+        <!-- GENERAL TAB -->
+        <section id="tab-general" class="tabPanel">
+            <div class="card">
+                <div class="cardHdr">
+                    <div id="hdrGameMeta" class="text--caption ink--default hint nowrap"></div>
+                </div>
+                <div class="formGrid" aria-label="Game fields">
+                    <div class="rowLabel text--label">Game Format</div>
+                    <select id="frmGameFormat" class="ctrl"></select>
+
+                    <div class="rowLabel text--label">Teeing Method</div>
+                    <select id="frmTOMethod" class="ctrl"></select>
+
+                    <div class="rowLabel text--label">Scoring Basis</div>
+                    <select id="frmScoringBasis" class="ctrl" disabled></select>
+
+                    <div class="rowLabel text--label">Competition</div>
+                    <select id="frmCompetition" class="ctrl"></select>
+
+                    <div class="rowLabel text--label">Holes / Segments</div>
+                    <div class="rowInline">
+                        <input id="frmHoles" class="ctrl" type="text" disabled
+                            style="flex:1 1 140px; min-width:140px;" />
+                        <select id="frmSegments" class="ctrl" style="flex:1 1 140px; min-width:140px;"></select>
+                    </div>
+
+                    <div class="rowLabel text--label">Rotation</div>
+                    <select id="frmRotationMethod" class="ctrl"></select>
+
+                    <div class="rowLabel text--label">Blind Player</div>
+                    <div class="rowInline">
+                        <label class="chk text--label ink--default">
+                            <input id="frmUseBlindPlayer" type="checkbox" />
+                            Use Blind Player
+                        </label>
+                        <select id="frmBlindPlayer" class="ctrl" style="flex:1 1 240px; min-width:220px;"></select>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SCORING TAB -->
+        <section id="tab-scoring" class="tabPanel hidden">
+            <div class="card">
+                <div class="cardHdr">
+                    <div class="text--section ink--default">Scoring</div>
+                    <div class="text--caption ink--default hint nowrap">Basis & format constraints applied automatically
+                    </div>
+                </div>
+                <div class="formGrid" aria-label="Scoring fields">
+                    <div class="rowLabel text--label">Scoring Method</div>
+                    <select id="frmScoringMethod" class="ctrl"></select>
+
+                    <div class="rowLabel text--label">Scoring System</div>
+                    <select id="frmScoringSystem" class="ctrl"></select>
+
+                    <div class="rowLabel text--label" id="lblBestBall">Best Ball Count</div>
+                    <select id="frmBestBallCnt" class="ctrl"></select>
+
+                    <div class="rowLabel text--label" id="lblPlayerDecl">Player Declaration</div>
+                    <select id="frmPlayerDeclaration" class="ctrl"></select>
+                </div>
+            </div>
+
+            <div id="cardHoleDecl" class="card hidden" style="margin-top:10px;">
+                <div class="cardHdr">
+                    <div class="text--section ink--default">Hole Declarations</div>
+                    <div class="text--caption ink--default hint nowrap">Counts default to Best Ball</div>
+                </div>
+                <div id="listHoleDecl" class="list holeDeclGrid" aria-label="Hole declaration list"></div>
+            </div>
+
+            <div id="cardStableford" class="card hidden" style="margin-top:10px;">
+                <div class="cardHdr">
+                    <div class="text--section ink--default">Stableford Points</div>
+                    <div class="rowInline">
+                        <button id="btnResetStableford" class="btn" type="button">Reset</button>
+                    </div>
+                </div>
+                <div id="listStableford" class="list" aria-label="Stableford points list"></div>
+            </div>
+        </section>
+
+        <!-- HANDICAPS TAB -->
+        <section id="tab-handicaps" class="tabPanel hidden">
+            <div class="card">
+                <div class="cardHdr">
+                    <div class="text--section ink--default">Handicaps</div>
+                    <div class="text--caption ink--default hint nowrap">Effectivity and allowance drive later
+                        computations
+                    </div>
+                </div>
+                <div class="formGrid" aria-label="Handicap fields">
+                    <div class="rowLabel text--label">HC Method</div>
+                    <select id="frmHCMethod" class="ctrl"></select>
+
+                    <div class="rowLabel text--label">Allowance</div>
+                    <select id="frmAllowance" class="ctrl"></select>
+
+                    <div class="rowLabel text--label">Stroke Distribution</div>
+                    <select id="frmStrokeDistribution" class="ctrl"></select>
+
+                    <div class="rowLabel text--label">HC Effectivity</div>
+                    <select id="frmHCEffectivity" class="ctrl"></select>
+
+                    <div class="rowLabel text--label" id="lblHCEffDate">Effectivity Date</div>
+                    <input id="frmHCEffectivityDate" class="ctrl" type="date" />
+                </div>
+            </div>
+        </section>
+
+        <div id="cardLoading" class="card" style="margin-top:10px;">
+            <div class="text--body ink--default">Loading game settings…</div>
+        </div>
+    </main>
+
+    <footer id="footerBar" class="footerBar" role="status" aria-live="polite">
+        <span id="statusText">Ready</span>
+    </footer>
+
+
+    <!-- Optional overlay (Reset confirmation) -->
+    <div id="overlayHost" class="overlayHost is-hidden" aria-hidden="true">
+        <div class="overlay" data-role="overlay"></div>
+        <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
+            <div class="dialog__hdr">
+                <div id="dlgTitle" class="text--subtitle">Confirm</div>
+                <button id="btnDlgClose" class="btn btn--hdr" type="button" aria-label="Close dialog">Close</button>
+            </div>
+            <div class="dialog__body">
+                <div id="dlgBody" class="text--body ink--default">Are you sure?</div>
+            </div>
+            <div class="dialog__ftr">
+                <button id="btnDlgCancel" class="btn" type="button">Cancel</button>
+                <button id="btnDlgOk" class="btn" type="button">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // -------------------------
+        // Messaging (Wix <-> HTML)
+        // -------------------------
+
+        const CONTRACT_VERSION = '1.0';
+
+        /**
+         * Attempt to compute Wix site origin so we can postMessage with explicit targetOrigin.
+         * In Wix iframes, document.referrer is typically the hosting page URL.
+         */
+        function getParentOrigin() {
+            try {
+                const ref = document.referrer || '';
+                if (ref) return new URL(ref).origin;
+            } catch (e) { }
+            try {
+                if (window.location && window.location.ancestorOrigins && window.location.ancestorOrigins.length > 0) {
+                    return window.location.ancestorOrigins[0];
+                }
+            } catch (e) { }
+            return null;
+        }
+
+        const state = {
+            wixOrigin: getParentOrigin(),
+            initialized: false,
+            dirty: false,
+            tab: 'general',
+
+            // server payload
+            game: null,
+            players: [],
+            coursePars: [],
+            courseParsByHole: {},
+            courseParTextByHole: {},
+
+            // computed option lists
+            options: {
+                scoringMethods: [],
+                competition: [],
+                segments: [],
+                rotation: [],
+                bestBall: [],
+            },
+
+            // stableford + hole decls
+            stableford: [],
+            holeDecls: [],
+
+            // dialog
+            dialog: {
+                open: false,
+                onOk: null,
+            }
+        };
+
+        const MSG = {
+            READY: 'READY',
+            INIT: 'INIT',
+            SAVE: 'SAVE',
+            SAVE_RESULT: 'SAVE_RESULT',
+            STATUS: 'STATUS',
+            CLOSE: 'CLOSE',
+            CANCEL: 'CANCEL'
+        };
+
+        function postToWix(type, payload = {}) {
+            const targetOrigin = state.wixOrigin;
+            if (!targetOrigin) {
+                // If we cannot determine origin, do nothing rather than use '*'.
+                // In normal Wix hosting, wixOrigin is always discovered.
+                console.warn('[GAME_SETTINGS] Missing wixOrigin; cannot postMessage');
+                return;
+            }
+            const msg = { type, payload, version: CONTRACT_VERSION };
+            window.parent.postMessage(msg, targetOrigin);
+        }
+
+        function isTrustedOrigin(e) {
+            // After first INIT, lock down origin.
+            if (state.wixOrigin) return e.origin === state.wixOrigin;
+            // Before INIT, accept only the computed parent origin (if present).
+            const computed = getParentOrigin();
+            if (computed) return e.origin === computed;
+            return false;
+        }
+
+        window.addEventListener('message', (e) => {
+            if (!isTrustedOrigin(e)) return;
+            const msg = e.data || {};
+            if (!msg.type) return;
+
+            if (!state.wixOrigin) state.wixOrigin = e.origin; // lock
+
+            try {
+                handleInboundMessage(msg.type, msg.payload || {});
+            } catch (err) {
+                console.error('[GAME_SETTINGS] inbound error', err);
+                setStatus('Unexpected error processing host message.', 'error');
+            }
+        });
+
+        function handleInboundMessage(type, payload) {
+            switch (type) {
+                case MSG.INIT:
+                    onInit(payload);
+                    break;
+                case MSG.SAVE_RESULT:
+                    onSaveResult(payload);
+                    break;
+                case MSG.STATUS:
+                    setStatus(payload.message || '', payload.level || '');
+                    break;
+                case MSG.CLOSE:
+                    // Host is closing the lightbox; nothing required.
+                    break;
+                default:
+                    // ignore
+                    break;
+            }
+        }
+
+        // -------------------------
+        // Domain config (matches legacy Velo)
+        // -------------------------
+
+        const stablefordTemplate = [
+            { reltoPar: -3, defaultPoints: 5 },
+            { reltoPar: -2, defaultPoints: 4 },
+            { reltoPar: -1, defaultPoints: 3 },
+            { reltoPar: 0, defaultPoints: 2 },
+            { reltoPar: 1, defaultPoints: 1 },
+            { reltoPar: 2, defaultPoints: 0 }
+        ];
+
+        const gameFormatConfig = {
+            StrokePlay: { label: 'Stroke Play', basis: 'Strokes', methods: ['NET', 'ADJ GROSS'], competition: ['PairPair', 'PairField'] },
+            Stableford: { label: 'Stableford', basis: 'Points', methods: ['NET', 'ADJ GROSS'], competition: ['PairPair', 'PairField'] },
+            MatchPlay: { label: 'Match Play', basis: 'Holes', methods: ['NET', 'ADJ GROSS'], competition: ['PairPair'] },
+            Skins: { label: 'Skins', basis: 'Skins', methods: ['NET', 'ADJ GROSS'], competition: ['PairPair'] },
+            Scramble: { label: 'Scramble', basis: 'Strokes', methods: ['NET', 'ADJ GROSS'], competition: ['PairPair', 'PairField'] },
+            Shamble: { label: 'Shamble', basis: 'Strokes', methods: ['NET', 'ADJ GROSS'], competition: ['PairPair', 'PairField'] },
+            AltShot: { label: 'Alt-Shot', basis: 'Strokes', methods: ['NET', 'ADJ GROSS'], competition: ['PairPair', 'PairField'] },
+        };
+
+        const competitionConfig = {
+            PairPair: { label: 'Pair vs. Pair', value: 'PairPair' },
+            PairField: { label: 'Pair vs. Field', value: 'PairField' },
+        };
+
+        const scoringSystemOptions = [
+            { label: 'All Scores', value: 'AllScores' },
+            { label: 'Best Ball', value: 'BestBall' },
+            { label: 'Hole Declarations', value: 'DeclareHole' },
+            { label: 'Game Declarations', value: 'DeclarePlayer' }
+        ];
+
+        const toMethodOptions = [
+            { label: 'ShotGun', value: 'ShotGun' },
+            { label: 'Tee Times', value: 'TeeTimes' }
+        ];
+
+        const hcMethodOptions = [
+            { label: 'CH with Allowance', value: 'CH' },
+            { label: 'Shots-Off', value: 'SO' }
+        ];
+
+        const allowanceOptions = (() => {
+            const out = [];
+            for (let i = 0; i <= 20; i++) {
+                const val = 100 - (i * 5);
+                out.push({ label: val + '%', value: String(val) });
+            }
+            return out;
+        })();
+
+        const strokeDistOptions = [
+            { label: 'Standard stroke allocation', value: 'Standard' },
+            { label: 'Strokes distributed across spins', value: 'Balanced' },
+            { label: "Round HCP's and distribute across spins", value: 'Balanced-Rounded' }
+        ];
+
+        // Effectivity options: include a conservative set + support legacy stored values.
+        const hcEffectivityOptions = [
+            { label: 'Play Date', value: 'PlayDate' },
+            { label: '3-Month Low', value: 'Low3' },
+            { label: '6-Month Low', value: 'Low6' },
+            { label: '12-Month Low', value: 'Low12' },
+            { label: 'Choose Date', value: 'Date' },
+        ];
+
+        // -------------------------
+        // DOM helpers
+        // -------------------------
+
+        const $ = (id) => document.getElementById(id);
+        const footerBarEl = document.getElementById("footerBar");
+        const statusTextEl = document.getElementById("statusText");
+
+
+        function escapeHtml(s) {
+            return String(s ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+        function setSelectOptions(sel, options) {
+            // Preserve current selection before rebuild
+            const prior = String(sel?.value ?? '');
+
+            sel.innerHTML = '';
+            for (const opt of (options || [])) {
+                const o = document.createElement('option');
+                o.value = String(opt.value);
+                o.textContent = String(opt.label);
+                sel.appendChild(o);
+            }
+
+            // Restore prior value if still valid in the rebuilt option list
+            if (prior && Array.from(sel.options).some(o => o.value === prior)) {
+                sel.value = prior;
+            } else if (sel.options.length) {
+                sel.value = sel.options[0].value;
+            }
+        }
+
+
+        function setDisabled(el, disabled) {
+            el.disabled = !!disabled;
+        }
+
+        function show(el, shouldShow) {
+            el.classList.toggle('hidden', !shouldShow);
+        }
+
+        function isoDate(d) {
+            if (!d) return '';
+
+            // ✅ If it's already a date-only string, return as-is (prevents -1 day shift)
+            if (typeof d === 'string') {
+                const s = d.trim().replace(/^"+|"+$/g, '');
+
+                // "YYYY-MM-DD"
+                if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+                // ISO string like "YYYY-MM-DDTHH:MM:SS..."
+                const m = /^(\d{4}-\d{2}-\d{2})/.exec(s);
+                if (m) return m[1];
+            }
+
+            // Date object or other parseable string
+            const dt = (d instanceof Date) ? d : new Date(d);
+            if (Number.isNaN(dt.getTime())) return '';
+
+            const y = dt.getFullYear();
+            const m = String(dt.getMonth() + 1).padStart(2, '0');
+            const day = String(dt.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+
+        function parseDateInput(v) {
+            // yyyy-mm-dd
+            if (!v) return null;
+            const dt = new Date(v + 'T00:00:00');
+            if (Number.isNaN(dt.getTime())) return null;
+            return dt;
+        }
+
+        function fmtSubLine(game) {
+            // Title line 2: playDate • course • GGID
+            const playDate = game?.dbGames_PlayDate ? new Date(game.dbGames_PlayDate) : null;
+            const dateStr = playDate && !Number.isNaN(playDate.getTime())
+                ? playDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: '2-digit' })
+                : '';
+            const course = game?.dbGames_CourseName || '';
+            const ggid = String(game?.dbGames_GGID || '').replace(/^0+/, '') || '';
+            const parts = [dateStr, course, ggid ? ('GGID ' + ggid) : ''].filter(Boolean);
+            return parts.join(' • ');
+        }
+
+        // -------------------------
+        // Render pipeline
+        // -------------------------
+
+        function onInit(payload) {
+            // Expected payload: { game, players, config? }
+            state.game = payload.game || null;
+
+            state.players = Array.isArray(payload.players) ? payload.players : [];
+            state.initialized = true;
+            state.dirty = false;
+
+            // Populate static selects
+            setSelectOptions($('frmTOMethod'), toMethodOptions);
+            setSelectOptions($('frmGameFormat'), Object.entries(gameFormatConfig).map(([k, cfg]) => ({ value: k, label: cfg.label })));
+            setSelectOptions($('frmScoringBasis'), [
+                { label: 'Strokes', value: 'Strokes' },
+                { label: 'Points', value: 'Points' },
+                { label: 'Holes', value: 'Holes' },
+                { label: 'Skins', value: 'Skins' },
+            ]);
+            setSelectOptions($('frmScoringSystem'), scoringSystemOptions);
+            setSelectOptions($('frmHCMethod'), hcMethodOptions);
+            setSelectOptions($('frmAllowance'), allowanceOptions);
+            setSelectOptions($('frmStrokeDistribution'), strokeDistOptions);
+            setSelectOptions($('frmHCEffectivity'), hcEffectivityOptions);
+
+            // Blind player list
+            const blindOptions = [{ label: 'Select…', value: '' }].concat(
+                state.players
+                    .slice()
+                    .sort((a, b) => String(a.dbPlayers_LName || '').localeCompare(String(b.dbPlayers_LName || '')))
+                    .map(p => ({
+                        label: String(p.dbPlayers_Name || '').trim() || `${String(p.dbPlayers_FName || '').trim()} ${String(p.dbPlayers_LName || '').trim()}`.trim(),
+                        value: String(p.dbPlayers_PlayerGHIN || '')
+                    }))
+            );
+            setSelectOptions($('frmBlindPlayer'), blindOptions);
+
+            // Course pars (sent once at INIT)
+            state.coursePars = Array.isArray(payload.coursePars) ? payload.coursePars : [];
+            state.courseParsByHole = buildCourseParsByHole(state.coursePars);
+
+            hydrateFromGame();
+            applyDependencies();
+            renderStableford();
+            renderHoleDecls();
+
+            // enable save after init
+            $('btnSave').disabled = false;
+
+            // hide loading card
+            show($('cardLoading'), false);
+
+            setStatus('Ready', '');
+        }
+
+        function hydrateFromGame() {
+            const g = state.game || {};
+
+            $('title').textContent = `Settings ${g.dbGames_Title}`
+            $('subtitle').textContent = fmtSubLine(g) || ' ';
+
+            $('frmHoles').value = String(g.dbGames_Holes || '');
+
+            $('frmTOMethod').value = String(g.dbGames_TOMethod || 'TeeTimes');
+            $('frmGameFormat').value = String(g.dbGames_GameFormat || 'StrokePlay');
+
+            $('frmScoringMethod').value = String(g.dbGames_ScoringMethod || 'NET');
+            $('frmScoringSystem').value = String(g.dbGames_ScoringSystem || 'BestBall');
+
+            $('frmBestBallCnt').value = String(g.dbGames_BestBall ?? '2');
+
+            // PlayerDeclaration is stored as opaque string; keep current.
+            const playerDecl = String(g.dbGames_PlayerDeclaration || '11');
+            setSelectOptions($('frmPlayerDeclaration'), [{ label: playerDecl, value: playerDecl }]);
+            $('frmPlayerDeclaration').value = playerDecl;
+
+            $('frmHCMethod').value = String(g.dbGames_HCMethod || 'CH');
+            $('frmAllowance').value = String((g.dbGames_Allowance ?? 100));
+            $('frmStrokeDistribution').value = String(g.dbGames_StrokeDistribution || 'Standard');
+
+            $('frmCompetition').value = String(g.dbGames_Competition || 'PairField');
+            $('frmSegments').value = String(g.dbGames_Segments || '9');
+            $('frmRotationMethod').value = String(g.dbGames_RotationMethod || 'None');
+
+            // Blind player stored as array<string> JSON
+            const blindArr = Array.isArray(g.dbGames_BlindPlayers) ? g.dbGames_BlindPlayers : [];
+            let blindGHIN = '';
+            if (blindArr.length > 0) {
+                try { blindGHIN = JSON.parse(blindArr[0] || '{}').ghin || ''; } catch (e) { }
+            }
+            $('frmUseBlindPlayer').checked = !!blindGHIN;
+            $('frmBlindPlayer').value = blindGHIN;
+
+            // Effectivity
+            const eff = String(g.dbGames_HCEffectivity || 'PlayDate');
+            // if value not in options, append it
+            if (![...$('frmHCEffectivity').options].some(o => o.value === eff)) {
+                const opt = document.createElement('option');
+                opt.value = eff;
+                opt.textContent = eff;
+                $('frmHCEffectivity').appendChild(opt);
+            }
+            $('frmHCEffectivity').value = eff;
+
+            // Date defaults to stored or play date
+            const effDateRaw = g.dbGames_HCEffectivityDate || g.dbGames_PlayDate;
+            $('frmHCEffectivityDate').value = isoDate(effDateRaw);
+
+            // Max date must be play date
+            const playIso = isoDate(g.dbGames_PlayDate);
+            if (playIso) $('frmHCEffectivityDate').max = playIso;
+
+            // Stableford + hole decls
+            state.stableford = normalizeStableford(g.dbGames_StablefordPoints);
+            state.holeDecls = normalizeHoleDecls(g.dbGames_HoleDeclaration);
+        }
+
+        function applyDependencies() {
+            const g = state.game || {};
+
+            const gameFormat = $('frmGameFormat').value;
+            const cfg = gameFormatConfig[gameFormat] || gameFormatConfig.StrokePlay;
+
+            // Basis forced
+            $('frmScoringBasis').value = cfg.basis;
+
+            // Scoring Method options constrained  (PRESERVE STORED VALUE)
+            const methodEl = $('frmScoringMethod');
+            const desiredMethod = String(g.dbGames_ScoringMethod ?? methodEl.value ?? '').trim();
+
+            const methodOptions = cfg.methods.map(m => ({ label: m, value: m }));
+            setSelectOptions(methodEl, methodOptions);
+
+            const validMethods = cfg.methods.map(m => String(m));
+            if (desiredMethod && validMethods.includes(desiredMethod)) {
+                methodEl.value = desiredMethod;                 // ✅ restore stored value
+            } else if (!validMethods.includes(String(methodEl.value))) {
+                methodEl.value = cfg.methods[0] || 'NET';       // safe fallback
+            }
+
+
+            // Competition options constrained  (PRESERVE STORED VALUE)
+            const compEl = $('frmCompetition');
+            const desiredComp = String(g.dbGames_Competition ?? compEl.value ?? '').trim();
+
+            const compOpts = cfg.competition.map(c => competitionConfig[c]).filter(Boolean);
+            setSelectOptions(compEl, compOpts);
+
+            const validComp = compOpts.map(o => String(o.value));
+            if (desiredComp && validComp.includes(desiredComp)) {
+                compEl.value = desiredComp;                    // ✅ restore stored value
+            } else if (!validComp.includes(String(compEl.value))) {
+                compEl.value = validComp[0] || 'PairField';    // safe fallback
+            }
+
+            setDisabled(compEl, compOpts.length <= 1);
+
+            // Segments depend on Holes setting
+            const holesSetting = String(g.dbGames_Holes || $('frmHoles').value || 'All 18');
+            let segmentOptions = [];
+            if (holesSetting === 'All 18') segmentOptions = [{ label: "6's", value: '6' }, { label: "9's", value: '9' }];
+            else if (holesSetting === 'F9' || holesSetting === 'B9') segmentOptions = [{ label: "3's", value: '3' }, { label: "9's", value: '9' }];
+            else segmentOptions = [];
+
+            const segEl = $('frmSegments');
+            // capture what we want to keep (stored value wins; otherwise whatever is currently selected)
+            const desiredSeg = String(g.dbGames_Segments ?? segEl.value ?? '').trim();
+
+
+            setSelectOptions(segEl, segmentOptions);
+            // re-apply desired value if still valid; otherwise keep/fall back safely
+            const validSegs = segmentOptions.map(o => String(o.value));
+            if (desiredSeg && validSegs.includes(desiredSeg)) {
+                segEl.value = desiredSeg;
+            } else if (!validSegs.includes(String(segEl.value))) {
+                segEl.value = segmentOptions[0]?.value || '';
+            }
+
+            // Rotation options depend on Competition + Segments
+            updateRotationOptions();
+
+            // Blind player enable
+            const useBlind = $('frmUseBlindPlayer').checked;
+            setDisabled($('frmBlindPlayer'), !useBlind);
+            if (!useBlind) $('frmBlindPlayer').value = '';
+
+            // Stableford panel
+            show($('cardStableford'), cfg.basis === 'Points');
+
+            // Scoring system toggles
+            const scoringSystem = $('frmScoringSystem').value;
+            const showBestBall = (scoringSystem === 'BestBall');
+            const showDeclPlayer = (scoringSystem === 'DeclarePlayer');
+            const showDeclHole = (scoringSystem === 'DeclareHole');
+
+            show($('lblBestBall'), showBestBall);
+            show($('frmBestBallCnt'), showBestBall);
+            show($('lblPlayerDecl'), showDeclPlayer);
+            show($('frmPlayerDeclaration'), showDeclPlayer);
+            show($('cardHoleDecl'), showDeclHole);
+
+            // Best ball options constrained by MatchPlay  (PRESERVE STORED VALUE)
+            const bbEl = $('frmBestBallCnt');
+            const desiredBB = String(g.dbGames_BestBall ?? bbEl.value ?? '').trim();
+
+            const bbOptions = (gameFormat === 'MatchPlay')
+                ? [{ label: 'Use Best 1 Best Score', value: '1' }, { label: 'Use Best 2 Best Scores', value: '2' }]
+                : [1, 2, 3, 4].map(v => ({
+                    label: v === 4 ? 'Use All Scores' : `Use Best ${v} Best Scores`,
+                    value: String(v)
+                }));
+
+            setSelectOptions(bbEl, bbOptions);
+
+            const validBB = bbOptions.map(o => String(o.value));
+            if (desiredBB && validBB.includes(desiredBB)) {
+                bbEl.value = desiredBB;                               // ✅ restore stored value
+            } else if (!validBB.includes(String(bbEl.value))) {
+                bbEl.value = (gameFormat === 'MatchPlay') ? '1' : '2'; // safe fallback
+            }
+
+
+            // When hole declarations, regenerate list if needed.
+            if (showDeclHole) {
+                state.holeDecls = normalizeHoleDecls(state.holeDecls);
+                renderHoleDecls();
+            }
+
+            // Handicap dependency: ADJ GROSS forces HC=CH, Allowance=100, StrokeDist=Standard
+            const scoringMethod = $('frmScoringMethod').value;
+            if (scoringMethod === 'ADJ GROSS') {
+                $('frmHCMethod').value = 'CH';
+                $('frmAllowance').value = '100';
+                $('frmStrokeDistribution').value = 'Standard';
+                setDisabled($('frmHCMethod'), true);
+                setDisabled($('frmAllowance'), true);
+            } else {
+                setDisabled($('frmHCMethod'), false);
+                setDisabled($('frmAllowance'), false);
+            }
+
+            // Stroke distribution depends on rotation + scoring method
+            handleStrokeDistribution();
+
+            // Effectivity date visible only when 'Date'
+            const eff = $('frmHCEffectivity').value;
+            const showDate = (eff === 'Date');
+            show($('lblHCEffDate'), showDate);
+            show($('frmHCEffectivityDate'), showDate);
+            if (!showDate) {
+                // keep value in memory (so toggling back doesn't lose), but do not send on save
+            }
+
+            // Update stableford list after basis set
+            if (cfg.basis === 'Points') renderStableford();
+
+            // Save enabled once initialized
+            $('btnSave').disabled = !state.initialized;
+
+            // Update overflow cue
+            updateSegOverflowCue();
+        }
+
+        function updateRotationOptions() {
+            const competition = $('frmCompetition').value;
+            const segmentValue = $('frmSegments').value;
+
+            let rotationOptions = [{ label: 'No Rotation', value: 'None' }];
+
+            if (competition === 'PairField') {
+                setSelectOptions($('frmRotationMethod'), rotationOptions);
+                $('frmRotationMethod').value = 'None';
+                setDisabled($('frmRotationMethod'), true);
+                return;
+            }
+
+            if (segmentValue === '6' || segmentValue === '3') {
+                rotationOptions.push({ label: 'Rotate C-O-D', value: 'COD' });
+            } else if (segmentValue === '9') {
+                rotationOptions.push(
+                    { label: '1-2 v 3-4 Rotates to 1-3 v 2-4', value: '1324' },
+                    { label: '1-2 v 3-4 Rotates to 1-4 v 2-3', value: '1423' }
+                );
+            }
+
+            const current = $('frmRotationMethod').value;
+            setSelectOptions($('frmRotationMethod'), rotationOptions);
+            setDisabled($('frmRotationMethod'), false);
+            if (!rotationOptions.map(o => o.value).includes(current)) {
+                $('frmRotationMethod').value = 'None';
+            } else {
+                $('frmRotationMethod').value = current;
+            }
+        }
+
+        function handleStrokeDistribution() {
+            const rotationMethod = $('frmRotationMethod').value;
+            const scoringMethod = $('frmScoringMethod').value;
+            const forceStandard = (scoringMethod === 'ADJ GROSS') || (rotationMethod !== 'COD');
+
+            setSelectOptions($('frmStrokeDistribution'), strokeDistOptions);
+
+            if (forceStandard) {
+                $('frmStrokeDistribution').value = 'Standard';
+                setDisabled($('frmStrokeDistribution'), true);
+            } else {
+                // only selectable when COD and not ADJ GROSS
+                const v = $('frmStrokeDistribution').value;
+                const valid = strokeDistOptions.map(o => o.value);
+                if (!valid.includes(v)) $('frmStrokeDistribution').value = 'Standard';
+                setDisabled($('frmStrokeDistribution'), false);
+            }
+        }
+
+        function normalizeStableford(existing) {
+            const arr = Array.isArray(existing) ? existing : [];
+            return stablefordTemplate.map((entry, idx) => {
+                const match = arr.find(e => Number(e.reltoPar ?? e.relToPar) === entry.reltoPar);
+                return {
+                    _id: String(idx),
+                    reltoPar: entry.reltoPar,
+                    points: match ? Number(match.points) : entry.defaultPoints
+                };
+            });
+        }
+
+        function renderStableford() {
+            const list = $('listStableford');
+            list.innerHTML = '';
+
+            const scheme = state.stableford || normalizeStableford(null);
+            state.stableford = scheme;
+
+            for (const row of scheme) {
+                const rel = Number(row.reltoPar);
+                const label = rel === 0 ? 'PAR' : (rel < 0 ? `${Math.abs(rel)} Under` : `${rel} Over`);
+
+                const el = document.createElement('div');
+                el.className = 'listRow';
+
+                const left = document.createElement('div');
+                left.className = 'text--body ink--default';
+                left.textContent = label;
+
+                const sel = document.createElement('select');
+                sel.className = 'ctrl';
+                sel.setAttribute('aria-label', `Points for ${label}`);
+
+                const opts = [];
+                for (let p = 0; p <= 10; p++) opts.push({ label: String(p), value: String(p) });
+                setSelectOptions(sel, opts);
+                sel.value = String(row.points ?? 0);
+
+                sel.addEventListener('change', () => {
+                    row.points = Number(sel.value);
+                    markDirty();
+                });
+
+                el.appendChild(left);
+                el.appendChild(sel);
+                list.appendChild(el);
+            }
+        }
+
+        function buildCourseParsByHole(coursePars) {
+            // coursePars items are like:
+            // { hole: 1, par: 4, parM: 4, parF: 5, parText: "Par 4/5" }
+            const map = {};
+            const arr = Array.isArray(coursePars) ? coursePars : [];
+
+            for (const p of arr) {
+                const holeNum = Number(p?.hole);
+                if (!Number.isFinite(holeNum)) continue;
+
+                const parText = String(p?.parText || '').trim();
+                if (parText) {
+                    map[holeNum] = parText;
+                    continue;
+                }
+
+                const par = Number(p?.par);
+                if (Number.isFinite(par)) {
+                    map[holeNum] = `Par ${par}`;
+                }
+            }
+
+            return map;
+        }
+
+        function getParTextForHole(holeNum) {
+            const parText = state.courseParsByHole ? state.courseParsByHole[holeNum] : '';
+            return String(parText || '').trim();
+        }
+
+        function buildHoleDeclLabelEl(holeNum) {
+            // Returns a <div> with two spans:
+            //  - "Hole 1"
+            //  - "Par 4/5" (optional)
+            const wrap = document.createElement('div');
+            wrap.className = 'holeDeclLabel text--caption ink--default';
+
+            const s1 = document.createElement('span');
+            s1.className = 'holeDeclLabel__hole';
+            s1.textContent = `Hole ${holeNum}`;
+
+            wrap.appendChild(s1);
+
+            const parText = getParTextForHole(holeNum);
+            if (parText) {
+                const s2 = document.createElement('span');
+                s2.className = 'holeDeclLabel__par';
+                s2.textContent = parText;
+                wrap.appendChild(s2);
+            }
+
+            return wrap;
+        }
+
+
+        function normalizeHoleDecls(existing) {
+            // Determine hole range from game holes
+            const g = state.game || {};
+            const holesSetting = String(g.dbGames_Holes || 'All 18');
+            let start = 1, end = 18;
+            if (holesSetting === 'F9') { start = 1; end = 9; }
+            if (holesSetting === 'B9') { start = 10; end = 18; }
+
+            const bestBallDefault = $('frmBestBallCnt').value || '2';
+
+            const arr = Array.isArray(existing) ? existing : [];
+            const expectedLen = (end - start + 1);
+
+            if (arr.length !== expectedLen) {
+                const out = [];
+                for (let i = 0; i < expectedLen; i++) {
+                    out.push({ _id: String(i), hole: start + i, count: bestBallDefault });
+                }
+                return out;
+            }
+
+            // Normalize count
+            return arr.map((r, i) => ({
+                _id: String(r._id ?? i),
+                hole: Number(r.hole ?? (start + i)),
+                count: String(r.count ?? bestBallDefault)
+            }));
+        }
+
+        function renderHoleDecls() {
+            const list = $('listHoleDecl');
+            list.innerHTML = '';
+
+            state.holeDecls = normalizeHoleDecls(state.holeDecls);
+
+            for (const row of state.holeDecls) {
+                const el = document.createElement('div');
+                el.className = 'holeDeclCell'; // ✅ was 'listRow'
+
+                // Label (already includes Par when available)
+                el.appendChild(buildHoleDeclLabelEl(row.hole));
+
+                const sel = document.createElement('select');
+                sel.className = 'ctrl';
+
+                const parText = getParTextForHole(row.hole);
+                sel.setAttribute('aria-label', parText ? `Count for Hole ${row.hole} ${parText}` : `Count for Hole ${row.hole}`);
+
+                const opts = [0, 1, 2, 3, 4].map(v => ({ label: String(v), value: String(v) }));
+                setSelectOptions(sel, opts);
+                sel.value = String(row.count ?? '2');
+
+                sel.addEventListener('change', () => {
+                    row.count = String(sel.value);
+                    markDirty();
+                });
+
+                el.appendChild(sel);
+                list.appendChild(el);
+            }
+        }
+
+        // -------------------------
+        // Save / mapping
+        // -------------------------
+
+        function collectUpdates() {
+            const g = state.game || {};
+
+            const blindValue = $('frmBlindPlayer').value;
+            const blindLabel = [...$('frmBlindPlayer').options].find(o => o.value === blindValue)?.textContent || '';
+            const blindPlayersArray = ($('frmUseBlindPlayer').checked && blindValue && blindLabel)
+                ? [JSON.stringify({ ghin: blindValue, name: blindLabel })]
+                : [];
+
+            // Effectivity date is only sent when HCEffectivity = Date
+            const eff = $('frmHCEffectivity').value;
+            //const effDate = (eff === 'Date') ? parseDateInput($('frmHCEffectivityDate').value) : null;
+            const effDate = (eff === 'Date')
+                ? String($('frmHCEffectivityDate').value || '').trim()
+                : null;
+
+            // Stableford points only when basis=Points
+            const basis = $('frmScoringBasis').value;
+            const stableford = (basis === 'Points')
+                ? (state.stableford || []).map(r => ({ reltoPar: Number(r.reltoPar), points: Number(r.points) }))
+                : (Array.isArray(g.dbGames_StablefordPoints) ? g.dbGames_StablefordPoints : []);
+
+            // Hole decls only when scoring system=DeclareHole
+            const scoringSystem = $('frmScoringSystem').value;
+            const holeDecls = (scoringSystem === 'DeclareHole')
+                ? (state.holeDecls || []).map(r => ({ hole: Number(r.hole), count: String(r.count) }))
+                : [];
+
+            return {
+                dbGames_TOMethod: $('frmTOMethod').value,
+                dbGames_ScoringMethod: $('frmScoringMethod').value,
+                dbGames_GameFormat: $('frmGameFormat').value,
+                dbGames_HCMethod: $('frmHCMethod').value,
+                dbGames_BestBall: $('frmBestBallCnt').value,
+                dbGames_Allowance: Number($('frmAllowance').value) || 100,
+                dbGames_BlindPlayers: blindPlayersArray,
+
+                dbGames_ScoringSystem: scoringSystem,
+                dbGames_PlayerDeclaration: $('frmPlayerDeclaration').value,
+                dbGames_StrokeDistribution: $('frmStrokeDistribution').value,
+                dbGames_HoleDeclaration: holeDecls,
+                dbGames_StablefordPoints: stableford,
+
+                dbGames_ScoringBasis: $('frmScoringBasis').value,
+                dbGames_Competition: $('frmCompetition').value,
+                dbGames_Segments: $('frmSegments').value,
+                dbGames_RotationMethod: $('frmRotationMethod').value,
+
+                dbGames_HCEffectivity: eff,
+                dbGames_HCEffectivityDate: effDate,
+            };
+        }
+
+        function validateBeforeSave() {
+            const g = state.game || {};
+
+            // Effectivity date cannot be after play date
+            const eff = $('frmHCEffectivity').value;
+            if (eff === 'Date') {
+                const play = g.dbGames_PlayDate ? new Date(g.dbGames_PlayDate) : null;
+                const effDate = parseDateInput($('frmHCEffectivityDate').value);
+
+                if (!effDate) {
+                    return { ok: false, msg: 'Please choose an effectivity date.' };
+                }
+                if (play && !Number.isNaN(play.getTime()) && effDate.getTime() > play.getTime()) {
+                    return { ok: false, msg: 'Effectivity date cannot be after the play date.' };
+                }
+            }
+
+            // Blind player selection required if enabled
+            if ($('frmUseBlindPlayer').checked && !$('frmBlindPlayer').value) {
+                return { ok: false, msg: 'Please select the blind player (or uncheck Use Blind Player).' };
+            }
+
+            return { ok: true };
+        }
+
+        // -------------------------
+        // Status footer
+        // -------------------------
+
+        let statusTimer = null;
+
+        function setStatus(message, level) {
+            if (!footerBarEl || !statusTextEl) return;
+
+            // status text only
+            statusTextEl.textContent = message || "";
+
+            // reset inline overrides (returns to CSS default when no level)
+            footerBarEl.style.backgroundColor = "";
+            footerBarEl.style.color = "";
+            footerBarEl.style.borderTopColor = "";
+
+            const lvl = String(level || "").toLowerCase();
+
+            if (lvl === "success" || lvl === "green") {
+                footerBarEl.style.backgroundColor = "var(--statusSuccessBg)";
+                footerBarEl.style.color = "var(--statusSuccessText)";
+                footerBarEl.style.borderTopColor = "var(--statusSuccessBg)";
+            } else if (lvl === "warn" || lvl === "warning" || lvl === "yellow") {
+                footerBarEl.style.backgroundColor = "var(--statusWarnBg)";
+                footerBarEl.style.color = "var(--statusWarnText)";
+                footerBarEl.style.borderTopColor = "var(--statusWarnBg)";
+            } else if (lvl === "error" || lvl === "danger" || lvl === "red") {
+                footerBarEl.style.backgroundColor = "var(--statusErrorBg)";
+                footerBarEl.style.color = "var(--statusErrorText)";
+                footerBarEl.style.borderTopColor = "var(--statusErrorBg)";
+            } else {
+                // neutral: no inline overrides
+            }
+        }
+
+        // -------------------------
+        // Dirty tracking
+        // -------------------------
+
+        function markDirty() {
+            if (!state.initialized) return;
+            state.dirty = true;
+            show($('chipDirty'), true);
+        }
+
+        function clearDirty() {
+            state.dirty = false;
+            show($('chipDirty'), false);
+        }
+
+        // -------------------------
+        // Host callbacks
+        // -------------------------
+
+        function onSaveResult(payload) {
+            const ok = (payload && (payload.ok === true || String(payload.status || '').toUpperCase() === 'OK'));
+            const level = payload.level || (ok ? 'success' : 'error');
+            const msg = payload.message || (ok ? '✅ Game options updated.' : '❌ Error updating game.');
+            setStatus(msg, level);
+
+            if (ok) {
+                clearDirty();
+                $('btnSave').disabled = false;
+            } else {
+                $('btnSave').disabled = false;
+            }
+
+            // If host sends updated game, rehydrate (keeps UI consistent if not closing immediately)
+            if (payload.game) {
+                state.game = payload.game;
+                hydrateFromGame();
+                applyDependencies();
+            }
+        }
+
+        // -------------------------
+        // Dialog helpers
+        // -------------------------
+
+        function openDialog({ title, body, okText = 'OK', cancelText = 'Cancel', onOk }) {
+            state.dialog.open = true;
+            state.dialog.onOk = onOk || null;
+
+            $('dlgTitle').textContent = title || 'Confirm';
+            $('dlgBody').textContent = body || '';
+            $('btnDlgOk').textContent = okText;
+            $('btnDlgCancel').textContent = cancelText;
+
+            $('overlayHost').classList.remove('is-hidden');
+            $('overlayHost').setAttribute('aria-hidden', 'false');
+
+            // focus first button
+            setTimeout(() => $('btnDlgOk').focus(), 0);
+        }
+
+        function closeDialog() {
+            state.dialog.open = false;
+            state.dialog.onOk = null;
+            $('overlayHost').classList.add('is-hidden');
+            $('overlayHost').setAttribute('aria-hidden', 'true');
+        }
+
+        // -------------------------
+        // Tabs + overflow cue
+        // -------------------------
+
+        function setActiveTab(tab) {
+            state.tab = tab;
+            const tabs = document.querySelectorAll('.segBtn');
+            tabs.forEach(btn => {
+                const isSel = btn.dataset.tab === tab;
+                btn.classList.toggle('is-selected', isSel);
+                btn.setAttribute('aria-selected', isSel ? 'true' : 'false');
+            });
+
+            show($('tab-general'), tab === 'general');
+            show($('tab-scoring'), tab === 'scoring');
+            show($('tab-handicaps'), tab === 'handicaps');
+
+            // Clear footer for major interaction (per standards)
+            if (state.initialized) setStatus('Ready', '');
+        }
+
+        function updateSegOverflowCue() {
+            const wrap = $('segWrap');
+            const seg = $('segTabs');
+            const isOverflow = seg.scrollWidth > seg.clientWidth + 4;
+            wrap.classList.toggle('is-overflow', isOverflow);
+        }
+
+        // -------------------------
+        // Wiring
+        // -------------------------
+
+        function wire() {
+            // tabs
+            $('segTabs').addEventListener('click', (e) => {
+                const btn = e.target.closest('.segBtn');
+                if (!btn) return;
+                setActiveTab(btn.dataset.tab);
+            });
+
+            // Save / Cancel
+            $('btnCancel').addEventListener('click', () => {
+                postToWix(MSG.CANCEL, {});
+            });
+
+            $('btnSave').addEventListener('click', () => {
+                if (!state.initialized) return;
+                const v = validateBeforeSave();
+                if (!v.ok) {
+                    setStatus(v.msg, 'warn');
+                    return;
+                }
+
+                const updates = collectUpdates();
+                $('btnSave').disabled = true;
+                setStatus('Saving game options…', '');
+                postToWix(MSG.SAVE, { updates });
+            });
+
+            // Field change listeners (reactive)
+            const reactiveIds = [
+                'frmGameFormat',
+                'frmScoringSystem',
+                'frmUseBlindPlayer',
+                'frmHCMethod',
+                'frmScoringMethod',
+                'frmCompetition',
+                'frmSegments',
+                'frmRotationMethod',
+                'frmHCEffectivity'
+            ];
+
+            reactiveIds.forEach(id => {
+                $(id).addEventListener('change', () => {
+                    applyDependencies();
+                    markDirty();
+                });
+            });
+
+            // Non-reactive changes
+            const dirtyIds = [
+                'frmTOMethod', 'frmBestBallCnt', 'frmPlayerDeclaration', 'frmAllowance', 'frmStrokeDistribution', 'frmBlindPlayer', 'frmHCEffectivityDate'
+            ];
+            dirtyIds.forEach(id => {
+                $(id).addEventListener('change', () => {
+                    markDirty();
+                    // clear footer on major interaction
+                    setStatus('', '');
+                });
+            });
+
+            // Reset stableford
+            $('btnResetStableford').addEventListener('click', () => {
+                openDialog({
+                    title: 'Reset Stableford',
+                    body: 'Reset Stableford points to the default scheme?',
+                    okText: 'Reset',
+                    cancelText: 'Cancel',
+                    onOk: () => {
+                        state.stableford = normalizeStableford(null);
+                        renderStableford();
+                        markDirty();
+                        closeDialog();
+                    }
+                });
+            });
+
+            // Dialog wiring
+            $('btnDlgClose').addEventListener('click', closeDialog);
+            $('btnDlgCancel').addEventListener('click', closeDialog);
+            $('btnDlgOk').addEventListener('click', () => {
+                const fn = state.dialog.onOk;
+                if (typeof fn === 'function') fn();
+                else closeDialog();
+            });
+            $('overlayHost').addEventListener('click', (e) => {
+                if (e.target && e.target.dataset && e.target.dataset.role === 'overlay') closeDialog();
+            });
+            window.addEventListener('keydown', (e) => {
+                if (state.dialog.open && e.key === 'Escape') closeDialog();
+            });
+
+            // overflow cue calc
+            window.addEventListener('resize', updateSegOverflowCue);
+            $('segTabs').addEventListener('scroll', updateSegOverflowCue, { passive: true });
+
+            // Ensure initial cue state
+            updateSegOverflowCue();
+        }
+
+        // Boot
+        wire();
+
+        // Send READY so host can INIT
+        // Note: origin must be explicit; derived from referrer.
+        postToWix(MSG.READY, { version: CONTRACT_VERSION });
+    </script>
+</body>
+
+</html>
