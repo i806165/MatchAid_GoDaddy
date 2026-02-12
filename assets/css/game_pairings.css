@@ -1,0 +1,161 @@
+/* /assets/css/game_pairings.css
+   Game Pairings page
+   Policy: reuse ma_shared.css classes; only add/override where necessary.
+   No ID selectors; no # selectors.
+*/
+
+/* Lock outer page scrolling; panels own their scroll bodies */
+.maPage--pairings{
+  overflow: hidden;
+}
+
+/* Tab Panels */
+.gpTabPanels{
+  height: 100%;
+  min-height: 0;
+}
+
+.gpTabPanel{
+  display: none;
+  height: 100%;
+  min-height: 0;
+}
+
+.gpTabPanel.is-active{
+  display: block;
+}
+
+/* Controls row (tabs + tray button) */
+.gpControls__spacer{
+  flex: 1 1 auto;
+}
+
+/* Panel header row */
+.gpPanelHdr{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.gpPanelHdr__title{
+  font-size: 14px;
+  font-weight: 950;
+  letter-spacing: .2px;
+}
+
+.gpPanelHdr__actions{
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.gpCount{
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--mutedText);
+}
+
+/* Hint line */
+.gpHint{
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--mutedText);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Footer layout */
+.gpFooter{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.gpFooter__left{
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--mutedText);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gpFooter__right{
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Group cards */
+.gpGroupCard{
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--cardRadius);
+  background: #fff;
+  overflow: hidden;
+}
+
+.gpGroupCard__hdr{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--borderSubtle);
+  background: rgba(7,67,42,.05);
+}
+
+.gpGroupCard__title{
+  font-size: 13px;
+  font-weight: 950;
+  color: var(--ink);
+}
+
+.gpGroupCard__meta{
+  font-size: 12px;
+  font-weight: 850;
+  color: var(--mutedText);
+}
+
+.gpGroupCard__body{
+  display: flex;
+  flex-direction: column;
+}
+
+.gpRowBtn{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--borderSubtle);
+  background: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.gpRowBtn:hover{
+  background: rgba(0,0,0,.02);
+}
+
+.gpRowBtn:active{
+  background: rgba(0,0,0,.04);
+}
+
+/* Selected row styling (tray) */
+.maListRow.is-selected{
+  background: rgba(11,95,255,.08);
+}
+
+/* Desktop tray panels visible; mobile uses drawer */
+@media (max-width: 900px){
+  .gpTrayPanel{
+    display: none;
+  }
+}
