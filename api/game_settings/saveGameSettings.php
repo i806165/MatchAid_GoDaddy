@@ -2,59 +2,38 @@
 // /public_html/api/game_settings/saveGameSettings.php
 declare(strict_types=1);
 
-if (session_status() !== PHP_SESSION_ACTIVE) {
-  session_start();
+require_once __DIR__ . "/../../bootstrap.php";
+require_once MA_SERVICES . "/database/service_dbGames.php";
+require_once MA_API_LIB . "/Logger.php";
+
+if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+
+// 1) Auth check
+$auth = ma_api_require_auth();
+
+// 2) Parse JSON input
+$in = ma_json_in();
+$payload = is_array($in["payload"] ?? null) ? $in["payload"] : [];
+$patch   = is_array($payload["patch"] ?? null) ? $payload["patch"] : [];
+
+// 3) Determine GGID (prefer patch, fallback to session)
+$ggid = (int)($patch["dbGames_GGID"] ?? 0);
+if ($ggid <= 0) {
+    $ggid = (int)($_SESSION["SessionStoredGGID"] ?? 0);
 }
 
-require_once __DIR__ . '/../../bootstrap.php';
-require_once MA_API_LIB . '/Logger.php';
-require_once MA_API_LIB . '/Http.php';
-require_once MA_SERVICES . '/context/service_ContextUser.php';
-require_once MA_SERVICES . '/context/service_ContextGame.php';
-require_once MA_SVC_DB . '/service_dbGames.php';
-
-header('Content-Type: application/json; charset=utf-8');
-
-$input = [];
 try {
-  // 1. Auth check
-  $userCtx = ServiceUserContext::getUserContext();
-  if (!$userCtx || empty($userCtx["ok"])) {
-    throw new Exception("Authentication required.", 401);
-  }
+    if ($ggid <= 0) {
+        throw new RuntimeException("No Game ID provided.");
+    }
 
-  // 2. Get Game Context (ensures a game is selected)
-  $gameCtx = ServiceContextGame::getGameContext();
-  $ggid = $gameCtx["ggid"];
+    // 4) Delegate to service
+    $result = ServiceDbGames::saveGameSettings($ggid, $patch);
 
-  // 3. Get input from request body
-  $input = Http::getJsonInput();
-  $patch = $input['patch'] ?? null;
-  if (!$patch || !is_array($patch)) {
-    throw new Exception("Invalid input: patch data is missing.", 400);
-  }
+    // 5) Success response
+    ma_respond(200, ["ok" => true, "payload" => $result]);
 
-  // 4. TODO: Server-side validation of the patch data
-
-  // 5. Save to database
-  $success = ServiceDbGames::updateGame($ggid, $patch);
-  if (!$success) {
-    throw new Exception("Database update failed.");
-  }
-
-  // 6. Return updated game object
-  $updatedGame = ServiceDbGames::getGameByGGID($ggid);
-
-  $payload = [
-    "ggid" => $ggid,
-    "game" => ServiceContextGame::hydrateForUi($updatedGame),
-  ];
-
-  echo json_encode(["ok" => true, "payload" => $payload], JSON_UNESCAPED_SLASHES);
-
-} catch (Exception $e) {
-  $code = $e->getCode() > 0 ? $e->getCode() : 500;
-  http_response_code($code);
-  Logger::error("API_SAVE_GAMESETTINGS_FAIL", ["err" => $e->getMessage(), "input" => $input]);
-  echo json_encode(["ok" => false, "message" => $e->getMessage()]);
+} catch (Throwable $e) {
+    Logger::error("SAVE_GAME_SETTINGS_FAIL", ["ggid" => $ggid, "error" => $e->getMessage()]);
+    ma_respond(500, ["ok" => false, "error" => $e->getMessage()]);
 }

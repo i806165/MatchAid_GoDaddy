@@ -222,6 +222,64 @@ public static function queryGames(array $args): array {
     return ["ggid" => $ggid, "game" => $saved, "mode" => "edit"];
   }
 
+  /**
+   * Specialized saver for Game Settings (Rules, Formats, Handicaps).
+   * Strictly EDIT mode only.
+   */
+  public static function saveGameSettings(int $ggid, array $patch): array
+  {
+    if ($ggid <= 0) throw new RuntimeException("Invalid GGID for settings save.");
+    
+    $existing = self::getGameByGGID($ggid);
+    if (!$existing) throw new RuntimeException("Game not found.");
+
+    // Allowlist for Settings fields
+    $allow = [
+      "dbGames_GameFormat", "dbGames_TOMethod", "dbGames_ScoringBasis",
+      "dbGames_Competition", "dbGames_Segments", "dbGames_RotationMethod",
+      "dbGames_ScoringMethod", "dbGames_ScoringSystem", "dbGames_BestBall",
+      "dbGames_PlayerDeclaration", "dbGames_HCMethod", "dbGames_Allowance",
+      "dbGames_StrokeDistribution", "dbGames_HCEffectivity", "dbGames_HCEffectivityDate",
+      // Array fields (will be json_encoded)
+      "dbGames_BlindPlayers", "dbGames_StablefordPoints", "dbGames_HoleDeclaration"
+    ];
+
+    $clean = [];
+    foreach ($allow as $field) {
+      if (array_key_exists($field, $patch)) {
+        $val = $patch[$field];
+        // Ensure arrays are stored as JSON strings
+        if (is_array($val)) {
+          $val = json_encode($val);
+        }
+        $clean[$field] = $val;
+      }
+    }
+
+    // Enforce HCEffectivity logic (shared rule)
+    if (isset($clean["dbGames_HCEffectivity"])) {
+       // We need the play date to clamp/default
+       $playDate = self::normalizeDateYMD((string)($existing["dbGames_PlayDate"] ?? ""));
+       
+       $eff = $clean["dbGames_HCEffectivity"];
+       $dt  = $clean["dbGames_HCEffectivityDate"] ?? ($existing["dbGames_HCEffectivityDate"] ?? "");
+       
+       if ($eff !== "Date") {
+         $clean["dbGames_HCEffectivity"] = "PlayDate";
+         $clean["dbGames_HCEffectivityDate"] = $playDate;
+       } else {
+         if (!$dt) $dt = $playDate;
+         $dt = self::normalizeDateYMD($dt);
+         if ($playDate !== "" && $dt > $playDate) $dt = $playDate;
+         $clean["dbGames_HCEffectivityDate"] = $dt;
+       }
+    }
+
+    if (!empty($clean)) self::updateGame($ggid, $clean);
+
+    return ["ggid" => $ggid, "game" => self::getGameByGGID($ggid)];
+  }
+
   private static function applyPatch(array $base, array $patch): array
   {
     $allow = [
