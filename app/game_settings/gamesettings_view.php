@@ -8,37 +8,55 @@
        ====================================================================== -->
   <div class="maTabPanel is-active" id="gsPanelGeneral" data-tab-panel="general">
     <div class="maCards">
-      <!-- CARD 1 — COMPETITION -->
-      <section class="maCard" aria-label="Competition">
+      <!-- CARD 1 — GAME OPTIONS -->
+      <section class="maCard" aria-label="Game Options">
         <header class="maCard__hdr">
-          <div class="maCard__title">COMPETITION</div>
-        </header>
-        <div class="maCard__body">
-          <div class="maFieldRow">
-            <div class="maField">
-              <label class="maLabel">Competition Type</label>
-              <div class="maChoiceChips" id="gsCompetitionType" role="radiogroup">
-                <button type="button" class="maChoiceChip" data-value="PairField">Team</button>
-                <button type="button" class="maChoiceChip" data-value="Individual">Individual</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- CARD 2 — FORMAT -->
-      <section class="maCard" aria-label="Format">
-        <header class="maCard__hdr">
-          <div class="maCard__title">FORMAT</div>
+          <div class="maCard__title">GAME OPTIONS</div>
         </header>
         <div class="maCard__body">
           <div class="maFieldRow">
             <div class="maField">
               <label class="maLabel" for="gsGameFormat">Game Format</label>
-              <select id="gsGameFormat" class="maTextInput">
-                <option value="StrokePlay">Stroke Play</option>
-                <option value="MatchPlay">Match Play</option>
-              </select>
+              <select id="gsGameFormat" class="maTextInput"></select>
+            </div>
+            <div class="maField">
+              <label class="maLabel" for="gsTOMethod">Teeing Method</label>
+              <select id="gsTOMethod" class="maTextInput"></select>
+            </div>
+            <div class="maField">
+              <label class="maLabel" for="gsScoringBasis">Scoring Basis</label>
+              <select id="gsScoringBasis" class="maTextInput" disabled></select>
+            </div>
+          </div>
+
+          <div class="maFieldRow">
+            <div class="maField">
+              <label class="maLabel" for="gsCompetition">Competition</label>
+              <select id="gsCompetition" class="maTextInput"></select>
+            </div>
+            <div class="maField">
+              <label class="maLabel" for="gsSegments">Holes / Segments</label>
+              <div class="maInputWrap">
+                 <input id="gsHoles" class="maTextInput" type="text" disabled style="width:80px;" />
+                 <select id="gsSegments" class="maTextInput" style="flex:1;"></select>
+              </div>
+            </div>
+            <div class="maField">
+              <label class="maLabel" for="gsRotationMethod">Rotation</label>
+              <select id="gsRotationMethod" class="maTextInput"></select>
+            </div>
+          </div>
+
+          <div class="maFieldRow">
+            <div class="maField">
+              <label class="maLabel">Blind Player</label>
+              <div class="maInputWrap">
+                  <div style="display:flex; align-items:center; gap:8px;">
+                      <input type="checkbox" id="gsUseBlindPlayer" style="width:20px; height:20px;">
+                      <label for="gsUseBlindPlayer" style="margin:0; font-weight:normal; font-size:13px;">Use Blind Player</label>
+                  </div>
+                  <select id="gsBlindPlayer" class="maTextInput" style="flex:1;"></select>
+              </div>
             </div>
           </div>
         </div>
@@ -51,65 +69,55 @@
        ====================================================================== -->
   <div class="maTabPanel" id="gsPanelScoring" data-tab-panel="scoring">
     <div class="maCards">
-      <!-- CARD 1 — SCORING SYSTEM -->
-      <section class="maCard" aria-label="Scoring System">
+      <!-- CARD 1 — SCORING RULES -->
+      <section class="maCard" aria-label="Scoring Rules">
         <header class="maCard__hdr">
-          <div class="maCard__title">SCORING SYSTEM</div>
+          <div class="maCard__title">SCORING RULES</div>
         </header>
         <div class="maCard__body">
           <div class="maFieldRow">
             <div class="maField">
-              <label class="maLabel" for="gsScoringSystem">Style</label>
-              <select id="gsScoringSystem" class="maTextInput">
-                <option value="BestBall">Best Ball</option>
-                <option value="Scramble">Scramble</option>
-                <option value="AltShot">Alternate Shot</option>
-                <option value="Shamble">Shamble</option>
-                <option value="Aggregate">Aggregate</option>
-              </select>
+              <label class="maLabel" for="gsScoringMethod">Scoring Method</label>
+              <select id="gsScoringMethod" class="maTextInput"></select>
             </div>
             <div class="maField">
-              <label class="maLabel" for="gsScoringMethod">Method</label>
-              <select id="gsScoringMethod" class="maTextInput">
-                <option value="GROSS">Gross</option>
-                <option value="NET">Net</option>
-              </select>
+              <label class="maLabel" for="gsScoringSystem">Scoring System</label>
+              <select id="gsScoringSystem" class="maTextInput"></select>
             </div>
-            <div class="maField">
-              <label class="maLabel" for="gsScoringBasis">Basis</label>
-              <select id="gsScoringBasis" class="maTextInput">
-                <option value="Strokes">Strokes</option>
-                <option value="Points">Points (Stableford)</option>
-              </select>
+          </div>
+          <div class="maFieldRow">
+            <div class="maField" id="divBestBall">
+               <label class="maLabel" for="gsBestBallCnt">Best Ball Count</label>
+               <select id="gsBestBallCnt" class="maTextInput"></select>
+            </div>
+            <div class="maField" id="divPlayerDecl">
+               <label class="maLabel" for="gsPlayerDeclaration">Player Declaration</label>
+               <select id="gsPlayerDeclaration" class="maTextInput"></select>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- CARD 2 — POINTS (Stableford) -->
-      <section class="maCard" id="gsCardPoints" aria-label="Points">
+      <!-- CARD 2 — HOLE DECLARATIONS (Dynamic) -->
+      <section class="maCard" id="gsCardHoleDecl" style="display:none;">
         <header class="maCard__hdr">
-          <div class="maCard__title">POINTS</div>
+          <div class="maCard__title">HOLE DECLARATIONS</div>
         </header>
         <div class="maCard__body">
-          <div class="maFieldRow">
-            <div class="maField">
-              <label class="maLabel" for="gsPointsBogey">Bogey</label>
-              <input type="number" id="gsPointsBogey" class="maTextInput" value="1">
-            </div>
-            <div class="maField">
-              <label class="maLabel" for="gsPointsPar">Par</label>
-              <input type="number" id="gsPointsPar" class="maTextInput" value="2">
-            </div>
-            <div class="maField">
-              <label class="maLabel" for="gsPointsBirdie">Birdie</label>
-              <input type="number" id="gsPointsBirdie" class="maTextInput" value="3">
-            </div>
-            <div class="maField">
-              <label class="maLabel" for="gsPointsEagle">Eagle</label>
-              <input type="number" id="gsPointsEagle" class="maTextInput" value="4">
-            </div>
+           <div id="gsListHoleDecl" class="gsGridList"></div>
+        </div>
+      </section>
+
+      <!-- CARD 3 — STABLEFORD POINTS (Dynamic) -->
+      <section class="maCard" id="gsCardStableford" style="display:none;">
+        <header class="maCard__hdr">
+          <div class="maCard__title">STABLEFORD POINTS</div>
+          <div class="maCard__actions">
+             <button type="button" class="btn btn--ghost" id="gsResetStableford">Reset</button>
           </div>
+        </header>
+        <div class="maCard__body">
+           <div id="gsListStableford" class="gsList"></div>
         </div>
       </section>
     </div>
@@ -120,39 +128,33 @@
        ====================================================================== -->
   <div class="maTabPanel" id="gsPanelHandicaps" data-tab-panel="handicaps">
     <div class="maCards">
-      <!-- CARD 1 — HANDICAP METHOD -->
-      <section class="maCard" aria-label="Handicap Method">
+      <section class="maCard" aria-label="Handicaps">
         <header class="maCard__hdr">
-          <div class="maCard__title">HANDICAP METHOD</div>
+          <div class="maCard__title">HANDICAPS</div>
         </header>
         <div class="maCard__body">
           <div class="maFieldRow">
             <div class="maField">
-              <label class="maLabel" for="gsHCMethod">Method</label>
-              <select id="gsHCMethod" class="maTextInput">
-                <option value="CH">Course Handicap (CH)</option>
-                <option value="PH">Playing Handicap (PH)</option>
-                <option value="None">None (0)</option>
-              </select>
+              <label class="maLabel" for="gsHCMethod">HC Method</label>
+              <select id="gsHCMethod" class="maTextInput"></select>
             </div>
             <div class="maField">
-              <label class="maLabel" for="gsAllowance">Allowance %</label>
-              <input type="number" id="gsAllowance" class="maTextInput" min="0" max="100" step="5">
+              <label class="maLabel" for="gsAllowance">Allowance</label>
+              <select id="gsAllowance" class="maTextInput"></select>
             </div>
             <div class="maField">
-              <label class="maLabel" for="gsStrokeDistribution">Allocation</label>
-              <select id="gsStrokeDistribution" class="maTextInput">
-                <option value="Standard">Standard (Odds/Evens)</option>
-                <option value="Sequential">Sequential (1-18)</option>
-              </select>
+              <label class="maLabel" for="gsStrokeDistribution">Stroke Distribution</label>
+              <select id="gsStrokeDistribution" class="maTextInput"></select>
             </div>
           </div>
           <div class="maFieldRow">
             <div class="maField">
-              <label class="maLabel" for="gsBlindPlayer">Blind Player</label>
-              <select id="gsBlindPlayer" class="maTextInput">
-                <option value="">(None)</option>
-              </select>
+              <label class="maLabel" for="gsHCEffectivity">HC Effectivity</label>
+              <select id="gsHCEffectivity" class="maTextInput"></select>
+            </div>
+            <div class="maField" id="divHCEffDate">
+              <label class="maLabel" for="gsHCEffectivityDate">Effectivity Date</label>
+              <input type="date" id="gsHCEffectivityDate" class="maTextInput">
             </div>
           </div>
         </div>
