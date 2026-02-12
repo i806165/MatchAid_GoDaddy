@@ -237,7 +237,6 @@
     if (!sel) return;
     const v = String(value ?? "").trim();
     if (!v) return;
-    if (![...sel.options].some(o => o.value === v)) {
     if (!Array.from(sel.options).some(o => o.value === v)) {
       const opt = document.createElement("option");
       opt.value = v;
