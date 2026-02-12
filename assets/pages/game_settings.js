@@ -228,7 +228,9 @@
     const current = String(sel.value ?? "");
     sel.innerHTML = (opts || []).map(o => `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join("");
     // Restore prior selection if still present
-    if ([...sel.options].some(o => o.value === current)) sel.value = current;
+    if (sel.options && Array.from(sel.options).some(o => o.value === current)) {
+      sel.value = current;
+    }
   }
 
   function ensureOption(sel, value) {
@@ -236,6 +238,7 @@
     const v = String(value ?? "").trim();
     if (!v) return;
     if (![...sel.options].some(o => o.value === v)) {
+    if (!Array.from(sel.options).some(o => o.value === v)) {
       const opt = document.createElement("option");
       opt.value = v;
       opt.textContent = v;
@@ -578,7 +581,7 @@
     if (el.segments) {
       const desiredSeg = String(g.dbGames_Segments ?? el.segments.value ?? "").trim() || "9";
       setSelectOptions(el.segments, buildSegmentsOptionsFromHoles());
-      if ([...el.segments.options].some(o => o.value === desiredSeg)) el.segments.value = desiredSeg;
+      if (Array.from(el.segments.options).some(o => o.value === desiredSeg)) el.segments.value = desiredSeg;
       else el.segments.value = el.segments.options[0]?.value || "9";
     }
 
@@ -703,7 +706,7 @@
     // Blind player stored as array<string> JSON
     const blindValue = String(el.blindPlayer?.value || "").trim();
     const blindLabel = el.blindPlayer
-      ? ([...el.blindPlayer.options].find(o => o.value === blindValue)?.textContent || "")
+      ? (Array.from(el.blindPlayer.options).find(o => o.value === blindValue)?.textContent || "")
       : "";
     const blindPlayersArray = (el.useBlind?.checked && blindValue && blindLabel)
       ? [JSON.stringify({ ghin: blindValue, name: String(blindLabel).trim() })]
