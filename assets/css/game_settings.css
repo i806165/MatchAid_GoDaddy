@@ -30,3 +30,53 @@
     margin: 0 auto;
   }
 }
+
+/* Hole Declarations Grid */
+.gsGridList {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* Mobile: 3 cols x 6 rows */
+  gap: 8px;
+}
+
+@media (min-width: 768px) {
+  .gsGridList {
+    grid-template-columns: repeat(9, 1fr); /* Desktop: 9 cols x 2 rows */
+  }
+}
+
+.holeDeclCell {
+  background: var(--surface);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--radiusMd);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.holeDeclLabel__hole {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--mutedText);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.holeDeclLabel__par {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--brandSecondary);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.holeDeclCell .maTextInput {
+  height: 30px;
+  min-height: 30px;
+  padding: 0 4px;
+  text-align: center;
+  font-size: 13px;
+}

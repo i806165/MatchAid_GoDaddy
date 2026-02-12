@@ -323,19 +323,19 @@
 
     const bestBallDefault = String(el.bestBallCnt?.value || "2");
     const arr = Array.isArray(existing) ? existing : [];
-    const expectedLen = (end - start + 1);
+    
+    // Map existing values by hole number
+    const map = {};
+    arr.forEach(r => {
+      if (r && r.hole) map[r.hole] = r.count;
+    });
 
-    if (arr.length !== expectedLen) {
-      const out = [];
-      for (let i = 0; i < expectedLen; i++) out.push({ _id: String(i), hole: start + i, count: bestBallDefault });
-      return out;
+    const out = [];
+    for (let h = start; h <= end; h++) {
+      const val = (map[h] !== undefined) ? String(map[h]) : bestBallDefault;
+      out.push({ _id: String(h), hole: h, count: val });
     }
-
-    return arr.map((r, i) => ({
-      _id: String(r._id ?? i),
-      hole: Number(r.hole ?? (start + i)),
-      count: String(r.count ?? bestBallDefault),
-    }));
+    return out;
   }
 
   function buildHoleDeclLabelEl(holeNum) {
@@ -371,7 +371,7 @@
       cell.appendChild(buildHoleDeclLabelEl(row.hole));
 
       const sel = document.createElement("select");
-      sel.className = "maSelect";
+      sel.className = "maTextInput"; // Use shared input style
       const parText = getParTextForHole(row.hole);
       sel.setAttribute("aria-label", parText ? `Count for Hole ${row.hole} ${parText}` : `Count for Hole ${row.hole}`);
 
