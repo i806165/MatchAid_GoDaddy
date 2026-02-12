@@ -39,7 +39,6 @@ try {
     throw new RuntimeException("Missing game context.");
   }
 
-  $players = ServiceDbPlayers::getGamePlayers($ggid);
   $players = ServiceDbPlayers::getGamePlayers((string)$ggid);
 
   $initPayload = [
