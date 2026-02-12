@@ -578,7 +578,7 @@
 
     // Segments options derived from holes (preserve stored value if possible)
     if (el.segments) {
-      const desiredSeg = String(g.dbGames_Segments ?? el.segments.value ?? "").trim() || "9";
+      const desiredSeg = String(el.segments.value ?? g.dbGames_Segments ?? "").trim() || "9";
       setSelectOptions(el.segments, buildSegmentsOptionsFromHoles());
       if (Array.from(el.segments.options).some(o => o.value === desiredSeg)) el.segments.value = desiredSeg;
       else el.segments.value = el.segments.options[0]?.value || "9";
@@ -586,7 +586,7 @@
 
     // Scoring Method constrained (PRESERVE STORED VALUE)
     if (el.scoringMethod) {
-      const desiredMethod = String(g.dbGames_ScoringMethod ?? el.scoringMethod.value ?? "").trim();
+      const desiredMethod = String(el.scoringMethod.value ?? g.dbGames_ScoringMethod ?? "").trim();
       const methodOptions = cfg.methods.map(m => ({ label: m, value: m }));
       setSelectOptions(el.scoringMethod, methodOptions);
 
@@ -597,7 +597,7 @@
 
     // Competition constrained (PRESERVE STORED VALUE)
     if (el.competition) {
-      const desiredComp = String(g.dbGames_Competition ?? el.competition.value ?? "").trim();
+      const desiredComp = String(el.competition.value ?? g.dbGames_Competition ?? "").trim();
       const compOpts = (cfg.competition || []).map(c => competitionConfig[c]).filter(Boolean);
       setSelectOptions(el.competition, compOpts);
 
@@ -608,7 +608,7 @@
 
     // Rotation depends on Segments + Competition (and PairField forces None)
     if (el.rotation) {
-      const desiredRot = String(g.dbGames_RotationMethod ?? el.rotation.value ?? "").trim() || "None";
+      const desiredRot = String(el.rotation.value ?? g.dbGames_RotationMethod ?? "").trim() || "None";
       const rotOpts = buildRotationOptions(el.segments?.value, el.competition?.value);
       setSelectOptions(el.rotation, rotOpts);
 
@@ -619,7 +619,7 @@
 
     // BestBall options depend on format (MatchPlay restrict 1/2)
     if (el.bestBallCnt) {
-      const desiredBB = String(g.dbGames_BestBall ?? el.bestBallCnt.value ?? "").trim() || "2";
+      const desiredBB = String(el.bestBallCnt.value ?? g.dbGames_BestBall ?? "").trim() || "2";
       const bbOpts = bestBallOptionsForFormat(fmt);
       setSelectOptions(el.bestBallCnt, bbOpts);
 
@@ -642,13 +642,29 @@
     }
 
     // StrokeDistribution: forced Standard unless (Rotation == COD && scoringMethod != ADJ GROSS)
+    // Preserve user's prior selection to restore when the control becomes enabled again.
     const rot = String(el.rotation?.value || "None");
     const allowStrokeDist = (!isAdjGross && rot === "COD");
 
     if (el.strokeDistribution) {
-      if (!allowStrokeDist) el.strokeDistribution.value = "Standard";
-      setDisabled(el.strokeDistribution, !allowStrokeDist);
+      if (!allowStrokeDist) {
+        // capture current selection once before we force/disable
+        if (!el.strokeDistribution.disabled) {
+          state._strokeDistPrior = String(el.strokeDistribution.value ?? "").trim();
+        }
+        el.strokeDistribution.value = "Standard";
+        setDisabled(el.strokeDistribution, true);
+      } else {
+        setDisabled(el.strokeDistribution, false);
+
+        // prefer current UI selection; if empty, restore prior remembered selection (if valid)
+        const want = String(el.strokeDistribution.value ?? "").trim() || String(state._strokeDistPrior ?? "").trim();
+        if (want && Array.from(el.strokeDistribution.options).some(o => o.value === want)) {
+          el.strokeDistribution.value = want;
+        }
+      }
     }
+
 
     // ScoringSystem show/hide rules (Wix-aligned)
     const sys = String(el.scoringSystem?.value || "BestBall");
