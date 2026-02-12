@@ -80,3 +80,43 @@
   text-align: center;
   font-size: 13px;
 }
+
+/* Stableford Grid */
+.gsStablefordGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* Mobile: 3 cols x 2 rows */
+  gap: 8px;
+}
+
+@media (min-width: 768px) {
+  .gsStablefordGrid {
+    grid-template-columns: repeat(6, 1fr); /* Desktop: 6 cols across */
+  }
+}
+
+.stablefordCell {
+  background: var(--surface);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--radiusMd);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.stablefordLabel {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--mutedText);
+  text-align: center;
+  line-height: 1.2;
+}
+
+.stablefordCell .maTextInput {
+  height: 30px;
+  min-height: 30px;
+  padding: 0 4px;
+  text-align: center;
+  font-size: 13px;
+}

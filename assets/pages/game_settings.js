@@ -287,18 +287,19 @@
     state.stableford = normalizeStableford(state.stableford);
 
     for (const row of state.stableford) {
-      const wrap = document.createElement("div");
-      wrap.className = "maListRow"; // keep shared class if present
+      const cell = document.createElement("div");
+      cell.className = "stablefordCell";
 
       const lab = document.createElement("div");
-      lab.className = "maListRow__label";
-      lab.textContent = (row.reltoPar > 0) ? `+${row.reltoPar}` : String(row.reltoPar);
+      lab.className = "stablefordLabel";
+      const sign = (row.reltoPar > 0) ? "+" : "";
+      lab.textContent = `${sign}${row.reltoPar}`;
 
       const sel = document.createElement("select");
-      sel.className = "maSelect"; // if not styled, will still work
-      // 0..10 is safe; Wix allows edits without tight constraints
+      sel.className = "maTextInput";
+      
       const opts = [];
-      for (let i = 0; i <= 10; i++) opts.push({ label: String(i), value: String(i) });
+      for (let i = -3; i <= 8; i++) opts.push({ label: String(i), value: String(i) });
       sel.innerHTML = opts.map(o => `<option value="${o.value}">${o.label}</option>`).join("");
       sel.value = String(row.points);
 
@@ -307,9 +308,9 @@
         setDirty(true);
       });
 
-      wrap.appendChild(lab);
-      wrap.appendChild(sel);
-      el.listStableford.appendChild(wrap);
+      cell.appendChild(lab);
+      cell.appendChild(sel);
+      el.listStableford.appendChild(cell);
     }
   }
 

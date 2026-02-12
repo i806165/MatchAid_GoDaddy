@@ -121,7 +121,7 @@
           </div>
         </header>
         <div class="maCard__body">
-          <div id="gsListStableford" class="gsList"></div>
+          <div id="gsListStableford" class="gsStablefordGrid"></div>
         </div>
       </section>
     </div>
