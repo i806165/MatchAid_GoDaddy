@@ -25,10 +25,9 @@
     unpairedList: document.getElementById("gpUnpairedList"),
     unpairedCount: document.getElementById("gpUnpairedCount"),
     unpairedSearch: document.getElementById("gpUnpairedSearch"),
+    unpairedSort: document.getElementById("gpUnpairedSort"),
     hintPair: document.getElementById("gpHintPair"),
-    btnAddPairing: document.getElementById("gpBtnAddPairing"),
     btnAssignToPairing: document.getElementById("gpBtnAssignToPairing"),
-    btnUnpairSelected: document.getElementById("gpBtnUnpairSelected"),
     btnClearTraySelection: document.getElementById("gpBtnClearTraySelection"),
     // Match tab
     flightsCanvas: document.getElementById("gpFlightsCanvas"),
@@ -36,9 +35,7 @@
     unmatchedCount: document.getElementById("gpUnmatchedCount"),
     unmatchedSearch: document.getElementById("gpUnmatchedSearch"),
     hintMatch: document.getElementById("gpHintMatch"),
-    btnAddFlight: document.getElementById("gpBtnAddFlight"),
     btnAssignToFlight: document.getElementById("gpBtnAssignToFlight"),
-    btnUnmatchSelected: document.getElementById("gpBtnUnmatchSelected"),
     btnClearTraySelection2: document.getElementById("gpBtnClearTraySelection2"),
     // Drawer
     btnTray: document.getElementById("gpBtnTray"),
@@ -59,8 +56,9 @@
     activeTab: "pair", // pair | match
 
     // Tray selection
-    selectedPlayerGHIN: "", // Pair tab tray selection
-    selectedPairingId: "", // Match tab tray selection (pairingId)
+    selectedPlayerGHINs: new Set(), // Pair tab tray selection (multi)
+    selectedPairingIds: new Set(), // Match tab tray selection (multi)
+    sortMode: "lname", // lname | hi | ch | so
 
     // Canvas selection / targets
     targetPairingId: "",
@@ -171,14 +169,6 @@
     return pad3(max + 1);
   }
 
-  function nextFlightId() {
-    const ids = state.players
-      .map(p => parseInt(String(p.flightId || "0"), 10))
-      .filter(n => Number.isFinite(n));
-    const max = ids.length ? Math.max(...ids) : 0;
-    return String(max + 1);
-  }
-
   function nextPairingPos(pairingId) {
     const rows = playersInPairing(pairingId);
     const vals = rows.map(p => parseInt(String(p.pairingPos || "0"), 10)).filter(n => Number.isFinite(n));
@@ -269,8 +259,8 @@
     }
 
     // reset selection/targets
-    state.selectedPlayerGHIN = "";
-    state.selectedPairingId = "";
+    state.selectedPlayerGHINs.clear();
+    state.selectedPairingIds.clear();
     state.targetPairingId = "";
     state.targetFlightId = "";
     state.targetFlightPos = "";
@@ -294,17 +284,17 @@
 
   function setHints() {
     if (el.hintPair) {
-      el.hintPair.textContent = state.selectedPlayerGHIN
-        ? `Selected: ${getPlayerByGHIN(state.selectedPlayerGHIN)?.name || state.selectedPlayerGHIN}. Tap a pairing card, then Assign.`
-        : "Select an unpaired player, then tap a pairing card.";
+      el.hintPair.textContent = state.selectedPlayerGHINs.size > 0
+        ? `Selected ${state.selectedPlayerGHINs.size} player(s). Tap Assign >> to create new, or tap a card to add.`
+        : "Select unpaired players, then tap Assign >>.";
     }
 
     if (el.hintMatch) {
       if (!isPairPair()) {
         el.hintMatch.textContent = "Matches are disabled for Pair vs Field.";
       } else {
-        el.hintMatch.textContent = state.selectedPairingId
-          ? `Selected group ${state.selectedPairingId}. Tap a match slot (A/B), then Assign.`
+        el.hintMatch.textContent = state.selectedPairingIds.size > 0
+          ? `Selected ${state.selectedPairingIds.size} pairing(s). Tap a match slot (A/B), then Assign.`
           : "Select an unmatched pairing, then tap a match slot (A/B).";
       }
     }
@@ -320,7 +310,7 @@
       .sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
 
     if (!ids.length) {
-      el.pairingsCanvas.innerHTML = `<div class="maEmpty">No pairings yet. Use “+ New Pairing” to start.</div>`;
+      el.pairingsCanvas.innerHTML = `<div class="maEmpty">No pairings yet. Select players and click Assign >>.</div>`;
       return;
     }
 
@@ -372,17 +362,34 @@
     const rows = state.players
       .filter(p => String(p.pairingId || "000") === "000")
       .filter(p => !q || String(p.name || "").toLowerCase().includes(q) || String(p.playerGHIN).includes(q))
-      .sort((a, b) => String(a.name).localeCompare(String(b.name)));
+      .sort((a, b) => {
+        if (state.sortMode === "hi") return (parseFloat(a.hi) - parseFloat(b.hi)) || a.name.localeCompare(b.name);
+        if (state.sortMode === "ch") return (parseInt(a.ch) - parseInt(b.ch)) || a.name.localeCompare(b.name);
+        if (state.sortMode === "so") return (parseInt(a.so) - parseInt(b.so)) || a.name.localeCompare(b.name);
+        return String(a.lname).localeCompare(String(b.lname)) || String(a.name).localeCompare(String(b.name));
+      });
 
     if (countEl) countEl.textContent = `${rows.length}`;
 
     host.innerHTML = rows.map(p => {
-      const sel = state.selectedPlayerGHIN === String(p.playerGHIN);
+      const sel = state.selectedPlayerGHINs.has(String(p.playerGHIN));
       const cls = sel ? "maListRow is-selected" : "maListRow";
+      
+      // Format extra info: TeeSet Name, HI:#, CH:#, PH:# SO:#
+      const parts = [];
+      if (p.teeSetName) parts.push(p.teeSetName);
+      if (p.hi) parts.push(`HI:${p.hi}`);
+      if (p.ch) parts.push(`CH:${p.ch}`);
+      if (p.ph) parts.push(`PH:${p.ph}`);
+      if (p.so && p.so !== "0") parts.push(`SO:${p.so}`);
+      const meta = parts.join(" • ");
+
       return `
         <div class="${cls}" data-action="selectUnpaired" data-ghin="${esc(p.playerGHIN)}">
-          <div class="maListRow__col">${esc(p.name)}</div>
-          <div class="maListRow__col maListRow__col--muted">${esc(p.teeSetName || "")}</div>
+          <div class="maListRow__col">
+            <div class="maListRow__line1">${esc(p.name)}</div>
+            <div class="maListRow__line2">${esc(meta)}</div>
+          </div>
         </div>`;
     }).join("");
   }
@@ -401,7 +408,7 @@
       .sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
 
     if (!ids.length) {
-      el.flightsCanvas.innerHTML = `<div class="maEmpty">No matches yet. Use “+ New Match” to start.</div>`;
+      el.flightsCanvas.innerHTML = `<div class="maEmpty">No matches yet. Select pairings and Assign >>.</div>`;
       return;
     }
 
@@ -477,7 +484,7 @@
     if (countEl) countEl.textContent = `${rows.length}`;
 
     host.innerHTML = rows.map(r => {
-      const sel = state.selectedPairingId === String(r.pairingId);
+      const sel = state.selectedPairingIds.has(String(r.pairingId));
       const cls = sel ? "maListRow is-selected" : "maListRow";
       return `
         <div class="${cls}" data-action="selectUnmatched" data-pairing-id="${esc(r.pairingId)}">
@@ -501,7 +508,12 @@
 
   // ---- Actions: Pairing tab ----
   function selectUnpaired(ghin) {
-    state.selectedPlayerGHIN = String(ghin || "");
+    const id = String(ghin || "");
+    if (state.selectedPlayerGHINs.has(id)) {
+      state.selectedPlayerGHINs.delete(id);
+    } else {
+      state.selectedPlayerGHINs.add(id);
+    }
     renderUnpairedList();
     if (isMobile()) renderUnpairedList({ intoDrawer: true });
     setHints();
@@ -513,22 +525,21 @@
     setHints();
   }
 
-  function createNewPairing() {
-    const pid = nextPairingId();
-    state.targetPairingId = pid;
-    render();
-    setStatus(`Created pairing ${pid}.`, "info");
-  }
-
   function assignSelectedPlayerToPairing() {
-    const ghin = state.selectedPlayerGHIN;
-    const pid = state.targetPairingId;
-    if (!ghin) return setStatus("Select an unpaired player first.", "warn");
-    if (!pid) return setStatus("Tap a target pairing card first.", "warn");
+    if (state.selectedPlayerGHINs.size === 0) return setStatus("Select unpaired players first.", "warn");
+    
+    let pid = state.targetPairingId;
+    let isNew = false;
 
-    const p = getPlayerByGHIN(ghin);
-    if (!p) return;
+    // If no target selected, create new pairing
+    if (!pid) {
+      pid = nextPairingId();
+      isNew = true;
+    }
 
+    state.selectedPlayerGHINs.forEach(ghin => {
+      const p = getPlayerByGHIN(ghin);
+      if (!p) return;
     // Pair Players: Add player to existing pairing
     p.pairingId = String(pid);
     p.pairingPos = nextPairingPos(pid);
@@ -564,10 +575,13 @@
       p.startHoleSuffix = String(sched.startHoleSuffix || "");
       // gameKey will be inherited/created on save
     }
-
     markDirty(ghin);
+    });
+
     // clear selection
-    state.selectedPlayerGHIN = "";
+    state.selectedPlayerGHINs.clear();
+    state.targetPairingId = ""; // Reset target after assign
+    setStatus(isNew ? `Created pairing ${pid}.` : `Added to pairing ${pid}.`, "success");
     render();
   }
 
@@ -610,7 +624,12 @@
 
   // ---- Actions: Match tab ----
   function selectUnmatchedPairing(pid) {
-    state.selectedPairingId = String(pid || "");
+    const id = String(pid || "");
+    if (state.selectedPairingIds.has(id)) {
+      state.selectedPairingIds.delete(id);
+    } else {
+      state.selectedPairingIds.add(id);
+    }
     renderUnmatchedList();
     if (isMobile()) renderUnmatchedList({ intoDrawer: true });
     setHints();
@@ -623,23 +642,13 @@
     setHints();
   }
 
-  function createNewFlight() {
-    if (!isPairPair()) return;
-    const fid = nextFlightId();
-    state.targetFlightId = fid;
-    state.targetFlightPos = "A";
-    // no DB rows yet; this will exist only after assignment
-    render();
-    setStatus(`Created match ${fid}. Select a pairing and assign to Team A.`, "info");
-  }
-
   function assignSelectedPairingToFlight() {
     if (!isPairPair()) return;
-    const pid = state.selectedPairingId;
+    if (state.selectedPairingIds.size === 0) return setStatus("Select unmatched pairings first.", "warn");
+    
     const fid = state.targetFlightId;
     const fp = state.targetFlightPos;
 
-    if (!pid) return setStatus("Select an unmatched pairing first.", "warn");
     if (!fid || !fp) return setStatus("Tap a match slot (Team A/B) first.", "warn");
 
     // Ensure slot is empty
@@ -647,6 +656,11 @@
     if (existing && existing.pairingId) {
       return setStatus(`That slot already has pairing ${existing.pairingId}. Remove it first.`, "warn");
     }
+
+    // Only allow 1 pairing per slot. If multiple selected, warn.
+    if (state.selectedPairingIds.size > 1) return setStatus("Select only 1 pairing for a match slot.", "warn");
+    
+    const pid = Array.from(state.selectedPairingIds)[0];
 
     const rows = playersInPairing(pid);
     if (!rows.length) return;
@@ -665,7 +679,7 @@
     });
 
     // Clear selection to support next action
-    state.selectedPairingId = "";
+    state.selectedPairingIds.clear();
 
     // If we were building a new flight, advance target to Team B
     if (fp === "A") {
@@ -804,24 +818,24 @@
       });
     }
 
-    // Buttons
-    if (el.btnAddPairing) el.btnAddPairing.addEventListener("click", createNewPairing);
-    if (el.btnAssignToPairing) el.btnAssignToPairing.addEventListener("click", assignSelectedPlayerToPairing);
-    if (el.btnUnpairSelected) el.btnUnpairSelected.addEventListener("click", () => {
-      if (!state.targetPairingId) return setStatus("Select a pairing card first.", "warn");
-      if (!confirm(`Unpair all players from pairing ${state.targetPairingId}?`)) return;
-      unpairGroup(state.targetPairingId);
-    });
-    if (el.btnClearTraySelection) el.btnClearTraySelection.addEventListener("click", () => { state.selectedPlayerGHIN = ""; renderUnpairedList(); setHints(); });
+    // Sort control
+    if (el.unpairedSort) {
+      el.unpairedSort.addEventListener("click", (e) => {
+        const btn = e.target.closest(".gpSortBtn");
+        if (!btn) return;
+        el.unpairedSort.querySelectorAll(".gpSortBtn").forEach(b => b.classList.remove("is-active"));
+        btn.classList.add("is-active");
+        state.sortMode = btn.dataset.sort;
+        renderUnpairedList();
+      });
+    }
 
-    if (el.btnAddFlight) el.btnAddFlight.addEventListener("click", createNewFlight);
+    // Buttons
+    if (el.btnAssignToPairing) el.btnAssignToPairing.addEventListener("click", assignSelectedPlayerToPairing);
+    if (el.btnClearTraySelection) el.btnClearTraySelection.addEventListener("click", () => { state.selectedPlayerGHINs.clear(); renderUnpairedList(); setHints(); });
+
     if (el.btnAssignToFlight) el.btnAssignToFlight.addEventListener("click", assignSelectedPairingToFlight);
-    if (el.btnUnmatchSelected) el.btnUnmatchSelected.addEventListener("click", () => {
-      if (!state.targetFlightId) return setStatus("Select a match first.", "warn");
-      if (!confirm(`Unmatch all pairings from match ${state.targetFlightId}?`)) return;
-      unmatchFlight(state.targetFlightId);
-    });
-    if (el.btnClearTraySelection2) el.btnClearTraySelection2.addEventListener("click", () => { state.selectedPairingId = ""; renderUnmatchedList(); setHints(); });
+    if (el.btnClearTraySelection2) el.btnClearTraySelection2.addEventListener("click", () => { state.selectedPairingIds.clear(); renderUnmatchedList(); setHints(); });
 
     // Delegated clicks for dynamic lists / cards
     document.addEventListener("click", (e) => {
@@ -883,6 +897,10 @@
         name,
         lname: String(r.dbPlayers_LName ?? r.lname ?? ""),
         teeSetName: String(r.dbPlayers_TeeSetName ?? r.teeSetName ?? ""),
+        hi: String(r.dbPlayers_HandicapIndex ?? r.hi ?? ""),
+        ch: String(r.dbPlayers_CourseHandicap ?? r.ch ?? ""),
+        ph: String(r.dbPlayers_PlayingHandicap ?? r.ph ?? ""),
+        so: String(r.dbPlayers_SortOrder ?? r.so ?? "0"),
         pairingId: pad3(r.dbPlayers_PairingID ?? r.pairingId ?? "000"),
         pairingPos: String(r.dbPlayers_PairingPos ?? r.pairingPos ?? ""),
         flightId: String(r.dbPlayers_FlightID ?? r.flightId ?? "").trim(),

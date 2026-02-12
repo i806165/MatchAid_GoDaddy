@@ -25,6 +25,24 @@
   display: block;
 }
 
+/* Full width segmented control (Tab area) */
+.maControlArea .maSegWrap {
+  display: flex;
+  width: 100%;
+  border: 1px solid var(--borderSubtle);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.maControlArea .maSegBtn {
+  flex: 1;
+  border: none;
+  border-right: 1px solid var(--borderSubtle);
+  border-radius: 0;
+  margin: 0;
+}
+.maControlArea .maSegBtn:last-child { border-right: none; }
+
 /* Controls row (tabs + tray button) */
 .gpControls__spacer{
   flex: 1 1 auto;
@@ -151,6 +169,32 @@
 /* Selected row styling (tray) */
 .maListRow.is-selected{
   background: rgba(11,95,255,.08);
+}
+
+/* Sort Control in Tray */
+.gpSortControl {
+  display: flex;
+  width: 100%;
+  margin-top: 8px;
+  border: 1px solid var(--borderSubtle);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.gpSortBtn {
+  flex: 1;
+  background: #fff;
+  border: none;
+  border-right: 1px solid var(--borderSubtle);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--mutedText);
+  padding: 4px 0;
+  cursor: pointer;
+}
+.gpSortBtn:last-child { border-right: none; }
+.gpSortBtn.is-active {
+  background: rgba(11,95,255,.1);
+  color: var(--ink);
 }
 
 /* Desktop tray panels visible; mobile uses drawer */

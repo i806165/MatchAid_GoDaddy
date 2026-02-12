@@ -10,45 +10,26 @@
   <section class="gpTabPanel is-active" data-tab-panel="pair">
     <div class="maPanels maPanels--2">
 
-      <!-- Primary: Pairings canvas -->
-      <section class="maPanel maPanel--primary" aria-label="Pairings canvas">
-        <header class="maPanel__hdr">
-          <div class="gpPanelHdr">
-            <div class="gpPanelHdr__title">Pairings</div>
-            <div class="gpPanelHdr__actions">
-              <button class="maBtn" type="button" id="gpBtnAddPairing">+ New Pairing</button>
-            </div>
-          </div>
-        </header>
-        <div class="maPanel__controls">
-          <div class="gpHint" id="gpHintPair"></div>
-        </div>
-        <div class="maPanel__body">
-          <div class="maCards" id="gpPairingsCanvas"></div>
-        </div>
-        <footer class="maPanel__ftr">
-          <div class="gpFooter">
-            <div class="gpFooter__left" id="gpPairFooterLeft"></div>
-            <div class="gpFooter__right">
-              <button class="maBtn maBtn--ghost" type="button" id="gpBtnUnpairSelected">Unpair</button>
-              <button class="maBtn" type="button" id="gpBtnAssignToPairing">Assign &gt;&gt;</button>
-            </div>
-          </div>
-        </footer>
-      </section>
-
-      <!-- Secondary: Unpaired tray (desktop) -->
+      <!-- Secondary: Unpaired tray (Now on LEFT) -->
       <section class="maPanel maPanel--secondary gpTrayPanel" aria-label="Unpaired players tray">
         <header class="maPanel__hdr">
           <div class="gpPanelHdr">
             <div class="gpPanelHdr__title">Unpaired</div>
             <div class="gpPanelHdr__actions">
               <span class="gpCount" id="gpUnpairedCount"></span>
+              <button class="maBtn maBtn--sm" type="button" id="gpBtnAssignToPairing">Assign &gt;&gt;</button>
             </div>
           </div>
         </header>
         <div class="maPanel__controls">
           <input class="maTextInput" id="gpUnpairedSearch" type="text" placeholder="Search" autocomplete="off" />
+          <!-- Sort Control -->
+          <div class="gpSortControl" id="gpUnpairedSort">
+            <button class="gpSortBtn is-active" type="button" data-sort="lname">Name</button>
+            <button class="gpSortBtn" type="button" data-sort="hi">HI</button>
+            <button class="gpSortBtn" type="button" data-sort="ch">CH</button>
+            <button class="gpSortBtn" type="button" data-sort="so">SO</button>
+          </div>
         </div>
         <div class="maPanel__body">
           <div class="maListRows" id="gpUnpairedList"></div>
@@ -63,6 +44,30 @@
         </footer>
       </section>
 
+      <!-- Primary: Pairings canvas (Now on RIGHT) -->
+      <section class="maPanel maPanel--primary" aria-label="Pairings canvas">
+        <header class="maPanel__hdr">
+          <div class="gpPanelHdr">
+            <div class="gpPanelHdr__title">Pairings</div>
+            <div class="gpPanelHdr__actions">
+            </div>
+          </div>
+        </header>
+        <div class="maPanel__controls">
+          <div class="gpHint" id="gpHintPair"></div>
+        </div>
+        <div class="maPanel__body">
+          <div class="maCards" id="gpPairingsCanvas"></div>
+        </div>
+        <footer class="maPanel__ftr">
+          <div class="gpFooter">
+            <div class="gpFooter__left" id="gpPairFooterLeft"></div>
+            <div class="gpFooter__right">
+            </div>
+          </div>
+        </footer>
+      </section>
+
     </div>
   </section>
 
@@ -70,40 +75,14 @@
   <section class="gpTabPanel" data-tab-panel="match">
     <div class="maPanels maPanels--2">
 
-      <!-- Primary: Matches canvas -->
-      <section class="maPanel maPanel--primary" aria-label="Matches canvas">
-        <header class="maPanel__hdr">
-          <div class="gpPanelHdr">
-            <div class="gpPanelHdr__title">Matches (Flights)</div>
-            <div class="gpPanelHdr__actions">
-              <button class="maBtn" type="button" id="gpBtnAddFlight">+ New Match</button>
-            </div>
-          </div>
-        </header>
-        <div class="maPanel__controls">
-          <div class="gpHint" id="gpHintMatch"></div>
-        </div>
-        <div class="maPanel__body">
-          <div class="maCards" id="gpFlightsCanvas"></div>
-        </div>
-        <footer class="maPanel__ftr">
-          <div class="gpFooter">
-            <div class="gpFooter__left" id="gpMatchFooterLeft"></div>
-            <div class="gpFooter__right">
-              <button class="maBtn maBtn--ghost" type="button" id="gpBtnUnmatchSelected">Unmatch</button>
-              <button class="maBtn" type="button" id="gpBtnAssignToFlight">Assign &gt;&gt;</button>
-            </div>
-          </div>
-        </footer>
-      </section>
-
-      <!-- Secondary: Unmatched tray (desktop) -->
+      <!-- Secondary: Unmatched tray (Now on LEFT) -->
       <section class="maPanel maPanel--secondary gpTrayPanel" aria-label="Unmatched pairings tray">
         <header class="maPanel__hdr">
           <div class="gpPanelHdr">
             <div class="gpPanelHdr__title">Unmatched</div>
             <div class="gpPanelHdr__actions">
               <span class="gpCount" id="gpUnmatchedCount"></span>
+              <button class="maBtn maBtn--sm" type="button" id="gpBtnAssignToFlight">Assign &gt;&gt;</button>
             </div>
           </div>
         </header>
@@ -118,6 +97,30 @@
             <div class="gpFooter__left" id="gpUnmatchedFooterLeft"></div>
             <div class="gpFooter__right">
               <button class="maBtn maBtn--ghost" type="button" id="gpBtnClearTraySelection2">Clear</button>
+            </div>
+          </div>
+        </footer>
+      </section>
+
+      <!-- Primary: Matches canvas (Now on RIGHT) -->
+      <section class="maPanel maPanel--primary" aria-label="Matches canvas">
+        <header class="maPanel__hdr">
+          <div class="gpPanelHdr">
+            <div class="gpPanelHdr__title">Matches (Flights)</div>
+            <div class="gpPanelHdr__actions">
+            </div>
+          </div>
+        </header>
+        <div class="maPanel__controls">
+          <div class="gpHint" id="gpHintMatch"></div>
+        </div>
+        <div class="maPanel__body">
+          <div class="maCards" id="gpFlightsCanvas"></div>
+        </div>
+        <footer class="maPanel__ftr">
+          <div class="gpFooter">
+            <div class="gpFooter__left" id="gpMatchFooterLeft"></div>
+            <div class="gpFooter__right">
             </div>
           </div>
         </footer>
