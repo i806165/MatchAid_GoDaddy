@@ -27,7 +27,7 @@ if (!is_array($selected)) $selected = [];
 // New PDO usage (bootstrap already Db::init()'d)
 $pdo = Db::pdo();
 
-$data = ServiceDbFavAdmins::queryFavoriteAdmins($pdo, [
+$data = ServiceDbFavAdmins::queryFavoriteAdmins([
   "userGHIN" => $user,
   "clubId" => $clubId,
   "selectedAdminKeys" => $selected
