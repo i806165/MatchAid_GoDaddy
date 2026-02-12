@@ -29,7 +29,6 @@ if ($clubId === "" && isset($profileArr["profileJson"]["golfers"][0])) {
 $body = json_decode(file_get_contents("php://input"), true) ?: [];
 $payload = $body["payload"] ?? [];
 
-$pdo = Db::pdo($config["db"]);
 
 $args = [
   "clubId" => $clubId,
@@ -63,7 +62,7 @@ error_log("[MA][queryGames] IN clubId={$clubId} df={$args['dateFrom']} dt={$args
 );
 //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
-$data = ServiceDbGames::queryGames($pdo, $args);
+$data = ServiceDbGames::queryGames($args);
 
 if (!is_array($data) || !array_key_exists("games", $data)) {
   error_log("[MA][queryGames] OUT missing games key. data=" . json_encode($data));
