@@ -32,7 +32,6 @@ if (!$ctx || empty($ctx["ok"])) {
 
 // 2) GAME context hydration (Rule-2)
 try {
-  $pdo = Db::pdo();
   $gc = ServiceContextGame::getGameContext();
   $game = $gc["game"] ?? null;
   $ggid = $gc["ggid"] ?? null;
@@ -40,7 +39,8 @@ try {
     throw new RuntimeException("Missing game context.");
   }
 
-  $players = ServiceDbPlayers::getGamePlayers($pdo, (int)$ggid);
+  $players = ServiceDbPlayers::getGamePlayers($ggid);
+  $players = ServiceDbPlayers::getGamePlayers((string)$ggid);
 
   $initPayload = [
     "ok" => true,
@@ -88,7 +88,15 @@ $maChromeLogoUrl = null;
   <?php include __DIR__ . "/../../includes/chromeHeader.php"; ?>
 
   <div class="maControlArea" role="region" aria-label="Pairings controls">
-    <?php include __DIR__ . "/gamepairings_controls.php"; ?>
+    <div class="maSegWrap" id="gpTabs" role="tablist" aria-label="Pairings tabs">
+      <button class="maSegBtn is-active" type="button" data-tab="pair" role="tab" aria-selected="true">Pair Players</button>
+      <button class="maSegBtn" type="button" data-tab="match" role="tab" aria-selected="false" id="gpTabMatch">Match Pairings</button>
+
+      <div class="gpControls__spacer"></div>
+
+      <!-- Mobile tray toggle (opens drawer) -->
+      <button class="maBtn maBtn--ghost" type="button" id="gpBtnTray">Tray</button>
+    </div>
   </div>
 
   <main class="maPage maPage--multi maPage--pairings" role="main">
