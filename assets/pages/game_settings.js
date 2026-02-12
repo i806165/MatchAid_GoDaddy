@@ -653,17 +653,14 @@
     // ScoringSystem show/hide rules (Wix-aligned)
     const sys = String(el.scoringSystem?.value || "BestBall");
 
-    // BestBallCnt: visible only for BestBall; otherwise hidden and forced to 4 ("use all scores")
+    // Scoring system toggles (Wix-style: fully collapse via display none)
     const showBB = (sys === "BestBall");
-    if (el.divBestBall) el.divBestBall.style.visibility = showBB ? "visible" : "hidden";
-    if (el.bestBallCnt) {
-      if (!showBB) el.bestBallCnt.value = "4";
-      setDisabled(el.bestBallCnt, !showBB);
-    }
+    show(el.divBestBall, showBB);
+    if (el.bestBallCnt) setDisabled(el.bestBallCnt, !showBB);
 
-    // PlayerDeclaration: visible only for DeclarePlayer
+    // PlayerDeclaration visible only for DeclarePlayer
     const showPD = (sys === "DeclarePlayer");
-    if (el.divPlayerDecl) el.divPlayerDecl.style.visibility = showPD ? "visible" : "hidden";
+    show(el.divPlayerDecl, showPD);
     if (el.playerDecl) setDisabled(el.playerDecl, !showPD);
 
     // Dynamic cards:
@@ -692,7 +689,8 @@
   function toggleHCEffDate() {
     if (!el.hcEffectivity || !el.divHCEffDate) return;
     const showDate = (String(el.hcEffectivity.value) === "Date");
-    el.divHCEffDate.style.visibility = showDate ? "visible" : "hidden";
+    show(el.divHCEffDate, showDate);
+
     if (!showDate && el.hcEffDate) {
       // keep value, but save mapper will send null unless Date
     }
