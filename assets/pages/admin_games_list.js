@@ -176,6 +176,11 @@ function badgeParts(ymd) {
         ]);
       }
 
+      // Show brand image on this page
+      if (MA.chrome && typeof MA.chrome.showBrand === "function") {
+        MA.chrome.showBrand(true);
+      }
+
       // Chrome actions (hide left; show right as “Actions”)
       if (MA.chrome && typeof MA.chrome.setActions === "function") {
         MA.chrome.setActions({

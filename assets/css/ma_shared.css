@@ -289,7 +289,7 @@ body {
   width: 48px; height: 48px;
   border-radius: var(--radiusMd);
   background: var(--brandPrimaryBg);
-  display:flex; align-items:center; justify-content:center;
+  display:none; align-items:center; justify-content:center;
   overflow:hidden;
   flex: 0 0 auto;
 }
@@ -297,6 +297,7 @@ body {
 .maChrome__titles{
   flex: 1 1 auto; 
   min-width: 0; 
+  text-align: center;
 }
 
 .maChrome__title{

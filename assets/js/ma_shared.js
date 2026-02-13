@@ -155,6 +155,12 @@
     apply(l3, vals[2]);
   };
 
+  // Brand: toggle visibility (default is hidden via CSS)
+  MA.chrome.showBrand = function (visible) {
+    const el = document.getElementById("chromeBrandSlot");
+    if (el) el.style.display = visible ? "flex" : "none";
+  };
+
   // Actions: left/right buttons (page decides show/label/click)
   MA.chrome.setActions = function (cfg) {
     const leftBtn = document.getElementById("chromeBtnLeft");
