@@ -339,6 +339,10 @@
           safeName,
           p.teeSetName,
           `HI:${p.hi}`, `CH:${p.ch}`, `PH:${p.ph}`, `SO:${p.so}`
+          p.hi ? `HI:${p.hi}` : "",
+          p.ch ? `CH:${p.ch}` : "",
+          p.ph ? `PH:${p.ph}` : "",
+          (p.so && p.so !== "0") ? `SO:${p.so}` : ""
         ].filter(Boolean).join(" • ");
 
         return `
@@ -397,7 +401,12 @@
       
       // Unpaired List: TeeSet Name, HI:#, CH:#, PH:# SO:# separated by dot
       // Desktop: All on 1 line. Mobile: Player+TeeSet line 1, rest line 2.
-      const stats = [`HI:${p.hi}`, `CH:${p.ch}`, `PH:${p.ph}`, `SO:${p.so}`].join(" • ");
+      const stats = [
+        p.hi ? `HI:${p.hi}` : "",
+        p.ch ? `CH:${p.ch}` : "",
+        p.ph ? `PH:${p.ph}` : "",
+        (p.so && p.so !== "0") ? `SO:${p.so}` : ""
+      ].filter(Boolean).join(" • ");
 
       return `
         <div class="${cls}" data-action="selectUnpaired" data-ghin="${esc(p.playerGHIN)}">
@@ -916,10 +925,10 @@
         name,
         lname: String(r.dbPlayers_LName ?? r.lname ?? ""),
         teeSetName: String(r.dbPlayers_TeeSetName ?? r.teeSetName ?? ""),
-        hi: String(r.dbPlayers_HandicapIndex ?? r.hi ?? ""),
-        ch: String(r.dbPlayers_CourseHandicap ?? r.ch ?? ""),
-        ph: String(r.dbPlayers_PlayingHandicap ?? r.ph ?? ""),
-        so: String(r.dbPlayers_SortOrder ?? r.so ?? "0"),
+        hi: String(r.dbPlayers_HI ?? r.hi ?? ""),
+        ch: String(r.dbPlayers_CH ?? r.ch ?? ""),
+        ph: String(r.dbPlayers_PH ?? r.ph ?? ""),
+        so: String(r.dbPlayers_SO ?? r.so ?? "0"),
         pairingId: pad3(r.dbPlayers_PairingID ?? r.pairingId ?? "000"),
         pairingPos: String(r.dbPlayers_PairingPos ?? r.pairingPos ?? ""),
         flightId: String(r.dbPlayers_FlightID ?? r.flightId ?? "").trim(),
