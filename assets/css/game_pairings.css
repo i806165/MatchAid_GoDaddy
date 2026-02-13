@@ -269,6 +269,48 @@
   background: rgba(11,95,255,.08);
 }
 
+/* Row Checkbox */
+.gpRowCheck {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--borderSubtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 900;
+  flex: 0 0 auto;
+  margin-right: 10px;
+  background: #fff;
+}
+.gpRowCheck.is-selected {
+  background: var(--brandAccent);
+  border-color: var(--brandAccent);
+}
+
+/* Master Header Checkbox (Clear Only) */
+.gpMasterCheck {
+  width: 24px; height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--borderSubtle);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  cursor: pointer;
+  margin-right: 8px;
+  flex: 0 0 auto;
+  background: #fff;
+}
+.gpMasterCheck.has-selection {
+  background: var(--brandAccent);
+  border-color: var(--brandAccent);
+}
+.gpMasterCheck svg {
+  fill: currentColor;
+  width: 14px; height: 14px;
+}
+
 /* Search input with clear button */
 .gpInputClearWrap {
   position: relative;

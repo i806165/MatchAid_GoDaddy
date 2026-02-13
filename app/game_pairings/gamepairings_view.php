@@ -30,7 +30,8 @@
             <button class="gpSortBtn" type="button" data-sort="ch">CH</button>
             <button class="gpSortBtn" type="button" data-sort="so">SO</button>
           </div>
-          <div class="maInputWrap gpInputClearWrap" style="margin-top: 8px;">
+          <div class="maInputWrap gpInputClearWrap" style="margin-top: 8px; align-items: center;">
+            <div class="gpMasterCheck" id="gpUnpairedMasterCheck" title="Clear selection"></div>
             <input class="maTextInput" id="gpUnpairedSearch" type="text" placeholder="Search" autocomplete="off" />
             <button id="gpUnpairedSearchClear" class="clearBtn isHidden" type="button" aria-label="Clear search">×</button>
           </div>
@@ -91,7 +92,8 @@
           </div>
         </header>
         <div class="maPanel__controls">
-          <div class="maInputWrap gpInputClearWrap">
+          <div class="maInputWrap gpInputClearWrap" style="align-items: center;">
+            <div class="gpMasterCheck" id="gpUnmatchedMasterCheck" title="Clear selection"></div>
             <input class="maTextInput" id="gpUnmatchedSearch" type="text" placeholder="Search" autocomplete="off" />
             <button id="gpUnmatchedSearchClear" class="clearBtn isHidden" type="button" aria-label="Clear search">×</button>
           </div>
@@ -149,7 +151,8 @@
       </div>
     </header>
     <div class="maPanel__controls">
-      <div class="maInputWrap gpInputClearWrap">
+      <div class="maInputWrap gpInputClearWrap" style="align-items: center;">
+        <div class="gpMasterCheck" id="gpDrawerMasterCheck" title="Clear selection"></div>
         <input class="maTextInput" id="gpDrawerSearch" type="text" placeholder="Search" autocomplete="off" />
         <button id="gpDrawerSearchClear" class="clearBtn isHidden" type="button" aria-label="Clear search">×</button>
       </div>

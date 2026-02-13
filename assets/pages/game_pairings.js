@@ -26,6 +26,7 @@
     unpairedCount: document.getElementById("gpUnpairedCount"),
     unpairedSearch: document.getElementById("gpUnpairedSearch"),
     unpairedSearchClear: document.getElementById("gpUnpairedSearchClear"),
+    unpairedMasterCheck: document.getElementById("gpUnpairedMasterCheck"),
     unpairedSort: document.getElementById("gpUnpairedSort"),
     hintPair: document.getElementById("gpHintPair"),
     btnAssignToPairing: document.getElementById("gpBtnAssignToPairing"),
@@ -36,6 +37,7 @@
     unmatchedCount: document.getElementById("gpUnmatchedCount"),
     unmatchedSearch: document.getElementById("gpUnmatchedSearch"),
     unmatchedSearchClear: document.getElementById("gpUnmatchedSearchClear"),
+    unmatchedMasterCheck: document.getElementById("gpUnmatchedMasterCheck"),
     hintMatch: document.getElementById("gpHintMatch"),
     btnAssignToFlight: document.getElementById("gpBtnAssignToFlight"),
     btnClearTraySelection2: document.getElementById("gpBtnClearTraySelection2"),
@@ -45,6 +47,7 @@
     drawerTitle: document.getElementById("gpDrawerTitle"),
     drawerSearch: document.getElementById("gpDrawerSearch"),
     drawerSearchClear: document.getElementById("gpDrawerSearchClear"),
+    drawerMasterCheck: document.getElementById("gpDrawerMasterCheck"),
     drawerList: document.getElementById("gpDrawerList"),
     btnCloseDrawer: document.getElementById("gpBtnCloseDrawer"),
     btnDrawerClear: document.getElementById("gpBtnDrawerClear"),
@@ -173,13 +176,6 @@
     return pad3(max + 1);
   }
 
-  function nextPairingPos(pairingId) {
-    const rows = playersInPairing(pairingId);
-    const vals = rows.map(p => parseInt(String(p.pairingPos || "0"), 10)).filter(n => Number.isFinite(n));
-    const max = vals.length ? Math.max(...vals) : 0;
-    return String(max + 1);
-  }
-
   function getContainerSchedule(scope) {
     // returns {teeTime,startHole,startHoleSuffix} by scanning players within container
     // scope: { type: 'pairing', id } OR { type: 'flight', id }
@@ -306,6 +302,26 @@
           : "Select an unmatched pairing, then tap a match slot (A/B).";
       }
     }
+
+    // Update Master Checkboxes (Clear Only)
+    updateMasterCheck(el.unpairedMasterCheck, state.selectedPlayerGHINs.size > 0);
+    updateMasterCheck(el.unmatchedMasterCheck, state.selectedPairingIds.size > 0);
+    if (el.drawerMasterCheck) {
+      const size = state.activeTab === "pair" ? state.selectedPlayerGHINs.size : state.selectedPairingIds.size;
+      updateMasterCheck(el.drawerMasterCheck, size > 0);
+    }
+  }
+
+  function updateMasterCheck(el, hasSelection) {
+    if (!el) return;
+    if (hasSelection) {
+      el.classList.add("has-selection");
+      // Minus icon
+      el.innerHTML = `<svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>`;
+    } else {
+      el.classList.remove("has-selection");
+      el.innerHTML = "";
+    }
   }
 
   // ---- Pairings tab UI ----
@@ -402,6 +418,9 @@
     host.innerHTML = rows.map(p => {
       const sel = state.selectedPlayerGHINs.has(String(p.playerGHIN));
       const cls = sel ? "maListRow is-selected" : "maListRow";
+      const checkHtml = sel 
+        ? `<div class="gpRowCheck is-selected"><svg viewBox="0 0 24 24" style="fill:#fff;width:16px;height:16px;"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>`
+        : `<div class="gpRowCheck"></div>`;
       
       // Unpaired List: TeeSet Name, HI:#, CH:#, PH:# SO:# separated by dot
       // Desktop: All on 1 line. Mobile: Player+TeeSet line 1, rest line 2.
@@ -414,6 +433,7 @@
 
       return `
         <div class="${cls}" data-action="selectUnpaired" data-ghin="${esc(p.playerGHIN)}">
+          ${checkHtml}
           <div class="gpUnpairedItem">
             <div class="gpUnpairedItem__primary">
               ${esc(p.name)} • ${esc(p.teeSetName)}
@@ -518,8 +538,12 @@
     host.innerHTML = rows.map(r => {
       const sel = state.selectedPairingIds.has(String(r.pairingId));
       const cls = sel ? "maListRow is-selected" : "maListRow";
+      const checkHtml = sel 
+        ? `<div class="gpRowCheck is-selected"><svg viewBox="0 0 24 24" style="fill:#fff;width:16px;height:16px;"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>`
+        : `<div class="gpRowCheck"></div>`;
       return `
         <div class="${cls}" data-action="selectUnmatched" data-pairing-id="${esc(r.pairingId)}">
+          ${checkHtml}
           <div class="maListRow__col">Pairing ${esc(r.pairingId)}</div>
           <div class="maListRow__col maListRow__col--muted">${esc(r.names.slice(0, 2).join(", "))}${r.names.length > 2 ? "…" : ""}</div>
         </div>`;
@@ -585,12 +609,23 @@
       isNew = true;
     }
 
+    // Gap Filling: Find first available slots (1, 2, 3, 4)
+    const existingRows = playersInPairing(pid);
+    const usedPos = new Set(existingRows.map(p => parseInt(p.pairingPos, 10)).filter(n => n > 0));
+    const slots = [];
+    let cursor = 1;
+    while (slots.length < state.selectedPlayerGHINs.size) {
+      if (!usedPos.has(cursor)) slots.push(cursor);
+      cursor++;
+    }
+
+    let slotIdx = 0;
     state.selectedPlayerGHINs.forEach(ghin => {
       const p = getPlayerByGHIN(ghin);
       if (!p) return;
     // Pair Players: Add player to existing pairing
     p.pairingId = String(pid);
-    p.pairingPos = nextPairingPos(pid);
+    p.pairingPos = String(slots[slotIdx++] || "");
 
     if (isPairPair()) {
       // PairPair: follow pairing’s current Flight if already matched
@@ -895,6 +930,20 @@
         else renderUnmatchedList({ intoDrawer: true });
       });
     }
+
+    // Master Checkboxes (Clear Only)
+    const clearSelection = () => {
+      if (state.activeTab === "pair") state.selectedPlayerGHINs.clear();
+      else state.selectedPairingIds.clear();
+      render();
+      if (isMobile()) syncDrawer();
+    };
+    if (el.unpairedMasterCheck) el.unpairedMasterCheck.addEventListener("click", clearSelection);
+    if (el.unmatchedMasterCheck) el.unmatchedMasterCheck.addEventListener("click", clearSelection);
+    if (el.drawerMasterCheck) el.drawerMasterCheck.addEventListener("click", () => {
+      // Drawer specific clear
+      clearSelection();
+    });
 
     // Sort control
     if (el.unpairedSort) {

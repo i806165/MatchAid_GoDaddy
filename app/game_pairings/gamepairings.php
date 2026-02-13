@@ -87,11 +87,13 @@ $maChromeLogoUrl = null;
   <?php include __DIR__ . "/../../includes/chromeHeader.php"; ?>
 
   <div class="maControlArea" role="region" aria-label="Pairings controls">
-    <div class="maSegWrap" id="gpTabs" role="tablist" aria-label="Pairings tabs">
-      <button class="maSegBtn is-active" type="button" data-tab="pair" role="tab" aria-selected="true">Pair Players</button>
-      <button class="maSegBtn" type="button" data-tab="match" role="tab" aria-selected="false" id="gpTabMatch">Match Pairings</button>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <div class="maSegWrap" id="gpTabs" role="tablist" aria-label="Pairings tabs" style="flex: 1;">
+        <button class="maSegBtn is-active" type="button" data-tab="pair" role="tab" aria-selected="true">Pair Players</button>
+        <button class="maSegBtn" type="button" data-tab="match" role="tab" aria-selected="false" id="gpTabMatch">Match Pairings</button>
+      </div>
 
-      <div class="gpControls__spacer"></div>
+      <div class="gpControls__spacer" style="display:none;"></div>
 
       <!-- Mobile tray toggle (opens drawer) -->
       <button class="maBtn maBtn--ghost" type="button" id="gpBtnTray">Tray</button>
