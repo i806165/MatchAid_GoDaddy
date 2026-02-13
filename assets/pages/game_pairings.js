@@ -634,7 +634,11 @@
       // Toggling on
       state.editMode = true;
       state.targetFlightId = id;
-      state.targetFlightPos = "A"; // Default to A
+      
+      // Smart default: pick first empty slot
+      const teamA = buildTeamSummary(id, "A");
+      state.targetFlightPos = (!teamA.pairingId) ? "A" : "B";
+
       setStatus(`Editing Match ${id}. Select pairings to add.`, "info");
     }
     renderFlightsCanvas();
