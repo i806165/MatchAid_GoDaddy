@@ -1081,13 +1081,11 @@
         const fid = a.dataset.flightId;
         const fp = a.dataset.flightPos;
         const pid = a.dataset.pairingId;
-        if (!confirm(`Remove pairing ${pid} from match ${fid} Team ${fp}?`)) return;
         removePairingFromFlight(fid, fp, pid);
         return;
       }
       if (action === "unmatchFlight") {
         const fid = a.dataset.flightId;
-        if (!confirm(`Unmatch all pairings from match ${fid}?`)) return;
         unmatchFlight(fid);
         return;
       }
