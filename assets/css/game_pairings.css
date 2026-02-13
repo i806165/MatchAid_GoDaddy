@@ -195,6 +195,9 @@
   padding: 6px 8px;
   border-bottom: 1px solid var(--borderSubtle);
 }
+.gpCardRow.is-selected {
+  background: rgba(11,95,255,.08);
+}
 .gpCardRow:last-child { border-bottom: none; }
 
 .gpCardRow__del {

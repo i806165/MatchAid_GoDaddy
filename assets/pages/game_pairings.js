@@ -303,9 +303,13 @@
       if (!isPairPair()) {
         el.hintMatch.textContent = "Matches are disabled for Pair vs Field.";
       } else {
-        el.hintMatch.textContent = state.selectedPairingIds.size > 0
-          ? `Selected ${state.selectedPairingIds.size} pairing(s). Tap a match slot (A/B), then Assign.`
-          : "Select an unmatched pairing, then tap a match slot (A/B).";
+        if (state.editMode) {
+          el.hintMatch.textContent = `EDIT MODE: Selected ${state.selectedPairingIds.size} pairing(s). Tap Assign >> to add to Match ${state.targetFlightId}.`;
+        } else {
+          el.hintMatch.textContent = state.selectedPairingIds.size > 0
+            ? `Selected ${state.selectedPairingIds.size} pairing(s). Tap a match slot (A/B), then Assign.`
+            : "Select an unmatched pairing, then tap a match slot (A/B).";
+        }
       }
     }
 
@@ -482,12 +486,14 @@
       return `
         <div class="gpGroupCard" data-flight-id="${esc(fid)}">
           <div class="gpGroupCard__hdr">
-            <div>
-              <div class="gpGroupCard__title">Match ${esc(fid)}</div>
-              <div class="gpGroupCard__meta">${esc(meta)}</div>
-            </div>
-            <div>
-              <button class="gpRowBtn" type="button" data-action="unmatchFlight" data-flight-id="${esc(fid)}">Unmatch</button>
+            <div class="gpGroupCard__title" title="Match ${esc(fid)} • ${esc(meta)}">Match ${esc(fid)} • ${esc(meta)}</div>
+            <div class="gpCardActions">
+              <button class="gpCardActionBtn" type="button" data-action="unmatchFlight" data-flight-id="${esc(fid)}" title="Unmatch">
+                <svg viewBox="0 0 24 24"><path d="M2 12c0 2.76 2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1 0-1.59 1.21-2.9 2.76-3.07L8.73 11H8v2h2.73L13 15.27V17h1.73l4.01 4L20 19.74 3.27 3 2 4.27z M17 7h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1 0 1.43-0.98 2.63-2.31 2.98l1.46 1.46C20.88 15.61 22 13.95 22 12c0-2.76-2.24-5-5-5zm-1 4h-2.19l2 2H16z"/></svg>
+              </button>
+              <button class="gpCardActionBtn" type="button" data-action="editFlight" data-flight-id="${esc(fid)}" title="Edit">
+                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+              </button>
             </div>
           </div>
           <div class="gpGroupCard__body">
@@ -508,18 +514,29 @@
   function renderTeamSlot(flightId, flightPos, team) {
     const isTarget = (state.targetFlightId === String(flightId) && state.targetFlightPos === String(flightPos));
     const label = flightPos === "A" ? "Team A" : "Team B";
-    const pid = team.pairingId ? `Pairing ${esc(team.pairingId)}` : "(empty)";
-    const detail = team.names && team.names.length ? esc(team.names.join(", ")) : "";
+    
+    let info = label;
+    let hasPairing = false;
+
+    if (team.pairingId) {
+      hasPairing = true;
+      const rows = playersInPairing(team.pairingId);
+      const phVals = rows.map(p => parseInt(p.ph || "0", 10)).filter(n => !isNaN(n));
+      const sumPH = phVals.reduce((a, b) => a + b, 0);
+      const avgPH = phVals.length ? (sumPH / phVals.length).toFixed(1) : "0.0";
+      const names = rows.map(p => p.lname).join(", ");
+      info = `${label} • Group ${team.pairingId} • Sum ${sumPH} • Avg ${avgPH} • ${names}`;
+    } else {
+      info = `${label} (Empty)`;
+    }
 
     return `
-      <div class="maListRow ${isTarget ? "is-selected" : ""}" data-action="selectFlightSlot" data-flight-id="${esc(flightId)}" data-flight-pos="${esc(flightPos)}">
-        <div class="maListRow__col">${label}</div>
-        <div class="maListRow__col maListRow__col--muted">${pid}</div>
-        <div class="maListRow__col maListRow__col--right">
-          ${team.pairingId ? `<button class="gpRowBtn" type="button" data-action="removePairingFromFlight" data-flight-id="${esc(flightId)}" data-flight-pos="${esc(flightPos)}" data-pairing-id="${esc(team.pairingId)}">Remove</button>` : ""}
+      <div class="gpCardRow ${isTarget ? "is-selected" : ""}" data-action="selectFlightSlot" data-flight-id="${esc(flightId)}" data-flight-pos="${esc(flightPos)}">
+        <div class="gpCardRow__del" ${hasPairing ? `data-action="removePairingFromFlight" data-flight-id="${esc(flightId)}" data-flight-pos="${esc(flightPos)}" data-pairing-id="${esc(team.pairingId)}"` : 'style="visibility:hidden;"'}>
+           ${hasPairing ? "X" : ""}
         </div>
-      </div>
-      ${detail ? `<div class="maSmallNote">${detail}</div>` : ""}`;
+        <div class="gpCardRow__info">${esc(info)}</div>
+      </div>`;
   }
 
   function renderUnmatchedList(opts) {
@@ -602,6 +619,25 @@
       setStatus(`Editing Pairing ${id}. Select players to add.`, "info");
     }
     renderPairingsCanvas();
+    setHints();
+  }
+
+  function toggleFlightEditMode(fid) {
+    const id = String(fid || "");
+    if (state.editMode && state.targetFlightId === id) {
+      // Toggling off
+      state.editMode = false;
+      state.targetFlightId = "";
+      state.targetFlightPos = "";
+      setStatus("Edit mode cancelled.", "info");
+    } else {
+      // Toggling on
+      state.editMode = true;
+      state.targetFlightId = id;
+      state.targetFlightPos = "A"; // Default to A
+      setStatus(`Editing Match ${id}. Select pairings to add.`, "info");
+    }
+    renderFlightsCanvas();
     setHints();
   }
 
@@ -811,6 +847,11 @@
     }
 
     state.selectedPairingIds.clear();
+    
+    if (state.editMode) {
+      state.editMode = false;
+    }
+    
     render();
   }
 
@@ -1008,6 +1049,10 @@
       }
       if (action === "selectPairing") {
         selectPairing(a.dataset.pairingId);
+        return;
+      }
+      if (action === "editFlight") {
+        toggleFlightEditMode(a.dataset.flightId);
         return;
       }
       if (action === "editPairing") {
