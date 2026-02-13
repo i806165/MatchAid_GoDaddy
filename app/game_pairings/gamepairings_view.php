@@ -22,7 +22,10 @@
           </div>
         </header>
         <div class="maPanel__controls">
-          <input class="maTextInput" id="gpUnpairedSearch" type="text" placeholder="Search" autocomplete="off" />
+          <div class="maInputWrap gpInputClearWrap">
+            <input class="maTextInput" id="gpUnpairedSearch" type="text" placeholder="Search" autocomplete="off" />
+            <button id="gpUnpairedSearchClear" class="clearBtn isHidden" type="button" aria-label="Clear search">×</button>
+          </div>
           <!-- Sort Control -->
           <div class="gpSortControl" id="gpUnpairedSort">
             <button class="gpSortBtn is-active" type="button" data-sort="lname">Name</button>
@@ -87,7 +90,10 @@
           </div>
         </header>
         <div class="maPanel__controls">
-          <input class="maTextInput" id="gpUnmatchedSearch" type="text" placeholder="Search" autocomplete="off" />
+          <div class="maInputWrap gpInputClearWrap">
+            <input class="maTextInput" id="gpUnmatchedSearch" type="text" placeholder="Search" autocomplete="off" />
+            <button id="gpUnmatchedSearchClear" class="clearBtn isHidden" type="button" aria-label="Clear search">×</button>
+          </div>
         </div>
         <div class="maPanel__body">
           <div class="maListRows" id="gpUnmatchedList"></div>
@@ -143,7 +149,10 @@
       </div>
     </header>
     <div class="maPanel__controls">
-      <input class="maTextInput" id="gpDrawerSearch" type="text" placeholder="Search" autocomplete="off" />
+      <div class="maInputWrap gpInputClearWrap">
+        <input class="maTextInput" id="gpDrawerSearch" type="text" placeholder="Search" autocomplete="off" />
+        <button id="gpDrawerSearchClear" class="clearBtn isHidden" type="button" aria-label="Clear search">×</button>
+      </div>
     </div>
     <div class="maPanel__body">
       <div class="maListRows" id="gpDrawerList"></div>

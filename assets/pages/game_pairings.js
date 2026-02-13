@@ -25,6 +25,7 @@
     unpairedList: document.getElementById("gpUnpairedList"),
     unpairedCount: document.getElementById("gpUnpairedCount"),
     unpairedSearch: document.getElementById("gpUnpairedSearch"),
+    unpairedSearchClear: document.getElementById("gpUnpairedSearchClear"),
     unpairedSort: document.getElementById("gpUnpairedSort"),
     hintPair: document.getElementById("gpHintPair"),
     btnAssignToPairing: document.getElementById("gpBtnAssignToPairing"),
@@ -34,6 +35,7 @@
     unmatchedList: document.getElementById("gpUnmatchedList"),
     unmatchedCount: document.getElementById("gpUnmatchedCount"),
     unmatchedSearch: document.getElementById("gpUnmatchedSearch"),
+    unmatchedSearchClear: document.getElementById("gpUnmatchedSearchClear"),
     hintMatch: document.getElementById("gpHintMatch"),
     btnAssignToFlight: document.getElementById("gpBtnAssignToFlight"),
     btnClearTraySelection2: document.getElementById("gpBtnClearTraySelection2"),
@@ -42,6 +44,7 @@
     drawerOverlay: document.getElementById("gpDrawerOverlay"),
     drawerTitle: document.getElementById("gpDrawerTitle"),
     drawerSearch: document.getElementById("gpDrawerSearch"),
+    drawerSearchClear: document.getElementById("gpDrawerSearchClear"),
     drawerList: document.getElementById("gpDrawerList"),
     btnCloseDrawer: document.getElementById("gpBtnCloseDrawer"),
     btnDrawerClear: document.getElementById("gpBtnDrawerClear"),
@@ -65,6 +68,7 @@
     targetFlightId: "",
     targetFlightPos: "", // A | B
 
+    editMode: false, // For card editing
     // Dirty map by GHIN
     dirty: new Set(),
     busy: false,
@@ -284,9 +288,13 @@
 
   function setHints() {
     if (el.hintPair) {
-      el.hintPair.textContent = state.selectedPlayerGHINs.size > 0
-        ? `Selected ${state.selectedPlayerGHINs.size} player(s). Tap Assign >> to create new, or tap a card to add.`
-        : "Select unpaired players, then tap Assign >>.";
+      if (state.editMode) {
+        el.hintPair.textContent = `EDIT MODE: Selected ${state.selectedPlayerGHINs.size} player(s). Tap Assign >> to add to Pairing ${state.targetPairingId}.`;
+      } else {
+        el.hintPair.textContent = state.selectedPlayerGHINs.size > 0
+          ? `Selected ${state.selectedPlayerGHINs.size} player(s). Tap Assign >> to create new, or tap a card to add.`
+          : "Select unpaired players, then tap Assign >>.";
+      }
     }
 
     if (el.hintMatch) {
@@ -329,7 +337,7 @@
         if (fPlayer) flightPrefix = `${fPlayer.flightId}-${normFlightPos(fPlayer.flightPos)} `;
       }
       const title = `${flightPrefix}Pairing ${pid}`;
-      const meta = `Sum:${sumPH} Avg:${avgPH}`;
+      const meta = `Sum PH: ${sumPH} • Avg PH: ${avgPH}`;
 
       const body = rows.map(p => {
         const safeName = esc(p.name);
@@ -357,15 +365,12 @@
       return `
         <div class="gpGroupCard${selectedClass}" data-action="selectPairing" data-pairing-id="${esc(pid)}">
           <div class="gpGroupCard__hdr">
-            <div>
-              <div class="gpGroupCard__title">${esc(title)}</div>
-              <div class="gpGroupCard__meta">${esc(meta)}</div>
-            </div>
+            <div class="gpGroupCard__title" title="${esc(title)} • ${esc(meta)}">${esc(title)} • ${esc(meta)}</div>
             <div class="gpCardActions">
               <button class="gpCardActionBtn" type="button" data-action="unpairGroup" data-pairing-id="${esc(pid)}" title="Unpair">
                 <svg viewBox="0 0 24 24"><path d="M2 12c0 2.76 2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1 0-1.59 1.21-2.9 2.76-3.07L8.73 11H8v2h2.73L13 15.27V17h1.73l4.01 4L20 19.74 3.27 3 2 4.27z M17 7h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1 0 1.43-0.98 2.63-2.31 2.98l1.46 1.46C20.88 15.61 22 13.95 22 12c0-2.76-2.24-5-5-5zm-1 4h-2.19l2 2H16z"/></svg>
               </button>
-              <button class="gpCardActionBtn" type="button" data-action="selectPairing" data-pairing-id="${esc(pid)}" title="Edit">
+              <button class="gpCardActionBtn" type="button" data-action="editPairing" data-pairing-id="${esc(pid)}" title="Edit">
                 <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
               </button>
             </div>
@@ -552,12 +557,28 @@
     setHints();
   }
 
+  function toggleEditMode(pid) {
+    const id = String(pid || "");
+    if (state.editMode && state.targetPairingId === id) {
+      // Toggling off
+      state.editMode = false;
+      state.targetPairingId = "";
+      setStatus("Edit mode cancelled.", "info");
+    } else {
+      // Toggling on
+      state.editMode = true;
+      state.targetPairingId = id;
+      setStatus(`Editing Pairing ${id}. Select players to add.`, "info");
+    }
+    renderPairingsCanvas();
+    setHints();
+  }
+
   function assignSelectedPlayerToPairing() {
     if (state.selectedPlayerGHINs.size === 0) return setStatus("Select unpaired players first.", "warn");
     
     let pid = state.targetPairingId;
     let isNew = false;
-
     // If no target selected, create new pairing
     if (!pid) {
       pid = nextPairingId();
@@ -604,6 +625,11 @@
     }
     markDirty(ghin);
     });
+
+    // If we were in edit mode, turn it off after assigning.
+    if (state.editMode) {
+      state.editMode = false;
+    }
 
     // clear selection
     state.selectedPlayerGHINs.clear();
@@ -836,8 +862,33 @@
     }
 
     // Search fields
-    if (el.unpairedSearch) el.unpairedSearch.addEventListener("input", () => renderUnpairedList());
-    if (el.unmatchedSearch) el.unmatchedSearch.addEventListener("input", () => renderUnmatchedList());
+    if (el.unpairedSearch) {
+      el.unpairedSearch.addEventListener("input", () => {
+        renderUnpairedList();
+        el.unpairedSearchClear?.classList.toggle("isHidden", !el.unpairedSearch.value);
+      });
+    }
+    if (el.unpairedSearchClear) {
+      el.unpairedSearchClear.addEventListener("click", () => {
+        if (el.unpairedSearch) el.unpairedSearch.value = "";
+        el.unpairedSearchClear.classList.add("isHidden");
+        renderUnpairedList();
+      });
+    }
+    if (el.unmatchedSearch) {
+      el.unmatchedSearch.addEventListener("input", () => {
+        renderUnmatchedList();
+        el.unmatchedSearchClear?.classList.toggle("isHidden", !el.unmatchedSearch.value);
+      });
+    }
+    if (el.unmatchedSearchClear) {
+      el.unmatchedSearchClear.addEventListener("click", () => {
+        if (el.unmatchedSearch) el.unmatchedSearch.value = "";
+        el.unmatchedSearchClear.classList.add("isHidden");
+        renderUnmatchedList();
+      });
+    }
+
     if (el.drawerSearch) {
       el.drawerSearch.addEventListener("input", () => {
         if (state.activeTab === "pair") renderUnpairedList({ intoDrawer: true });
@@ -876,6 +927,10 @@
       }
       if (action === "selectPairing") {
         selectPairing(a.dataset.pairingId);
+        return;
+      }
+      if (action === "editPairing") {
+        toggleEditMode(a.dataset.pairingId);
         return;
       }
       if (action === "removeFromPair") {

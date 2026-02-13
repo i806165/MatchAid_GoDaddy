@@ -48,6 +48,11 @@
   flex: 1 1 auto;
 }
 
+/* Hide tray button on desktop */
+#gpBtnTray {
+  display: none;
+}
+
 /* Panel header row */
 .maPage--pairings .maPanel__hdr {
   background: var(--brandSecondary);
@@ -164,12 +169,17 @@
   font-size: 13px;
   font-weight: 950;
   color: var(--ink);
+  /* For single-line layout */
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .gpGroupCard__meta{
-  font-size: 12px;
-  font-weight: 850;
-  color: var(--mutedText);
+  /* No longer used, title is now one line */
+  display: none;
 }
 
 .gpGroupCard__body{
@@ -254,6 +264,35 @@
   background: rgba(11,95,255,.08);
 }
 
+/* Search input with clear button */
+.gpInputClearWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.gpInputClearWrap .maTextInput {
+  padding-right: 30px; /* Make space for the X */
+}
+
+.gpInputClearWrap .clearBtn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--mutedText);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 50%;
+}
+.gpInputClearWrap .clearBtn.isHidden { display: none; }
+
 /* Unpaired List Item Layout */
 .gpUnpairedItem {
   display: flex;
@@ -316,5 +355,9 @@
 @media (max-width: 900px){
   .gpTrayPanel{
     display: none;
+  }
+  /* Show tray button on mobile */
+  #gpBtnTray {
+    display: inline-flex;
   }
 }
