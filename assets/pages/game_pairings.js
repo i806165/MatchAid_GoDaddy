@@ -166,6 +166,14 @@
       .sort((a, b) => String(a.pairingId).localeCompare(String(b.pairingId)) || String(a.name).localeCompare(String(b.name)));
   }
 
+  function nextFlightId() {
+    const ids = state.players
+      .map(p => parseInt(String(p.flightId || "0"), 10))
+      .filter(n => Number.isFinite(n));
+    const max = ids.length ? Math.max(...ids) : 0;
+    return String(max + 1);
+  }
+
   function nextPairingId() {
     const ids = state.players
       .map(p => parseInt(String(p.pairingId || "0"), 10))
@@ -734,49 +742,75 @@
     if (!isPairPair()) return;
     if (state.selectedPairingIds.size === 0) return setStatus("Select unmatched pairings first.", "warn");
     
-    const fid = state.targetFlightId;
-    const fp = state.targetFlightPos;
+    let fid = state.targetFlightId;
+    let fp = state.targetFlightPos;
+    let isNew = false;
 
-    if (!fid || !fp) return setStatus("Tap a match slot (Team A/B) first.", "warn");
-
-    // Ensure slot is empty
-    const existing = buildTeamSummary(fid, fp);
-    if (existing && existing.pairingId) {
-      return setStatus(`That slot already has pairing ${existing.pairingId}. Remove it first.`, "warn");
+    // Create new match if no target selected
+    if (!fid) {
+      fid = nextFlightId();
+      fp = "A";
+      isNew = true;
     }
 
-    // Only allow 1 pairing per slot. If multiple selected, warn.
-    if (state.selectedPairingIds.size > 1) return setStatus("Select only 1 pairing for a match slot.", "warn");
+    if (!isNew && !fp) return setStatus("Tap a match slot (Team A/B) first.", "warn");
+
+    // If targeting specific slot, enforce single selection
+    if (!isNew && state.selectedPairingIds.size > 1) {
+      return setStatus("Select only 1 pairing for a specific match slot.", "warn");
+    }
+
+    // If new, allow max 2
+    if (isNew && state.selectedPairingIds.size > 2) {
+      return setStatus("Maximum 2 pairings for a new match.", "warn");
+    }
+
+    // Check collision if not new
+    if (!isNew) {
+      const existing = buildTeamSummary(fid, fp);
+      if (existing && existing.pairingId) {
+        return setStatus(`That slot already has pairing ${existing.pairingId}. Remove it first.`, "warn");
+      }
+    }
+
+    const pids = Array.from(state.selectedPairingIds);
     
-    const pid = Array.from(state.selectedPairingIds)[0];
+    // Helper to assign one pairing
+    const doAssign = (pid, slot) => {
+      const rows = playersInPairing(pid);
+      const sched = getContainerSchedule({ type: "flight", id: fid });
+      rows.forEach(p => {
+        p.flightId = String(fid);
+        p.flightPos = slot;
+        p.teeTime = String(sched.teeTime || "");
+        p.startHole = String(sched.startHole || "");
+        p.startHoleSuffix = String(sched.startHoleSuffix || "");
+        markDirty(p.playerGHIN);
+      });
+    };
 
-    const rows = playersInPairing(pid);
-    if (!rows.length) return;
-
-    // Inherit schedule from target flight (if any) else clear
-    const sched = getContainerSchedule({ type: "flight", id: fid });
-
-    rows.forEach(p => {
-      p.flightId = String(fid);
-      p.flightPos = fp;
-      p.teeTime = String(sched.teeTime || "");
-      p.startHole = String(sched.startHole || "");
-      p.startHoleSuffix = String(sched.startHoleSuffix || "");
-      // playerKey will inherit target flight on save
-      markDirty(p.playerGHIN);
-    });
-
-    // Clear selection to support next action
-    state.selectedPairingIds.clear();
-
-    // If we were building a new flight, advance target to Team B
-    if (fp === "A") {
-      state.targetFlightPos = "B";
-      setStatus(`Assigned ${pid} to Match ${fid} Team A. Select another pairing for Team B.`, "info");
+    if (isNew && pids.length === 2) {
+      doAssign(pids[0], "A");
+      doAssign(pids[1], "B");
+      setStatus(`Created Match ${fid} with Pairings ${pids[0]} & ${pids[1]}.`, "success");
+      state.targetFlightId = "";
+      state.targetFlightPos = "";
     } else {
-      setStatus(`Assigned ${pid} to Match ${fid} Team B.`, "success");
+      // Single assignment
+      doAssign(pids[0], fp);
+      if (isNew) {
+        setStatus(`Created Match ${fid}. Assigned Pairing ${pids[0]} to Team A.`, "success");
+        // Auto-advance to B for convenience
+        state.targetFlightId = fid;
+        state.targetFlightPos = "B";
+      } else {
+        setStatus(`Assigned Pairing ${pids[0]} to Match ${fid} Team ${fp === "A" ? "A" : "B"}.`, "success");
+        state.targetFlightId = "";
+        state.targetFlightPos = "";
+      }
     }
 
+    state.selectedPairingIds.clear();
     render();
   }
 
