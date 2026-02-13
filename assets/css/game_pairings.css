@@ -49,8 +49,13 @@
 }
 
 /* Panel header row */
-.gpPanelHdr{
-  /* Background/Text handled by .maPanel__hdr override below */
+.maPage--pairings .maPanel__hdr {
+  background: var(--brandSecondary);
+  color: var(--brandSecondaryText);
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.gpPanelHdr {
   display: flex;
   gap: 10px;
   align-items: center;
@@ -62,7 +67,7 @@
   font-size: 14px;
   font-weight: 950;
   letter-spacing: .2px;
-  color: inherit;
+  color: var(--brandSecondaryText);
 }
 
 .gpPanelHdr__actions{
@@ -74,7 +79,7 @@
 .gpCount{
   font-size: 12px;
   font-weight: 900;
-  color: rgba(255,255,255,0.85);
+  color: rgba(255,255,255,0.9);
 }
 
 /* Hint line */
@@ -129,6 +134,32 @@
   background: rgba(7,67,42,.05);
 }
 
+/* Card Header Actions */
+.gpCardActions {
+  display: flex;
+  gap: 4px;
+}
+.gpCardActionBtn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--brandSecondary);
+  border-radius: 4px;
+}
+.gpCardActionBtn:hover {
+  background: rgba(0,0,0,0.05);
+}
+.gpCardActionBtn svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
 .gpGroupCard__title{
   font-size: 13px;
   font-weight: 950;
@@ -144,6 +175,43 @@
 .gpGroupCard__body{
   display: flex;
   flex-direction: column;
+}
+
+/* Card Row Layout */
+.gpCardRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--borderSubtle);
+}
+.gpCardRow:last-child { border-bottom: none; }
+
+.gpCardRow__del {
+  flex: 0 0 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--danger);
+  font-weight: 900;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 14px;
+  line-height: 1;
+}
+.gpCardRow__del:hover {
+  background: rgba(198, 40, 40, 0.1);
+}
+
+.gpCardRow__info {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .gpRowBtn{
@@ -168,9 +236,54 @@
   background: rgba(0,0,0,.04);
 }
 
+/* Assign Button: White bg, Green outline/text */
+#gpBtnAssignToPairing,
+#gpBtnAssignToFlight {
+  background: #ffffff;
+  color: var(--brandSecondary);
+  border: 1px solid var(--brandSecondary);
+  font-weight: 800;
+}
+#gpBtnAssignToPairing:hover,
+#gpBtnAssignToFlight:hover {
+  background: #f0fdf4;
+}
+
 /* Selected row styling (tray) */
 .maListRow.is-selected{
   background: rgba(11,95,255,.08);
+}
+
+/* Unpaired List Item Layout */
+.gpUnpairedItem {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 6px;
+  width: 100%;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.gpUnpairedItem__primary {
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.gpUnpairedItem__secondary {
+  font-weight: 400;
+  color: var(--mutedText);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Mobile: 2 lines */
+@media (max-width: 600px) {
+  .gpUnpairedItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .gpUnpairedSep { display: none; }
 }
 
 /* Sort Control in Tray */

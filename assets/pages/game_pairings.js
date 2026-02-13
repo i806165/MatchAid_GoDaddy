@@ -317,12 +317,12 @@
     el.pairingsCanvas.innerHTML = ids.map(pid => {
       const rows = playersInPairing(pid);
       
-      // 5. Header Stats: Sum PH, Avg PH
+      // Header Stats: Sum PH, Avg PH
       const phVals = rows.map(p => parseInt(p.ph || "0", 10)).filter(n => !isNaN(n));
       const sumPH = phVals.reduce((a, b) => a + b, 0);
       const avgPH = phVals.length ? (sumPH / phVals.length).toFixed(1) : "0.0";
       
-      // 5. Header Title: Flight-Pos + PairingID
+      // Header Title: Flight-Pos + PairingID
       let flightPrefix = "";
       if (isPairPair()) {
         const fPlayer = rows.find(p => p.flightId);
@@ -334,7 +334,7 @@
       const body = rows.map(p => {
         const safeName = esc(p.name);
         const safeGHIN = esc(p.playerGHIN);
-        // 6. Row Info: TeeSet Name, HI:#, CH:#, PH:# SO:#
+        // Row Info: TeeSet Name, HI:#, CH:#, PH:# SO:#
         const info = [
           safeName,
           p.teeSetName,
@@ -343,14 +343,14 @@
 
         return `
           <div class="gpCardRow">
-            <div class="gpCardRow__del" data-action="removeFromPair" data-ghin="${safeGHIN}">✕</div>
+            <div class="gpCardRow__del" data-action="removeFromPair" data-ghin="${safeGHIN}">X</div>
             <div class="gpCardRow__info">${esc(info)}</div>
           </div>`;
       }).join("");
 
       const selectedClass = (state.targetPairingId === pid) ? " is-target" : "";
       
-      // 4. Header Icons: Unpair (broken link), Edit (pencil)
+      // Header Icons: Unpair (broken link), Edit (pencil)
       return `
         <div class="gpGroupCard${selectedClass}" data-action="selectPairing" data-pairing-id="${esc(pid)}">
           <div class="gpGroupCard__hdr">
@@ -360,7 +360,7 @@
             </div>
             <div class="gpCardActions">
               <button class="gpCardActionBtn" type="button" data-action="unpairGroup" data-pairing-id="${esc(pid)}" title="Unpair">
-                <svg viewBox="0 0 24 24"><path d="M17 7h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1 0 1.43-0.98 2.63-2.31 2.98l1.46 1.46C20.88 15.61 22 13.95 22 12c0-2.76-2.24-5-5-5zm-1 4h-2.19l2 2H16zM2 4.27l3.11 3.11C3.29 8.12 2 9.91 2 12c0 2.76 2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1 0-1.59 1.21-2.9 2.76-3.07L8.73 11H8v2h2.73L13 15.27V17h1.73l4.01 4L20 19.74 3.27 3 2 4.27z"/></svg>
+                <svg viewBox="0 0 24 24"><path d="M2 12c0 2.76 2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1 0-1.59 1.21-2.9 2.76-3.07L8.73 11H8v2h2.73L13 15.27V17h1.73l4.01 4L20 19.74 3.27 3 2 4.27z M17 7h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1 0 1.43-0.98 2.63-2.31 2.98l1.46 1.46C20.88 15.61 22 13.95 22 12c0-2.76-2.24-5-5-5zm-1 4h-2.19l2 2H16z"/></svg>
               </button>
               <button class="gpCardActionBtn" type="button" data-action="selectPairing" data-pairing-id="${esc(pid)}" title="Edit">
                 <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
@@ -395,7 +395,7 @@
       const sel = state.selectedPlayerGHINs.has(String(p.playerGHIN));
       const cls = sel ? "maListRow is-selected" : "maListRow";
       
-      // 1. Unpaired List: TeeSet Name, HI:#, CH:#, PH:# SO:# separated by dot
+      // Unpaired List: TeeSet Name, HI:#, CH:#, PH:# SO:# separated by dot
       // Desktop: All on 1 line. Mobile: Player+TeeSet line 1, rest line 2.
       const stats = [`HI:${p.hi}`, `CH:${p.ch}`, `PH:${p.ph}`, `SO:${p.so}`].join(" • ");
 
@@ -403,7 +403,7 @@
         <div class="${cls}" data-action="selectUnpaired" data-ghin="${esc(p.playerGHIN)}">
           <div class="gpUnpairedItem">
             <div class="gpUnpairedItem__primary">
-              ${esc(p.name)} <span style="font-weight:400">• ${esc(p.teeSetName)}</span>
+              ${esc(p.name)} • ${esc(p.teeSetName)}
             </div>
             <div class="gpUnpairedItem__secondary">
               <span class="gpUnpairedSep">•</span> ${esc(stats)}
