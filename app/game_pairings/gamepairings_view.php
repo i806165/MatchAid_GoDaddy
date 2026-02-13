@@ -163,6 +163,7 @@
         <div class="gpFooter__left" id="gpDrawerFooterLeft"></div>
         <div class="gpFooter__right">
           <button class="maBtn maBtn--ghost" type="button" id="gpBtnDrawerClear">Clear</button>
+          <button class="maBtn maBtn--sm" type="button" id="gpBtnDrawerAssign">Assign</button>
         </div>
       </div>
     </footer>

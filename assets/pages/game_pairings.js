@@ -49,6 +49,7 @@
     drawerList: document.getElementById("gpDrawerList"),
     btnCloseDrawer: document.getElementById("gpBtnCloseDrawer"),
     btnDrawerClear: document.getElementById("gpBtnDrawerClear"),
+    btnDrawerAssign: document.getElementById("gpBtnDrawerAssign"),
   };
 
   // ---- State ----
@@ -717,6 +718,7 @@
     state.selectedPlayerGHINs.clear();
     state.targetPairingId = ""; // Reset target after assign
     setStatus(isNew ? `Created pairing ${pid}.` : `Added to pairing ${pid}.`, "success");
+    if (isMobile()) closeDrawer();
     render();
   }
 
@@ -856,6 +858,7 @@
       state.editMode = false;
     }
     
+    if (isMobile()) closeDrawer();
     render();
   }
 
@@ -972,6 +975,13 @@
           state.selectedPairingId = "";
           renderUnmatchedList({ intoDrawer: true });
         }
+      });
+    }
+    if (el.btnDrawerAssign) {
+      el.btnDrawerAssign.addEventListener("click", () => {
+        // Dispatch to correct handler based on active tab
+        if (state.activeTab === "pair") assignSelectedPlayerToPairing();
+        else assignSelectedPairingToFlight();
       });
     }
 

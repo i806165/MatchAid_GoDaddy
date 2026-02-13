@@ -251,7 +251,8 @@
 
 /* Assign Button: White bg, Green outline/text */
 #gpBtnAssignToPairing,
-#gpBtnAssignToFlight {
+#gpBtnAssignToFlight,
+#gpBtnDrawerAssign {
   background: #ffffff;
   color: var(--brandSecondary);
   border: 1px solid var(--brandSecondary);
@@ -259,7 +260,8 @@
   border-radius: 999px;
 }
 #gpBtnAssignToPairing:hover,
-#gpBtnAssignToFlight:hover {
+#gpBtnAssignToFlight:hover,
+#gpBtnDrawerAssign:hover {
   background: #f0fdf4;
 }
 
