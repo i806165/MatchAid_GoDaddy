@@ -38,8 +38,6 @@ function ma_randGameKey(int $len = 6): string {
 }
 
 try {
-  $pdo = Db::pdo();
-
   $uc = ServiceUserContext::getUserContext();
   if (!$uc || empty($uc['ok'])) {
     echo json_encode(['ok' => false, 'message' => 'Not signed in.']);
@@ -69,12 +67,12 @@ try {
   if (!is_array($assignments)) $assignments = [];
 
   // Load game (for competition rule)
-  $game = ServiceDbGames::getGameByGGID($pdo, $ggid);
+  $game = ServiceDbGames::getGameByGGID((int)$ggid);
   $competition = strval($game['dbGames_Competition'] ?? '');
   $isPairPair = ($competition === 'PairPair');
 
   // Map current player rows by GHIN so we can upsert full rows without losing fields.
-  $rows = ServiceDbPlayers::getGamePlayers($pdo, (int)$ggid);
+  $rows = ServiceDbPlayers::getGamePlayers((string)$ggid);
   $byGHIN = [];
   foreach ($rows as $r) {
     $k = strval($r['dbPlayers_PlayerGHIN'] ?? '');
@@ -133,12 +131,12 @@ try {
     $row['dbPlayers_StartHole'] = $startHole;
     $row['dbPlayers_StartHoleSuffix'] = $startHoleS;
 
-    ServiceDbPlayers::upsertGamePlayer($pdo, $row);
+    ServiceDbPlayers::upsertGamePlayer((string)$ggid, $playerGHIN, $row);
     $updated++;
   }
 
   // Reload and enforce post-normalization inheritance (schedule + gameKey)
-  $rows2 = ServiceDbPlayers::getGamePlayers($pdo, (int)$ggid);
+  $rows2 = ServiceDbPlayers::getGamePlayers((string)$ggid);
 
   // Helper maps for schedule resolution
   $pairingSched = [];
@@ -220,7 +218,8 @@ try {
   // Persist inheritance changes (only where needed)
   $final = [];
   foreach ($rows2 as $r) {
-    ServiceDbPlayers::upsertGamePlayer($pdo, $r);
+    $rGhin = strval($r['dbPlayers_PlayerGHIN'] ?? '');
+    ServiceDbPlayers::upsertGamePlayer((string)$ggid, $rGhin, $r);
     $final[] = $r;
   }
 
