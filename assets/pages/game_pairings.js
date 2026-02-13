@@ -338,7 +338,6 @@
         const info = [
           safeName,
           p.teeSetName,
-          `HI:${p.hi}`, `CH:${p.ch}`, `PH:${p.ph}`, `SO:${p.so}`
           p.hi ? `HI:${p.hi}` : "",
           p.ch ? `CH:${p.ch}` : "",
           p.ph ? `PH:${p.ph}` : "",
