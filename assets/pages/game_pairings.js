@@ -939,7 +939,6 @@
       }
       if (action === "unpairGroup") {
         const pid = a.dataset.pairingId;
-        if (!confirm(`Unpair all players from pairing ${pid}?`)) return;
         unpairGroup(pid);
         return;
       }

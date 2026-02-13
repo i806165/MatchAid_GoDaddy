@@ -18,20 +18,21 @@
             <div class="gpPanelHdr__actions">
               <span class="gpCount" id="gpUnpairedCount"></span>
               <button class="maBtn maBtn--sm" type="button" id="gpBtnAssignToPairing">Assign &gt;&gt;</button>
+              <button class="maBtn maBtn--sm" type="button" id="gpBtnClearTraySelection">Clear</button>
             </div>
           </div>
         </header>
         <div class="maPanel__controls">
-          <div class="maInputWrap gpInputClearWrap">
-            <input class="maTextInput" id="gpUnpairedSearch" type="text" placeholder="Search" autocomplete="off" />
-            <button id="gpUnpairedSearchClear" class="clearBtn isHidden" type="button" aria-label="Clear search">×</button>
-          </div>
           <!-- Sort Control -->
           <div class="gpSortControl" id="gpUnpairedSort">
             <button class="gpSortBtn is-active" type="button" data-sort="lname">Name</button>
             <button class="gpSortBtn" type="button" data-sort="hi">HI</button>
             <button class="gpSortBtn" type="button" data-sort="ch">CH</button>
             <button class="gpSortBtn" type="button" data-sort="so">SO</button>
+          </div>
+          <div class="maInputWrap gpInputClearWrap" style="margin-top: 8px;">
+            <input class="maTextInput" id="gpUnpairedSearch" type="text" placeholder="Search" autocomplete="off" />
+            <button id="gpUnpairedSearchClear" class="clearBtn isHidden" type="button" aria-label="Clear search">×</button>
           </div>
         </div>
         <div class="maPanel__body">
@@ -41,7 +42,6 @@
           <div class="gpFooter">
             <div class="gpFooter__left" id="gpUnpairedFooterLeft"></div>
             <div class="gpFooter__right">
-              <button class="maBtn maBtn--ghost" type="button" id="gpBtnClearTraySelection">Clear</button>
             </div>
           </div>
         </footer>
@@ -86,6 +86,7 @@
             <div class="gpPanelHdr__actions">
               <span class="gpCount" id="gpUnmatchedCount"></span>
               <button class="maBtn maBtn--sm" type="button" id="gpBtnAssignToFlight">Assign &gt;&gt;</button>
+              <button class="maBtn maBtn--sm" type="button" id="gpBtnClearTraySelection2">Clear</button>
             </div>
           </div>
         </header>
@@ -102,7 +103,6 @@
           <div class="gpFooter">
             <div class="gpFooter__left" id="gpUnmatchedFooterLeft"></div>
             <div class="gpFooter__right">
-              <button class="maBtn maBtn--ghost" type="button" id="gpBtnClearTraySelection2">Clear</button>
             </div>
           </div>
         </footer>

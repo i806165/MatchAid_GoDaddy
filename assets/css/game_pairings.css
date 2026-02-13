@@ -35,7 +35,7 @@
 }
 
 .maControlArea .maSegBtn {
-  flex: 1;
+  flex: 1 1 0px;
   border: none;
   border-right: 1px solid var(--borderSubtle);
   border-radius: 0;
@@ -134,7 +134,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
+  padding: 6px 12px;
   border-bottom: 1px solid var(--borderSubtle);
   background: rgba(7,67,42,.05);
 }
@@ -248,14 +248,19 @@
 
 /* Assign Button: White bg, Green outline/text */
 #gpBtnAssignToPairing,
-#gpBtnAssignToFlight {
+#gpBtnAssignToFlight,
+#gpBtnClearTraySelection,
+#gpBtnClearTraySelection2 {
   background: #ffffff;
   color: var(--brandSecondary);
   border: 1px solid var(--brandSecondary);
   font-weight: 800;
+  border-radius: 999px;
 }
 #gpBtnAssignToPairing:hover,
-#gpBtnAssignToFlight:hover {
+#gpBtnAssignToFlight:hover,
+#gpBtnClearTraySelection:hover,
+#gpBtnClearTraySelection2:hover {
   background: #f0fdf4;
 }
 
