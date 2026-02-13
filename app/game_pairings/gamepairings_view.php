@@ -18,7 +18,6 @@
             <div class="gpPanelHdr__actions">
               <span class="gpCount" id="gpUnpairedCount"></span>
               <button class="maBtn maBtn--sm" type="button" id="gpBtnAssignToPairing">Assign &gt;&gt;</button>
-              <button class="maBtn maBtn--sm" type="button" id="gpBtnClearTraySelection">Clear</button>
             </div>
           </div>
         </header>
@@ -87,7 +86,6 @@
             <div class="gpPanelHdr__actions">
               <span class="gpCount" id="gpUnmatchedCount"></span>
               <button class="maBtn maBtn--sm" type="button" id="gpBtnAssignToFlight">Assign &gt;&gt;</button>
-              <button class="maBtn maBtn--sm" type="button" id="gpBtnClearTraySelection2">Clear</button>
             </div>
           </div>
         </header>

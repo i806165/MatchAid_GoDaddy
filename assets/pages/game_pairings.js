@@ -30,7 +30,6 @@
     unpairedSort: document.getElementById("gpUnpairedSort"),
     hintPair: document.getElementById("gpHintPair"),
     btnAssignToPairing: document.getElementById("gpBtnAssignToPairing"),
-    btnClearTraySelection: document.getElementById("gpBtnClearTraySelection"),
     // Match tab
     flightsCanvas: document.getElementById("gpFlightsCanvas"),
     unmatchedList: document.getElementById("gpUnmatchedList"),
@@ -40,7 +39,6 @@
     unmatchedMasterCheck: document.getElementById("gpUnmatchedMasterCheck"),
     hintMatch: document.getElementById("gpHintMatch"),
     btnAssignToFlight: document.getElementById("gpBtnAssignToFlight"),
-    btnClearTraySelection2: document.getElementById("gpBtnClearTraySelection2"),
     // Drawer
     btnTray: document.getElementById("gpBtnTray"),
     drawerOverlay: document.getElementById("gpDrawerOverlay"),
@@ -568,6 +566,7 @@
     if (state.selectedPlayerGHINs.has(id)) {
       state.selectedPlayerGHINs.delete(id);
     } else {
+      if (state.selectedPlayerGHINs.size >= 4) return setStatus("Maximum 4 players selected.", "warn");
       state.selectedPlayerGHINs.add(id);
     }
     renderUnpairedList();
@@ -716,6 +715,7 @@
     if (state.selectedPairingIds.has(id)) {
       state.selectedPairingIds.delete(id);
     } else {
+      if (state.selectedPairingIds.size >= 2) return setStatus("Maximum 2 pairings selected.", "warn");
       state.selectedPairingIds.add(id);
     }
     renderUnmatchedList();
@@ -959,10 +959,8 @@
 
     // Buttons
     if (el.btnAssignToPairing) el.btnAssignToPairing.addEventListener("click", assignSelectedPlayerToPairing);
-    if (el.btnClearTraySelection) el.btnClearTraySelection.addEventListener("click", () => { state.selectedPlayerGHINs.clear(); renderUnpairedList(); setHints(); });
 
     if (el.btnAssignToFlight) el.btnAssignToFlight.addEventListener("click", assignSelectedPairingToFlight);
-    if (el.btnClearTraySelection2) el.btnClearTraySelection2.addEventListener("click", () => { state.selectedPairingIds.clear(); renderUnmatchedList(); setHints(); });
 
     // Delegated clicks for dynamic lists / cards
     document.addEventListener("click", (e) => {
