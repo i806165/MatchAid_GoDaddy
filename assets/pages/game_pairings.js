@@ -565,15 +565,15 @@
         p.startHole = String(p.startHole || "");
         p.startHoleSuffix = String(p.startHoleSuffix || "");
       }
-      // gameKey blank until matched (server will enforce)
-      p.gameKey = "";
+      // playerKey blank until matched (server will enforce)
+      p.playerKey = "";
     } else {
-      // PairField: inherit target pairing schedule + gameKey scope pairing
+      // PairField: inherit target pairing schedule + playerKey scope pairing
       const sched = getContainerSchedule({ type: "pairing", id: pid });
       p.teeTime = String(sched.teeTime || "");
       p.startHole = String(sched.startHole || "");
       p.startHoleSuffix = String(sched.startHoleSuffix || "");
-      // gameKey will be inherited/created on save
+      // playerKey will be inherited/created on save
     }
     markDirty(ghin);
     });
@@ -598,7 +598,7 @@
     p.teeTime = "";
     p.startHole = "";
     p.startHoleSuffix = "";
-    p.gameKey = "";
+    p.playerKey = "";
     markDirty(ghin);
     render();
   }
@@ -616,7 +616,7 @@
       p.teeTime = "";
       p.startHole = "";
       p.startHoleSuffix = "";
-      p.gameKey = "";
+      p.playerKey = "";
       markDirty(p.playerGHIN);
     });
     render();
@@ -674,7 +674,7 @@
       p.teeTime = String(sched.teeTime || "");
       p.startHole = String(sched.startHole || "");
       p.startHoleSuffix = String(sched.startHoleSuffix || "");
-      // gameKey will inherit target flight on save
+      // playerKey will inherit target flight on save
       markDirty(p.playerGHIN);
     });
 
@@ -701,7 +701,7 @@
       p.teeTime = "";
       p.startHole = "";
       p.startHoleSuffix = "";
-      p.gameKey = "";
+      p.playerKey = "";
       markDirty(p.playerGHIN);
     });
     render();
@@ -717,7 +717,7 @@
         p.teeTime = "";
         p.startHole = "";
         p.startHoleSuffix = "";
-        p.gameKey = "";
+        p.playerKey = "";
         markDirty(p.playerGHIN);
       });
     render();
@@ -908,7 +908,7 @@
         teeTime: String(r.dbPlayers_TeeTime ?? r.teeTime ?? ""),
         startHole: String(r.dbPlayers_StartHole ?? r.startHole ?? ""),
         startHoleSuffix: String(r.dbPlayers_StartHoleSuffix ?? r.startHoleSuffix ?? ""),
-        gameKey: String(r.dbPlayers_GameKey ?? r.gameKey ?? ""),
+        playerKey: String(r.dbPlayers_PlayerKey ?? r.playerKey ?? ""),
       };
     });
   }
