@@ -193,6 +193,7 @@ $maChromeLogoUrl = null; // reserve slot; set later if desired
 </script>
 
   <script src="/assets/js/ma_shared.js"></script>
+  <script src="/assets/modules/actions_menu.js?v=1"></script>
   <script src="/assets/pages/admin_games_list.js"></script>
 </body>
 </html>
