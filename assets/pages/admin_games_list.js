@@ -641,58 +641,25 @@ function applyPreset(presetKey) {
   }
 
   function openActionsMenu(openFiltersModalFn) {
-    const html = `
-      <div class="actionMenu">
-        <div class="actionMenu_header">
-          <div class="actionMenu_headerRow">
-            <div class="actionMenu_headerSpacer"></div>
-            <div>
-              <div class="actionMenu_title">Actions</div>
-              <div class="actionMenu_subtitle">Admin Games List</div>
-            </div>
-            <button class="actionMenu_closeBtn" type="button" data-closemenu="1">✕</button>
-          </div>
-        </div>
+    if (!MA.ui || !MA.ui.openActionsMenu) {
+      console.warn("MA.ui.openActionsMenu not found.");
+      return;
+    }
 
-        <button class="actionMenu_item" type="button" data-menuclick="current">My Current Games</button>
-        <button class="actionMenu_item" type="button" data-menuclick="past">My Past Games</button>
-        <div class="actionMenu_divider"></div>
-        <button class="actionMenu_item" type="button" data-menuclick="allCurrent">All Current Games</button>
-        <button class="actionMenu_item" type="button" data-menuclick="allPast">All Past Games</button>
-        <div class="actionMenu_divider"></div>
-        <button class="actionMenu_item" type="button" data-menuclick="filters">Advanced Filters…</button>
-        <div class="actionMenu_divider"></div>
-        <button class="actionMenu_item" type="button" data-menuclick="addGame">Add Game</button>
-        <button class="actionMenu_item" type="button" data-menuclick="import">Import Games</button>
-      </div>
-    `;
+    const items = [
+      { label: "My Current Games", action: () => applyPreset("current") },
+      { label: "My Past Games", action: () => applyPreset("past") },
+      { separator: true },
+      { label: "All Current Games", action: () => applyPreset("allCurrent") },
+      { label: "All Past Games", action: () => applyPreset("allPast") },
+      { separator: true },
+      { label: "Advanced Filters…", action: () => { if (typeof openFiltersModalFn === "function") openFiltersModalFn(); } },
+      { separator: true },
+      { label: "Add Game", action: () => handleGameAction({ action: "addGame" }) },
+      { label: "Import Games", action: () => handleGameAction({ action: "import" }) }
+    ];
 
-    openMenu(html);
-
-    const host = document.getElementById("menuHost");
-    if (!host) return;
-
-    host.querySelectorAll("[data-menuclick]").forEach((el) => {
-      el._onMenuClick = async (action) => {
-        const a = String(action || "");
-        if (a === "filters") {
-          if (typeof openFiltersModalFn === "function") openFiltersModalFn();
-          return;
-        }
-
-        // Presets
-        if (["my", "current", "past", "all", "allCurrent", "allPast"].includes(a)) {
-          await applyPreset(a);
-          return;
-        }
-
-        // Page actions
-        if (a === "addGame" || a === "import") {
-          await handleGameAction({ action: a });
-          return;
-        }
-      };
-    });
+    MA.ui.openActionsMenu("Actions", items, "Admin Games List");
   }
 
   function openGameMenu(g) {

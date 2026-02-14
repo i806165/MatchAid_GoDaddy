@@ -1,0 +1,3846 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MatchAid - Pairings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* brandColor0 is primary menu color */
+            /* brandColor1 is subPanel menu color */
+            --brandColor0: #07432a;
+            --brandColor1: #3F7652;
+            --brandColor4: #5C746E;
+            --brandColor2: #cdb278;
+            --brandColor3: #3F7652;
+
+            /* selectColor1 is color used to denote an enum selection */
+            --selectColor3: #2FA4A9;
+            --selectColor1: #F1D7B7;
+            --selectColor2: #e8f5ee;
+
+            --brandBlue: #1e78ff;
+            --onBrandText: #ffffff;
+
+            --ink: #111111;
+            --mutedText: rgba(17, 17, 17, .62);
+            --labelText: #1a1a1a;
+            --danger: #c62828;
+            --warn: #f6d365;
+            --success: #0aa45c;
+
+            --chromeHeight: 0px;
+            --bg: #ffffff;
+            --surface: #ffffff;
+            --modalSurface: var(--surface);
+            --modalEdge: rgba(0, 0, 0, .50);
+            --modalHeaderBg: var(--brandColor0);
+            --modalHeaderText: var(--onBrandText);
+            --modalHeaderDivider: rgba(255, 255, 255, .22);
+            --cardHeaderBg: rgba(0, 0, 0, .04);
+
+            /* Elevation */
+            --elevationModal: 0 10px 28px rgba(0, 0, 0, .18);
+
+            --border: rgba(0, 0, 0, .12);
+            --divider: rgba(0, 0, 0, .10);
+            --controlBorder: rgba(0, 0, 0, .15);
+
+            --selectedBg: var(--brandColor0);
+            --pressedBg: var(--brandColor0);
+
+            --footerTopLine: rgba(0, 0, 0, .22);
+            --footerShadow: 0 -8px 18px rgba(0, 0, 0, .10);
+            --footerBarH: 30px;
+            --overlayBg: rgba(0, 0, 0, .35);
+
+            --statusSuccessBg: var(--success);
+            --statusSuccessText: #ffffff;
+            --statusWarnBg: var(--warn);
+            --statusWarnText: #111111;
+            --statusErrorBg: var(--danger);
+            --statusErrorText: #ffffff;
+
+            /* ------ TYPOGRAPHY ROLES (canonical)------- */
+            --pageTitleSize: 18px;
+            --pageTitleWeight: 800;
+            --subPageDividerColor: #B8C6D6;
+            --subPageDividerWidth: 2px;
+            --subPageTopGap: 4px;
+            --subPageRadius: 14px;
+            --subTitleSize: 12px;
+            --subTitleWeight: 600;
+
+            --sectionLabelSize: 12px;
+            --sectionLabelWeight: 900;
+            --sectionLabelColor: var(--mutedText);
+            --sectionLabelLetterSpacing: .12em;
+            --sectionLabelTransform: uppercase;
+
+            --fieldLabelSize: 12px;
+            --fieldLabelWeight: 700;
+            --fieldLabelColor: var(--labelText);
+
+            --fieldValueSize: 12px;
+            --fieldValueWeight: 800;
+            --fieldValueColor: var(--ink);
+
+            --fieldValueSublineSize: 11px;
+            --fieldValueSublineWeight: 600;
+            --fieldValueSublineColor: var(--mutedText);
+
+            --statusTextSize: var(--fieldValueSize);
+            --statusTextWeight: 700;
+
+            /* ----    CONTROL + CHIP GEOMETRY ------ */
+            --controlHeight: 34px;
+            --controlPadY: 6px;
+            --controlPadX: 10px;
+            --controlRadius: 14px;
+            --iconRadius: 6px;
+
+            --chipHeight: 34px;
+            --chipPadX: 14px;
+            --chipRadius: 14px;
+            --chipLabelSize: var(--fieldValueSize);
+            --chipLabelWeight: 800;
+            --chipBorderWidth: 1px;
+            --chipBorderColor: var(--controlBorder);
+
+            --segmentSelectedBg: var(--selectColor1);
+            --segmentSelectedText: var(--fieldValueColor);
+
+            /* ------ROW + LAYOUT --------- */
+            --pagePad: 10px;
+            --cardPad: 10px;
+            --cardGap: 10px;
+
+            --rowPadX: 10px;
+            --rowPadY: 4px;
+
+            --rowHeight1: 36px;
+            --rowHeight2: 56px;
+
+            --drawerHandleH: 6px;
+            --drawerRadius: 14px;
+        }
+
+        #chipAutoPair,
+        #pageAutoPair {
+            display: none !important;
+        }
+
+        /* -------Sticky header ------- */
+
+        .stickyHeader {
+            position: sticky;
+            top: 0;
+            z-index: 60;
+            background: var(--brandColor0);
+            color: var(--onBrandText);
+            border-bottom: 1px solid var(--divider);
+            padding: 10px var(--pagePad);
+        }
+
+        /* Row owns layout only */
+        .hdrRow {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .hdrTitles {
+            min-width: 0;
+        }
+
+        .hdrTitle {
+            font-size: var(--pageTitleSize);
+            font-weight: var(--pageTitleWeight);
+            line-height: 1.1;
+            text-align: center;
+        }
+
+        .hdrSub {
+            font-size: var(--fieldValueSublineSize);
+            font-weight: var(--fieldValueSublineWeight);
+            color: var(--onBrandText);
+            text-align: center;
+        }
+
+        .hdrLeft,
+        .hdrRight {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 90px;
+        }
+
+        .hdrLeft {
+            justify-content: flex-start;
+        }
+
+        .hdrRight {
+            justify-content: flex-end;
+        }
+
+        .hdrCenter {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .hdrActions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .hdrBtn {
+            height: var(--controlHeight);
+            padding: 0 14px;
+            border-radius: var(--controlRadius);
+            border: 1px solid var(--controlBorder);
+            font-size: var(--fieldValueSize);
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .hdrBtn.primary {
+            background: var(--surface);
+            color: var(--ink);
+            border-color: var(--brandColor0);
+        }
+
+        .hdrBtn.secondary {
+            background: var(--surface);
+            color: var(--ink);
+        }
+
+        body {
+            margin: 0;
+            overflow-x: hidden;
+            background: var(--bg);
+            color: var(--ink);
+            font-family: Montserrat, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        }
+
+        /* ------- Global building blocks  ----------------- */
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--controlRadius);
+            padding: var(--cardPad);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, .05);
+        }
+
+        .targetCard {
+            outline: 2px solid color-mix(in srgb, var(--brandColor0) 55%, white);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--brandColor0) 12%, transparent);
+        }
+
+        .sectionLabel {
+            font-size: var(--sectionLabelSize);
+            font-weight: var(--sectionLabelWeight);
+            color: var(--sectionLabelColor);
+            letter-spacing: var(--sectionLabelLetterSpacing);
+            text-transform: var(--sectionLabelTransform);
+            margin: 0 0 6px 0;
+        }
+
+        .btn {
+            height: var(--controlHeight);
+            padding: 0 14px;
+            border-radius: var(--controlRadius);
+            border: 1px solid var(--controlBorder);
+            font-weight: 800;
+            font-size: var(--fieldValueSize);
+            cursor: pointer;
+            background: var(--brandColor0);
+            color: var(--onBrandText);
+        }
+
+        .btn.secondary {
+            background: var(--surface);
+            color: var(--ink);
+        }
+
+        .btn:active {
+            background: color-mix(in srgb, var(--brandColor0) 80%, black);
+        }
+
+        .btn:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+        }
+
+        .btn.secondary:disabled {
+            opacity: .45;
+        }
+
+        .controlInput,
+        .controlSelect {
+            height: var(--controlHeight);
+            padding: var(--controlPadY) var(--controlPadX);
+            border-radius: var(--controlRadius);
+            border: 1px solid var(--controlBorder);
+            font-size: var(--fieldValueSize);
+            font-weight: 600;
+            width: 100%;
+            outline: none;
+            background: var(--surface);
+            color: var(--ink);
+        }
+
+        .segTabs {
+            display: flex;
+            width: 100%;
+            margin-bottom: 8px;
+            border: 1px solid var(--controlBorder);
+            border-radius: var(--controlRadius);
+            overflow: hidden;
+            background: var(--surface);
+            margin-top: 10px;
+        }
+
+        .chip {
+            flex: 1;
+            min-height: var(--chipHeight);
+            line-height: 1;
+            padding: 6px 12px;
+            border: none;
+            background: transparent;
+            font-size: var(--chipLabelSize);
+            font-weight: var(--chipLabelWeight);
+            cursor: pointer;
+            color: var(--ink);
+        }
+
+        .chip.active {
+            background: var(--segmentSelectedBg);
+            color: var(--segmentSelectedText);
+        }
+
+        /* ------ Sticky footer (status bar)  -------- */
+        .footerBar {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--surface);
+            border-top: 1px solid var(--footerTopLine);
+            box-shadow: var(--footerShadow);
+            padding: 6px var(--pagePad);
+            padding-bottom: calc(4px + env(safe-area-inset-bottom));
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            min-height: var(--footerBarH);
+            border-bottom-left-radius: var(--subPageRadius);
+            border-bottom-right-radius: var(--subPageRadius);
+        }
+
+
+        .statusText {
+            font-size: var(--statusTextSize);
+            font-weight: var(--statusTextWeight);
+            color: var(--ink);
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .footerBar.status-success {
+            background: var(--statusSuccessBg);
+        }
+
+        .footerBar.status-success .statusText {
+            color: var(--statusSuccessText);
+        }
+
+        .footerBar.status-warn {
+            background: var(--statusWarnBg);
+        }
+
+        .footerBar.status-warn .statusText {
+            color: var(--statusWarnText);
+        }
+
+        .footerBar.status-error {
+            background: var(--statusErrorBg);
+        }
+
+        .footerBar.status-error .statusText {
+            color: var(--statusErrorText);
+        }
+
+        /* ---- Desktop split layout ----------------- */
+        .layoutSplit {
+            display: grid;
+            grid-template-columns: minmax(360px, 1fr) 1.3fr;
+            gap: var(--cardGap);
+            align-items: start;
+        }
+
+        .trayHeaderSpacer {
+            width: 65px;
+            flex: 0 0 65px;
+        }
+
+        /* ACTIONS MENU (header dropdown/panel) - desktop + mobile --- */
+        .actionMenuOverlay {
+            position: fixed;
+            inset: 0;
+            background: var(--overlayBg);
+            display: none;
+            z-index: 99999;
+            backdrop-filter: blur(2px);
+            /* subtle “native” feel */
+        }
+
+        .actionMenuOverlay.open {
+            display: block;
+        }
+
+        .actionMenu {
+            position: absolute;
+            min-width: 260px;
+            max-width: 360px;
+
+            background: var(--modalSurface);
+            border: 1px solid var(--controlBorder);
+            border-radius: var(--drawerRadius);
+            overflow: hidden;
+
+            box-shadow: 0 14px 34px rgba(0, 0, 0, .18);
+
+            /* give the list the same inset feel as your reference rendering */
+            padding: 0 0 8px 0;
+        }
+
+        .actionMenu_header {
+            position: sticky;
+            top: 0;
+            background: var(--brandColor3);
+            color: var(--modalHeaderText);
+            padding: 12px 14px;
+            z-index: 2;
+
+            border-bottom: 0;
+            /* reference rendering has no divider */
+        }
+
+        .actionMenu_headerRow {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .actionMenu_title {
+            font-weight: 900;
+            font-size: var(--fieldValueSize);
+            line-height: 1.15;
+        }
+
+        /* keep this for reuse, but you can hide it in JS for “Select Action” */
+        .actionMenu_subtitle {
+            margin-top: 2px;
+            font-weight: 800;
+            font-size: var(--fieldValueSublineSize);
+            opacity: .9;
+        }
+
+        .actionMenu_closeBtn {
+            border: 0;
+            background: color-mix(in srgb, #fff 20%, transparent);
+            color: var(--bg);
+
+            border-radius: 12px;
+            width: 30px;
+            height: 28px;
+
+            font-size: 20px;
+            line-height: 1;
+            font-weight: 900;
+            cursor: pointer;
+        }
+
+        .actionMenu_closeBtn:hover {
+            background: color-mix(in srgb, #fff 28%, transparent);
+        }
+
+        .actionMenu_item {
+            /* Reference rendering: clean list w/ whitespace (no separators) */
+            border: 0;
+
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            padding: 12px 16px;
+            margin: 2px 8px 0 8px;
+            /* inset rows from the menu edge */
+
+            font-weight: 900;
+            /* match the bold, clean look */
+            font-size: var(--fieldValueSize);
+            color: var(--ink);
+
+            cursor: pointer;
+            user-select: none;
+            border-radius: 10px;
+            /* enables smooth hover without “popping” */
+        }
+
+        .actionMenu_item:hover {
+            background: var(--pressedBg);
+        }
+
+        .actionMenu_item.disabled {
+            opacity: .50;
+            cursor: default;
+            color: var(--mutedText);
+        }
+
+        .actionMenu_item.danger {
+            color: var(--danger);
+            /* Reset = red */
+        }
+
+        .actionMenu_item.danger:hover {
+            background: color-mix(in srgb, var(--danger) 10%, var(--pressedBg));
+        }
+
+        .actionMenu_divider {
+            height: 1px;
+            background: var(--border);
+            margin: 8px 14px 6px 14px;
+        }
+
+        /* Independent scrolling panes (desktop) */
+        @media (min-width: 901px) {
+            .layoutSplit {
+                height: calc(100vh - var(--chromeHeight) - var(--footerBarH) - env(safe-area-inset-bottom));
+                overflow: hidden;
+                grid-template-columns: minmax(360px, 1fr) 1.3fr;
+            }
+
+            .subPanel {
+                width: 100%;
+            }
+
+            /* Header row */
+            .subPanelHeader {
+                width: 100%;
+                display: flex;
+                align-items: center;
+            }
+
+            .trayCloseMobile {
+                display: none;
+            }
+
+            .subPanelBody {
+                width: 100%;
+            }
+
+            /* Tools block (chips + search) */
+            .subPanelTools {
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            #unpairedSortChips,
+            .segTabs {
+                width: 100%;
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: flex-start;
+            }
+
+            .searchRow {
+                width: 100%;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .searchRow input {
+                flex: 1;
+                min-width: 0;
+            }
+
+            html,
+            body {
+                height: 100%;
+                overflow: hidden;
+            }
+
+            /* Both panes must fill the split height */
+            .leftPaneDesktop,
+            .rightPane {
+                height: 100%;
+                overflow: hidden;
+                /* important: the inner surfaces will scroll */
+            }
+
+            /* Right pane scrolls */
+            .rightPane {
+                overflow: hidden;
+            }
+
+            /* Left tray card fills and allows internal subPanelBody scrolling */
+            #unpairedPaneDesktop,
+            #unmatchedPaneDesktop {
+                height: 100%;
+                display: flex;
+                width: 100%;
+                /* Frame */
+                border: var(--subPageDividerWidth) solid var(--subPageDividerColor);
+                background: var(--surface);
+                /* small air gap above tray header (inside the new border) */
+                padding-top: var(--subPageTopGap);
+            }
+
+            .leftPaneDesktop,
+            .rightPane {
+                padding-bottom: 0;
+            }
+        }
+
+        .rightPane {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .subPanel.canvas {
+            flex: 1;
+            min-height: 0;
+        }
+
+        /* Canvas body is the ONLY scroll surface for cards */
+        .subPanel.canvas .subPanelBody {
+            display: flex;
+            flex-direction: column;
+            gap: var(--cardGap);
+
+            flex: 1;
+            min-height: 0;
+            overflow: auto;
+            /* optional padding so cards don't kiss the edges */
+            padding: 0 var(--pagePad) var(--pagePad);
+        }
+
+        /* Canvas header Button supressed on Desktop */
+        .subPanel.canvas .canvasHeaderMobile {
+            display: flex;
+        }
+
+        .subPanel.canvas .subPanelHeaderAction {
+            display: none;
+        }
+
+        .subPanelCardHeader {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 4px;
+            padding: 4px 4px;
+            margin: calc(-1 * var(--cardPad)) calc(-1 * var(--cardPad)) 8px calc(-1 * var(--cardPad));
+            background: var(--cardHeaderBg);
+            border-bottom: 1px solid var(--divider);
+            border-top-left-radius: var(--controlRadius);
+            border-top-right-radius: var(--controlRadius);
+        }
+
+        .subPanelCardHeaderActions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex: 0 0 auto;
+        }
+
+        .subPanelCardHeaderLine {
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: var(--fieldLabelSize);
+            font-weight: var(--fieldLabelWeight);
+            color: var(--labelText);
+        }
+
+        .subPanelCardHeaderLine .muted {
+            color: var(--mutedText);
+            font-weight: 700;
+        }
+
+        .subPanelCardRow {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            padding: 2px 0px;
+            border: 0;
+            border-radius: 0;
+            margin: 0;
+        }
+
+        .subPanelCardRow+.subPanelCardRow {
+            border-top: 1px solid var(--divider);
+        }
+
+        .card .subPanelCardRow:first-of-type {
+            border-top: none;
+        }
+
+
+        .subPanelCardRowLeft {
+            min-width: 0;
+            display: flex;
+            gap: 10px;
+            align-items: baseline;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .subPanelCardRowLine1 {
+            font-size: var(--fieldLabelSize);
+            font-weight: var(--fieldLabelWeight);
+            color: var(--labelText);
+        }
+
+        .subPanelCardRowLine2 {
+            font-size: var(--fieldValueSublineSize);
+            font-weight: var(--fieldValueSublineWeight);
+            color: var(--mutedText);
+            margin-top: 0;
+        }
+
+        .subPanelCardRowRight {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .iconBtn {
+            width: 28px;
+            height: 28px;
+            border-radius: var(--iconRadius);
+            border: 0;
+            background: transparent;
+            cursor: pointer;
+            font-weight: 900;
+            padding: 0;
+            color: var(--mutedText);
+        }
+
+        .iconBtn .iconSvg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .iconBtn.iconBare:hover {
+            color: var(--ink);
+        }
+
+        .iconBtn.clearSelBtn {
+            color: var(--brandBlue);
+        }
+
+        .iconBtn.clearSelBtn:hover {
+            color: var(--brandBlue);
+        }
+
+        .rowTap {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .subPanelRow {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: var(--rowPadY) var(--rowPadX);
+            border-top: 1px solid var(--divider);
+            min-height: var(--rowHeight1);
+        }
+
+        .subPanelRowLeft {
+            min-width: 0;
+        }
+
+        .subPanelRowLine1 {
+            font-size: var(--fieldValueSize);
+            font-weight: 900;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .subPanelRowLine2 {
+            font-size: var(--fieldValueSublineSize);
+            font-weight: var(--fieldValueSublineWeight);
+            color: var(--fieldValueSublineColor);
+            margin-top: 2px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .subPanelRowRight {
+            font-size: var(--fieldValueSublineSize);
+            font-weight: 800;
+            color: var(--mutedText);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .subPanelRow.selected {
+            background: var(--selectedBg);
+        }
+
+        /* -------  Mobile drawer (unpaired palette)---- */
+        .drawerOverlay {
+            position: fixed;
+            inset: 0;
+            background: var(--overlayBg);
+            display: none;
+            z-index: 60;
+            pointer-events: auto;
+            /* 10am */
+        }
+
+        .drawer.open {
+            display: flex;
+        }
+
+        .drawerOverlay.open {
+            display: block;
+            pointer-events: auto;
+        }
+
+        .drawer {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--surface);
+            border-top-left-radius: var(--subPageRadius);
+            border-top-right-radius: var(--subPageRadius);
+            border: 1px solid var(--border);
+            max-height: 78vh;
+            display: none;
+            z-index: 61;
+            overflow: hidden;
+            flex-direction: column;
+        }
+
+        .subPanel.tray {
+            display: flex;
+        }
+
+
+        .drawerHeader {
+            background: var(--modalHeaderBg);
+            color: var(--modalHeaderText);
+            padding: 12px 12px 10px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            border-bottom: 1px solid var(--modalHeaderDivider);
+        }
+
+        .drawerTitle {
+            font-weight: 900;
+            font-size: var(--fieldValueSize);
+        }
+
+        .drawerHandle {
+            width: 46px;
+            height: var(--drawerHandleH);
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .45);
+            margin: 8px auto 6px auto;
+        }
+
+        .drawerBody {
+            padding: var(--pagePad);
+            overflow: auto;
+        }
+
+        /* ------ Tray v2 (Clear | Title | Assign) -- */
+        .subPanel {
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            height: 100%;
+        }
+
+        .subPanelHeader {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 8px 10px;
+            background: var(--brandColor1);
+            color: var(--onBrandText);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            border-top-left-radius: var(--subPageRadius);
+            border-top-right-radius: var(--subPageRadius);
+            border-bottom: 2px solid var(--subPageDividerColor);
+        }
+
+        .subPanelHeaderTitle {
+            flex: 1;
+            min-width: 0;
+            text-align: center;
+            font-size: var(--fieldValueSize);
+            font-weight: 900;
+            letter-spacing: .04em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* clickable text actions (not buttons/pills) */
+        .subPanelHeaderAction {
+            appearance: none;
+            border: 0;
+            background: transparent;
+            padding: 0;
+            margin: 0;
+            cursor: pointer;
+            color: var(--onBrandText);
+            font-size: var(--subTitleSize);
+            font-weight: 600;
+            letter-spacing: .10em;
+            text-transform: uppercase;
+            line-height: 1;
+            white-space: nowrap;
+            min-width: 65px;
+        }
+
+        .subPanelHeaderAction:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+        }
+
+        /* tools area stays clean (no inner card/pill) */
+        .subPanelTools {
+            padding: 10px 10px 8px 10px;
+        }
+
+        /* list is the scroll surface inside the tray */
+        .subPanelBody {
+            flex: 1;
+            min-height: 0;
+            overflow: auto;
+            border-top: 1px solid var(--divider);
+        }
+
+        /* compact footer always visible */
+        .subPanelFooter {
+            border-top: 1px solid var(--divider);
+            background: var(--surface);
+            padding: 4px 10px;
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--mutedText);
+            line-height: 1.1;
+            position: sticky;
+            bottom: 0;
+            z-index: 2;
+        }
+
+        /* make the tray card allow internal flex layout when we remove padding */
+        #unpairedPaneDesktop.card,
+        #unmatchedPaneDesktop.card {
+            padding: 0;
+        }
+
+
+        .searchRow {
+            margin-top: 8px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .searchClearBtn {
+            width: var(--controlHeight);
+            height: var(--controlHeight);
+            border-radius: var(--controlRadius);
+            border: 1px solid var(--controlBorder);
+            background: var(--surface);
+            font-weight: 900;
+            cursor: pointer;
+        }
+
+        .subPanelRowSelMark {
+            width: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            color: var(--brandBlue);
+            opacity: 0;
+            margin-right: 6px;
+        }
+
+        .subPanelRow.selected .subPanelRowSelMark {
+            opacity: 1;
+        }
+
+        .subPanelRowLeft .line1Wrap {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            min-width: 0;
+        }
+
+
+        /* ------ Page visibility ------ */
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+
+        @media (max-width: 520px) {
+
+            /* ---- Mobile tokens (single source of truth) ---- */
+            :root {
+                --pageTitleSize: 15px;
+                --sectionLabelSize: 11px;
+                --fieldLabelSize: 11px;
+                --fieldValueSize: 11px;
+                --fieldValueSublineSize: 10px;
+
+                --controlHeight: 32px;
+                --chipHeight: 38px;
+
+                --pagePad: 6px;
+                --cardPad: 6px;
+
+                --rowHeight1: 32px;
+                --rowHeight2: 34px;
+            }
+
+            .actionMenu {
+                left: 12px !important;
+                right: 12px !important;
+                max-width: none;
+            }
+
+            .leftPaneDesktop {
+                display: none;
+            }
+
+            .layoutSplit {
+                grid-template-columns: 1fr;
+                height: 100%;
+                min-height: 0;
+            }
+
+            /* make the actual content column scroll */
+            .rightPane {
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
+            }
+
+            .page {
+                height: auto;
+                flex: 1 1 auto;
+                min-height: 0;
+                overflow: hidden;
+                padding-bottom: 10px;
+            }
+
+            .segTabs {
+                margin-top: 4px;
+            }
+
+            #panelChips {
+                flex: 0 0 auto;
+            }
+
+            /* --- Mobile: lock the content to “viewport minus header/footer” and scroll inside panes --- */
+            html,
+            body {
+                height: 100%;
+                overflow: hidden;
+                /* prevent body scrolling; panes handle scrolling */
+            }
+
+            .stickyHeader {
+                padding: 4px;
+            }
+
+            .mobileFrame {
+                position: fixed;
+                top: var(--pagePad);
+                left: 0;
+                right: 0;
+                top: var(--chromeHeight);
+                bottom: 0;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                min-height: 0;
+                padding-bottom: calc(var(--footerBarH) + 4px + env(safe-area-inset-bottom));
+            }
+
+            .subPanel.canvas .canvasHeaderMobile {
+                display: flex;
+            }
+
+            /* .subPanelHeaderAction { display: flex;} */
+            .subPanel.canvas .canvasHeaderMobile .subPanelHeaderAction {
+                display: flex;
+            }
+
+            .subPanel.canvas .subPanelFooter {
+                display: none;
+            }
+
+            .drawer {
+                top: 0;
+                bottom: 0;
+                max-height: none;
+                border-top-left-radius: 0;
+                border-top-right-radius: 0;
+                padding-top: env(safe-area-inset-top);
+                padding-bottom: 0;
+            }
+
+            .subPanel.tray .drawerHeader,
+            .subPanel.tray .drawerHandle {
+                display: none;
+            }
+
+            .subPanel.tray .subPanelRow {
+                padding: 4x 8px;
+            }
+
+            /* Reduce the gap between the two lines of text inside each row */
+            .subPanel.tray .subPanelRow .subPanelRowLine2 {
+                margin-top: 1px;
+            }
+
+            /* Tighten the overall list spacing if you have gaps via borders/margins */
+            .subPanel.tray .subPanelBody {
+                gap: 0;
+            }
+
+            /* Optional: slightly smaller meta/line-2 text to fit more rows (mobile panel only) */
+            .subPanel.tray .subPanelRowLine2 {
+                font-size: 11px;
+            }
+
+            /* ---- Pairing / Match card header wrapping ---- */
+            .subPanelCardHeaderLine {
+                white-space: normal;
+                /* allow 2 lines on mobile */
+                display: -webkit-box;
+                -webkit-box-orient: vertical;
+                overflow: hidden;
+            }
+
+            .trayCloseMobile {
+                display: inline-flex;
+            }
+
+            /* ---- Player lines inside cards: allow 2-line layout ---- */
+            .subPanelCardRowLeft {
+                display: block;
+                white-space: normal;
+            }
+
+            .subPanelCardRowLine2 {
+                display: block;
+                margin-top: 2px;
+            }
+
+            .subPanelCardRowLine2Inline {
+                display: inline;
+                margin-top: 0;
+                font-size: var(--fieldValueSublineSize);
+                font-weight: 800;
+                color: var(--mutedText);
+                white-space: nowrap;
+            }
+
+            .matchTeamRow .matchLine1 {
+                display: flex;
+                align-items: baseline;
+                gap: 8px;
+                flex-wrap: nowrap;
+            }
+
+            .matchTeamRow .matchLine2 {
+                margin-top: 4px;
+            }
+
+            /* ---- Tray list rows: taller + allow wrapping ---- */
+            .subPanelRow {
+                min-height: var(--rowHeight2);
+                align-items: flex-start;
+            }
+
+            .subPanelRowLine1 {
+                white-space: normal;
+            }
+
+            .subPanelRowLine2 {
+                white-space: normal;
+            }
+
+        }
+
+
+        /* ------------------------------------------------------------
+           Auto-Pair Modal (Actions → AutoPair)
+           - Header / Controls / Body (scroll) / Footer
+           ------------------------------------------------------------ */
+        .autoPairOverlay.open {
+            display: block;
+        }
+
+        .autoPairModal {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: min(760px, calc(100vw - 24px));
+            max-height: calc(100vh - 24px);
+            background: var(--modalSurface);
+            border: 1px solid var(--controlBorder);
+            border-radius: var(--drawerRadius);
+            overflow: hidden;
+            box-shadow: var(--elevationModal);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .autoPairHeader {
+            background: var(--brandColor3);
+            color: var(--modalHeaderText);
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .autoPairHeaderTitle {
+            font-weight: 900;
+            font-size: var(--fieldValueSize);
+        }
+
+        .autoPairControls {
+            padding: 12px 14px 10px 14px;
+            border-bottom: 1px solid var(--divider);
+            background: color-mix(in srgb, var(--brandColor0) 3%, white);
+        }
+
+        .autoPairGrid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px 12px;
+        }
+
+        .autoPairRow {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            min-width: 0;
+        }
+
+        .autoPairLabel {
+            font-weight: 900;
+            font-size: 12px;
+            color: var(--labelText);
+        }
+
+        .autoPairField {
+            width: 100%;
+            border: 1px solid var(--controlBorder);
+            border-radius: 10px;
+            padding: 10px 10px;
+            font-family: inherit;
+            font-weight: 800;
+            font-size: 14px;
+            background: #fff;
+        }
+
+        .autoPairInlineMsg {
+            margin-top: 0px;
+            padding: 8px 10px;
+            border-radius: 10px;
+            border: 1px solid var(--divider);
+            font-weight: 900;
+            font-size: 13px;
+            color: var(--ink);
+            background: #fff;
+            min-height: 18px;
+        }
+
+        .autoPairInlineMsg.ok {
+            border-color: rgba(10, 164, 92, .25);
+            background: rgba(10, 164, 92, .08);
+        }
+
+        .autoPairInlineMsg.warn {
+            border-color: rgba(246, 211, 101, .35);
+            background: rgba(246, 211, 101, .18);
+        }
+
+        .autoPairInlineMsg.error {
+            border-color: rgba(198, 40, 40, .25);
+            background: rgba(198, 40, 40, .10);
+        }
+
+        .autoPairBody {
+            padding: 12px 14px;
+            overflow: auto;
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+
+        .autoPairBodyTitle {
+            font-weight: 900;
+            font-size: 12px;
+            color: var(--labelText);
+            margin-bottom: 8px;
+        }
+
+        .autoPairEmpty {
+            color: var(--mutedText);
+            font-weight: 800;
+            padding: 8px 2px;
+        }
+
+        .autoPairPreviewList {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .autoPairPreviewGroup {
+            border: 1px solid var(--divider);
+            border-radius: 12px;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .autoPairPreviewGroupHeader {
+            background: var(--cardHeaderBg);
+            padding: 10px 12px;
+            font-weight: 900;
+            font-size: 13px;
+            color: var(--ink);
+        }
+
+        .autoPairPreviewRow {
+            padding: 9px 12px;
+            border-top: 1px solid var(--divider);
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .autoPairPreviewRowName {
+            font-weight: 900;
+            font-size: 14px;
+            color: var(--ink);
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .autoPairPreviewRowMeta {
+            font-weight: 800;
+            font-size: 12px;
+            color: var(--mutedText);
+            text-align: right;
+            white-space: nowrap;
+        }
+
+        .autoPairFooter {
+            padding: 12px 14px;
+            border-top: 1px solid var(--divider);
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+            background: #fff;
+        }
+
+        /* Responsive: stack grid on narrow screens */
+        @media (max-width: 560px) {
+            .autoPairGrid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Sticky page chrome header -->
+    <div class="stickyHeader">
+        <div class="hdrRow">
+            <div class="hdrLeft">
+                <button class="hdrBtn primary" id="btnHdrSettings" type="button">Actions</button>
+            </div>
+            <div class="hdrCenter">
+                <div class="hdrTitle" id="hdrTitle">Pairings</div>
+                <div class="hdrSub" id="hdrSub">&nbsp;</div>
+            </div>
+            <div class="hdrRight">
+                <button class="hdrBtn primary" id="btnHdrSave" type="button">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel selector (pairingCanvas | matchCanvas | autoPair) -->
+    <div class="segTabs" id="panelChips">
+        <button class="chip active" id="chipPairingCanvas" type="button">Pair Players</button>
+        <button class="chip" id="chipMatchCanvas" type="button">Set Matches</button>
+        <button class="chip" id="chipAutoPair" type="button">AutoPair</button>
+    </div>
+
+
+    <div class="mobileFrame">
+        <!-- Pairing Canvas -->
+        <div class="page active" id="pagePairingCanvas">
+            <div class="layoutSplit">
+                <!-- LEFT: unpaired tray (desktop) -->
+                <div class="leftPaneDesktop">
+                    <div class="card" id="unpairedPaneDesktop"></div>
+                </div>
+
+                <!-- RIGHT: pairing canvas  -->
+                <div class="rightPane">
+                    <div class="subPanel canvas">
+                        <div class="subPanelHeader canvasHeaderMobile" id="pairingsRightPaneHeader">
+                            <div class="trayHeaderSpacer"></div>
+                            <div class="subPanelHeaderTitle"></div>
+                            <button class="subPanelHeaderAction" id="btnPairingsRightHdrAction" type="button">
+                                +Add New Pairing
+                            </button>
+                        </div>
+
+                        <div class="subPanelBody" id="pairingCards"></div>
+                        <div class="subPanelFooter" id="pairingsCanvasFooter"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Match Canvas -->
+        <div class="page" id="pageMatchCanvas">
+            <div class="layoutSplit">
+                <!-- LEFT: unmatched pairings tray (desktop) -->
+                <div class="leftPaneDesktop">
+                    <div class="card" id="unmatchedPaneDesktop"></div>
+                </div>
+
+                <!-- RIGHT: match canvas -->
+                <div class="rightPane">
+                    <div class="subPanel canvas">
+                        <div class="subPanelHeader canvasHeaderMobile" id="matchesRightPaneHeader">
+                            <div class="trayHeaderSpacer"></div>
+                            <div class="subPanelHeaderTitle"></div>
+                            <button class="subPanelHeaderAction" id="btnMatchesRightHdrAction" type="button">
+                                +Add New Match
+                            </button>
+                        </div>
+
+                        <div class="subPanelBody" id="matchCards"></div>
+                        <div class="subPanelFooter" id="matchesCanvasFooter"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+
+        <!-- AutoPair -->
+        <div class="page" id="pageAutoPair">
+            <div class="card">
+                <div class="sectionLabel">AUTO PAIR</div>
+                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                    <button class="btn" id="btnRunAutoPair" type="button">Run AutoPair</button>
+                    <button class="btn secondary" id="btnApplyAutoPair" type="button">Apply Result</button>
+                </div>
+                <div style="margin-top:10px;" id="autoPairBody">
+                    AutoPair logic will be ported from iOS VM (not Wix). Placeholder for now.
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Mobile drawer for Unpaired Palette -->
+    <div class="drawerOverlay" id="drawerOverlay"></div>
+    <div class="drawer" id="drawer">
+        <div class="drawerHeader">
+            <div class="drawerTitle" id="drawerTitle">Choose Players</div>
+            <button class="btn secondary" id="btnCloseDrawer" type="button">Close</button>
+        </div>
+        <div class="drawerHandle"></div>
+        <div class="drawerBody" id="drawerBody"></div>
+    </div>
+
+    <!-- Sticky footer status bar -->
+    <div class="footerBar" id="footerBar">
+        <div class="statusText" id="status"></div>
+    </div>
+
+
+    <script>
+        // ------------------------------------------------------------
+        // Canonical state (MatchAid)
+        // ------------------------------------------------------------
+        const state = {
+            activePanel: "pairingCanvas", // "pairingCanvas" | "matchCanvas" | "autoPair"
+            game: null,
+            players: [],    // all db_players for game
+            pairings: [],   // normalized pairing card models for UI
+            matches: [],
+            // unpaired palette UI state
+            unpairedSort: "PH",           // "PH" | "Last" | "Tee" | "HI"
+            unpairedQuery: "",
+            selectedUnpairedIDs: new Set(),
+            selectedUnmatchedPairingIDs: new Set(),
+            autoPairPreview: null,
+            trayMode: "addToGroup",     // "addToGroup" | "addToCard"
+            targetPairingId: null,
+            targetFlightId: null
+
+        };
+
+        // ------------------------------------------------------------
+        // Utilities (house style; mirrors your pattern)
+        // ------------------------------------------------------------
+        function escapeHtml(s) {
+            return String(s ?? "")
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
+
+        function setStatus(message, level) {
+            const bar = document.getElementById("footerBar");
+            const el = document.getElementById("status");
+            if (el) el.textContent = message || "";
+            if (!bar) return;
+            bar.classList.remove("status-success", "status-warn", "status-error");
+            const lvl = String(level || "").toLowerCase();
+            if (lvl === "success" || lvl === "green") bar.classList.add("status-success");
+            else if (lvl === "warn" || lvl === "warning" || lvl === "yellow") bar.classList.add("status-warn");
+            else if (lvl === "error" || lvl === "danger" || lvl === "red") bar.classList.add("status-error");
+        }
+
+        // Accept either {type, payload:{...}} or {type, ...}
+        function normalizeMsg(raw) {
+            const msg = raw || {};
+            const payload = msg.payload && typeof msg.payload === "object" ? msg.payload : msg;
+            return { type: msg.type, requestId: msg.requestId || "", payload };
+        }
+
+        function postToWix(message) {
+            window.parent.postMessage(message, "*");
+        }
+
+        // ------------------------------------------------------------
+        // Panel routing
+        // ------------------------------------------------------------
+        let actionsMenuOverlay = null;
+
+        function ensureActionsMenuOverlay() {
+            if (actionsMenuOverlay) return actionsMenuOverlay;
+
+            const ov = document.createElement("div");
+            ov.className = "actionMenuOverlay";
+            ov.id = "actionsMenuOverlay";
+
+            // click outside closes (unlike the tray overlay rule)
+            ov.addEventListener("click", () => closeActionsMenu());
+
+            document.body.appendChild(ov);
+            actionsMenuOverlay = ov;
+            return ov;
+        }
+
+        function closeActionsMenu() {
+            const ov = document.getElementById("actionsMenuOverlay");
+            if (!ov) return;
+            ov.classList.remove("open");
+            ov.innerHTML = "";
+        }
+
+        function buildActionsMenu() {
+            const menu = document.createElement("div");
+            menu.className = "actionMenu";
+
+            // Prevent overlay click-close when interacting inside menu
+            menu.addEventListener("click", (e) => e.stopPropagation());
+
+            // Header (Title + optional date/subtitle)
+            const header = document.createElement("div");
+            header.className = "actionMenu_header";
+
+            const headerRow = document.createElement("div");
+            headerRow.className = "actionMenu_headerRow";
+
+            const titleWrap = document.createElement("div");
+
+            const hTitle = document.createElement("div");
+            hTitle.className = "actionMenu_title";
+            // Use page header title as a reliable fallback
+            const pageTitle = document.getElementById("hdrTitle")?.textContent?.trim() || "Actions";
+            hTitle.textContent = "Select Action";
+
+            const hDate = document.createElement("div");
+            hDate.className = "actionMenu_subtitle";
+            // hdrSub exists in your chrome; use it if meaningful
+            const sub = document.getElementById("hdrSub")?.textContent?.trim() || "";
+            hDate.textContent = " ";
+
+            titleWrap.appendChild(hTitle);
+            titleWrap.appendChild(hDate);
+
+            const closeBtn = document.createElement("button");
+            closeBtn.className = "actionMenu_closeBtn";
+            closeBtn.type = "button";
+            closeBtn.textContent = "✕";
+            closeBtn.setAttribute("aria-label", "Close menu");
+            closeBtn.addEventListener("click", (e) => {
+                e.stopPropagation();
+                closeActionsMenu();
+            });
+
+            headerRow.appendChild(titleWrap);
+            headerRow.appendChild(closeBtn);
+            header.appendChild(headerRow);
+            menu.appendChild(header);
+
+            // Menu items
+            const items = [
+                { label: "Game Settings", action: "gameSettings", enabled: true },
+                { label: "Reset (discard unsaved changes)", action: "reset", enabled: true },
+                { label: "AutoPair", action: "autoPair", enabled: true }
+            ];
+
+            items.forEach(it => {
+                const row = document.createElement("div");
+                row.className = "actionMenu_item" + (!it.enabled ? " disabled" : "");
+                row.textContent = it.label;
+
+                row.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    if (!it.enabled) return;
+
+                    closeActionsMenu();
+
+                    if (it.action === "gameSettings") {
+                        setStatus("Opening Game Settings", "neutral");
+                        postToWix({ type: "OPEN_GAME_OPTIONS" });
+                        return;
+                    }
+
+                    if (it.action === "reset") {
+                        setStatus("Resetting to last saved state…", "");
+                        postToWix({ type: "RESET_REQUEST" });
+                        return;
+                    }
+
+                    if (it.action === "autoPair") {
+                        onAutoPairClick()
+                        return;
+                    }
+                });
+
+                menu.appendChild(row);
+            });
+
+            return menu;
+        }
+
+        function openActionsMenu(anchorEl) {
+            const ov = ensureActionsMenuOverlay();
+            ov.innerHTML = "";
+            ov.classList.add("open");
+
+            const menu = buildActionsMenu();
+            ov.appendChild(menu);
+
+            // Positioning:
+            // Desktop: near the button
+            // Mobile: full-width-ish below sticky header
+            const isMobile = isMobileLayout();
+            const headerEl = document.querySelector(".stickyHeader");
+            const headerBottom = headerEl ? headerEl.getBoundingClientRect().bottom : 0;
+
+            if (isMobile) {
+                menu.style.left = "12px";
+                menu.style.right = "12px";
+                menu.style.top = (headerBottom + 10) + "px";
+            } else {
+                const r = anchorEl.getBoundingClientRect();
+                menu.style.top = (r.bottom + 10) + "px";
+                menu.style.left = Math.max(12, r.left) + "px";
+            }
+        }
+
+        function setActivePanel(panel) {
+            // Only allow navigation into matchCanvas for games = matchPlay
+            if (panel === "matchCanvas" && getCompetitionValue() !== "PairPair") {
+                //console.log("triggered", getCompetitionValue())
+                setStatus("Matches are disabled. Go to SETTINGS to set Competition to Match Play.", "warn");
+                return;
+            }
+
+            closeDrawer();
+            state.activePanel = panel;
+
+            document.getElementById("chipPairingCanvas").classList.toggle("active", panel === "pairingCanvas");
+            document.getElementById("chipMatchCanvas").classList.toggle("active", panel === "matchCanvas");
+            document.getElementById("chipAutoPair").classList.toggle("active", panel === "autoPair");
+
+            // Enable/disable the Matches chip based on competition
+            const matchAllowed = (getCompetitionValue() === "PairPair");
+            const matchChip = document.getElementById("chipMatchCanvas");
+            if (matchChip) matchChip.disabled = !matchAllowed;
+
+            document.getElementById("pagePairingCanvas").classList.toggle("active", panel === "pairingCanvas");
+            document.getElementById("pageMatchCanvas").classList.toggle("active", panel === "matchCanvas");
+            document.getElementById("pageAutoPair").classList.toggle("active", panel === "autoPair");
+
+            setStatus("", ""); // clear status on major interaction (your rule)
+            render();          // refresh
+        }
+
+        /*
+        function setActivePanel(panel) {
+            closeDrawer();
+            state.activePanel = panel;
+
+            document.getElementById("chipPairingCanvas").classList.toggle("active", panel === "pairingCanvas");
+            document.getElementById("chipMatchCanvas").classList.toggle("active", panel === "matchCanvas");
+            document.getElementById("chipAutoPair").classList.toggle("active", panel === "autoPair");
+
+            document.getElementById("pagePairingCanvas").classList.toggle("active", panel === "pairingCanvas");
+            document.getElementById("pageMatchCanvas").classList.toggle("active", panel === "matchCanvas");
+            document.getElementById("pageAutoPair").classList.toggle("active", panel === "autoPair");
+
+            setStatus("", ""); // clear status on major interaction (your rule)
+            render();          // refresh
+        }
+        */
+        // ------------------------------------------------------------
+        // Shared Tray / Drawer renderer (Pairings + Matches)
+        // ------------------------------------------------------------
+        function renderTray(container) {
+            if (!container) return;
+
+            // Pairings panel (and AutoPair for now) use the existing Unpaired Players tray
+            if (state.activePanel === "pairingCanvas" || state.activePanel === "autoPair") {
+                renderUnpairedPalette(container);
+                return;
+            }
+
+            // Matches panel will use the Unmatched Pairings (Groups) tray (we’ll implement next)
+            if (state.activePanel === "matchCanvas") {
+                renderUnmatchedPalette(container);
+                return;
+            }
+        }
+
+        function openDrawer() {
+            document.getElementById("drawerOverlay").classList.add("open");
+            document.getElementById("drawer").classList.add("open");
+
+            // Content is rendered by the active palette; subPanelHeader inside the palette owns the title
+            const bodyEl = document.getElementById("drawerBody");
+
+            if (state.activePanel === "matchCanvas") {
+                renderUnmatchedPalette(bodyEl);
+            } else {
+                renderUnpairedPalette(bodyEl);
+            }
+        }
+
+
+
+        function closeDrawer() {
+            document.getElementById("drawerOverlay").classList.remove("open");
+            document.getElementById("drawer").classList.remove("open");
+        }
+
+        // ------------------------------------------------------------
+        // Rendering
+        // ------------------------------------------------------------
+        function render() {
+            // Always render the left tray on desktop, but into the correct page container
+            const trayEl = (state.activePanel === "matchCanvas")
+                ? document.getElementById("unmatchedPaneDesktop")
+                : document.getElementById("unpairedPaneDesktop");
+
+            renderTray(trayEl);
+
+            // Pairings canvas
+            if (state.activePanel === "pairingCanvas") {
+                renderPairingCards();
+            }
+
+            // Matches canvas (still stub for now)
+            if (state.activePanel === "matchCanvas") {
+                renderMatchCards(); // new (stub ok for now)
+            }
+
+            // AutoPair canvas (still stub for now)
+            if (state.activePanel === "autoPair") {
+                // later
+            }
+        }
+
+        function renderMatchCards() {
+            const el = document.getElementById("matchCards");
+            if (!el) return;
+
+            // Build matches from players (flightId-driven)
+            state.matches = buildMatchesFromPlayers();
+
+            // Empty state (no phantom empty match)
+            if (!state.matches.length) {
+                el.innerHTML = `
+            <div class="card">
+                <div class="sectionLabel">MATCHES</div>
+                <div style="color:var(--mutedText); font-weight:800;">
+                    No matches yet. Tap <span style="font-weight:900;">OPEN</span> to select groups,
+                    then <span style="font-weight:900;">ASSIGN&gt;&gt;</span> to create a match.
+                </div>
+            </div>
+        `;
+                return;
+            }
+
+            el.innerHTML = (state.matches || []).map(m => matchCardHtml(m)).join("");
+            wireMatchCardEvents();
+        }
+
+
+        // ------------------------------------------------------------
+        // Matches: build model from players (flightId + flightPos)
+        // ------------------------------------------------------------
+        function buildMatchesFromPlayers() {
+            const all = Array.isArray(state.players) ? state.players : [];
+
+            // Only players assigned to a flightId participate in matches
+            const inFlights = all.filter(p => String(p.flightId || "").trim() !== "");
+            if (!inFlights.length) return [];
+
+            const byFlight = new Map(); // flightId -> { flightId, updatedAt, teams:{A,B} }
+
+            for (const p of inFlights) {
+                const flightId = String(p.flightId || "").trim();
+                if (!flightId) continue;
+
+                if (!byFlight.has(flightId)) {
+                    const ts = Number(state.matchUpdatedAt?.[flightId] ?? 0) || 0;
+                    byFlight.set(flightId, {
+                        flightId,
+                        updatedAt: ts,
+                        teams: {
+                            A: { teamKey: "A", pairingId: "", players: [], sumPH: 0, avgPH: 0, lastNames: "" },
+                            B: { teamKey: "B", pairingId: "", players: [], sumPH: 0, avgPH: 0, lastNames: "" }
+                        }
+                    });
+                }
+
+                const m = byFlight.get(flightId);
+
+                // Normalize flightPos to "A" / "B" (accept 1/2 as well)
+                let pos = String(p.flightPos || "").trim().toUpperCase();
+                if (pos === "1") pos = "A";
+                if (pos === "2") pos = "B";
+                if (pos !== "A" && pos !== "B") continue;
+
+                m.teams[pos].players.push(p);
+
+                // capture pairingId for that team (should be consistent across that team)
+                if (!m.teams[pos].pairingId) {
+                    m.teams[pos].pairingId = String(p.pairingId || "").trim();
+                }
+            }
+
+            // finalize sums/avgs + last names
+            const matches = Array.from(byFlight.values());
+
+            for (const m of matches) {
+                for (const key of ["A", "B"]) {
+                    const t = m.teams[key];
+                    if (!t.players.length) continue;
+
+                    // Keep deterministic order inside the team (prefer pairingPos if present)
+                    t.players.sort((x, y) => (x.pairingPos ?? 99) - (y.pairingPos ?? 99));
+
+                    // Sum/Avg use same convention you use elsewhere: ch ?? ph ?? 0
+                    t.sumPH = t.players.reduce((s, x) => s + Number(x.ch ?? x.ph ?? 0), 0);
+                    t.avgPH = t.players.length ? (t.sumPH / t.players.length) : 0;
+
+                    // Last names only (per requirements)
+                    const names = t.players.map(getPlayerLastName).filter(Boolean);
+                    t.lastNames = names.join(", ");
+                }
+
+                // If match has no updatedAt yet, set a stable default once it exists
+                if (!m.updatedAt) {
+                    m.updatedAt = 0;
+                }
+            }
+
+            // Remove any “empty” matches that somehow have no teams populated
+            return matches.filter(m => (m.teams.A.players.length || m.teams.B.players.length));
+        }
+
+        function getPlayerLastName(p) {
+            // Prefer explicit last name fields if present
+            const ln =
+                String(p.last ?? p.dbPlayers_LName ?? p.lname ?? p.lastName ?? "").trim();
+
+            if (ln) return ln;
+
+            // Fallback: derive from "name"
+            const full = String(p.name ?? p.dbPlayers_Name ?? "").trim();
+            if (!full) return "";
+            const parts = full.split(/\s+/).filter(Boolean);
+            return parts.length ? parts[parts.length - 1] : full;
+        }
+
+        // ------------------------------------------------------------
+        // Matches: rendering
+        // ------------------------------------------------------------
+        function matchCardHtml(match) {
+            const flightId = escapeHtml(String(match.flightId || "").trim());
+            const isTarget = state.trayMode === "addToMatch" && String(state.targetFlightId || "") === String(match.flightId || "");
+            const headerLeft = `Match ${flightId}`;
+
+            const teamA = match.teams?.A;
+            const teamB = match.teams?.B;
+
+            const body =
+                (teamA?.players?.length ? matchTeamRowHtml(match.flightId, teamA) : "") +
+                (teamB?.players?.length ? matchTeamRowHtml(match.flightId, teamB) : "");
+
+            return `
+        <div class="card ${isTarget ? "targetCard" : ""}" data-flight-id="${flightId}">
+            <div class="subPanelCardHeader ">
+                <div class="subPanelCardHeaderLine">
+                    <span>${headerLeft}</span>
+                </div>
+
+                <div class="subPanelCardHeaderActions">
+                    <button class="iconBtn iconBare" type="button" data-action="editMatch" title="Edit (Target Match)" aria-label="Edit Match">
+                        <svg class="iconSvg" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 20h9"></path>
+                            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+                        </svg>
+                    </button>
+
+                    <button class="iconBtn iconBare" type="button" data-action="unmatchMatch" title="Unmatch (Clear Both Teams)" aria-label="Unmatch">
+                        <svg class="iconSvg" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M10 13a5 5 0 0 1 0-7l1.5-1.5a5 5 0 0 1 7 7L17 13"></path>
+                            <path d="M14 11a5 5 0 0 1 0 7L12.5 19.5a5 5 0 0 1-7-7L7 11"></path>
+                            <path d="M3 21 21 3"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            ${body || `<div style="color:var(--mutedText); font-weight:800;">Empty match.</div>`}
+        </div>
+    `;
+        }
+
+        function matchTeamRowHtml(flightId, team) {
+            const teamKey = escapeHtml(team.teamKey || "");
+            const label = (teamKey === "A") ? "Team-A" : "Team-B";
+            const pairingId = escapeHtml(String(team.pairingId || "").trim());
+            const sumPH = Number(team.sumPH ?? 0);
+            const avgPH = Number(team.avgPH ?? 0);
+            const meta = `Sum ${sumPH.toFixed(1)} • Avg ${avgPH.toFixed(1)}`;
+            const lastNames = escapeHtml(team.lastNames || "");
+
+            // MOBILE: 2-line layout (Line-11: Team/Group + Sum/Avg, Line-2: Names)
+            if (isMobileLayout()) {
+                return `
+                    <div class="subPanelCardRow matchTeamRow" style="align-items:flex-start;">
+                        <div class="subPanelCardRowLeft">
+                            <div class="matchLine1">
+                                <span class="subPanelCardRowLine1">${label} • Group ${pairingId || "?"}</span>
+                                <span class="subPanelCardRowLine2Inline"> • ${escapeHtml(meta)}</span>
+                            </div>
+                            ${lastNames ? `<div class="subPanelCardRowLine2 matchLine2">${lastNames}</div>` : ``}
+                        </div>
+
+                        <div class="subPanelCardRowRight">
+                            <button class="iconBtn iconBare" type="button"
+                                data-action="removeTeam"
+                                data-flight-id="${escapeHtml(String(flightId || ""))}"
+                                data-team="${teamKey}"
+                                data-pairing-id="${escapeHtml(String(team.pairingId || "").trim())}"
+                                title="Remove Team">×</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // DESKTOP: keep existing 3-line layout exactly as-is
+            return `
+        <div class="subPanelCardRow" style="align-items:flex-start;">
+            <div class="subPanelCardRowLeft">
+                <span class="subPanelCardRowLine1">${label} • Group ${pairingId || "?"}</span>
+                <span class="subPanelCardRowLine2">${escapeHtml(meta)}</span>
+                ${lastNames ? `<div class="subPanelCardRowLine2" style="margin-top:4px;">${lastNames}</div>` : ``}
+            </div>
+
+            <div class="subPanelCardRowRight">
+                <button class="iconBtn iconBare" type="button"
+                    data-action="removeTeam"
+                    data-flight-id="${escapeHtml(String(flightId || ""))}"
+                    data-team="${teamKey}"
+                    data-pairing-id="${escapeHtml(String(team.pairingId || "").trim())}"
+                    title="Remove Team">×</button>
+            </div>
+        </div>
+    `;
+        }
+
+        // ------------------------------------------------------------
+        // Matches: event wiring (minimal stubs for now)
+        // ------------------------------------------------------------
+        function wireMatchCardEvents() {
+            const host = document.getElementById("matchCards");
+            if (!host || host.dataset.wiredMatchClicks) return;
+            host.dataset.wiredMatchClicks = "1";
+
+            host.addEventListener("click", (e) => {
+                const btn = e.target.closest("button[data-action]");
+                if (!btn) return;
+
+                const card = btn.closest("[data-flight-id]");
+                const flightId = card?.getAttribute("data-flight-id");
+                const action = btn.getAttribute("data-action");
+
+                if (!flightId) return;
+
+                // NOTE: handlers will be fully implemented in the next change block(s).
+                // For now, these stubs prevent “dead buttons” and help validate rendering.
+                if (action === "editMatch") {
+                    state.trayMode = "addToMatch";
+                    state.targetFlightId = String(flightId);
+                    setStatus(`Targeting Match ${flightId} (select 1 group → Assign>>)`, "neutral");
+                    render();
+                    if (isMobileLayout()) {
+                        state.activePanel = "matchCanvas";
+                        openDrawer();
+                    }
+                    return;
+                }
+
+                if (action === "unmatchMatch") {
+                    // Clear flightId + flightPos for all players in this match
+                    (state.players || []).forEach(p => {
+                        if (String(p.flightId || "").trim() === String(flightId)) {
+                            p.flightId = "";
+                            p.flightPos = "";
+                            p.isDirty = true;
+                        }
+                    });
+
+                    if (!state.matchUpdatedAt) state.matchUpdatedAt = {};
+                    state.matchUpdatedAt[String(flightId)] = Date.now();
+
+                    // If we were targeting this match, exit target mode
+                    if (state.trayMode === "addToMatch" && String(state.targetFlightId || "") === String(flightId)) {
+                        state.trayMode = "addToGroup";
+                        state.targetFlightId = null;
+                        state.selectedUnmatchedPairingIDs.clear();
+                    }
+
+                    setStatus(`Match ${flightId} removed.`, "success");
+                    render();
+                    return;
+                }
+
+                if (action === "removeTeam") {
+                    const teamKey = (btn.getAttribute("data-team") || "").toUpperCase();
+                    const pairingId = String(btn.getAttribute("data-pairing-id") || "").trim();
+                    if (!pairingId) return;
+
+                    // Clear flightId + flightPos for all players in that pairing group (team)
+                    (state.players || []).forEach(p => {
+                        const pid = String(p.dbPlayers_PairingID || p.pairingId || "").trim();
+                        if (pid === pairingId && String(p.flightId || "").trim() === String(flightId)) {
+                            p.flightId = "";
+                            p.flightPos = "";
+                            p.isDirty = true;
+                        }
+                    });
+
+                    if (!state.matchUpdatedAt) state.matchUpdatedAt = {};
+                    state.matchUpdatedAt[String(flightId)] = Date.now();
+
+                    // If we were targeting this match, keep target mode (user might be freeing a slot)
+                    setStatus(`Team ${teamKey || ""} removed from Match ${flightId}.`, "success");
+                    render();
+                    return;
+                }
+
+            });
+        }
+
+        function renderPairingCards() {
+            const el = document.getElementById("pairingCards");
+            if (!el) return;
+
+            const cards = Array.isArray(state.pairings) ? state.pairings : [];
+            state.pairings = cards;
+
+            normalizeCardOrderForStacking();
+
+            // Empty-state (no phantom empty group)
+            if (!cards.length) {
+                el.innerHTML = `
+            <div class="card">
+                <div class="sectionLabel">PAIRINGS</div>
+                <div style="color:var(--mutedText); font-weight:800;">
+                    No groups yet. Tap <span style="font-weight:900;">OPEN</span> to select players, then <span style="font-weight:900;">ASSIGN&gt;&gt;</span> to create a group.
+                </div>
+            </div>
+        `;
+                return;
+            }
+
+            el.innerHTML = cards.map(card => pairingCardHtml(card)).join("");
+            wirePairingCardEvents();
+        }
+
+
+        function pairingCardHtml(card) {
+            const title = escapeHtml(card.title || `Group ${card.id || ""}`.trim() || "Group");
+            const sumPH = Number(card.sumPH ?? 0);
+            const avgPH = (card.players && card.players.length) ? (sumPH / card.players.length) : 0;
+            const meta = `Sum ${sumPH.toFixed(1)} • Avg ${avgPH.toFixed(1)}`;
+            const isTarget = state.trayMode === "addToCard" && String(state.targetPairingId) === String(card.id);
+            const playersHtml = (card.players || []).map(p => subPanelCardRowHtml(p, card.id)).join("");
+
+            return `
+                <div class="card ${isTarget ? "targetCard" : ""}" data-pairing-id="${escapeHtml(card.id || "")}">
+                    <div class="subPanelCardHeader ">
+                    <div class="subPanelCardHeaderLine">
+                        ${card.flightId ? `<span>${escapeHtml(String(card.flightId))}</span> <span class="muted">•</span> ` : ``}
+                        <span>${title}</span>
+                        <span class="muted"> • ${escapeHtml(meta)}</span>
+                    </div>
+
+                    <div class="subPanelCardHeaderActions">
+                        <button class="iconBtn iconBare" type="button" data-action="editCard" title="Edit (Add to Card)" aria-label="Edit">
+                        <svg class="iconSvg" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 20h9"></path>
+                            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+                        </svg>
+                        </button>
+
+                        <button class="iconBtn iconBare" type="button" data-action="unpairGroup" title="Unlink Group (return players)" aria-label="Unlink">
+                        <svg class="iconSvg" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M10 13a5 5 0 0 1 0-7l1.5-1.5a5 5 0 0 1 7 7L17 13"></path>
+                            <path d="M14 11a5 5 0 0 1 0 7L12.5 19.5a5 5 0 0 1-7-7L7 11"></path>
+                            <path d="M3 21 21 3"></path>
+                        </svg>
+                        </button>
+                    </div>
+                    </div>
+
+                    ${playersHtml || ``}
+                </div>
+                `;
+        }
+
+        function subPanelCardRowHtml(p, pairingId) {
+            const name = escapeHtml(p.name || "Player");
+            const tee = escapeHtml(p.tee || "");
+            const ch = (p.ch !== undefined && p.ch !== null) ? Number(p.ch).toFixed(0) : "";
+            const hi = (p.hi !== undefined && p.hi !== null) ? Number(p.hi).toFixed(1) : "";
+
+            const meta = [tee ? `T:${tee}` : "", ch ? `CH ${ch}` : "", hi ? `HI ${hi}` : ""].filter(Boolean).join(" • ");
+
+            return `
+        <div class="subPanelCardRow rowTap" data-player-id="${escapeHtml(p.id || "")}" data-pairing-id="${escapeHtml(pairingId || "")}">
+<div class="subPanelCardRowLeft">
+  <span class="subPanelCardRowLine1">${name}</span>
+  ${meta ? `<span class="subPanelCardRowLine2">${escapeHtml(meta)}</span>` : ``}
+</div>
+
+          <div class="subPanelCardRowRight">
+<button class="iconBtn iconBare" type="button" data-action="removePlayer" title="Remove">×</button>
+
+          </div>
+        </div>
+      `;
+        }
+
+        function renderUnpairedPalette(container) {
+            if (!container) return;
+
+            const header = `
+        <div class="subPanel">
+
+            <!-- Tray Header -->
+            <div class="subPanelHeader">
+                <button class="subPanelHeaderAction trayCloseMobile" id="btnTrayClose" type="button">CLOSE</button>
+                <div class="subPanelHeaderTitle">Choose Players</div>
+                <button class="subPanelHeaderAction" id="btnAssign" type="button">ASSIGN &gt;&gt;</button>
+            </div>
+
+
+            <!-- Tools (clean, no pill wrapper) -->
+            <div class="subPanelTools">
+                <div class="segTabs" id="unpairedSortChips">
+                    <button class="chip ${state.unpairedSort === "PH" ? "active" : ""}" data-sort="PH" type="button">PH</button>
+                    <button class="chip ${state.unpairedSort === "Last" ? "active" : ""}" data-sort="Last" type="button">Last</button>
+                    <button class="chip ${state.unpairedSort === "Tee" ? "active" : ""}" data-sort="Tee" type="button">Tee</button>
+                    <button class="chip ${state.unpairedSort === "HI" ? "active" : ""}" data-sort="HI" type="button">HI</button>
+                </div>
+
+                <div class="searchRow">
+                    <!-- Clear Selected (left of search) -->
+                    <button class="iconBtn iconBare clearSelBtn" id="btnClearSelected" type="button" title="Clear selected">
+                        <svg class="iconSvg" viewBox="0 0 24 24" aria-hidden="true">
+                            <!-- check -->
+                            <path d="M5 12.5l4 4L19 7.5"></path>
+                            <!-- small X -->
+                            <path d="M16.5 14.5l4 4"></path>
+                            <path d="M20.5 14.5l-4 4"></path>
+                        </svg>
+                    </button>
+
+                    <input class="controlInput" id="txtUnpairedSearch"
+                        placeholder="Search name..."
+                        value="${escapeHtml(state.unpairedQuery)}"/>
+
+                    <button class="iconBtn iconBare" id="btnClearSearch" type="button" title="Clear search">✕</button>
+                </div>
+            </div>
+
+            <!-- List -->
+            <div class="subPanelBody" id="unpairedListHost"></div>
+
+            <!-- Footer -->
+            <div class="subPanelFooter" id="subPanelFooter"></div>
+        </div>
+    `;
+
+            container.innerHTML = header;
+
+            // Render list + footer without rebuilding the whole tray (prevents input focus loss)
+            renderUnpairedList(container);
+            updateSubPanelFooter(container);
+            updateAssignButtonState(container);
+
+            wireUnpairedPaletteEvents(container);
+        }
+
+        function renderUnpairedList(container) {
+            const host = container.querySelector("#unpairedListHost");
+            if (!host) return;
+
+            const rows = getUnpairedRowsSortedFiltered();
+            host.innerHTML = rows.length
+                ? rows.map(r => unpairedRowHtml(r)).join("")
+                : `<div style="padding:10px; color:var(--mutedText); font-weight:800;">No unpaired players.</div>`;
+        }
+
+        function updateSubPanelFooter(container) {
+            const el = container.querySelector("#subPanelFooter");
+            if (!el) return;
+
+            const totalUnpaired = (Array.isArray(state.players) ? state.players : [])
+                .filter(p => p.pairingId === "000").length;
+
+            const mode = (state.trayMode === "addToCard") ? "Card" : "Group";
+            el.textContent = `Mode: ${mode} • Selected: ${state.selectedUnpairedIDs.size} / ${totalUnpaired}`;
+        }
+        function updateAssignButtonState(container) {
+            const btn = container.querySelector("#btnAssign");
+            if (!btn) return;
+
+            const hasSelection = state.selectedUnpairedIDs.size > 0;
+            const needsTarget = (state.trayMode === "addToCard");
+            const hasTarget = !!state.targetPairingId;
+
+            btn.disabled = !hasSelection || (needsTarget && !hasTarget);
+        }
+
+
+
+        function unpairedRowHtml(p) {
+            const id = String(p.id || "");
+            const selected = state.selectedUnpairedIDs.has(id);
+            const name = escapeHtml(p.name || "");
+            const line2 = escapeHtml([p.cityState, p.flight].filter(Boolean).join(" • "));
+            const right = escapeHtml([p.tee ? `T:${p.tee}` : "", p.ch !== undefined ? `CH ${Number(p.ch).toFixed(0)}` : ""].filter(Boolean).join(" • "));
+
+            return `
+  <div class="subPanelRow rowTap ${selected ? "selected" : ""}" data-player-id="${escapeHtml(id)}">
+    <div class="subPanelRowSelMark" aria-hidden="true">✓</div>
+
+    <div class="subPanelRowLeft" style="flex:1; min-width:0;">
+      <div class="subPanelRowLine1">${name || "—"}</div>
+      ${line2 ? `<div class="subPanelRowLine2">${line2}</div>` : ``}
+    </div>
+
+    <div class="subPanelRowRight">${right}</div>
+  </div>
+`;
+        }
+
+
+        // ------------------------------------------------------------
+        // Auto-Pair (Actions → AutoPair)
+        // ------------------------------------------------------------
+        let autoPairOverlay = null;
+
+        function ensureAutoPairOverlay() {
+            if (autoPairOverlay) return autoPairOverlay;
+
+            const ov = document.createElement("div");
+            ov.className = "actionMenuOverlay autoPairOverlay";
+            ov.id = "autoPairOverlay";
+
+            // click outside closes
+            ov.addEventListener("click", (e) => {
+                if (e.target === ov) closeAutoPairModal();
+            });
+
+            document.body.appendChild(ov);
+            autoPairOverlay = ov;
+            return ov;
+        }
+
+        function openAutoPairModal(defaults, unpairedPlayers) {
+            const ov = ensureAutoPairOverlay();
+            ov.innerHTML = "";
+            ov.classList.add("open");
+
+            const modal = buildAutoPairModalDOM(defaults, unpairedPlayers);
+            ov.appendChild(modal);
+        }
+
+        function closeAutoPairModal() {
+            const ov = document.getElementById("autoPairOverlay");
+            if (!ov) return;
+            ov.classList.remove("open");
+            ov.innerHTML = "";
+            state.autoPairPreview = null;
+        }
+
+        function onAutoPairClick() {
+            // Actions menu already closes before calling, but keep safe
+            closeActionsMenu();
+
+            const unpaired = getUnpairedPlayers();
+            if (unpaired.length < 2) {
+                setStatus("Not enough unpaired players to auto-pair.", "warn");
+                return;
+            }
+
+            const defaults = buildDefaultAutoPairConfig(unpaired);
+            openAutoPairModal(defaults, unpaired);
+        }
+
+        function getUnpairedPlayers() {
+            const all = Array.isArray(state.players) ? state.players : [];
+            return all.filter(p => String(p.pairingId || "000") === "000");
+        }
+
+        function buildDefaultAutoPairConfig(unpaired) {
+            const total = unpaired.length;
+            const minTeeTimes = Math.max(1, Math.ceil(total / 4));
+            const teeTimeCount = minTeeTimes;
+
+            const mixes = AutoPairEngine.calculateValidMixes(total, teeTimeCount);
+            const mix = mixes[0] || { fours: 0, threes: 0, twos: Math.ceil(total / 2) };
+
+            return {
+                teeTimeCount,
+                foursomes: mix.fours || 0,
+                threesomes: mix.threes || 0,
+                twosomes: mix.twos || 0,
+                bucketCount: Math.min(4, Math.max(1, total)), // 1..4 typical
+                outcome: "balanced"
+            };
+        }
+
+        function buildAutoPairModalDOM(defaults, unpairedPlayers) {
+            // ---------- Shell ----------
+            const modal = document.createElement("div");
+            modal.className = "autoPairModal";
+            modal.addEventListener("click", (e) => e.stopPropagation()); // prevent overlay close
+
+            // Header
+            const header = document.createElement("div");
+            header.className = "autoPairHeader";
+            header.innerHTML = `
+                <div class="autoPairHeaderTitle">Auto-Pair</div>
+                <button class="actionMenu_closeBtn" type="button" aria-label="Close">×</button>
+            `;
+            header.querySelector("button")?.addEventListener("click", closeAutoPairModal);
+
+            // Controls
+            const controls = document.createElement("div");
+            controls.className = "autoPairControls";
+            controls.innerHTML = `
+                <div class="autoPairGrid">
+                    <div class="autoPairRow">
+                        <div class="autoPairLabel">Tee Times</div>
+                        <input id="apTeeTimeCount" class="autoPairField" type="number" min="1" max="99" step="1">
+                    </div>
+
+                    <div class="autoPairRow">
+                        <div class="autoPairLabel">Group Mix</div>
+                        <select id="apMixSelect" class="autoPairField"></select>
+                    </div>
+
+                    <div class="autoPairRow">
+                        <div class="autoPairLabel">Outcome</div>
+                        <select id="apOutcome" class="autoPairField">
+                            <option value="balanced">Balanced (snake buckets)</option>
+                            <option value="abcdDraw">ABCD Draw</option>
+                            <option value="inOrder">In Order</option>
+                            <option value="random">Random</option>
+                            <option value="stackedHighFirst">Stacked (high first)</option>
+                        </select>
+                    </div>
+
+                    <div class="autoPairRow" id="apBucketCountRow">
+                        <div class="autoPairLabel">Buckets</div>
+                        <input id="apBucketCount" class="autoPairField" type="number" min="1" max="12" step="1">
+                    </div>
+                </div>
+
+            `;
+
+            // Body (scrollable)
+            const body = document.createElement("div");
+            body.className = "autoPairBody";
+            body.innerHTML = `
+                <div class="autoPairBodyTitle">Preview</div>
+                <div id="apPreviewList" class="autoPairPreviewList">
+                    <div class="autoPairEmpty">Run Auto-Pair to generate a preview.</div>
+                </div>
+            `;
+
+            // Footer
+            const footer = document.createElement("div");
+            footer.className = "autoPairFooter";
+            footer.innerHTML = `
+    <div id="apInlineMsg" class="autoPairInlineMsg" aria-live="polite"></div>
+    <div style="display:flex; align-items:center; gap:10px;">
+        <button id="btnAutoPairCancel" class="btn secondary" type="button">CANCEL</button>
+        <div style="flex:1"></div>
+        <button id="btnRunAutoPair" class="btn" type="button">RUN</button>
+        <button id="btnApplyAutoPair" class="btn" type="button">APPLY</button>
+    </div>
+`;
+
+
+            // ---------- Initial values ----------
+            const elTT = controls.querySelector("#apTeeTimeCount");
+            const elMix = controls.querySelector("#apMixSelect");
+            const elOutcome = controls.querySelector("#apOutcome");
+            const elBuckets = controls.querySelector("#apBucketCount");
+
+            elTT.value = String(defaults.teeTimeCount);
+            elOutcome.value = String(defaults.outcome || "balanced");
+            elBuckets.value = String(defaults.bucketCount || 4);
+
+            // bind mixes for initial teeTimeCount
+            function setMixOptions(mixes, selected) {
+                elMix.innerHTML = "";
+                mixes.forEach((m, idx) => {
+                    const opt = document.createElement("option");
+                    opt.value = JSON.stringify({ fours: m.fours, threes: m.threes, twos: m.twos });
+                    opt.textContent = m.verboseDisplay;
+                    if (selected) {
+                        if (m.fours === selected.fours && m.threes === selected.threes && m.twos === selected.twos) opt.selected = true;
+                    } else if (idx === 0) {
+                        opt.selected = true;
+                    }
+                    elMix.appendChild(opt);
+                });
+            }
+
+            function currentMix() {
+                try { return JSON.parse(String(elMix.value || "{}")); } catch { return { fours: 0, threes: 0, twos: 0 }; }
+            }
+
+            function showInline(msg, level) {
+                const box = modal.querySelector("#apInlineMsg");
+                if (!box) return;
+                box.textContent = msg || "";
+                box.classList.remove("ok", "warn", "error");
+                const lvl = String(level || "");
+                if (lvl) box.classList.add(lvl);
+            }
+
+            function renderPreview(previewGroups) {
+                const host = body.querySelector("#apPreviewList");
+                if (!host) return;
+
+                if (!previewGroups || !previewGroups.length) {
+                    host.innerHTML = `<div class="autoPairEmpty">Run Auto-Pair to generate a preview.</div>`;
+                    return;
+                }
+
+                host.innerHTML = previewGroups.map((grp, gi) => {
+                    const sum = grp.reduce((s, p) => s + AutoPairEngine.phValue(p), 0);
+                    const rows = grp.map(p => {
+                        const nm = escapeHtml(p.name || "—");
+                        const tee = escapeHtml(p.tee || "");
+                        const ph = AutoPairEngine.phValue(p);
+                        const meta = [tee ? `T:${tee}` : "", Number.isFinite(ph) ? `PH ${ph.toFixed(1)}` : ""].filter(Boolean).join(" • ");
+                        return `<div class="autoPairPreviewRow">
+                                  <div class="autoPairPreviewRowName">${nm}</div>
+                                  <div class="autoPairPreviewRowMeta">${escapeHtml(meta)}</div>
+                                </div>`;
+                    }).join("");
+
+                    return `<div class="autoPairPreviewGroup">
+                              <div class="autoPairPreviewGroupHeader">Group ${gi + 1} • ${grp.length} players • Sum PH ${sum.toFixed(1)}</div>
+                              ${rows}
+                            </div>`;
+                }).join("");
+            }
+
+            function outcomeUsesBuckets(outcome) {
+                return outcome === "balanced" || outcome === "abcdDraw";
+            }
+
+            function syncBucketVisibility() {
+                const out = String(elOutcome.value || "");
+                const row = controls.querySelector("#apBucketCountRow");
+                if (!row) return;
+                row.style.display = outcomeUsesBuckets(out) ? "" : "none";
+            }
+
+            // initial mixes + bucket visibility
+            const initialMixes = AutoPairEngine.calculateValidMixes(unpairedPlayers.length, Number(elTT.value || defaults.teeTimeCount));
+            setMixOptions(initialMixes, { fours: defaults.foursomes, threes: defaults.threesomes, twos: defaults.twosomes });
+            syncBucketVisibility();
+
+            // ---------- Events ----------
+            footer.querySelector("#btnAutoPairCancel")?.addEventListener("click", closeAutoPairModal);
+
+            elOutcome.addEventListener("change", () => {
+                syncBucketVisibility();
+                showInline("", "");
+            });
+
+            elTT.addEventListener("change", () => {
+                const tt = Math.max(1, Math.min(99, Number(elTT.value || 1)));
+                elTT.value = String(tt);
+
+                const mixes = AutoPairEngine.calculateValidMixes(unpairedPlayers.length, tt);
+                if (!mixes.length) {
+                    setMixOptions([{ fours: 0, threes: 0, twos: Math.ceil(unpairedPlayers.length / 2), verboseDisplay: "—" }], null);
+                    showInline("No valid mixes found for that tee-time count.", "warn");
+                    return;
+                }
+                setMixOptions(mixes, null);
+                showInline("", "");
+            });
+
+            footer.querySelector("#btnRunAutoPair")?.addEventListener("click", () => {
+                showInline("", "");
+
+                const mix = currentMix();
+                const cfg = {
+                    teeTimeCount: Math.max(1, Number(elTT.value || 1)),
+                    foursomes: Number(mix.fours || 0),
+                    threesomes: Number(mix.threes || 0),
+                    twosomes: Number(mix.twos || 0),
+                    bucketCount: Math.max(1, Number(elBuckets.value || 1)),
+                    outcome: String(elOutcome.value || "balanced")
+                };
+
+                const unpaired = getUnpairedPlayers();
+                const v = AutoPairEngine.validateConfig(cfg, unpaired);
+                if (!v.ok) {
+                    showInline(v.message || "Invalid settings.", "error");
+                    return;
+                }
+
+                const preview = AutoPairEngine.run(cfg, unpaired);
+                state.autoPairPreview = preview;
+
+                renderPreview(preview);
+                showInline("Preview generated. Click APPLY to use these pairings.", "ok");
+            });
+
+            footer.querySelector("#btnApplyAutoPair")?.addEventListener("click", () => {
+                if (!state.autoPairPreview || !state.autoPairPreview.length) {
+                    showInline("Run Auto-Pair first.", "warn");
+                    return;
+                }
+
+                applyAutoPairPreviewToState(state.autoPairPreview);
+                rebuildPairingsFromPlayers();
+
+                closeAutoPairModal();
+                setStatus("Auto-Pair applied. Click SAVE to commit or RESET to discard.", "warn");
+            });
+
+            modal.appendChild(header);
+            modal.appendChild(controls);
+            modal.appendChild(body);
+            modal.appendChild(footer);
+            return modal;
+        }
+
+        function rebuildPairingsFromPlayers() {
+            const byPairing = new Map();
+            (state.players || []).forEach(pl => {
+                if (String(pl.pairingId || "000") === "000") return;
+                if (!byPairing.has(pl.pairingId)) byPairing.set(pl.pairingId, makeEmptyPairingCard(pl.pairingId));
+                byPairing.get(pl.pairingId).players.push(pl);
+            });
+
+            state.pairings = Array.from(byPairing.values());
+            state.pairings.sort((a, b) => String(a.id).localeCompare(String(b.id), undefined, { numeric: true }));
+            state.pairings.forEach(c => {
+                c.players.sort((a, b) => (Number(a.pairingPos ?? 99) - Number(b.pairingPos ?? 99)));
+                c.sumPH = c.players.reduce((s, x) => s + (x.ch ?? x.ph ?? 0), 0);
+                c.flightId = c.players.find(x => x.flightId)?.flightId || "";
+            });
+
+            // reset palette selection
+            state.selectedUnpairedIDs.clear();
+            state.unpairedQuery = "";
+            state.unpairedSort = "PH";
+
+            render();
+        }
+
+        function makePairingIdAllocator(players) {
+            const ids = (players || [])
+                .map(p => String(p.pairingId || ""))
+                .filter(id => id && id !== "000");
+
+            const nums = ids
+                .map(id => Number(String(id).replace(/\D+/g, "")))
+                .filter(n => Number.isFinite(n));
+
+            const maxNum = nums.length ? Math.max(...nums) : 0;
+            const padTo3 = ids.some(id => /^0\d\d$/.test(id)) || maxNum >= 100;
+
+            let cur = maxNum;
+            return () => {
+                cur += 1;
+                const raw = String(cur);
+                return padTo3 ? raw.padStart(3, "0") : raw;
+            };
+        }
+
+        function applyAutoPairPreviewToState(previewGroups) {
+            const allocateId = makePairingIdAllocator(state.players);
+
+            previewGroups.forEach(group => {
+                const pid = allocateId();
+
+                group.forEach((p, seatIdx) => {
+                    const pl = (state.players || []).find(x => String(x.id) === String(p.id));
+                    if (!pl) return;
+
+                    pl.pairingId = pid;
+                    pl.pairingPos = seatIdx + 1;
+                    pl.isDirty = true;
+                });
+            });
+        }
+
+        // ------------------------------------------------------------
+        // Auto-Pair Engine (ported from Swift)
+        // ------------------------------------------------------------
+        const AutoPairEngine = {
+            phValue(p) {
+                const v = (p && p.ph != null) ? Number(p.ph)
+                    : (p && p.ch != null) ? Number(p.ch)
+                        : (p && p.hi != null) ? Number(p.hi)
+                            : 999;
+                return Number.isFinite(v) ? v : 999;
+            },
+
+            calculateValidMixes(totalGolfers, teeTimeCount) {
+                const mixes = this._calculateAllValidGroupSizes(totalGolfers, teeTimeCount);
+                return mixes.map(m => ({
+                    fours: m.fours, threes: m.threes, twos: m.twos,
+                    verboseDisplay: this._mixVerbose(m.fours, m.threes, m.twos)
+                }));
+            },
+
+            validateConfig(cfg, unpairedPlayers) {
+                const total = (unpairedPlayers || []).length;
+
+                const fours = Number(cfg.foursomes || 0);
+                const threes = Number(cfg.threesomes || 0);
+                const twos = Number(cfg.twosomes || 0);
+
+                const seats = fours * 4 + threes * 3 + twos * 2;
+                const groups = fours + threes + twos;
+
+                if (!total) return { ok: false, message: "No unpaired players." };
+                if (seats !== total) return { ok: false, message: `Mix seats (${seats}) must equal unpaired players (${total}).` };
+                if (groups <= 0) return { ok: false, message: "Choose a valid group mix." };
+                if (groups > Number(cfg.teeTimeCount || groups)) return { ok: false, message: "Total groups exceed tee times." };
+
+                const bucketCount = Math.max(1, Number(cfg.bucketCount || 1));
+                if ((cfg.outcome === "balanced" || cfg.outcome === "abcdDraw") && bucketCount < 1) {
+                    return { ok: false, message: "Bucket count must be at least 1." };
+                }
+
+                const okOutcomes = new Set(["balanced", "inOrder", "abcdDraw", "random", "stackedHighFirst"]);
+                if (!okOutcomes.has(String(cfg.outcome || ""))) return { ok: false, message: "Invalid outcome selection." };
+
+                return { ok: true, message: "" };
+            },
+
+            run(cfg, unpairedPlayers) {
+                const pool = (unpairedPlayers || []).slice().sort((a, b) => this.phValue(a) - this.phValue(b));
+                const sizes = this._autopairGroupSizes(cfg, pool.length);
+                const bucketCount = Math.max(1, Number(cfg.bucketCount || 1));
+                const buckets = this._bucketize(pool, bucketCount);
+
+                switch (cfg.outcome) {
+                    case "balanced":
+                        return this._draftBalanced(buckets, sizes);
+                    case "inOrder":
+                        return this._draftInOrder(pool, sizes);
+                    case "abcdDraw":
+                        return this._draftABCD(buckets, sizes);
+                    case "random":
+                        return this._draftRandom(pool, sizes);
+                    case "stackedHighFirst":
+                        return this._draftStackedHighFirst(pool, sizes);
+                    default:
+                        return this._draftBalanced(buckets, sizes);
+                }
+            },
+
+            _autopairGroupSizes(cfg, availablePlayers) {
+                const out = [];
+                const f = Number(cfg.foursomes || 0);
+                const t3 = Number(cfg.threesomes || 0);
+                const t2 = Number(cfg.twosomes || 0);
+
+                for (let i = 0; i < f; i++) out.push(4);
+                for (let i = 0; i < t3; i++) out.push(3);
+                for (let i = 0; i < t2; i++) out.push(2);
+
+                // clamp seats
+                const seats = out.reduce((s, x) => s + x, 0);
+                if (seats <= availablePlayers) return out;
+
+                let remaining = availablePlayers;
+                const clamped = [];
+                for (const s of out) {
+                    if (remaining <= 0) break;
+                    const take = Math.min(s, remaining);
+                    clamped.push(take);
+                    remaining -= take;
+                }
+                return clamped;
+            },
+
+            _bucketize(players, bucketCount) {
+                if (bucketCount <= 1) return [players.slice()];
+
+                const sorted = players.slice().sort((a, b) => this.phValue(a) - this.phValue(b));
+                const n = sorted.length;
+                const base = Math.floor(n / bucketCount);
+                const rem = n % bucketCount;
+
+                const buckets = [];
+                let idx = 0;
+                for (let i = 0; i < bucketCount; i++) {
+                    const extra = (i < rem) ? 1 : 0;
+                    const size = base + extra;
+                    const slice = (size > 0 && idx < n) ? sorted.slice(idx, Math.min(idx + size, n)) : [];
+                    buckets.push(slice);
+                    idx += size;
+                }
+                return buckets;
+            },
+
+            _draftBalanced(buckets, sizes) {
+                // queues as mutable arrays
+                const queues = buckets.map(b => b.slice());
+
+                const pull = (bi, back = false) => {
+                    if (!queues[bi] || !queues[bi].length) return null;
+                    return back ? queues[bi].pop() : queues[bi].shift();
+                };
+
+                const pullAny = () => {
+                    for (let i = 0; i < queues.length; i++) {
+                        if (queues[i].length) return queues[i].shift();
+                    }
+                    return null;
+                };
+
+                const pushFrom = (group, sources) => {
+                    for (const [i, back] of sources) {
+                        const p = pull(i, back);
+                        if (p) { group.push(p); return; }
+                    }
+                    const p = pullAny();
+                    if (p) group.push(p);
+                };
+
+                const groups = [];
+                for (const size of sizes) {
+                    const g = [];
+                    switch (size) {
+                        case 4:
+                            pushFrom(g, [[0, false], [1, true], [2, false], [3, false]]);
+                            pushFrom(g, [[1, true], [2, false], [3, false], [0, false]]);
+                            pushFrom(g, [[2, true], [3, false], [1, false], [0, false]]);
+                            pushFrom(g, [[3, false], [0, false], [2, false], [1, false]]);
+                            break;
+                        case 3:
+                            pushFrom(g, [[0, false], [1, true], [2, false], [3, false]]);
+                            pushFrom(g, [[1, true], [2, false], [3, false], [0, false]]);
+                            pushFrom(g, [[2, false], [3, false], [1, false], [0, false]]);
+                            break;
+                        case 2:
+                            pushFrom(g, [[0, false], [1, true], [2, false], [3, false]]);
+                            pushFrom(g, [[1, true], [0, false], [2, false], [3, false]]);
+                            break;
+                        default:
+                            for (let i = 0; i < size; i++) {
+                                const p = pullAny();
+                                if (p) g.push(p);
+                            }
+                            break;
+                    }
+                    groups.push(g);
+                }
+                return groups;
+            },
+
+            _draftInOrder(players, sizes) {
+                const list = players.slice();
+                const groups = [];
+                for (const s of sizes) {
+                    const g = [];
+                    for (let i = 0; i < s; i++) if (list.length) g.push(list.shift());
+                    groups.push(g);
+                }
+                return groups;
+            },
+
+            _draftABCD(buckets, sizes) {
+                const queues = buckets.map(b => b.slice());
+
+                const pullFront = (i) => {
+                    if (!queues[i] || !queues[i].length) return null;
+                    return queues[i].shift();
+                };
+                const pullAny = () => {
+                    for (let i = 0; i < queues.length; i++) if (queues[i].length) return queues[i].shift();
+                    return null;
+                };
+
+                const B = Math.max(1, queues.length);
+                const groups = [];
+
+                for (const s of sizes) {
+                    const g = [];
+                    let k = 0;
+                    while (g.length < s) {
+                        const bi = k % B;
+                        const p = pullFront(bi) || pullAny();
+                        if (!p) break;
+                        g.push(p);
+                        k += 1;
+                    }
+                    groups.push(g);
+                }
+                return groups;
+            },
+
+            _draftRandom(players, sizes) {
+                const list = players.slice();
+                // Fisher-Yates
+                for (let i = list.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [list[i], list[j]] = [list[j], list[i]];
+                }
+                return this._draftInOrder(list, sizes);
+            },
+
+            _draftStackedHighFirst(players, sizes) {
+                // players already sorted asc by PH
+                return this._draftInOrder(players, sizes);
+            },
+
+            _mixVerbose(fours, threes, twos) {
+                const parts = [];
+                if (fours > 0) parts.push(`foursomes (${fours})`);
+                if (threes > 0) parts.push(`threesomes (${threes})`);
+                if (twos > 0) parts.push(`twosomes (${twos})`);
+                return parts.length ? parts.join(", ") : "—";
+            },
+
+            _calculateAllValidGroupSizes(totalGolfers, totalTeeTimes) {
+                if (!(totalGolfers > 0 && totalTeeTimes > 0)) return [];
+
+                const results = [];
+
+                for (let fours = Math.floor(totalGolfers / 4); fours >= 0; fours--) {
+                    const leftAfter4 = totalGolfers - fours * 4;
+
+                    for (let threes = Math.floor(leftAfter4 / 3); threes >= 0; threes--) {
+                        const left = leftAfter4 - threes * 3;
+                        if (left % 2 !== 0) continue;
+                        const twos = left / 2;
+
+                        const totalGroups = fours + threes + twos;
+                        if (totalGroups > totalTeeTimes) continue;
+
+                        results.push({ fours, threes, twos });
+                    }
+                }
+
+                // Prefer fewer distinct group types, then more foursomes, then more threesomes, then fewer twosomes.
+                results.sort((a, b) => {
+                    const aKinds = (a.fours > 0 ? 1 : 0) + (a.threes > 0 ? 1 : 0) + (a.twos > 0 ? 1 : 0);
+                    const bKinds = (b.fours > 0 ? 1 : 0) + (b.threes > 0 ? 1 : 0) + (b.twos > 0 ? 1 : 0);
+                    if (aKinds !== bKinds) return aKinds - bKinds;
+                    if (a.fours !== b.fours) return b.fours - a.fours;
+                    if (a.threes !== b.threes) return b.threes - a.threes;
+                    return a.twos - b.twos;
+                });
+
+                return results;
+            }
+        };
+
+
+        // ------------------------------------------------------------
+        // Helper Functions (placeholder normalization)
+        // ------------------------------------------------------------
+        function getCompetitionValue() {
+            const g = state.game || {};
+            return String(
+                g.competition ?? g.dbGames_Competition ?? g.dbgames_competition ?? ""
+            ).trim();
+        }
+        function renderUnmatchedPalette(container) {
+            if (!container) return;
+
+            const rows = getUnmatchedPairingRows(); // [{ pairingId, count, sumPH, avgPH, lastNames }]
+            const selected = state.selectedUnmatchedPairingIDs;
+
+            container.innerHTML = `
+        <div class="subPanel">
+            <div class="subPanelHeader">
+                <button class="subPanelHeaderAction trayCloseMobile" id="btnTrayClose" type="button">CLOSE</button>
+                <div class="subPanelHeaderTitle">Choose Groups</div>
+                <button class="subPanelHeaderAction" id="btnAssignUnmatched" type="button">ASSIGN &gt;&gt;</button>
+            </div>
+
+            <!-- Tools row position (Matches has no search; Clear Selected stands alone) -->
+            <div class="subPanelTools">
+                <div class="searchRow">
+                    <button class="iconBtn iconBare clearSelBtn" id="btnClearUnmatched" type="button" title="Clear selected">
+                        <svg class="iconSvg" viewBox="0 0 24 24" aria-hidden="true">
+                            <!-- check -->
+                            <path d="M5 12.5l4 4L19 7.5"></path>
+                            <!-- small X -->
+                            <path d="M16.5 14.5l4 4"></path>
+                            <path d="M20.5 14.5l-4 4"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="subPanelBody" id="unmatchedTrayList">
+                ${rows.length ? rows.map(r => unmatchedRowHtml(r, selected.has(String(r.pairingId)))).join("") :
+                    `<div style="padding:12px; color:var(--mutedText); font-weight:800;">No unmatched pairings.</div>`
+                }
+            </div>
+
+            <div class="subPanelFooter" id="unmatchedTrayFooter">
+                ${buildUnmatchedFooterText(rows, selected)}
+            </div>
+        </div>
+    `;
+
+            wireUnmatchedPaletteEvents(container);
+        }
+
+        function unmatchedRowHtml(r, isSelected) {
+            const pairingId = String(r.pairingId || "");
+            const txtLine1 = `Group ${pairingId} • Sum ${Number(r.sumPH || 0).toFixed(1)} • Avg ${Number(r.avgPH || 0).toFixed(1)}`;
+            const txtLine2 = (r.lastNames || "").trim() || "";
+            const txtInfoRight = `${Number(r.count || 0)}p`;
+
+            return `
+        <div class="subPanelRow rowTap ${isSelected ? "selected" : ""}" data-rowtap-key="${escapeHtml(pairingId)}">
+            <div class="subPanelRowLeft">
+                <div class="line1Wrap">
+                    <span class="subPanelRowSelMark">✓</span>
+                    <div class="subPanelRowLine1">${escapeHtml(txtLine1)}</div>
+                </div>
+                <div class="subPanelRowLine2">${escapeHtml(txtLine2)}</div>
+            </div>
+            <div class="subPanelRowRight">${escapeHtml(txtInfoRight)}</div>
+        </div>
+    `;
+        }
+
+        function wireUnmatchedPaletteEvents(container) {
+            const btnTrayClose = container.querySelector("#btnTrayClose");
+            if (btnTrayClose) {
+                btnTrayClose.addEventListener("click", () => closeDrawer());
+            }
+
+            const btnClear = container.querySelector("#btnClearUnmatched");
+            const btnAssign = container.querySelector("#btnAssignUnmatched");
+            const list = container.querySelector("#unmatchedTrayList");
+
+            if (btnClear) {
+                btnClear.addEventListener("click", () => {
+                    state.selectedUnmatchedPairingIDs.clear();
+                    //xxx render(); // keep consistent with your pattern
+                    renderUnmatchedPalette(container);
+                });
+            }
+
+            if (btnAssign) {
+                btnAssign.addEventListener("click", () => {
+                    const pairingIds = Array.from(state.selectedUnmatchedPairingIDs || []);
+                    if (!pairingIds.length) return;
+
+                    const isTargeting = (state.trayMode === "addToMatch" && String(state.targetFlightId || "").trim() !== "");
+                    const targetFlightId = String(state.targetFlightId || "").trim();
+
+                    // Determine flightId for this assignment (new match vs targeted match)
+                    const flightId = isTargeting ? targetFlightId : generateFlightId();
+
+                    // Determine which team slots are available when targeting
+                    let allowedSlots = ["A", "B"];
+                    if (isTargeting) {
+                        const inThisMatch = (state.players || []).filter(p => String(p.flightId || "").trim() === flightId);
+                        const hasA = inThisMatch.some(p => String(p.flightPos || "").toUpperCase() === "A" || String(p.flightPos || "") === "1");
+                        const hasB = inThisMatch.some(p => String(p.flightPos || "").toUpperCase() === "B" || String(p.flightPos || "") === "2");
+
+                        allowedSlots = [];
+                        if (!hasA) allowedSlots.push("A");
+                        if (!hasB) allowedSlots.push("B");
+
+                        if (!allowedSlots.length) {
+                            // Max 2 teams already present → ignore silently (no alerts)
+                            // Keep target mode so user can remove a team and try again.
+                            state.selectedUnmatchedPairingIDs.clear();
+                            //xxx render();
+                            renderUnmatchedPalette(container);
+                            return;
+                        }
+                    }
+
+                    // While targeting, only allow 1 group to be assigned (into first empty slot)
+                    // New group inherits the scheduling attributes of the match in the card.
+                    const maxGroups = isTargeting ? 1 : 2;
+                    const chosen = pairingIds.slice(0, maxGroups);
+
+                    chosen.forEach((pairingId, idx) => {
+                        const slot = isTargeting
+                            ? allowedSlots[0]                 // first empty slot (A then B)
+                            : (idx === 0 ? "A" : "B");        // new match: first=A, second=B
+
+                        // If targeting an existing match, inherit schedule context from any player already in that match
+                        const matchAnchor = isTargeting
+                            ? (state.players || []).find(x => String(x.flightId || "").trim() === String(flightId))
+                            : null;
+
+                        (state.players || []).forEach(p => {
+                            const pid = String(p.dbPlayers_PairingID || p.pairingId || "").trim();
+                            if (pid === String(pairingId)) {
+                                p.flightId = flightId;
+                                p.flightPos = slot;
+
+                                // Inherit schedule fields ONLY when adding into an existing match
+                                if (matchAnchor) {
+                                    p.teeTime = matchAnchor.teeTime ?? "";
+                                    p.startHole = matchAnchor.startHole ?? "";
+                                    p.startHoleSuffix = matchAnchor.startHoleSuffix ?? "";
+                                }
+
+                                p.isDirty = true;
+                            }
+                        });
+                    });
+
+
+                    // Touch updatedAt so the edited/new match floats to top
+                    if (!state.matchUpdatedAt) state.matchUpdatedAt = {};
+                    state.matchUpdatedAt[flightId] = Date.now();
+
+                    // One-shot behavior: exit target mode after a successful add
+                    if (isTargeting) {
+                        state.trayMode = "addToGroup";
+                        state.targetFlightId = null;
+                    }
+
+                    // Clear tray selection after assignment
+                    state.selectedUnmatchedPairingIDs.clear();
+
+                    render();
+                    setStatus(isTargeting ? `Match ${flightId} updated.` : `Match ${flightId} created.`, "success");
+                    //setStatus("Pairings updated. Click SAVE to apply changes.", "");
+                    if (isMobileLayout()) closeDrawer();
+                });
+            }
+
+
+            if (list) {
+                list.querySelectorAll(".rowTap").forEach(row => {
+                    row.addEventListener("click", () => {
+                        const key = row.getAttribute("data-rowtap-key") || "";
+                        if (!key) return;
+
+                        const sel = state.selectedUnmatchedPairingIDs;
+                        if (sel.has(key)) {
+                            sel.delete(key);
+                        } else {
+                            const maxSel = (state.trayMode === "addToMatch" && state.targetFlightId) ? 1 : 2;
+                            if (sel.size >= maxSel) return;
+                            sel.add(key);
+                        }
+                        //xxx render(); // rerender keeps header/footer counts correct
+                        renderUnmatchedPalette(container);
+                    });
+                });
+            }
+
+            // enable/disable assign button based on selection
+            if (btnAssign) {
+                btnAssign.disabled = !(state.selectedUnmatchedPairingIDs && state.selectedUnmatchedPairingIDs.size > 0);
+            }
+        }
+
+        function buildUnmatchedFooterText(rows, selectedSet) {
+            const totalGroups = rows.length;
+            const selectedCnt = selectedSet ? selectedSet.size : 0;
+            return `${totalGroups} groups • ${selectedCnt} selected`;
+        }
+
+        /**
+         * Returns unmatched pairing groups derived from state.players.
+         * Unmatched = has pairingId but no flightId (match not assigned yet).
+         * Line2 = last names only (per requirements).
+         */
+        function getUnmatchedPairingRows() {
+            const players = Array.isArray(state.players) ? state.players : [];
+            const map = new Map(); // pairingId -> agg
+
+            players.forEach(p => {
+                const pairingId = String(p.dbPlayers_PairingID || p.pairingId || "").trim();
+                const flightId = String(p.dbPlayers_FlightID || p.flightId || "").trim();
+
+                if (!pairingId) return;                 // not paired into a group
+                if (pairingId === "000" || pairingId === "0") return; // EXCLUDE unpaired bucket group
+                if (flightId) return;                   // already in a match
+
+                const ph = Number(p.dbPlayers_PH ?? p.PH ?? p.ph ?? 0) || 0;
+
+                // Use the same last-name resolver you use in match model building
+                const last = getPlayerLastName(p);
+                const lastOnly = last ? last.toUpperCase() : "";
+
+                if (!map.has(pairingId)) {
+                    map.set(pairingId, { pairingId, count: 0, sumPH: 0, lastNames: [] });
+                }
+                const agg = map.get(pairingId);
+                agg.count += 1;
+                agg.sumPH += ph;
+                if (lastOnly) agg.lastNames.push(lastOnly);
+            });
+
+            const rows = Array.from(map.values()).map(r => {
+                const avgPH = r.count ? (r.sumPH / r.count) : 0;
+                const lastNames = (r.lastNames || []).join(", "); // last names only, comma separated
+                return { ...r, avgPH, lastNames };
+            });
+
+            // Stable numeric sort by pairingId descending (keeps your current “top-down” feel)
+            rows.sort((a, b) => Number(b.pairingId) - Number(a.pairingId));
+
+            return rows;
+        }
+
+        function makeEmptyPairingCard(id) {
+            return { id, title: `Group ${id}`, players: [], sumPH: 0, updatedAt: Date.now() };
+        }
+
+        function nextPairingId() {
+            const ids = (state.pairings || [])
+                .map(p => Number(String(p.id || "").replace(/\D+/g, "")))
+                .filter(n => Number.isFinite(n));
+            const maxId = ids.length ? Math.max(...ids) : 0;
+            return String(maxId + 1);
+        }
+        function generateFlightId() {
+            const used = new Set(
+                (state.players || [])
+                    .map(p => String(p.flightId || "").trim())
+                    .filter(Boolean)
+            );
+
+            let i = 1;
+            while (used.has(String(i))) i++;
+            return String(i);
+        }
+
+        function isMobileLayout() {
+            return window.matchMedia("(max-width: 520px)").matches;
+        }
+
+
+        function touchCard(pid) {
+            const c = (state.pairings || []).find(x => String(x.id) === String(pid));
+            if (c) c.updatedAt = Date.now();
+        }
+
+        function normalizeCardOrderForStacking() {
+            // newest at top (first in list)
+            const cards = Array.isArray(state.pairings) ? state.pairings : [];
+            cards.forEach(c => { if (!c.updatedAt) c.updatedAt = 0; });
+            cards.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+            state.pairings = cards;
+        }
+
+        function markPlayerDirty(playerId) {
+            const pl = (state.players || []).find(x => String(x.id) === String(playerId));
+            if (pl) pl.isDirty = true;
+        }
+
+        function getUnpairedRowsSortedFiltered() {
+            // Placeholder: treat players with pairingId "000" as unpaired (matches legacy pattern) 
+            const all = Array.isArray(state.players) ? state.players : [];
+            let rows = all.filter(p => p.pairingId === "000");
+
+            const q = String(state.unpairedQuery || "").trim().toLowerCase();
+            if (q) rows = rows.filter(p => String(p.name || p.dbPlayers_Name || "").toLowerCase().includes(q));
+
+            const sort = state.unpairedSort || "PH";
+            rows.sort((a, b) => {
+                const phA = Number(a.ph ?? a.dbPlayers_PH ?? 999);
+                const phB = Number(b.ph ?? b.dbPlayers_PH ?? 999);
+                const hiA = Number(a.hi ?? a.dbPlayers_HI ?? 999);
+                const hiB = Number(b.hi ?? b.dbPlayers_HI ?? 999);
+                const lnA = String(a.last ?? a.dbPlayers_LName ?? "");
+                const lnB = String(b.last ?? b.dbPlayers_LName ?? "");
+                const teeA = String(a.tee ?? a.dbPlayers_TeeSetName ?? "");
+                const teeB = String(b.tee ?? b.dbPlayers_TeeSetName ?? "");
+                if (sort === "PH") return phA - phB;
+                if (sort === "HI") return hiA - hiB;
+                if (sort === "Last") return lnA.localeCompare(lnB);
+                if (sort === "Tee") return teeA.localeCompare(teeB);
+                return 0;
+            });
+
+            // Normalize minimal display fields
+            return rows.map(p => ({
+                id: (p.id ?? p.dbPlayers_GHIN) ? String(p.id ?? p.dbPlayers_GHIN).trim() : "",
+                name: String(p.name || p.dbPlayers_Name || "").trim(),
+                tee: String(p.tee || p.dbPlayers_TeeSetName || ""),
+                ch: p.ch ?? p.dbPlayers_CH ?? p.dbPlayers_PH ?? null,
+                hi: p.hi ?? p.dbPlayers_HI ?? null,
+                cityState: "", // optional; depends on what Wix sends
+                flight: ""     // optional; depends on what Wix sends
+            }));
+        }
+
+        // ------------------------------------------------------------
+        // Event wiring
+        // ------------------------------------------------------------
+
+        function wirePairingCardEvents() {
+            document.querySelectorAll('[data-action="openPalette"]').forEach(btn => {
+                btn.addEventListener("click", () => {
+                    setStatus("", "");
+                    openDrawer(); // on desktop you still have right pane; this is helpful on mobile
+                });
+            });
+
+            // Edit → enter one-shot "Add to Card" mode
+            document.querySelectorAll('[data-action="editCard"]').forEach(btn => {
+                btn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    const card = e.target.closest('[data-pairing-id]');
+                    const pid = card ? card.getAttribute("data-pairing-id") : "";
+                    if (!pid) return;
+
+                    const alreadyTargeting =
+                        state.trayMode === "addToCard" && String(state.targetPairingId || "") === String(pid);
+
+                    if (alreadyTargeting) {
+                        // Toggle OFF (user mis-click recovery)
+                        state.trayMode = "addToGroup";
+                        state.targetPairingId = null;
+                        setStatus("Card unselected.", "success");
+                        render();
+                        return;
+                    }
+
+                    // Toggle ON
+                    state.trayMode = "addToCard";
+                    state.targetPairingId = pid;
+                    setStatus(`Targeting Group ${pid}. Select players, then "Add to Card".`, "warn");
+                    render();
+                    // MOBILE: immediately open tray so Edit is 1-tap
+                    if (isMobileLayout()) {
+                        state.activePanel = "pairingCanvas";
+                        openDrawer();
+                    }
+
+                });
+            });
+
+            // Unpair Group → dissolve (non-destructive; returns players to tray)
+            document.querySelectorAll('[data-action="unpairGroup"]').forEach(btn => {
+                btn.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    const card = e.target.closest('[data-pairing-id]');
+                    const pid = card ? card.getAttribute("data-pairing-id") : "";
+                    if (!pid) return;
+
+                    const cardObj = (state.pairings || []).find(x => String(x.id) === String(pid));
+                    if (cardObj) {
+                        (cardObj.players || []).forEach(p => {
+                            const pl = (state.players || []).find(x => String(x.id) === String(p.id));
+                            if (pl) {
+                                pl.pairingId = "000";
+                                pl.pairingPos = null;
+                                pl.flightId = "";
+                                pl.flightPos = "";
+                                pl.teeTime = "";
+                                pl.startHole = "";
+                                pl.startHoleSuffix = "";
+                                pl.isDirty = true;
+                            }
+                        });
+                    }
+
+                    // remove the card entirely
+                    state.pairings = (state.pairings || []).filter(x => String(x.id) !== String(pid));
+
+                    // if we were targeting this card, revert to safe default
+                    if (String(state.targetPairingId || "") === String(pid)) {
+                        state.trayMode = "addToGroup";
+                        state.targetPairingId = null;
+                    }
+
+                    //if (!state.pairings.length) state.pairings = [makeEmptyPairingCard("1")];
+                    //ensureOneEmptyCard();
+                    normalizeCardOrderForStacking();
+
+                    render();
+                    setStatus("Group unpaired. Click SAVE to apply changes.", "warn");
+                });
+            });
+
+            document.querySelectorAll('[data-action="removePlayer"]').forEach(btn => {
+                btn.addEventListener("click", (e) => {
+                    e.stopPropagation(); // required: icon buttons must not trigger card tap
+                    const line = e.target.closest(".subPanelCardRow");
+                    const pid = line?.getAttribute("data-pairing-id") || "";
+                    const playerId = line?.getAttribute("data-player-id") || "";
+                    // stub remove
+                    const g = (state.pairings || []).find(x => String(x.id) === String(pid));
+                    if (g) {
+                        // canonical update: set player back to unpaired
+                        const pl = (state.players || []).find(x => String(x.id) === String(playerId));
+                        if (pl) {
+                            pl.pairingId = "000";
+                            pl.pairingPos = null;
+                            pl.flightId = "";
+                            pl.flightPos = "";
+                            pl.teeTime = "";
+                            pl.startHole = "";
+                            pl.startHoleSuffix = "";
+                            pl.isDirty = true;
+                        }
+
+                        g.players = (g.players || []).filter(p => String(p.id) !== String(playerId));
+                        g.sumPH = (g.players || []).reduce((s, x) => s + (x.ch ?? x.ph ?? 0), 0);
+                    }
+                    touchCard(pid);
+                    //ensureOneEmptyCard();
+                    normalizeCardOrderForStacking();
+                    render();
+                    setStatus("Player removed from group.", "");
+                });
+            });
+
+            // tap player line → (future) action menu for move/reassign (no modal now)
+            document.querySelectorAll(".subPanelCardRow.rowTap").forEach(row => {
+                row.addEventListener("click", () => {
+                    // placeholder
+                    //setStatus("Player action menu coming next (move/reassign).", "warn");
+                });
+            });
+        }
+
+        function wireUnpairedPaletteEvents(container) {
+            const btnTrayClose = container.querySelector("#btnTrayClose");
+            if (btnTrayClose) {
+                btnTrayClose.addEventListener("click", () => closeDrawer());
+            }
+            /*
+            const chips = container.querySelectorAll("#unpairedSortChips .chip");
+            chips.forEach(chip => chip.addEventListener("click", () => {
+                state.unpairedSort = chip.getAttribute("data-sort") || "PH";
+                render();
+            }));
+            */
+            const chips = container.querySelectorAll("#unpairedSortChips .chip");
+            chips.forEach(chip => chip.addEventListener("click", () => {
+                state.unpairedSort = chip.getAttribute("data-sort") || "PH";
+
+                // keep the UI in sync without relying on a full render()
+                chips.forEach(c => c.classList.toggle("active", c === chip));
+
+                // re-render ONLY the tray list + footer inside this container (works in mobile drawer + desktop tray)
+                renderUnpairedList(container);
+                updateSubPanelFooter(container);
+                updateAssignButtonState(container);
+            }));
+
+            const txt = container.querySelector("#txtUnpairedSearch");
+            if (txt) {
+                txt.addEventListener("input", () => {
+                    state.unpairedQuery = txt.value || "";
+                    renderUnpairedList(container);
+                    updateSubPanelFooter(container);
+                    updateAssignButtonState(container);
+                });
+            }
+
+            const btnClearSearch = container.querySelector("#btnClearSearch");
+            if (btnClearSearch && txt) {
+                btnClearSearch.addEventListener("click", () => {
+                    state.unpairedQuery = "";
+                    txt.value = "";
+                    renderUnpairedList(container);
+                    updateSubPanelFooter(container);
+                    updateAssignButtonState(container);
+                    txt.focus();
+                });
+            }
+
+            // --- delegated row click (survives renderUnpairedList because host stays constant) ---
+            const host = container.querySelector("#unpairedListHost");
+            if (host && !host.dataset.wiredClicks) {
+                host.dataset.wiredClicks = "1";
+
+                host.addEventListener("click", (e) => {
+                    const row = e.target.closest(".subPanelRow.rowTap");
+                    if (!row || !host.contains(row)) return;
+
+                    const id = row.getAttribute("data-player-id");
+                    if (!id) return;
+
+                    if (state.selectedUnpairedIDs.has(id)) {
+                        state.selectedUnpairedIDs.delete(id);
+                        row.classList.remove("selected");
+                    } else {
+                        state.selectedUnpairedIDs.add(id);
+                        row.classList.add("selected");
+                    }
+
+                    updateSubPanelFooter(container);
+                    updateAssignButtonState(container);
+                });
+            }
+
+            const btnClear = container.querySelector("#btnClearSelected");
+            if (btnClear) btnClear.addEventListener("click", () => {
+                // clear state
+                state.selectedUnpairedIDs.clear();
+
+                // clear DOM selection (UI is driven by .selected class)
+                container.querySelectorAll("#unpairedListHost .subPanelRow.selected").forEach(row => {
+                    row.classList.remove("selected");
+                });
+
+                updateSubPanelFooter(container);
+                updateAssignButtonState(container);
+            });
+
+
+
+            const btnAdd = container.querySelector("#btnAssign");
+            if (btnAdd) btnAdd.addEventListener("click", () => {
+                const ids = Array.from(state.selectedUnpairedIDs);
+                if (!ids.length) { updateAssignButtonState(container); return; }
+
+                // Build lookup from canonical players list
+                const lookup = new Map((state.players || []).map(p => [String(p.id), p]));
+
+                // Decide target card based on Mode
+                let target = null;
+
+                if (state.trayMode === "addToCard" && state.targetPairingId) {
+                    target = (state.pairings || []).find(x => String(x.id) === String(state.targetPairingId));
+                    if (!target) {
+                        setStatus("Target group not found. Reverting to Add to Group.", "warn");
+                        state.trayMode = "addToGroup";
+                        state.targetPairingId = null;
+                        render();
+                        return;
+                    }
+                } else {
+                    // Create a NEW group from selection (Phase-2 rule)
+                    const newId = nextPairingId();
+                    target = makeEmptyPairingCard(newId);
+                    (state.pairings || []).push(target);
+                }
+
+                target.players = target.players || [];
+
+                // Add unpaired player to existing card.  
+                // New player inherits pair/match/schedule fields from player-1 in the group
+                ids.forEach(id => {
+                    const p = lookup.get(String(id));
+                    if (!p) return;
+
+                    // max 4 rule
+                    if (target.players.length >= 4) return;
+
+                    // skip if already there
+                    if (target.players.some(x => String(x.id) === String(p.id))) return;
+
+                    // Move player from unpaired → target card by updating canonical record
+                    p.pairingId = String(target.id);
+                    p.pairingPos = null; // set on Save (Phase-4)
+                    const anchor = (target.players && target.players.length) ? target.players[0] : null;
+                    if (anchor) {
+                        p.teeTime = anchor.teeTime ?? "";
+                        p.startHole = anchor.startHole ?? "";
+                        p.startHoleSuffix = anchor.startHoleSuffix ?? "";
+                        p.flightId = anchor.flightId ?? "";
+                        p.flightPos = anchor.flightPos ?? "";
+                    }
+                    p.isDirty = true;
+
+                    target.players.push(p);
+                });
+
+                target.sumPH = target.players.reduce((s, x) => s + (x.ch ?? x.ph ?? 0), 0);
+                touchCard(target.id);
+
+                // clear selection after add
+                state.selectedUnpairedIDs.clear();
+
+                // One-shot targeting rule: revert after adding to card
+                if (state.trayMode === "addToCard") {
+                    state.trayMode = "addToGroup";
+                    state.targetPairingId = null;
+                }
+
+                //ensureOneEmptyCard();
+                normalizeCardOrderForStacking();
+
+                updateAssignButtonState(container);
+                render();
+                setStatus("Pairings updated. Click SAVE to apply changes.", "");
+                if (isMobileLayout()) closeDrawer();
+            });
+
+
+        }
+
+        // ------------------------------------------------------------
+        // AutoPair stubs (we will port iOS VM next)
+        // ------------------------------------------------------------
+        function runAutoPairPreview() {
+            // placeholder: do not implement Wix logic
+            state.autoPairPreview = { note: "AutoPair preview will come from iOS VM logic." };
+            render();
+            setStatus("AutoPair preview generated (stub).", "warn");
+        }
+
+        function applyAutoPair() {
+            // placeholder: will apply preview into state.pairings
+            setStatus("Apply AutoPair (stub).", "warn");
+        }
+
+        // ------------------------------------------------------------
+        // Wix ↔ HTML messaging
+        // ------------------------------------------------------------
+        window.addEventListener("message", (event) => {
+            const { type, payload } = normalizeMsg(event.data);
+            if (!type) return;
+
+            if (type === "STATUS") {
+                const text = payload.message || payload.text || "";
+                const level = payload.level || payload.color || "";
+                setStatus(text, level);
+                return;
+            }
+
+            if (type === "INIT") {
+                const env = payload || {};
+                state.game = env.game || null;
+                const gp = env.gamePlayers || [];
+                state.players = gp.map(p => ({
+                    // identity (GHIN is the unique key inside this game)
+                    id: p.playerGHIN,
+                    ggid: p.ggid,
+                    ghin: p.playerGHIN,
+                    name: p.displayName,
+                    last: p.lastName,
+                    tee: p.teeSetName,
+                    hi: p.hi,
+                    ch: p.ch,
+                    ph: p.ph,
+                    so: p.so,
+                    pairingId: p.pairingId || "000",
+                    pairingPos: p.pairingPos ?? null,
+                    teeTime: p.teeTime ?? "",
+                    startHole: p.startHole ?? "",
+                    startHoleSuffix: p.startHoleSuffix ?? "",
+                    flightId: p.flightId ?? "",
+                    flightPos: p.flightPos ?? "",
+                    isDirty: false
+                }));
+
+                // Build pairing cards from players who are already paired (pairingId != "000")
+                const byPairing = new Map();
+                state.players.forEach(pl => {
+                    if (pl.pairingId === "000") return;
+
+                    if (!byPairing.has(pl.pairingId)) {
+                        byPairing.set(pl.pairingId, makeEmptyPairingCard(pl.pairingId));
+                    }
+                    byPairing.get(pl.pairingId).players.push(pl);
+                });
+
+                state.pairings = Array.from(byPairing.values());
+
+                // keep deterministic order and meta
+                state.pairings.sort((a, b) => String(a.id).localeCompare(String(b.id), undefined, { numeric: true }));
+                state.pairings.forEach(c => {
+                    // prefer pairingPos if present
+                    c.players.sort((a, b) => (a.pairingPos ?? 99) - (b.pairingPos ?? 99));
+                    c.sumPH = c.players.reduce((s, x) => s + (x.ch ?? x.ph ?? 0), 0);
+                    c.flightId = c.players.find(x => x.flightId)?.flightId || "";
+                });
+
+                //if (!state.pairings.length) state.pairings = [makeEmptyPairingCard("1")];
+
+                // reset palette selection
+                state.selectedUnpairedIDs.clear();
+                state.unpairedQuery = "";
+                state.unpairedSort = "PH";
+
+                setActivePanel("pairingCanvas");
+                setStatus("Ready", "success");
+                render();
+                return;
+            }
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+            // panel chips
+            document.getElementById("chipPairingCanvas").addEventListener("click", () => setActivePanel("pairingCanvas"));
+            document.getElementById("chipMatchCanvas").addEventListener("click", () => setActivePanel("matchCanvas"));
+            document.getElementById("chipAutoPair").addEventListener("click", () => setActivePanel("autoPair"));
+
+            // drawer buttons (mobile right-pane headers)
+            const btnPairingsHdr = document.getElementById("btnPairingsRightHdrAction");
+            if (btnPairingsHdr) btnPairingsHdr.addEventListener("click", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                state.activePanel = "pairingCanvas";
+                if (state.trayMode === "addToCard" && state.targetPairingId) {
+                    openDrawer();
+                    return;
+                }
+                // Pairings header ACTION: open Unpaired Players drawer in "new group" mode
+                state.trayMode = "addToGroup";
+                state.targetPairingId = null;
+                openDrawer();
+            });
+
+            const btnMatchesHdr = document.getElementById("btnMatchesRightHdrAction");
+            if (btnMatchesHdr) btnMatchesHdr.addEventListener("click", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                state.activePanel = "matchCanvas";
+
+                if (state.trayMode === "addToMatch" && state.targetFlightId) {
+                    openDrawer();
+                    return;
+                }
+                // Matches header ACTION: open Unmatched Pairings drawer in "new match" mode
+                state.trayMode = "addToMatch";
+                state.targetFlightId = null;
+                openDrawer();
+            });
+
+
+            document.getElementById("btnCloseDrawer").addEventListener("click", closeDrawer);
+
+            // autopair
+            document.getElementById("btnRunAutoPair").addEventListener("click", runAutoPairPreview);
+            document.getElementById("btnApplyAutoPair").addEventListener("click", applyAutoPair);
+
+            document.getElementById("btnHdrSettings").addEventListener("click", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openActionsMenu(e.currentTarget);
+            });
+
+            // save button → send patch to Wix (dirty records only)
+            document.getElementById("btnHdrSave").addEventListener("click", () => {
+                // 1) If nothing dirty, do nothing (your preferred design)
+                const dirty = (state.players || []).filter(p => p.isDirty === true);
+                if (dirty.length === 0) {
+                    setStatus("No changes to save.", "");
+                    return;
+                }
+
+                // 2) Build a quick lookup of "current pairing state" from the cards
+                const current = new Map(); // key = GHIN (p.id), value = { pairingId, pairingPos }
+                (state.pairings || []).forEach(card => {
+                    const pairingId = String(card.id);
+                    (card.players || []).forEach((p, idx) => {
+                        current.set(String(p.id), { pairingId, pairingPos: idx + 1 });
+                    });
+                });
+
+                // 3) Build assignments ONLY for dirty players
+                const assignments = dirty.map(p => {
+                    const key = String(p.id);
+                    const c = current.get(key);
+
+                    // If player is in a card, use that pairing; otherwise unpaired
+                    const pairingId = c ? c.pairingId : "000";
+                    const pairingPos = c ? c.pairingPos : null;
+
+                    return {
+                        playerGHIN: key,
+                        pairingId,
+                        pairingPos,
+                        flightId: p.flightId ?? "",
+                        flightPos: p.flightPos ?? "",
+                        teeTime: p.teeTime ?? "",
+                        startHole: p.startHole ?? "",
+                        startHoleSuffix: p.startHoleSuffix ?? "",
+                        isDirty: true
+                    };
+                });
+
+                postToWix({
+                    type: "SAVE_PAIRINGS",
+                    payload: {
+                        ggid: state.game?.ggid || "",
+                        assignments,
+                        matches: [] // matchCanvas later
+                    }
+                });
+
+                setStatus(`Saving ${assignments.length} change(s)…`, "warn");
+            });
+
+            function measureChrome() {
+                const hdr = document.querySelector(".stickyHeader");
+                const chips = document.getElementById("panelChips");
+                const chipsStyle = chips ? getComputedStyle(chips) : null;
+
+                const hdrH = hdr ? hdr.offsetHeight : 0;
+                const chipsH = chips ? chips.offsetHeight : 0;
+                const chipsMB = chipsStyle ? parseFloat(chipsStyle.marginBottom || "0") : 0;
+
+                const chromeHeight = hdrH + chipsH + chipsMB;
+                document.documentElement.style.setProperty("--chromeHeight", `${Math.ceil(chromeHeight)}px`);
+                //const chromeHeight = hdrH;
+                //document.documentElement.style.setProperty("--chromeHeight", chromeHeight + "px");
+                //const chromeHeight = hdrH + chipsH + chipsMB + (parseFloat(getComputedStyle(document.querySelector(".mobileFrame")).paddingTop || "0"));
+                //document.documentElement.style.setProperty("--chromeHeight", `${Math.ceil(chromeHeight)}px`);
+            }
+
+            measureChrome();
+            window.addEventListener("resize", measureChrome);
+            closeDrawer()
+
+
+            // boot handshake: HTML → Wix
+            postToWix({ type: "READY" });
+            render();
+        });
+    </script>
+
+</body>
+
+</html>

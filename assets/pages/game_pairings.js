@@ -200,6 +200,31 @@
     return out;
   }
 
+  // ---- Actions Menu ----
+  function onResetPairings() {
+    setStatus("Reset Pairings: Not implemented yet.", "info");
+  }
+
+  function onRecalcHandicaps() {
+    setStatus("Recalculate Handicaps: Not implemented yet.", "info");
+  }
+
+  function onAutoPair() {
+    setStatus("AutoPair: Not implemented yet.", "info");
+  }
+
+  function openActionsMenu() {
+    if (!MA.ui || !MA.ui.openActionsMenu) return;
+    
+    const items = [
+      { label: "AutoPair", action: onAutoPair },
+      { label: "Recalculate Handicaps", action: onRecalcHandicaps },
+      { separator: true },
+      { label: "Reset Pairings", action: onResetPairings, danger: true }
+    ];
+    MA.ui.openActionsMenu("Actions", items);
+  }
+
   // ---- Chrome ----
   function applyChrome() {
     const g = state.game || {};
@@ -211,7 +236,7 @@
 
     if (chrome && typeof chrome.setActions === "function") {
       chrome.setActions({
-        left: { show: true, label: "Back", onClick: onBack },
+        left: { show: true, label: "Actions", onClick: openActionsMenu },
         right: { show: true, label: "Save", onClick: doSave }
       });
     }
