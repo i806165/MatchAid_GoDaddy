@@ -647,7 +647,10 @@
   }
 
   function assignSelectedPlayerToPairing() {
-    if (state.selectedPlayerGHINs.size === 0) return setStatus("Select unpaired players first.", "warn");
+    if (state.selectedPlayerGHINs.size === 0) {
+      if (isMobile()) return openDrawer();
+      return setStatus("Select unpaired players first.", "warn");
+    }
     
     let pid = state.targetPairingId;
     let isNew = false;
@@ -782,7 +785,10 @@
 
   function assignSelectedPairingToFlight() {
     if (!isPairPair()) return;
-    if (state.selectedPairingIds.size === 0) return setStatus("Select unmatched pairings first.", "warn");
+    if (state.selectedPairingIds.size === 0) {
+      if (isMobile()) return openDrawer();
+      return setStatus("Select unmatched pairings first.", "warn");
+    }
     
     let fid = state.targetFlightId;
     let fp = state.targetFlightPos;
