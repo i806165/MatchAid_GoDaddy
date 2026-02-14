@@ -647,10 +647,7 @@
   }
 
   function assignSelectedPlayerToPairing() {
-    if (state.selectedPlayerGHINs.size === 0) {
-      if (isMobile()) return openDrawer();
-      return setStatus("Select unpaired players first.", "warn");
-    }
+    if (state.selectedPlayerGHINs.size === 0) return setStatus("Select unpaired players first.", "warn");
     
     let pid = state.targetPairingId;
     let isNew = false;
@@ -785,10 +782,7 @@
 
   function assignSelectedPairingToFlight() {
     if (!isPairPair()) return;
-    if (state.selectedPairingIds.size === 0) {
-      if (isMobile()) return openDrawer();
-      return setStatus("Select unmatched pairings first.", "warn");
-    }
+    if (state.selectedPairingIds.size === 0) return setStatus("Select unmatched pairings first.", "warn");
     
     let fid = state.targetFlightId;
     let fp = state.targetFlightPos;
@@ -1011,6 +1005,18 @@
 
     if (el.drawerSearch) {
       el.drawerSearch.addEventListener("input", () => {
+        if (el.drawerSearchClear) el.drawerSearchClear.classList.toggle("isHidden", !el.drawerSearch.value);
+        if (state.activeTab === "pair") renderUnpairedList({ intoDrawer: true });
+        else renderUnmatchedList({ intoDrawer: true });
+      });
+    }
+    if (el.drawerSearchClear) {
+      el.drawerSearchClear.addEventListener("click", () => {
+        if (el.drawerSearch) {
+          el.drawerSearch.value = "";
+          el.drawerSearch.focus();
+        }
+        el.drawerSearchClear.classList.add("isHidden");
         if (state.activeTab === "pair") renderUnpairedList({ intoDrawer: true });
         else renderUnmatchedList({ intoDrawer: true });
       });
