@@ -53,6 +53,7 @@
           <div class="gpPanelHdr">
             <div class="gpPanelHdr__title">Pairings</div>
             <div class="gpPanelHdr__actions">
+              <button class="maBtn maBtn--sm gpMobileAddBtn" type="button" id="gpBtnTrayPair">Add Pairing</button>
             </div>
           </div>
         </header>
@@ -114,6 +115,7 @@
           <div class="gpPanelHdr">
             <div class="gpPanelHdr__title">Matches (Flights)</div>
             <div class="gpPanelHdr__actions">
+              <button class="maBtn maBtn--sm gpMobileAddBtn" type="button" id="gpBtnTrayMatch">Add Match</button>
             </div>
           </div>
         </header>
@@ -142,9 +144,12 @@
   <section class="maDrawer" role="dialog" aria-modal="true" aria-label="Tray">
     <header class="maPanel__hdr">
       <div class="gpPanelHdr">
+        <div class="gpPanelHdr__left">
+          <button class="maBtn maBtn--ghost" type="button" id="gpBtnCloseDrawer">Close</button>
+        </div>
         <div class="gpPanelHdr__title" id="gpDrawerTitle">Tray</div>
         <div class="gpPanelHdr__actions">
-          <button class="maBtn maBtn--ghost" type="button" id="gpBtnCloseDrawer">Close</button>
+          <button class="maBtn maBtn--ghost" type="button" id="gpBtnDrawerAssign">Assign</button>
         </div>
       </div>
     </header>
@@ -158,14 +163,5 @@
     <div class="maPanel__body">
       <div class="maListRows" id="gpDrawerList"></div>
     </div>
-    <footer class="maPanel__ftr">
-      <div class="gpFooter">
-        <div class="gpFooter__left" id="gpDrawerFooterLeft"></div>
-        <div class="gpFooter__right">
-          <button class="maBtn maBtn--ghost" type="button" id="gpBtnDrawerClear">Clear</button>
-          <button class="maBtn maBtn--sm" type="button" id="gpBtnDrawerAssign">Assign</button>
-        </div>
-      </div>
-    </footer>
   </section>
 </div>

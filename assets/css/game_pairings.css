@@ -48,8 +48,8 @@
   flex: 1 1 auto;
 }
 
-/* Hide tray button on desktop */
-#gpBtnTray {
+/* Hide mobile add buttons on desktop */
+.gpMobileAddBtn {
   display: none;
 }
 
@@ -251,8 +251,7 @@
 
 /* Assign Button: White bg, Green outline/text */
 #gpBtnAssignToPairing,
-#gpBtnAssignToFlight,
-#gpBtnDrawerAssign {
+#gpBtnAssignToFlight {
   background: #ffffff;
   color: var(--brandSecondary);
   border: 1px solid var(--brandSecondary);
@@ -260,8 +259,7 @@
   border-radius: 999px;
 }
 #gpBtnAssignToPairing:hover,
-#gpBtnAssignToFlight:hover,
-#gpBtnDrawerAssign:hover {
+#gpBtnAssignToFlight:hover {
   background: #f0fdf4;
 }
 
@@ -404,8 +402,14 @@
   .gpTrayPanel{
     display: none;
   }
-  /* Show tray button on mobile */
-  #gpBtnTray {
+  /* Show mobile add buttons */
+  .gpMobileAddBtn {
     display: inline-flex;
+  }
+  
+  /* Center drawer title */
+  #gpDrawerTitle {
+    flex: 1;
+    text-align: center;
   }
 }

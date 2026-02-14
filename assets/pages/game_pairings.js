@@ -40,7 +40,8 @@
     hintMatch: document.getElementById("gpHintMatch"),
     btnAssignToFlight: document.getElementById("gpBtnAssignToFlight"),
     // Drawer
-    btnTray: document.getElementById("gpBtnTray"),
+    btnTrayPair: document.getElementById("gpBtnTrayPair"),
+    btnTrayMatch: document.getElementById("gpBtnTrayMatch"),
     drawerOverlay: document.getElementById("gpDrawerOverlay"),
     drawerTitle: document.getElementById("gpDrawerTitle"),
     drawerSearch: document.getElementById("gpDrawerSearch"),
@@ -48,7 +49,6 @@
     drawerMasterCheck: document.getElementById("gpDrawerMasterCheck"),
     drawerList: document.getElementById("gpDrawerList"),
     btnCloseDrawer: document.getElementById("gpBtnCloseDrawer"),
-    btnDrawerClear: document.getElementById("gpBtnDrawerClear"),
     btnDrawerAssign: document.getElementById("gpBtnDrawerAssign"),
   };
 
@@ -958,7 +958,8 @@
       });
     }
 
-    if (el.btnTray) el.btnTray.addEventListener("click", openDrawer);
+    if (el.btnTrayPair) el.btnTrayPair.addEventListener("click", openDrawer);
+    if (el.btnTrayMatch) el.btnTrayMatch.addEventListener("click", openDrawer);
     if (el.btnCloseDrawer) el.btnCloseDrawer.addEventListener("click", closeDrawer);
     if (el.drawerOverlay) {
       el.drawerOverlay.addEventListener("click", (e) => {
@@ -966,17 +967,6 @@
       });
     }
 
-    if (el.btnDrawerClear) {
-      el.btnDrawerClear.addEventListener("click", () => {
-        if (state.activeTab === "pair") {
-          state.selectedPlayerGHIN = "";
-          renderUnpairedList({ intoDrawer: true });
-        } else {
-          state.selectedPairingId = "";
-          renderUnmatchedList({ intoDrawer: true });
-        }
-      });
-    }
     if (el.btnDrawerAssign) {
       el.btnDrawerAssign.addEventListener("click", () => {
         // Dispatch to correct handler based on active tab

@@ -94,9 +94,6 @@ $maChromeLogoUrl = null;
       </div>
 
       <div class="gpControls__spacer" style="display:none;"></div>
-
-      <!-- Mobile tray toggle (opens drawer) -->
-      <button class="maBtn maBtn--ghost" type="button" id="gpBtnTray">Tray</button>
     </div>
   </div>
 
