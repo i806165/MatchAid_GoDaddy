@@ -126,12 +126,15 @@ function be_recalculateGameHandicaps(string $parmGGID, string $parmPlayerGHIN, a
                     $txtTeeSetName = "ReSelect Tee";
                 }
 
+                // Calculate Baseline PH (Pass-A)
+                $valPH = (int)round($valCH * ((float)$varAllowance / 100.0));
+
                 // 3) Update record by (GGID, PlayerGHIN)
                 $repo->updateHandicapFields($ggid, $txtGHIN, [
                     "dbPlayers_TeeSetName" => $txtTeeSetName,
                     "dbPlayers_HI" => $txtPlayerHI,
                     "dbPlayers_CH" => (string)$valCH,
-                    "dbPlayers_PH" => (string)$valCH, // placeholder until PH/SO overwrites
+                    "dbPlayers_PH" => (string)$valPH,
                     "dbPlayers_SO" => "0",
                 ]);
 

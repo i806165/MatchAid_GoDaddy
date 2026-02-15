@@ -52,13 +52,18 @@ try {
 
   $existing = ServiceDbPlayers::getPlayerByGGIDGHIN($ggid, $ghin);
 
+  // Calculate Baseline PH (Pass-A logic: PH = CH * Allowance)
+  $ch = (int)($tee["playerCH"] ?? 0);
+  $allowance = (float)($game["dbGames_Allowance"] ?? 100);
+  $ph = (int)round($ch * ($allowance / 100.0));
+
   $fields = [
     "dbPlayers_Name" => trim(($first . " " . $last)),
     "dbPlayers_LName" => $last,
     "dbPlayers_LocalID" => (string)($player["local_number"] ?? ""),
     "dbPlayers_HI" => $effectiveHI,
-    "dbPlayers_CH" => (string)($tee["playerCH"] ?? "0"),
-    "dbPlayers_PH" => (string)($tee["playerCH"] ?? "0"), // deferred bulk PH/SO
+    "dbPlayers_CH" => (string)$ch,
+    "dbPlayers_PH" => (string)$ph,
     "dbPlayers_SO" => "0",
     "dbPlayers_CourseID" => (string)($game["dbGames_CourseID"] ?? ""),
     "dbPlayers_TeeSetID" => (string)($tee["teeSetID"] ?? ""),

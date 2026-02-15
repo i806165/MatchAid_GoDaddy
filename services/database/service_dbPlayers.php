@@ -34,6 +34,13 @@ final class ServiceDbPlayers
     return is_array($row) ? $row : null;
   }
 
+  public static function upsertPlayer(array $row): array
+  {
+    $ggid = (string)($row["dbPlayers_GGID"] ?? "");
+    $ghin = (string)($row["dbPlayers_PlayerGHIN"] ?? "");
+    return ($ggid !== "" && $ghin !== "") ? self::upsertGamePlayer($ggid, $ghin, $row) : [];
+  }
+
   public static function upsertGamePlayer(string $ggid, string $playerGHIN, array $fields): array
   {
     $existing = self::getPlayerByGGIDGHIN($ggid, $playerGHIN);
