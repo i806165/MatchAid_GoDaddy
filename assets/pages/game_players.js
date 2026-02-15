@@ -2,6 +2,7 @@
   "use strict";
   const MA = window.MA || {};
   const init = window.__MA_INIT__ || {};
+  const apiGHIN = MA.paths?.apiGHIN || "/api/GHIN";
 
   const state = {
     activeTab: "roster",
@@ -506,14 +507,35 @@
 
   async function commitPending(){
     if (!state.pendingPlayer || !state.selectedTee) return;
+
+    // Trigger-2 Check: Is this an existing player in a pairing?
+    const ghin = safe(state.pendingPlayer.ghin);
+    const existing = state.players.find(p => safe(p.dbPlayers_PlayerGHIN) === ghin);
+    let wasPaired = false;
+    if (existing) {
+      const comp = state.game?.dbGames_Competition || "PairField";
+      const pid = safe(existing.dbPlayers_PairingID || "000");
+      const fid = safe(existing.dbPlayers_FlightID || "");
+      wasPaired = (comp === "PairPair") ? (pid !== "000" && fid !== "" && fid !== "0") : (pid !== "000");
+    }
+
     const res = await MA.postJson(MA.paths.gamePlayersUpsert, { player: state.pendingPlayer, selectedTee: state.selectedTee });
     if (!res?.ok) {
       MA.setStatus(res?.message || "Unable to save player", "danger");
       return;
     }
     closeTeeModal();
-    if (safe(state.pendingPlayer.ghin).startsWith("NH")) MA.ghinSearch.close && MA.ghinSearch.close();
+    if (ghin.startsWith("NH")) MA.ghinSearch.close && MA.ghinSearch.close();
     state.pendingPlayer = null;
+
+    // Trigger-2 Action: Recalc PH/SO if paired
+    if (wasPaired) {
+      MA.setStatus("Calculating shots off...", "info");
+      try {
+        await MA.postJson(`${apiGHIN}/calcPHSO.php`, { action: "player", id: ghin });
+      } catch (e) { console.error(e); }
+    }
+
     await refreshPlayers();
     await refreshFavorites();
     renderBody();
@@ -523,8 +545,36 @@
   async function onDeleteRow(e){
     const ghin = e.currentTarget.closest(".gpRow")?.getAttribute("data-ghin");
     if (!ghin) return;
+
+    // Trigger-2 Check: Was player paired?
+    const p = state.players.find(x => safe(x.dbPlayers_PlayerGHIN) === safe(ghin));
+    let wasPaired = false;
+    let pid = "000";
+    let fid = "";
+    let comp = "PairField";
+
+    if (p) {
+      comp = state.game?.dbGames_Competition || "PairField";
+      pid = safe(p.dbPlayers_PairingID || "000");
+      fid = safe(p.dbPlayers_FlightID || "");
+      wasPaired = (comp === "PairPair") ? (pid !== "000" && fid !== "" && fid !== "0") : (pid !== "000");
+    }
+
     const res = await MA.postJson(MA.paths.gamePlayersDelete, { playerGHIN: ghin });
     if (!res?.ok) return MA.setStatus("Unable to delete player", "danger");
+
+    // Trigger-2 Action: Recalc group
+    if (wasPaired) {
+      MA.setStatus("Calculating shots off...", "info");
+      try {
+        if (comp === "PairPair") {
+          await MA.postJson(`${apiGHIN}/calcPHSO.php`, { action: "flight", id: fid });
+        } else {
+          await MA.postJson(`${apiGHIN}/calcPHSO.php`, { action: "pairing", id: pid });
+        }
+      } catch (e) { console.error(e); }
+    }
+
     await refreshPlayers();
     await refreshFavorites();
     renderBody();
