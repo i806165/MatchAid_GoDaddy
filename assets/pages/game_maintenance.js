@@ -97,6 +97,7 @@
     state.dirty = !!on;
     if (state.dirty) setStatus("Unsaved changes.", "warn");
     else setStatus("", "");
+    applyChrome();
   }
 
   function isoToParts(iso) {
@@ -173,6 +174,13 @@
     syncActionDisabled();
   }
 
+  function openActionsMenu() {
+    if (!MA.ui || !MA.ui.openActionsMenu) return;
+    MA.ui.openActionsMenu("Actions", [
+      { label: "Game Settings", action: "settings" }
+    ]);
+  }
+
 function applyChrome() {
   if (chrome && typeof chrome.setHeaderLines === "function") {
     const modeText = (state.mode === "add") ? "Add Game" : "Edit Game";
@@ -180,8 +188,11 @@ function applyChrome() {
   }
 
   if (chrome && typeof chrome.setActions === "function") {
+    const isTransactional = (state.mode === "add" || state.dirty);
     chrome.setActions({
-      left:  { show: true, label: "Back", onClick: onBack },
+      left: isTransactional 
+        ? { show: true, label: "Cancel", onClick: onBack }
+        : { show: true, label: "Actions", onClick: openActionsMenu },
       right: { show: true, label: "Save", onClick: () => doSave() }
     });
     syncActionDisabled();
@@ -232,8 +243,9 @@ function applyChrome() {
     // shared chrome.setActions may not implement disabled; enforce via DOM
     const rightBtn = document.getElementById("chromeBtnRight");
     if (rightBtn) {
-      rightBtn.disabled = !!state.busy;
-      rightBtn.classList.toggle("is-disabled", !!state.busy);
+      const disabled = !!state.busy || !state.dirty;
+      rightBtn.disabled = disabled;
+      rightBtn.classList.toggle("is-disabled", disabled);
     }
   }
 
