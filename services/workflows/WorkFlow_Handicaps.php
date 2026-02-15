@@ -166,9 +166,9 @@ function be_recalculateGameHandicaps(string $parmGGID, string $parmPlayerGHIN, a
 
 /**
  * Port of Wix:
- * export async function be_calculateGamePHSO(parmType, parmData, parmGameData, parmToken)
+ * export async function be_calculateGamePHSO(action, id, parmGameData, parmToken)
  */
-function be_calculateGamePHSO(string $parmType, $parmData, array $parmGameData, string $parmToken): array
+function be_calculateGamePHSO(string $action, ?string $id, array $parmGameData, string $parmToken): array
 {
     $cfg = require __DIR__ . "/../config.php";
     $pdo = Db::pdo($cfg["db"]);
@@ -192,11 +192,45 @@ function be_calculateGamePHSO(string $parmType, $parmData, array $parmGameData, 
         ];
     }
 
-    // 1) Acquire players
-    if ($parmType === "players") {
-        $players = is_array($parmData) ? $parmData : [];
-    } else {
-        $players = $repo->listByGame($txtGGID);
+    // 1) Acquire players based on Action/Scope
+    // Actions: "all" (or "game"), "player", "pairing", "flight"
+    $allPlayers = $repo->listByGame($txtGGID);
+    $players = [];
+
+    if ($action === "all" || $action === "game") {
+        $players = $allPlayers;
+    } 
+    elseif ($action === "player" && $id) {
+        // Smart Scope: Find player's group based on competition type
+        $target = null;
+        foreach ($allPlayers as $p) {
+            if (($p["dbPlayers_PlayerGHIN"] ?? "") === $id) { $target = $p; break; }
+        }
+        if ($target) {
+            if ($txtCompetition === "PairPair") {
+                $fid = (string)($target["dbPlayers_FlightID"] ?? "");
+                if ($fid !== "" && $fid !== "0") {
+                    $players = array_filter($allPlayers, fn($p) => ((string)($p["dbPlayers_FlightID"] ?? "") === $fid));
+                }
+            } else {
+                // PairField (or others) use PairingID
+                $pid = (string)($target["dbPlayers_PairingID"] ?? "");
+                if ($pid !== "" && $pid !== "000") {
+                    $players = array_filter($allPlayers, fn($p) => ((string)($p["dbPlayers_PairingID"] ?? "") === $pid));
+                }
+            }
+        }
+    }
+    elseif ($action === "pairing" && $id) {
+        $players = array_filter($allPlayers, fn($p) => ((string)($p["dbPlayers_PairingID"] ?? "") === $id));
+    }
+    elseif ($action === "flight" && $id) {
+        $players = array_filter($allPlayers, fn($p) => ((string)($p["dbPlayers_FlightID"] ?? "") === $id));
+    }
+
+    // If scoped lookup found nothing (e.g. player not in a group), return early
+    if (empty($players)) {
+        return ["status" => "ok", "message" => "No players in scope.", "updated" => 0];
     }
 
     // 2) Eligible: tee set must be valid

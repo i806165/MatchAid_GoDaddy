@@ -12,19 +12,20 @@ require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_SERVICES . "/workflows/WorkFlow_Handicaps.php";
 
 $auth = ma_api_require_auth();
+$in = ma_json_in();
+$payload = $in['payload'] ?? $in;
 
 try {
   $gc = ServiceContextGame::getGameContext();
   $game = $gc["game"];
   $ggid = (string)($gc["ggid"] ?? "");
 
-  if (!function_exists("be_calculateGamePHSO")) {
-    ma_respond(500, ["ok" => false, "message" => "Workflow function missing."]);
-    exit;
-  }
+  // Action: "all" (default), "player", "pairing", "flight"
+  $action = trim((string)($payload["action"] ?? "all"));
+  // ID: GHIN, PairingID, or FlightID (depending on action)
+  $id = trim((string)($payload["id"] ?? ""));
 
-  // Always runs for the whole game ("game", null)
-  $out = be_calculateGamePHSO("game", null, $game, $auth["adminToken"]);
+  $out = be_calculateGamePHSO($action, $id, $game, $auth["adminToken"]);
 
   ma_respond(200, ["ok" => true, "result" => $out]);
 
