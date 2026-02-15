@@ -19,6 +19,7 @@
   // API bases injected by PHP (preferred). Fallbacks are last-resort.
   const routes = MA.routes || {};
   const gsApiBase = routes.apiGameSettings || MA.paths?.apiGameSettings || "/api/game_settings";
+  const apiGHIN = MA.paths?.apiGHIN || "/api/GHIN";
   const returnToUrl = init.returnTo || routes.returnTo || "/app/admin_games/gameslist.php";
 
   // ---- Constants (Wix-aligned) ----
@@ -796,6 +797,16 @@
 
       setDirty(false);
       setStatus("Settings saved successfully.", "success");
+
+      // Trigger-3: Recalculate handicaps (Pass-A + Pass-B)
+      setStatus("Recalculating handicaps...", "info");
+      try {
+        // Pass-A: Base Refresh (HI/CH/Baseline PH)
+        await postJson(`${apiGHIN}/refreshHandicaps.php`, { ghin: "all" });
+        // Pass-B: Competition Calc (PH/SO)
+        await postJson(`${apiGHIN}/calcPHSO.php`, { action: "all" });
+        setStatus("Handicaps updated.", "success");
+      } catch (e) { console.error("Recalc failed", e); }
 
       // Re-apply dependencies (server may coerce fields)
       hydrateFromGame();
