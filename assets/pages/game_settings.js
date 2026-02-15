@@ -19,7 +19,7 @@
   // API bases injected by PHP (preferred). Fallbacks are last-resort.
   const routes = MA.routes || {};
   const gsApiBase = routes.apiGameSettings || MA.paths?.apiGameSettings || "/api/game_settings";
-  const returnToUrl = routes.returnTo || "/app/admin_games/gameslist.php";
+  const returnToUrl = init.returnTo || routes.returnTo || "/app/admin_games/gameslist.php";
 
   // ---- Constants (Wix-aligned) ----
   const stablefordTemplate = [
@@ -800,6 +800,8 @@
       // Re-apply dependencies (server may coerce fields)
       hydrateFromGame();
       applyDependencies();
+      // Return to caller
+      window.location.assign(returnToUrl);
 
     } catch (e) {
       console.error(e);
