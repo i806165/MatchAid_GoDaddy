@@ -2,13 +2,9 @@
 // /public_html/workflows/WorkFlow_Handicaps.php
 declare(strict_types=1);
 
-require_once __DIR__ . "/../config.php";
-require_once __DIR__ . "/../lib/Db.php";
-require_once __DIR__ . "/../lib/HttpClient.php";
-
 require_once __DIR__ . "/../repo/RepoPlayers.php";
-require_once __DIR__ . "/../services/GHIN_API_Players.php";
-require_once __DIR__ . "/../services/GHIN_API_Handicaps.php"; // the file we created earlier
+require_once __DIR__ . "/../GHIN/GHIN_API_Players.php";
+require_once __DIR__ . "/../GHIN/GHIN_API_Handicaps.php";
 
 /**
  * Port of Wix:
