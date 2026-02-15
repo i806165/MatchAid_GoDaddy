@@ -1,6 +1,10 @@
 <?php
 declare(strict_types=1);
 
+// /public_html/api/GHIN/calcPHSO.php
+// Pass-B: Calculate Playing Handicap (PH) and Shots Off (SO) for all players.
+// Requires grouping context (Pairings/Flights).
+
 if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 
 require_once __DIR__ . "/../../bootstrap.php";
@@ -8,27 +12,22 @@ require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_SERVICES . "/workflows/WorkFlow_Handicaps.php";
 
 $auth = ma_api_require_auth();
-$in = ma_json_in();
-$payload = $in['payload'] ?? $in;
 
 try {
   $gc = ServiceContextGame::getGameContext();
   $game = $gc["game"];
   $ggid = (string)($gc["ggid"] ?? "");
 
-  // Optional: specific player GHIN (for single-player refresh)
-  // If missing or "all", defaults to "allPlayers"
-  $targetGhin = trim((string)($payload["ghin"] ?? ""));
-  if ($targetGhin === "" || $targetGhin === "all") $targetGhin = "allPlayers";
-
-  if (!function_exists("be_recalculateGameHandicaps")) {
-    ma_respond(200, ["ok" => true, "status" => "ok", "message" => "Workflow not wired yet (PASS-2)."]);
+  if (!function_exists("be_calculateGamePHSO")) {
+    ma_respond(500, ["ok" => false, "message" => "Workflow function missing."]);
     exit;
   }
 
-  $out = be_recalculateGameHandicaps($ggid, $targetGhin, $game, $auth["adminToken"]);
+  // Always runs for the whole game ("game", null)
+  $out = be_calculateGamePHSO("game", null, $game, $auth["adminToken"]);
 
   ma_respond(200, ["ok" => true, "result" => $out]);
+
 } catch (Throwable $e) {
   ma_respond(500, ["ok" => false, "error" => $e->getMessage()]);
 }
