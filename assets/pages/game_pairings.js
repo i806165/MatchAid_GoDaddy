@@ -924,7 +924,7 @@
         p.hi ? `HI:${p.hi}` : "",
         p.ch ? `CH:${p.ch}` : "",
         p.ph ? `PH:${p.ph}` : "",
-        (p.so && p.so !== "0") ? `SO:${p.so}` : ""
+        p.so ? `SO:${p.so}` : ""
       ].filter(Boolean).join(" • ");
 
       return `
