@@ -349,9 +349,10 @@
       const isFav = favoriteSet.has(ghin);
       const hi = safe(p.dbPlayers_HI || "");
       const ch = safe(p.dbPlayers_CH || "");
-      const ph = safe(p.dbPlayers_PlayingHcp || p.dbPlayers_PH || "");
+      const ph = safe(p.dbPlayers_PH || "");
+      const so = safe(p.dbPlayers_SO);
       const pairing = safe(p.dbPlayers_PairingID || "");
-      const meta = [hi && `HI ${hi}`, ch && `CH ${ch}`, ph && `PH ${ph}`, pairing].filter(Boolean).join(" · ");
+      const meta = [hi && `HI ${hi}`, ch && `CH ${ch}`, ph && `PH ${ph}`, so && `SO ${so}`, pairing].filter(Boolean).join(" · ");
       const teeName = safe(p.dbPlayers_TeeSetName || "");
       const nameLine = teeName ? `${safe(p.dbPlayers_Name)} · ${teeName}` : safe(p.dbPlayers_Name);
       return `<div class="maListRow gpRow gpRow--roster" data-ghin="${esc(ghin)}">
