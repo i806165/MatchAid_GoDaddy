@@ -2,7 +2,7 @@
 // /public_html/workflows/WorkFlow_Handicaps.php
 declare(strict_types=1);
 
-require_once __DIR__ . "/../repo/RepoPlayers.php";
+require_once __DIR__ . "/../database/service_dbPlayers.php";
 require_once __DIR__ . "/../GHIN/GHIN_API_Players.php";
 require_once __DIR__ . "/../GHIN/GHIN_API_Handicaps.php";
 
@@ -12,9 +12,7 @@ require_once __DIR__ . "/../GHIN/GHIN_API_Handicaps.php";
  */
 function be_recalculateGameHandicaps(string $parmGGID, string $parmPlayerGHIN, array $parmGameData, string $parmToken): array
 {
-    $cfg = require __DIR__ . "/../config.php";
-    $pdo = Db::pdo($cfg["db"]);
-    $repo = new RepoPlayers($pdo);
+    $repo = new ServiceDbPlayers();
 
     try {
         $txtHoles   = (string)($parmGameData["dbGames_Holes"] ?? "");
@@ -25,8 +23,8 @@ function be_recalculateGameHandicaps(string $parmGGID, string $parmPlayerGHIN, a
         if ($ggid === "") throw new RuntimeException("Missing GGID");
 
         $players = ($parmPlayerGHIN !== "allPlayers")
-            ? $repo->listByGameAndPlayer($ggid, $parmPlayerGHIN)
-            : $repo->listByGame($ggid);
+            ? [$repo->getPlayerByGGIDGHIN($ggid, $parmPlayerGHIN)]
+            : $repo->getGamePlayers($ggid);
 
         // Exclude non-rated players "NH..."
         $rated = array_values(array_filter($players, function($p){
@@ -126,7 +124,7 @@ function be_recalculateGameHandicaps(string $parmGGID, string $parmPlayerGHIN, a
                 $valPH = (int)round($valCH * ((float)$varAllowance / 100.0));
 
                 // 3) Update record by (GGID, PlayerGHIN)
-                $repo->updateHandicapFields($ggid, $txtGHIN, [
+                $repo->upsertGamePlayer($ggid, $txtGHIN, [
                     "dbPlayers_TeeSetName" => $txtTeeSetName,
                     "dbPlayers_HI" => $txtPlayerHI,
                     "dbPlayers_CH" => (string)$valCH,
@@ -166,9 +164,7 @@ function be_recalculateGameHandicaps(string $parmGGID, string $parmPlayerGHIN, a
  */
 function be_calculateGamePHSO(string $action, ?string $id, array $parmGameData, string $parmToken): array
 {
-    $cfg = require __DIR__ . "/../config.php";
-    $pdo = Db::pdo($cfg["db"]);
-    $repo = new RepoPlayers($pdo);
+    $repo = new ServiceDbPlayers();
 
     $myToken = $parmToken;
 
@@ -190,7 +186,7 @@ function be_calculateGamePHSO(string $action, ?string $id, array $parmGameData, 
 
     // 1) Acquire players based on Action/Scope
     // Actions: "all" (or "game"), "player", "pairing", "flight"
-    $allPlayers = $repo->listByGame($txtGGID);
+    $allPlayers = $repo->getGamePlayers($txtGGID);
     $players = [];
 
     if ($action === "all" || $action === "game") {
@@ -294,7 +290,7 @@ function be_calculateGamePHSO(string $action, ?string $id, array $parmGameData, 
 
             $playerGhin = (string)($p["dbPlayers_PlayerGHIN"] ?? "");
             if ($playerGhin !== "") {
-                $repo->updatePHSOFields($txtGGID, $playerGhin, $ph, $so);
+                $repo->upsertGamePlayer($txtGGID, $playerGhin, ["dbPlayers_PH" => $ph, "dbPlayers_SO" => $so]);
                 $updatedCount++;
             }
         }
