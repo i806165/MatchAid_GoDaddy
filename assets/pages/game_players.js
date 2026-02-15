@@ -77,11 +77,18 @@
     render();
   }
 
+  function openActionsMenu() {
+    if (!MA.ui || !MA.ui.openActionsMenu) return;
+    MA.ui.openActionsMenu("Actions", [
+      { label: "Game Settings", action: "settings", params: { returnTo: "roster" } }
+    ]);
+  }
+
   function applyChrome(){
     if (MA.chrome && MA.chrome.setHeaderLines) MA.chrome.setHeaderLines(["ADMIN PORTAL", "Game Players", `GGID ${safe(init.ggid)}`]);
     if (MA.chrome && MA.chrome.setActions) {
       MA.chrome.setActions({
-        left: { show:false },
+        left: { show: true, label: "Actions", onClick: openActionsMenu },
         right: { show:false }
       });
     }
@@ -212,7 +219,17 @@
       el.controls.innerHTML = `<div class="maFieldRow"><div class="maField"><div class="maHelpText">Your player record will open tee selection automatically.</div></div></div>`;
       return;
     }
-    el.controls.innerHTML = `<div class="maFieldRow"><div class="maField"><div class="maHelpText">Tap ♥ to manage favorites.</div></div></div>`;
+
+    const eff = state.game?.dbGames_HCEffectivity || "PlayDate";
+    let hcLabel = "HCP as of Play Date";
+    if (eff === "Low12") hcLabel = "HCP: 12m Low";
+    else if (eff === "Low6") hcLabel = "HCP: 6m Low";
+    else if (eff === "Low3") hcLabel = "HCP: 3m Low";
+    else if (eff === "Date") {
+      const d = state.game?.dbGames_HCEffectivityDate || "Date";
+      hcLabel = `HCP as of ${d}`;
+    }
+    el.controls.innerHTML = `<div class="maFieldRow"><div class="maField"><div class="maHelpText">${esc(hcLabel)} • Tap ♥ to manage favorites.</div></div></div>`;
   }
 
   function renderBody(){
