@@ -117,7 +117,7 @@
             item.action();
           } else if (typeof item.action === "string") {
             // Support string actions for router or standard behaviors
-            if (MA.routerGo) MA.routerGo(item.action);
+            if (MA.routerGo) MA.routerGo(item.action, item.params);
             else if (item.action === "back") window.history.back();
           }
         }
