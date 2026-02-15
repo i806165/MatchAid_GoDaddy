@@ -92,11 +92,16 @@ function be_getHandicapbyPeriod(string $parmPeriod, $parmBegDate, $parmEndDate, 
         $requestBody["DateEnd"]   = $DateEnd;
     }
 
+    error_log("[be_getHandicapbyPeriod] URL: " . $GHINurl);
+    error_log("[be_getHandicapbyPeriod] Body: " . json_encode($requestBody));
+
     // NOTE: your HttpClient::postJson throws on non-2xx, like your Wix code did.
-    return HttpClient::postJson($GHINurl, $requestBody, [
+    $res = HttpClient::postJson($GHINurl, $requestBody, [
         "accept: application/json",
         "Authorization: Bearer " . $myToken,
     ]);
+    error_log("[be_getHandicapbyPeriod] Response: " . json_encode($res));
+    return $res;
 }
 
 /**
