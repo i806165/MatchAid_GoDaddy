@@ -265,7 +265,7 @@ public static function queryGames(array $args): array {
        $dt  = $clean["dbGames_HCEffectivityDate"] ?? ($existing["dbGames_HCEffectivityDate"] ?? "");
        
        if ($eff !== "Date") {
-         $clean["dbGames_HCEffectivity"] = "PlayDate";
+         // Do not force "PlayDate" here; preserve Low3/Low12 etc.
          $clean["dbGames_HCEffectivityDate"] = $playDate;
        } else {
          if (!$dt) $dt = $playDate;
@@ -423,8 +423,8 @@ public static function queryGames(array $args): array {
     $dt  = trim((string)($g["dbGames_HCEffectivityDate"] ?? ""));
 
     if ($eff !== "Date") {
-      // New contract: default/force PlayDate
-      $g["dbGames_HCEffectivity"] = "PlayDate";
+      // Only default if empty; otherwise respect Low3/Low12/PlayDate
+      if ($eff === "") $g["dbGames_HCEffectivity"] = "PlayDate";
       $g["dbGames_HCEffectivityDate"] = $playDate;
       return;
     }
