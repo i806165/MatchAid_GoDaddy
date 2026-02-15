@@ -223,10 +223,16 @@ function be_getCoursePHSO(array $parmGolfers, string $parmToken): array
     $GHINurl = "https://api.ghin.com/api/v1/playing_handicaps.json";
     $requestBody = ["golfers" => $parmGolfers];
 
-    return HttpClient::postJson($GHINurl, $requestBody, [
+    $headers = [
         "accept: application/json",
         "Authorization: Bearer " . $myToken,
-    ]);
+    ];
+    error_log("[be_getCoursePHSO] URL: " . $GHINurl);
+    error_log("[be_getCoursePHSO] Body: " . json_encode($requestBody));
+    error_log("[be_getCoursePHSO] Headers: " . json_encode($headers));
+    $res = HttpClient::postJson($GHINurl, $requestBody, $headers);
+    error_log("[be_getCoursePHSO] Response: " . json_encode($res));
+    return $res;
 }
 
 /**
