@@ -177,8 +177,29 @@
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     MA.ui.openActionsMenu("Actions", [
-      { label: "Game Settings", action: "settings" }
+      { label: "Game Settings", action: "settings" },
+      { separator: true },
+      { label: "Delete Game", action: onDeleteGame, danger: true }
     ]);
+  }
+
+  async function onDeleteGame() {
+    if (!state.ggid) return;
+    if (!confirm("Are you sure you want to delete this game? This cannot be undone.")) return;
+    
+    setBusy(true);
+    try {
+      const res = await apiCall("/api/admin_games", "deleteGame.php", { ggid: state.ggid });
+      if (!res || !res.ok) throw new Error(res?.message || "Delete failed.");
+      
+      setStatus("Game deleted.", "success");
+      if (typeof MA.routerGo === "function") MA.routerGo("admin");
+      else window.location.assign("/app/admin_games/gameslist.php");
+    } catch (e) {
+      console.error(e);
+      setStatus(String(e.message || e), "error");
+      setBusy(false);
+    }
   }
 
 function applyChrome() {

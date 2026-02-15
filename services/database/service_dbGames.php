@@ -280,6 +280,22 @@ public static function queryGames(array $args): array {
     return ["ggid" => $ggid, "game" => self::getGameByGGID($ggid)];
   }
 
+  public static function deleteGame(int $ggid): bool
+  {
+    if ($ggid <= 0) return false;
+    $pdo = Db::pdo();
+
+    // 1. Delete players
+    $delPlayers = $pdo->prepare("DELETE FROM db_Players WHERE dbPlayers_GGID = :ggid");
+    $delPlayers->execute([":ggid" => $ggid]);
+
+    // 2. Delete game
+    $delGame = $pdo->prepare("DELETE FROM db_Games WHERE dbGames_GGID = :ggid LIMIT 1");
+    $delGame->execute([":ggid" => $ggid]);
+
+    return $delGame->rowCount() > 0;
+  }
+
   private static function applyPatch(array $base, array $patch): array
   {
     $allow = [
