@@ -202,7 +202,10 @@
 
   // ---- Actions Menu ----
   function onResetPairings() {
-    setStatus("Reset Pairings: Not implemented yet.", "info");
+    if (state.dirty.size === 0) return setStatus("No unsaved changes.", "info");
+    if (confirm("Discard all unsaved changes and revert to the last save?")) {
+      window.location.reload();
+    }
   }
 
   function onRecalcHandicaps() {
@@ -210,7 +213,27 @@
   }
 
   function onAutoPair() {
-    setStatus("AutoPair: Not implemented yet.", "info");
+    const unpaired = state.players.filter(p => String(p.pairingId || "000") === "000");
+    if (unpaired.length < 2) return setStatus("Not enough unpaired players.", "warn");
+
+    // Default config
+    const total = unpaired.length;
+    const minTeeTimes = Math.max(1, Math.ceil(total / 4));
+    
+    // Calculate initial valid mix
+    const mixes = AutoPairEngine.calculateValidMixes(total, minTeeTimes);
+    const mix = mixes[0] || { fours: 0, threes: 0, twos: Math.ceil(total / 2) };
+
+    const defaults = {
+      teeTimeCount: minTeeTimes,
+      foursomes: mix.fours,
+      threesomes: mix.threes,
+      twosomes: mix.twos,
+      bucketCount: Math.min(4, Math.max(1, total)),
+      outcome: "balanced"
+    };
+
+    openAutoPairModal(defaults, unpaired);
   }
 
   function openActionsMenu() {
@@ -220,10 +243,447 @@
       { label: "AutoPair", action: onAutoPair },
       { label: "Recalculate Handicaps", action: onRecalcHandicaps },
       { separator: true },
-      { label: "Reset Pairings", action: onResetPairings, danger: true }
+      { label: "Reset Pairings and Matches to last Save", action: onResetPairings, danger: true }
     ];
     MA.ui.openActionsMenu("Actions", items);
   }
+
+  // ---- AutoPair Modal & Logic ----
+  function openAutoPairModal(defaults, unpairedPlayers) {
+    // 1. Build Shell
+    const overlay = document.createElement("div");
+    overlay.className = "maModalOverlay is-open";
+    
+    const modal = document.createElement("div");
+    modal.className = "maModal";
+    modal.style.maxWidth = "600px"; // Override default max-width for this specific modal
+
+    // 2. Header
+    const header = document.createElement("div");
+    header.className = "maModal__hdr";
+    header.innerHTML = `
+      <div class="maModal__title">Auto-Pair</div>
+      <button class="closeBtn" type="button">✕</button>
+    `;
+
+    // 3. Controls (Setup Mode)
+    const controls = document.createElement("div");
+    controls.className = "maModal__controls";
+    controls.innerHTML = `
+      <div class="maFieldRow" style="margin-top:0;">
+        <div class="maField">
+          <label class="maLabel">Tee Times</label>
+          <input type="number" id="apTeeTimeCount" class="maTextInput" min="1" max="99" value="${defaults.teeTimeCount}">
+        </div>
+        <div class="maField">
+          <label class="maLabel">Group Mix</label>
+          <select id="apMixSelect" class="maTextInput"></select>
+        </div>
+      </div>
+      <div class="maFieldRow">
+        <div class="maField">
+          <label class="maLabel">Outcome</label>
+          <select id="apOutcome" class="maTextInput">
+            <option value="balanced">Balanced (Snake)</option>
+            <option value="abcdDraw">ABCD Draw</option>
+            <option value="inOrder">In Order (Ranked)</option>
+            <option value="random">Random</option>
+            <option value="stackedHighFirst">Stacked (High First)</option>
+          </select>
+        </div>
+        <div class="maField" id="apBucketField">
+          <label class="maLabel">Buckets</label>
+          <input type="number" id="apBucketCount" class="maTextInput" min="1" max="12" value="${defaults.bucketCount}">
+        </div>
+      </div>
+      <div id="apMsg" style="margin-top:10px; font-size:12px; font-weight:700; color:var(--warn);"></div>
+    `;
+
+    // 4. Body (Review Mode - initially hidden)
+    const body = document.createElement("div");
+    body.className = "maModal__body";
+    body.style.display = "none"; // Hidden on launch
+    body.innerHTML = `<div id="apPreviewList" class="maCards"></div>`;
+
+    // 5. Footer
+    const footer = document.createElement("div");
+    footer.className = "maModal__ftr";
+    footer.innerHTML = `
+      <button class="btn btnSecondary" id="apBtnCancel" type="button">Cancel</button>
+      <div class="maModal__ftrActions">
+        <button class="btn" id="apBtnRetry" type="button" style="display:none;">Retry</button>
+        <button class="btn btnPrimary" id="apBtnRun" type="button">Run</button>
+        <button class="btn btnPrimary" id="apBtnApply" type="button" style="display:none;">Apply</button>
+      </div>
+    `;
+
+    modal.appendChild(header);
+    modal.appendChild(controls);
+    modal.appendChild(body);
+    modal.appendChild(footer);
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // ---- Wiring ----
+    const elTT = controls.querySelector("#apTeeTimeCount");
+    const elMix = controls.querySelector("#apMixSelect");
+    const elOutcome = controls.querySelector("#apOutcome");
+    const elBuckets = controls.querySelector("#apBucketCount");
+    const elBucketField = controls.querySelector("#apBucketField");
+    const elMsg = controls.querySelector("#apMsg");
+    const elPreview = body.querySelector("#apPreviewList");
+
+    const btnClose = header.querySelector(".closeBtn");
+    const btnCancel = footer.querySelector("#apBtnCancel");
+    const btnRun = footer.querySelector("#apBtnRun");
+    const btnRetry = footer.querySelector("#apBtnRetry");
+    const btnApply = footer.querySelector("#apBtnApply");
+
+    let currentPreviewGroups = [];
+
+    const close = () => {
+      overlay.remove();
+    };
+
+    btnClose.addEventListener("click", close);
+    btnCancel.addEventListener("click", close);
+
+    // Mix Logic
+    const updateMixOptions = () => {
+      const tt = Math.max(1, parseInt(elTT.value || "1", 10));
+      const mixes = AutoPairEngine.calculateValidMixes(unpairedPlayers.length, tt);
+      
+      elMix.innerHTML = "";
+      if (!mixes.length) {
+        elMsg.textContent = "No valid group mix for this tee time count.";
+        btnRun.disabled = true;
+        return;
+      }
+      elMsg.textContent = "";
+      btnRun.disabled = false;
+
+      mixes.forEach((m, idx) => {
+        const opt = document.createElement("option");
+        opt.value = JSON.stringify({ fours: m.fours, threes: m.threes, twos: m.twos });
+        opt.textContent = m.verboseDisplay;
+        if (idx === 0) opt.selected = true;
+        elMix.appendChild(opt);
+      });
+    };
+
+    elTT.addEventListener("change", updateMixOptions);
+    elTT.addEventListener("input", updateMixOptions);
+
+    // Outcome Logic (Bucket visibility)
+    const updateBuckets = () => {
+      const out = elOutcome.value;
+      const usesBuckets = (out === "balanced" || out === "abcdDraw");
+      elBucketField.style.visibility = usesBuckets ? "visible" : "hidden";
+    };
+    elOutcome.addEventListener("change", updateBuckets);
+
+    // Initialize inputs
+    elOutcome.value = defaults.outcome;
+    updateMixOptions(); // populates mix
+    updateBuckets();
+
+    // RUN
+    btnRun.addEventListener("click", () => {
+      const mix = JSON.parse(elMix.value || "{}");
+      const cfg = {
+        teeTimeCount: parseInt(elTT.value, 10),
+        foursomes: mix.fours || 0,
+        threesomes: mix.threes || 0,
+        twosomes: mix.twos || 0,
+        bucketCount: parseInt(elBuckets.value, 10),
+        outcome: elOutcome.value
+      };
+
+      const v = AutoPairEngine.validateConfig(cfg, unpairedPlayers);
+      if (!v.ok) {
+        elMsg.textContent = v.message;
+        return;
+      }
+
+      // Generate
+      currentPreviewGroups = AutoPairEngine.run(cfg, unpairedPlayers);
+
+      // Render Preview
+      elPreview.innerHTML = currentPreviewGroups.map((grp, i) => {
+        const sum = grp.reduce((s, p) => s + AutoPairEngine.phValue(p), 0);
+        const avg = grp.length ? (sum / grp.length).toFixed(1) : "0.0";
+        const rows = grp.map(p => {
+          const ph = AutoPairEngine.phValue(p);
+          const meta = [p.teeSetName, `PH:${ph}`].filter(Boolean).join(" • ");
+          return `<div style="display:flex; justify-content:space-between; font-size:12px; padding:4px 0; border-top:1px solid #eee;">
+            <span>${esc(p.name)}</span>
+            <span style="color:var(--mutedText);">${esc(meta)}</span>
+          </div>`;
+        }).join("");
+
+        return `
+          <div class="maCard">
+            <div class="maCard__hdr" style="padding:8px 10px; background:#f9f9f9; border-bottom:1px solid #eee;">
+              <div class="maCard__title" style="font-size:12px;">Group ${i + 1}</div>
+              <div style="font-size:11px; font-weight:700; color:var(--mutedText);">Sum ${sum} • Avg ${avg}</div>
+            </div>
+            <div class="maCard__body" style="padding:4px 10px;">${rows}</div>
+          </div>
+        `;
+      }).join("");
+
+      // Transition to Review Mode
+      controls.style.display = "none";
+      body.style.display = "block";
+      btnRun.style.display = "none";
+      btnRetry.style.display = "inline-flex";
+      btnApply.style.display = "inline-flex";
+    });
+
+    // RETRY
+    btnRetry.addEventListener("click", () => {
+      // Transition back to Setup Mode
+      body.style.display = "none";
+      controls.style.display = "block";
+      elPreview.innerHTML = ""; // Clear data
+      currentPreviewGroups = [];
+      
+      btnApply.style.display = "none";
+      btnRetry.style.display = "none";
+      btnRun.style.display = "inline-flex";
+    });
+
+    // APPLY
+    btnApply.addEventListener("click", () => {
+      if (currentPreviewGroups.length) {
+        applyAutoPairGroups(currentPreviewGroups);
+        close();
+      }
+    });
+  }
+
+  function applyAutoPairGroups(groups) {
+    let pidNum = parseInt(nextPairingId(), 10) - 1; // start before next
+    
+    groups.forEach(grp => {
+      pidNum++;
+      const pid = pad3(pidNum);
+      grp.forEach((p, idx) => {
+        const pl = getPlayerByGHIN(p.playerGHIN);
+        if (pl) {
+          pl.pairingId = pid;
+          pl.pairingPos = String(idx + 1);
+          markDirty(pl.playerGHIN);
+        }
+      });
+    });
+    
+    render();
+    setStatus(`Auto-paired ${groups.length} groups.`, "success");
+  }
+
+  // ---- AutoPair Engine (Ported) ----
+  const AutoPairEngine = {
+    phValue(p) {
+      const v = (p && p.ph != null && p.ph !== "") ? Number(p.ph)
+        : (p && p.ch != null && p.ch !== "") ? Number(p.ch)
+          : (p && p.hi != null && p.hi !== "") ? Number(p.hi)
+            : 999;
+      return Number.isFinite(v) ? v : 999;
+    },
+    calculateValidMixes(totalGolfers, totalTeeTimes) {
+      if (!(totalGolfers > 0 && totalTeeTimes > 0)) return [];
+      const results = [];
+      for (let fours = Math.floor(totalGolfers / 4); fours >= 0; fours--) {
+        const leftAfter4 = totalGolfers - fours * 4;
+        for (let threes = Math.floor(leftAfter4 / 3); threes >= 0; threes--) {
+          const left = leftAfter4 - threes * 3;
+          if (left % 2 !== 0) continue;
+          const twos = left / 2;
+          const totalGroups = fours + threes + twos;
+          if (totalGroups > totalTeeTimes) continue;
+          results.push({ fours, threes, twos });
+        }
+      }
+      results.sort((a, b) => {
+        const aKinds = (a.fours > 0 ? 1 : 0) + (a.threes > 0 ? 1 : 0) + (a.twos > 0 ? 1 : 0);
+        const bKinds = (b.fours > 0 ? 1 : 0) + (b.threes > 0 ? 1 : 0) + (b.twos > 0 ? 1 : 0);
+        if (aKinds !== bKinds) return aKinds - bKinds;
+        if (a.fours !== b.fours) return b.fours - a.fours;
+        if (a.threes !== b.threes) return b.threes - a.threes;
+        return a.twos - b.twos;
+      });
+      return results.map(m => ({
+        fours: m.fours, threes: m.threes, twos: m.twos,
+        verboseDisplay: this._mixVerbose(m.fours, m.threes, m.twos)
+      }));
+    },
+    validateConfig(cfg, unpairedPlayers) {
+      const total = (unpairedPlayers || []).length;
+      const fours = Number(cfg.foursomes || 0);
+      const threes = Number(cfg.threesomes || 0);
+      const twos = Number(cfg.twosomes || 0);
+      const seats = fours * 4 + threes * 3 + twos * 2;
+      const groups = fours + threes + twos;
+
+      if (!total) return { ok: false, message: "No unpaired players." };
+      if (seats !== total) return { ok: false, message: `Mix seats (${seats}) must equal unpaired players (${total}).` };
+      if (groups <= 0) return { ok: false, message: "Choose a valid group mix." };
+      if (groups > Number(cfg.teeTimeCount || groups)) return { ok: false, message: "Total groups exceed tee times." };
+
+      return { ok: true, message: "" };
+    },
+    run(cfg, unpairedPlayers) {
+      const pool = (unpairedPlayers || []).slice().sort((a, b) => this.phValue(a) - this.phValue(b));
+      const sizes = this._autopairGroupSizes(cfg, pool.length);
+      const bucketCount = Math.max(1, Number(cfg.bucketCount || 1));
+      const buckets = this._bucketize(pool, bucketCount);
+
+      switch (cfg.outcome) {
+        case "balanced": return this._draftBalanced(buckets, sizes);
+        case "inOrder": return this._draftInOrder(pool, sizes);
+        case "abcdDraw": return this._draftABCD(buckets, sizes);
+        case "random": return this._draftRandom(pool, sizes);
+        case "stackedHighFirst": return this._draftStackedHighFirst(pool, sizes);
+        default: return this._draftBalanced(buckets, sizes);
+      }
+    },
+    _autopairGroupSizes(cfg, availablePlayers) {
+      const out = [];
+      const f = Number(cfg.foursomes || 0);
+      const t3 = Number(cfg.threesomes || 0);
+      const t2 = Number(cfg.twosomes || 0);
+      for (let i = 0; i < f; i++) out.push(4);
+      for (let i = 0; i < t3; i++) out.push(3);
+      for (let i = 0; i < t2; i++) out.push(2);
+      const seats = out.reduce((s, x) => s + x, 0);
+      if (seats <= availablePlayers) return out;
+      let remaining = availablePlayers;
+      const clamped = [];
+      for (const s of out) {
+        if (remaining <= 0) break;
+        const take = Math.min(s, remaining);
+        clamped.push(take);
+        remaining -= take;
+      }
+      return clamped;
+    },
+    _bucketize(players, bucketCount) {
+      if (bucketCount <= 1) return [players.slice()];
+      const sorted = players.slice().sort((a, b) => this.phValue(a) - this.phValue(b));
+      const n = sorted.length;
+      const base = Math.floor(n / bucketCount);
+      const rem = n % bucketCount;
+      const buckets = [];
+      let idx = 0;
+      for (let i = 0; i < bucketCount; i++) {
+        const extra = (i < rem) ? 1 : 0;
+        const size = base + extra;
+        const slice = (size > 0 && idx < n) ? sorted.slice(idx, Math.min(idx + size, n)) : [];
+        buckets.push(slice);
+        idx += size;
+      }
+      return buckets;
+    },
+    _draftBalanced(buckets, sizes) {
+      const queues = buckets.map(b => b.slice());
+      const pull = (bi, back = false) => {
+        if (!queues[bi] || !queues[bi].length) return null;
+        return back ? queues[bi].pop() : queues[bi].shift();
+      };
+      const pullAny = () => {
+        for (let i = 0; i < queues.length; i++) {
+          if (queues[i].length) return queues[i].shift();
+        }
+        return null;
+      };
+      const pushFrom = (group, sources) => {
+        for (const [i, back] of sources) {
+          const p = pull(i, back);
+          if (p) { group.push(p); return; }
+        }
+        const p = pullAny();
+        if (p) group.push(p);
+      };
+      const groups = [];
+      for (const size of sizes) {
+        const g = [];
+        switch (size) {
+          case 4:
+            pushFrom(g, [[0, false], [1, true], [2, false], [3, false]]);
+            pushFrom(g, [[1, true], [2, false], [3, false], [0, false]]);
+            pushFrom(g, [[2, true], [3, false], [1, false], [0, false]]);
+            pushFrom(g, [[3, false], [0, false], [2, false], [1, false]]);
+            break;
+          case 3:
+            pushFrom(g, [[0, false], [1, true], [2, false], [3, false]]);
+            pushFrom(g, [[1, true], [2, false], [3, false], [0, false]]);
+            pushFrom(g, [[2, false], [3, false], [1, false], [0, false]]);
+            break;
+          default:
+            for (let i = 0; i < size; i++) { const p = pullAny(); if (p) g.push(p); }
+            break;
+        }
+        groups.push(g);
+      }
+      return groups;
+    },
+    _draftInOrder(players, sizes) {
+      const list = players.slice();
+      const groups = [];
+      for (const s of sizes) {
+        const g = [];
+        for (let i = 0; i < s; i++) if (list.length) g.push(list.shift());
+        groups.push(g);
+      }
+      return groups;
+    },
+    _draftABCD(buckets, sizes) {
+      const queues = buckets.map(b => b.slice());
+      const pullFront = (i) => {
+        if (!queues[i] || !queues[i].length) return null;
+        return queues[i].shift();
+      };
+      const pullAny = () => {
+        for (let i = 0; i < queues.length; i++) if (queues[i].length) return queues[i].shift();
+        return null;
+      };
+      const B = Math.max(1, queues.length);
+      const groups = [];
+      for (const s of sizes) {
+        const g = [];
+        let k = 0;
+        while (g.length < s) {
+          const bi = k % B;
+          const p = pullFront(bi) || pullAny();
+          if (!p) break;
+          g.push(p);
+          k += 1;
+        }
+        groups.push(g);
+      }
+      return groups;
+    },
+    _draftRandom(players, sizes) {
+      const list = players.slice();
+      for (let i = list.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [list[i], list[j]] = [list[j], list[i]];
+      }
+      return this._draftInOrder(list, sizes);
+    },
+    _draftStackedHighFirst(players, sizes) {
+      // players already sorted asc by PH, so this is just InOrder
+      return this._draftInOrder(players, sizes);
+    },
+    _mixVerbose(f, t3, t2) {
+      const p = [];
+      if (f > 0) p.push(`foursomes (${f})`);
+      if (t3 > 0) p.push(`threesomes (${t3})`);
+      if (t2 > 0) p.push(`twosomes (${t2})`);
+      return p.length ? p.join(", ") : "—";
+    }
+  };
 
   // ---- Chrome ----
   function applyChrome() {
