@@ -512,7 +512,17 @@ cardsEl.innerHTML = state.games.dbRows
     
     if (action === "calendar") return routerGo("gameCalendar", {});
     if (action === "deleteGame") {
-      setStatus("Delete not wired yet (needs endpoint).", "warn");
+      if (!confirm("Are you sure you want to delete this game? This cannot be undone.")) return;
+
+      try {
+        const res = await apiAdmin("deleteGame.php", { ggid });
+        if (!res || !res.ok) throw new Error(res?.message || "Delete failed.");
+        setStatus("Game deleted.", "success");
+        await refreshGamesAndAdmins();
+      } catch (e) {
+        console.error(e);
+        setStatus(String(e.message || e), "error");
+      }
       return;
     }
 
@@ -685,8 +695,9 @@ function applyPreset(presetKey) {
         <button class="actionMenu_item" type="button" data-menuclick="teetimes">Set TeeTimes</button>
         <button class="actionMenu_item" type="button" data-menuclick="viewGame">Review Game</button>
         <button class="actionMenu_item" type="button" data-menuclick="viewScoreCard">Scorecard</button>
-        <div class="actionMenu_divider"></div>
         <button class="actionMenu_item" type="button" data-menuclick="calendar">Add to Calendar</button>
+        <div class="actionMenu_divider"></div>
+        <button class="actionMenu_item danger" type="button" data-menuclick="deleteGame">Delete Game</button>
       </div>
     `;
 
