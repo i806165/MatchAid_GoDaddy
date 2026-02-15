@@ -236,7 +236,7 @@ final class ServiceContextGame
         "dbGames_Privacy" => "Club",
         "dbGames_Comments" => null,
 
-        "dbGames_TeeTimeCnt" => 16,
+        "dbGames_TeeTimeCnt" => 3,
         "dbGames_TeeTimeInterval" => 9,
         "dbGames_TeeTimeList" => "",
 
