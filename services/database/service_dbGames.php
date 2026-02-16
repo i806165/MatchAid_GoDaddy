@@ -84,9 +84,8 @@ public static function queryGames(array $args): array {
       }
     }
 
-    // Sort direction: if the selected window ends before today, show newest first
-    $sortPast = ($dateTo !== "" && $dateTo < $today);
-    $orderDir = $sortPast ? "DESC" : "ASC";
+    // Use sophisticated weighted sort direction
+    $orderDir = self::getSortDirectionForQuery($dateFrom, $dateTo);
 
     $sql = "$selectSql FROM db_Games";
     if ($where) $sql .= " WHERE " . implode(" AND ", $where);
@@ -145,6 +144,46 @@ public static function queryGames(array $args): array {
     // Placeholder: admin list is handled elsewhere in your stack.
     $pdo = Db::pdo();
     return [];
+  }
+
+  /**
+   * Ported from Wix getSortDirection.
+   */
+  private static function getSortDirectionForQuery(?string $fromISO, ?string $toISO): string
+  {
+      $msDay = 86400000;
+
+      $today = new DateTimeImmutable('today');
+      $todayMs = ((int)$today->format('U')) * 1000;
+
+      $hasFrom = is_string($fromISO) && $fromISO !== '';
+      $hasTo = is_string($toISO) && $toISO !== '';
+
+      $from = $hasFrom ? DateTimeImmutable::createFromFormat('Y-m-d', $fromISO) : null;
+      $to = $hasTo ? DateTimeImmutable::createFromFormat('Y-m-d', $toISO) : null;
+
+      // One-sided windows
+      if ($hasFrom && !$hasTo) {
+          return ($from && $from >= $today) ? 'asc' : 'desc';
+      }
+      if (!$hasFrom && $hasTo) {
+          return ($to && $to >= $today) ? 'asc' : 'desc';
+      }
+
+      // No window
+      if (!$hasFrom && !$hasTo) return 'desc';
+
+      // Two-sided windows
+      if ($to && $to < $today) return 'desc';
+      if ($from && $from > $today) return 'asc';
+
+      $fromMs = $from ? ((int)$from->format('U')) * 1000 : $todayMs;
+      $toMs = $to ? ((int)$to->format('U')) * 1000 : $todayMs;
+
+      $daysBefore = ($from && $from < $today) ? (int)round(($todayMs - $fromMs) / $msDay) : 0;
+      $daysAfter = ($to && $to > $today) ? (int)round(($toMs - $todayMs) / $msDay) : 0;
+
+      return ($daysAfter >= $daysBefore) ? 'asc' : 'desc';
   }
 
   // -----------------------------
