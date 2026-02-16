@@ -20,27 +20,44 @@ try {
     $count = 0;
     $pdo = Db::pdo();
     
-    // Prepare update statement (ServiceDbPlayers doesn't have bulk update by PairingID yet, so we do it here or loop upsert)
-    // For efficiency with pairing-level updates, a direct SQL is acceptable here or we add a method to Service.
-    // Let's use direct SQL for batch efficiency as per original design, but cleaner.
-    $sql = "UPDATE db_Players 
+    // Prepare two statements: one for PairingID, one for GHIN (unpaired singletons)
+    $sqlPairing = "UPDATE db_Players 
             SET dbPlayers_TeeTime = :teeTime, 
                 dbPlayers_StartHole = :startHole, 
                 dbPlayers_StartHoleSuffix = :suffix 
             WHERE dbPlayers_GGID = :ggid AND dbPlayers_PairingID = :pairingId";
-    $stmt = $pdo->prepare($sql);
+    $stmtPairing = $pdo->prepare($sqlPairing);
+
+    $sqlGhin = "UPDATE db_Players 
+            SET dbPlayers_TeeTime = :teeTime, 
+                dbPlayers_StartHole = :startHole, 
+                dbPlayers_StartHoleSuffix = :suffix 
+            WHERE dbPlayers_GGID = :ggid AND dbPlayers_PlayerGHIN = :ghin";
+    $stmtGhin = $pdo->prepare($sqlGhin);
 
     foreach ($assignments as $a) {
         $pids = is_array($a["pairingIds"] ?? null) ? $a["pairingIds"] : [];
+        
+        $params = [
+            ":teeTime" => (string)($a["teeTime"] ?? ""),
+            ":startHole" => (string)($a["startHole"] ?? ""),
+            ":suffix" => (string)($a["startHoleSuffix"] ?? ""),
+            ":ggid" => $ggid
+        ];
+
         foreach ($pids as $pid) {
-            $stmt->execute([
-                ":teeTime" => (string)($a["teeTime"] ?? ""),
-                ":startHole" => (string)($a["startHole"] ?? ""),
-                ":suffix" => (string)($a["startHoleSuffix"] ?? ""),
-                ":ggid" => $ggid,
-                ":pairingId" => (string)$pid
-            ]);
-            $count += $stmt->rowCount();
+            $idStr = (string)$pid;
+            if (str_starts_with($idStr, "GHIN:")) {
+                // Singleton update by GHIN
+                $params[":ghin"] = substr($idStr, 5);
+                $stmtGhin->execute($params);
+                $count += $stmtGhin->rowCount();
+            } else {
+                // Standard update by PairingID
+                $params[":pairingId"] = $idStr;
+                $stmtPairing->execute($params);
+                $count += $stmtPairing->rowCount();
+            }
         }
     }
 

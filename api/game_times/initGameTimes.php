@@ -99,8 +99,25 @@ function gt_buildGroups(array $players, array $meta): array {
   foreach ($players as $p) {
     $pid = strval($p["dbPlayers_PairingID"] ?? "");
     $fid = strval($p["dbPlayers_FlightID"] ?? "");
+    $ghin = strval($p["dbPlayers_PlayerGHIN"] ?? "");
     
-    $k = ($isPairPair && $fid !== "" && $fid !== "0") ? "F:" . $fid : "P:" . $pid;
+    // 1. Unpaired (Singleton) -> Group by GHIN
+    if ($pid === "" || $pid === "000") {
+      $k = "U:" . $ghin;
+    }
+    // 2. Match Play: Unmatched Pairing -> Group by PairingID
+    else if ($isPairPair && ($fid === "" || $fid === "0")) {
+      $k = "P:" . $pid;
+    }
+    // 3. Match Play: Matched Flight -> Group by FlightID
+    else if ($isPairPair) {
+      $k = "F:" . $fid;
+    }
+    // 4. Stroke Play: Pairing -> Group by PairingID
+    else {
+      $k = "P:" . $pid;
+    }
+
     if (!isset($groups[$k])) $groups[$k] = [];
     $groups[$k][] = $p;
   }
@@ -111,6 +128,7 @@ function gt_buildGroups(array $players, array $meta): array {
     $idx++;
     $isFlightGroup = (strpos($k, "F:") === 0);
     $id = substr($k, 2);
+    $isSingleton = (strpos($k, "U:") === 0);
 
     $pairingIdsSet = [];
     $teeTime = "";
@@ -120,7 +138,14 @@ function gt_buildGroups(array $players, array $meta): array {
 
     foreach ($rows as $r) {
       $pid = strval($r["dbPlayers_PairingID"] ?? "");
-      if ($pid !== "") $pairingIdsSet[$pid] = true;
+      $ghin = strval($r["dbPlayers_PlayerGHIN"] ?? "");
+
+      if ($isSingleton) {
+        // For singletons, use special GHIN key for saving
+        $pairingIdsSet["GHIN:" . $ghin] = true;
+      } else if ($pid !== "") {
+        $pairingIdsSet[$pid] = true;
+      }
 
       if ($teeTime === "" && trim(strval($r["dbPlayers_TeeTime"] ?? "")) !== "") $teeTime = trim(strval($r["dbPlayers_TeeTime"] ?? ""));
       if ($startHole === "" && trim(strval($r["dbPlayers_StartHole"] ?? "")) !== "") $startHole = trim(strval($r["dbPlayers_StartHole"] ?? ""));
@@ -130,9 +155,16 @@ function gt_buildGroups(array $players, array $meta): array {
       if ($ln !== "") $names[] = $ln;
     }
 
+    // Title logic
+    if ($isSingleton) {
+      $displayTitle = "Unpaired";
+    } else {
+      $displayTitle = $isPairPair ? ($isFlightGroup ? "Match " . $id : "Pairing " . $id) : ("Group " . $id);
+    }
+
     $out[] = [
       "id" => $id,
-      "displayTitle" => $isPairPair ? ("Match " . $idx) : ("Group " . $idx),
+      "displayTitle" => $displayTitle,
       "isFlightGroup" => $isFlightGroup,
       "pairingIds" => array_values(array_keys($pairingIdsSet)),
       "size" => count($rows),
