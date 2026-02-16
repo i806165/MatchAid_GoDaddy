@@ -250,11 +250,23 @@
     const title = esc(g.displayTitle || "");
     const size = Number(g.size || 0) || 0;
 
-    const teamLine = (Array.isArray(g.teamA) && Array.isArray(g.teamB) && (g.teamA.length || g.teamB.length))
-      ? `Team A: ${esc(g.teamA.join(" · "))} vs Team B: ${esc(g.teamB.join(" · "))}`
-      : "";
-
-    const names = Array.isArray(g.playerLastNames) ? esc(g.playerLastNames.join(" · ")) : "";
+    let bodyContent = "";
+    if (Array.isArray(g.teamA) && Array.isArray(g.teamB) && (g.teamA.length > 0 || g.teamB.length > 0)) {
+       // Match Play: Split rows
+       bodyContent = `
+         <div style="margin-bottom:4px; font-size:13px;">
+           <span style="font-weight:600; color:var(--textMain);">Team A:</span> 
+           <span style="color:var(--mutedText);">${esc(g.teamA.join(" · "))}</span>
+         </div>
+         <div style="font-size:13px;">
+           <span style="font-weight:600; color:var(--textMain);">Team B:</span> 
+           <span style="color:var(--mutedText);">${esc(g.teamB.join(" · "))}</span>
+         </div>`;
+    } else {
+       // Stroke Play: Single list
+       const names = Array.isArray(g.playerLastNames) ? esc(g.playerLastNames.join(" · ")) : "";
+       bodyContent = `<div style="font-size:13px; color:var(--textMain);">${names}</div>`;
+    }
 
     const timeText = g.teeTime ? esc(g.teeTime) : "Set Time";
     const holeText = g.startHole ? `Start ${esc(g.startHole)}` : "Start Tee";
@@ -266,8 +278,7 @@
       <section class="${cardClass}">
         <header class="maCard__hdr">
           <div class="maCard__titleRow">
-            <div class="maCard__title">${title}</div>
-            <div class="maCard__meta">${size} players</div>
+            <div class="maCard__title">${title} <span style="font-weight:400; opacity:0.7; margin-left:8px; font-size:0.9em;">${size} players</span></div>
           </div>
           <div class="maCard__actions">
              <button type="button" class="btn btnLink" data-gt-action="time" data-gt-id="${esc(g.id)}">${timeText}</button>
@@ -277,7 +288,7 @@
         </header>
         <div class="maCard__body">
            <div class="maCard__sub">
-             ${teamLine ? teamLine : names}
+             ${bodyContent}
            </div>
         </div>
       </section>
@@ -484,7 +495,7 @@
     const items = [
       { label: "Reset / Reload", action: doReset },
       { separator: true },
-      { label: "Close Menu", action: () => {} } // Implicit close
+      { label: "Game Settings", action: "settings" },
     ];
     MA.ui.openActionsMenu("Actions", items);
   }
