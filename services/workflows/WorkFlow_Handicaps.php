@@ -274,10 +274,13 @@ function be_calculateGamePHSO(string $action, ?string $id, array $parmGameData, 
             ];
         }, $groupPlayers);
 
+        error_log("[be_calculateGamePHSO] Group {$groupCount} Input: " . json_encode(["golfers" => $parmGolfers]));
+
         $phso = HttpClient::postJson($GHINurl, ["golfers" => $parmGolfers], [
             "accept: application/json",
             "Authorization: Bearer " . $myToken,
         ]);
+        error_log("[be_calculateGamePHSO] Group {$groupCount} Output: " . json_encode($phso));
 
         $bucket = $phso[$varAllowance] ?? [];
 
