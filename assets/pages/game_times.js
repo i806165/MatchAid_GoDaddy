@@ -265,22 +265,21 @@
     return `
       <section class="${cardClass}">
         <header class="maCard__hdr">
-          <div class="gtCardHdrRow">
-            <div>
-              <div class="maCard__titleRow">
-                <div class="maCard__title">${title}</div>
-                <div class="maCard__meta">${size} players</div>
-              </div>
-              ${teamLine ? `<div class="maCard__sub">${teamLine}</div>` : `<div class="maCard__sub">${names}</div>`}
-            </div>
-
-            <div class="gtCardActions">
-              <button type="button" class="btn btnLink" data-gt-action="time" data-gt-id="${esc(g.id)}">${timeText}</button>
-              <button type="button" class="btn btnLink" data-gt-action="hole" data-gt-id="${esc(g.id)}">${holeText}</button>
-              ${showSuffix ? `<button type="button" class="btn btnLink" data-gt-action="suffix" data-gt-id="${esc(g.id)}">Slot ${suffixText}</button>` : ""}
-            </div>
+          <div class="maCard__titleRow">
+            <div class="maCard__title">${title}</div>
+            <div class="maCard__meta">${size} players</div>
+          </div>
+          <div class="maCard__actions">
+             <button type="button" class="btn btnLink" data-gt-action="time" data-gt-id="${esc(g.id)}">${timeText}</button>
+             <button type="button" class="btn btnLink" data-gt-action="hole" data-gt-id="${esc(g.id)}">${holeText}</button>
+             ${showSuffix ? `<button type="button" class="btn btnLink" data-gt-action="suffix" data-gt-id="${esc(g.id)}">Slot ${suffixText}</button>` : ""}
           </div>
         </header>
+        <div class="maCard__body">
+           <div class="maCard__sub">
+             ${teamLine ? teamLine : names}
+           </div>
+        </div>
       </section>
     `;
   }
