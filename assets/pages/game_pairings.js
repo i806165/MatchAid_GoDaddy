@@ -1411,6 +1411,21 @@
     if (state.busy) return;
     if (!state.dirty.size) return setStatus("No changes to save.", "info");
 
+    // Pre-save validation: PairPair max 2 per pairing
+    if (isPairPair()) {
+      const pairingCounts = {};
+      state.players.forEach(p => {
+        const pid = String(p.pairingId || "000");
+        if (pid !== "000") {
+          pairingCounts[pid] = (pairingCounts[pid] || 0) + 1;
+        }
+      });
+      const badPairing = Object.keys(pairingCounts).find(pid => pairingCounts[pid] > 2);
+      if (badPairing) {
+        return setStatus(`Cannot save: Pairing ${badPairing} has more than 2 players (Match Play limit).`, "danger");
+      }
+    }
+
     setBusy(true);
     setStatus("Saving pairings…", "info");
 
