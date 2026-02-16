@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_SVC_DB . "/service_dbPlayers.php";
-require_once MA_SERVICES . "/workflows/initGameTimes.php"; // For re-init return
+require_once __DIR__ . "/initGameTimes.php"; // For re-init return
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 
 session_start();
