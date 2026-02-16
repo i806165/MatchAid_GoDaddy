@@ -251,7 +251,13 @@
     const size = Number(g.size || 0) || 0;
 
     let bodyContent = "";
-    if (g.isFlightGroup) {
+    // Only use Team layout if we actually have team data (A or B)
+    const hasTeams = g.isFlightGroup && (
+      (Array.isArray(g.teamA) && g.teamA.length > 0) || 
+      (Array.isArray(g.teamB) && g.teamB.length > 0)
+    );
+
+    if (hasTeams) {
        // Match Play: Split rows
        const namesA = (Array.isArray(g.teamA) && g.teamA.length) ? g.teamA.join(" · ") : "";
        const namesB = (Array.isArray(g.teamB) && g.teamB.length) ? g.teamB.join(" · ") : "";
@@ -265,7 +271,7 @@
            <span style="color:var(--mutedText);">${esc(namesB)}</span>
          </div>`;
     } else {
-       // Stroke Play: Single list
+       // Stroke Play OR Match with undefined positions: Single list
        const names = Array.isArray(g.playerLastNames) ? esc(g.playerLastNames.join(" · ")) : "";
        bodyContent = `<div style="font-size:13px; color:var(--textMain);">${names}</div>`;
     }
