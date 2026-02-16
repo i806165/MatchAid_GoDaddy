@@ -40,7 +40,7 @@ try {
   }
 
   // Build INIT payload (server embeds) via API module function
-  require_once MA_SERVICES . "/workflows/initGameTimes.php";
+  require_once MA_ROUTE_API_GAME_TIMES . "/api/game_times/initGameTimes.php";
   $initPayload = initGameTimes((string)$ggid, $ctx);
 
   // Standard INIT wrappers + helpers
@@ -60,9 +60,7 @@ $paths = [
   "apiSession"    => MA_ROUTE_API_SESSION,
   "routerApi"     => MA_ROUTE_API_ROUTER,
   "apiGHIN"       => MA_ROUTE_API_GHIN,
-
-  // Game Times API endpoint (single INIT/SAVE endpoint)
-  "apiGameTimes"  => "/api/game_times/saveGameTimes.php",
+  "apiGameTimes"  => MA_ROUTE_API_GAME_TIMES,
 ];
 
 // Chrome values (picked up by chromeHeader.php)
