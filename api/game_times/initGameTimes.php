@@ -1,4 +1,5 @@
 <?php
+// /public_html/api/game_times/initGameTimes.php
 declare(strict_types=1);
 
 require_once MA_SVC_DB . "/service_dbGames.php";
@@ -130,10 +131,30 @@ function gt_buildGroups(array $players, array $meta): array {
     $id = substr($k, 2);
     $isSingleton = (strpos($k, "U:") === 0);
 
+    // Sort players within the group based on competition type
+    usort($rows, function($a, $b) use ($isPairPair) {
+        if ($isPairPair) {
+            // Match Play: FlightPos (A vs B), then PairingID, then PairingPos
+            $fpA = strtoupper(trim(strval($a["dbPlayers_FlightPos"] ?? "")));
+            $fpB = strtoupper(trim(strval($b["dbPlayers_FlightPos"] ?? "")));
+            if ($fpA !== $fpB) return strcmp($fpA, $fpB);
+
+            $pidA = (int)($a["dbPlayers_PairingID"] ?? 0);
+            $pidB = (int)($b["dbPlayers_PairingID"] ?? 0);
+            if ($pidA !== $pidB) return $pidA - $pidB;
+        }
+        // Default/Secondary sort: PairingPos
+        $ppA = (int)($a["dbPlayers_PairingPos"] ?? 0);
+        $ppB = (int)($b["dbPlayers_PairingPos"] ?? 0);
+        return $ppA - $ppB;
+    });
+
     $pairingIdsSet = [];
     $teeTime = "";
     $startHole = "";
     $suffix = "";
+    $teamA = [];
+    $teamB = [];
     $names = [];
 
     foreach ($rows as $r) {
@@ -153,6 +174,14 @@ function gt_buildGroups(array $players, array $meta): array {
       
       $ln = trim(strval($r["dbPlayers_LName"] ?? $r["dbPlayers_Name"] ?? ""));
       if ($ln !== "") $names[] = $ln;
+
+      // Populate Teams for Match Play
+      if ($isPairPair) {
+          $fp = strtoupper(trim(strval($r["dbPlayers_FlightPos"] ?? "")));
+          // Heuristic: A/1 => Team A; B/2 => Team B
+          if ($fp === "A" || $fp === "1") $teamA[] = $ln;
+          else if ($fp === "B" || $fp === "2") $teamB[] = $ln;
+      }
     }
 
     // Title logic
@@ -172,6 +201,8 @@ function gt_buildGroups(array $players, array $meta): array {
       "startHole" => $startHole,
       "startHoleSuffix" => (strtolower(strval($meta["toMethod"] ?? "")) === "shotgun") ? $suffix : "",
       "playerLastNames" => $names,
+      "teamA" => $teamA,
+      "teamB" => $teamB,
     ];
   }
 
