@@ -256,24 +256,26 @@
       (Array.isArray(g.teamA) && g.teamA.length > 0) || 
       (Array.isArray(g.teamB) && g.teamB.length > 0)
     );
-
+    
+    console.log("[GT_CARD]", g.id, { isFlightGroup: g.isFlightGroup, hasTeams, teamA: g.teamA, teamB: g.teamB });
+    
     if (hasTeams) {
        // Match Play: Split rows
        const namesA = (Array.isArray(g.teamA) && g.teamA.length) ? g.teamA.join(" · ") : "";
        const namesB = (Array.isArray(g.teamB) && g.teamB.length) ? g.teamB.join(" · ") : "";
        bodyContent = `
          <div style="margin-bottom:4px; font-size:13px;">
-           <span style="font-weight:600; color:var(--textMain);">Team A:</span> 
+           <span style="font-weight:600; color:var(--ink);">Team A:</span> 
            <span style="color:var(--mutedText);">${esc(namesA)}</span>
          </div>
          <div style="font-size:13px;">
-           <span style="font-weight:600; color:var(--textMain);">Team B:</span> 
+           <span style="font-weight:600; color:var(--ink);">Team B:</span> 
            <span style="color:var(--mutedText);">${esc(namesB)}</span>
          </div>`;
     } else {
        // Stroke Play OR Match with undefined positions: Single list
        const names = Array.isArray(g.playerLastNames) ? esc(g.playerLastNames.join(" · ")) : "";
-       bodyContent = `<div style="font-size:13px; color:var(--textMain);">${names}</div>`;
+       bodyContent = `<div style="font-size:13px; color:var(--ink);">${names}</div>`;
     }
 
     const timeText = g.teeTime ? esc(g.teeTime) : "Set Time";
