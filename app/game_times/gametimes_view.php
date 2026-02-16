@@ -64,16 +64,3 @@
 
   </section>
 </template>
-
-<!-- Actions Menu Overlay
-     If your chromeFooter/actions_menu already injects this markup, REMOVE this block to avoid duplicates.
--->
-<div class="actionMenuOverlay" id="actionMenuOverlay" aria-hidden="true" style="display:none;">
-  <div class="actionMenu" id="actionMenu" role="dialog" aria-modal="true" aria-labelledby="actionMenuTitle">
-    <div class="actionMenu_header">
-      <div class="actionMenu_title" id="actionMenuTitle"></div>
-      <div class="actionMenu_subtitle" id="actionMenuSubtitle"></div>
-    </div>
-    <div class="actionMenu_body" id="actionMenuBody"></div>
-  </div>
-</div>
