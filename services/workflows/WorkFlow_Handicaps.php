@@ -168,6 +168,8 @@ function be_calculateGamePHSO(string $action, ?string $id, array $parmGameData, 
 
     $myToken = $parmToken;
 
+    error_log("[be_calculateGamePHSO] START action={$action} id={$id}");
+
     $txtHoles = (string)($parmGameData["dbGames_Holes"] ?? "");
     $varAllowance = (string)($parmGameData["dbGames_Allowance"] ?? "100");
     $txtCompetition = (string)($parmGameData["dbGames_Competition"] ?? ""); // PairPair | PairField
@@ -175,6 +177,7 @@ function be_calculateGamePHSO(string $action, ?string $id, array $parmGameData, 
     $isGrossPlay = ((string)($parmGameData["dbGames_ScoringMethod"] ?? "") === "ADJ GROSS");
 
     if ($isGrossPlay) {
+        error_log("[be_calculateGamePHSO] Skipped: Gross Play");
         return [
             "status" => "ok",
             "message" => "PH/SO skipped, Gross Play.",
@@ -222,6 +225,7 @@ function be_calculateGamePHSO(string $action, ?string $id, array $parmGameData, 
 
     // If scoped lookup found nothing (e.g. player not in a group), return early
     if (empty($players)) {
+        error_log("[be_calculateGamePHSO] Skipped: No players in scope.");
         return ["status" => "ok", "message" => "No players in scope.", "updated" => 0];
     }
 
@@ -248,7 +252,10 @@ function be_calculateGamePHSO(string $action, ?string $id, array $parmGameData, 
         $groups[$key][] = $p;
     }
 
+    error_log("[be_calculateGamePHSO] Groups found: " . count($groups) . " keys: " . json_encode(array_keys($groups)));
+
     if (!count($groups)) {
+        error_log("[be_calculateGamePHSO] Skipped: No valid groups formed.");
         return [
             "status" => "ok",
             "message" => "PH/SO Skipped. No pairings/matches.",
