@@ -251,16 +251,18 @@
     const size = Number(g.size || 0) || 0;
 
     let bodyContent = "";
-    if (Array.isArray(g.teamA) && Array.isArray(g.teamB) && (g.teamA.length > 0 || g.teamB.length > 0)) {
+    if (g.isFlightGroup) {
        // Match Play: Split rows
+       const namesA = (Array.isArray(g.teamA) && g.teamA.length) ? g.teamA.join(" · ") : "";
+       const namesB = (Array.isArray(g.teamB) && g.teamB.length) ? g.teamB.join(" · ") : "";
        bodyContent = `
          <div style="margin-bottom:4px; font-size:13px;">
            <span style="font-weight:600; color:var(--textMain);">Team A:</span> 
-           <span style="color:var(--mutedText);">${esc(g.teamA.join(" · "))}</span>
+           <span style="color:var(--mutedText);">${esc(namesA)}</span>
          </div>
          <div style="font-size:13px;">
            <span style="font-weight:600; color:var(--textMain);">Team B:</span> 
-           <span style="color:var(--mutedText);">${esc(g.teamB.join(" · "))}</span>
+           <span style="color:var(--mutedText);">${esc(namesB)}</span>
          </div>`;
     } else {
        // Stroke Play: Single list
