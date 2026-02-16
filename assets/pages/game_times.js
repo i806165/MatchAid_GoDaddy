@@ -311,8 +311,7 @@
             assignTime(groupId, t);
           });
         });
-      },
-    });
+      });
   }
 
   function openHolePicker(groupId) {
@@ -327,8 +326,7 @@
             assignHole(groupId, h);
           });
         });
-      },
-    });
+      });
   }
 
   function openSuffixPicker(groupId) {
@@ -357,8 +355,7 @@
             assignSuffix(groupId, s);
           });
         });
-      },
-    });
+      });
   }
 
   // Helper to reuse the shared overlay for custom content (Pickers)
