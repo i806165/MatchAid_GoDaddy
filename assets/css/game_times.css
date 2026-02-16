@@ -1,0 +1,26 @@
+/* /assets/pages/game_times.css
+   Tee Times page (minimal additions).
+   IMPORTANT: Do not redefine shared chrome, cards, actionMenu, or chip styles.
+*/
+
+/* Only if ma_shared.css can't express the header row with right-side actions. */
+.gtCardHdrRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gtCardActions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.gtInlineIcon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
