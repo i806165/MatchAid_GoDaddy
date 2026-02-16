@@ -300,7 +300,7 @@
     // We will use the shared MA.ui.openActionsMenu but pass a custom render function or HTML string if supported,
     // OR we can use the shared overlay DOM directly like game_pairings does for its modal?
     // Actually, game_pairings uses a custom modal for AutoPair.
-    // Let's stick to the existing custom menu logic for pickers but use the shared overlay ID "maActionMenuOverlay".
+    // Let's stick to the existing custom menu logic for pickers but use the shared overlay ID "actionMenuOverlay".
     
     openCustomMenu("Tee Time", "Select a time.", items, (host) => {
         host.querySelectorAll("[data-gt-time]").forEach((node) => {
@@ -362,10 +362,17 @@
     // We can reuse the structure created by actions_menu.js
     let overlay = document.getElementById("maActionMenuOverlay");
     if (!overlay) {
-      // If not present, create it (or rely on actions_menu.js to have created it)
-      // For now, assume actions_menu.js is loaded.
-      console.warn("maActionMenuOverlay not found. Ensure actions_menu.js is loaded.");
-      return;
+      // Create it if missing (lazy init similar to actions_menu.js)
+      overlay = document.createElement("div");
+      overlay.id = "maActionMenuOverlay";
+      overlay.className = "actionMenuOverlay";
+      overlay.innerHTML = '<div id="maActionMenuHost"></div>';
+      document.body.appendChild(overlay);
+      
+      // Wire click-outside
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) closeMenu();
+      });
     }
     const host = document.getElementById("maActionMenuHost");
     if (!host) return;
