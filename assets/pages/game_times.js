@@ -10,6 +10,7 @@
   "use strict";
 
   const MA = window.MA || {};
+  const chrome = MA.chrome || {};
 
   const init = window.__MA_INIT__ || window.__INIT__ || {};
   const postJson = typeof MA.postJson === "function" ? MA.postJson : null;
@@ -23,15 +24,6 @@
   // ---- DOM ----
   const el = {
     cards: document.getElementById("gtCards"),
-    chromeBtnLeft: document.getElementById("chromeBtnLeft"),
-    chromeBtnRight: document.getElementById("chromeBtnRight"),
-
-    // These are expected to exist as part of chrome/actions_menu pattern
-    overlay: document.getElementById("actionMenuOverlay"),
-    menu: document.getElementById("actionMenu"),
-    title: document.getElementById("actionMenuTitle"),
-    subtitle: document.getElementById("actionMenuSubtitle"),
-    body: document.getElementById("actionMenuBody"),
   };
 
   // ---- State ----
@@ -87,7 +79,10 @@
 
   function setBusy(on) {
     state.busy = !!on;
-    if (el.chromeBtnRight) el.chromeBtnRight.disabled = state.busy || state.dirtyCount === 0;
+    // Re-apply chrome actions to update disabled state
+    if (chrome && typeof chrome.setActions === "function") {
+      applyChrome();
+    }
   }
 
   function minutesFromHMMA(s) {
@@ -154,35 +149,6 @@
     const used = takenSuffixes(time, hole, excludingId);
     for (const s of suffixList()) if (!used.has(s)) return s;
     return null;
-  }
-
-  // ---- Overlay menu (assumes chrome/actions_menu supplies DOM) ----
-  function closeMenu() {
-    if (!el.overlay) return;
-    el.overlay.classList.remove("is-open");
-    el.overlay.setAttribute("aria-hidden", "true");
-    if (el.body) el.body.innerHTML = "";
-  }
-
-  function openMenu({ title, subtitle, bodyHtml, onWire }) {
-    if (!el.overlay || !el.body || !el.title) {
-      setStatus("Action menu UI not available on this page (missing overlay).", "error");
-      return;
-    }
-
-    el.title.textContent = String(title || "");
-    if (el.subtitle) el.subtitle.textContent = String(subtitle || "");
-    el.body.innerHTML = bodyHtml || "";
-
-    el.overlay.classList.add("is-open");
-    el.overlay.setAttribute("aria-hidden", "false");
-
-    const closeOnBackdrop = (ev) => {
-      if (ev.target === el.overlay) closeMenu();
-    };
-    el.overlay.addEventListener("click", closeOnBackdrop, { once: true });
-
-    if (typeof onWire === "function") onWire();
   }
 
   // ---- Assignments ----
@@ -256,7 +222,7 @@
     if (!el.cards) return;
 
     const dirtyCount = recalcDirtyCount();
-    if (el.chromeBtnRight) el.chromeBtnRight.disabled = state.busy || dirtyCount === 0;
+    applyChrome(); // Update Save button state
 
     el.cards.innerHTML = state.groups.map(renderGroupCard).join("");
 
@@ -323,15 +289,22 @@
   function openTimePicker(groupId) {
     const arr = Array.isArray(state.meta?.availableTimes) ? state.meta.availableTimes : [];
     const items = ['<div class="actionMenu_item" data-gt-time="">(Clear)</div>']
-      .concat(arr.map((t) => `<div class="actionMenu_item" data-gt-time="${esc(t)}">${esc(t)}</div>`))
+      .concat(arr.map((t, idx) => `<div class="actionMenu_item" data-gt-time="${esc(t)}">${esc(t)}</div>`))
       .join("");
 
-    openMenu({
-      title: "Tee Time",
-      subtitle: "Select a time.",
-      bodyHtml: items,
-      onWire: () => {
-        el.body.querySelectorAll("[data-gt-time]").forEach((node) => {
+    // Use shared MA.ui.openActionsMenu but inject custom HTML body logic via a workaround or
+    // better yet, map these to standard items if possible. 
+    // Since game_times uses custom pickers (chips/lists), we can use the shared overlay's DOM if exposed,
+    // OR adapt openActionsMenu to support custom HTML body.
+    // However, the prompt asks to match game_pairings.js pattern which uses MA.ui.openActionsMenu.
+    // game_pairings uses standard items. game_times needs custom pickers.
+    // We will use the shared MA.ui.openActionsMenu but pass a custom render function or HTML string if supported,
+    // OR we can use the shared overlay DOM directly like game_pairings does for its modal?
+    // Actually, game_pairings uses a custom modal for AutoPair.
+    // Let's stick to the existing custom menu logic for pickers but use the shared overlay ID "maActionMenuOverlay".
+    
+    openCustomMenu("Tee Time", "Select a time.", items, (host) => {
+        host.querySelectorAll("[data-gt-time]").forEach((node) => {
           node.addEventListener("click", () => {
             const t = node.getAttribute("data-gt-time") || "";
             closeMenu();
@@ -346,12 +319,8 @@
     const holes = Array.isArray(state.meta?.availableHoles) ? state.meta.availableHoles : [];
     const chips = holes.map((h) => `<button type="button" class="maChoiceChip" data-gt-hole="${esc(h)}">${esc(h)}</button>`).join("");
 
-    openMenu({
-      title: "Start Hole",
-      subtitle: isShotgun() ? "Select a hole (then choose slot)." : "Select a hole.",
-      bodyHtml: `<div class="maChoiceChips">${chips}</div>`,
-      onWire: () => {
-        el.body.querySelectorAll("[data-gt-hole]").forEach((node) => {
+    openCustomMenu("Start Hole", isShotgun() ? "Select a hole (then choose slot)." : "Select a hole.", `<div class="maChoiceChips">${chips}</div>`, (host) => {
+        host.querySelectorAll("[data-gt-hole]").forEach((node) => {
           node.addEventListener("click", () => {
             const h = node.getAttribute("data-gt-hole") || "";
             closeMenu();
@@ -380,12 +349,8 @@
       return `<button type="button" class="${cls}" data-gt-suffix="${esc(s)}" ${ok ? "" : "disabled"}>${esc(s)}</button>`;
     }).join("");
 
-    openMenu({
-      title: "Shotgun Slot",
-      subtitle: `Time ${esc(time)} • Hole ${esc(hole)}`,
-      bodyHtml: `<div class="maChoiceChips">${chips}</div>`,
-      onWire: () => {
-        el.body.querySelectorAll("[data-gt-suffix]").forEach((node) => {
+    openCustomMenu("Shotgun Slot", `Time ${esc(time)} • Hole ${esc(hole)}`, `<div class="maChoiceChips">${chips}</div>`, (host) => {
+        host.querySelectorAll("[data-gt-suffix]").forEach((node) => {
           node.addEventListener("click", () => {
             const s = node.getAttribute("data-gt-suffix") || "";
             closeMenu();
@@ -394,6 +359,61 @@
         });
       },
     });
+  }
+
+  // Helper to reuse the shared overlay for custom content (Pickers)
+  function openCustomMenu(title, subtitle, bodyHtml, onWire) {
+    // We can reuse the structure created by actions_menu.js
+    let overlay = document.getElementById("maActionMenuOverlay");
+    if (!overlay) {
+      // If not present, create it (or rely on actions_menu.js to have created it)
+      // For now, assume actions_menu.js is loaded.
+      console.warn("maActionMenuOverlay not found. Ensure actions_menu.js is loaded.");
+      return;
+    }
+    const host = document.getElementById("maActionMenuHost");
+    if (!host) return;
+
+    const html = `
+      <div class="actionMenu">
+        <div class="actionMenu_header">
+          <div class="actionMenu_headerRow">
+            <div class="actionMenu_headerSpacer"></div>
+            <div>
+              <div class="actionMenu_title">${esc(title)}</div>
+              ${subtitle ? `<div class="actionMenu_subtitle">${esc(subtitle)}</div>` : ""}
+            </div>
+            <button class="actionMenu_closeBtn" type="button" data-close="1">✕</button>
+          </div>
+        </div>
+        <div class="actionMenu_body">${bodyHtml}</div>
+      </div>
+    `;
+
+    host.innerHTML = html;
+    overlay.classList.add("open");
+    overlay.setAttribute("aria-hidden", "false");
+    document.documentElement.classList.add("maOverlayOpen");
+
+    // Wire close
+    const closeBtn = host.querySelector("[data-close='1']");
+    if (closeBtn) closeBtn.addEventListener("click", closeMenu);
+    
+    // Wire custom events
+    if (typeof onWire === "function") onWire(host);
+  }
+
+  function closeMenu() {
+    if (MA.ui && MA.ui.closeActionsMenu) {
+      MA.ui.closeActionsMenu();
+    } else {
+      const overlay = document.getElementById("maActionMenuOverlay");
+      if (overlay) {
+        overlay.classList.remove("open");
+        overlay.setAttribute("aria-hidden", "true");
+      }
+      document.documentElement.classList.remove("maOverlayOpen");
+    }
   }
 
   // ---- Actions ----
@@ -456,36 +476,42 @@
   }
 
   function openActionsMenu() {
-    const canSave = state.dirtyCount > 0 && !state.busy;
+    if (!MA.ui || !MA.ui.openActionsMenu) return;
+    
     const items = [
-      `<div class="actionMenu_item ${canSave ? "" : "is-disabled"}" data-gt-menu="save">Save</div>`,
-      `<div class="actionMenu_item" data-gt-menu="reset">Reset / Reload</div>`,
-      `<div class="actionMenu_divider"></div>`,
-      `<div class="actionMenu_item" data-gt-menu="close">Close</div>`,
-    ].join("");
-
-    openMenu({
-      title: "Actions",
-      subtitle: "",
-      bodyHtml: items,
-      onWire: () => {
-        el.body.querySelectorAll("[data-gt-menu]").forEach((node) => {
-          node.addEventListener("click", () => {
-            const cmd = node.getAttribute("data-gt-menu");
-            closeMenu();
-            if (cmd === "save") return doSave();
-            if (cmd === "reset") return doReset();
-            return;
-          });
-        });
-      },
-    });
+      { label: "Reset / Reload", action: doReset },
+      { separator: true },
+      { label: "Close Menu", action: () => {} } // Implicit close
+    ];
+    MA.ui.openActionsMenu("Actions", items);
   }
 
-  // ---- Wire chrome buttons (fallback if MA.chrome not used) ----
-  function wireChromeButtons() {
-    if (el.chromeBtnLeft) el.chromeBtnLeft.addEventListener("click", openActionsMenu);
-    if (el.chromeBtnRight) el.chromeBtnRight.addEventListener("click", doSave);
+  // ---- Chrome ----
+  function applyChrome() {
+    const g = state.meta || {};
+    const title = String(g.title || "Game") || `GGID ${state.meta.ggid}`;
+
+    if (chrome && typeof chrome.setHeaderLines === "function") {
+      chrome.setHeaderLines(["ADMIN PORTAL", "Tee Times", title]);
+    }
+
+    if (chrome && typeof chrome.setActions === "function") {
+      const canSave = state.dirtyCount > 0 && !state.busy;
+      chrome.setActions({
+        left: { show: true, label: "Actions", onClick: openActionsMenu },
+        right: { show: true, label: "Save", onClick: doSave, disabled: !canSave }
+      });
+    }
+
+    if (chrome && typeof chrome.setBottomNav === "function") {
+      chrome.setBottomNav({
+        visible: ["admin", "edit", "roster", "pairings", "teetimes", "summary"],
+        active: "teetimes",
+        onNavigate: (id) => {
+          if (typeof MA.routerGo === "function") MA.routerGo(id);
+        }
+      });
+    }
   }
 
   // ---- Boot ----
@@ -500,7 +526,7 @@
 
     state.groups = sortForDisplay(state.groups);
     snapshotOriginal();
-    wireChromeButtons();
+    applyChrome();
     render();
   }
 
