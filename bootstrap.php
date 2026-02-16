@@ -31,6 +31,7 @@ define('MA_ROUTE_API_GHIN',          '/api/GHIN');
 define('MA_ROUTE_API_GAME_MAINT',    '/api/game_maintenance');
 define('MA_ROUTE_API_GAME_SETTINGS', '/api/game_settings');
 define('MA_ROUTE_API_GAME_PLAYERS',  '/api/game_players');
+define('MA_ROUTE_API_GAME_TIMES',  '/api/game_times');
 define('MA_ROUTE_API_FAVORITE_PLAYERS', '/api/favorite_players');
 
 ini_set("log_errors", "1");

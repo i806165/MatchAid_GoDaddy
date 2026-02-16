@@ -1,5 +1,5 @@
 <?php
-// /public_html/app/game_times/gametimes.php
+// /public_html/app/game_times/gametimes.php 
 declare(strict_types=1);
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -28,7 +28,7 @@ if (!$ctx || empty($ctx["ok"])) {
   exit;
 }
 
-// 2) GAME context hydration (Rule-2 for pages)
+// 2) GAME context hydration 
 try {
   $gc = ServiceContextGame::getGameContext();
   $game = $gc["game"] ?? [];

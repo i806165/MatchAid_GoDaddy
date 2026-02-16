@@ -52,7 +52,7 @@ $ROUTES = [
     "edit"     => "/app/game_maintenance/gamemaint.php",   // expects mode=add|edit (if your router appends it)
     "roster"   => "/app/game_players/gameplayers.php",
     "pairings" => "/app/game_pairings/gamepairings.php",
-    "teetimes" => "/app/game_teetimes/gameteetimes.php",
+    "teetimes" => "/app/game_times/gametimes.php",
     "summary"  => "/app/game_review/gameReview.php",
     "import" => "/app/game_import/import_games.php",
     "gameReview"  => "/app/game_review/gameReview.php",
