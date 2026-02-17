@@ -456,7 +456,7 @@
   // ---- actions ----
   function buildCsvText() {
     const rows = normalizeRosterForDisplay(state.roster || []);
-    const header = ["Name","Tee","HI","CH","PH","SO","Time","Start","Match","Pair","Pos","ScoreID"];
+    const header = ["Name","Tee","HI","CH","PH","SO","Time","Start","Match","Team","Pair","Pos","ScoreID"];
     const lines = [header.join(",")];
 
     rows.forEach(p => {
@@ -472,6 +472,7 @@
         `"` + safeString(p.dbPlayers_TeeTime).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_StartHole).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_FlightID).replace(/"/g, '""') + `"`,
+        `"` + safeString(p.dbPlayers_FlightPos).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_PairingID).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_PairingPos).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_PlayerKey).replace(/"/g, '""') + `"`,
@@ -494,7 +495,7 @@
       ["Game Format", g.dbGames_GameFormat],
       ["Competition", g.dbGames_Competition],
       ["Scoring Method", g.dbGames_ScoringMethod],
-      ["System System", g.dbGames_ScoringSystem],
+      ["Scoring System", g.dbGames_ScoringSystem],
       ["Handicap Method", g.dbGames_HCMethod],
       ["Handicap Allowance", g.dbGames_Allowance],
       ["Handicap Effectivity", g.dbGames_HCEffectivity],
@@ -623,11 +624,6 @@
     setStatus("CSV downloaded.", "ok");
   }
 
-  async function refreshHandicaps() {
-    setStatus("Refresh handicaps not wired yet for GoDaddy.", "warn");
-    showActionHint("TODO: wire to handicap workflow endpoint (Pass-A/Pass-B).", "warn");
-  }
-
   function emailSummary() {
     const g = state.game || {};
     const subject = "MatchAid Game Summary - " + (g.dbGames_Title || "Game");
@@ -712,12 +708,11 @@
 
     const items = [
       { label: "Game Settings", action: "settings", params: { returnTo: "summary" } },
-      { label: "Refresh Handicaps", action: refreshHandicaps },
       { label: "Print Scorecards", action: printScorecards },
       { separator: true },
-      { label: "Download CSV", action: downloadCsv },
-      { label: "Copy Game Summary to CSV)", action: copySummaryToClipboard },
-      { label: "Copy Game Summary", action: copyRichTextToClipboard },
+      { label: "Download to csv file", action: downloadCsv },
+      { label: "Copy Game Summary (csv)", action: copySummaryToClipboard },
+      { label: "Copy Game Summary (rich text)", action: copyRichTextToClipboard },
       { label: "Compose Email to Players", action: emailSummary }
     ];
     MA.ui.openActionsMenu("Actions", items);
