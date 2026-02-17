@@ -778,6 +778,10 @@
 
   async function doSave() {
     if (state.busy) return;
+    if (!state.dirty) {
+      window.location.assign(returnToUrl);
+      return;
+    }
 
     setStatus("Saving...", "info");
     setBusy(true);
