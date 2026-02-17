@@ -110,6 +110,14 @@
       if (teeA && !teeB) return -1;
       if (!teeA && teeB) return 1;
 
+      const flightA = safeString(a.dbPlayers_FlightID).trim();
+      const flightB = safeString(b.dbPlayers_FlightID).trim();
+      if (flightA !== flightB) return flightA.localeCompare(flightB, undefined, { numeric: true });
+
+      const fPosA = safeString(a.dbPlayers_FlightPos).trim();
+      const fPosB = safeString(b.dbPlayers_FlightPos).trim();
+      if (fPosA !== fPosB) return fPosA.localeCompare(fPosB);
+
       const pairA = safeString(a.dbPlayers_PairingID).trim();
       const pairB = safeString(b.dbPlayers_PairingID).trim();
       if (pairA !== pairB) return pairA.localeCompare(pairB);

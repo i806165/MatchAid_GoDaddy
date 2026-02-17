@@ -7,10 +7,10 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 }
 
 require_once __DIR__ . "/../../bootstrap.php";
-require_once MA_API_LIB . "/Db.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
+require_once MA_SVC_DB . "/service_dbPlayers.php";
 
 /**
  * buildGameSummaryInit
@@ -21,7 +21,6 @@ require_once MA_SERVICES . "/context/service_ContextGame.php";
  * @return array INIT payload for the Game Summary page
  */
 function buildGameSummaryInit(array $ctx, array $gc): array {
-  $pdo = Db::pdo();
   $ggid = strval($gc["ggid"] ?? "");
   $game = $gc["game"] ?? null;
 
@@ -33,22 +32,7 @@ function buildGameSummaryInit(array $ctx, array $gc): array {
   }
 
   // Roster: select full rows to preserve schema flexibility (JS uses known keys)
-  $sql = "
-    SELECT *
-    FROM db_Players
-    WHERE dbPlayers_GGID = :ggid
-    ORDER BY
-      CASE WHEN dbPlayers_TeeTime IS NULL OR dbPlayers_TeeTime = '' THEN 1 ELSE 0 END,
-      dbPlayers_TeeTime ASC,
-      dbPlayers_PairingID ASC,
-      dbPlayers_PairingPos ASC,
-      dbPlayers_LName ASC
-    LIMIT 500
-  ";
-
-  $stmt = $pdo->prepare($sql);
-  $stmt->execute([":ggid" => $ggid]);
-  $roster = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+  $roster = ServiceDbPlayers::getGamePlayers($ggid);
 
   return [
     "ok" => true,
