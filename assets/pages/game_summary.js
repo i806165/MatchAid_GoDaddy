@@ -516,7 +516,7 @@
     
     let html = `
       <h2 style="font-family: sans-serif;">${esc(g.dbGames_Title || "Game Summary")}</h2>
-      <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; font-family: sans-serif; font-size: 12px; width: 100%;">
+      <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; font-family: sans-serif; font-size: 10pt; width: 100%;">
         <thead style="background-color: #f2f2f2;">
           <tr>
             <th>Name</th><th>Tee</th><th>HI</th><th>CH</th><th>PH</th><th>SO</th>
@@ -544,7 +544,7 @@
 
     html += `</tbody></table><br/>
     <h3 style="font-family: sans-serif;">Game Configuration</h3>
-    <table border="0" cellpadding="3" cellspacing="0" style="font-family: sans-serif; font-size: 12px;">`;
+    <table border="0" cellpadding="3" cellspacing="0" style="font-family: sans-serif; font-size: 10pt;">`;
 
     const config = [
       ["Facility", g.dbGames_FacilityName],
