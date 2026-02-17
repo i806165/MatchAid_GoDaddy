@@ -14,6 +14,7 @@
 
   const routes = MA.routes || {};
   const apiBase = routes.apiGamePairings || "/api/game_pairings";
+  const apiGHIN = MA.paths?.apiGHIN || "/api/GHIN";
 
   // ---- DOM ----
   const el = {
@@ -208,10 +209,6 @@
     }
   }
 
-  function onRecalcHandicaps() {
-    setStatus("Recalculate Handicaps: Not implemented yet.", "info");
-  }
-
   function onAutoPair() {
     const unpaired = state.players.filter(p => String(p.pairingId || "000") === "000");
     if (unpaired.length < 2) return setStatus("Not enough unpaired players.", "warn");
@@ -241,7 +238,6 @@
     
     const items = [
       { label: "AutoPair", action: onAutoPair },
-      { label: "Recalculate Handicaps", action: onRecalcHandicaps },
       { separator: true },
       { label: "Reset Pairings and Matches to last Save", action: onResetPairings, danger: true }
     ];
@@ -1438,9 +1434,21 @@
       if (Array.isArray(res.payload?.players)) {
         state.players = normalizePlayers(res.payload.players);
       }
+
+      // Trigger-4: Recalculate handicaps (Pass-A + Pass-B)
+      setStatus("Recalculating handicaps...", "info");
+      try {
+        // Pass-A: Base Refresh (HI/CH/Baseline PH)
+        await MA.postJson(`${apiGHIN}/refreshHandicaps.php`, { ghin: "all" });
+        // Pass-B: Competition Calc (PH/SO)
+        await MA.postJson(`${apiGHIN}/calcPHSO.php`, { action: "all" });
+        setStatus("Handicaps updated. Reloading...", "success");
+        window.location.reload(); // Refresh UI with new PH/SO values
+        return; // Stop here, reload will happen
+      } catch (e) { console.error("Recalc failed", e); }
+
       clearDirty();
       render();
-      setStatus("Saved.", "success");
     } catch (e) {
       console.error(e);
       setStatus(String(e.message || e), "error");
