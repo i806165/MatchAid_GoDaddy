@@ -179,6 +179,16 @@
       const desired = normSuffix(g.startHoleSuffix) || defaultSuffix();
       const ok = !takenSuffixes(g.teeTime, g.startHole, groupId).has(desired);
       g.startHoleSuffix = ok ? desired : (suggestSuffix(g.teeTime, g.startHole, groupId) || defaultSuffix());
+    } else if (!isShotgun() && !g.startHole) {
+      // Smart default for TeeTimes: if hole empty, set based on settings
+      const holes = String(state.meta?.holesSetting || "").toLowerCase();
+      if (holes === "b9" || holes === "back" || holes === "back 9") {
+        g.startHole = "10";
+      } else {
+        // All 18 or Front 9 -> Hole 1
+        g.startHole = "1";
+      }
+      // No suffix needed for TeeTimes
     }
 
     state.groups = sortForDisplay(state.groups);
@@ -279,7 +289,7 @@
     }
 
     const timeText = g.teeTime ? esc(g.teeTime) : "Set Time";
-    const holeText = g.startHole ? `Start ${esc(g.startHole)}` : "Start Tee";
+    const holeText = g.startHole ? `Hole ${esc(g.startHole)}` : "Hole";
 
     const showSuffix = isShotgun();
     const suffixText = g.startHoleSuffix ? esc(g.startHoleSuffix) : defaultSuffix();
