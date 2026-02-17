@@ -2,48 +2,6 @@
 // /public_html/app/game_summary/gamesummary_view.php
 ?>
 
-<!-- CONTROLS BAND (peer to body standard) -->
-<div class="maControlArea" id="gsControls" aria-label="Game Summary Controls">
-
-  <!-- Collapsible: Game Configuration -->
-  <button type="button"
-          class="gsCfgToggle"
-          id="gsCfgToggle"
-          aria-expanded="false">
-    <span class="gsCfgTitle">Game Settings</span>
-    <span class="gsCfgChevron" aria-hidden="true">▾</span>
-  </button>
-
-  <div class="gsCfgPanel" id="gsCfgPanel" hidden>
-    <div class="gsConfigGrid" id="configGrid"></div>
-  </div>
-
-  <!-- Scope + Meta pills row -->
-  <div class="gsControlsRow">
-    <div class="maSeg gsScopeSeg" role="tablist" aria-label="Roster Scope">
-      <button type="button" class="maSegBtn is-active" id="scopeByPlayer" aria-selected="true">By Player</button>
-      <button type="button" class="maSegBtn" id="scopeByGroup" aria-selected="false">By Group</button>
-    </div>
-
-    <div class="maPills gsMetaPills" aria-label="Game quick stats">
-      <div class="maPill maPillKV" role="group" aria-label="Players">
-        <div class="maPillLabel">Players</div>
-        <div class="maPillValue maListRow__col--muted" id="gsMetaPlayers">—</div>
-      </div>
-
-      <div class="maPill maPillKV" role="group" aria-label="Holes">
-        <div class="maPillLabel">Holes</div>
-        <div class="maPillValue maListRow__col--muted" id="gsMetaHoles">—</div>
-      </div>
-
-      <div class="maPill maPillKV" role="group" aria-label="HC Method">
-        <div class="maPillLabel">HC</div>
-        <div class="maPillValue maListRow__col--muted" id="gsMetaHC">—</div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- PAGE BODY -->
 <div class="maCards" id="gsCards">
 
