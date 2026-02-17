@@ -633,12 +633,11 @@
     const subject = "MatchAid Game Summary - " + (g.dbGames_Title || "Game");
     
     const body = 
-      "(Paste the game summary here)\n\n" +
+      "(Note: use ctrl+v / cmd+v to paste the game summary here)\n\n" +
       "Game: " + (g.dbGames_Title || "") + "\n" +
       "Facility: " + (g.dbGames_FacilityName || "") + "\n" +
       "Course: " + (g.dbGames_CourseName || "") + "\n" +
-      "Date: " + (g.dbGames_PlayDate || "") + "\n" +
-      "\n" + "(note: paste (ctrl+v / cmd+v) to place the game details from clipboard here..) ";
+      "Date: " + (g.dbGames_PlayDate || "") + "\n" ;
 
     const recipients = (state.roster || [])
       .filter(p => p.contactEmail)
