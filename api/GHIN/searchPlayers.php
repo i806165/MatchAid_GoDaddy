@@ -9,6 +9,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 require_once __DIR__ . "/../../bootstrap.php";
 //require_once __DIR__ . "/../../../bootstrap.php";
 //require_once MA_SVC_GHIN . "/GHIN/GHIN_API_Players.php";
+require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/GHIN/GHIN_API_Players.php";
 
 header("Content-Type: application/json; charset=utf-8");
@@ -41,6 +42,8 @@ $clubId = $_SESSION["SessionClubID"] ?? "";
 
 // Inputs
 $mode = strtolower(trim((string)($in["mode"] ?? "")));
+
+Logger::info("GHIN_SEARCH_REQ", ["mode" => $mode, "ghin" => $in["ghin"] ?? "", "last" => $in["lastName"] ?? "", "state" => $in["state"] ?? ""]);
 
 try {
   $rows = [];
@@ -137,6 +140,8 @@ try {
     exit;
   }
 
+  Logger::info("GHIN_SEARCH_RES", ["count" => count($rows), "truncated" => $truncated]);
+
   echo json_encode([
     "ok" => true,
     "payload" => [
@@ -146,6 +151,7 @@ try {
   ]);
 
 } catch (Throwable $e) {
+  Logger::error("GHIN_SEARCH_FAIL", ["err" => $e->getMessage()]);
   http_response_code(500);
   echo json_encode(["ok" => false, "message" => "GHIN search error."]);
 }
