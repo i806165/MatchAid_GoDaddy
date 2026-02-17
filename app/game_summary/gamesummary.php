@@ -153,6 +153,7 @@ $maChromeLogoUrl = null;
 
   <script src="/assets/js/ma_shared.js"></script>
   <script src="/assets/modules/actions_menu.js?v=1"></script>
+  <script src="/assets/modules/composeEmail.js?v=1"></script>
   <script src="/assets/pages/game_summary.js"></script>
 </body>
 </html>

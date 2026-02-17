@@ -639,15 +639,33 @@
 
   function emailSummary() {
     const g = state.game || {};
-    const subj = encodeURIComponent("MatchAid Game Summary - " + (g.dbGames_Title || "Game"));
-    const body = encodeURIComponent(
-      "Attached: Game Summary CSV (download from the page first).\n\n" +
+    const subject = "MatchAid Game Summary - " + (g.dbGames_Title || "Game");
+    
+    // Build plain text body (CSV content)
+    const csvContent = buildCsvText();
+    const body = 
+      "Here is the game summary:\n\n" +
       "Game: " + (g.dbGames_Title || "") + "\n" +
       "Facility: " + (g.dbGames_FacilityName || "") + "\n" +
       "Course: " + (g.dbGames_CourseName || "") + "\n" +
-      "Date: " + (g.dbGames_PlayDate || "") + "\n"
-    );
-    window.location.href = "mailto:?subject=" + subj + "&body=" + body;
+      "Date: " + (g.dbGames_PlayDate || "") + "\n\n" +
+      csvContent;
+
+    // Extract recipients from roster
+    const recipients = (state.roster || [])
+      .filter(p => p.contactEmail)
+      .map(p => ({ name: p.dbPlayers_Name, email: p.contactEmail }));
+
+    if (MA.email && MA.email.compose) {
+      MA.email.compose({
+        bcc: recipients, // Use BCC for privacy/large lists
+        subject: subject,
+        body: body,
+        bodyIsHtml: false
+      });
+    } else {
+      setStatus("Email module not loaded.", "error");
+    }
   }
 
   function openGameSettings() {

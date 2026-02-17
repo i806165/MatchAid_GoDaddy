@@ -108,6 +108,41 @@ final class service_dbFavPlayers
     return $favorites;
 }
 
+    /**
+     * getContactsForGame
+     * Returns map of playerGHIN => { email, mobile } for a list of players,
+     * looked up from the user's favorites (address book).
+     */
+    public static function getContactsForGame(string $userGHIN, array $playerGHINs): array
+    {
+        $userGHIN = trim($userGHIN);
+        if ($userGHIN === "" || empty($playerGHINs)) return [];
+
+        $ghins = array_values(array_unique(array_filter(array_map("strval", $playerGHINs))));
+        if (empty($ghins)) return [];
+
+        $pdo = Db::pdo();
+        $in = implode(",", array_fill(0, count($ghins), "?"));
+        
+        $sql = "SELECT dbFav_PlayerGHIN, dbFav_PlayerEMail, dbFav_PlayerMobile
+                FROM db_FavPlayers
+                WHERE dbFav_UserGHIN = ?
+                  AND dbFav_PlayerGHIN IN ($in)";
+        
+        $params = array_merge([$userGHIN], $ghins);
+        $st = $pdo->prepare($sql);
+        $st->execute($params);
+
+        $map = [];
+        while ($r = $st->fetch(PDO::FETCH_ASSOC)) {
+            $g = (string)($r["dbFav_PlayerGHIN"] ?? "");
+            $map[$g] = [
+                "email" => (string)($r["dbFav_PlayerEMail"] ?? ""),
+                "mobile" => (string)($r["dbFav_PlayerMobile"] ?? "")
+            ];
+        }
+        return $map;
+    }
 
     public static function isFavorite(string $userGHIN, string $favGHIN): bool
     {

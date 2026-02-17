@@ -11,6 +11,7 @@ require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_SVC_DB . "/service_dbPlayers.php";
+require_once MA_SVC_DB . "/service_dbFavPlayers.php";
 
 /**
  * buildGameSummaryInit
@@ -33,6 +34,23 @@ function buildGameSummaryInit(array $ctx, array $gc): array {
 
   // Roster: select full rows to preserve schema flexibility (JS uses known keys)
   $roster = ServiceDbPlayers::getGamePlayers($ggid);
+
+  // Enrich roster with contact info from User's Favorites (Address Book)
+  $userGHIN = (string)($ctx["ghinId"] ?? $_SESSION["SessionGHINLogonID"] ?? "");
+  if ($userGHIN !== "") {
+      $ghins = array_map(fn($p) => (string)($p["dbPlayers_PlayerGHIN"] ?? ""), $roster);
+      $contacts = service_dbFavPlayers::getContactsForGame($userGHIN, $ghins);
+
+      foreach ($roster as &$p) {
+          $g = (string)($p["dbPlayers_PlayerGHIN"] ?? "");
+          if (isset($contacts[$g])) {
+              // Inject into roster object for JS usage
+              $p["contactEmail"] = $contacts[$g]["email"] ?? "";
+              $p["contactMobile"] = $contacts[$g]["mobile"] ?? "";
+          }
+      }
+      unset($p);
+  }
 
   return [
     "ok" => true,
