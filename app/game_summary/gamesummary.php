@@ -10,7 +10,6 @@ require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
-require_once __DIR__ . "/../../api/game_summary/initGameSummary.php";
 
 // Portal context (required convention)
 $_SESSION["SessionPortal"] = "ADMIN PORTAL";
@@ -38,6 +37,7 @@ if (!$gc || empty($gc["ok"])) {
 }
 
 try {
+  require_once MA_API . "/game_summary/initGameSummary.php";
   $initPayload = buildGameSummaryInit($ctx, $gc);
   if (empty($initPayload["ok"])) {
     // Hard failure: treat as context error
