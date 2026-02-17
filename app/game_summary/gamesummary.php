@@ -32,12 +32,12 @@ if (!$ctx || empty($ctx["ok"])) {
 $gc = ServiceContextGame::getGameContext();
 
 Logger::info("GAMESUMMARY_CTX_DEBUG", [
-  "ok" => $gc["ok"] ?? false,
+  "ok" => !empty($gc["game"]),
   "ggid" => $gc["ggid"] ?? "missing",
   "hasGame" => !empty($gc["game"])
 ]);
 
-if (!$gc || empty($gc["ok"])) {
+if (!$gc || empty($gc["game"])) {
   // If game context is missing, route back to Admin Games List (safe default)
   header("Location: " . MA_ROUTE_LOGIN);
   exit;
