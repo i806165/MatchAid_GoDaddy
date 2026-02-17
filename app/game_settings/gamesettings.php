@@ -76,6 +76,17 @@ $paths = [
   "routerApi"     => MA_ROUTE_API_ROUTER,
 ];
 
+// Determine return route from query param (default to games list)
+$returnToParam = trim((string)($_GET["returnTo"] ?? ""));
+$returnRoute = MA_ROUTE_ADMIN_GAMES;
+
+if ($returnToParam !== "") {
+    // If it looks like a path, use it; otherwise delegate to pageRouter
+    $returnRoute = str_starts_with($returnToParam, "/")
+        ? $returnToParam
+        : (MA_ROUTE_API_ROUTER . "?action=" . urlencode($returnToParam) . "&redirect=1");
+}
+
 // Chrome values
 $maChromeTitle = "Game Settings";
 $maChromeSubtitle = $initPayload["header"]["subtitle"] ?? "";
@@ -120,7 +131,7 @@ $maChromeLogoUrl = null;
   window.MA.routes = {
     router: window.MA.paths.routerApi,
     apiGameSettings: window.MA.paths.apiGameSettings,
-    returnTo: <?= json_encode(MA_ROUTE_ADMIN_GAMES) ?>
+    returnTo: <?= json_encode($returnRoute) ?>
   };
 </script>
 
