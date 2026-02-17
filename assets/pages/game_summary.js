@@ -467,25 +467,151 @@
     const lines = [header.join(",")];
 
     rows.forEach(p => {
+      const teeName = safeString(p.dbPlayers_TeeSetName);
       const vals = [
-        safeString(p.dbPlayers_Name),
-        safeString(p.dbPlayers_TeeSetName),
-        safeString(p.dbPlayers_HI),
-        safeString(p.dbPlayers_CH),
-        safeString(p.dbPlayers_PH),
-        safeString(p.dbPlayers_SO),
-        safeString(p.dbPlayers_TeeTime),
-        safeString(p.dbPlayers_StartHole),
-        safeString(p.dbPlayers_FlightID),
-        safeString(p.dbPlayers_PairingID),
-        safeString(p.dbPlayers_PairingPos),
-        safeString(p.dbPlayers_PlayerKey),
-      ].map(v => '"' + String(v ?? "").replace(/"/g,'""') + '"');
+        `"` + safeString(p.dbPlayers_Name).replace(/"/g, '""') + `"`,
+        // Special format for Tee Name to prevent Excel from converting "2/3" to a date
+        teeName.includes('/') ? `="` + teeName.replace(/"/g, '""') + `"` : `"` + teeName.replace(/"/g, '""') + `"`,
+        `"` + safeString(p.dbPlayers_HI).replace(/"/g, '""') + `"`,
+        `"` + safeString(p.dbPlayers_CH).replace(/"/g, '""') + `"`,
+        `"` + safeString(p.dbPlayers_PH).replace(/"/g, '""') + `"`,
+        `"` + safeString(p.dbPlayers_SO).replace(/"/g, '""') + `"`,
+        `"` + safeString(p.dbPlayers_TeeTime).replace(/"/g, '""') + `"`,
+        `"` + safeString(p.dbPlayers_StartHole).replace(/"/g, '""') + `"`,
+        `"` + safeString(p.dbPlayers_FlightID).replace(/"/g, '""') + `"`,
+        `"` + safeString(p.dbPlayers_PairingID).replace(/"/g, '""') + `"`,
+        `"` + safeString(p.dbPlayers_PairingPos).replace(/"/g, '""') + `"`,
+        `"` + safeString(p.dbPlayers_PlayerKey).replace(/"/g, '""') + `"`,
+      ];
 
       lines.push(vals.join(","));
     });
 
+    // Append Game Configuration
+    const g = state.game || {};
+    lines.push(""); // Blank line separator
+    lines.push("GAME CONFIGURATION,");
+    
+    const config = [
+      ["Facility", g.dbGames_FacilityName],
+      ["Course", g.dbGames_CourseName],
+      ["Play Date", g.dbGames_PlayDate],
+      ["First Tee Time", g.dbGames_PlayTime],
+      ["Holes", g.dbGames_Holes],
+      ["Game Format", g.dbGames_GameFormat],
+      ["Competition", g.dbGames_Competition],
+      ["Scoring Method", g.dbGames_ScoringMethod],
+      ["System System", g.dbGames_ScoringSystem],
+      ["Handicap Method", g.dbGames_HCMethod],
+      ["Handicap Allowance", g.dbGames_Allowance],
+      ["Handicap Effectivity", g.dbGames_HCEffectivity],
+      ["Effectivity Date", g.dbGames_HCEffectivityDate]
+    ];
+
+    config.forEach(([label, val]) => {
+      const v = safeString(val).replace(/"/g, '""');
+      lines.push(`"${label}","${v}"`);
+    });
+
     return lines.join("\n");
+  }
+
+  function buildHtmlSummary() {
+    const rows = normalizeRosterForDisplay(state.roster || []);
+    const g = state.game || {};
+    
+    let html = `
+      <h2 style="font-family: sans-serif;">${esc(g.dbGames_Title || "Game Summary")}</h2>
+      <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; font-family: sans-serif; font-size: 12px; width: 100%;">
+        <thead style="background-color: #f2f2f2;">
+          <tr>
+            <th>Name</th><th>Tee</th><th>HI</th><th>CH</th><th>PH</th><th>SO</th>
+            <th>Time</th><th>Start</th><th>Match</th><th>Pair</th><th>Pos</th><th>ScoreID</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+    rows.forEach(p => {
+      html += `<tr>
+        <td>${esc(p.dbPlayers_Name)}</td>
+        <td>${esc(p.dbPlayers_TeeSetName)}</td>
+        <td align="center">${esc(p.dbPlayers_HI)}</td>
+        <td align="center">${esc(p.dbPlayers_CH)}</td>
+        <td align="center">${esc(p.dbPlayers_PH)}</td>
+        <td align="center">${esc(p.dbPlayers_SO)}</td>
+        <td align="center">${esc(p.dbPlayers_TeeTime)}</td>
+        <td align="center">${esc(p.dbPlayers_StartHole)}</td>
+        <td align="center">${esc(p.dbPlayers_FlightID)}</td>
+        <td align="center">${esc(p.dbPlayers_PairingID)}</td>
+        <td align="center">${esc(p.dbPlayers_PairingPos)}</td>
+        <td align="center">${esc(p.dbPlayers_PlayerKey)}</td>
+      </tr>`;
+    });
+
+    html += `</tbody></table><br/>
+    <h3 style="font-family: sans-serif;">Game Configuration</h3>
+    <table border="0" cellpadding="3" cellspacing="0" style="font-family: sans-serif; font-size: 12px;">`;
+
+    const config = [
+      ["Facility", g.dbGames_FacilityName],
+      ["Course", g.dbGames_CourseName],
+      ["Play Date", g.dbGames_PlayDate],
+      ["Play Time", g.dbGames_PlayTime],
+      ["Holes", g.dbGames_Holes],
+      ["Format", g.dbGames_GameFormat],
+      ["Competition", g.dbGames_Competition],
+      ["Scoring", g.dbGames_ScoringMethod],
+      ["System", g.dbGames_ScoringSystem],
+      ["HC Method", g.dbGames_HCMethod],
+      ["Allowance", g.dbGames_Allowance],
+      ["Effectivity", g.dbGames_HCEffectivity],
+      ["Eff. Date", g.dbGames_HCEffectivityDate]
+    ];
+
+    config.forEach(([label, val]) => {
+      html += `<tr><td style="font-weight:bold;">${esc(label)}:</td><td>${esc(safeString(val))}</td></tr>`;
+    });
+
+    html += `</table>`;
+    return html;
+  }
+
+  function copySummaryToClipboard() {
+    if (!navigator.clipboard) {
+      setStatus("Clipboard API not available on this browser.", "warn");
+      showActionHint("Clipboard API not available on this browser.", "warn");
+      return;
+    }
+    const csv = buildCsvText();
+    navigator.clipboard.writeText(csv).then(() => {
+      setStatus("Summary copied to clipboard.", "ok");
+    }).catch(err => {
+      console.error("Copy failed", err);
+      setStatus("Could not copy to clipboard.", "err");
+    });
+  }
+
+  async function copyRichTextToClipboard() {
+    if (!navigator.clipboard || !navigator.clipboard.write) {
+      setStatus("Rich text copy not supported on this browser.", "warn");
+      return;
+    }
+    
+    try {
+      const html = buildHtmlSummary();
+      const text = buildCsvText(); // Fallback plain text
+      
+      const blobHtml = new Blob([html], { type: "text/html" });
+      const blobText = new Blob([text], { type: "text/plain" });
+      
+      const data = [new ClipboardItem({ "text/html": blobHtml, "text/plain": blobText })];
+      
+      await navigator.clipboard.write(data);
+      setStatus("Summary copied (Table). Paste into email/doc.", "success");
+    } catch (err) {
+      console.error("Copy rich text failed", err);
+      setStatus("Could not copy rich text.", "error");
+    }
   }
 
   function downloadCsv() {
@@ -589,6 +715,8 @@
       { separator: true },
       { label: "Print Scorecards", action: printScorecards },
       { label: "Download CSV", action: downloadCsv },
+      { label: "Copy Summary (CSV)", action: copySummaryToClipboard },
+      { label: "Copy Summary (Table)", action: copyRichTextToClipboard },
       { label: "Email Summary", action: emailSummary }
     ];
     MA.ui.openActionsMenu("Actions", items);
