@@ -513,6 +513,7 @@
   function buildHtmlSummary() {
     const rows = normalizeRosterForDisplay(state.roster || []);
     const g = state.game || {};
+    const isPairPair = g.dbGames_Competition === 'PairPair';
     
     let html = `
       <h2 style="font-family: sans-serif;">${esc(g.dbGames_Title || "Game Summary")}</h2>
@@ -520,13 +521,13 @@
         <thead style="background-color: #f2f2f2;">
           <tr>
             <th>Name</th><th>Tee</th><th>HI</th><th>CH</th><th>PH</th><th>SO</th>
-            <th>Time</th><th>Start</th><th>Match</th><th>Pair</th><th>Pos</th><th>ScoreID</th>
+            <th>Time</th><th>Start</th><th>Match</th><th>Team</th><th>Pair</th><th>Pos</th><th>ScoreID</th>
           </tr>
         </thead>
         <tbody>`;
 
-    rows.forEach(p => {
-      html += `<tr>
+    const buildRow = (p) => {
+      return `<tr>
         <td>${esc(p.dbPlayers_Name)}</td>
         <td>${esc(p.dbPlayers_TeeSetName)}</td>
         <td align="center">${esc(p.dbPlayers_HI)}</td>
@@ -536,11 +537,32 @@
         <td align="center">${esc(p.dbPlayers_TeeTime)}</td>
         <td align="center">${esc(p.dbPlayers_StartHole)}</td>
         <td align="center">${esc(p.dbPlayers_FlightID)}</td>
+        <td align="center">${esc(p.dbPlayers_FlightPos)}</td>
         <td align="center">${esc(p.dbPlayers_PairingID)}</td>
         <td align="center">${esc(p.dbPlayers_PairingPos)}</td>
         <td align="center">${esc(p.dbPlayers_PlayerKey)}</td>
       </tr>`;
-    });
+    };
+
+    if (state.scope === "byGroup") {
+      const flights = groupRoster(rows);
+      flights.forEach(f => {
+        f.pairings.forEach(pg => {
+          let headerText = `<strong>Pairing ${esc(pg.pairingId)}</strong>`;
+          if (isPairPair) {
+              const fPos = pg.players[0]?.dbPlayers_FlightPos || '';
+              const teamLabel = fPos ? ` (Team ${fPos})` : '';
+              headerText = `<strong>Match ${esc(f.flightId)}${teamLabel} · Pair ${esc(pg.pairingId)}</strong>`;
+          }
+          html += `<tr style="background-color:#f9f9f9;"><td colspan="13">${headerText}</td></tr>`;
+          pg.players.forEach(p => html += buildRow(p));
+        });
+      });
+    } else {
+      rows.forEach(p => {
+        html += buildRow(p);
+      });
+    }
 
     html += `</tbody></table><br/>
     <h3 style="font-family: sans-serif;">Game Configuration</h3>
