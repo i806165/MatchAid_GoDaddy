@@ -55,7 +55,7 @@ try {
   $pdo = Db::pdo($config["db"]);
   $pdo->beginTransaction();
 
-  $favs = ServiceDbFavAdmins::getFavoriteAdmins($pdo, [
+  $favs = ServiceDbFavAdmins::getFavoriteAdmins([
       "userGHIN" => strval($_SESSION["SessionGHINLogonID"] ?? "")
   ]);
 
