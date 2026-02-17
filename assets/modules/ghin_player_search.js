@@ -266,6 +266,7 @@ function renderRows(rows, truncated) {
   }
 
   rows.forEach(row => {
+    console.log("[GHIN_SEARCH] row data:", row);
     const ghin = safeStr(row.ghin).trim();         // keep for identity + existing set, but DO NOT display
     const name = safeStr(row.name).trim();         // display
     const hi = safeStr(row.hi).trim();             // display
