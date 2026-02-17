@@ -270,7 +270,7 @@ function renderRows(rows, truncated) {
     const name = safeStr(row.name).trim();         // display
     const hi = safeStr(row.hi).trim();             // display
     const gender = safeStr(row.gender).trim();     // display
-    const club = safeStr(row.club_name || row.clubName).trim(); // display
+    const club = safeStr(row.club_name || row.clubName || "").trim(); // display
 
     const already = _cfg.existingGHINs && _cfg.existingGHINs.has(ghin);
 
