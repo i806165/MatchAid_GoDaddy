@@ -21,17 +21,11 @@
 
   // ---- DOM ----
   const el = {
-    gameTitle: document.getElementById("gameTitle"),
-    gameFacility: document.getElementById("gameFacility"),
-    gameCourseTime: document.getElementById("gameCourseTime"),
     configGrid: document.getElementById("configGrid"),
     rosterTbody: document.getElementById("rosterTableBody"),
     mobileList: document.getElementById("mobileList"),
     scopeByPlayer: document.getElementById("scopeByPlayer"),
     scopeByGroup: document.getElementById("scopeByGroup"),
-    pillPlayers: document.getElementById("pillPlayers"),
-    pillHoles: document.getElementById("pillHoles"),
-    pillHcMethod: document.getElementById("pillHcMethod"),
     emptyHint: document.getElementById("gsEmptyHint"),
 
     openSettingsBtn: document.getElementById("openGameSettingsButton"),
@@ -149,22 +143,6 @@
   }
 
   // ---- rendering ----
-  function renderHeader() {
-    const g = state.game || {};
-    if (el.gameTitle) el.gameTitle.textContent = safeString(g.dbGames_Title || "Game");
-    if (el.gameFacility) el.gameFacility.textContent = safeString(g.dbGames_FacilityName || g.dbGames_AdminClubName || "—");
-
-    const dateText = g.gameDateDDDMMDDYY || g.dbGames_PlayDate || "—";
-    const timeText = g.gameTimeCondensed || g.dbGames_PlayTime || "—";
-    const courseText = safeString(g.dbGames_CourseName || "");
-    const courseLine = courseText ? (courseText + " • " + timeText + " • " + dateText) : (timeText + " • " + dateText);
-    if (el.gameCourseTime) el.gameCourseTime.textContent = courseLine;
-
-    if (el.pillPlayers) el.pillPlayers.textContent = "Players: " + String((state.roster || []).length);
-    if (el.pillHoles) el.pillHoles.textContent = "Holes: " + valueOrDash(g.dbGames_Holes);
-    if (el.pillHcMethod) el.pillHcMethod.textContent = "HC: " + valueOrDash(g.dbGames_HCMethod || g.dbGames_HCMethod || g.dbGames_HcMethod);
-  }
-
   function renderConfig() {
     const g = state.game;
     if (!el.configGrid) return;
@@ -585,7 +563,6 @@
 
       applyChrome();
 
-      renderHeader();
       renderConfig();
       renderScopeButtons();
       renderRoster();
