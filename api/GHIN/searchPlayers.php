@@ -140,7 +140,11 @@ try {
     exit;
   }
 
-  Logger::info("GHIN_SEARCH_RES", ["count" => count($rows), "truncated" => $truncated]);
+  Logger::info("GHIN_SEARCH_RES", [
+    "count" => count($rows), 
+    "truncated" => $truncated,
+    "sample" => $rows[0] ?? null
+  ]);
 
   echo json_encode([
     "ok" => true,
