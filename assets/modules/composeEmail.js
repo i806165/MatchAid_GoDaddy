@@ -41,7 +41,7 @@
       return list
         .map(r => r.email)
         .filter(e => e && e.trim())
-        .join(",");
+        .join(", ");
     };
 
     const to = formatRecipients(opts.to);
