@@ -177,7 +177,7 @@
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     MA.ui.openActionsMenu("Actions", [
-      { label: "Game Settings", action: "settings" },
+      { label: "Game Settings", action: "settings", params: { returnTo: "edit" } },
       { separator: true },
       { label: "Delete Game", action: onDeleteGame, danger: true }
     ]);
@@ -229,23 +229,6 @@ function applyChrome() {
   }
 }
 
-
-  /*
-  function wireChromeActions() {
-    if (!chrome || typeof chrome.onAction !== "function") return;
-
-    chrome.onAction("left", () => {
-      if (state.dirty) {
-        const ok = confirm("Discard unsaved changes and go back?");
-        if (!ok) return;
-      }
-      if (MA.routerGo) MA.routerGo("admin");
-      else window.location.assign("/api/session/pageRouter.php?action=admin&redirect=1");
-    });
-
-    chrome.onAction("right", () => doSave());
-  }
-  */
     function onBack() {
     if (state.dirty) {
       const ok = confirm("Discard unsaved changes and go back?");

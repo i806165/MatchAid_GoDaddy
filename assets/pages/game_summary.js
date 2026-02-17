@@ -223,6 +223,17 @@
   function renderRoster() {
     const sorted = normalizeRosterForDisplay(state.roster || []);
     if (el.emptyHint) el.emptyHint.style.display = sorted.length ? "none" : "block";
+
+    // Add class to table for CSS-based column visibility
+    const isPairPair = state.game?.dbGames_Competition === 'PairPair';
+    if (el.rosterTbody) {
+      const table = el.rosterTbody.closest('table');
+      if (table) table.classList.toggle('is-match-play', isPairPair);
+    }
+    if (el.mobileList) {
+      el.mobileList.classList.toggle('is-match-play', isPairPair);
+    }
+
     if (state.scope === "byPlayer") renderRosterByPlayer(sorted);
     else renderRosterByGroup(sorted);
   }
@@ -239,6 +250,7 @@
         const time = valueOrDash(p.dbPlayers_TeeTime);
         const start = valueOrDash(p.dbPlayers_StartHole);
         const flight = valueOrDash(p.dbPlayers_FlightID);
+        const fPos = valueOrDash(p.dbPlayers_FlightPos);
         const pair = valueOrDash(p.dbPlayers_PairingID);
         const pos = valueOrDash(p.dbPlayers_PairingPos);
         const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
@@ -253,7 +265,8 @@
             "<td class=\"gsRight gsMono\">" + esc(so) + "</td>" +
             "<td class=\"gsMono\">" + esc(time) + "</td>" +
             "<td class=\"gsRight gsMono\">" + esc(start) + "</td>" +
-            "<td class=\"gsMono\">" + esc(flight) + "</td>" +
+            "<td class=\"gsMono col-match\">" + esc(flight) + "</td>" +
+            "<td class=\"gsMono col-flightpos\">" + esc(fPos) + "</td>" +
             "<td class=\"gsMono\">" + esc(pair) + "</td>" +
             "<td class=\"gsRight gsMono\">" + esc(pos) + "</td>" +
             "<td class=\"gsMono\"><a class=\"gsScoreLink\" href=\"#\" data-scoreid=\"" + esc(scoreId) + "\">" + esc(scoreId) + "</a></td>" +
@@ -277,6 +290,7 @@
         const so = numberOrDash(p.dbPlayers_SO);
 
         const flight = valueOrDash(p.dbPlayers_FlightID);
+        const fPos = valueOrDash(p.dbPlayers_FlightPos);
         const pair = valueOrDash(p.dbPlayers_PairingID);
         const pos = valueOrDash(p.dbPlayers_PairingPos);
 
@@ -298,7 +312,8 @@
               '<div class="gsMetaItem">SO ' + esc(so) + '</div>' +
             '</div>' +
             '<div class="gsLine4">' +
-              '<div class="gsMetaItem">Match ' + esc(flight) + '</div>' +
+              '<div class="gsMetaItem col-match">Match ' + esc(flight) + '</div>' +
+              '<div class="gsMetaItem col-flightpos">F.Pos ' + esc(fPos) + '</div>' +
               '<div class="gsMetaItem">Pair ' + esc(pair) + '</div>' +
               '<div class="gsMetaItem">Pos ' + esc(pos) + '</div>' +
             '</div>' +
@@ -316,8 +331,16 @@
 
     flights.forEach(f => {
       f.pairings.forEach(pg => {
+        const isPairPair = state.game?.dbGames_Competition === 'PairPair';
+        let headerText = `<strong>Pairing ${esc(pg.pairingId)}</strong>`;
+        if (isPairPair) {
+            const fPos = pg.players[0]?.dbPlayers_FlightPos || '';
+            const teamLabel = fPos ? ` (Team ${fPos})` : '';
+            headerText = `<strong>Match ${esc(f.flightId)}${teamLabel} · Pair ${esc(pg.pairingId)}</strong>`;
+        }
+
         desktopParts.push(
-          '<tr class="gsGroupHdr"><td colspan="12"><strong>Match ' + esc(f.flightId) + ' · Pair ' + esc(pg.pairingId) + '</strong></td></tr>'
+          '<tr class="gsGroupHdr"><td colspan="13">' + headerText + '</td></tr>'
         );
         pg.players.forEach(p => {
           const name = valueOrDash(p.dbPlayers_Name);
@@ -328,6 +351,7 @@
           const so = numberOrDash(p.dbPlayers_SO);
           const time = valueOrDash(p.dbPlayers_TeeTime);
           const start = valueOrDash(p.dbPlayers_StartHole);
+          const fPos = valueOrDash(p.dbPlayers_FlightPos);
           const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
 
           desktopParts.push(
@@ -340,7 +364,8 @@
               "<td class=\"gsRight gsMono\">" + esc(so) + "</td>" +
               "<td class=\"gsMono\">" + esc(time) + "</td>" +
               "<td class=\"gsRight gsMono\">" + esc(start) + "</td>" +
-              "<td class=\"gsMono\">" + esc(f.flightId) + "</td>" +
+              "<td class=\"gsMono col-match\">" + esc(f.flightId) + "</td>" +
+              "<td class=\"gsMono col-flightpos\">" + esc(fPos) + "</td>" +
               "<td class=\"gsMono\">" + esc(pg.pairingId) + "</td>" +
               "<td class=\"gsRight gsMono\">" + esc(valueOrDash(p.dbPlayers_PairingPos)) + "</td>" +
               "<td class=\"gsMono\"><a class=\"gsScoreLink\" href=\"#\" data-scoreid=\"" + esc(scoreId) + "\">" + esc(scoreId) + "</a></td>" +
@@ -356,7 +381,15 @@
       const mob = [];
       flights.forEach(f => {
         f.pairings.forEach(pg => {
-          mob.push('<div class="maHint"><strong>Match ' + esc(f.flightId) + ' · Pair ' + esc(pg.pairingId) + '</strong></div>');
+          const isPairPair = state.game?.dbGames_Competition === 'PairPair';
+          let headerText = `<strong>Pairing ${esc(pg.pairingId)}</strong>`;
+          if (isPairPair) {
+              const fPos = pg.players[0]?.dbPlayers_FlightPos || '';
+              const teamLabel = fPos ? ` (Team ${fPos})` : '';
+              headerText = `<strong>Match ${esc(f.flightId)}${teamLabel} · Pair ${esc(pg.pairingId)}</strong>`;
+          }
+          mob.push('<div class="maHint">' + headerText + '</div>');
+
           pg.players.forEach(p => {
             const name = valueOrDash(p.dbPlayers_Name);
             const ph = numberOrDash(p.dbPlayers_PH);
@@ -544,20 +577,13 @@
       renderScopeButtons();
       renderRoster();
     });
-
-    // Optional button wiring (only if you add these IDs to the view later)
-    if (el.openSettingsBtn) el.openSettingsBtn.addEventListener("click", () => { hideActionHint(); openGameSettings(); });
-    if (el.refreshHcBtn) el.refreshHcBtn.addEventListener("click", async () => { hideActionHint(); await refreshHandicaps(); });
-    if (el.printScorecardsBtn) el.printScorecardsBtn.addEventListener("click", () => { hideActionHint(); printScorecards(); });
-    if (el.downloadCsvBtn) el.downloadCsvBtn.addEventListener("click", () => { hideActionHint(); downloadCsv(); });
-    if (el.emailBtn) el.emailBtn.addEventListener("click", () => { hideActionHint(); emailSummary(); });
   }
 
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
 
     const items = [
-      { label: "Game Settings", action: openGameSettings },
+      { label: "Game Settings", action: "settings", params: { returnTo: "summary" } },
       { label: "Refresh Handicaps", action: refreshHandicaps },
       { separator: true },
       { label: "Print Scorecards", action: printScorecards },

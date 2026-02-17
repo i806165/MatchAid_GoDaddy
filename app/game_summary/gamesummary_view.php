@@ -28,17 +28,17 @@
     <div class="maPills gsMetaPills" aria-label="Game quick stats">
       <div class="maPill maPillKV" role="group" aria-label="Players">
         <div class="maPillLabel">Players</div>
-        <div class="maPillValue" id="gsMetaPlayers">—</div>
+        <div class="maPillValue maListRow__col--muted" id="gsMetaPlayers">—</div>
       </div>
 
       <div class="maPill maPillKV" role="group" aria-label="Holes">
         <div class="maPillLabel">Holes</div>
-        <div class="maPillValue" id="gsMetaHoles">—</div>
+        <div class="maPillValue maListRow__col--muted" id="gsMetaHoles">—</div>
       </div>
 
       <div class="maPill maPillKV" role="group" aria-label="HC Method">
         <div class="maPillLabel">HC</div>
-        <div class="maPillValue" id="gsMetaHC">—</div>
+        <div class="maPillValue maListRow__col--muted" id="gsMetaHC">—</div>
       </div>
     </div>
   </div>
@@ -67,7 +67,8 @@
               <th class="gsRight">SO</th>
               <th>Time</th>
               <th class="gsRight">Start</th>
-              <th>Match</th>
+              <th class="col-match">Match</th>
+              <th class="col-flightpos">F.Pos</th>
               <th>Pair</th>
               <th class="gsRight">Pos</th>
               <th class="gsMono">ScoreID</th>
