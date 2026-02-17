@@ -10,7 +10,7 @@
           class="gsCfgToggle"
           id="gsCfgToggle"
           aria-expanded="false">
-    <span class="gsCfgTitle">Game Configuration</span>
+    <span class="gsCfgTitle">Game Settings</span>
     <span class="gsCfgChevron" aria-hidden="true">▾</span>
   </button>
 
@@ -61,17 +61,17 @@
             <tr>
               <th>Name</th>
               <th>Tee</th>
-              <th class="gsRight">HI</th>
-              <th class="gsRight">CH</th>
-              <th class="gsRight">PH</th>
-              <th class="gsRight">SO</th>
-              <th>Time</th>
-              <th class="gsRight">Start</th>
-              <th class="col-match">Match</th>
-              <th class="col-flightpos">F.Pos</th>
-              <th>Pair</th>
-              <th class="gsRight">Pos</th>
-              <th class="gsMono">ScoreID</th>
+              <th class="gsCenter">HI</th>
+              <th class="gsCenter">CH</th>
+              <th class="gsCenter">PH</th>
+              <th class="gsCenter">SO</th>
+              <th class="gsCenter">Time</th>
+              <th class="gsCenter">Start</th>
+              <th class="gsCenter col-match">Match</th>
+              <th class="gsCenter col-flightpos">F.Pos</th>
+              <th class="gsCenter">Pair</th>
+              <th class="gsCenter">Pos</th>
+              <th class="gsCenter gsMono">ScoreID</th>
             </tr>
           </thead>
           <tbody id="rosterTableBody"></tbody>

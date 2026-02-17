@@ -259,17 +259,17 @@
           "<tr>" +
             "<td title=\"" + esc(name) + "\">" + esc(name) + "</td>" +
             "<td title=\"" + esc(tee) + "\">" + esc(tee) + "</td>" +
-            "<td class=\"gsRight gsMono\">" + esc(hi) + "</td>" +
-            "<td class=\"gsRight gsMono\">" + esc(ch) + "</td>" +
-            "<td class=\"gsRight gsMono\">" + esc(ph) + "</td>" +
-            "<td class=\"gsRight gsMono\">" + esc(so) + "</td>" +
-            "<td class=\"gsMono\">" + esc(time) + "</td>" +
-            "<td class=\"gsRight gsMono\">" + esc(start) + "</td>" +
-            "<td class=\"gsMono col-match\">" + esc(flight) + "</td>" +
-            "<td class=\"gsMono col-flightpos\">" + esc(fPos) + "</td>" +
-            "<td class=\"gsMono\">" + esc(pair) + "</td>" +
-            "<td class=\"gsRight gsMono\">" + esc(pos) + "</td>" +
-            "<td class=\"gsMono\"><a class=\"gsScoreLink\" href=\"#\" data-scoreid=\"" + esc(scoreId) + "\">" + esc(scoreId) + "</a></td>" +
+            "<td class=\"gsCenter gsMono\">" + esc(hi) + "</td>" +
+            "<td class=\"gsCenter gsMono\">" + esc(ch) + "</td>" +
+            "<td class=\"gsCenter gsMono\">" + esc(ph) + "</td>" +
+            "<td class=\"gsCenter gsMono\">" + esc(so) + "</td>" +
+            "<td class=\"gsCenter gsMono\">" + esc(time) + "</td>" +
+            "<td class=\"gsCenter gsMono\">" + esc(start) + "</td>" +
+            "<td class=\"gsCenter gsMono col-match\">" + esc(flight) + "</td>" +
+            "<td class=\"gsCenter gsMono col-flightpos\">" + esc(fPos) + "</td>" +
+            "<td class=\"gsCenter gsMono\">" + esc(pair) + "</td>" +
+            "<td class=\"gsCenter gsMono\">" + esc(pos) + "</td>" +
+            "<td class=\"gsCenter gsMono\"><a class=\"gsScoreLink\" href=\"#\" data-scoreid=\"" + esc(scoreId) + "\">" + esc(scoreId) + "</a></td>" +
           "</tr>"
         );
       }).join("");
@@ -359,17 +359,17 @@
             "<tr>" +
               "<td>" + esc(name) + "</td>" +
               "<td>" + esc(tee) + "</td>" +
-              "<td class=\"gsRight gsMono\">" + esc(hi) + "</td>" +
-              "<td class=\"gsRight gsMono\">" + esc(ch) + "</td>" +
-              "<td class=\"gsRight gsMono\">" + esc(ph) + "</td>" +
-              "<td class=\"gsRight gsMono\">" + esc(so) + "</td>" +
-              "<td class=\"gsMono\">" + esc(time) + "</td>" +
-              "<td class=\"gsRight gsMono\">" + esc(start) + "</td>" +
-              "<td class=\"gsMono col-match\">" + esc(f.flightId) + "</td>" +
-              "<td class=\"gsMono col-flightpos\">" + esc(fPos) + "</td>" +
-              "<td class=\"gsMono\">" + esc(pg.pairingId) + "</td>" +
-              "<td class=\"gsRight gsMono\">" + esc(valueOrDash(p.dbPlayers_PairingPos)) + "</td>" +
-              "<td class=\"gsMono\"><a class=\"gsScoreLink\" href=\"#\" data-scoreid=\"" + esc(scoreId) + "\">" + esc(scoreId) + "</a></td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(hi) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(ch) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(ph) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(so) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(time) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(start) + "</td>" +
+              "<td class=\"gsCenter gsMono col-match\">" + esc(f.flightId) + "</td>" +
+              "<td class=\"gsCenter gsMono col-flightpos\">" + esc(fPos) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(pg.pairingId) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(valueOrDash(p.dbPlayers_PairingPos)) + "</td>" +
+              "<td class=\"gsCenter gsMono\"><a class=\"gsScoreLink\" href=\"#\" data-scoreid=\"" + esc(scoreId) + "\">" + esc(scoreId) + "</a></td>" +
             "</tr>"
           );
         });
