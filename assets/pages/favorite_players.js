@@ -322,10 +322,29 @@
 
   async function doSave() {
     if (!state.current) return;
+
+    const emailVal = el.email ? el.email.value.trim() : "";
+    const mobileVal = el.mobile ? el.mobile.value.trim() : "";
+
+    if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+      if (MA.setStatus) MA.setStatus("Invalid email address.", "error");
+      if (el.email) el.email.focus();
+      return;
+    }
+
+    if (mobileVal) {
+      const digits = mobileVal.replace(/\D/g, "");
+      if (digits.length < 10) {
+        if (MA.setStatus) MA.setStatus("Invalid mobile number (10 digits required).", "error");
+        if (el.mobile) el.mobile.focus();
+        return;
+      }
+    }
+
     const payload = {
       playerGHIN: state.current.playerGHIN,
-      email: el.email ? el.email.value : "",
-      mobile: el.mobile ? el.mobile.value : "",
+      email: emailVal,
+      mobile: mobileVal,
       memberId: el.memberId ? el.memberId.value : "",
       groups: Array.from(state.selectedGroups || [])
     };
