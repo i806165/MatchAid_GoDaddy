@@ -238,8 +238,9 @@
       const rows = (state.ghinRows || []).map((r) => {
         const ghin = safe(r.ghin);
         const isEnrolled = enrolled.has(ghin);
+        const club = safe(r.club_name || r.clubName || "").trim();
         return `<div class="maListRow gpRow gpRow--ghin ${isEnrolled ? "" : "gpRowClickable"}" data-act="ghin-row" data-ghin="${esc(ghin)}" data-disabled="${isEnrolled ? "1" : "0"}">
-          <div class="maListRow__col">${esc(r.name || ghin)}</div>
+          <div class="maListRow__col">${esc(r.name || ghin)}${club ? ` • ${esc(club)}` : ""}</div>
           <div class="maListRow__col maListRow__col--right">${esc(r.hi || "")}</div>
           <div class="maListRow__col maListRow__col--right">${esc(r.gender || "")}</div>
           <div class="maListRow__col maListRow__col--right gpEnrolledMark">${isEnrolled ? "☑" : ""}</div>

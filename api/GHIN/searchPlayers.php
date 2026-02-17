@@ -43,8 +43,6 @@ $clubId = $_SESSION["SessionClubID"] ?? "";
 // Inputs
 $mode = strtolower(trim((string)($in["mode"] ?? "")));
 
-Logger::info("GHIN_SEARCH_REQ", ["mode" => $mode, "ghin" => $in["ghin"] ?? "", "last" => $in["lastName"] ?? "", "state" => $in["state"] ?? ""]);
-
 try {
   $rows = [];
   $truncated = false;
@@ -140,11 +138,6 @@ try {
     exit;
   }
 
-  Logger::info("GHIN_SEARCH_RES", [
-    "count" => count($rows), 
-    "truncated" => $truncated,
-    "sample" => $rows[0] ?? null
-  ]);
 
   echo json_encode([
     "ok" => true,
