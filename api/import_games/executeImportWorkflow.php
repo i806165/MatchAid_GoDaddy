@@ -139,7 +139,7 @@ try {
       ]);
 
       try {
-        $saved = ServiceDbGames::saveGame($pdo, "add", $patch, $sessionCtx);
+        $saved = ServiceDbGames::saveGame("add", $patch, $sessionCtx);
       } catch (Throwable $saveEx) {
         Logger::error("IMPORT_ROW_SAVE_FAIL", [
           "idx" => $idx,
