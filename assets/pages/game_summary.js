@@ -624,21 +624,22 @@
     setStatus("CSV downloaded.", "ok");
   }
 
-  function emailSummary() {
+  async function emailSummary() {
+    // 1. Copy rich HTML to clipboard first
+    await copyRichTextToClipboard();
+
+    // 2. Launch email client with placeholder body
     const g = state.game || {};
     const subject = "MatchAid Game Summary - " + (g.dbGames_Title || "Game");
     
-    // Build plain text body (CSV content)
-    const csvContent = buildCsvText();
     const body = 
-      "Here is the game summary:\n\n" +
+      "(Paste the game summary here)\n\n" +
       "Game: " + (g.dbGames_Title || "") + "\n" +
       "Facility: " + (g.dbGames_FacilityName || "") + "\n" +
       "Course: " + (g.dbGames_CourseName || "") + "\n" +
-      "Date: " + (g.dbGames_PlayDate || "") + "\n\n" +
-      csvContent;
+      "Date: " + (g.dbGames_PlayDate || "") + "\n" +
+      "\n" + "(note: paste (ctrl+v / cmd+v) to place the game details from clipboard here..) ";
 
-    // Extract recipients from roster
     const recipients = (state.roster || [])
       .filter(p => p.contactEmail)
       .map(p => ({ name: p.dbPlayers_Name, email: p.contactEmail }));
