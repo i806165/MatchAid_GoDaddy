@@ -313,7 +313,7 @@
             '</div>' +
             '<div class="gsLine4">' +
               '<div class="gsMetaItem col-match">Match ' + esc(flight) + '</div>' +
-              '<div class="gsMetaItem col-flightpos">F.Pos ' + esc(fPos) + '</div>' +
+              '<div class="gsMetaItem col-flightpos">Team ' + esc(fPos) + '</div>' +
               '<div class="gsMetaItem">Pair ' + esc(pair) + '</div>' +
               '<div class="gsMetaItem">Pos ' + esc(pos) + '</div>' +
             '</div>' +
@@ -332,6 +332,7 @@
     flights.forEach(f => {
       f.pairings.forEach(pg => {
         const isPairPair = state.game?.dbGames_Competition === 'PairPair';
+        const colspan = isPairPair ? 13 : 11;
         let headerText = `<strong>Pairing ${esc(pg.pairingId)}</strong>`;
         if (isPairPair) {
             const fPos = pg.players[0]?.dbPlayers_FlightPos || '';
@@ -340,7 +341,7 @@
         }
 
         desktopParts.push(
-          '<tr class="gsGroupHdr"><td colspan="13">' + headerText + '</td></tr>'
+          '<tr class="gsGroupHdr"><td colspan="' + colspan + '">' + headerText + '</td></tr>'
         );
         pg.players.forEach(p => {
           const name = valueOrDash(p.dbPlayers_Name);
