@@ -13,6 +13,7 @@
  */
 (function () {
   "use strict";
+  console.log("[GHIN_SEARCH] Module loaded (v3)");
 
   const MA = (window.MA = window.MA || {});
   MA.ghinSearch = MA.ghinSearch || {};
@@ -257,6 +258,7 @@ function mountOnce() {
   }
 
 function renderRows(rows, truncated) {
+  console.log("[GHIN_SEARCH] renderRows count:", rows.length, "Sample:", rows[0]);
   _results.innerHTML = "";
 
   if (truncated) {
