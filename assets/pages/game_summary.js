@@ -38,13 +38,6 @@
     mobileList: document.getElementById("mobileList"),
     emptyHint: document.getElementById("gsEmptyHint"),
 
-    // Optional (if you later add explicit buttons in the view)
-    openSettingsBtn: document.getElementById("openGameSettingsButton"),
-    refreshHcBtn: document.getElementById("refreshHcMenuButton"),
-    printScorecardsBtn: document.getElementById("printScorecardsButton"),
-    downloadCsvBtn: document.getElementById("downloadCsvButton"),
-    emailBtn: document.getElementById("emailCsvButton"),
-    actionHint: document.getElementById("gsActionHint")
   };
 
   // ---- helpers ----
@@ -603,11 +596,9 @@
       
       const blobHtml = new Blob([html], { type: "text/html" });
       const blobText = new Blob([text], { type: "text/plain" });
-      
-      const data = [new ClipboardItem({ "text/html": blobHtml, "text/plain": blobText })];
-      
+      const data = [new ClipboardItem({ "text/html": blobHtml, "text/plain": blobText })]; 
       await navigator.clipboard.write(data);
-      setStatus("Summary copied (Table). Paste into email/doc.", "success");
+      setStatus("Game summary copied. Ready to paste...", "success");
     } catch (err) {
       console.error("Copy rich text failed", err);
       setStatus("Could not copy rich text.", "error");
@@ -668,14 +659,6 @@
     }
   }
 
-  function openGameSettings() {
-    if (typeof MA.routerGo === "function") {
-      try { MA.routerGo("gamesettings"); return; } catch (e) {}
-    }
-    setStatus("Open Game Settings: wire router action for this button.", "warn");
-    showActionHint("TODO: route to the Game Settings page.", "warn");
-  }
-
   function printScorecards() {
     if (typeof MA.routerGo === "function") {
       try { MA.routerGo("scorecards"); return; } catch (e) {}
@@ -730,12 +713,12 @@
     const items = [
       { label: "Game Settings", action: "settings", params: { returnTo: "summary" } },
       { label: "Refresh Handicaps", action: refreshHandicaps },
-      { separator: true },
       { label: "Print Scorecards", action: printScorecards },
+      { separator: true },
       { label: "Download CSV", action: downloadCsv },
-      { label: "Copy Summary (CSV)", action: copySummaryToClipboard },
-      { label: "Copy Summary (Table)", action: copyRichTextToClipboard },
-      { label: "Email Summary", action: emailSummary }
+      { label: "Copy Game Summary to CSV)", action: copySummaryToClipboard },
+      { label: "Copy Game Summary", action: copyRichTextToClipboard },
+      { label: "Compose Email to Players", action: emailSummary }
     ];
     MA.ui.openActionsMenu("Actions", items);
   }
