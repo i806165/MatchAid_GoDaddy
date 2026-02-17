@@ -486,7 +486,7 @@ cardsEl.innerHTML = state.games.dbRows
     }
 
     // 1) authorization for actions (server decides OK/NotOK)
-    const requiresAuth = new Set(["editGame", "deleteGame", "roster", "pairings", "teetimes", "settings", "viewGame", "viewScoreCard", "calendar"]);
+    const requiresAuth = new Set(["editGame", "deleteGame", "roster", "pairings", "teetimes", "settings", "summary", "viewScoreCard", "calendar"]);
     if (requiresAuth.has(action)) {
       const auth = await apiSession("getGameAuthorizations.php", { ggid, action });
       const ok = auth?.payload?.status === "Authorized" || auth?.payload?.status === "OK" || auth?.status === "OK";
@@ -504,7 +504,7 @@ cardsEl.innerHTML = state.games.dbRows
     await apiAdmin("setGameSession.php", { ggid });
     if (action === "editGame") return routerGo("edit", { mode: "edit" });
     if (action === "settings") return routerGo("settings", {});
-    if (action === "viewGame") return routerGo("gameReview", {});
+    if (action === "summary") return routerGo("summary", {});
     if (action === "roster") return routerGo("roster", {});
     if (action === "viewScoreCard") return routerGo("scorecard", {});
     if (action === "pairings") return routerGo("pairings", {});
@@ -693,7 +693,7 @@ function applyPreset(presetKey) {
         <button class="actionMenu_item" type="button" data-menuclick="roster">Player Roster</button>
         <button class="actionMenu_item" type="button" data-menuclick="pairings">Pair Players</button>
         <button class="actionMenu_item" type="button" data-menuclick="teetimes">Set TeeTimes</button>
-        <button class="actionMenu_item" type="button" data-menuclick="viewGame">Review Game</button>
+        <button class="actionMenu_item" type="button" data-menuclick="summary">Game Summary</button>
         <button class="actionMenu_item" type="button" data-menuclick="viewScoreCard">Scorecard</button>
         <button class="actionMenu_item" type="button" data-menuclick="calendar">Add to Calendar</button>
         <div class="actionMenu_divider"></div>

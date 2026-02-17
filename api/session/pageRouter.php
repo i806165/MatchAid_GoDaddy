@@ -55,7 +55,8 @@ $ROUTES = [
     "teetimes" => "/app/game_times/gametimes.php",
     "summary"  => "/app/game_review/gameReview.php",
     "import" => "/app/game_import/import_games.php",
-    "gameReview"  => "/app/game_review/gameReview.php",
+    "gameReview"  => "/app/game_summary/gamesummary.php",  //Legacy remove.
+    "summary"  => "/app/game_summary/gamesummary.php",
     "scorecard"   => "/app/game_scorecard/scorecard.php",
     "settings"    => "/app/game_settings/gamesettings.php",
 ];

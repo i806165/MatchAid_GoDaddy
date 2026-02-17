@@ -552,6 +552,28 @@
     if (el.emailBtn) el.emailBtn.addEventListener("click", () => { hideActionHint(); emailSummary(); });
   }
 
+  function applyChrome() {
+    const g = state.game || {};
+    const title = String(g.dbGames_Title || "Game");
+    const ggid = String(g.dbGames_GGID || g.dbGames_GGIDnum || "");
+
+    if (chrome && typeof chrome.setHeaderLines === "function") {
+      chrome.setHeaderLines(["ADMIN PORTAL", "Game Summary", ggid ? `GGID ${ggid}` : title]);
+    }
+
+    // Actions are handled by the page's own "Actions" button (el.actionsBtn), so we might not need header actions.
+    // However, standard pattern usually puts "Actions" in the header.
+    // For now, we'll leave header actions empty/default unless you want to move el.actionsBtn there.
+
+    if (chrome && typeof chrome.setBottomNav === "function") {
+      chrome.setBottomNav({
+        visible: ["admin", "edit", "roster", "pairings", "teetimes", "summary"],
+        active: "summary",
+        onNavigate: (id) => (typeof MA.routerGo === "function" ? MA.routerGo(id) : null),
+      });
+    }
+  }
+
   async function boot() {
     try {
       setStatus("Loading game summary…", "info");
@@ -559,12 +581,7 @@
       applyInit(init);
       wireEvents();
 
-      // Chrome setup (best-effort)
-      if (chrome && typeof chrome.setTitle === "function") chrome.setTitle("Game Summary");
-      if (chrome && typeof chrome.setSubtitle === "function") {
-        const ggid = (state.game && (state.game.dbGames_GGID || state.game.dbGames_GGIDnum)) || "";
-        chrome.setSubtitle(ggid ? ("GGID " + ggid) : "");
-      }
+      applyChrome();
 
       renderHeader();
       renderConfig();
