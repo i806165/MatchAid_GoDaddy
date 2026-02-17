@@ -30,6 +30,13 @@ if (!$ctx || empty($ctx["ok"])) {
 
 // 2) GAME context hydration (Rule-2 for pages)
 $gc = ServiceContextGame::getGameContext();
+
+Logger::info("GAMESUMMARY_CTX_DEBUG", [
+  "ok" => $gc["ok"] ?? false,
+  "ggid" => $gc["ggid"] ?? "missing",
+  "hasGame" => !empty($gc["game"])
+]);
+
 if (!$gc || empty($gc["ok"])) {
   // If game context is missing, route back to Admin Games List (safe default)
   header("Location: " . MA_ROUTE_LOGIN);
