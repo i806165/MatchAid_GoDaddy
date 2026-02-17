@@ -270,14 +270,16 @@ function renderRows(rows, truncated) {
     const name = safeStr(row.name).trim();         // display
     const hi = safeStr(row.hi).trim();             // display
     const gender = safeStr(row.gender).trim();     // display
+    const club = safeStr(row.club_name || row.clubName).trim(); // display
 
     const already = _cfg.existingGHINs && _cfg.existingGHINs.has(ghin);
 
     const item = el("div", "maListRow ghinRow", "");
     item.setAttribute("data-ghin", ghin);
 
+    const nameLine = club ? `${name} • ${club}` : name;
     // Columns
-    const c1 = el("div", "maListRow__col ghinColName", name);  // NO GHIN fallback
+    const c1 = el("div", "maListRow__col ghinColName", nameLine);  // NO GHIN fallback
     const c2 = el("div", "maListRow__col ghinColHI", hi);
     const c3 = el("div", "maListRow__col ghinColG", gender);
 
