@@ -82,7 +82,7 @@ $maChromeLogoUrl = null;
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="/assets/css/ma_shared.css?v=1" />
-  <link rel="stylesheet" href="/assets/pages/game_summary.css?v=1" />
+  <link rel="stylesheet" href="/assets/css/game_summary.css?v=1" />
 </head>
 <body>
 
