@@ -13,6 +13,7 @@
  */
 (function () {
   "use strict";
+  console.log("[GHIN_SEARCH] Module loaded (v4)");
 
   const MA = (window.MA = window.MA || {});
   MA.ghinSearch = MA.ghinSearch || {};
@@ -219,7 +220,7 @@ function mountOnce() {
 
         const res = await MA.postJson(MA.paths.ghinPlayerSearch, payload);
 
-        console.log("[GHIN_SEARCH] API Response Payload:", res);
+        console.log("[GHIN_SEARCH] API Response Payload (v4):", res);
 
         if (!res || !res.ok) {
           throw new Error(res?.message || "Search failed.");
