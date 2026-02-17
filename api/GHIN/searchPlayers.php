@@ -70,6 +70,7 @@ try {
       $gender = (string)($g["gender"] ?? ($g["gender_code"] ?? ""));
       $city = (string)($g["city"] ?? "");
       $st   = (string)($g["state"] ?? "");
+      $club = (string)($g["club_name"] ?? "");
 
       $rows[] = [
         "ghin" => $gh,
@@ -78,6 +79,7 @@ try {
         "gender" => trim($gender),
         "city" => trim($city),
         "state" => trim($st),
+        "club_name" => trim($club),
       ];
     }
 
@@ -113,6 +115,7 @@ try {
       $gender = (string)($g["gender"] ?? ($g["gender_code"] ?? ""));
       $city = (string)($g["city"] ?? "");
       $st   = (string)($g["state"] ?? $state);
+      $club = (string)($g["club_name"] ?? "");
 
       $rows[] = [
         "ghin" => $gh,
@@ -121,6 +124,7 @@ try {
         "gender" => trim($gender),
         "city" => trim($city),
         "state" => trim($st),
+        "club_name" => trim($club),
       ];
     }
 
