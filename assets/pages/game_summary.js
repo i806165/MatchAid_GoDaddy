@@ -34,9 +34,6 @@
     pillHcMethod: document.getElementById("pillHcMethod"),
     emptyHint: document.getElementById("gsEmptyHint"),
 
-    actionsBtn: document.getElementById("gsActionsBtn"),
-    actionsModal: document.getElementById("gsActionsModal"),
-    actionsCloseBtn: document.getElementById("gsActionsCloseBtn"),
     openSettingsBtn: document.getElementById("openGameSettingsButton"),
     refreshHcBtn: document.getElementById("refreshHcMenuButton"),
     printScorecardsBtn: document.getElementById("printScorecardsButton"),
@@ -65,18 +62,6 @@
       return (Math.round(n) === n) ? String(n) : n.toFixed(1);
     }
     return s;
-  }
-
-  function openModal() {
-    if (!el.actionsModal) return;
-    el.actionsModal.classList.add("is-open");
-    el.actionsModal.setAttribute("aria-hidden", "false");
-  }
-  function closeModal() {
-    if (!el.actionsModal) return;
-    el.actionsModal.classList.remove("is-open");
-    el.actionsModal.setAttribute("aria-hidden", "true");
-    hideActionHint();
   }
 
   function showActionHint(msg, level) {
@@ -545,19 +530,25 @@
     if (el.scopeByPlayer) el.scopeByPlayer.addEventListener("click", () => { state.scope = "byPlayer"; renderScopeButtons(); renderRoster(); });
     if (el.scopeByGroup) el.scopeByGroup.addEventListener("click", () => { state.scope = "byGroup"; renderScopeButtons(); renderRoster(); });
 
-    if (el.actionsBtn) el.actionsBtn.addEventListener("click", openModal);
-    if (el.actionsCloseBtn) el.actionsCloseBtn.addEventListener("click", closeModal);
-    if (el.actionsModal) {
-      el.actionsModal.addEventListener("click", (e) => {
-        if (e.target === el.actionsModal) closeModal();
-      });
-    }
-
     if (el.openSettingsBtn) el.openSettingsBtn.addEventListener("click", () => { hideActionHint(); openGameSettings(); });
     if (el.refreshHcBtn) el.refreshHcBtn.addEventListener("click", async () => { hideActionHint(); await refreshHandicaps(); });
     if (el.printScorecardsBtn) el.printScorecardsBtn.addEventListener("click", () => { hideActionHint(); printScorecards(); });
     if (el.downloadCsvBtn) el.downloadCsvBtn.addEventListener("click", () => { hideActionHint(); downloadCsv(); });
     if (el.emailBtn) el.emailBtn.addEventListener("click", () => { hideActionHint(); emailSummary(); });
+  }
+
+  function openActionsMenu() {
+    if (!MA.ui || !MA.ui.openActionsMenu) return;
+    
+    const items = [
+      { label: "Game Settings", action: openGameSettings },
+      { label: "Refresh Handicaps", action: refreshHandicaps },
+      { separator: true },
+      { label: "Print Scorecards", action: printScorecards },
+      { label: "Download CSV", action: downloadCsv },
+      { label: "Email Summary", action: emailSummary }
+    ];
+    MA.ui.openActionsMenu("Actions", items);
   }
 
   function applyChrome() {
@@ -569,9 +560,12 @@
       chrome.setHeaderLines(["ADMIN PORTAL", "Game Summary", ggid ? `GGID ${ggid}` : title]);
     }
 
-    // Actions are handled by the page's own "Actions" button (el.actionsBtn), so we might not need header actions.
-    // However, standard pattern usually puts "Actions" in the header.
-    // For now, we'll leave header actions empty/default unless you want to move el.actionsBtn there.
+    if (chrome && typeof chrome.setActions === "function") {
+      chrome.setActions({
+        left: { show: true, label: "Actions", onClick: openActionsMenu },
+        right: { show: false }
+      });
+    }
 
     if (chrome && typeof chrome.setBottomNav === "function") {
       chrome.setBottomNav({
