@@ -2,29 +2,56 @@
 // /public_html/app/game_summary/gamesummary_view.php
 ?>
 
+<!-- CONTROLS BAND (peer to body standard) -->
+<div class="maControlArea" id="gsControls" aria-label="Game Summary Controls">
+
+  <!-- Collapsible: Game Configuration -->
+  <button type="button"
+          class="gsCfgToggle"
+          id="gsCfgToggle"
+          aria-expanded="false">
+    <span class="gsCfgTitle">Game Configuration</span>
+    <span class="gsCfgChevron" aria-hidden="true">▾</span>
+  </button>
+
+  <div class="gsCfgPanel" id="gsCfgPanel" hidden>
+    <div class="gsConfigGrid" id="configGrid"></div>
+  </div>
+
+  <!-- Scope + Meta pills row -->
+  <div class="gsControlsRow">
+    <div class="maSeg gsScopeSeg" role="tablist" aria-label="Roster Scope">
+      <button type="button" class="maSegBtn is-active" id="scopeByPlayer" aria-selected="true">By Player</button>
+      <button type="button" class="maSegBtn" id="scopeByGroup" aria-selected="false">By Group</button>
+    </div>
+
+    <div class="maPills gsMetaPills" aria-label="Game quick stats">
+      <div class="maPill maPillKV" role="group" aria-label="Players">
+        <div class="maPillLabel">Players</div>
+        <div class="maPillValue" id="gsMetaPlayers">—</div>
+      </div>
+
+      <div class="maPill maPillKV" role="group" aria-label="Holes">
+        <div class="maPillLabel">Holes</div>
+        <div class="maPillValue" id="gsMetaHoles">—</div>
+      </div>
+
+      <div class="maPill maPillKV" role="group" aria-label="HC Method">
+        <div class="maPillLabel">HC</div>
+        <div class="maPillValue" id="gsMetaHC">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE BODY -->
 <div class="maCards" id="gsCards">
 
-  <!-- CARD 2 — GAME CONFIGURATION -->
-  <section class="maCard" aria-label="Game Configuration">
-    <header class="maCard__hdr">
-      <div class="maCard__title">GAME CONFIGURATION</div>
-    </header>
-
-    <div class="maCard__body">
-      <div class="gsConfigGrid" id="configGrid"></div>
-    </div>
-  </section>
-
-  <!-- CARD 3 — ROSTER -->
+  <!-- ROSTER -->
   <section class="maCard" aria-label="Roster">
     <header class="maCard__hdr">
       <div class="maCard__title">ROSTER</div>
-      <div class="maCard__actions">
-        <div class="maSeg" role="tablist" aria-label="Scope">
-          <button type="button" class="maSegBtn is-active" id="scopeByPlayer" aria-selected="true">By Player</button>
-          <button type="button" class="maSegBtn" id="scopeByGroup" aria-selected="false">By Group</button>
-        </div>
-      </div>
+      <div class="maCard__actions"></div>
     </header>
 
     <div class="maCard__body">

@@ -9,6 +9,61 @@
 
 .gsPillRow{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
 
+/* ===== Controls band layout ===== */
+.gsCfgToggle{
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding: 10px 12px;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--radiusLg);
+  background: #fff;
+  cursor: pointer;
+  font-family: var(--fontFamilyBase);
+  font-weight: 900;
+}
+
+.gsCfgToggle:focus{
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0,0,0,.06);
+}
+
+.gsCfgTitle{ font-size: 14px; letter-spacing: .2px; }
+.gsCfgChevron{
+  transition: transform .15s ease;
+  font-weight: 900;
+  opacity: .9;
+}
+.gsCfgToggle.is-open .gsCfgChevron{ transform: rotate(180deg); }
+
+.gsCfgPanel{ margin-top: 10px; }
+
+.gsControlsRow{
+  margin-top: 12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* maSeg defaults to width:100%; make it compact like the screenshot */
+.gsScopeSeg{
+  width: auto;
+  flex: 0 0 auto;
+}
+.gsScopeSeg .maSegBtn{
+  flex: 0 0 auto;
+}
+
+.gsMetaPills{
+  justify-content: flex-end;
+  flex: 1 1 auto;
+}
+
+/* ===== Config grid (expanded inline) ===== */
 .gsConfigGrid{
   display:grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -28,10 +83,22 @@
 .gsKVLabel{ font-size: 12px; font-weight: 900; letter-spacing: .2px; color: var(--inkMuted); }
 .gsKVValue{ margin-top: 2px; font-weight: 800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
+/* ===== Table ===== */
 .gsTableWrap{ width:100%; overflow:auto; border:1px solid var(--borderSubtle); border-radius: var(--controlRadius); background:#fff; }
 .gsTable{ width:100%; border-collapse:collapse; font-size: 13px; }
 .gsTable th, .gsTable td{ padding:10px 10px; border-bottom:1px solid rgba(0,0,0,.08); vertical-align:top; }
-.gsTable th{ text-align:left; font-weight:900; position:sticky; top:0; background:#fff; z-index:1; }
+
+/* Match screenshot: dark green header */
+.gsTable th{
+  text-align:left;
+  font-weight:900;
+  position:sticky;
+  top:0;
+  background: var(--brandSecondary);
+  color: var(--brandSecondaryText);
+  z-index:1;
+}
+
 .gsRight{ text-align:right; }
 .gsMono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 

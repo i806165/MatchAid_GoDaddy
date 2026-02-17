@@ -21,13 +21,24 @@
 
   // ---- DOM ----
   const el = {
+    // Controls band
+    cfgToggle: document.getElementById("gsCfgToggle"),
+    cfgPanel: document.getElementById("gsCfgPanel"),
     configGrid: document.getElementById("configGrid"),
-    rosterTbody: document.getElementById("rosterTableBody"),
-    mobileList: document.getElementById("mobileList"),
+
     scopeByPlayer: document.getElementById("scopeByPlayer"),
     scopeByGroup: document.getElementById("scopeByGroup"),
+
+    metaPlayers: document.getElementById("gsMetaPlayers"),
+    metaHoles: document.getElementById("gsMetaHoles"),
+    metaHC: document.getElementById("gsMetaHC"),
+
+    // Body
+    rosterTbody: document.getElementById("rosterTableBody"),
+    mobileList: document.getElementById("mobileList"),
     emptyHint: document.getElementById("gsEmptyHint"),
 
+    // Optional (if you later add explicit buttons in the view)
     openSettingsBtn: document.getElementById("openGameSettingsButton"),
     refreshHcBtn: document.getElementById("refreshHcMenuButton"),
     printScorecardsBtn: document.getElementById("printScorecardsButton"),
@@ -62,7 +73,6 @@
     if (!el.actionHint) return;
     el.actionHint.style.display = "block";
     el.actionHint.textContent = String(msg || "");
-    // reuse status color semantics lightly
     el.actionHint.style.color = (level === "err") ? "var(--danger)" : "inherit";
   }
   function hideActionHint() {
@@ -78,6 +88,26 @@
         '<div class="gsKVValue" title="' + esc(valueOrDash(value)) + '">' + esc(valueOrDash(value)) + '</div>' +
       '</div>'
     );
+  }
+
+  function setConfigExpanded(isExpanded) {
+    if (!el.cfgToggle || !el.cfgPanel) return;
+    el.cfgToggle.classList.toggle("is-open", !!isExpanded);
+    el.cfgToggle.setAttribute("aria-expanded", isExpanded ? "true" : "false");
+    el.cfgPanel.hidden = !isExpanded;
+  }
+
+  function renderMetaPills() {
+    const g = state.game || {};
+    const players = Array.isArray(state.roster) ? state.roster.length : 0;
+
+    if (el.metaPlayers) el.metaPlayers.textContent = players ? String(players) : "—";
+
+    const holes = String(g.dbGames_Holes || "").trim();
+    if (el.metaHoles) el.metaHoles.textContent = holes || "—";
+
+    const hc = String(g.dbGames_HCMethod || "").trim();
+    if (el.metaHC) el.metaHC.textContent = hc || "—";
   }
 
   function normalizeRosterForDisplay(records) {
@@ -130,7 +160,6 @@
       pairMap.get(pairingId).push(p);
     });
 
-    // Convert to arrays (stable order by key)
     const flightIds = Array.from(flightsMap.keys()).sort((a,b)=>a.localeCompare(b));
     return flightIds.map(fid => {
       const pairMap = flightsMap.get(fid);
@@ -149,7 +178,6 @@
     if (!g) { el.configGrid.innerHTML = ""; return; }
 
     const parts = [];
-    // Mirrors Wix widget config
     parts.push(configRow("Facility", g.dbGames_FacilityName));
     parts.push(configRow("Course", g.dbGames_CourseName));
     parts.push(configRow("Play Date", g.gameDateDDDMMDDYY || g.dbGames_PlayDate));
@@ -200,7 +228,6 @@
   }
 
   function renderRosterByPlayer(sorted) {
-    // Desktop table
     if (el.rosterTbody) {
       el.rosterTbody.innerHTML = sorted.map(p => {
         const name = valueOrDash(p.dbPlayers_Name);
@@ -235,7 +262,6 @@
       }).join("");
     }
 
-    // Mobile
     if (el.mobileList) {
       el.mobileList.innerHTML = sorted.map(p => {
         const name = valueOrDash(p.dbPlayers_Name);
@@ -272,7 +298,7 @@
               '<div class="gsMetaItem">SO ' + esc(so) + '</div>' +
             '</div>' +
             '<div class="gsLine4">' +
-              '<div class="gsMetaItem">Flight ' + esc(flight) + '</div>' +
+              '<div class="gsMetaItem">Match ' + esc(flight) + '</div>' +
               '<div class="gsMetaItem">Pair ' + esc(pair) + '</div>' +
               '<div class="gsMetaItem">Pos ' + esc(pos) + '</div>' +
             '</div>' +
@@ -303,7 +329,7 @@
           const time = valueOrDash(p.dbPlayers_TeeTime);
           const start = valueOrDash(p.dbPlayers_StartHole);
           const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
-          // hide pairing columns in group view? we keep them for consistency but show same.
+
           desktopParts.push(
             "<tr>" +
               "<td>" + esc(name) + "</td>" +
@@ -326,7 +352,6 @@
 
     if (el.rosterTbody) el.rosterTbody.innerHTML = desktopParts.join("");
 
-    // Mobile: same player cards but insert simple headers
     if (el.mobileList) {
       const mob = [];
       flights.forEach(f => {
@@ -379,7 +404,6 @@
         const scoreId = String(a.getAttribute("data-scoreid") || "").trim();
         if (!scoreId || scoreId === "—") return;
 
-        // Best-effort routing: if routerGo supports it, use it; else copy to clipboard.
         if (typeof MA.routerGo === "function") {
           try {
             MA.routerGo("score", { scoreId: scoreId });
@@ -449,8 +473,6 @@
   }
 
   async function refreshHandicaps() {
-    // Placeholder until you point this to the canonical workflow endpoint.
-    // Keep behavior clean: show a single status + optional hint.
     setStatus("Refresh handicaps not wired yet for GoDaddy.", "warn");
     showActionHint("TODO: wire to handicap workflow endpoint (Pass-A/Pass-B).", "warn");
   }
@@ -469,7 +491,6 @@
   }
 
   function openGameSettings() {
-    // Best-effort navigation; adjust to your router action or direct path as needed.
     if (typeof MA.routerGo === "function") {
       try { MA.routerGo("gamesettings"); return; } catch (e) {}
     }
@@ -505,9 +526,26 @@
   }
 
   function wireEvents() {
-    if (el.scopeByPlayer) el.scopeByPlayer.addEventListener("click", () => { state.scope = "byPlayer"; renderScopeButtons(); renderRoster(); });
-    if (el.scopeByGroup) el.scopeByGroup.addEventListener("click", () => { state.scope = "byGroup"; renderScopeButtons(); renderRoster(); });
+    if (el.cfgToggle) {
+      el.cfgToggle.addEventListener("click", () => {
+        const expanded = el.cfgToggle.getAttribute("aria-expanded") === "true";
+        setConfigExpanded(!expanded);
+      });
+    }
 
+    if (el.scopeByPlayer) el.scopeByPlayer.addEventListener("click", () => {
+      state.scope = "byPlayer";
+      renderScopeButtons();
+      renderRoster();
+    });
+
+    if (el.scopeByGroup) el.scopeByGroup.addEventListener("click", () => {
+      state.scope = "byGroup";
+      renderScopeButtons();
+      renderRoster();
+    });
+
+    // Optional button wiring (only if you add these IDs to the view later)
     if (el.openSettingsBtn) el.openSettingsBtn.addEventListener("click", () => { hideActionHint(); openGameSettings(); });
     if (el.refreshHcBtn) el.refreshHcBtn.addEventListener("click", async () => { hideActionHint(); await refreshHandicaps(); });
     if (el.printScorecardsBtn) el.printScorecardsBtn.addEventListener("click", () => { hideActionHint(); printScorecards(); });
@@ -517,7 +555,7 @@
 
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
-    
+
     const items = [
       { label: "Game Settings", action: openGameSettings },
       { label: "Refresh Handicaps", action: refreshHandicaps },
@@ -564,6 +602,8 @@
       applyChrome();
 
       renderConfig();
+      setConfigExpanded(false);       // default collapsed
+      renderMetaPills();              // Players / Holes / HC
       renderScopeButtons();
       renderRoster();
 
