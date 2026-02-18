@@ -63,8 +63,8 @@
           openForm({
             playerGHIN: String(row.ghin || ""),
             name: String(row.name || ""),
-            email: "",
-            mobile: "",
+            email: String(row.email || ""),
+            mobile: String(row.mobile || ""),
             memberId: "",
             groups: []
           }, true);

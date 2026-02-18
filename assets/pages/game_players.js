@@ -442,13 +442,6 @@
       return;
     }
     const mode = /^\d+$/.test(lastOrId) ? "id" : "name";
-    if (mode === "name" && !stateCode) {
-      state.ghinRows = [];
-      state.ghinTruncated = false;
-      state.ghinStatus = "Enter state for name search.";
-      renderBody();
-      return;
-    }
     state.ghinStatus = "Searching…";
     renderBody();
     const payload = (mode === "id")

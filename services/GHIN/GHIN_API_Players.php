@@ -180,6 +180,50 @@ function be_getPlayersByName(
 }
 
 /**
+ * Global search (no state required) using api2.ghin.com endpoint.
+ * Returns raw payload (structure differs from standard search).
+ */
+function be_getPlayersGlobal(string $lastName, ?string $firstName, ?string $state, string $token): array
+{
+    $myToken = trim($token);
+    if ($myToken === "") {
+        throw new RuntimeException("be_getPlayersGlobal: missing token");
+    }
+
+    $last = trim($lastName);
+    $first = trim((string)($firstName ?? ""));
+
+    if ($last === "") {
+        return [];
+    }
+
+    $url = "https://api2.ghin.com/api/v1/golfers.json" .
+           "?status=Active" .
+           "&from_ghin=true" .
+           "&per_page=100" .
+           "&sorting_criteria=full_name" .
+           "&order=asc" .
+           "&page=1" .
+           "&country=USA" .
+           "&source=GHINcom" .
+           "&last_name=" . rawurlencode($last);
+
+    if ($first !== "") {
+        $url .= "&first_name=" . rawurlencode($first);
+    }
+
+    if ($state !== null && $state !== "") {
+        $url .= "&state=" . rawurlencode($state);
+    }
+
+    return HttpClient::getJson($url, [
+        "accept: application/json",
+        "Content-Type: application/json",
+        "Authorization: Bearer " . $myToken,
+    ]);
+}
+
+/**
  * PHP placeholder for deprecated Wix function.
  * Wix: export async function be_getPlayers()
  * DO NOT USE.

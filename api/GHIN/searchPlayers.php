@@ -72,6 +72,8 @@ try {
       $city = (string)($g["city"] ?? "");
       $st   = (string)($g["state"] ?? "");
       $club = (string)($g["club_name"] ?? "");
+      $email = (string)($g["email"] ?? "");
+      $mobile = (string)($g["phone_number"] ?? $g["phoneNumber"] ?? "");
 
       $rows[] = [
         "ghin" => $gh,
@@ -81,6 +83,8 @@ try {
         "city" => trim($city),
         "state" => trim($st),
         "club_name" => trim($club),
+        "email" => trim($email),
+        "mobile" => trim($mobile),
       ];
     }
 
@@ -89,34 +93,41 @@ try {
     $last  = trim((string)($in["lastName"] ?? ""));
     $first = trim((string)($in["firstName"] ?? ""));
 
-    if ($state === "" || $last === "") {
-      http_response_code(400);
-      echo json_encode(["ok" => false, "message" => "Missing state or lastName for mode=name."]);
-      exit;
-    }
-
     // Keep aligned with overlay truncation policy
     $recCnt = 90;
     $pageNum = 1;
+    
+    if ($last === "") {
+        http_response_code(400);
+        echo json_encode(["ok" => false, "message" => "Missing lastName."]);
+        exit;
+    }
 
-    $out = be_getPlayersByName($recCnt, $pageNum, $state, $last, ($first !== "" ? $first : null), $clubId, $token);
-
-    $golfers = $out["golfers"] ?? [];
+    // Unified search using global endpoint (api2.ghin.com)
+    // This endpoint supports optional state filtering
+    $rawGlobal = be_getPlayersGlobal($last, ($first !== "" ? $first : null), ($state !== "" ? $state : null), $token);
+    $golfers = $rawGlobal["golfers"] ?? [];
     if (!is_array($golfers)) $golfers = [];
 
     foreach ($golfers as $g) {
       if (!is_array($g)) continue;
 
-      $gh = trim((string)($g["ghin"] ?? ($g["golfer_id"] ?? "")));
-      $firstN = trim((string)($g["first_name"] ?? ""));
-      $lastN  = trim((string)($g["last_name"] ?? ""));
+      // Normalize keys (Global endpoint uses camelCase e.g. firstName vs first_name)
+      $gh = trim((string)($g["ghin"] ?? $g["golfer_id"] ?? ""));
+      
+      $firstN = trim((string)($g["first_name"] ?? $g["firstName"] ?? ""));
+      $lastN  = trim((string)($g["last_name"] ?? $g["lastName"] ?? ""));
       $name   = trim(($firstN . " " . $lastN));
 
-      $hi = (string)($g["handicap_index"] ?? ($g["hi"] ?? ""));
-      $gender = (string)($g["gender"] ?? ($g["gender_code"] ?? ""));
+      $hi = (string)($g["handicap_index"] ?? $g["handicapIndex"] ?? $g["hi"] ?? "");
+      $gender = (string)($g["gender"] ?? $g["genderCode"] ?? $g["gender_code"] ?? "");
+      
+      // Location fields might differ
       $city = (string)($g["city"] ?? "");
-      $st   = (string)($g["state"] ?? $state);
-      $club = (string)($g["club_name"] ?? "");
+      $st   = (string)($g["state"] ?? $g["stateCode"] ?? $state);
+      $club = (string)($g["club_name"] ?? $g["clubName"] ?? "");
+      $email = (string)($g["email"] ?? "");
+      $mobile = (string)($g["phone_number"] ?? $g["phoneNumber"] ?? "");
 
       $rows[] = [
         "ghin" => $gh,
@@ -126,6 +137,8 @@ try {
         "city" => trim($city),
         "state" => trim($st),
         "club_name" => trim($club),
+        "email" => trim($email),
+        "mobile" => trim($mobile),
       ];
     }
 
