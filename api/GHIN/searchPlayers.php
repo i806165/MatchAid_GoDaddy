@@ -74,6 +74,8 @@ try {
       $club = (string)($g["club_name"] ?? "");
       $email = (string)($g["email"] ?? "");
       $mobile = (string)($g["phone_number"] ?? $g["phoneNumber"] ?? "");
+      $memberId = (string)($g["local_number"] ?? ($g["member_number"] ?? ($g["memberId"] ?? "")));
+
 
       $rows[] = [
         "ghin" => $gh,
@@ -85,6 +87,7 @@ try {
         "club_name" => trim($club),
         "email" => trim($email),
         "mobile" => trim($mobile),
+        "memberId" => trim($memberId),
       ];
     }
 
@@ -128,6 +131,9 @@ try {
       $club = (string)($g["club_name"] ?? $g["clubName"] ?? "");
       $email = (string)($g["email"] ?? "");
       $mobile = (string)($g["phone_number"] ?? $g["phoneNumber"] ?? "");
+      $memberId = ""; // Not currently provided by global search, but keep shape consistent with ID search results""
+      
+
 
       $rows[] = [
         "ghin" => $gh,
@@ -139,6 +145,8 @@ try {
         "club_name" => trim($club),
         "email" => trim($email),
         "mobile" => trim($mobile),
+        "memberId" => $memberId,
+        
       ];
     }
 

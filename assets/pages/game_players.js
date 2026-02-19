@@ -1,3 +1,7 @@
+/* /assets/pages/game_players.js
+   Game Players page controller (GoDaddy).
+   - Hydrates from window.__MA_INIT__
+*/
 (function(){
   "use strict";
   const MA = window.MA || {};

@@ -47,7 +47,6 @@ $paths = [
   "favPlayersInit"   => "/api/favorite_players/initFavPlayers.php",
   "favPlayersSave"   => "/api/favorite_players/saveFavPlayers.php",
   "favPlayersDelete" => "/api/favorite_players/deleteFavPlayers.php",
-  // Shared GHIN player search endpoint used across pages
   "ghinPlayerSearch" => "/api/GHIN/searchPlayers.php",
 ];
 

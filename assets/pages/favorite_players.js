@@ -58,16 +58,17 @@
         title: "Add Player from GHIN",
         defaultState: String(state.context?.userState || "").trim().toUpperCase(),
         existingGHINs: existing,
-        onSelect: (row) => {
+        onSelect: async (row) => {
           MA.ghinSearch.close();
-          openForm({
-            playerGHIN: String(row.ghin || ""),
-            name: String(row.name || ""),
-            email: String(row.email || ""),
-            mobile: String(row.mobile || ""),
-            memberId: "",
-            groups: []
-          }, true);
+          const ghin = String(row.ghin || "").trim();
+          if (!ghin) return;
+
+          try {
+            await openFromGhinSelection(ghin);
+          } catch (e) {
+            console.error(e);
+            if (MA.setStatus) MA.setStatus(String(e.message || e), "error");
+          }
         }
       });
     }
@@ -148,11 +149,16 @@
     renderFilters();
 
     // If playerGHIN provided, auto-open form and suppress footer
-    const autoGhin = String(launch.playerGHIN || "");
+    const autoGhin = String(launch.playerGHIN || "").trim();
     if (autoGhin) {
-      const fav = state.favorites.find(f => String(f.playerGHIN) === autoGhin) || null;
-      // If not present, we'll still allow create-from-GHIN path via search.
-      openForm(fav || { playerGHIN: autoGhin, name: "", groups: [] }, true);
+      try {
+        await openFromLaunchGHIN(autoGhin);
+      } catch (e) {
+        console.error(e);
+        if (MA.setStatus) MA.setStatus(String(e.message || e), "error");
+        // fall back to list if launch open fails
+        showList();
+      }
     } else {
       showList();
     }
@@ -168,6 +174,59 @@
   function escapeHtml(s) {
     return String(s || "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;" }[c]));
   }
+    async function fetchGhinById(ghin) {
+    const id = String(ghin || "").trim();
+    if (!id) return null;
+
+    const res = await MA.postJson(MA.paths.ghinPlayerSearch, { mode: "id", ghin: id });
+    if (!res || !res.ok) throw new Error(res?.message || "GHIN lookup failed.");
+
+    const rows = Array.isArray(res.payload?.rows) ? res.payload.rows : [];
+    return rows[0] || null;
+  }
+
+  async function openFromLaunchGHIN(playerGHIN) {
+    const ghin = String(playerGHIN || "").trim();
+    if (!ghin) return;
+
+    // 1) Try DB favorites first (already returned by init endpoint)
+    const fav = state.favorites.find(f => String(f.playerGHIN) === ghin) || null;
+    if (fav) {
+      openForm(Object.assign({}, fav, { __existing: true }), true);
+      return;
+    }
+
+    // 2) Not found → GHIN hydrate (Add flow)
+    const row = await fetchGhinById(ghin);
+    if (!row) {
+      openForm({ playerGHIN: ghin, name: "", email: "", mobile: "", memberId: "", groups: [], __existing: false }, true);
+      return;
+    }
+
+    openForm({
+      playerGHIN: String(row.ghin || ghin),
+      name: String(row.name || ""),
+      email: String(row.email || ""),
+      mobile: String(row.mobile || ""),
+      memberId: String(row.memberId || ""),
+      groups: [],
+      __existing: false
+    }, true);
+  }
+
+  async function openFromGhinSelection(ghin) {
+    const row = await fetchGhinById(ghin);
+    openForm({
+      playerGHIN: String(row?.ghin || ghin || ""),
+      name: String(row?.name || ""),
+      email: String(row?.email || ""),
+      mobile: String(row?.mobile || ""),
+      memberId: String(row?.memberId || ""),
+      groups: [],
+      __existing: false
+    }, true);
+  }
+
 
   function showList() {
     el.form.style.display = "none";
@@ -204,7 +263,8 @@
     setHeaderActionsFor("form");
 
     // hydrate fields
-    if (el.formTitle) el.formTitle.textContent = state.current.name ? "Edit Favorite" : "Add Favorite";
+    const isEdit = !!fav.__existing;
+    if (el.formTitle) el.formTitle.textContent = isEdit ? "Edit Favorite" : "Add Favorite";
     if (el.formSub) el.formSub.textContent = `${state.current.name || "Selected Player"} • ${maskGHIN(state.current.playerGHIN)}`;
     if (el.email) el.email.value = state.current.email || "";
     if (el.mobile) el.mobile.value = state.current.mobile || "";
