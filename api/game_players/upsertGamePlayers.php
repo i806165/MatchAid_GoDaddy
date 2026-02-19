@@ -52,6 +52,25 @@ try {
 
   $existing = ServiceDbPlayers::getPlayerByGGIDGHIN($ggid, $ghin);
 
+    // --- Enrich player profile fields (LocalID / ClubID / ClubName) ---
+  // GoDaddy UI sends a minimal player object (ghin/name/gender/hi). Hydrate the rest here.
+  $templateGhin = (string)($_SESSION["SessionGHINLogonID"] ?? "");
+  $profile = gp_fetch_player_profile($ghin, $token, $templateGhin);
+
+  // Prefer UI-provided values, then GHIN profile, then existing DB values (so we don't blank-out good data)
+  $localId = trim((string)($player["local_number"] ?? $player["memberId"] ?? ""));
+  if ($localId === "") $localId = trim((string)($profile["local_number"] ?? $profile["member_number"] ?? $profile["memberId"] ?? ""));
+  if ($localId === "" && is_array($existing)) $localId = (string)($existing["dbPlayers_LocalID"] ?? "");
+
+  $clubId = trim((string)($player["club_id"] ?? ""));
+  if ($clubId === "") $clubId = trim((string)($profile["club_id"] ?? $profile["primary_club_id"] ?? $profile["home_club_id"] ?? ""));
+  if ($clubId === "" && is_array($existing)) $clubId = (string)($existing["dbPlayers_ClubID"] ?? "");
+
+  $clubName = trim((string)($player["club_name"] ?? ""));
+  if ($clubName === "") $clubName = trim((string)($profile["club_name"] ?? $profile["primary_club_name"] ?? $profile["home_club_name"] ?? ""));
+  if ($clubName === "" && is_array($existing)) $clubName = (string)($existing["dbPlayers_ClubName"] ?? "");
+
+
   // Calculate Baseline PH (Pass-A logic: PH = CH * Allowance)
   $ch = (int)($tee["playerCH"] ?? 0);
   $allowance = (float)($game["dbGames_Allowance"] ?? 100);
@@ -60,7 +79,6 @@ try {
   $fields = [
     "dbPlayers_Name" => trim(($first . " " . $last)),
     "dbPlayers_LName" => $last,
-    "dbPlayers_LocalID" => (string)($player["local_number"] ?? ""),
     "dbPlayers_HI" => $effectiveHI,
     "dbPlayers_CH" => (string)$ch,
     "dbPlayers_PH" => (string)$ph,
@@ -74,12 +92,13 @@ try {
     "dbPlayers_FlightID" => (string)($existing["dbPlayers_FlightID"] ?? ""),
     "dbPlayers_FlightPos" => (string)($existing["dbPlayers_FlightPos"] ?? ""),
     "dbPlayers_Gender" => $gender,
-    "dbPlayers_ClubID" => (string)($player["club_id"] ?? ""),
-    "dbPlayers_ClubName" => (string)($player["club_name"] ?? ""),
     "dbPlayers_CreatorID" => (string)($_SESSION["SessionGHINLogonID"] ?? ""),
     "dbPlayers_CreatorName" => (string)($_SESSION["SessionUserName"] ?? $_SESSION["SessionGHINUserName"] ?? ""),
     "dbPlayers_TeeSetDetails" => json_encode($tee),
     "dbPlayers_PlayerKey" => (string)($existing["dbPlayers_PlayerKey"] ?? ""),
+    "dbPlayers_LocalID"  => $localId,
+    "dbPlayers_ClubID"   => $clubId,
+    "dbPlayers_ClubName" => $clubName,
   ];
 
   $saved = ServiceDbPlayers::upsertGamePlayer($ggid, $ghin, $fields);
@@ -134,3 +153,17 @@ function gp_pick_tee(array $teeSets, string $selectedId): ?array
   }
   return null;
 }
+function gp_fetch_player_profile(string $ghin, string $token, string $templateGhin): array
+{
+  $fetch = str_starts_with($ghin, "NH") ? $templateGhin : $ghin;
+  $fetch = trim((string)$fetch);
+  if ($fetch === "") return [];
+
+  $res = be_getPlayersByID($fetch, $token);
+  $golf = (is_array($res["golfers"] ?? null) && isset($res["golfers"][0]) && is_array($res["golfers"][0]))
+    ? $res["golfers"][0]
+    : [];
+
+  return is_array($golf) ? $golf : [];
+}
+

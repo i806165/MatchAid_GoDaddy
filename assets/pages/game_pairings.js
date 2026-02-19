@@ -116,6 +116,7 @@
     el.drawerOverlay.classList.add("is-open");
     el.drawerOverlay.setAttribute("aria-hidden", "false");
     // sync drawer content to active tab
+    lockBackground();
     syncDrawer();
   }
 
@@ -123,6 +124,7 @@
     if (!el.drawerOverlay) return;
     el.drawerOverlay.classList.remove("is-open");
     el.drawerOverlay.setAttribute("aria-hidden", "true");
+    unlockBackground();
   }
 
   function syncDrawer() {
@@ -135,6 +137,22 @@
       el.drawerTitle.textContent = "Unmatched";
       renderUnmatchedList({ intoDrawer: true });
     }
+  }
+
+  function lockBackground() {
+    // Apply inert to all direct children of the body, except the drawer
+    Array.from(document.body.children).forEach(child => {
+      if (child !== el.drawerOverlay) {
+        child.inert = true;
+      }
+    });
+  }
+
+  function unlockBackground() {
+    // Remove inert from all elements
+    Array.from(document.body.children).forEach(child => {
+      child.inert = false;
+    });
   }
 
   function markDirty(ghin) {
@@ -681,6 +699,12 @@
       return p.length ? p.join(", ") : "—";
     }
   };
+
+
+
+
+
+
 
   // ---- Chrome ----
   function applyChrome() {

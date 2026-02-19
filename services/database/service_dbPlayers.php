@@ -45,6 +45,7 @@ final class ServiceDbPlayers
   {
     $existing = self::getPlayerByGGIDGHIN($ggid, $playerGHIN);
     $pdo = Db::pdo();
+    
 
     if ($existing) {
       $setParts = [];
