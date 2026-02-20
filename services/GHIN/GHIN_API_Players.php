@@ -45,14 +45,8 @@ function be_getPlayersByID(string $parmGHIN, ?string $parmToken = null): array
         $golfers = $jsonData["golfers"] ?? [];
         if (!is_array($golfers)) $golfers = [];
 
-        // Sort so is_home_club:true comes first (Wix logic)
-        usort($golfers, function ($a, $b) {
-            $aHome = !empty($a["is_home_club"]) ? 1 : 0;
-            $bHome = !empty($b["is_home_club"]) ? 1 : 0;
-
-            if ($aHome === $bHome) return 0;
-            return ($aHome > $bHome) ? -1 : 1; // home club first
-        });
+        // Scrub memberships_home_club:true comes first (Wix logic)
+        $golfers = ghin_scrub_memberships($golfers);
 
         return ["golfers" => $golfers];
 
@@ -117,62 +111,7 @@ function be_getPlayersByName(
     $golfers = $jsonData["golfers"] ?? [];
     if (!is_array($golfers)) $golfers = [];
 
-    // ---- De-dupe memberships by GHIN ----
-    $userClubIdStr = trim((string)($parmUserClubID ?? ""));
-    $byGHIN = [];
-
-    foreach ($golfers as $g) {
-        if (!is_array($g)) continue;
-        $key = trim((string)($g["ghin"] ?? ($g["golfer_id"] ?? "")));
-        if ($key === "") continue;
-        if (!isset($byGHIN[$key])) $byGHIN[$key] = [];
-        $byGHIN[$key][] = $g;
-    }
-
-    $preferred = [];
-
-    foreach ($byGHIN as $rows) {
-        $pick = null;
-
-        // 1) Prefer membership for user's club
-        if ($userClubIdStr !== "") {
-            foreach ($rows as $r) {
-                $clubId = (string)($r["club_id"] ?? "");
-                if ($clubId === $userClubIdStr) {
-                    $pick = $r;
-                    break;
-                }
-            }
-        }
-
-        // 2) Else GHIN home club
-        if ($pick === null) {
-            foreach ($rows as $r) {
-                if (!empty($r["is_home_club"])) {
-                    $pick = $r;
-                    break;
-                }
-            }
-        }
-
-        // 3) Else deterministic fallback
-        if ($pick === null && count($rows) > 0) {
-            $pick = $rows[0];
-        }
-
-        if ($pick !== null) $preferred[] = $pick;
-    }
-
-    // Keep ordering stable for UI: last_name then first_name
-    usort($preferred, function ($a, $b) {
-        $aL = strtolower((string)($a["last_name"] ?? ""));
-        $bL = strtolower((string)($b["last_name"] ?? ""));
-        if ($aL !== $bL) return $aL <=> $bL;
-
-        $aF = strtolower((string)($a["first_name"] ?? ""));
-        $bF = strtolower((string)($b["first_name"] ?? ""));
-        return $aF <=> $bF;
-    });
+    $preferred = ghin_scrub_memberships($golfers);
 
     // Return SAME SHAPE as Wix: spread jsonData, override golfers with deduped list
     $jsonData["golfers"] = $preferred;
@@ -222,6 +161,83 @@ function be_getPlayersGlobal(string $lastName, ?string $firstName, ?string $stat
         "Authorization: Bearer " . $myToken,
     ]);
 }
+
+/**
+ * Session-only membership scrubbing (single source of truth).
+ * - Groups rows by GHIN and picks ONE preferred membership per GHIN using:
+ *    1) club_id matches $_SESSION["SessionClubID"] (if present)
+ *    2) is_home_club === true
+ *    3) deterministic fallback (first row)
+ * - Returns stable order: last_name then first_name
+ */
+function ghin_scrub_memberships(array $golfers): array
+{
+    if (!is_array($golfers)) return [];
+
+    // Session-only club context
+    $sessionClubId = "";
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        $sessionClubId = trim((string)($_SESSION["SessionClubID"] ?? ""));
+    }
+
+    // Group by GHIN
+    $byGHIN = [];
+    foreach ($golfers as $g) {
+        if (!is_array($g)) continue;
+        $key = trim((string)($g["ghin"] ?? ($g["golfer_id"] ?? "")));
+        if ($key === "") continue;
+        if (!isset($byGHIN[$key])) $byGHIN[$key] = [];
+        $byGHIN[$key][] = $g;
+    }
+
+    // Pick preferred membership per GHIN
+    $preferred = [];
+    foreach ($byGHIN as $rows) {
+        $pick = null;
+
+        // 1) Prefer session club membership
+        if ($sessionClubId !== "") {
+            foreach ($rows as $r) {
+                $clubId = (string)($r["club_id"] ?? "");
+                if ($clubId === $sessionClubId) {
+                    $pick = $r;
+                    break;
+                }
+            }
+        }
+
+        // 2) Else home club
+        if ($pick === null) {
+            foreach ($rows as $r) {
+                if (!empty($r["is_home_club"])) {
+                    $pick = $r;
+                    break;
+                }
+            }
+        }
+
+        // 3) Else deterministic fallback
+        if ($pick === null && count($rows) > 0) {
+            $pick = $rows[0];
+        }
+
+        if ($pick !== null) $preferred[] = $pick;
+    }
+
+    // Stable ordering (UI-friendly)
+    usort($preferred, function ($a, $b) {
+        $aL = strtolower((string)($a["last_name"] ?? ""));
+        $bL = strtolower((string)($b["last_name"] ?? ""));
+        if ($aL !== $bL) return $aL <=> $bL;
+
+        $aF = strtolower((string)($a["first_name"] ?? ""));
+        $bF = strtolower((string)($b["first_name"] ?? ""));
+        return $aF <=> $bF;
+    });
+
+    return $preferred;
+}
+
 
 /**
  * PHP placeholder for deprecated Wix function.
