@@ -34,6 +34,7 @@ define('MA_ROUTE_API_GAME_PLAYERS',  '/api/game_players');
 define('MA_ROUTE_API_GAME_TIMES',  '/api/game_times');
 define('MA_ROUTE_API_GAME_SUMMARY', '/api/game_summary');
 define('MA_ROUTE_API_FAVORITE_PLAYERS', '/api/favorite_players');
+define('MA_ROUTE_API_GAME_SCORECARD', '/api/game_scorecard');
 
 ini_set("log_errors", "1");
 ini_set("error_log", MA_ROOT . "/logs/matchaid.log");
