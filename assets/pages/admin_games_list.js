@@ -486,7 +486,7 @@ cardsEl.innerHTML = state.games.dbRows
     }
 
     // 1) authorization for actions (server decides OK/NotOK)
-    const requiresAuth = new Set(["editGame", "deleteGame", "roster", "pairings", "teetimes", "settings", "summary", "viewScoreCard", "calendar"]);
+    const requiresAuth = new Set(["editGame", "deleteGame", "roster", "pairings", "teetimes", "settings", "summary", "scorecard", "calendar"]);
     if (requiresAuth.has(action)) {
       const auth = await apiSession("getGameAuthorizations.php", { ggid, action });
       const ok = auth?.payload?.status === "Authorized" || auth?.payload?.status === "OK" || auth?.status === "OK";
@@ -506,7 +506,7 @@ cardsEl.innerHTML = state.games.dbRows
     if (action === "settings") return routerGo("settings", {});
     if (action === "summary") return routerGo("summary", {});
     if (action === "roster") return routerGo("roster", {});
-    if (action === "viewScoreCard") return routerGo("scorecard", {});
+    if (action === "scorecard") return routerGo("scorecard", {});
     if (action === "pairings") return routerGo("pairings", {});
     if (action === "teetimes") return routerGo("teetimes", {});
     
@@ -694,7 +694,7 @@ function applyPreset(presetKey) {
         <button class="actionMenu_item" type="button" data-menuclick="pairings">Pair Players</button>
         <button class="actionMenu_item" type="button" data-menuclick="teetimes">Set TeeTimes</button>
         <button class="actionMenu_item" type="button" data-menuclick="summary">Game Summary</button>
-        <button class="actionMenu_item" type="button" data-menuclick="viewScoreCard">Scorecard</button>
+        <button class="actionMenu_item" type="button" data-menuclick="scorecard">View Scorecard</button>
         <button class="actionMenu_item" type="button" data-menuclick="calendar">Add to Calendar</button>
         <div class="actionMenu_divider"></div>
         <button class="actionMenu_item danger" type="button" data-menuclick="deleteGame">Delete Game</button>
