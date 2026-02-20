@@ -1,0 +1,144 @@
+/* /assets/pages/game_scorecards.css
+ * Scorecards are print-first. Reuse ma_shared.css wherever possible.
+ * Only introduce sc* classes where a true scorecard grid + print contract needs it.
+ */
+
+.scHost{
+  display: grid;
+  gap: 14px;
+}
+
+/* Each printed page contains two groups (top/bottom) with a divider */
+.scPage{
+  background: #fff;
+  border: 1px solid var(--borderSubtle);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.scPage__divider{
+  height: 10px;
+  background: var(--brandPrimaryBg);
+  border-top: 1px solid var(--borderSubtle);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+
+.scGroup{
+  padding: 12px;
+}
+
+.scHdr{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.scHdr__left{
+  min-width: 0;
+}
+
+.scHdr__title{
+  font-weight: 800;
+  font-size: 16px;
+  line-height: 1.2;
+}
+
+.scHdr__sub{
+  color: rgba(0,0,0,.70);
+  font-weight: 700;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.scHdr__right{
+  display:flex;
+  align-items:flex-start;
+  gap: 10px;
+}
+
+.scQR{
+  width: 70px;
+  height: 70px;
+  border: 1px solid var(--borderSubtle);
+  border-radius: 10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  background:#fff;
+}
+
+.scQR img{ width:100%; height:100%; object-fit:cover; }
+
+.scTable{
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 11px;
+}
+
+.scTable th,
+.scTable td{
+  border: 1px solid rgba(0,0,0,.14);
+  padding: 4px 4px;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scTable th.scName,
+.scTable td.scName{
+  text-align: left;
+  font-weight: 800;
+  width: 190px;
+}
+
+.scTable th.scMeta,
+.scTable td.scMeta{
+  width: 62px;
+  font-weight: 800;
+}
+
+.scDots{
+  display:flex;
+  gap: 2px;
+  justify-content:center;
+  align-items:center;
+}
+.scDot{
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  background: #000;
+  opacity: .75;
+}
+
+/* Print contract */
+@media print{
+  /* Hide chrome + controls + footer/status */
+  header, footer, .maChromeFooter, .maControlArea { display:none !important; }
+
+  body{ background:#fff !important; }
+  main.maPage{ padding:0 !important; }
+
+  .maCard{ border:none !important; box-shadow:none !important; }
+  .maCard__hdr{ display:none !important; }
+  .maCard__body{ padding:0 !important; }
+
+  .scHost{ gap: 0 !important; }
+  .scPage{
+    border: none !important;
+    border-radius: 0 !important;
+    page-break-after: always;
+    break-after: page;
+  }
+
+  @page{
+    size: landscape;
+    margin: 0.35in;
+  }
+}
