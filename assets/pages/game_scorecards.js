@@ -9,6 +9,7 @@
   "use strict";
 
   const MA = window.MA || {};
+  const chrome = MA.chrome || {};
   const init = window.__MA_INIT__ || window.__INIT__ || {};
   const setStatus = (msg, level) => (typeof MA.setStatus === "function" ? MA.setStatus(msg, level) : console.log("[STATUS]", level || "info", msg));
 
@@ -163,9 +164,50 @@
     try { window.print(); } catch (e) { /* ignore */ }
   }
 
+  function openActionsMenu() {
+    if (!MA.ui || !MA.ui.openActionsMenu) return;
+    
+    const items = [
+      { label: "Game Settings", action: "settings", params: { returnTo: "scorecards" } },
+      { label: "Game Summary", action: "summary" },
+      { separator: true },
+      { label: "Print", action: onPrint }
+    ];
+    MA.ui.openActionsMenu("Actions", items);
+  }
+
+  function applyChrome(payload) {
+    // Derive title/subtitle from the first group's header if available
+    let title = "Game";
+    if (payload && payload.rows && payload.rows.length > 0) {
+       const gh = payload.rows[0].gameHeader || {};
+       if (gh.gameTitle) title = gh.gameTitle;
+    }
+
+    if (chrome && typeof chrome.setHeaderLines === "function") {
+      chrome.setHeaderLines(["ADMIN PORTAL", "Scorecards", title]);
+    }
+
+    if (chrome && typeof chrome.setActions === "function") {
+      chrome.setActions({
+        left: { show: true, label: "Actions", onClick: openActionsMenu },
+        right: { show: true, label: "Print", onClick: onPrint }
+      });
+    }
+
+    if (chrome && typeof chrome.setBottomNav === "function") {
+      chrome.setBottomNav({
+        visible: ["admin", "edit", "roster", "pairings", "teetimes", "summary"],
+        active: "summary",
+        onNavigate: (id) => { if (typeof MA.routerGo === "function") MA.routerGo(id); }
+      });
+    }
+  }
+
   function initPage() {
     try {
       const payload = normalizePayload(init);
+      applyChrome(payload);
       applyMeta(payload.meta || {});
       renderPages(payload.rows || []);
       setStatus("Ready.", "success");
