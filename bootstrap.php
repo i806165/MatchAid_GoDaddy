@@ -20,6 +20,7 @@ define('MA_SVC_CTX',   MA_SERVICES . '/context');
 define('MA_SVC_DB',    MA_SERVICES . '/database');
 define('MA_SVC_GHIN',  MA_SERVICES . '/GHIN');
 define('MA_APP',       MA_ROOT . '/app');
+define('MA_INCLUDES',  MA_ROOT . '/includes');
 define('MA_API_SESSION', MA_API . '/session');
 define('MA_ROUTE_LOGIN', '/app/login/login.php');
 define('MA_ROUTE_HOME',  '/');
