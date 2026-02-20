@@ -178,10 +178,19 @@
     const id = String(ghin || "").trim();
     if (!id) return null;
 
+    console.log("[FAV_GHIN_ID] request", { url: MA.paths.ghinPlayerSearch, mode: "id", ghin: id });
+
+
     const res = await MA.postJson(MA.paths.ghinPlayerSearch, { mode: "id", ghin: id });
+    
+    console.log("[FAV_GHIN_ID] response", res);
+    
     if (!res || !res.ok) throw new Error(res?.message || "GHIN lookup failed.");
 
     const rows = Array.isArray(res.payload?.rows) ? res.payload.rows : [];
+
+    console.log("[FAV_GHIN_ID] rows", rows);
+
     return rows[0] || null;
   }
 
