@@ -679,7 +679,7 @@
 
   function printScorecards() {
     if (typeof MA.routerGo === "function") {
-      try { MA.routerGo("scorecards"); return; } catch (e) {}
+      try { MA.routerGo("scorecard"); return; } catch (e) {}
     }
     setStatus("Print Scorecards: wire router action for this button.", "warn");
     showActionHint("TODO: route to your scorecards page.", "warn");
