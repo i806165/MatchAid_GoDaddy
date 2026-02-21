@@ -35,7 +35,7 @@ try {
       ],
       "players" => $rows,
     ]
-  ]);
+  ], JSON_THROW_ON_ERROR | JSON_INVALID_UTF8_SUBSTITUTE);
 } catch (Throwable $e) {
   Logger::error("GAMEPLAYERS_GET_FAIL", ["err" => $e->getMessage()]);
   http_response_code(500);
