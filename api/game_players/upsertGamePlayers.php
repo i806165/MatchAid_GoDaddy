@@ -1,6 +1,6 @@
-// api/game_players/upsertGamePlayers.php
 <?php
 declare(strict_types=1);
+// api/game_players/upsertGamePlayers.php
 
 require_once __DIR__ . "/../../bootstrap.php";
 session_start();

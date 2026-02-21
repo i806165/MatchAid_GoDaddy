@@ -1,6 +1,6 @@
 <?php
-// /public_html/api/services/GHIN_API_Handicaps.php
 declare(strict_types=1);
+// /public_html/api/services/GHIN_API_Handicaps.php
 
 require_once MA_API_LIB . "/HttpClient.php";
 

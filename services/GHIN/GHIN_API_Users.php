@@ -1,6 +1,6 @@
 <?php
-// /public_html/services/GHIN/GHIN_API_Users.php
 declare(strict_types=1);
+// /public_html/services/GHIN/GHIN_API_Users.php
 
 require_once __DIR__ . "/../../bootstrap.php";
 $config = ma_config();
