@@ -124,10 +124,14 @@
 }
 
 .scLogo{
-  width: 52px;
-  height: 52px;
-  border-radius: 6px;
+  width: 56px !important;
+  height: 56px !important;
+  max-width: 56px !important;
+  max-height: 56px !important;
+  border-radius: 8px;
   object-fit: cover;
+  flex: 0 0 56px;
+  display: block;
 }
 
 .scHdrText{
