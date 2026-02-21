@@ -1,6 +1,6 @@
 <?php
-// /public_html/services/scoring/service_ScoreCard.php
 declare(strict_types=1);
+// /public_html/services/scoring/service_ScoreCard.php
 
 /**
  * ServiceScoreCard
