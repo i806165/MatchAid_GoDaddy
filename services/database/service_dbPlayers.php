@@ -1,6 +1,6 @@
-// /services/database/service_dbPlayers.php
 <?php
 declare(strict_types=1);
+// /services/database/service_dbPlayers.php
 
 require_once MA_API_LIB . "/Db.php";
 
