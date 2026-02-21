@@ -45,16 +45,19 @@ function initScoreCard(string $ggid, array $ctx = []): array {
   }
   unset($p);
 
-  $payload = ServiceScoreCard::buildBlankScorecardPayload($game, $players);
+  $scorecards = ServiceScoreCard::buildBlankScorecardPayload($game, $players);
 
-  // Light meta for UI pills
-  $meta = [
-    "playerCount" => count($players),
-    "holes" => (string)($game["dbGames_Holes"] ?? "All 18"),
-    "hcMethod" => (string)($game["dbGames_HCMethod"] ?? "CH"),
+  return [
+    "ok" => true,
+    "game" => $game,          // raw db_Games row (no transformations)
+    "players" => $players,    // raw db_Players rows (optional but recommended)
+    "scorecards" => $scorecards,
+    "meta" => [
+      "playerCount" => count($players),
+      "holes" => (string)($game["dbGames_Holes"] ?? "All 18"),
+      "hcMethod" => (string)($game["dbGames_HCMethod"] ?? "CH"),
+    ],
   ];
-
-  return array_merge($payload, ["meta" => $meta]);
 }
 
 // If invoked directly as endpoint, emit JSON
@@ -65,7 +68,6 @@ if (php_sapi_name() !== "cli" && basename($_SERVER["SCRIPT_NAME"] ?? "") === "in
   try {
     $ggid = (string)($_GET["ggid"] ?? ($_SESSION["SessionStoredGGID"] ?? ""));
     $out = initScoreCard($ggid, []);
-    $out["ok"] = true;
     echo json_encode($out, JSON_UNESCAPED_SLASHES);
   } catch (Throwable $e) {
     Logger::error("SCORECARDS_INIT_API_FAIL", ["err" => $e->getMessage()]);

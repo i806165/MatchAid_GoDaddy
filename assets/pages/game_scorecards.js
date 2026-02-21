@@ -10,7 +10,10 @@
 
   const MA = window.MA || {};
   const chrome = MA.chrome || {};
-  const init = window.__MA_INIT__ || window.__INIT__ || {};
+  const init = window.__INIT__ || window.__MA_INIT__ || {};
+  const game = init.game || {};
+  const scorecards = init.scorecards || init; // fallback during transition
+  
   const setStatus = (msg, level) => (typeof MA.setStatus === "function" ? MA.setStatus(msg, level) : console.log("[STATUS]", level || "info", msg));
 
   const el = {
@@ -42,29 +45,36 @@
     if (el.host) el.host.innerHTML = "";
   }
 
-  function buildDots(n) {
+  function buildStrokeMark(n) {
     const num = Number(n || 0);
     if (!Number.isFinite(num) || num === 0) return "";
-    const dots = Math.min(Math.abs(num), 3); // visual cap for compactness
-    const sign = num < 0 ? "-" : "";
-    let html = '<div class="scDots" aria-label="strokes">';
-    for (let i = 0; i < dots; i++) html += '<span class="scDot"></span>';
-    html += sign ? `<span style="font-weight:800;margin-left:4px;">${sign}</span>` : "";
-    html += "</div>";
-    return html;
+
+    // Display as superscript number (use minus for plus-handicaps / givebacks)
+    const abs = Math.abs(num);
+    const sign = num < 0 ? "−" : ""; // nicer minus
+    return `<sup class="scStrokeSup" aria-label="strokes">${sign}${abs}</sup>`;
   }
 
   function renderTable(group) {
     const courseRows = Array.isArray(group.courseInfo) ? group.courseInfo : [];
     const players = Array.isArray(group.players) ? group.players : [];
-    const holes = Array.from({ length: 18 }, (_, i) => i + 1);
-
-    // Header row: Name + holes + totals (9a/9b/9c)
+    
+    const scoringMethod = String(game.dbGames_ScoringMethod || "").toUpperCase();
+    const hcMethod = String(game.dbGames_HCMethod || "").toUpperCase();
+    const isAdjGross = (scoringMethod === "ADJ GROSS");
+    
     let html = '<table class="scTable" role="table" aria-label="scorecard">';
     html += "<thead><tr>";
-    html += '<th class="scName">Name</th>';
-    holes.forEach((h) => (html += `<th>${h}</th>`));
-    html += '<th class="scMeta">F9</th><th class="scMeta">B9</th><th class="scMeta">Tot</th>';
+    html += '<th class="scName">HOLE</th>';
+
+    // 1..9
+    for (let h = 1; h <= 9; h++) html += `<th>${h}</th>`;
+    html += '<th class="scMeta">Out</th>';
+
+    // 10..18
+    for (let h = 10; h <= 18; h++) html += `<th>${h}</th>`;
+    html += '<th class="scMeta">In</th><th class="scMeta">Tot</th>';
+
     html += "</tr></thead>";
     html += "<tbody>";
 
@@ -74,21 +84,52 @@
       const tee = esc(r.tee || "");
       html += "<tr>";
       html += `<td class="scName">${label}${tee && label !== "Par" && label !== "HCP" ? " — " + tee : ""}</td>`;
-      holes.forEach((h) => (html += `<td>${esc(r["h" + h] ?? "")}</td>`));
-      html += `<td>${esc(r["9a"] ?? "")}</td><td>${esc(r["9b"] ?? "")}</td><td>${esc(r["9c"] ?? "")}</td>`;
+      // 1..9
+      for (let h = 1; h <= 9; h++) html += `<td>${esc(r["h" + h] ?? "")}</td>`;
+      html += `<td class="scMeta">${esc(r["9a"] ?? "")}</td>`;
+
+      // 10..18
+      for (let h = 10; h <= 18; h++) html += `<td>${esc(r["h" + h] ?? "")}</td>`;
+      html += `<td class="scMeta">${esc(r["9b"] ?? "")}</td><td class="scMeta">${esc(r["9c"] ?? "")}</td>`;
       html += "</tr>";
     });
 
     // Player rows (blank score entry cells; dots can be shown but cells blank)
     players.forEach((p) => {
       html += "<tr>";
-      html += `<td class="scName">${esc(p.playerName || "")}</td>`;
-      holes.forEach((h) => {
+      const name = String(p.playerName || "").trim();
+      const teeName = String(p.tee || "").trim();
+
+      // Handicap display rules:
+      // - ADJ GROSS => blank
+      // - Otherwise show computed playerHC (including 0)
+      let hcText = "";
+      if (!isAdjGross) {
+        const hcVal = Number(p.playerHC);
+        if (Number.isFinite(hcVal)) hcText = `(${hcVal})`;
+      }
+
+      html += `<td class="scName">
+        <div class="scPLine1">${esc(name)} ${hcText ? `<span class="scPHC">${esc(hcText)}</span>` : ""}</div>
+        <div class="scPLine2">${esc(teeName)}</div>
+      </td>`;
+      // 1..9
+      for (let h = 1; h <= 9; h++) {
         const v = p.strokes ? p.strokes["h" + h] : 0;
-        // show dots but keep cell otherwise blank
-        html += `<td>${buildDots(v)}</td>`;
-      });
-      html += "<td></td><td></td><td></td>";
+        html += `<td>${buildStrokeMark(v)}</td>`;
+      }
+
+      // Out
+      html += `<td class="scMeta"></td>`;
+
+      // 10..18
+      for (let h = 10; h <= 18; h++) {
+        const v = p.strokes ? p.strokes["h" + h] : 0;
+        html += `<td>${buildStrokeMark(v)}</td>`;
+      }
+
+      // In + Tot
+      html += `<td class="scMeta"></td><td class="scMeta"></td>`;
       html += "</tr>";
     });
 
@@ -102,31 +143,85 @@
     const courseName = esc(gh.courseName || "");
     const playDate = esc(gh.playDate || "");
     const holesPlayed = esc(gh.holesPlayed || "");
-    const summaryText = esc(gh.summaryText || "");
-    const teeTime = esc(group.teeTime || "");
-    const groupId = esc(group.groupId || "");
     const qrKey = String(gh.playerKey || "").trim();
     const ggid = esc(gh.GGID || "");
 
     // QR url contract (update later if your scoring URL differs)
-    const qrUrl = qrKey && ggid ? `/scorekeeping/scorekeeping.php?ggid=${encodeURIComponent(ggid)}&key=${encodeURIComponent(qrKey)}` : "";
+    const qrUrl = qrKey && ggid
+      ? `https://www.matchaid.net/scorekeeping?ggid=${encodeURIComponent(ggid)}&key=${encodeURIComponent(qrKey)}`
+      : "";
 
-    return `
-      <div class="scGroup">
-        <div class="scHdr">
-          <div class="scHdr__left">
-            <div class="scHdr__title">${title}</div>
-            <div class="scHdr__sub">${courseName}${playDate ? " • " + playDate : ""}${teeTime ? " • " + teeTime : ""}${holesPlayed ? " • " + holesPlayed : ""}${groupId ? " • " + groupId : ""}</div>
-            ${summaryText ? `<div class="scHdr__sub">${summaryText}</div>` : ""}
+      const scoreCardId = qrKey; // dbPlayers_PlayerKey (first player in group per your existing rule)
+
+      return `
+        <div class="scGroup">
+          <div class="scHdr">
+            <div class="scHdr__left">
+
+              <div class="scHdrTop">
+                <img class="scLogo" src="/assets/images/MatchAidLogoSquare.jpeg" alt="MatchAid" />
+                <div class="scHdrText">
+                  <div class="scHdr__title">${title}</div>
+                  <div class="scHdr__sub">${courseName}${playDate ? " • " + playDate : ""}${holesPlayed ? " • " + holesPlayed : ""}</div>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="scHdr__right">
+              <div class="scHdrRightText">
+                <div class="scHdrLink">Live Scoring at www.matchaid.net/scorekeeping</div>
+                <div class="scHdrKey">Use ScoreCard-ID: <span class="scHdrKeyVal">${esc(scoreCardId)}</span></div>
+              </div>
+
+              <div class="scQR">
+                ${qrUrl ? `<img alt="QR" src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(qrUrl)}">` : ""}
+              </div>
+            </div>
           </div>
-          <div class="scHdr__right">
-            <div class="scQR">${qrUrl ? `<img alt="QR" src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(qrUrl)}">` : ""}</div>
+
+          ${renderTable(group)}
+          ${renderFooter(group)}
+        </div>
+      `;
+  }
+  function renderFooter(group) {
+      const gh = group.gameHeader || {};
+
+      const ggid = String(gh.GGID || "").trim();
+      const flightID = String(group.flightID || "").trim();
+      const pairingID = String(group.pairingID || "").trim();
+
+      // Example footer left: "Game 00000440 Flight 2, Pairing 006"
+      const left = [
+        ggid ? `Game ${ggid}` : "",
+        flightID ? `Match ${flightID}` : "",
+        pairingID ? `Pairing ${pairingID}` : ""
+      ].filter(Boolean).join(" ");
+
+      const year = new Date().getFullYear();
+
+      return `
+        <div class="scFooter">
+          <div class="scFooterRow">
+            <div class="scFooterBox">
+              <div class="scFooterLabel">SCORER</div>
+              <div class="scFooterLine"></div>
+            </div>
+
+            <div class="scFooterBox">
+              <div class="scFooterLabel">ATTEST</div>
+              <div class="scFooterLine"></div>
+            </div>
+          </div>
+
+          <div class="scFooterMeta">
+            <div class="scFooterLeft">${esc(left)}</div>
+            <div class="scFooterRight">© ${year} MatchAid — All Rights Reserved</div>
           </div>
         </div>
-        ${renderTable(group)}
-      </div>
-    `;
-  }
+      `;
+    }
 
   function renderPages(rows) {
     clearHost();
@@ -208,8 +303,8 @@
   function initPage() {
     try {
       console.log("[SCORECARDS] Init payload:", init);
-      const payload = normalizePayload(init);
-      
+      const payload = normalizePayload(scorecards);
+      payload.meta = init.meta || payload.meta || {};      
       if (!el.host) console.error("[SCORECARDS] DOM Error: #scHost element not found.");
 
       applyChrome(payload);

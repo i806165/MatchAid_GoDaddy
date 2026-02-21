@@ -16,11 +16,11 @@
   overflow: hidden;
 }
 
+/* Perforation-style divider between scorecards (preview + print) */
 .scPage__divider{
-  height: 10px;
-  background: var(--brandPrimaryBg);
-  border-top: 1px solid var(--borderSubtle);
-  border-bottom: 1px solid var(--borderSubtle);
+  margin: 14px 0;
+  height: 0;
+  border-top: 2px dashed rgba(0,0,0,.55);
 }
 
 .scGroup{
@@ -115,6 +115,123 @@
   border-radius: 99px;
   background: #000;
   opacity: .75;
+}
+/* ---- Wix-like scorecard header layout ---- */
+.scHdrTop{
+  display:flex;
+  align-items:flex-start;
+  gap: 12px;
+}
+
+.scLogo{
+  width: 52px;
+  height: 52px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.scHdrText{
+  min-width: 0;
+}
+
+.scHdrRightText{
+  text-align: right;
+  display:flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.scHdrLink{
+  font-weight: 700;
+  font-size: 12px;
+  color: rgba(0,0,0,.60);
+}
+
+.scHdrKey{
+  font-weight: 800;
+  font-size: 12px;
+}
+
+.scHdrKeyVal{
+  font-weight: 900;
+}
+/* ---- Player name cell stacked (screen) ---- */
+.scPLine1{
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.scPHC{
+  font-weight: 800;
+}
+
+.scPLine2{
+  font-weight: 700;
+  color: rgba(0,0,0,.65);
+  margin-top: 2px;
+  line-height: 1.1;
+}
+
+/* Stroke marks as superscript numbers, right/top aligned */
+.scStrokeCell{
+  position: relative;
+  text-align: right;     /* right justify */
+  vertical-align: top;   /* put mark near top */
+  padding-right: 6px;    /* give a little breathing room */
+}
+
+.scStrokeSup{
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+/* Scorecard footer (SCORER / ATTEST) */
+.scFooter{
+  margin-top: 12px;
+  padding-top: 10px;
+}
+
+.scFooterRow{
+  display: flex;
+  gap: 60px;
+  justify-content: space-between;
+}
+
+.scFooterBox{
+  flex: 1 1 50%;
+  text-align: center;
+}
+
+.scFooterLabel{
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: .5px;
+}
+
+.scFooterLine{
+  margin: 8px auto 0 auto;
+  height: 0;
+  border-bottom: 2px solid #000;
+  width: 70%;
+}
+
+.scFooterMeta{
+  margin-top: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+  color: rgba(0,0,0,.7);
+}
+
+.scFooterLeft{
+  white-space: nowrap;
+}
+
+.scFooterRight{
+  white-space: nowrap;
 }
 
 /* Print contract */
