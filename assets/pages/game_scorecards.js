@@ -131,6 +131,7 @@
   function renderPages(rows) {
     clearHost();
     if (!el.host) return;
+    console.log("[SCORECARDS] Rendering pages for rows:", rows.length);
 
     if (!rows.length) {
       if (el.empty) el.empty.style.display = "block";
@@ -155,7 +156,7 @@
     const holes = String(meta?.holes ?? meta?.holesPlayed ?? "—");
     const hcMethod = String(meta?.hcMethod ?? "—");
 
-    if (el.pillPlayers) el.pillPlayers.textContent = `Players: ${players || "—"}`;
+    if (el.pillPlayers) el.pillPlayers.textContent = `Players: ${Number.isFinite(players) ? players : "—"}`;
     if (el.pillHoles) el.pillHoles.textContent = `Holes: ${holes || "—"}`;
     if (el.pillHC) el.pillHC.textContent = `HC: ${hcMethod || "—"}`;
   }
@@ -206,7 +207,11 @@
 
   function initPage() {
     try {
+      console.log("[SCORECARDS] Init payload:", init);
       const payload = normalizePayload(init);
+      
+      if (!el.host) console.error("[SCORECARDS] DOM Error: #scHost element not found.");
+
       applyChrome(payload);
       applyMeta(payload.meta || {});
       renderPages(payload.rows || []);
