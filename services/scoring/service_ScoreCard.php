@@ -191,7 +191,7 @@ final class ServiceScoreCard {
       $strokes = [];
       if (!$isAdjGross && $playerHC != 0) {
         $teeDetails = $player["dbPlayers_TeeSetDetails"] ?? null;
-        $teeHoles = is_array($teeDetails) ? ($teeDetails["Holes"] ?? []) : [];
+        $teeHoles = is_array($teeDetails) ? ($teeDetails["holes"] ?? $teeDetails["Holes"] ?? []) : [];
         $allocMap = self::buildStrokeAllocationMap($gameRow, $playerHC, $teeHoles);
 
         foreach ($allocMap as $holeNum => $v) {
@@ -224,7 +224,7 @@ final class ServiceScoreCard {
       $teeSetID = $player["dbPlayers_TeeSetID"] ?? null;
       $teeLabel = $player["dbPlayers_TeeSetName"] ?? null;
       $teeDetails = $player["dbPlayers_TeeSetDetails"] ?? null;
-      $holes = is_array($teeDetails) ? ($teeDetails["Holes"] ?? null) : null;
+      $holes = is_array($teeDetails) ? ($teeDetails["holes"] ?? $teeDetails["Holes"] ?? null) : null;
       if (!$teeSetID || !$teeLabel || !is_array($holes)) continue;
 
       $courseMap = self::getCourseInfoMap($gameRow, $player);
@@ -240,16 +240,18 @@ final class ServiceScoreCard {
       $holesToPlay = (string)($gameRow["dbGames_Holes"] ?? "All 18");
       $gender = (string)($player["dbPlayers_Gender"] ?? "Unknown");
       $ratings = is_array($teeDetails) ? ($teeDetails["Ratings"] ?? []) : [];
+      if (empty($ratings)) $ratings = is_array($teeDetails) ? ($teeDetails["ratings"] ?? []) : [];
 
       $ratingEntry = null;
       foreach ($ratings as $r) {
         if (!is_array($r)) continue;
-        if ($holesToPlay === "F9" && ($r["RatingType"] ?? "") === "Front") $ratingEntry = $r;
-        else if ($holesToPlay === "B9" && ($r["RatingType"] ?? "") === "Back") $ratingEntry = $r;
-        else if ($holesToPlay !== "F9" && $holesToPlay !== "B9" && ($r["RatingType"] ?? "") === "Total") $ratingEntry = $r;
+        $rt = $r["RatingType"] ?? $r["rating_type"] ?? "";
+        if ($holesToPlay === "F9" && $rt === "Front") $ratingEntry = $r;
+        else if ($holesToPlay === "B9" && $rt === "Back") $ratingEntry = $r;
+        else if ($holesToPlay !== "F9" && $holesToPlay !== "B9" && $rt === "Total") $ratingEntry = $r;
       }
-      $slope = is_array($ratingEntry) ? floatval($ratingEntry["SlopeRating"] ?? 0) : 0;
-      $rating = is_array($ratingEntry) ? floatval($ratingEntry["CourseRating"] ?? 0) : 0;
+      $slope = is_array($ratingEntry) ? floatval($ratingEntry["SlopeRating"] ?? $ratingEntry["slope_rating"] ?? 0) : 0;
+      $rating = is_array($ratingEntry) ? floatval($ratingEntry["CourseRating"] ?? $ratingEntry["course_rating"] ?? 0) : 0;
 
       $allYards[] = self::buildCourseRow((string)$teeLabel, (string)$teeSetID, "Yards", array_map(fn($h)=> (string)($yardages[$h] ?? 0), $holesStd), self::splitTotalFromMap($yardages), "Yards", 1, $slope, $rating, $gender);
       $allHcp[] = self::buildCourseRow("HCP", (string)$teeSetID, "HCP", array_map(fn($h)=> (string)($hcp[$h] ?? 0), $holesStd), self::splitTotalFromMap($hcp), "HCP", 2, $slope, $rating, $gender);
@@ -359,7 +361,7 @@ final class ServiceScoreCard {
 
   public static function getCourseInfoMap(array $gameRow, array $player): array {
     $teeDetails = $player["dbPlayers_TeeSetDetails"] ?? null;
-    $holes = is_array($teeDetails) ? ($teeDetails["Holes"] ?? []) : [];
+    $holes = is_array($teeDetails) ? ($teeDetails["holes"] ?? $teeDetails["Holes"] ?? []) : [];
     $teeSetId = $player["dbPlayers_TeeSetID"] ?? null;
     $teeSetLabel = $player["dbPlayers_TeeSetName"] ?? null;
     $gender = $player["dbPlayers_Gender"] ?? null;
@@ -367,12 +369,12 @@ final class ServiceScoreCard {
     $map = [];
     foreach ($holes as $h) {
       if (!is_array($h)) continue;
-      $hole = intval($h["Number"] ?? 0);
+      $hole = intval($h["Number"] ?? $h["number"] ?? 0);
       if ($hole > 0) {
         $map[$hole] = [
-          "par" => $h["Par"] ?? null,
-          "hcp" => $h["Allocation"] ?? null,
-          "yardage" => $h["Length"] ?? null,
+          "par" => $h["Par"] ?? $h["par"] ?? null,
+          "hcp" => $h["Allocation"] ?? $h["allocation"] ?? null,
+          "yardage" => $h["Length"] ?? $h["length"] ?? null,
           "teeSetId" => $teeSetId,
           "teeSetLabel" => $teeSetLabel,
           "gender" => $gender,
@@ -422,9 +424,9 @@ final class ServiceScoreCard {
     foreach ($teeSetHoles as $h) {
       if (!is_array($h)) continue;
       $holes[] = [
-        "Number" => intval($h["Number"] ?? 0),
-        "Allocation" => intval($h["Allocation"] ?? 99),
-        "hcpSpin" => intval($h["hcpSpin"] ?? ($h["Allocation"] ?? 99)),
+        "Number" => intval($h["Number"] ?? $h["number"] ?? 0),
+        "Allocation" => intval($h["Allocation"] ?? $h["allocation"] ?? 99),
+        "hcpSpin" => intval($h["hcpSpin"] ?? ($h["Allocation"] ?? $h["allocation"] ?? 99)),
       ];
     }
     $holes = array_values(array_filter($holes, fn($h) => $h["Number"] > 0));

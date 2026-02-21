@@ -1,3 +1,4 @@
+// api/game_players/upsertGamePlayers.php
 <?php
 declare(strict_types=1);
 
@@ -10,6 +11,7 @@ require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_SERVICES . "/database/service_dbPlayers.php";
 require_once MA_SERVICES . "/GHIN/GHIN_API_Handicaps.php";
 require_once MA_SERVICES . "/GHIN/GHIN_API_Players.php";
+require_once MA_SERVICES . "/GHIN/GHIN_API_Courses.php";
 
 if (($_SERVER["REQUEST_METHOD"] ?? "") !== "POST") {
   http_response_code(405);
@@ -49,6 +51,10 @@ try {
     echo json_encode(["ok" => false, "message" => "Selected tee is no longer available."]);
     exit;
   }
+
+  // Fetch full rich tee details (raw GHIN format with holes) via ID lookup
+  $teeSetId = (string)($tee["teeSetID"] ?? "");
+  $richTeeDetails = ($teeSetId !== "") ? be_getTeeSetByID($teeSetId, $token) : $tee;
 
   $existing = ServiceDbPlayers::getPlayerByGGIDGHIN($ggid, $ghin);
 
@@ -94,7 +100,7 @@ try {
     "dbPlayers_Gender" => $gender,
     "dbPlayers_CreatorID" => (string)($_SESSION["SessionGHINLogonID"] ?? ""),
     "dbPlayers_CreatorName" => (string)($_SESSION["SessionUserName"] ?? $_SESSION["SessionGHINUserName"] ?? ""),
-    "dbPlayers_TeeSetDetails" => json_encode($tee),
+    "dbPlayers_TeeSetDetails" => json_encode($richTeeDetails),
     "dbPlayers_PlayerKey" => (string)($existing["dbPlayers_PlayerKey"] ?? ""),
     "dbPlayers_LocalID"  => $localId,
     "dbPlayers_ClubID"   => $clubId,
@@ -166,4 +172,3 @@ function gp_fetch_player_profile(string $ghin, string $token, string $templateGh
 
   return is_array($golf) ? $golf : [];
 }
-
