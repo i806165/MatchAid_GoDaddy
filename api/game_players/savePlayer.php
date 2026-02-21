@@ -1,3 +1,5 @@
+// api/game_players/savePlayer.php
+
 <?php
 declare(strict_types=1);
 
@@ -50,7 +52,8 @@ try {
         
         // Baseline PH (Pass-A)
         'dbPlayers_PH'         => (string)$ph,
-        'dbPlayers_SO'         => '0'
+        'dbPlayers_SO'         => '0',
+        'dbPlayers_TeeSetDetails' => json_encode($tee)
     ];
 
     // 4. Save to DB
