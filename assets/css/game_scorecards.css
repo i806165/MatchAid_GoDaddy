@@ -203,16 +203,15 @@
 
 /* Stroke marks as superscript numbers, right/top aligned */
 .scStrokeCell{
-  position: relative;
-  text-align: right;     /* right justify */
-  vertical-align: top;   /* put mark near top */
-  padding-right: 6px;    /* give a little breathing room */
+  text-align: right !important;
+  vertical-align: bottom !important;
+  padding: 2px 4px !important;
 }
 
 .scStrokeSup{
-  font-size: 10px;
-  font-weight: 800;
-  line-height: 1;
+  font-size: 9px;
+  font-weight: 700;
+  vertical-align: baseline;
 }
 
 /* Scorecard footer (SCORER / ATTEST) */

@@ -129,7 +129,7 @@
       // 1..9
       for (let h = 1; h <= 9; h++) {
         const v = p.strokes ? p.strokes["h" + h] : 0;
-        rowHtml += `<td>${buildStrokeMark(v)}</td>`;
+        rowHtml += `<td class="scStrokeCell">${buildStrokeMark(v)}</td>`;
       }
 
       // Out
@@ -138,7 +138,7 @@
       // 10..18
       for (let h = 10; h <= 18; h++) {
         const v = p.strokes ? p.strokes["h" + h] : 0;
-        rowHtml += `<td>${buildStrokeMark(v)}</td>`;
+        rowHtml += `<td class="scStrokeCell">${buildStrokeMark(v)}</td>`;
       }
 
       // In + Tot
