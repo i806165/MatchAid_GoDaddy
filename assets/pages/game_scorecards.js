@@ -174,6 +174,28 @@
     return html;
   }
 
+  function formatDate(s) {
+    if (!s) return "";
+    // Try to parse YYYY-MM-DD or similar
+    // Note: "2026-02-21" parses as UTC in JS Date usually, but we want local date parts.
+    // Best to split string if ISO.
+    let d = null;
+    if (String(s).match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [y, m, day] = s.split("-").map(Number);
+      d = new Date(y, m - 1, day);
+    } else {
+      d = new Date(s); // fallback
+    }
+    if (isNaN(d.getTime())) return s; // return original if invalid
+    
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' }); // Sat
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yy = String(d.getFullYear()).slice(-2);
+    
+    return `${dayName} ${mm}/${dd}/${yy}`;
+  }
+
   function renderGroup(group) {
     // Calculate Density
     const courseRows = Array.isArray(group.courseInfo) ? group.courseInfo.length : 0;
@@ -195,11 +217,7 @@
     // 1) Date: dd mm/dd/yy (e.g. Sat 02/21/26)
     let dateStr = "";
     if (gh.playDate) {
-      // gh.playDate is typically "Sat 2/21/2026" from PHP formatPlayDateLong
-      // or YYYY-MM-DD. Let's try to parse and reformat if needed, or use as-is if close.
-      // The PHP sends "D n/j/Y" (Sat 2/21/2026). Request is dd mm/dd/yy.
-      // Let's just use what PHP sent for now or simple JS reformat if it's ISO.
-      dateStr = esc(gh.playDate);
+      dateStr = formatDate(gh.playDate);
     }
 
     // 2) Tee Time
@@ -224,10 +242,10 @@
     let scoringLine = "";
     const sys = String(game.dbGames_ScoringSystem || "").trim();
     
-    if (sys === "Best Ball") {
+    if (sys === "BestBall") {
       const cnt = game.dbGames_BestBallCnt || "1";
-      scoringLine = `Best Ball (${cnt})`;
-    } else if (sys === "Hole Declarations") {
+      scoringLine = ` (${cnt}) Best Ball(s)`;
+    } else if (sys === "DeclareHole") {
       // Format: H1:1, H2:2...
       try {
         const decl = JSON.parse(game.dbGames_HoleDeclarations || "{}");
@@ -238,13 +256,13 @@
           const val = decl[String(h)] || decl[h];
           if (val) pairs.push(`H${h}:${val}`);
         }
-        if (pairs.length > 0) scoringLine = pairs.join(", ");
+        if (pairs.length > 0) scoringLine = "Balls per Hole: " + pairs.join(", ");
         else scoringLine = "Hole Declarations";
       } catch (e) {
         scoringLine = "Hole Declarations";
       }
-    } else if (sys === "Game Declarations") {
-      scoringLine = String(game.dbGames_PlayerDeclarations || "Game Declarations");
+    } else if (sys === "DeclarePlayer") {
+      scoringLine = String(game.dbGames_PlayerDeclarations + "x (per Player)" || "Game Declarations");
     } else if (sys) {
       // Fallback for other systems (e.g. "Individual")
       scoringLine = sys;
