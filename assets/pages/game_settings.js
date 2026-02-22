@@ -329,12 +329,12 @@
     // Map existing values by hole number
     const map = {};
     arr.forEach(r => {
-      if (r && r.hole) map[r.hole] = r.count;
+      if (r && r.hole) map[String(r.hole)] = String(r.count);
     });
 
     const out = [];
     for (let h = start; h <= end; h++) {
-      const val = (map[h] !== undefined) ? String(map[h]) : bestBallDefault;
+      const val = (map[String(h)] !== undefined) ? String(map[String(h)]) : bestBallDefault;
       out.push({ _id: String(h), hole: h, count: val });
     }
     return out;
@@ -744,7 +744,7 @@
     // Hole decls only when scoring system=DeclareHole
     const scoringSystem = String(el.scoringSystem?.value || "");
     const holeDecls = (scoringSystem === "DeclareHole")
-      ? (state.holeDecls || []).map(r => ({ hole: Number(r.hole), count: String(r.count) }))
+      ? (state.holeDecls || []).map(r => ({ hole: Number(r.hole), count: String(r.count || "0") }))
       : [];
 
     const patch = {

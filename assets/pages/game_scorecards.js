@@ -248,7 +248,7 @@
     } else if (sys === "DeclareHole") {
       // Format: H1:1, H2:2...
       try {
-        const raw = JSON.parse(game.dbGames_HoleDeclarations || "[]");
+        const raw = JSON.parse(game.dbGames_HoleDeclaration || "[]");
         // Normalize to map: hole -> count
         const map = {};
         if (Array.isArray(raw)) {
@@ -261,8 +261,8 @@
         const pairs = [];
         // We'll iterate 1..18
         for (let h=1; h<=18; h++) {
-          const val = map[h] || map[String(h)];
-          if (val) pairs.push(`H${h}:${val}`);
+          const val = map[h] ?? map[String(h)];
+          if (val != null) pairs.push(`H${h}:${val}`);
         }
         if (pairs.length > 0) scoringLine = "Balls per Hole: " + pairs.join(", ");
         else scoringLine = "Hole Declarations1";
