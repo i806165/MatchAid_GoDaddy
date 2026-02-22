@@ -205,7 +205,7 @@
 function applyChrome() {
   if (chrome && typeof chrome.setHeaderLines === "function") {
     const modeText = (state.mode === "add") ? "Add Game" : "Edit Game";
-    chrome.setHeaderLines(["ADMIN PORTAL", "Game Maintenance", modeText]);
+    chrome.setHeaderLines(["Game Maintenance", `${modeText}`, ""]);
   }
 
   if (chrome && typeof chrome.setActions === "function") {

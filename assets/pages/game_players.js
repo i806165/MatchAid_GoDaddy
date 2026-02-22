@@ -71,6 +71,24 @@
     return hay.includes(needle);
   }
 
+  function formatDate(s) {
+    if (!s) return "";
+    // Try to parse YYYY-MM-DD or similar
+    let d = null;
+    if (String(s).match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [y, m, day] = s.split("-").map(Number);
+      d = new Date(y, m - 1, day);
+    } else {
+      d = new Date(s);
+    }
+    if (isNaN(d.getTime())) return s;
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yy = String(d.getFullYear()).slice(-2);
+    return `${dayName} ${mm}/${dd}/${yy}`;
+  }
+
   async function boot(){
     applyChrome();
     wireModal();
@@ -89,7 +107,13 @@
   }
 
   function applyChrome(){
-    if (MA.chrome && MA.chrome.setHeaderLines) MA.chrome.setHeaderLines(["ADMIN PORTAL", "Game Players", `GGID ${safe(init.ggid)}`]);
+    const g = state.game || {};
+    const title = String(g.dbGames_Title || "Game");
+    const course = String(g.dbGames_CourseName || "");
+    const date = formatDate(g.dbGames_PlayDate);
+    const subTitle = [course, date].filter(Boolean).join(" • ");
+
+    if (MA.chrome && MA.chrome.setHeaderLines) MA.chrome.setHeaderLines(["Game Players", title, subTitle]);
     if (MA.chrome && MA.chrome.setActions) {
       MA.chrome.setActions({
         left: { show: true, label: "Actions", onClick: openActionsMenu },

@@ -28,6 +28,7 @@
 
   // ---- State ----
   const state = {
+    game: init?.payload?.game || init?.game || {},
     meta: init?.payload?.meta || init?.meta || {},
     groups: Array.isArray(init?.payload?.groups) ? init.payload.groups : (Array.isArray(init?.groups) ? init.groups : []),
     originalById: new Map(),
@@ -45,8 +46,26 @@
     return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
+  function formatDate(s) {
+    if (!s) return "";
+    // Try to parse YYYY-MM-DD or similar
+    let d = null;
+    if (String(s).match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [y, m, day] = s.split("-").map(Number);
+      d = new Date(y, m - 1, day);
+    } else {
+      d = new Date(s);
+    }
+    if (isNaN(d.getTime())) return s;
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yy = String(d.getFullYear()).slice(-2);
+    return `${dayName} ${mm}/${dd}/${yy}`;
+  }
+
   function isShotgun() {
-    return String(state.meta?.toMethod || "").toLowerCase() === "shotgun";
+    return String(state.game?.dbGames_TOMethod || state.meta?.toMethod || "").toLowerCase() === "shotgun";
   }
 
   function snapshotOriginal() {
@@ -181,7 +200,7 @@
       g.startHoleSuffix = ok ? desired : (suggestSuffix(g.teeTime, g.startHole, groupId) || defaultSuffix());
     } else if (!isShotgun() && !g.startHole) {
       // Smart default for TeeTimes: if hole empty, set based on settings
-      const holes = String(state.meta?.holesSetting || "").toLowerCase();
+      const holes = String(state.game?.dbGames_Holes || state.meta?.holesSetting || "").toLowerCase();
       if (holes === "b9" || holes === "back" || holes === "back 9") {
         g.startHole = "10";
       } else {
@@ -471,6 +490,7 @@
       if (!res || !res.ok) throw new Error(res?.message || "Save failed.");
 
       // After save, server returns refreshed INIT shape
+      state.game = res.payload?.game || state.game;
       state.meta = res.payload?.meta || state.meta;
       state.groups = Array.isArray(res.payload?.groups) ? res.payload.groups : state.groups;
       state.groups = sortForDisplay(state.groups);
@@ -496,6 +516,7 @@
     try {
       const res = await postJson(apiGameTimes, { action: "INIT", ggid: state.meta?.ggid || init.ggid || "" });
       if (!res || !res.ok) throw new Error(res?.message || "Refresh failed.");
+      state.game = res.payload?.game || state.game;
       state.meta = res.payload?.meta || state.meta;
       state.groups = Array.isArray(res.payload?.groups) ? res.payload.groups : [];
       state.groups = sortForDisplay(state.groups);
@@ -522,11 +543,14 @@
 
   // ---- Chrome ----
   function applyChrome() {
-    const g = state.meta || {};
-    const title = String(g.title || "Game") || `GGID ${state.meta.ggid}`;
+    const g = state.game || {};
+    const title = String(g.dbGames_Title || "Game");
+    const course = String(g.dbGames_CourseName || "");
+    const date = formatDate(g.dbGames_PlayDate);
+    const subTitle = [course, date].filter(Boolean).join(" • ");
 
     if (chrome && typeof chrome.setHeaderLines === "function") {
-      chrome.setHeaderLines(["ADMIN PORTAL", "Tee Times", title]);
+      chrome.setHeaderLines(["Tee Times", title, subTitle]);
     }
 
     if (chrome && typeof chrome.setActions === "function") {
@@ -550,7 +574,7 @@
 
   // ---- Boot ----
   function boot() {
-    if (!state.meta || !state.meta.ggid) {
+    if (!state.game || !state.game.dbGames_GGID) {
       setStatus("Missing GGID context. Returning to games list…", "warn");
       window.location.assign(returnToUrl);
       return;
@@ -558,7 +582,7 @@
 
     console.log("[GAME_TIMES] init", init);
 
-    state.groups = sortForDisplay(state.groups);
+    state.groups = sortForDisplay(state.groups || []);
     snapshotOriginal();
     applyChrome();
     render();

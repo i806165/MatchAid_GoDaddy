@@ -36,23 +36,19 @@ function initGameTimes(string $ggid, array $userContext): array {
   $availableSuffixes = ["A","B","C","D"];
 
   $meta = [
-    "ggid" => $ggid,
-    "title" => strval($game["dbGames_Title"] ?? ""),
-    "toMethod" => $toMethod,
-    "holesSetting" => $holesSetting,
-    "competition" => $competition,
     "availableTimes" => $availableTimes,
     "availableHoles" => $availableHoles,
     "availableSuffixes" => $availableSuffixes,
   ];
 
   // 4. Build Groups
-  $groups = gt_buildGroups($players, $meta);
+  $groups = gt_buildGroups($players, $game);
 
   return [
     "ok" => true,
     "message" => "",
     "payload" => [
+      "game" => $game,
       "meta" => $meta,
       "groups" => $groups,
       "userName" => strval($userContext["userName"] ?? $userContext["name"] ?? ""),
@@ -92,8 +88,8 @@ function gt_generateHolesPicklist(string $holesSetting): array {
   return range(1, 18);
 }
 
-function gt_buildGroups(array $players, array $meta): array {
-  $competition = strval($meta["competition"] ?? "");
+function gt_buildGroups(array $players, array $game): array {
+  $competition = strval($game["dbGames_Competition"] ?? "");
   $isPairPair = (strtolower($competition) === "pairpair");
 
   $groups = [];
@@ -199,7 +195,7 @@ function gt_buildGroups(array $players, array $meta): array {
       "size" => count($rows),
       "teeTime" => $teeTime,
       "startHole" => $startHole,
-      "startHoleSuffix" => (strtolower(strval($meta["toMethod"] ?? "")) === "shotgun") ? $suffix : "",
+      "startHoleSuffix" => (strtolower(strval($game["dbGames_TOMethod"] ?? "")) === "shotgun") ? $suffix : "",
       "playerLastNames" => $names,
       "teamA" => $teamA,
       "teamB" => $teamB,
