@@ -749,7 +749,7 @@
     const items = [
       { label: "Game Settings", action: "settings", params: { returnTo: "summary" } },
       { label: "Print Scorecards", action: printScorecards },
-      { separator: true },
+      { separator: true }, 
       { label: "Export to csv file", action: downloadCsv },
       { label: "Copy Game Summary (csv)", action: copySummaryToClipboard },
       { label: "Copy Game Summary (rich text)", action: copyRichTextToClipboard },
