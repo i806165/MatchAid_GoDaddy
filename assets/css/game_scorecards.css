@@ -204,7 +204,7 @@
 /* Stroke marks as superscript numbers, right/top aligned */
 .scStrokeCell{
   text-align: right !important;
-  vertical-align: bottom !important;
+  vertical-align: top !important;
   padding: 2px 4px !important;
 }
 
