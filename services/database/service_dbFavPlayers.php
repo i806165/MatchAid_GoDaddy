@@ -37,21 +37,28 @@ final class service_dbFavPlayers
             : ["status" => "NOT FOUND"];
     }
 
-    public static function getFavoritesForUser(string $userGHIN, string $courseId = ""): array
+    public static function getFavoritesForUser(string $userGHIN, string $courseId = "", string $targetGhin = ""): array
 {
     $userGHIN = trim($userGHIN);
     if ($userGHIN === "") return [];
 
     $pdo = Db::pdo();
+    $params = ["u" => $userGHIN];
+    $where = "WHERE dbFav_UserGHIN = :u";
+    
+    if ($targetGhin !== "") {
+        $where .= " AND dbFav_PlayerGHIN = :tg";
+        $params["tg"] = $targetGhin;
+    }
 
     // SELECT * as requested
-    $sql = "SELECT *
+    $sql = "SELECT * 
             FROM db_FavPlayers
-            WHERE dbFav_UserGHIN = :u
+            $where
             ORDER BY dbFav_PlayerLName ASC, dbFav_PlayerName ASC";
 
     $st = $pdo->prepare($sql);
-    $st->execute(["u" => $userGHIN]);
+    $st->execute($params);
 
     $favorites = [];
     while ($r = $st->fetch(PDO::FETCH_ASSOC)) {
@@ -72,6 +79,8 @@ final class service_dbFavPlayers
             "memberId"   => (string)($r["dbFav_PlayerMemberID"] ?? ""),
             "gender"     => (string)($r["dbFav_PlayerGender"] ?? ""),
             "lname"      => (string)($r["dbFav_PlayerLName"] ?? ""),
+            "hi"         => (string)($r["dbFav_PlayerHI"] ?? ""),
+            "hi"         => (string)($r["dbFav_PlayerHI"] ?? ""),
             "groups"     => array_values(array_filter(array_map("strval", $groups))),
             "lastCourse" => null,
         ];

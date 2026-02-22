@@ -136,8 +136,9 @@
   }
 
   async function initPage() {
+    const autoGhin = String(launch.playerGHIN || "").trim();
     // Load data for list; and/or determine entry form launch
-    const res = await MA.postJson(MA.paths.favPlayersInit, {});
+    const res = await MA.postJson(MA.paths.favPlayersInit, { ghin: autoGhin });
     if (!res || !res.ok) throw new Error(res?.message || "INIT failed.");
 
     state.context = res.payload?.context || {};
@@ -149,7 +150,6 @@
     renderFilters();
 
     // If playerGHIN provided, auto-open form and suppress footer
-    const autoGhin = String(launch.playerGHIN || "").trim();
     if (autoGhin) {
       try {
         await openFromLaunchGHIN(autoGhin);
@@ -208,6 +208,9 @@
     openForm({
       playerGHIN: String(row.ghin || ghin),
       name: String(row.name || ""),
+      last_name: String(row.last_name || ""),
+      gender: String(row.gender || ""),
+      hi: String(row.hi || ""),
       email: String(row.email || ""),
       mobile: String(row.mobile || ""),
       memberId: String(row.memberId || ""),
@@ -221,6 +224,9 @@
     openForm({
       playerGHIN: String(row?.ghin || ghin || ""),
       name: String(row?.name || ""),
+      last_name: String(row?.last_name || ""),
+      gender: String(row?.gender || ""),
+      hi: String(row?.hi || ""),
       email: String(row?.email || ""),
       mobile: String(row?.mobile || ""),
       memberId: String(row?.memberId || ""),
@@ -251,6 +257,9 @@
     state.current = {
       playerGHIN: safe(fav.playerGHIN),
       name: safe(fav.name),
+      lname: safe(fav.lname || fav.last_name),
+      gender: safe(fav.gender),
+      hi: safe(fav.hi),
       email: safe(fav.email),
       mobile: safe(fav.mobile),
       memberId: safe(fav.memberId),
@@ -407,6 +416,10 @@
       playerGHIN: state.current.playerGHIN,
       email: emailVal,
       mobile: mobileVal,
+      playerName: state.current.name,
+      playerLName: state.current.lname,
+      playerGender: state.current.gender,
+      playerHI: state.current.hi,
       memberId: el.memberId ? el.memberId.value : "",
       groups: Array.from(state.selectedGroups || [])
     };

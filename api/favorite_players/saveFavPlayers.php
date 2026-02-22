@@ -29,6 +29,10 @@ $email      = (string)($in["email"] ?? "");
 $mobile     = (string)($in["mobile"] ?? "");
 $memberId   = (string)($in["memberId"] ?? "");
 $groups     = $in["groups"] ?? [];
+$playerName = (string)($in["playerName"] ?? "");
+$playerLName= (string)($in["playerLName"] ?? "");
+$playerHI   = (string)($in["playerHI"] ?? "");
+$playerGender=(string)($in["playerGender"] ?? "");
 
 if ($playerGHIN === "") {
   http_response_code(400);
@@ -43,7 +47,11 @@ try {
     ($email !== "" ? $email : null),
     ($mobile !== "" ? $mobile : null),
     ($memberId !== "" ? $memberId : null),
-    (is_array($groups) ? $groups : [])
+    (is_array($groups) ? $groups : []),
+    ($playerName !== "" ? $playerName : null),
+    ($playerLName !== "" ? $playerLName : null),
+    ($playerHI !== "" ? $playerHI : null),
+    ($playerGender !== "" ? $playerGender : null)
   );
 } catch (Throwable $e) {
   http_response_code(500);

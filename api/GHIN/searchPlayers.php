@@ -80,6 +80,8 @@ try {
       $rows[] = [
         "ghin" => $gh,
         "name" => $name !== "" ? $name : $gh,
+        "first_name" => $first,
+        "last_name" => $last,
         "hi" => trim($hi),
         "gender" => trim($gender),
         "city" => trim($city),
@@ -138,6 +140,8 @@ try {
       $rows[] = [
         "ghin" => $gh,
         "name" => $name !== "" ? $name : $gh,
+        "first_name" => $firstN,
+        "last_name" => $lastN,
         "hi" => trim($hi),
         "gender" => trim($gender),
         "city" => trim($city),

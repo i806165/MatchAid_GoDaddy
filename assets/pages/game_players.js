@@ -509,7 +509,7 @@
     state.pendingPlayer.hi = safe(res.payload?.hi);
     state.teeOptions = Array.isArray(res.payload?.teeSets) ? res.payload.teeSets : [];
     const preferred = safe(state.pendingPlayer?.selectedTeeSetId);
-    state.selectedTee = state.teeOptions.find(t => safe(t.teeSetID || t.value) === preferred) || state.teeOptions[0] || null;
+    state.selectedTee = state.teeOptions.find(t => safe(t.teeSetID || t.value) === preferred) || null;
     openTeeModal();
   }
 
