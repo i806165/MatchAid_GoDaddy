@@ -1,20 +1,6 @@
 <?php
 // /public_html/app/game_scorecards/scorecards_view.php
 ?>
-<section class="maControlArea" id="scControls" aria-label="Scorecard controls">
-  <div class="maControlArea__left">
-    <button type="button" class="btn btnSecondary" id="scPrintBtn">Print</button>
-  </div>
-
-  <div class="maControlArea__right">
-    <div class="maPills" id="scMetaPills" aria-label="Game meta">
-      <span class="maPill" id="scPillPlayers">Players: —</span>
-      <span class="maPill" id="scPillHoles">Holes: —</span>
-      <span class="maPill" id="scPillHC">HC: —</span>
-    </div>
-  </div>
-</section>
-
 <div class="maCards" id="scCards">
   <section class="maCard" id="scHostCard" aria-label="Scorecards">
     <header class="maCard__hdr">

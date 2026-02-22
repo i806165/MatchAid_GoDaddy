@@ -19,10 +19,6 @@
   const el = {
     host: document.getElementById("scHost"),
     empty: document.getElementById("scEmpty"),
-    printBtn: document.getElementById("scPrintBtn"),
-    pillPlayers: document.getElementById("scPillPlayers"),
-    pillHoles: document.getElementById("scPillHoles"),
-    pillHC: document.getElementById("scPillHC"),
   };
 
   function esc(s) {
@@ -297,16 +293,6 @@
     }
   }
 
-  function applyMeta(meta) {
-    const players = Number(meta?.playerCount ?? 0);
-    const holes = String(meta?.holes ?? meta?.holesPlayed ?? "—");
-    const hcMethod = String(meta?.hcMethod ?? "—");
-
-    if (el.pillPlayers) el.pillPlayers.textContent = `Players: ${Number.isFinite(players) ? players : "—"}`;
-    if (el.pillHoles) el.pillHoles.textContent = `Holes: ${holes || "—"}`;
-    if (el.pillHC) el.pillHC.textContent = `HC: ${hcMethod || "—"}`;
-  }
-
   function onPrint() {
     try { window.print(); } catch (e) { /* ignore */ }
   }
@@ -359,11 +345,8 @@
       if (!el.host) console.error("[SCORECARDS] DOM Error: #scHost element not found.");
 
       applyChrome(payload);
-      applyMeta(payload.meta || {});
       renderPages(payload.rows || []);
       setStatus("Ready.", "success");
-
-      if (el.printBtn) el.printBtn.addEventListener("click", onPrint);
 
       const ap = qs("autoprint");
       if (String(ap || "") === "1") {
