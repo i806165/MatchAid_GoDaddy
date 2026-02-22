@@ -387,7 +387,6 @@
     
     const items = [
       { label: "Game Settings", action: "settings", params: { returnTo: "scorecard" } },
-      { label: "Game Summary", action: "summary" },
       { separator: true },
       { label: "Print", action: onPrint }
     ];
@@ -395,15 +394,13 @@
   }
 
   function applyChrome(payload) {
-    // Derive title/subtitle from the first group's header if available
-    let title = "Game";
-    if (payload && payload.rows && payload.rows.length > 0) {
-       const gh = payload.rows[0].gameHeader || {};
-       if (gh.gameTitle) title = gh.gameTitle;
-    }
+    const title = String(game.dbGames_Title || "Game");
+    const course = String(game.dbGames_CourseName || "");
+    const date = formatDate(game.dbGames_PlayDate);
+    const subtitle = [course, date].filter(Boolean).join(" • ");
 
     if (chrome && typeof chrome.setHeaderLines === "function") {
-      chrome.setHeaderLines(["ADMIN PORTAL", "Scorecards", title]);
+      chrome.setHeaderLines(["Scorecard", title, subtitle]);
     }
 
     if (chrome && typeof chrome.setActions === "function") {
@@ -424,7 +421,7 @@
 
   function initPage() {
     try {
-      console.log("[SCORECARDS] Init payload:", init);
+      //console.log("[SCORECARDS] Init payload:", init);
       const payload = normalizePayload(scorecards);
       payload.meta = init.meta || payload.meta || {};      
       if (!el.host) console.error("[SCORECARDS] DOM Error: #scHost element not found.");
