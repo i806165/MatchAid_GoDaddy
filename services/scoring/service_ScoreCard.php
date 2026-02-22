@@ -74,6 +74,7 @@ final class ServiceScoreCard {
       $first = $playersInGroup[0] ?? [];
       $flightID = trim((string)($first["dbPlayers_FlightID"] ?? ""));
       $teeTime = trim((string)($first["dbPlayers_TeeTime"] ?? ""));
+      $startHole = trim((string)($first["dbPlayers_StartHole"] ?? ""));
 
       $gameHeader = [
         "gameTitle" => (string)($gameRow["dbGames_Title"] ?? ""),
@@ -98,6 +99,7 @@ final class ServiceScoreCard {
         "pairingID" => trim((string)($first["dbPlayers_PairingID"] ?? ($groupId ?? ""))),
         "flightID" => $flightID,
         "teeTime" => $teeTime,
+        "startHole" => $startHole,
 
         "courseInfo" => $courseInfoFilteredRows,
         "players" => self::buildPlayersArray($playersInGroup, $gameRow),

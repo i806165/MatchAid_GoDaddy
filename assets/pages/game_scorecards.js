@@ -188,10 +188,68 @@
     const gh = group.gameHeader || {};
     const title = esc(gh.gameTitle || "Game");
     const courseName = esc(gh.courseName || "");
-    const playDate = esc(gh.playDate || "");
-    const holesPlayed = esc(gh.holesPlayed || "");
     const qrKey = String(gh.playerKey || "").trim();
     const ggid = esc(gh.GGID || "");
+
+    // Header Line 2 Construction
+    // 1) Date: dd mm/dd/yy (e.g. Sat 02/21/26)
+    let dateStr = "";
+    if (gh.playDate) {
+      // gh.playDate is typically "Sat 2/21/2026" from PHP formatPlayDateLong
+      // or YYYY-MM-DD. Let's try to parse and reformat if needed, or use as-is if close.
+      // The PHP sends "D n/j/Y" (Sat 2/21/2026). Request is dd mm/dd/yy.
+      // Let's just use what PHP sent for now or simple JS reformat if it's ISO.
+      dateStr = esc(gh.playDate);
+    }
+
+    // 2) Tee Time
+    const teeTime = group.teeTime ? esc(group.teeTime) : "";
+
+    // 3) Starting Hole (implied from tee time usually, or explicit if we had it)
+    const startHole = group.startHole ? `Hole ${esc(group.startHole)}` : "";
+
+    // 4) HC Effectivity
+    // This comes from game object in init, not group.
+    const hcEff = game.dbGames_HCEffectivity || "";
+    const hcDate = game.dbGames_HCEffectivityDate || "";
+    let hcLabel = "";
+    if (hcEff === "Date" && hcDate) hcLabel = `HC ${esc(hcDate)}`;
+    else if (hcEff && hcEff !== "PlayDate") hcLabel = `HC ${esc(hcEff)}`;
+
+    // Combine parts
+    const parts = [courseName, dateStr, teeTime, startHole, hcLabel].filter(Boolean);
+    const subLine = parts.join(" • ");
+
+    // Header Line 3: Scoring System Details
+    let scoringLine = "";
+    const sys = String(game.dbGames_ScoringSystem || "").trim();
+    
+    if (sys === "Best Ball") {
+      const cnt = game.dbGames_BestBallCnt || "1";
+      scoringLine = `Best Ball (${cnt})`;
+    } else if (sys === "Hole Declarations") {
+      // Format: H1:1, H2:2...
+      try {
+        const decl = JSON.parse(game.dbGames_HoleDeclarations || "{}");
+        const pairs = [];
+        // Assuming decl is like { "1": "1", "2": "2" ... } or array
+        // We'll iterate 1..18
+        for (let h=1; h<=18; h++) {
+          const val = decl[String(h)] || decl[h];
+          if (val) pairs.push(`H${h}:${val}`);
+        }
+        if (pairs.length > 0) scoringLine = pairs.join(", ");
+        else scoringLine = "Hole Declarations";
+      } catch (e) {
+        scoringLine = "Hole Declarations";
+      }
+    } else if (sys === "Game Declarations") {
+      scoringLine = String(game.dbGames_PlayerDeclarations || "Game Declarations");
+    } else if (sys) {
+      // Fallback for other systems (e.g. "Individual")
+      scoringLine = sys;
+    }
+
 
     // QR url contract (update later if your scoring URL differs)
     const qrUrl = qrKey && ggid
@@ -209,7 +267,8 @@
                 <img class="scLogo" src="/assets/images/MatchAidLogoSquare.jpeg" alt="MatchAid" />
                 <div class="scHdrText">
                   <div class="scHdr__title">${title}</div>
-                  <div class="scHdr__sub">${courseName}${playDate ? " • " + playDate : ""}${holesPlayed ? " • " + holesPlayed : ""}</div>
+                  <div class="scHdr__sub">${subLine}</div>
+                  ${scoringLine ? `<div class="scHdr__sub2">${esc(scoringLine)}</div>` : ""}
                 </div>
               </div>
 
