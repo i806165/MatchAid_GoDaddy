@@ -270,7 +270,11 @@
 
   // ---- Stableford normalize/render (Wix-aligned) ----
   function normalizeStableford(existing) {
-    const arr = Array.isArray(existing) ? existing : [];
+    let arr = existing;
+    if (typeof arr === "string") {
+      try { arr = JSON.parse(arr); } catch (e) { arr = []; }
+    }
+    arr = Array.isArray(arr) ? arr : [];
     if (!arr.length) {
       return stablefordTemplate.map(r => ({ reltoPar: r.reltoPar, points: r.defaultPoints }));
     }
@@ -324,7 +328,12 @@
     if (holesSetting === "B9") { start = 10; end = 18; }
 
     const bestBallDefault = String(el.bestBallCnt?.value || "2");
-    const arr = Array.isArray(existing) ? existing : [];
+    
+    let arr = existing;
+    if (typeof arr === "string") {
+      try { arr = JSON.parse(arr); } catch (e) { arr = []; }
+    }
+    arr = Array.isArray(arr) ? arr : [];
     
     // Map existing values by hole number
     const map = {};

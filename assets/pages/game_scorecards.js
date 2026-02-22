@@ -264,7 +264,7 @@
           const val = map[h] ?? map[String(h)];
           if (val != null) pairs.push(`H${h}:${val}`);
         }
-        if (pairs.length > 0) scoringLine = "Balls per Hole: " + pairs.join(", ");
+        if (pairs.length > 0) scoringLine = "Balls per Hole: " + pairs.join(" • ");
         else scoringLine = "Hole Declarations1";
       } catch (e) {
         scoringLine = "Hole Declarations2";
@@ -329,7 +329,7 @@
         ggid ? `Game ${ggid}` : "",
         flightID ? `Match ${flightID}` : "",
         pairingID ? `Pairing ${pairingID}` : ""
-      ].filter(Boolean).join(" ");
+      ].filter(Boolean).join(" • ");
 
       const year = new Date().getFullYear();
 
