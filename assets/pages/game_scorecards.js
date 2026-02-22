@@ -55,13 +55,13 @@
     return `<sup class="scStrokeSup" aria-label="strokes">${sign}${abs}</sup>`;
   }
 
-  function renderTable(group) {
+  function renderTable(group, densityClass) {
     const courseRows = Array.isArray(group.courseInfo) ? group.courseInfo : [];
     const players = Array.isArray(group.players) ? group.players : [];
     
-    const scoringMethod = String(game.dbGames_ScoringMethod || "").toUpperCase();
-    const hcMethod = String(game.dbGames_HCMethod || "").toUpperCase();
+    const scoringMethod = String(game.dbGames_ScoringMethod || "NET").toUpperCase();
     const isAdjGross = (scoringMethod === "ADJ GROSS");
+    const isMatchPlay = (String(group.competition || "").toLowerCase() === "pairpair");
     
     let html = '<table class="scTable" role="table" aria-label="scorecard">';
     html += "<thead><tr>";
@@ -94,8 +94,36 @@
       html += "</tr>";
     });
 
-    // Player rows (blank score entry cells; dots can be shown but cells blank)
-    players.forEach((p) => {
+    // Player Section: Fixed 6 rows total
+    // Match Play: Team A (2) + Separator (1) + Team B (2) + Bottom (1)
+    // Standard: Players (4) + Bottom (2)
+    
+    const renderPlayerRow = (p) => {
+      if (!p) {
+        // Empty scoring row
+        let rowHtml = "<tr>";
+        rowHtml += `<td class="scName">&nbsp;</td>`;
+        for (let h = 1; h <= 9; h++) rowHtml += `<td></td>`;
+        rowHtml += `<td class="scMeta"></td>`;
+        for (let h = 10; h <= 18; h++) rowHtml += `<td></td>`;
+        rowHtml += `<td class="scMeta"></td><td class="scMeta"></td>`;
+        rowHtml += "</tr>";
+        return rowHtml;
+      }
+
+      // Separator row (special object)
+      if (p._isSeparator) {
+        let rowHtml = "<tr class='scMatchSep'>";
+        rowHtml += `<td class="scName" style="background:#eee;font-weight:bold;font-size:0.9em;padding-left:6px;">${esc(p.label)}</td>`;
+        // Span remaining columns or render empty cells
+        // 18 holes + 3 metas = 21 cols. Name is 1. Total 22.
+        // Let's just render empty cells with background to keep grid alignment perfect
+        for (let i=0; i<21; i++) rowHtml += "<td></td>";
+        rowHtml += "</tr>";
+        return rowHtml;
+      }
+
+      // Real player
       html += "<tr>";
       const name = String(p.playerName || "").trim();
       const teeName = String(p.tee || "").trim();
@@ -109,35 +137,70 @@
         if (Number.isFinite(hcVal)) hcText = `(${hcVal})`;
       }
 
-      html += `<td class="scName">
+      let rowHtml = "<tr>";
+      rowHtml += `<td class="scName">
         <div class="scPLine1">${esc(name)} ${hcText ? `<span class="scPHC">${esc(hcText)}</span>` : ""}</div>
         <div class="scPLine2">${esc(teeName)}</div>
       </td>`;
       // 1..9
       for (let h = 1; h <= 9; h++) {
         const v = p.strokes ? p.strokes["h" + h] : 0;
-        html += `<td>${buildStrokeMark(v)}</td>`;
+        rowHtml += `<td>${buildStrokeMark(v)}</td>`;
       }
 
       // Out
-      html += `<td class="scMeta"></td>`;
+      rowHtml += `<td class="scMeta"></td>`;
 
       // 10..18
       for (let h = 10; h <= 18; h++) {
         const v = p.strokes ? p.strokes["h" + h] : 0;
-        html += `<td>${buildStrokeMark(v)}</td>`;
+        rowHtml += `<td>${buildStrokeMark(v)}</td>`;
       }
 
       // In + Tot
-      html += `<td class="scMeta"></td><td class="scMeta"></td>`;
-      html += "</tr>";
-    });
+      rowHtml += `<td class="scMeta"></td><td class="scMeta"></td>`;
+      rowHtml += "</tr>";
+      return rowHtml;
+    };
+
+    // Build the 6-row structure
+    const rowsToRender = [];
+    if (isMatchPlay) {
+      // Team A (slots 0,1)
+      rowsToRender.push(players[0] || null);
+      rowsToRender.push(players[1] || null);
+      // Separator
+      rowsToRender.push({ _isSeparator: true, label: "" }); // Blank separator line
+      // Team B (slots 2,3)
+      rowsToRender.push(players[2] || null);
+      rowsToRender.push(players[3] || null);
+      // Bottom empty
+      rowsToRender.push(null);
+    } else {
+      // Standard: 4 players + 2 empty
+      for (let i=0; i<4; i++) rowsToRender.push(players[i] || null);
+      rowsToRender.push(null);
+      rowsToRender.push(null);
+    }
+
+    // Render
+    rowsToRender.forEach(r => html += renderPlayerRow(r));
 
     html += "</tbody></table>";
     return html;
   }
 
   function renderGroup(group) {
+    // Calculate Density
+    const courseRows = Array.isArray(group.courseInfo) ? group.courseInfo.length : 0;
+    const playerSectionRows = 6; // Fixed
+    const totalRows = courseRows + playerSectionRows;
+    
+    let densityClass = "";
+    if (totalRows > 14) densityClass = "scDenseC";
+    else if (totalRows > 12) densityClass = "scDenseB";
+    else if (totalRows > 10) densityClass = "scDenseA";
+
     const gh = group.gameHeader || {};
     const title = esc(gh.gameTitle || "Game");
     const courseName = esc(gh.courseName || "");
@@ -154,7 +217,7 @@
       const scoreCardId = qrKey; // dbPlayers_PlayerKey (first player in group per your existing rule)
 
       return `
-        <div class="scGroup">
+        <div class="scGroup ${densityClass}">
           <div class="scHdr">
             <div class="scHdr__left">
 
@@ -180,7 +243,7 @@
             </div>
           </div>
 
-          ${renderTable(group)}
+          ${renderTable(group, densityClass)}
           ${renderFooter(group)}
         </div>
       `;
@@ -205,13 +268,13 @@
         <div class="scFooter">
           <div class="scFooterRow">
             <div class="scFooterBox">
-              <div class="scFooterLabel">SCORER</div>
               <div class="scFooterLine"></div>
+              <div class="scFooterLabel">SCORER</div>
             </div>
 
             <div class="scFooterBox">
-              <div class="scFooterLabel">ATTEST</div>
               <div class="scFooterLine"></div>
+              <div class="scFooterLabel">ATTEST</div>
             </div>
           </div>
 

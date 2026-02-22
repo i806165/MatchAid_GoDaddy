@@ -1,4 +1,4 @@
-/* /assets/pages/game_scorecards.css
+/* /assets/css/game_scorecards.css
  * Scorecards are print-first. Reuse ma_shared.css wherever possible.
  * Only introduce sc* classes where a true scorecard grid + print contract needs it.
  */
@@ -116,6 +116,37 @@
   background: #000;
   opacity: .75;
 }
+
+/* ---- Density Scaling (Target Total Rows logic) ---- */
+/* Standard (<= 10 rows): Default 11px font, 4px padding */
+
+/* Dense A (11-12 rows): Slight reduction */
+.scGroup.scDenseA .scTable{ font-size: 10px; }
+.scGroup.scDenseA .scTable th,
+.scGroup.scDenseA .scTable td{ padding: 3px 3px; }
+
+/* Dense B (13-14 rows): Moderate reduction */
+.scGroup.scDenseB .scTable{ font-size: 9px; }
+.scGroup.scDenseB .scTable th,
+.scGroup.scDenseB .scTable td{ padding: 2px 2px; }
+.scGroup.scDenseB .scHdr__title{ font-size: 14px; }
+.scGroup.scDenseB .scHdr__sub{ font-size: 11px; }
+
+/* Dense C (15+ rows): Aggressive reduction (Compact) */
+.scGroup.scDenseC .scTable{ font-size: 8px; }
+.scGroup.scDenseC .scTable th,
+.scGroup.scDenseC .scTable td{ padding: 1px 2px; }
+.scGroup.scDenseC .scHdr__title{ font-size: 13px; }
+.scGroup.scDenseC .scHdr__sub{ font-size: 10px; }
+.scGroup.scDenseC .scLogo{ width: 48px !important; height: 48px !important; flex: 0 0 48px; }
+
+/* Match Separator Row */
+.scMatchSep td{
+  background-color: #f0f0f0;
+  height: 4px; /* visual break */
+  padding: 0 !important;
+}
+
 /* ---- Wix-like scorecard header layout ---- */
 .scHdrTop{
   display:flex;
@@ -242,6 +273,13 @@
 @media print{
   /* Hide chrome + controls + footer/status */
   header, footer, .maChromeFooter, .maControlArea { display:none !important; }
+
+  /* Reset scroll containers so full content prints */
+  html, body, main.maPage {
+    height: auto !important;
+    overflow: visible !important;
+    display: block !important;
+  }
 
   body{ background:#fff !important; }
   main.maPage{ padding:0 !important; }
