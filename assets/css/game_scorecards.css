@@ -97,6 +97,10 @@
   text-overflow: ellipsis;
 }
 
+.scTable thead th{
+  background-color: #f0f0f0;
+}
+
 .scTable th.scName,
 .scTable td.scName{
   text-align: left;
