@@ -140,13 +140,6 @@
 .scGroup.scDenseC .scHdr__sub{ font-size: 10px; }
 .scGroup.scDenseC .scLogo{ width: 48px !important; height: 48px !important; flex: 0 0 48px; }
 
-/* Match Separator Row */
-.scMatchSep td{
-  background-color: #f0f0f0;
-  height: 4px; /* visual break */
-  padding: 0 !important;
-}
-
 /* ---- Wix-like scorecard header layout ---- */
 .scHdrTop{
   display:flex;

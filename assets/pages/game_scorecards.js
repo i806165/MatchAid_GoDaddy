@@ -111,18 +111,6 @@
         return rowHtml;
       }
 
-      // Separator row (special object)
-      if (p._isSeparator) {
-        let rowHtml = "<tr class='scMatchSep'>";
-        rowHtml += `<td class="scName" style="background:#eee;font-weight:bold;font-size:0.9em;padding-left:6px;">${esc(p.label)}</td>`;
-        // Span remaining columns or render empty cells
-        // 18 holes + 3 metas = 21 cols. Name is 1. Total 22.
-        // Let's just render empty cells with background to keep grid alignment perfect
-        for (let i=0; i<21; i++) rowHtml += "<td></td>";
-        rowHtml += "</tr>";
-        return rowHtml;
-      }
-
       // Real player
       html += "<tr>";
       const name = String(p.playerName || "").trim();
@@ -170,7 +158,7 @@
       rowsToRender.push(players[0] || null);
       rowsToRender.push(players[1] || null);
       // Separator
-      rowsToRender.push({ _isSeparator: true, label: "" }); // Blank separator line
+      rowsToRender.push(null); // Blank separator line
       // Team B (slots 2,3)
       rowsToRender.push(players[2] || null);
       rowsToRender.push(players[3] || null);
