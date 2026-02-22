@@ -301,7 +301,7 @@
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     
     const items = [
-      { label: "Game Settings", action: "settings", params: { returnTo: "scorecards" } },
+      { label: "Game Settings", action: "settings", params: { returnTo: "scorecard" } },
       { label: "Game Summary", action: "summary" },
       { separator: true },
       { label: "Print", action: onPrint }
