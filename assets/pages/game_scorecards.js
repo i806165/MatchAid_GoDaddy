@@ -265,9 +265,9 @@
           if (val) pairs.push(`H${h}:${val}`);
         }
         if (pairs.length > 0) scoringLine = "Balls per Hole: " + pairs.join(", ");
-        else scoringLine = "Hole Declarations";
+        else scoringLine = "Hole Declarations1";
       } catch (e) {
-        scoringLine = "Hole Declarations";
+        scoringLine = "Hole Declarations2";
       }
     } else if (sys === "DeclarePlayer") {
       scoringLine = String(game.dbGames_PlayerDeclarations + "x (per Player)" || "Game Declarations");
