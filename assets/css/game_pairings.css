@@ -400,9 +400,16 @@
 /* Desktop tray panels visible; mobile uses drawer */
 @media (max-width: 900px){
   .gpTrayPanel{
-    display: none;
+    display: none; /* Hidden by default on mobile */
+    width: 100%;
+    border-left: none;
+    border-bottom: 1px solid var(--borderSubtle);
+    margin-bottom: 12px;
   }
-  /* Show mobile add buttons */
+  .gpTrayPanel.is-mobile-open{
+    display: block; /* Visible when toggled */
+  }
+
   .gpMobileAddBtn {
     display: inline-flex;
   }

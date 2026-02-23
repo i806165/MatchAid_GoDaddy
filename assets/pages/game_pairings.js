@@ -129,32 +129,17 @@
     return window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
   }
 
-  function openDrawer() {
-    if (!el.drawerOverlay) return;
-    el.drawerOverlay.classList.add("is-open");
-    el.drawerOverlay.setAttribute("aria-hidden", "false");
-    // sync drawer content to active tab
-    document.body.classList.add("maOverlayOpen");
-    syncDrawer();
-  }
+  function toggleMobileTray() {
+    // Find the tray panel associated with the active tab
+    // Pair tab -> gpUnpairedList's parent panel
+    // Match tab -> gpUnmatchedList's parent panel
+    const listEl = (state.activeTab === "pair") ? el.unpairedList : el.unmatchedList;
+    if (!listEl) return;
+    
+    const panel = listEl.closest(".gpTrayPanel");
+    if (!panel) return;
 
-  function closeDrawer() {
-    if (!el.drawerOverlay) return;
-    el.drawerOverlay.classList.remove("is-open");
-    el.drawerOverlay.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("maOverlayOpen");
-  }
-
-  function syncDrawer() {
-    if (!el.drawerList || !el.drawerTitle || !el.drawerSearch) return;
-    el.drawerSearch.value = "";
-    if (state.activeTab === "pair") {
-      el.drawerTitle.textContent = "Unpaired";
-      renderUnpairedList({ intoDrawer: true });
-    } else {
-      el.drawerTitle.textContent = "Unmatched";
-      renderUnmatchedList({ intoDrawer: true });
-    }
+    panel.classList.toggle("is-mobile-open");
   }
 
   function markDirty(ghin) {
@@ -778,7 +763,6 @@
     state.targetFlightPos = "";
 
     render();
-    if (isMobile()) syncDrawer();
   }
 
   function render() {
@@ -822,10 +806,6 @@
     // Update Master Checkboxes (Clear Only)
     updateMasterCheck(el.unpairedMasterCheck, state.selectedPlayerGHINs.size > 0);
     updateMasterCheck(el.unmatchedMasterCheck, state.selectedPairingIds.size > 0);
-    if (el.drawerMasterCheck) {
-      const size = state.activeTab === "pair" ? state.selectedPlayerGHINs.size : state.selectedPairingIds.size;
-      updateMasterCheck(el.drawerMasterCheck, size > 0);
-    }
   }
 
   function updateMasterCheck(el, hasSelection) {
@@ -912,11 +892,10 @@
     }).join("");
   }
 
-  function renderUnpairedList(opts) {
-    const intoDrawer = !!(opts && opts.intoDrawer);
-    const host = intoDrawer ? el.drawerList : el.unpairedList;
-    const countEl = intoDrawer ? null : el.unpairedCount;
-    const q = intoDrawer ? String(el.drawerSearch?.value || "").trim().toLowerCase() : String(el.unpairedSearch?.value || "").trim().toLowerCase();
+  function renderUnpairedList() {
+    const host = el.unpairedList;
+    const countEl = el.unpairedCount;
+    const q = String(el.unpairedSearch?.value || "").trim().toLowerCase();
 
     if (!host) return;
     const rows = state.players
@@ -1045,11 +1024,10 @@
       </div>`;
   }
 
-  function renderUnmatchedList(opts) {
-    const intoDrawer = !!(opts && opts.intoDrawer);
-    const host = intoDrawer ? el.drawerList : el.unmatchedList;
-    const countEl = intoDrawer ? null : el.unmatchedCount;
-    const q = intoDrawer ? String(el.drawerSearch?.value || "").trim().toLowerCase() : String(el.unmatchedSearch?.value || "").trim().toLowerCase();
+  function renderUnmatchedList() {
+    const host = el.unmatchedList;
+    const countEl = el.unmatchedCount;
+    const q = String(el.unmatchedSearch?.value || "").trim().toLowerCase();
 
     if (!host) return;
 
@@ -1101,7 +1079,6 @@
       state.selectedPlayerGHINs.add(id);
     }
     renderUnpairedList();
-    if (isMobile()) renderUnpairedList({ intoDrawer: true });
     setHints();
   }
 
@@ -1223,7 +1200,6 @@
     state.selectedPlayerGHINs.clear();
     state.targetPairingId = ""; // Reset target after assign
     setStatus(isNew ? `Created pairing ${pid}.` : `Added to pairing ${pid}.`, "success");
-    if (isMobile()) closeDrawer();
     render();
   }
 
@@ -1274,7 +1250,6 @@
       state.selectedPairingIds.add(id);
     }
     renderUnmatchedList();
-    if (isMobile()) renderUnmatchedList({ intoDrawer: true });
     setHints();
   }
 
@@ -1363,7 +1338,6 @@
       state.editMode = false;
     }
     
-    if (isMobile()) closeDrawer();
     render();
   }
 
@@ -1490,14 +1464,8 @@
       });
     }
 
-    if (el.btnTrayPair) el.btnTrayPair.addEventListener("click", openDrawer);
-    if (el.btnTrayMatch) el.btnTrayMatch.addEventListener("click", openDrawer);
-    if (el.btnCloseDrawer) el.btnCloseDrawer.addEventListener("click", closeDrawer);
-    if (el.drawerOverlay) {
-      el.drawerOverlay.addEventListener("click", (e) => {
-        if (e.target === el.drawerOverlay) closeDrawer();
-      });
-    }
+    if (el.btnTrayPair) el.btnTrayPair.addEventListener("click", toggleMobileTray);
+    if (el.btnTrayMatch) el.btnTrayMatch.addEventListener("click", toggleMobileTray);
 
     if (el.btnDrawerAssign) {
       el.btnDrawerAssign.addEventListener("click", () => {
@@ -1535,38 +1503,14 @@
       });
     }
 
-    if (el.drawerSearch) {
-      el.drawerSearch.addEventListener("input", () => {
-        if (el.drawerSearchClear) el.drawerSearchClear.classList.toggle("isHidden", !el.drawerSearch.value);
-        if (state.activeTab === "pair") renderUnpairedList({ intoDrawer: true });
-        else renderUnmatchedList({ intoDrawer: true });
-      });
-    }
-    if (el.drawerSearchClear) {
-      el.drawerSearchClear.addEventListener("click", () => {
-        if (el.drawerSearch) {
-          el.drawerSearch.value = "";
-          el.drawerSearch.focus();
-        }
-        el.drawerSearchClear.classList.add("isHidden");
-        if (state.activeTab === "pair") renderUnpairedList({ intoDrawer: true });
-        else renderUnmatchedList({ intoDrawer: true });
-      });
-    }
-
     // Master Checkboxes (Clear Only)
     const clearSelection = () => {
       if (state.activeTab === "pair") state.selectedPlayerGHINs.clear();
       else state.selectedPairingIds.clear();
       render();
-      if (isMobile()) syncDrawer();
     };
     if (el.unpairedMasterCheck) el.unpairedMasterCheck.addEventListener("click", clearSelection);
     if (el.unmatchedMasterCheck) el.unmatchedMasterCheck.addEventListener("click", clearSelection);
-    if (el.drawerMasterCheck) el.drawerMasterCheck.addEventListener("click", () => {
-      // Drawer specific clear
-      clearSelection();
-    });
 
     // Sort control
     if (el.unpairedSort) {
