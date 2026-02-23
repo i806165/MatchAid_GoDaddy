@@ -750,9 +750,9 @@
       { label: "Game Settings", action: "settings", params: { returnTo: "summary" } },
       { label: "Print Scorecards", action: printScorecards },
       { separator: true }, 
-      { label: "Export to csv file", action: downloadCsv },
-      { label: "Copy Game Summary (csv)", action: copySummaryToClipboard },
-      { label: "Copy Game Summary (rich text)", action: copyRichTextToClipboard },
+      { label: "Export to .csv file", action: downloadCsv },
+      { label: "Copy csv to clipboard", action: copySummaryToClipboard },
+      { label: "Copy text to clipboard", action: copyRichTextToClipboard },
       { label: "Compose Email to Players", action: emailSummary }
     ];
     MA.ui.openActionsMenu("Actions", items);
