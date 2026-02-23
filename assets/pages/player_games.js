@@ -8,6 +8,7 @@
   'use strict';
 
   const MA = window.MA || {};
+  const apiAdmin = MA.apiAdminGames;
   const init = window.__MA_INIT__ || window.__INIT__ || {};
   const routes = MA.routes || {};
   const chrome = MA.chrome || {};
@@ -411,18 +412,18 @@
   async function onGameAction(g, action){
     const ggid = String(g.ggid || g.dbGames_GGID || '');
     if (!ggid) return;
+    // Set game session and route for all game relevant actions
+    await apiAdmin("setGameSession.php", { ggid });
 
     // First-pass routing/actions (non-destructive). Can be wired to final routes later.
     if (action === 'viewGame') {
-      if (typeof MA.postJson === 'function' && routes.apiSession) {
-        try { await MA.postJson(`${routes.apiSession}/setGame.php`, { ggid }); } catch (_) {}
-      }
-      if (routerGo) routerGo('summary', { ggid });
-      return;
+      return routerGo("summary", {});
+    }
+    if (action === 'scorecard') {
+      return routerGo("scorecard", {});
     }
     if (action === 'enroll' || action === 'register') {
-      if (routerGo) routerGo('roster', { ggid });
-      return;
+      return routerGo("roster", {});
     }
     if (action === 'unregister') {
       alert('Unregister action not wired yet in this first-pass scaffold.');
@@ -430,10 +431,6 @@
     }
     if (action === 'calendar') {
       downloadIcsForGame(g);
-      return;
-    }
-    if (action === 'scorecard') {
-      if (routerGo) routerGo('scorecard', { ggid });
       return;
     }
   }
