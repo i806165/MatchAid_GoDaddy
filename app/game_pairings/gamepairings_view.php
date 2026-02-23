@@ -14,6 +14,9 @@
       <section class="maPanel maPanel--secondary gpTrayPanel" aria-label="Unpaired players tray">
         <header class="maPanel__hdr">
           <div class="gpPanelHdr">
+            <div class="gpPanelHdr__left">
+              <button class="maBtn maBtn--ghost gpMobileCloseBtn" type="button" aria-label="Close Tray">✕</button>
+            </div>
             <div class="gpPanelHdr__title">Unpaired</div>
             <div class="gpPanelHdr__actions">
               <span class="gpCount" id="gpUnpairedCount"></span>
@@ -83,6 +86,9 @@
       <section class="maPanel maPanel--secondary gpTrayPanel" aria-label="Unmatched pairings tray">
         <header class="maPanel__hdr">
           <div class="gpPanelHdr">
+            <div class="gpPanelHdr__left">
+              <button class="maBtn maBtn--ghost gpMobileCloseBtn" type="button" aria-label="Close Tray">✕</button>
+            </div>
             <div class="gpPanelHdr__title">Unmatched</div>
             <div class="gpPanelHdr__actions">
               <span class="gpCount" id="gpUnmatchedCount"></span>
@@ -113,7 +119,7 @@
       <section class="maPanel maPanel--primary" aria-label="Matches canvas">
         <header class="maPanel__hdr">
           <div class="gpPanelHdr">
-            <div class="gpPanelHdr__title">Matches (Flights)</div>
+            <div class="gpPanelHdr__title">Matches</div>
             <div class="gpPanelHdr__actions">
               <button class="maBtn maBtn--sm gpMobileAddBtn" type="button" id="gpBtnTrayMatch">Add Match</button>
             </div>

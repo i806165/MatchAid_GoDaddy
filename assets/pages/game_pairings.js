@@ -44,6 +44,7 @@
     btnTrayPair: document.getElementById("gpBtnTrayPair"),
     btnTrayMatch: document.getElementById("gpBtnTrayMatch"),
     btnDrawerAssign: document.getElementById("gpBtnDrawerAssign"),
+    mobileCloseBtns: document.querySelectorAll(".gpMobileCloseBtn"),
   };
 
   // ---- State ----
@@ -782,11 +783,15 @@
   function setHints() {
     if (el.hintPair) {
       if (state.editMode) {
-        el.hintPair.textContent = `EDIT MODE: Selected ${state.selectedPlayerGHINs.size} player(s). Tap Assign >> to add to Pairing ${state.targetPairingId}.`;
+        el.hintPair.textContent = `EDIT MODE: Selected ${state.selectedPlayerGHINs.size}. Tap Assign >> to add to Pairing ${state.targetPairingId}.`;
       } else {
-        el.hintPair.textContent = state.selectedPlayerGHINs.size > 0
-          ? `Selected ${state.selectedPlayerGHINs.size} player(s). Tap Assign >> to create new, or tap a card to add.`
-          : "Select unpaired players, then tap Assign >>.";
+        if (isMobile()) {
+          el.hintPair.textContent = "Tap Add Pairing to open tray.";
+        } else {
+          el.hintPair.textContent = state.selectedPlayerGHINs.size > 0
+            ? `Selected ${state.selectedPlayerGHINs.size}. Tap Assign >> to create new, or tap a card to add.`
+            : "Select unpaired players, then tap Assign >>.";
+        }
       }
     }
 
@@ -795,11 +800,15 @@
         el.hintMatch.textContent = "Matches are disabled for Pair vs Field.";
       } else {
         if (state.editMode) {
-          el.hintMatch.textContent = `EDIT MODE: Selected ${state.selectedPairingIds.size} pairing(s). Tap Assign >> to add to Match ${state.targetFlightId}.`;
+          el.hintMatch.textContent = `EDIT MODE: Selected ${state.selectedPairingIds.size}. Tap Assign >> to add to Match ${state.targetFlightId}.`;
         } else {
-          el.hintMatch.textContent = state.selectedPairingIds.size > 0
-            ? `Selected ${state.selectedPairingIds.size} pairing(s). Tap a match slot (A/B), then Assign.`
-            : "Select an unmatched pairing, then tap a match slot (A/B).";
+          if (isMobile()) {
+            el.hintMatch.textContent = "Tap Add Match to open tray.";
+          } else {
+            el.hintMatch.textContent = state.selectedPairingIds.size > 0
+              ? `Selected ${state.selectedPairingIds.size}. Tap a match slot (A/B), then Assign.`
+              : "Select an unmatched pairing, then tap a match slot (A/B).";
+          }
         }
       }
     }
@@ -1201,6 +1210,11 @@
     state.selectedPlayerGHINs.clear();
     state.targetPairingId = ""; // Reset target after assign
     setStatus(isNew ? `Created pairing ${pid}.` : `Added to pairing ${pid}.`, "success");
+    
+    // Auto-close tray on mobile if no more unpaired players
+    const remaining = state.players.filter(p => String(p.pairingId || "000") === "000").length;
+    if (isMobile() && remaining === 0) toggleMobileTray();
+
     render();
   }
 
@@ -1339,6 +1353,10 @@
       state.editMode = false;
     }
     
+    // Auto-close tray on mobile if no more unmatched pairings
+    const remaining = getUnmatchedPairingIds().length;
+    if (isMobile() && remaining === 0) toggleMobileTray();
+
     render();
   }
 
@@ -1467,6 +1485,10 @@
 
     if (el.btnTrayPair) el.btnTrayPair.addEventListener("click", toggleMobileTray);
     if (el.btnTrayMatch) el.btnTrayMatch.addEventListener("click", toggleMobileTray);
+
+    if (el.mobileCloseBtns) {
+      el.mobileCloseBtns.forEach(btn => btn.addEventListener("click", toggleMobileTray));
+    }
 
     if (el.btnDrawerAssign) {
       el.btnDrawerAssign.addEventListener("click", () => {

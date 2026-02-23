@@ -64,7 +64,7 @@
   display: flex;
   gap: 10px;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center; /* Center title */
   width: 100%;
 }
 
@@ -73,11 +73,27 @@
   font-weight: 950;
   letter-spacing: .2px;
   color: var(--brandSecondaryText);
+  flex: 1;
+  text-align: center;
 }
 
 .gpPanelHdr__actions{
   display: flex;
   gap: 8px;
+  align-items: center;
+  position: absolute;
+  right: 10px;
+}
+
+/* Mobile Close Button (Left) */
+.gpPanelHdr__left {
+  display: none; /* Hidden on desktop */
+  position: absolute;
+  left: 10px;
+}
+
+.gpPanelHdr {
+  position: relative; /* For absolute positioning of left/right actions */
   align-items: center;
 }
 
@@ -419,5 +435,9 @@
   }
   .gpMobileAddBtn {
     display: inline-flex;
+  }
+
+  .gpPanelHdr__left {
+    display: flex; /* Show on mobile */
   }
 }
