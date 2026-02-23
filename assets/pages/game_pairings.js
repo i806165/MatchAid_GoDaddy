@@ -136,9 +136,6 @@
     const listEl = (state.activeTab === "pair") ? el.unpairedList : el.unmatchedList;
     if (!listEl) return;
     
-    // const panel = listEl.closest(".gpTrayPanel");
-    // if (!panel) return;
-    // const isOpen = panel.classList.toggle("is-mobile-open");
     const panel = listEl.closest(".gpTabPanel");
     if (!panel) return;
     const isOpen = panel.classList.toggle("is-tray-open");
