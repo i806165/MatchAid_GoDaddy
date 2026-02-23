@@ -410,15 +410,23 @@
     margin-bottom: 0;
   }
 
-  .gpTrayPanel.is-mobile-open{
+  /*
+  .gpTrayPanel.is-mobile-open {
     display: flex;
     flex-direction: column;
   }
-
   .gpTrayPanel.is-mobile-open ~ .gpCanvas {
     display: none;
   }
+  */
 
+  .gpTabPanel.is-tray-open .gpTrayPanel {
+    display: flex;
+    flex-direction: column;
+  }
+  .gpTabPanel.is-tray-open .gpCanvas {
+    display: none;
+  }
   .gpMobileAddBtn {
     display: inline-flex;
   }
