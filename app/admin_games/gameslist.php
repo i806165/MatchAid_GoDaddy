@@ -107,7 +107,6 @@ if ($isReturn) {
     "dateFrom" => $dateFrom,
     "dateTo" => $dateTo,
     "adminScope" => $scope,
-    // IMPORTANT: this is the UI selection set (even when adminScope=ALL)
     "selectedAdminKeys" => $selected,
   ];
 

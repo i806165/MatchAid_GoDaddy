@@ -64,7 +64,7 @@ $initPayload = [
   <?php include __DIR__ . "/../../includes/chromeHeader.php"; ?>
 
   <main class="maPage" role="main">
-    <?php include __DIR__ . "/import_games_view.php"; ?>
+    <?php include __DIR__ . "/gameimport_view.php"; ?>
   </main>
 
   <?php include __DIR__ . "/../../includes/chromeFooter.php"; ?>
@@ -84,6 +84,6 @@ $initPayload = [
 </script>
 
   <script src="/assets/js/ma_shared.js"></script>
-  <script src="/assets/pages/import_games.js"></script>
+  <script src="/assets/pages/game_import.js"></script>
 </body>
 </html>
