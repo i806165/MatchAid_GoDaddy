@@ -1110,6 +1110,12 @@
       state.editMode = true;
       state.targetPairingId = id;
       setStatus(`Editing Pairing ${id}. Select players to add.`, "info");
+      
+      // Mobile UX: Auto-open tray to show players to add
+      if (isMobile()) {
+        const panel = el.unpairedList?.closest(".gpTabPanel");
+        if (panel && !panel.classList.contains("is-tray-open")) toggleMobileTray();
+      }
     }
     renderPairingsCanvas();
     setHints();
@@ -1133,6 +1139,12 @@
       state.targetFlightPos = (!teamA.pairingId) ? "A" : "B";
 
       setStatus(`Editing Match ${id}. Select pairings to add.`, "info");
+      
+      // Mobile UX: Auto-open tray to show pairings to add
+      if (isMobile()) {
+        const panel = el.unmatchedList?.closest(".gpTabPanel");
+        if (panel && !panel.classList.contains("is-tray-open")) toggleMobileTray();
+      }
     }
     renderFlightsCanvas();
     setHints();
