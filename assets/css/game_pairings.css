@@ -400,14 +400,23 @@
 /* Desktop tray panels visible; mobile uses drawer */
 @media (max-width: 900px){
   .gpTrayPanel{
-    display: none; /* Hidden by default on mobile */
-    width: 100%;
+    display: none;
+    flex: 1 1 auto; /* Fill available space */
+    min-height: 0;  /* Allow scrolling */
+    overflow-y: auto;
+    
     border-left: none;
-    border-bottom: 1px solid var(--borderSubtle);
-    margin-bottom: 12px;
+    border-bottom: none;
+    margin-bottom: 0;
   }
+
   .gpTrayPanel.is-mobile-open{
-    display: block; /* Visible when toggled */
+    display: flex;
+    flex-direction: column;
+  }
+
+  .gpTrayPanel.is-mobile-open ~ .gpCanvas {
+    display: none;
   }
 
   .gpMobileAddBtn {

@@ -139,7 +139,16 @@
     const panel = listEl.closest(".gpTrayPanel");
     if (!panel) return;
 
-    panel.classList.toggle("is-mobile-open");
+    const isOpen = panel.classList.toggle("is-mobile-open");
+    
+    // Update button text
+    const btn = (state.activeTab === "pair") ? el.btnTrayPair : el.btnTrayMatch;
+    if (btn) {
+      // Toggle between "Add Players" (default) and "Show Pairings"
+      // We assume the default HTML text is "Add Players" or similar.
+      // We can store original text if needed, but simple toggle is fine.
+      btn.textContent = isOpen ? "Show Pairings" : (state.activeTab === "pair" ? "Add Players" : "Add Matches");
+    }
   }
 
   function markDirty(ghin) {
