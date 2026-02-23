@@ -24,3 +24,39 @@
   height: 16px;
   flex: 0 0 16px;
 }
+@media (min-width: 980px){
+
+  /* 1) Desktop backdrop ("outside the canvas") */
+  body{
+    background:
+      radial-gradient(1200px circle at 18% 8%,
+        color-mix(in srgb, var(--brandPrimary) 16%, transparent),
+        transparent 58%),
+      radial-gradient(900px circle at 82% 0%,
+        color-mix(in srgb, var(--brandSecondary) 16%, transparent),
+        transparent 60%),
+      linear-gradient(180deg,
+        color-mix(in srgb, var(--surfaceApp) 96%, black),
+        var(--surfaceApp));
+    background-attachment: fixed;
+  }
+
+  /* 2) Center the page content column */
+  .maPage{
+    display: flex;
+    justify-content: center;
+  }
+
+  /* 3) "Canvas" surface behind the cards */
+  .maPage > .maCards{
+    width: min(980px, 100%);
+    margin: 0 auto;
+
+    background: rgba(255,255,255,.72);
+    border: 1px solid rgba(0,0,0,.06);
+    border-radius: 18px;
+    padding: 14px;
+
+    box-shadow: 0 10px 30px rgba(0,0,0,.08);
+  }
+}
