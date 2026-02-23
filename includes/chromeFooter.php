@@ -22,7 +22,7 @@
 
     <button type="button" class="maNavBtn" data-nav="admin" aria-label="Admin">
       <span class="maNavIcon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true">
           <!-- visor -->
           <path d="M8.2 4.8c1-.9 2.4-1.4 3.9-1.4 2.1 0 3.9 1 4.8 2.7h-2.4c-.7-.6-1.6-.9-2.6-.9-1.1 0-2.1.4-2.9 1.1L8.2 4.8z"></path>
           <path d="M8.9 6.4h7c-.4 1.1-1.8 1.8-3.6 1.8-1.9 0-3.1-.7-3.4-1.8z"></path>
@@ -46,6 +46,7 @@
           <path d="M8.65 13.8a.55.55 0 1 0 0 .9" fill="white"></path>
         </svg>
       </span>
+      <span class="maNavLabel">Admin</span>
     </button>
 
     <button type="button" class="maNavBtn" data-nav="edit" aria-label="Edit">
