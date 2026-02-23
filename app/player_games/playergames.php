@@ -21,6 +21,7 @@ if (!$context || empty($context['ok'])) {
   header('Location: ' . MA_ROUTE_LOGIN);
   exit;
 }
+$_SESSION["SessionPortal"] = "PLAYER PORTAL";
 
 $today = new DateTimeImmutable('today');
 $plus30 = $today->modify('+30 days');

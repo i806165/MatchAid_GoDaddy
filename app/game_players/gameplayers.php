@@ -8,7 +8,6 @@ require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
 
-$_SESSION["SessionPortal"] = "ADMIN PORTAL";
 $_SESSION["SessionFavLaunchMode"] = "registrations";
 $_SESSION["SessionFavReturnAction"] = "roster";
 $_SESSION["SessionFavPlayerGHIN"] = "";

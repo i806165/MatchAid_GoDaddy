@@ -13,9 +13,6 @@ require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_SVC_DB . "/service_dbPlayers.php";
 
-// Portal context (required convention)
-$_SESSION["SessionPortal"] = "ADMIN PORTAL";
-
 Logger::info("GAMEPAIRINGS_ENTRY", [
   "uri" => $_SERVER["REQUEST_URI"] ?? "",
   "ghin" => $_SESSION["SessionGHINLogonID"] ?? "",

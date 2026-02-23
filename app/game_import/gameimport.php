@@ -11,9 +11,6 @@ require_once MA_API_LIB . "/Db.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 
-// Portal context (required convention)
-$_SESSION["SessionPortal"] = "ADMIN PORTAL";
-
 Logger::info("IMPORT_GAMES_ENTRY", [
   "uri" => $_SERVER["REQUEST_URI"] ?? "",
   "ghin" => $_SESSION["SessionGHINLogonID"] ?? "",
