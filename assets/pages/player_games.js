@@ -49,6 +49,21 @@
   };
   state.uiFilters = cloneFilters(state.filters);
 
+  // ---- Date Helpers (Admin parity) ----
+  function parseYmd(ymd) {
+    if (!ymd) return null;
+    const [y, m, d] = String(ymd).slice(0, 10).split("-").map((n) => parseInt(n, 10));
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d);
+  }
+
+  function toYmdLocal(dt) {
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, "0");
+    const d = String(dt.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
   function normalizeFilters(f){
     return {
       dateFrom: String(f.dateFrom || ''),
@@ -66,7 +81,7 @@
   }
 
   function esc(s){
-    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    return String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
   function applyChrome(){
@@ -76,7 +91,7 @@
     if (chrome && typeof chrome.setActions === 'function') {
       chrome.setActions({
         left: { show: true, label: 'Home', onClick: () => routerGo ? routerGo('home') : (window.location.assign('/')) },
-        right: { show: true, label: 'Filters', onClick: openFilters }
+        right: { show: true, label: 'Actions', onClick: () => openActionsMenu(openFiltersModal) }
       });
     }
     if (chrome && typeof chrome.setBottomNav === 'function') {
@@ -92,12 +107,12 @@
   }
 
   function formatPlayDateBadge(dateText){
-    const d = dateText ? new Date(dateText + 'T00:00:00') : null;
-    if (!d || Number.isNaN(d.getTime())) return { dow:'', day:'--', mon:'' };
-    const dow = d.toLocaleDateString(undefined,{ weekday:'short' }).slice(0,2).toUpperCase();
-    const day = String(d.getDate());
-    const mon = d.toLocaleDateString(undefined,{ month:'short' }).toUpperCase();
-    return { dow, day, mon };
+    const dt = parseYmd(dateText);
+    if (!dt) return { top: "", day: "", bot: "" };
+    const mon = dt.toLocaleDateString(undefined, { month: "short" }).toUpperCase();
+    const yy = String(dt.getFullYear()).slice(-2);
+    const top = `${mon}'${yy}`;
+    return { top, day: String(dt.getDate()), bot: dt.toLocaleDateString(undefined, { weekday: "short" }) };
   }
 
   function rowText(g, keys){
@@ -171,9 +186,9 @@
         <div class="maCard__body maPlayerGameCard__body">
           <div class="maPlayerGameCard__top">
             <div class="maDateBadge" aria-hidden="true">
-              <div class="maDateBadge__top">${esc(badge.dow)}</div>
+              <div class="maDateBadge__top">${esc(badge.top)}</div>
               <div class="maDateBadge__mid">${esc(badge.day)}</div>
-              <div class="maDateBadge__bot">${esc(badge.mon)}</div>
+              <div class="maDateBadge__bot">${esc(badge.bot)}</div>
             </div>
             <div class="maPlayerGameCard__meta">
               <div class="maPlayerGameCard__line1">
@@ -234,32 +249,23 @@
     MA.ui.openActionsMenu(title, items);
   }
 
-  function openFilters(){
-    state.uiFilters = cloneFilters(state.filters);
-    syncFilterUIFromState();
-    if (el.overlay) {
-      el.overlay.style.display = 'flex';
-      el.overlay.setAttribute('aria-hidden','false');
-    }
-  }
-  function closeFilters(){
-    if (el.overlay) {
-      el.overlay.style.display = 'none';
-      el.overlay.setAttribute('aria-hidden','true');
-    }
+  function openActionsMenu(openFiltersFn) {
+    if (!MA.ui || !MA.ui.openActionsMenu) return;
+    const items = [
+      { label: "My Current Games", action: () => applyQuickPreset("MY_CURRENT") },
+      { label: "My Past Games", action: () => applyQuickPreset("MY_PAST") },
+      { separator: true },
+      { label: "All Current Games", action: () => applyQuickPreset("ALL_CURRENT") },
+      { label: "All Past Games", action: () => applyQuickPreset("ALL_PAST") },
+      { separator: true },
+      { label: "Advanced Filters…", action: () => { if (typeof openFiltersFn === "function") openFiltersFn(); } }
+    ];
+    MA.ui.openActionsMenu("Actions", items);
   }
 
-  function setFilterTab(tab){
-    const isDate = tab === 'date';
-    [el.segDate, el.segAdmin].forEach(x => x && x.classList.remove('is-active'));
-    [el.panelDate, el.panelAdmin].forEach(x => x && x.classList.remove('is-active'));
-    if (isDate) {
-      el.segDate?.classList.add('is-active'); el.panelDate?.classList.add('is-active');
-      el.segDate?.setAttribute('aria-selected','true'); el.segAdmin?.setAttribute('aria-selected','false');
-    } else {
-      el.segAdmin?.classList.add('is-active'); el.panelAdmin?.classList.add('is-active');
-      el.segAdmin?.setAttribute('aria-selected','true'); el.segDate?.setAttribute('aria-selected','false');
-    }
+  // Placeholder for the modal opener function, wired below
+  function openFiltersModal() {
+    // wired in wireFiltersModal
   }
 
   function syncFilterUIFromState(){
@@ -324,33 +330,27 @@
     }
   }
 
-  function applyQuickPreset(kind){
+  function applyQuickPreset(presetKey){
+    const key = String(presetKey || "").toUpperCase();
     const today = new Date();
-    today.setHours(0,0,0,0);
-    const from = new Date(today);
-    const to = new Date(today);
-    if (kind === 'MY_PAST') from.setDate(from.getDate()-30); else to.setDate(to.getDate()+30);
-    if (kind === 'MY_PAST') { /* to=today */ } else { /* from=today */ }
-    state.uiFilters.dateFrom = fmtDateInput(kind === 'MY_PAST' ? from : today);
-    state.uiFilters.dateTo = fmtDateInput(kind === 'MY_PAST' ? today : to);
-    state.uiFilters.quickPreset = kind;
-    syncFilterUIFromState();
-  }
+    const plus30 = new Date(today); plus30.setDate(plus30.getDate() + 30);
+    const minus30 = new Date(today); minus30.setDate(minus30.getDate() - 30);
 
-  function fmtDateInput(d){
-    if (!(d instanceof Date) || Number.isNaN(d.getTime())) return '';
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth()+1).padStart(2,'0');
-    const dd = String(d.getDate()).padStart(2,'0');
-    return `${yyyy}-${mm}-${dd}`;
-  }
+    const todayYmd = toYmdLocal(today);
+    const plus30Ymd = toYmdLocal(plus30);
+    const minus30Ymd = toYmdLocal(minus30);
 
-  async function onApplyFilters(){
-    if (el.dateFrom) state.uiFilters.dateFrom = el.dateFrom.value || '';
-    if (el.dateTo) state.uiFilters.dateTo = el.dateTo.value || '';
-    state.filters = cloneFilters(state.uiFilters);
-    closeFilters();
-    await reloadGames();
+    let dFrom = minus30Ymd, dTo = plus30Ymd;
+    if (key.includes("CURRENT")) { dFrom = todayYmd; dTo = plus30Ymd; }
+    else if (key.includes("PAST")) { dFrom = minus30Ymd; dTo = todayYmd; }
+
+    // For now, player portal doesn't have explicit "ME vs ALL" admin scope in UI state,
+    // but we can simulate it by clearing selected admins for ALL.
+    // If MY, we might want to select favorites? For now just date range.
+    
+    state.filters.dateFrom = dFrom;
+    state.filters.dateTo = dTo;
+    reloadGames();
   }
 
   async function reloadGames(){
@@ -452,20 +452,188 @@
     return res.json();
   }
 
+  // ---- Filters Modal Wiring (Ported from Admin) ----
+  function wireFiltersModal() {
+    const modalOverlay = document.getElementById('overlay'); // Reusing existing ID
+    const btnCloseX = document.getElementById('btnCloseModal');
+    const btnCancel = document.getElementById('btnCancelFilters');
+    const btnApply = document.getElementById('btnApplyFilters');
+    const segDate = document.getElementById('segDate');
+    const segAdmin = document.getElementById('segAdmin');
+    const panelDate = document.getElementById('panelDate');
+    const panelAdmin = document.getElementById('panelAdmin');
+
+    if (!modalOverlay) return;
+
+    // Segmented control
+    function setPanel(which) {
+      const isDate = which === 'date';
+      if (segDate) segDate.classList.toggle('is-active', isDate);
+      if (segAdmin) segAdmin.classList.toggle('is-active', !isDate);
+      if (panelDate) panelDate.classList.toggle('is-active', isDate);
+      if (panelAdmin) panelAdmin.classList.toggle('is-active', !isDate);
+    }
+
+    // Inline Calendar Logic
+    const dateFromEl = document.getElementById('dateFrom');
+    const dateToEl = document.getElementById('dateTo');
+    const btnPickFrom = document.getElementById('btnPickFrom');
+    const btnPickTo = document.getElementById('btnPickTo');
+    const calWrap = document.getElementById('calWrap');
+    const calGrid = document.getElementById('calGrid');
+    const calMonthLabel = document.getElementById('calMonthLabel');
+    const calPrev = document.getElementById('calPrev');
+    const calNext = document.getElementById('calNext');
+    const calToday = document.getElementById('calToday');
+
+    let activeTarget = 'from';
+    let viewMonth = null;
+
+    function ensureCalendarOpen() { if (calWrap) { calWrap.classList.add('open'); calWrap.setAttribute('aria-hidden', 'false'); } }
+    function closeCalendar() { if (calWrap) { calWrap.classList.remove('open'); calWrap.setAttribute('aria-hidden', 'true'); } }
+    
+    function setViewMonthFromInputs() {
+      const fromD = parseYmd(dateFromEl?.value);
+      const toD = parseYmd(dateToEl?.value);
+      const basis = (activeTarget === 'from' ? fromD : toD) || fromD || toD || new Date();
+      viewMonth = new Date(basis.getFullYear(), basis.getMonth(), 1);
+    }
+
+    function renderCalendar() {
+      if (!calGrid || !viewMonth) return;
+      calGrid.innerHTML = '';
+      if (calMonthLabel) calMonthLabel.textContent = viewMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+
+      const fromD = parseYmd(dateFromEl?.value);
+      const toD = parseYmd(dateToEl?.value);
+      const start = new Date(viewMonth);
+      start.setDate(1 - start.getDay()); // Start on Sunday
+
+      for (let i = 0; i < 42; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        const iso = toYmdLocal(d);
+        
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = 'maCalDay';
+        cell.textContent = String(d.getDate());
+        if (d.getMonth() !== viewMonth.getMonth()) cell.classList.add('muted');
+        
+        // Selection logic
+        const t = d.getTime();
+        const fT = fromD ? fromD.getTime() : null;
+        const tT = toD ? toD.getTime() : null;
+        
+        if ((fT && t === fT) || (tT && t === tT)) cell.classList.add('selected');
+        else if (fT && tT && t > Math.min(fT, tT) && t < Math.max(fT, tT)) cell.classList.add('inRange');
+
+        cell.onclick = (e) => {
+          e.preventDefault();
+          if (activeTarget === 'from') {
+            if (dateFromEl) dateFromEl.value = iso;
+            if (toD && d > toD) if (dateToEl) dateToEl.value = ''; // Reset to if invalid
+            activeTarget = 'to';
+          } else {
+            if (dateToEl) dateToEl.value = iso;
+            const newFrom = parseYmd(dateFromEl?.value);
+            if (newFrom && d < newFrom) {
+              if (dateFromEl) dateFromEl.value = iso;
+              if (dateToEl) dateToEl.value = toYmdLocal(newFrom);
+            }
+          }
+          renderCalendar();
+        };
+        calGrid.appendChild(cell);
+      }
+    }
+
+    // Calendar Controls
+    if (calPrev) calPrev.onclick = (e) => { e.preventDefault(); viewMonth.setMonth(viewMonth.getMonth() - 1); renderCalendar(); };
+    if (calNext) calNext.onclick = (e) => { e.preventDefault(); viewMonth.setMonth(viewMonth.getMonth() + 1); renderCalendar(); };
+    if (calToday) calToday.onclick = (e) => { e.preventDefault(); viewMonth = new Date(); viewMonth.setDate(1); renderCalendar(); };
+
+    if (btnPickFrom) btnPickFrom.onclick = (e) => { e.preventDefault(); activeTarget = 'from'; ensureCalendarOpen(); setViewMonthFromInputs(); renderCalendar(); };
+    if (btnPickTo) btnPickTo.onclick = (e) => { e.preventDefault(); activeTarget = 'to'; ensureCalendarOpen(); setViewMonthFromInputs(); renderCalendar(); };
+    
+    if (dateFromEl) {
+      dateFromEl.onfocus = () => { activeTarget = 'from'; ensureCalendarOpen(); };
+      dateFromEl.onchange = () => { setViewMonthFromInputs(); renderCalendar(); };
+    }
+    if (dateToEl) {
+      dateToEl.onfocus = () => { activeTarget = 'to'; ensureCalendarOpen(); };
+      dateToEl.onchange = () => { setViewMonthFromInputs(); renderCalendar(); };
+    }
+
+    // Modal Open/Close
+    let pendingFrom = '';
+    let pendingTo = '';
+    let pendingSelectedKeys = [];
+
+    // Assign to outer scope so openActionsMenu can call it
+    openFiltersModal = () => {
+      // Snapshot
+      pendingFrom = String(state.filters.dateFrom || '');
+      pendingTo = String(state.filters.dateTo || '');
+      pendingSelectedKeys = [...(state.uiFilters.selectedAdminKeys || [])];
+      
+      // Seed UI
+      if (dateFromEl) dateFromEl.value = pendingFrom;
+      if (dateToEl) dateToEl.value = pendingTo;
+      state.uiFilters.selectedAdminKeys = [...pendingSelectedKeys]; // Sync UI state
+      renderAdminRows();
+
+      setPanel('date');
+      modalOverlay.style.display = 'flex';
+      modalOverlay.setAttribute('aria-hidden', 'false');
+      document.documentElement.classList.add('maOverlayOpen');
+      closeCalendar();
+    };
+
+    const closeModal = (revert = true) => {
+      if (revert) {
+        if (dateFromEl) dateFromEl.value = pendingFrom;
+        if (dateToEl) dateToEl.value = pendingTo;
+        state.uiFilters.selectedAdminKeys = [...pendingSelectedKeys];
+      }
+      closeCalendar();
+      modalOverlay.style.display = 'none';
+      modalOverlay.setAttribute('aria-hidden', 'true');
+      document.documentElement.classList.remove('maOverlayOpen');
+    };
+
+    if (btnCloseX) btnCloseX.onclick = () => closeModal(true);
+    if (btnCancel) btnCancel.onclick = () => closeModal(true);
+    
+    if (btnApply) {
+      btnApply.onclick = async () => {
+        state.filters.dateFrom = String(dateFromEl?.value || '');
+        state.filters.dateTo = String(dateToEl?.value || '');
+        // Admin keys are already in state.uiFilters.selectedAdminKeys from toggles
+        state.filters.selectedAdminKeys = [...state.uiFilters.selectedAdminKeys];
+        
+        closeModal(false);
+        await reloadGames();
+      };
+    }
+
+    if (segDate) segDate.onclick = () => setPanel('date');
+    if (segAdmin) segAdmin.onclick = () => setPanel('admin');
+  }
+
   function wireEvents(){
-    el.btnOpenFilter?.addEventListener('click', openFilters);
-    el.btnCloseModal?.addEventListener('click', closeFilters);
-    el.btnCancelFilters?.addEventListener('click', closeFilters);
-    el.btnApplyFilters?.addEventListener('click', onApplyFilters);
-    el.segDate?.addEventListener('click', () => setFilterTab('date'));
-    el.segAdmin?.addEventListener('click', () => setFilterTab('admin'));
+    // Wire the modal logic
+    wireFiltersModal();
+
     el.adminSearch?.addEventListener('input', renderAdminRows);
+    
     el.btnAdminToggleAll?.addEventListener('click', () => {
       const allKeys = (state.admins || []).map(a => String(a.key||a.adminKey||'')).filter(Boolean);
       const allSelected = allKeys.length && allKeys.every(k => state.uiFilters.selectedAdminKeys.includes(k));
       state.uiFilters.selectedAdminKeys = allSelected ? [] : allKeys;
       renderAdminRows();
     });
+    
     el.btnAdminToggleFavs?.addEventListener('click', () => {
       const favKeys = (state.admins || []).filter(a => a.isFavorite).map(a => String(a.key||a.adminKey||'')).filter(Boolean);
       const allFavsSelected = favKeys.length && favKeys.every(k => state.uiFilters.selectedAdminKeys.includes(k));
