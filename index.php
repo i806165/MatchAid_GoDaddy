@@ -2,7 +2,7 @@
 // index.php — MatchAid Home
 // If you ever move folders, you can adjust these two paths in one place.
 $adminPortalHref  = "/app/admin_games/gameslist.php";
-$playerPortalHref = "#"; // coming soon
+$playerPortalHref = "/app/player_games/playergames.php"; 
 ?><!doctype html>
 <html lang="en">
 <head>
@@ -405,18 +405,15 @@ $playerPortalHref = "#"; // coming soon
           </div>
           <div class="card__body">
             <p class="copy">
-              Select where you’d like to go. Player access is being finalized; admin access is available now.
+              Select where you’d like to go.
             </p>
 
             <div class="ctaRow" role="group" aria-label="Portal navigation">
-              <!-- Player Portal (Coming Soon) -->
-              <a class="btn btn--ghost btn--disabled"
+              <!-- Player Portal -->
+              <a class="btn btn--primary"
                  href="<?= htmlspecialchars($playerPortalHref) ?>"
-                 aria-disabled="true"
-                 tabindex="-1">
                 <span aria-hidden="true">🏌️</span>
                 <span>Player Portal</span>
-                <span class="srOnly">(Coming soon)</span>
               </a>
 
               <!-- Admin Portal -->
@@ -429,7 +426,7 @@ $playerPortalHref = "#"; // coming soon
 
             <p class="copy" style="margin-top: 0.2rem;">
               <span style="color: rgba(205,178,120,0.92); font-weight: 600;">Admin tip:</span>
-              Bookmark the Admin Portal for quick access during game day.
+              Bookmark your Portal for quick access during game day.
             </p>
           </div>
         </div>

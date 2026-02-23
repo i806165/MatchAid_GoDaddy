@@ -59,6 +59,7 @@ $ROUTES = [
     "summary"  => "/app/game_summary/gamesummary.php",
     "scorecard"   => "/app/game_scorecards/scorecards.php",
     "settings"    => "/app/game_settings/gamesettings.php",
+    "player"    => "/app/player_games/playergames.php",
 ];
 
 
