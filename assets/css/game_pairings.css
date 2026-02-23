@@ -420,10 +420,4 @@
   .gpMobileAddBtn {
     display: inline-flex;
   }
-  
-  /* Center drawer title */
-  #gpDrawerTitle {
-    flex: 1;
-    text-align: center;
-  }
 }

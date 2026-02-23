@@ -2,7 +2,7 @@
    Game Pairings page controller (GoDaddy).
    - Hydrates from window.__MA_INIT__
    - Desktop: 2-panel (canvas + tray)
-   - Mobile: 1-panel + drawer tray
+   - Mobile: 1-panel + inline tray toggle
    - Persists to db_Players via /api/game_pairings/savePairings.php
 */
 (function () {
@@ -43,13 +43,6 @@
     // Drawer
     btnTrayPair: document.getElementById("gpBtnTrayPair"),
     btnTrayMatch: document.getElementById("gpBtnTrayMatch"),
-    drawerOverlay: document.getElementById("gpDrawerOverlay"),
-    drawerTitle: document.getElementById("gpDrawerTitle"),
-    drawerSearch: document.getElementById("gpDrawerSearch"),
-    drawerSearchClear: document.getElementById("gpDrawerSearchClear"),
-    drawerMasterCheck: document.getElementById("gpDrawerMasterCheck"),
-    drawerList: document.getElementById("gpDrawerList"),
-    btnCloseDrawer: document.getElementById("gpBtnCloseDrawer"),
     btnDrawerAssign: document.getElementById("gpBtnDrawerAssign"),
   };
 
