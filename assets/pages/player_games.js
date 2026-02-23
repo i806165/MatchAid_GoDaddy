@@ -148,7 +148,36 @@
 
   function renderCards(){
     if (!el.cards) return;
-    const games = Array.isArray(state.games) ? state.games : [];
+    
+    // Dynamic Sort Direction (Admin parity):
+    // 1. Count Future vs Past games in current set
+    // 2. If Future >= Past -> Sort ASC (Oldest -> Newest)
+    // 3. If Past > Future -> Sort DESC (Newest -> Oldest)
+    // 4. Default (empty/no dates) -> DESC
+    
+    const todayYmd = toYmdLocal(new Date());
+    const rawList = Array.isArray(state.games) ? state.games : [];
+    
+    let futureCount = 0;
+    let pastCount = 0;
+    
+    rawList.forEach(g => {
+      const d = rowText(g, ['playDate','dbGames_PlayDate']);
+      if (!d) return;
+      if (d >= todayYmd) futureCount++; else pastCount++;
+    });
+
+    const sortAsc = (futureCount >= pastCount);
+
+    const games = rawList.slice().sort((a, b) => {
+      const da = rowText(a, ['playDate','dbGames_PlayDate']) || '';
+      const db = rowText(b, ['playDate','dbGames_PlayDate']) || '';
+      if (!da && !db) return 0;
+      if (!da) return 1;
+      if (!db) return -1;
+      return sortAsc ? da.localeCompare(db) : db.localeCompare(da);
+    });
+
     el.cards.innerHTML = '';
 
     if (!games.length) {
@@ -388,11 +417,11 @@
       if (typeof MA.postJson === 'function' && routes.apiSession) {
         try { await MA.postJson(`${routes.apiSession}/setGame.php`, { ggid }); } catch (_) {}
       }
-      window.location.assign(routes.playerReview || `/app/game_review/gamereview.php?ggid=${encodeURIComponent(ggid)}`);
+      if (routerGo) routerGo('summary', { ggid });
       return;
     }
     if (action === 'enroll' || action === 'register') {
-      window.location.assign(routes.playerRegister || `/app/game_players/gameplayers.php?ggid=${encodeURIComponent(ggid)}`);
+      if (routerGo) routerGo('roster', { ggid });
       return;
     }
     if (action === 'unregister') {
@@ -404,7 +433,7 @@
       return;
     }
     if (action === 'scorecard') {
-      window.location.assign(routes.playerScorecard || `/app/game_scorecard/gamescorecard.php?ggid=${encodeURIComponent(ggid)}`);
+      if (routerGo) routerGo('scorecard', { ggid });
       return;
     }
   }
@@ -416,30 +445,20 @@
     const course = rowText(g,['courseName','dbGames_CourseName']);
     const facility = rowText(g,['facilityName','dbGames_FacilityName']);
     if (!date) { setStatus('Calendar export unavailable (missing date).','warn'); return; }
+    
+    const startIso = `${date}T${time.length===5?time: '08:00'}:00`;
+    const uid = `matchaid-${rowText(g,['ggid','dbGames_GGID'])||Date.now()}@matchaid`;
 
-    const start = new Date(`${date}T${time.length===5?time: '08:00'}:00`);
-    if (Number.isNaN(start.getTime())) { setStatus('Calendar export unavailable (invalid date/time).','warn'); return; }
-    const end = new Date(start.getTime() + 4*60*60*1000);
-
-    const fmtUtc = d => d.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}Z$/,'Z');
-    const escapeIcs = s => String(s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
-    const ics = [
-      'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//MatchAid//Player Portal//EN','BEGIN:VEVENT',
-      `UID:matchaid-${rowText(g,['ggid','dbGames_GGID'])||Date.now()}@matchaid`,
-      `DTSTAMP:${fmtUtc(new Date())}`,
-      `DTSTART:${fmtUtc(start)}`,
-      `DTEND:${fmtUtc(end)}`,
-      `SUMMARY:${escapeIcs(title)}`,
-      `LOCATION:${escapeIcs([facility,course].filter(Boolean).join(' • '))}`,
-      'END:VEVENT','END:VCALENDAR'
-    ].join('\r\n');
-    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'matchaid-game.ics';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+    if (MA.calendar && MA.calendar.downloadIcs) {
+      MA.calendar.downloadIcs({
+        title: title,
+        start: startIso,
+        location: [facility, course].filter(Boolean).join(' • '),
+        uid: uid
+      });
+    } else {
+      setStatus('Calendar module not loaded.', 'error');
+    }
   }
 
   async function postJson(url, payload){

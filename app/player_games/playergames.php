@@ -93,6 +93,7 @@ $maChromeLogoUrl = null;
   </script>
   <script src="/assets/js/ma_shared.js"></script>
   <script src="/assets/modules/actions_menu.js?v=1"></script>
+  <script src="/assets/modules/addCalendar.js?v=1"></script>
   <script src="/assets/pages/player_games.js"></script>
 </body>
 </html>
