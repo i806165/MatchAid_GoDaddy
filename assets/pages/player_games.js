@@ -86,7 +86,7 @@
 
   function applyChrome(){
     if (chrome && typeof chrome.setHeaderLines === 'function') {
-      chrome.setHeaderLines(['PLAYER PORTAL', 'Games', state.header?.subtitle || '']);
+      chrome.setHeaderLines(['PLAYER PORTAL', 'Games List', ""]);
     }
     if (chrome && typeof chrome.setActions === 'function') {
       chrome.setActions({
@@ -181,7 +181,6 @@
           <div class="maCard__titleWrap">
             <div class="maCard__title">${esc(title)}${ggid ? `<span class="maCard__titleGgid">#${esc(ggid)}</span>` : ''}</div>
           </div>
-          <button class="btn btnPrimary maPlayerGameCard__menuBtn" type="button" data-role="menu">Actions</button>
         </header>
         <div class="maCard__body maPlayerGameCard__body">
           <div class="maPlayerGameCard__top">
@@ -193,6 +192,7 @@
             <div class="maPlayerGameCard__meta">
               <div class="maPlayerGameCard__line1">
                 <div class="maPlayerGameCard__courseWrap">${esc(courseName)}${facilityName ? ` <span class="maPlayerGameCard__facilityName">• ${esc(facilityName)}</span>` : ''}</div>
+                <button type="button" class="maCard__actionBtn maGameCard__manageBtn" data-role="menu" aria-label="Manage">MANAGE</button>
                 <div class="maPlayerGameCard__admin">${esc(adminName)}</div>
               </div>
               <div class="maPlayerGameCard__line2">
@@ -204,10 +204,6 @@
               </div>
               <div class="maPlayerGameCard__line3">
                 <div class="maPlayerGameCard__yourTee">${esc(yourTee ? `Your Tee Time: ${yourTee}` : (hiStats ? `HI: ${hiStats}` : ''))}</div>
-                <div class="maPlayerGameCard__actions">
-                  <button class="btn btnSecondary maPlayerGameCard__actionBtn" type="button" data-action="viewGame">Review</button>
-                  <button class="btn btnPrimary maPlayerGameCard__actionBtn" type="button" data-action="${enrollmentStatus === 'Registered' ? 'unregister' : 'enroll'}">${enrollmentStatus === 'Registered' ? 'Unregister' : 'Register'}</button>
-                </div>
               </div>
             </div>
           </div>
@@ -226,7 +222,7 @@
           openGameActionsMenu(g);
           return;
         }
-        onGameAction(g, 'viewGame');
+        openGameActionsMenu(g);
       });
 
       el.cards.appendChild(card);
@@ -246,7 +242,10 @@
     });
     
     const title = rowText(game, ['title','dbGames_Title']) || 'Game Actions';
-    MA.ui.openActionsMenu(title, items);
+    const playDateRaw = rowText(game, ['playDate','dbGames_PlayDate']);
+    const badge = formatPlayDateBadge(playDateRaw);
+    const subtitle = [badge.bot, badge.day, badge.top, rowText(game, ['playTimeText','dbGames_PlayTime'])].filter(Boolean).join(' ');
+    MA.ui.openActionsMenu(title, items, subtitle);
   }
 
   function openActionsMenu(openFiltersFn) {
