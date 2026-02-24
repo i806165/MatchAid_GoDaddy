@@ -3,15 +3,17 @@
 
 // Handle portal selection before rendering the page.
 // This sets the session variable so the login page knows where to return.
+session_start();
 if (isset($_GET['portal'])) {
-    session_start();
     $portal = trim((string)$_GET['portal']);
     if ($portal === 'admin') {
         $_SESSION['SessionPortal'] = 'ADMIN PORTAL';
+        session_write_close();
         header('Location: /app/admin_games/gameslist.php');
         exit;
     } elseif ($portal === 'player') {
         $_SESSION['SessionPortal'] = 'PLAYER PORTAL';
+        session_write_close();
         header('Location: /app/player_games/playergames.php');
         exit;
     }
