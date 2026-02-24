@@ -10,6 +10,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 require_once __DIR__ . '/../../bootstrap.php';
 require_once MA_SERVICES . '/context/service_ContextUser.php';
 require_once MA_API_LIB . '/Logger.php';
+require_once MA_SERVICES . '/workflows/hydratePlayerGamesList.php';
 
 Logger::info('PLAYERGAMES_ENTRY', [
   'uri' => $_SERVER['REQUEST_URI'] ?? '',
@@ -73,16 +74,13 @@ if ($isReturn) {
   ];
 }
 
+// Hydrate games list server-side (Option 2)
+$hydrated = hydratePlayerGamesList(strval($context['userGHIN'] ?? ''), $defaultFilters);
+
 $initPayload = [
   'ok' => true,
-  'header' => [
-    'title' => 'PLAYER PORTAL',
-    'subtitle' => 'Games'
-  ],
-  'defaultFilters' => $defaultFilters,
-  // First paint can be empty; JS will call initPlayerGames.php and hydrate.
-  'admins' => [],
-  'games' => [ 'vm' => [], 'raw' => [] ],
+  // Merge hydrated payload (header, filters, admins, games)
+  ...$hydrated,
   'user' => [
     'ghin' => strval($context['userGHIN'] ?? ''),
     'name' => strval($context['userName'] ?? ''),
