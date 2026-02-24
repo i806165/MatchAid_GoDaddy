@@ -13,13 +13,20 @@ require_once MA_API_LIB . '/Logger.php';
 
 Logger::info('PLAYERGAMES_ENTRY', [
   'uri' => $_SERVER['REQUEST_URI'] ?? '',
-  'sessionGHIN' => (string)($_SESSION['SessionGHINLogonID'] ?? ''),
+  'ghin' => $_SESSION['SessionGHINLogonID'] ?? '',
+  'loginTime' => $_SESSION['SessionLoginTime'] ?? '',
 ]);
 
 $_SESSION["SessionPortal"] = "PLAYER PORTAL";
 
 $context = ServiceUserContext::getUserContext();
 if (!$context || empty($context['ok'])) {
+  Logger::error("PLAYERGAMES_AUTH_FAIL", [
+    "msg" => "Redirecting to login",
+    "session_ghin" => $_SESSION["SessionGHINLogonID"] ?? "MISSING",
+    "session_time" => $_SESSION["SessionLoginTime"] ?? "MISSING",
+    "ctx_result" => $context
+  ]);
   header('Location: ' . MA_ROUTE_LOGIN);
   exit;
 }
