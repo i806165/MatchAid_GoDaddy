@@ -695,6 +695,16 @@
     }
   }
 
+  function downloadIcsForGame() {
+    const g = state.game || {};
+    if (MA.calendar && MA.calendar.addCalendarEventFromGame) {
+      MA.calendar.addCalendarEventFromGame(g);
+    } else {
+      setStatus("Calendar module not loaded.", "error");
+    }
+  }
+
+
   function printScorecards() {
     if (typeof MA.routerGo === "function") {
       try { MA.routerGo("scorecard"); return; } catch (e) {}
@@ -749,6 +759,7 @@
     const items = [
       { label: "Game Settings", action: "settings", params: { returnTo: "summary" } },
       { label: "Print Scorecards", action: printScorecards },
+      { label: "Add Game to Calendar", action: downloadIcsForGame },
       { separator: true }, 
       { label: "Export to .csv file", action: downloadCsv },
       { label: "Copy csv to clipboard", action: copySummaryToClipboard },

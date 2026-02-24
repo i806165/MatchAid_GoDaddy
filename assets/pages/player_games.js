@@ -435,28 +435,13 @@
     }
   }
 
-  function downloadIcsForGame(g){
-    const title = rowText(g,['title','dbGames_Title']) || 'Golf Game';
-    const date = rowText(g,['playDate','dbGames_PlayDate']);
-    const time = rowText(g,['playTimeText','dbGames_PlayTime']) || '08:00';
-    const course = rowText(g,['courseName','dbGames_CourseName']);
-    const facility = rowText(g,['facilityName','dbGames_FacilityName']);
-    if (!date) { setStatus('Calendar export unavailable (missing date).','warn'); return; }
-    
-    const startIso = `${date}T${time.length===5?time: '08:00'}:00`;
-    const uid = `matchaid-${rowText(g,['ggid','dbGames_GGID'])||Date.now()}@matchaid`;
-
-    if (MA.calendar && MA.calendar.downloadIcs) {
-      MA.calendar.downloadIcs({
-        title: title,
-        start: startIso,
-        location: [facility, course].filter(Boolean).join(' • '),
-        uid: uid
-      });
-    } else {
-      setStatus('Calendar module not loaded.', 'error');
+  function downloadIcsForGame(g) {
+    if (MA.calendar && MA.calendar.addCalendarEventFromGame) {
+        MA.calendar.addCalendarEventFromGame(g);
+      } else {
+        setStatus("Calendar module not loaded.", "error");
+      }
     }
-  }
 
   async function postJson(url, payload){
     if (typeof MA.postJson === 'function') return MA.postJson(url, { payload });

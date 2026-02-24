@@ -510,10 +510,18 @@ cardsEl.innerHTML = state.games.dbRows
     if (action === "pairings") return routerGo("pairings", {});
     if (action === "teetimes") return routerGo("teetimes", {});
     
-    if (action === "calendar") return routerGo("gameCalendar", {});
-    if (action === "deleteGame") {
-      if (!confirm("Are you sure you want to delete this game? This cannot be undone.")) return;
+    if (action === "calendar") {      
+      const g = (state.games.dbRows || []).find(r => String(r.dbGames_GGID) === String(ggid));
+      if (MA.calendar && MA.calendar.addCalendarEventFromGame) {
+        MA.calendar.addCalendarEventFromGame(g);
+      } else {
+        setStatus("Calendar module not loaded.", "error");
+      }
+      return
+    };
 
+    if (action === "deleteGame") {
+      if (!confirm("Are you sure you want to delete this game?")) return;
       try {
         const res = await apiAdmin("deleteGame.php", { ggid });
         if (!res || !res.ok) throw new Error(res?.message || "Delete failed.");
@@ -525,7 +533,6 @@ cardsEl.innerHTML = state.games.dbRows
       }
       return;
     }
-
     console.warn("[MA] Unknown game action:", action, "payload=", payload);
     setStatus("Unknown action: " + action, "warn");
   }
