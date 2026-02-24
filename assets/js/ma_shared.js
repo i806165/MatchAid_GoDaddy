@@ -109,8 +109,6 @@
     const url = MA.paths.routerApi;
     if (!url) throw new Error("MA.paths.routerApi missing");
     const body = Object.assign({ action }, payload || {});
-    // optional: caller can pass returnTo; default to current path
-    if (!("returnTo" in body)) body.returnTo = window.location.pathname;
     const data = await postJson(url, body);
     if (data && data.redirectUrl) {
       window.location.href = data.redirectUrl;
