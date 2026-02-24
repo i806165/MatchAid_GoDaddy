@@ -157,7 +157,7 @@ function hydratePlayerGamesList(string $userGHIN, array $filters): array {
     $playDate = substr((string)($g['dbGames_PlayDate'] ?? ''), 0, 10);
     $isCurrent = ($playDate !== '' && $playDate >= $todayYmd);
     $daysUntil = null;
-    if ($playDate !== '') { try { $daysUntil = (int)((new DateTimeImmutable($playDate))->diff(new DateTimeImmutable('today'))->format('%r%a')); } catch (Throwable $e) { $daysUntil = null; } }
+    if ($playDate !== '') { try { $daysUntil = (int)((new DateTimeImmutable('today'))->diff(new DateTimeImmutable($playDate))->format('%r%a')); } catch (Throwable $e) { $daysUntil = null; } }
     $stats = $statsByGGID[$ggid] ?? null;
     $playerCount = (int)($stats['cnt'] ?? 0);
     $teeTimeCnt = (int)($g['dbGames_TeeTimeCnt'] ?? 0);
