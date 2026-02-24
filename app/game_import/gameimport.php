@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-// /public_html/app/game_import/import_games.php
+// /public_html/app/game_import/gameimport.php
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
   session_start();
