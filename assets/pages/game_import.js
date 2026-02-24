@@ -1,4 +1,4 @@
-/* /public_html/assets/pages/import_games.js
+/* /public_html/assets/pages/game_import.js
    Import Games page controller.
    - Uses /assets/js/ma_shared.js for MA.postJson + MA.chrome + MA.routerGo helpers.
 */
