@@ -39,7 +39,7 @@ $plus30 = $today->modify('+30 days');
 $defaultDateFrom = $today->format('Y-m-d');
 $defaultDateTo   = $plus30->format('Y-m-d');
 $defaultSelected = [];
-$defaultPreset   = 'MY_CURRENT';
+$defaultPreset   = 'OPEN'; // Default to "Open Games" (All Available)
 
 // Session restore (Return path)
 $sessDf     = trim((string)($_SESSION['PP_FILTERDATEFROM'] ?? ''));

@@ -365,19 +365,20 @@
     
     // Default ranges
     const plus30 = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 30);
-    const plus60 = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 60);
+    const plus365 = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 365);
     const minus30 = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30);
     const minus60 = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 60);
 
     const todayYmd = toYmdLocal(today);
     const plus30Ymd = toYmdLocal(plus30);
-    const plus60Ymd = toYmdLocal(plus60);
+    const plus365Ymd = toYmdLocal(plus365);
     const minus30Ymd = toYmdLocal(minus30);
     const minus60Ymd = toYmdLocal(minus60);
 
     let dFrom = todayYmd, dTo = plus30Ymd;
 
-    if (key === "MYSCHEDULE") { dFrom = todayYmd; dTo = plus60Ymd; } // Look further ahead for commitments
+    // My Schedule: Look far ahead (1 year) to catch all commitments
+    if (key === "MYSCHEDULE") { dFrom = todayYmd; dTo = plus365Ymd; }
     else if (key === "FAVORITES") { dFrom = todayYmd; dTo = plus30Ymd; }
     else if (key === "OPEN") { dFrom = todayYmd; dTo = plus30Ymd; }
     else if (key === "HISTORY") { dFrom = minus60Ymd; dTo = todayYmd; }
