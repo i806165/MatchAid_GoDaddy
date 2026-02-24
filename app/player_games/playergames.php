@@ -33,12 +33,45 @@ if (!$context || empty($context['ok'])) {
 
 $today = new DateTimeImmutable('today');
 $plus30 = $today->modify('+30 days');
-$defaultFilters = [
-  'dateFrom' => $today->format('Y-m-d'),
-  'dateTo'   => $plus30->format('Y-m-d'),
-  'selectedAdminKeys' => [],
-  'quickPreset' => 'MY_CURRENT',
-];
+
+// Hard-coded "fresh" defaults
+$defaultDateFrom = $today->format('Y-m-d');
+$defaultDateTo   = $plus30->format('Y-m-d');
+$defaultSelected = [];
+$defaultPreset   = 'MY_CURRENT';
+
+// Session restore (Return path)
+$sessDf     = trim((string)($_SESSION['PP_FILTERDATEFROM'] ?? ''));
+$sessDt     = trim((string)($_SESSION['PP_FILTERDATETO'] ?? ''));
+$sessPreset = trim((string)($_SESSION['PP_FILTER_PRESET'] ?? ''));
+
+// PP_FILTER_ADMINS is stored as JSON array string
+$sessAdminsJson = (string)($_SESSION['PP_FILTER_ADMINS'] ?? '');
+$sessAdmins = [];
+if ($sessAdminsJson !== '') {
+  $tmp = json_decode($sessAdminsJson, true);
+  if (is_array($tmp)) $sessAdmins = array_values(array_filter(array_map('strval', $tmp)));
+}
+
+// Decide fresh vs return:
+// If we have BOTH dates in session, treat as "Return"
+$isReturn = ($sessDf !== '' && $sessDt !== '');
+
+if ($isReturn) {
+  $defaultFilters = [
+    'dateFrom' => $sessDf,
+    'dateTo'   => $sessDt,
+    'selectedAdminKeys' => $sessAdmins,
+    'quickPreset' => $sessPreset,
+  ];
+} else {
+  $defaultFilters = [
+    'dateFrom' => $defaultDateFrom,
+    'dateTo'   => $defaultDateTo,
+    'selectedAdminKeys' => $defaultSelected,
+    'quickPreset' => $defaultPreset,
+  ];
+}
 
 $initPayload = [
   'ok' => true,
