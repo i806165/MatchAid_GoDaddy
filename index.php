@@ -1,8 +1,24 @@
 <?php
 // index.php — MatchAid Home
-// If you ever move folders, you can adjust these two paths in one place.
-$adminPortalHref  = "/app/admin_games/gameslist.php";
-$playerPortalHref = "/app/player_games/playergames.php"; 
+
+// Handle portal selection before rendering the page.
+// This sets the session variable so the login page knows where to return.
+if (isset($_GET['portal'])) {
+    session_start();
+    $portal = trim((string)$_GET['portal']);
+    if ($portal === 'admin') {
+        $_SESSION['SessionPortal'] = 'ADMIN PORTAL';
+        header('Location: /app/admin_games/gameslist.php');
+        exit;
+    } elseif ($portal === 'player') {
+        $_SESSION['SessionPortal'] = 'PLAYER PORTAL';
+        header('Location: /app/player_games/playergames.php');
+        exit;
+    }
+}
+
+$adminPortalHref  = "/index.php?portal=admin";
+$playerPortalHref = "/index.php?portal=player"; 
 ?><!doctype html>
 <html lang="en">
 <head>
