@@ -162,7 +162,6 @@ function hydratePlayerGamesList(string $userGHIN, array $filters): array {
     $playerCount = (int)($stats['cnt'] ?? 0);
     $teeTimeCnt = (int)($g['dbGames_TeeTimeCnt'] ?? 0);
     $slotCount = max(0, $teeTimeCnt * 4);
-    $isRegistered = ($ggid !== '' && !empty($myGGIDs[$ggid]));
     $registrationStatus = 'Open';
     if (!$isCurrent) $registrationStatus = 'Closed';
     elseif ($daysUntil !== null && $daysUntil < 3) $registrationStatus = 'Locked';

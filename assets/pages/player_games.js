@@ -281,11 +281,11 @@
   function openActionsMenu(openFiltersFn) {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     const items = [
-      { label: "My Current Games", action: () => applyQuickPreset("MY_CURRENT") },
-      { label: "My Past Games", action: () => applyQuickPreset("MY_PAST") },
+      { label: "My Schedule (Registered)", action: () => applyQuickPreset("MYSCHEDULE") },
+      { label: "Favorites (High Interest)", action: () => applyQuickPreset("FAVORITES") },
+      { label: "Open Games (All Available)", action: () => applyQuickPreset("OPEN") },
       { separator: true },
-      { label: "All Current Games", action: () => applyQuickPreset("ALL_CURRENT") },
-      { label: "All Past Games", action: () => applyQuickPreset("ALL_PAST") },
+      { label: "History (Played)", action: () => applyQuickPreset("HISTORY") },
       { separator: true },
       { label: "Advanced Filters…", action: () => { if (typeof openFiltersFn === "function") openFiltersFn(); } }
     ];
@@ -362,23 +362,30 @@
   function applyQuickPreset(presetKey){
     const key = String(presetKey || "").toUpperCase();
     const today = new Date();
-    const plus30 = new Date(today); plus30.setDate(plus30.getDate() + 30);
-    const minus30 = new Date(today); minus30.setDate(minus30.getDate() - 30);
+    
+    // Default ranges
+    const plus30 = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 30);
+    const plus60 = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 60);
+    const minus30 = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30);
+    const minus60 = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 60);
 
     const todayYmd = toYmdLocal(today);
     const plus30Ymd = toYmdLocal(plus30);
+    const plus60Ymd = toYmdLocal(plus60);
     const minus30Ymd = toYmdLocal(minus30);
+    const minus60Ymd = toYmdLocal(minus60);
 
-    let dFrom = minus30Ymd, dTo = plus30Ymd;
-    if (key.includes("CURRENT")) { dFrom = todayYmd; dTo = plus30Ymd; }
-    else if (key.includes("PAST")) { dFrom = minus30Ymd; dTo = todayYmd; }
+    let dFrom = todayYmd, dTo = plus30Ymd;
 
-    // For now, player portal doesn't have explicit "ME vs ALL" admin scope in UI state,
-    // but we can simulate it by clearing selected admins for ALL.
-    // If MY, we might want to select favorites? For now just date range.
+    if (key === "MYSCHEDULE") { dFrom = todayYmd; dTo = plus60Ymd; } // Look further ahead for commitments
+    else if (key === "FAVORITES") { dFrom = todayYmd; dTo = plus30Ymd; }
+    else if (key === "OPEN") { dFrom = todayYmd; dTo = plus30Ymd; }
+    else if (key === "HISTORY") { dFrom = minus60Ymd; dTo = todayYmd; }
     
     state.filters.dateFrom = dFrom;
     state.filters.dateTo = dTo;
+    state.filters.quickPreset = key;
+    state.filters.selectedAdminKeys = []; // Clear specific admin selections for presets
     reloadGames();
   }
 
