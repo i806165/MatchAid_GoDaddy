@@ -36,8 +36,9 @@ try {
   $_SESSION['PP_FILTER_ADMINS'] = json_encode($inFilters['selectedAdminKeys'] ?? []);
   $_SESSION['PP_FILTER_PRESET'] = trim((string)($inFilters['quickPreset'] ?? ''));
 
-  // Delegate to shared workflow
-  $payload = hydratePlayerGamesList($userGHIN, $inFilters);
+  // Delegate to shared workflow (club visibility uses session club id)
+  $userClubId = strval($_SESSION['SessionClubID'] ?? '');
+  $payload = hydratePlayerGamesList($userGHIN, $inFilters, $userClubId);
 
   echo json_encode([
     'ok' => true,

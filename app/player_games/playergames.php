@@ -75,7 +75,8 @@ if ($isReturn) {
 }
 
 // Hydrate games list server-side (Option 2)
-$hydrated = hydratePlayerGamesList(strval($context['userGHIN'] ?? ''), $defaultFilters);
+$userClubId = strval($_SESSION['SessionClubID'] ?? '');
+$hydrated = hydratePlayerGamesList(strval($context['userGHIN'] ?? ''), $defaultFilters, $userClubId);
 
 $initPayload = [
   'ok' => true,

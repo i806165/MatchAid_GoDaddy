@@ -10,7 +10,7 @@ require_once MA_API_LIB . '/Logger.php';
  * hydratePlayerGamesList
  * Shared workflow to fetch games for the Player Portal.
  */
-function hydratePlayerGamesList(string $userGHIN, array $filters): array {
+function hydratePlayerGamesList(string $userGHIN, array $filters, string $userClubId = ''): array {
   $today = new DateTimeImmutable('today');
   $defFrom = $today->format('Y-m-d');
   $defTo = $today->modify('+30 days')->format('Y-m-d');
@@ -136,41 +136,109 @@ function hydratePlayerGamesList(string $userGHIN, array $filters): array {
     }
   }
 
-  // 6) Apply privacy and derive VM
+  // 6) Apply visibility (security) + derive VM
   $todayYmd = (new DateTimeImmutable('today'))->format('Y-m-d');
   $vm = [];
   $rawVisible = [];
+
   foreach ($gamesRaw as $g) {
     $ggid = trim((string)($g['dbGames_GGID'] ?? ''));
     $admin = trim((string)($g['dbGames_AdminGHIN'] ?? ''));
+
     $privacy = trim((string)($g['dbGames_Privacy'] ?? 'Club'));
     if ($privacy === '') $privacy = 'Club';
-    $isAdminSelf = ($admin !== '' && $admin === $userGHIN);
-    $isPlayable = ($ggid !== '' && !empty($myGGIDs[$ggid]));
-    $isBuddy = ($admin !== '' && !empty($buddyAdmins[$admin]));
-    $visible = false;
-    if ($privacy === 'Club') $visible = true;
-    elseif ($privacy === 'Only Me') $visible = $isAdminSelf;
-    elseif ($privacy === 'Players') $visible = $isPlayable || $isAdminSelf;
-    elseif ($privacy === 'Buddies') $visible = $isBuddy || $isAdminSelf;
+
+    // Legacy compatibility: "Players" is retired; treat it as "Club"
+    if ($privacy === 'Players') $privacy = 'Club';
+
+    // Canonical game club field (fallback chain for compatibility)
+    $gameClubId = trim((string)(
+      $g['dbGames_AdminClubID'] ??
+      $g['dbGames_ClubID'] ??
+      $g['dbGames_ClubId'] ??
+      ''
+    ));
+
+    // Core relation flags
+    $isAdminSelf  = ($admin !== '' && $admin === $userGHIN);
+    $isEnrolled   = ($ggid !== '' && !empty($myGGIDs[$ggid])); // enrollment overrides privacy
+    $isBuddyAdmin = ($admin !== '' && !empty($buddyAdmins[$admin]));
+    $isSameClub   = ($gameClubId !== '' && $userClubId !== '' && $gameClubId === $userClubId);
+
+    // Visibility decision (security gate)
+    $allowByAdmin = $isAdminSelf;
+    $allowByEnrollment = $isEnrolled;
+    $allowByClubPrivacy = false;
+
+    if ($isSameClub) {
+      if ($privacy === 'Club') {
+        $allowByClubPrivacy = true;
+      } elseif ($privacy === 'Buddies') {
+        $allowByClubPrivacy = $isBuddyAdmin;
+      } elseif ($privacy === 'Only Me') {
+        $allowByClubPrivacy = false;
+      } else {
+        // Safe default for unknown privacy values
+        $allowByClubPrivacy = false;
+      }
+    }
+
+    $visible = ($allowByAdmin || $allowByEnrollment || $allowByClubPrivacy);
     if (!$visible) continue;
+
     $playDate = substr((string)($g['dbGames_PlayDate'] ?? ''), 0, 10);
     $isCurrent = ($playDate !== '' && $playDate >= $todayYmd);
+
     $daysUntil = null;
-    if ($playDate !== '') { try { $daysUntil = (int)((new DateTimeImmutable('today'))->diff(new DateTimeImmutable($playDate))->format('%r%a')); } catch (Throwable $e) { $daysUntil = null; } }
+    if ($playDate !== '') {
+      try {
+        $daysUntil = (int)((new DateTimeImmutable('today'))->diff(new DateTimeImmutable($playDate))->format('%r%a'));
+      } catch (Throwable $e) {
+        $daysUntil = null;
+      }
+    }
+
     $stats = $statsByGGID[$ggid] ?? null;
     $playerCount = (int)($stats['cnt'] ?? 0);
+
     $teeTimeCnt = (int)($g['dbGames_TeeTimeCnt'] ?? 0);
     $slotCount = max(0, $teeTimeCnt * 4);
+
     $registrationStatus = 'Open';
     if (!$isCurrent) $registrationStatus = 'Closed';
     elseif ($daysUntil !== null && $daysUntil < 3) $registrationStatus = 'Locked';
     elseif ($slotCount > 0 && $playerCount >= $slotCount) $registrationStatus = 'Full';
+
     $playerHIStats = 'No Data';
     if ($stats && $stats['min_hi'] !== null && $stats['avg_hi'] !== null && $stats['max_hi'] !== null) {
-      $playerHIStats = number_format((float)$stats['min_hi'], 1) . ' / ' . number_format((float)$stats['avg_hi'], 1) . ' / ' . number_format((float)$stats['max_hi'], 1);
+      $playerHIStats =
+        number_format((float)$stats['min_hi'], 1) . ' / ' .
+        number_format((float)$stats['avg_hi'], 1) . ' / ' .
+        number_format((float)$stats['max_hi'], 1);
     }
-    $vm[] = ['ggid' => $ggid, 'title' => (string)($g['dbGames_Title'] ?? 'Game'), 'playDate' => $playDate, 'playTimeText' => substr((string)($g['dbGames_PlayTime'] ?? ''), 0, 5), 'courseName' => (string)($g['dbGames_CourseName'] ?? ''), 'facilityName' => (string)($g['dbGames_FacilityName'] ?? ''), 'adminName' => (string)($g['dbGames_AdminName'] ?? ''), 'privacy' => $privacy, 'playerCount' => $playerCount, 'playerHIStats' => $playerHIStats, 'yourTeeTime' => (string)($myTeeByGGID[$ggid] ?? ''), 'isRegistered' => $isRegistered, 'enrollmentStatus' => $isRegistered ? 'Registered' : 'Not Registered', 'registrationStatus' => $registrationStatus, 'holes' => (string)($g['dbGames_Holes'] ?? ''), 'teeTimeCnt' => $teeTimeCnt];
+
+    $vm[] = [
+      'ggid' => $ggid,
+      'title' => (string)($g['dbGames_Title'] ?? 'Game'),
+      'playDate' => $playDate,
+      'playTimeText' => substr((string)($g['dbGames_PlayTime'] ?? ''), 0, 5),
+      'courseName' => (string)($g['dbGames_CourseName'] ?? ''),
+      'facilityName' => (string)($g['dbGames_FacilityName'] ?? ''),
+      'adminName' => (string)($g['dbGames_AdminName'] ?? ''),
+      'privacy' => $privacy,
+      'playerCount' => $playerCount,
+      'playerHIStats' => $playerHIStats,
+      'yourTeeTime' => (string)($myTeeByGGID[$ggid] ?? ''),
+
+      // FIX: use $isEnrolled (was undefined $isRegistered)
+      'isRegistered' => $isEnrolled,
+      'enrollmentStatus' => $isEnrolled ? 'Registered' : 'Not Registered',
+
+      'registrationStatus' => $registrationStatus,
+      'holes' => (string)($g['dbGames_Holes'] ?? ''),
+      'teeTimeCnt' => $teeTimeCnt,
+    ];
+
     $rawVisible[] = $g;
   }
 
