@@ -747,259 +747,30 @@ function wireFiltersModal() {
     if (panelAdmin) panelAdmin.classList.toggle('is-active', !isDate);
   }
 
-  // ------------------------------------------------------------
-  // Inline calendar (legacy UX replication)
-  // ------------------------------------------------------------
+  // ---- Native date pickers only ----
   const dateFromEl = document.getElementById('dateFrom');
-  const dateToEl = document.getElementById('dateTo');
+  const dateToEl   = document.getElementById('dateTo');
   const btnPickFrom = document.getElementById('btnPickFrom');
-  const btnPickTo = document.getElementById('btnPickTo');
+  const btnPickTo   = document.getElementById('btnPickTo');
 
+  // Hide old custom calendar container if it exists in the modal HTML
   const calWrap = document.getElementById('calWrap');
-  const calHint = document.getElementById('calHint');
-  const calPrev = document.getElementById('calPrev');
-  const calNext = document.getElementById('calNext');
-  const calToday = document.getElementById('calToday');
-  const calMonthLabel = document.getElementById('calMonthLabel');
-  const calGrid = document.getElementById('calGrid');
-
-  let activeTarget = 'from'; // 'from' | 'to'
-  let viewMonth = null; // Date at first of month
-
-  const pad2 = (n) => String(n).padStart(2, '0');
-
-  function toISODate(d) {
-    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-  }
-
-  function parseISODate(s) {
-    // expects YYYY-MM-DD
-    if (!s || typeof s !== 'string') return null;
-    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
-    if (!m) return null;
-    const y = Number(m[1]);
-    const mo = Number(m[2]);
-    const da = Number(m[3]);
-    const d = new Date(y, mo - 1, da);
-    // guard against JS date rollover
-    if (d.getFullYear() !== y || d.getMonth() !== mo - 1 || d.getDate() !== da) return null;
-    return d;
-  }
-
-  function monthStart(d) {
-    return new Date(d.getFullYear(), d.getMonth(), 1);
-  }
-
-  function addMonths(d, delta) {
-    return new Date(d.getFullYear(), d.getMonth() + delta, 1);
-  }
-
-  function sameDay(a, b) {
-    return (
-      a &&
-      b &&
-      a.getFullYear() === b.getFullYear() &&
-      a.getMonth() === b.getMonth() &&
-      a.getDate() === b.getDate()
-    );
-  }
-
-  function ensureCalendarOpen() {
-    if (!calWrap) return;
-    calWrap.classList.add('open');
-    calWrap.setAttribute('aria-hidden', 'false');
-  }
-
-  function closeCalendar() {
-    if (!calWrap) return;
-    calWrap.classList.remove('open');
+  if (calWrap) {
+    calWrap.style.display = 'none';
     calWrap.setAttribute('aria-hidden', 'true');
   }
 
-  function setHint() {
-    if (!calHint) return;
-    calHint.textContent = activeTarget === 'from' ? 'Select From Date' : 'Select To Date';
-  }
-
-  function setViewMonthFromInputs() {
-    const fromD = parseISODate(dateFromEl?.value);
-    const toD = parseISODate(dateToEl?.value);
-
-    const basis = (activeTarget === 'from' ? fromD : toD) || fromD || toD || new Date();
-    viewMonth = monthStart(basis);
-  }
-
-  function setMonthLabel() {
-    if (!calMonthLabel || !viewMonth) return;
-    const monthName = viewMonth.toLocaleString(undefined, { month: 'long' });
-    calMonthLabel.textContent = `${monthName} ${viewMonth.getFullYear()}`;
-  }
-
-  function clearGrid() {
-    if (!calGrid) return;
-    calGrid.innerHTML = '';
-  }
-
-  function renderCalendar() {
-    if (!calGrid || !viewMonth) return;
-
-    clearGrid();
-    setMonthLabel();
-    setHint();
-
-    const fromD = parseISODate(dateFromEl?.value);
-    const toD = parseISODate(dateToEl?.value);
-
-    const first = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1);
-    const firstDow = first.getDay(); // 0..6 (Sun..Sat)
-    const start = new Date(first);
-    start.setDate(first.getDate() - firstDow); // start on Sunday
-
-    // 6 weeks grid = 42 cells (legacy-style stable layout)
-    for (let i = 0; i < 42; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-
-      const cell = document.createElement('button');
-      cell.type = 'button';
-      cell.className = 'maCalDay';
-      cell.textContent = String(d.getDate());
-      cell.dataset.iso = toISODate(d);
-
-      // in-month styling
-      if (d.getMonth() !== viewMonth.getMonth()) {
-        cell.classList.add('muted');
-      }
-
-      // selected endpoints
-      if (sameDay(d, fromD) || sameDay(d, toD)) {
-        cell.classList.add('selected');
-      }
-
-      // in-range shading (exclusive of endpoints)
-      if (fromD && toD) {
-        const t = d.getTime();
-        const a = fromD.getTime();
-        const b = toD.getTime();
-        const lo = Math.min(a, b);
-        const hi = Math.max(a, b);
-        if (t > lo && t < hi) {
-          cell.classList.add('inRange');
-        }
-      }
-
-      cell.addEventListener('click', () => {
-        onPickDay(d);
-      });
-
-      calGrid.appendChild(cell);
-    }
-  }
-
-  function onPickDay(d) {
-    const iso = toISODate(d);
-
-    // current values
-    const fromD = parseISODate(dateFromEl?.value);
-    const toD = parseISODate(dateToEl?.value);
-
-    if (activeTarget === 'from') {
-      // set From
-      if (dateFromEl) dateFromEl.value = iso;
-
-      // legacy rule: if From > To then clear To
-      if (toD && d.getTime() > toD.getTime()) {
-        if (dateToEl) dateToEl.value = '';
-      }
-
-      // after picking From, next target is To
-      activeTarget = 'to';
-      setHint();
-    } else {
-      // set To
-      if (dateToEl) dateToEl.value = iso;
-
-      // legacy rule: if To < From then swap
-      const newFrom = parseISODate(dateFromEl?.value);
-      const newTo = parseISODate(dateToEl?.value);
-      if (newFrom && newTo && newTo.getTime() < newFrom.getTime()) {
-        if (dateFromEl) dateFromEl.value = toISODate(newTo);
-        if (dateToEl) dateToEl.value = toISODate(newFrom);
-      }
-
-      // after picking To, remain on To (matches legacy feel)
-      activeTarget = 'to';
-      setHint();
-    }
-
-    // keep calendar on the same month unless user navigates
-    renderCalendar();
-  }
-
-  function openCalendarFor(target) {
-    activeTarget = target;
-    ensureCalendarOpen();
-    setViewMonthFromInputs();
-    renderCalendar();
-  }
-
-  // Calendar controls
-  if (calPrev) {
-    calPrev.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (!viewMonth) setViewMonthFromInputs();
-      viewMonth = addMonths(viewMonth || new Date(), -1);
-      renderCalendar();
-    });
-  }
-
-  if (calNext) {
-    calNext.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (!viewMonth) setViewMonthFromInputs();
-      viewMonth = addMonths(viewMonth || new Date(), 1);
-      renderCalendar();
-    });
-  }
-
-  if (calToday) {
-    calToday.addEventListener('click', (e) => {
-      e.preventDefault();
-      const t = new Date();
-      viewMonth = monthStart(t);
-      onPickDay(t);
-      renderCalendar();
-    });
-  }
-
-  // picker buttons open the legacy inline calendar (not native picker)
+  // Icon buttons open the native <input type="date"> picker
   if (btnPickFrom) {
     btnPickFrom.addEventListener('click', (e) => {
       e.preventDefault();
-      openCalendarFor('from');
+      if (dateFromEl) { dateFromEl.focus(); dateFromEl.click(); }
     });
   }
-
   if (btnPickTo) {
     btnPickTo.addEventListener('click', (e) => {
       e.preventDefault();
-      openCalendarFor('to');
-    });
-  }
-
-  // if user focuses the input directly, also open the inline calendar (legacy-friendly)
-  if (dateFromEl) {
-    dateFromEl.addEventListener('focus', () => openCalendarFor('from'));
-    dateFromEl.addEventListener('change', () => {
-      setViewMonthFromInputs();
-      renderCalendar();
-    });
-  }
-  if (dateToEl) {
-    dateToEl.addEventListener('focus', () => openCalendarFor('to'));
-    dateToEl.addEventListener('change', () => {
-      setViewMonthFromInputs();
-      renderCalendar();
+      if (dateToEl) { dateToEl.focus(); dateToEl.click(); }
     });
   }
 
@@ -1036,7 +807,7 @@ function wireFiltersModal() {
     updateOverlayLock(); ////Scrolling
 
     // calendar starts closed until user hits a picker (matches legacy look)
-    closeCalendar();
+    //closeCalendar();
   };
 
   const closeModal = (revert = true) => {
@@ -1047,7 +818,7 @@ function wireFiltersModal() {
 
     }
 
-    closeCalendar();
+    //closeCalendar();
     modalOverlay.classList.remove('is-open');
     updateOverlayLock();
     modalOverlay.setAttribute('aria-hidden', 'true');
