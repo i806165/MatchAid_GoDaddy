@@ -486,97 +486,46 @@
       if (panelAdmin) panelAdmin.classList.toggle('is-active', !isDate);
     }
 
-    // Inline Calendar Logic
+    // ---- Native date pickers only (remove custom calendar) ----
     const dateFromEl = document.getElementById('dateFrom');
-    const dateToEl = document.getElementById('dateTo');
+    const dateToEl   = document.getElementById('dateTo');
     const btnPickFrom = document.getElementById('btnPickFrom');
-    const btnPickTo = document.getElementById('btnPickTo');
+    const btnPickTo   = document.getElementById('btnPickTo');
+
+    // Optional: hide the old custom calendar container if it still exists in the HTML
     const calWrap = document.getElementById('calWrap');
-    const calGrid = document.getElementById('calGrid');
-    const calMonthLabel = document.getElementById('calMonthLabel');
-    const calPrev = document.getElementById('calPrev');
-    const calNext = document.getElementById('calNext');
-    const calToday = document.getElementById('calToday');
+    if (calWrap) {
+      calWrap.style.display = 'none';
+      calWrap.setAttribute('aria-hidden', 'true');
+    }
 
-    let activeTarget = 'from';
-    let viewMonth = null;
+    // Icon buttons should open the native <input type="date"> picker
+    if (btnPickFrom) btnPickFrom.onclick = (e) => {
+      e.preventDefault();
+      if (dateFromEl) { dateFromEl.focus(); dateFromEl.click(); }
+    };
 
-    function ensureCalendarOpen() { if (calWrap) { calWrap.classList.add('open'); calWrap.setAttribute('aria-hidden', 'false'); } }
-    function closeCalendar() { if (calWrap) { calWrap.classList.remove('open'); calWrap.setAttribute('aria-hidden', 'true'); } }
+    if (btnPickTo) btnPickTo.onclick = (e) => {
+      e.preventDefault();
+      if (dateToEl) { dateToEl.focus(); dateToEl.click(); }
+    };
     
-    function setViewMonthFromInputs() {
-      const fromD = parseYmd(dateFromEl?.value);
-      const toD = parseYmd(dateToEl?.value);
-      const basis = (activeTarget === 'from' ? fromD : toD) || fromD || toD || new Date();
-      viewMonth = new Date(basis.getFullYear(), basis.getMonth(), 1);
-    }
+    // ---- Native date pickers only ----
+    // Icon buttons should just focus/click the native <input type="date">.
+    if (btnPickFrom) btnPickFrom.onclick = (e) => {
+      e.preventDefault();
+      dateFromEl?.focus();
+      dateFromEl?.click();
+    };
 
-    function renderCalendar() {
-      if (!calGrid || !viewMonth) return;
-      calGrid.innerHTML = '';
-      if (calMonthLabel) calMonthLabel.textContent = viewMonth.toLocaleString(undefined, { month: 'long', year: 'numeric' });
+    if (btnPickTo) btnPickTo.onclick = (e) => {
+      e.preventDefault();
+      dateToEl?.focus();
+      dateToEl?.click();
+    };
 
-      const fromD = parseYmd(dateFromEl?.value);
-      const toD = parseYmd(dateToEl?.value);
-      const start = new Date(viewMonth);
-      start.setDate(1 - start.getDay()); // Start on Sunday
-
-      for (let i = 0; i < 42; i++) {
-        const d = new Date(start);
-        d.setDate(start.getDate() + i);
-        const iso = toYmdLocal(d);
-        
-        const cell = document.createElement('button');
-        cell.type = 'button';
-        cell.className = 'maCalDay';
-        cell.textContent = String(d.getDate());
-        if (d.getMonth() !== viewMonth.getMonth()) cell.classList.add('muted');
-        
-        // Selection logic
-        const t = d.getTime();
-        const fT = fromD ? fromD.getTime() : null;
-        const tT = toD ? toD.getTime() : null;
-        
-        if ((fT && t === fT) || (tT && t === tT)) cell.classList.add('selected');
-        else if (fT && tT && t > Math.min(fT, tT) && t < Math.max(fT, tT)) cell.classList.add('inRange');
-
-        cell.onclick = (e) => {
-          e.preventDefault();
-          if (activeTarget === 'from') {
-            if (dateFromEl) dateFromEl.value = iso;
-            if (toD && d > toD) if (dateToEl) dateToEl.value = ''; // Reset to if invalid
-            activeTarget = 'to';
-          } else {
-            if (dateToEl) dateToEl.value = iso;
-            const newFrom = parseYmd(dateFromEl?.value);
-            if (newFrom && d < newFrom) {
-              if (dateFromEl) dateFromEl.value = iso;
-              if (dateToEl) dateToEl.value = toYmdLocal(newFrom);
-            }
-          }
-          renderCalendar();
-        };
-        calGrid.appendChild(cell);
-      }
-    }
-
-    // Calendar Controls
-    if (calPrev) calPrev.onclick = (e) => { e.preventDefault(); viewMonth.setMonth(viewMonth.getMonth() - 1); renderCalendar(); };
-    if (calNext) calNext.onclick = (e) => { e.preventDefault(); viewMonth.setMonth(viewMonth.getMonth() + 1); renderCalendar(); };
-    if (calToday) calToday.onclick = (e) => { e.preventDefault(); viewMonth = new Date(); viewMonth.setDate(1); renderCalendar(); };
-
-    if (btnPickFrom) btnPickFrom.onclick = (e) => { e.preventDefault(); activeTarget = 'from'; ensureCalendarOpen(); setViewMonthFromInputs(); renderCalendar(); };
-    if (btnPickTo) btnPickTo.onclick = (e) => { e.preventDefault(); activeTarget = 'to'; ensureCalendarOpen(); setViewMonthFromInputs(); renderCalendar(); };
-    
-    if (dateFromEl) {
-      dateFromEl.onfocus = () => { activeTarget = 'from'; ensureCalendarOpen(); };
-      dateFromEl.onchange = () => { setViewMonthFromInputs(); renderCalendar(); };
-    }
-    if (dateToEl) {
-      dateToEl.onfocus = () => { activeTarget = 'to'; ensureCalendarOpen(); };
-      dateToEl.onchange = () => { setViewMonthFromInputs(); renderCalendar(); };
-    }
-
+    // No custom calendar open/render on focus/change.
+    // Leave onchange alone only if you need to validate ranges; otherwise omit entirely.
     // Modal Open/Close
     let pendingFrom = '';
     let pendingTo = '';
@@ -599,7 +548,7 @@
       modalOverlay.style.display = 'flex';
       modalOverlay.setAttribute('aria-hidden', 'false');
       document.documentElement.classList.add('maOverlayOpen');
-      closeCalendar();
+      //closeCalendar();
     };
 
     const closeModal = (revert = true) => {
@@ -608,7 +557,7 @@
         if (dateToEl) dateToEl.value = pendingTo;
         state.uiFilters.selectedAdminKeys = [...pendingSelectedKeys];
       }
-      closeCalendar();
+      //closeCalendar();
       modalOverlay.style.display = 'none';
       modalOverlay.setAttribute('aria-hidden', 'true');
       document.documentElement.classList.remove('maOverlayOpen');
