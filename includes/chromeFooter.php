@@ -113,7 +113,7 @@
     
     <button class="maNavBtn" data-nav="import" aria-label="Import Games">
       <span class="maNavIcon" aria-hidden="true">⭳</span>
-      <span class="maNavLabel">Import</span>
+      <span class="maNavLabel">Import Games</span>
     </button>
   </nav>
 </footer>
