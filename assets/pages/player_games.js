@@ -281,11 +281,10 @@
   function openActionsMenu(openFiltersFn) {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     const items = [
-      { label: "My Schedule (Registered)", action: () => applyQuickPreset("MYSCHEDULE") },
-      { label: "Favorites (High Interest)", action: () => applyQuickPreset("FAVORITES") },
-      { label: "Open Games (All Available)", action: () => applyQuickPreset("OPEN") },
-      { separator: true },
-      { label: "History (Played)", action: () => applyQuickPreset("HISTORY") },
+      { label: "My Upcoming Games", action: () => applyQuickPreset("MYSCHEDULE") },
+      { label: "Games from Favorite Admins", action: () => applyQuickPreset("FAVORITES") },
+      { label: "All Available Games", action: () => applyQuickPreset("OPEN") },
+      { label: "My Past Games Played", action: () => applyQuickPreset("HISTORY") },
       { separator: true },
       { label: "Advanced Filters…", action: () => { if (typeof openFiltersFn === "function") openFiltersFn(); } }
     ];
