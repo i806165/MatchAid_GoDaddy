@@ -48,6 +48,9 @@ try {
     header("Location: " . MA_ROUTE_LOGIN);
     exit;
   }
+
+  // Add portal context for JS-driven UI changes
+  $initPayload['portal'] = $_SESSION['SessionPortal'] ?? 'ADMIN PORTAL';
 } catch (Throwable $e) {
   Logger::error("GAMESUMMARY_INIT_FAIL", ["err" => $e->getMessage()]);
   header("Location: " . MA_ROUTE_LOGIN);

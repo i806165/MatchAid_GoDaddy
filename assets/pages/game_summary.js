@@ -16,7 +16,8 @@
   const state = {
     scope: "byPlayer", // byPlayer | byGroup
     game: null,
-    roster: []
+    roster: [],
+    portal: ""
   };
 
   // ---- DOM ----
@@ -730,6 +731,7 @@
     if (!init || !init.ok) throw new Error(init?.message || "Init failed");
     state.game = init.game || init.payload?.game || null;
     state.roster = init.roster || init.payload?.roster || [];
+    state.portal = init.portal || init.payload?.portal || "";
   }
 
   function wireEvents() {
@@ -788,8 +790,13 @@
     }
 
     if (chrome && typeof chrome.setBottomNav === "function") {
+      const isPlayer = (state.portal === "PLAYER PORTAL");
+      const visible = isPlayer 
+        ? ["player", "roster", "summary"] 
+        : ["admin", "edit", "roster", "pairings", "teetimes", "summary"];
+
       chrome.setBottomNav({
-        visible: ["admin", "edit", "roster", "pairings", "teetimes", "summary"],
+        visible: visible,
         active: "summary",
         onNavigate: (id) => (typeof MA.routerGo === "function" ? MA.routerGo(id) : null),
       });
