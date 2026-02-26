@@ -49,6 +49,36 @@
       <span class="maNavLabel">Admin Games</span>
     </button>
 
+    <button type="button" class="maNavBtn" data-nav="player" aria-label="Player">
+      <span class="maNavIcon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" aria-hidden="true">
+          <!-- Scorecard sheet -->
+          <path d="M7.5 3.5h8.8c1.1 0 2 .9 2 2v13.2c0 1.1-.9 2-2 2H7.5c-1.1 0-2-.9-2-2V5.5c0-1.1.9-2 2-2z"></path>
+
+          <!-- Binding/notch cutout -->
+          <path d="M9.1 3.5h5.6c-.2 1.2-1.3 2.1-2.8 2.1s-2.6-.9-2.8-2.1z" fill="white"></path>
+
+          <!-- Header row cutout -->
+          <rect x="7.6" y="7.0" width="8.6" height="1.1" rx=".55" fill="white"></rect>
+
+          <!-- Grid cutouts (2 columns x 3 rows) -->
+          <rect x="7.9" y="9.1" width="3.8" height="2.0" rx=".35" fill="white"></rect>
+          <rect x="12.2" y="9.1" width="3.8" height="2.0" rx=".35" fill="white"></rect>
+
+          <rect x="7.9" y="11.6" width="3.8" height="2.0" rx=".35" fill="white"></rect>
+          <rect x="12.2" y="11.6" width="3.8" height="2.0" rx=".35" fill="white"></rect>
+
+          <rect x="7.9" y="14.1" width="3.8" height="2.0" rx=".35" fill="white"></rect>
+          <rect x="12.2" y="14.1" width="3.8" height="2.0" rx=".35" fill="white"></rect>
+
+          <!-- Pencil (optional accent) -->
+          <path d="M16.2 15.9l1.9-1.9 1.2 1.2-1.9 1.9-.9.2.2-.9z" fill="white"></path>
+          <path d="M17.5 13.6l.7-.7c.2-.2.5-.2.7 0l.6.6c.2.2.2.5 0 .7l-.7.7-1.3-1.3z" fill="white"></path>
+        </svg>
+      </span>
+      <span class="maNavLabel">Player Games</span>
+    </button>
+
     <button type="button" class="maNavBtn" data-nav="edit" aria-label="Edit">
       <span class="maNavIcon" aria-hidden="true">✎</span>
       <span class="maNavLabel">Edit</span>
@@ -84,35 +114,6 @@
     <button class="maNavBtn" data-nav="import" aria-label="Import Games">
       <span class="maNavIcon" aria-hidden="true">⭳</span>
       <span class="maNavLabel">Import</span>
-    </button>
-
-    <button type="button" class="maNavBtn" data-nav="player" aria-label="Player">
-      <span class="maNavIcon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor" aria-hidden="true">
-          <!-- visor -->
-          <path d="M8.2 4.8c1-.9 2.4-1.4 3.9-1.4 2.1 0 3.9 1 4.8 2.7h-2.4c-.7-.6-1.6-.9-2.6-.9-1.1 0-2.1.4-2.9 1.1L8.2 4.8z"></path>
-          <path d="M8.9 6.4h7c-.4 1.1-1.8 1.8-3.6 1.8-1.9 0-3.1-.7-3.4-1.8z"></path>
-
-          <!-- head -->
-          <circle cx="12.2" cy="9" r="2.4"></circle>
-
-          <!-- body -->
-          <path d="M7.2 19.4c.6-3 2.6-4.8 5-4.8 1.4 0 2.7.6 3.6 1.7l-1.5 1.2c-.6-.7-1.3-1.1-2.1-1.1-1.4 0-2.7 1.1-3.2 3H7.8c-.4 0-.7-.4-.6-.8z"></path>
-
-          <!-- clipboard (filled) -->
-          <rect x="16.3" y="12.3" width="4.2" height="6" rx="0.8"></rect>
-          <!-- clipboard clip cutout -->
-          <path d="M17.6 12.2c0-.5.4-.9.9-.9h.2c.5 0 .9.4.9.9v.7h-2v-.7z" fill="white"></path>
-          <!-- clipboard lines cutout -->
-          <rect x="17.3" y="14.6" width="2.2" height=".45" rx=".2" fill="white"></rect>
-          <rect x="17.3" y="16.0" width="2.2" height=".45" rx=".2" fill="white"></rect>
-
-          <!-- captain shoulder badge -->
-          <circle cx="8.2" cy="14.3" r="1.35"></circle>
-          <path d="M8.65 13.8a.55.55 0 1 0 0 .9" fill="white"></path>
-        </svg>
-      </span>
-      <span class="maNavLabel">Player Games</span>
     </button>
   </nav>
 </footer>
