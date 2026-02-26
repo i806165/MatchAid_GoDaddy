@@ -317,6 +317,299 @@ body {
   text-overflow: ellipsis;
 }
 
+/* ======================================================================
+   SHARED FORM FIELDS & CALENDAR
+   (Moved from admin_games_list.css for reuse in Player Portal)
+   ====================================================================== */
+
+/* Field layout */
+.maFieldRow{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.maField{
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.maLabel{
+  display: block;
+  margin: 0 0 6px 2px;
+  font-size: var(--labelTextSize);
+  font-weight: 900;
+  color: var(--mutedText);
+}
+
+.maInputWrap{
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.maTextInput{
+  width: 100%;
+  min-height: var(--btnHeight);
+  padding: 0 12px;
+  border-radius: var(--controlRadius);
+  border: 1px solid var(--controlBorder);
+  background: #fff;
+  color: var(--ink);
+  font-family: var(--fontFamilyBase);
+  font-size: var(--inputTextSize);
+  font-weight: 800;
+  outline: none;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.maTextInput:focus{
+  border-color: var(--brandSecondary);
+  box-shadow: 0 0 0 3px rgba(0,0,0,.06);
+}
+
+/* Calendar */
+.maCalWrap{
+  display: none; /* opened by JS with .open */
+  margin-top: 12px;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--radiusLg);
+  overflow: hidden;
+  background: #fff;
+}
+
+.maCalWrap.open{ display: block; }
+
+.maCalHeader{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--panelHdrBg);
+  color: var(--panelHdrText);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+
+.maCalHint{
+  font-size: 12px;
+  font-weight: 900;
+  opacity: .95;
+}
+
+.maCalLeft{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.maCalMonthLabel{
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  padding: 0 6px;
+}
+
+.maCalNavBtn{
+  min-width: 40px;
+}
+
+.maCalMiniBtn{
+  padding: 0 10px;
+}
+
+.maCalRight{ display: none; } /* legacy pills kept in DOM */
+
+.maCalDow{
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  padding: 10px 10px 0 10px;
+  color: var(--mutedText);
+  font-weight: 900;
+  font-size: 11px;
+}
+
+.maCalGrid{
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  padding: 10px;
+}
+
+.maCalDay{
+  min-height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--borderSubtle);
+  background: var(--cardBg);
+  color: var(--ink);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.maCalDay:hover{
+  background: var(--pressedBg);
+}
+
+.maCalDay.muted{
+  opacity: .45;
+}
+
+.maCalDay.today{
+  border-color: var(--brandSecondary);
+}
+
+.maCalDay.selected{
+  background: var(--brandSecondary);
+  border-color: var(--brandSecondary);
+  color: #fff;
+}
+
+.maCalDay.inRange{
+  background: rgba(48, 110, 230, .10);
+  border-color: rgba(48, 110, 230, .10);
+}
+
+.maCalDay.from,
+.maCalDay.to{
+  background: var(--brandSecondary);
+  border-color: var(--brandSecondary);
+  color: #fff;
+}
+
+/* Modal footer actions */
+.maModal__ftrActions{
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  align-items: center;
+  width: 100%;
+}
+
+/* Admin picker list (in Filters modal) */
+.maAdminPick__top{
+  margin-top: 12px;
+}
+
+.maAdminPick{
+  margin-top: 10px;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--radiusLg);
+  overflow: hidden;
+  background: #fff;
+}
+
+.maAdminPick__hdr{
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  background: var(--panelHdrBg);
+  color: var(--panelHdrText);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+
+.maAdminPick__hdrBtn{
+  height: 36px;
+  width: 44px;
+  border: 1px solid rgba(255,255,255,.25);
+  background: rgba(255,255,255,.10);
+  border-radius: 12px;
+  color: inherit;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.maAdminPick__hdrBtn:hover{
+  background: rgba(255,255,255,.18);
+}
+
+.maAdminPick__hdrName{
+  font-weight: 900;
+  letter-spacing: .2px;
+}
+
+.maAdminPick__rows{
+  max-height: 360px;
+  overflow: auto;
+}
+
+.maAdminRow{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--borderSubtle);
+  cursor: pointer;
+  user-select: none;
+}
+
+.maAdminRow:hover{
+  background: var(--pressedBg);
+}
+
+.maAdminRow__left{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.maAdminRow__check{
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  border: 1px solid var(--borderSubtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--mutedText);
+  flex: 0 0 auto;
+}
+
+.maAdminRow__check.on{
+  background: var(--brandSecondary);
+  border-color: var(--brandSecondary);
+  color: #fff;
+}
+
+.maAdminRow__name{
+  font-weight: 900;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.maAdminRow__right{
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.maAdminRow__heart{
+  font-size: 18px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  color: var(--mutedText);
+  cursor: pointer;
+}
+
+.maAdminRow__heart:hover{
+  background: var(--pressedBg);
+}
+
+.maAdminRow__heart.on{
+  color: var(--danger);
+}
+
 
 /* Footer shell */
 .maChrome__ftr{

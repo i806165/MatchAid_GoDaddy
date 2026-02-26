@@ -95,10 +95,6 @@
   min-height: var(--btnHeight);
 }
 
-/* Reuse admin picker styles if ma_shared has them; add local fallback spacing only */
-.maAdminPick__top{ margin-top: 12px; }
-.maAdminPick{ margin-top:10px; border:1px solid var(--borderSubtle); border-radius: var(--radiusLg); overflow:hidden; background:#fff; }
-
 @media (max-width: 520px){
   .maPlayerGameCard__line2,
   .maPlayerGameCard__line3{ align-items:flex-start; }

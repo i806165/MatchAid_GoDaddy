@@ -314,16 +314,20 @@
     el.adminRows.innerHTML = '';
     admins.forEach(a => {
       const row = document.createElement('div');
-      row.className = 'maAdminPick__row';
+      row.className = 'maAdminRow';
       row.dataset.key = String(a.key || a.adminKey || '');
       const key = row.dataset.key;
       const checked = selected.has(key);
       row.innerHTML = `
-        <button type="button" class="maAdminPick__check" aria-label="Toggle select">${checked ? '☑' : '☐'}</button>
-        <div class="maAdminPick__name">${esc(a.name || a.adminName || key)}</div>
-        <button type="button" class="maAdminPick__fav ${a.isFavorite ? 'is-on':''}" aria-label="Toggle favorite">♥</button>`;
+        <div class="maAdminRow__left">
+          <div class="maAdminRow__check ${checked ? 'on' : ''}">${checked ? '✓' : ''}</div>
+          <div class="maAdminRow__name">${esc(a.name || a.adminName || key)}</div>
+        </div>
+        <div class="maAdminRow__right">
+          <div class="maAdminRow__heart ${a.isFavorite ? 'on':''}" data-heart="1" aria-label="Toggle favorite">${a.isFavorite ? '♥' : '♡'}</div>
+        </div>`;
       row.addEventListener('click', async (e) => {
-        const favBtn = e.target.closest('.maAdminPick__fav');
+        const favBtn = e.target.closest('[data-heart="1"]');
         if (favBtn) {
           e.stopPropagation();
           await toggleFavoriteAdmin(a);
