@@ -170,6 +170,16 @@
     return null;
   }
 
+  function applyTeeTimeDefaults() {
+    if (isShotgun()) return;
+    const holes = String(state.game?.dbGames_Holes || state.meta?.holesSetting || "").toLowerCase();
+    const def = (holes === "b9" || holes === "back" || holes === "back 9") ? "10" : "1";
+    
+    for (const g of state.groups) {
+      if (!g.startHole) g.startHole = def;
+    }
+  }
+
   // ---- Assignments ----
   function assignTime(groupId, time) {
     const g = state.groups.find((x) => String(x.id) === String(groupId));
@@ -584,6 +594,7 @@
 
     state.groups = sortForDisplay(state.groups || []);
     snapshotOriginal();
+    applyTeeTimeDefaults();
     applyChrome();
     render();
   }

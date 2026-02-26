@@ -48,7 +48,8 @@ try {
       "userState" => (string)($_SESSION["SessionUserState"] ?? ""),
       "userGHIN" => (string)($_SESSION["SessionGHINLogonID"] ?? ""),
       "userName" => (string)($_SESSION["SessionUserName"] ?? $_SESSION["SessionGHINUserName"] ?? ""),
-    ]
+    ],
+    "portal" => $_SESSION['SessionPortal'] ?? 'ADMIN PORTAL'
   ];
 } catch (Throwable $e) {
   Logger::error("GAMEPLAYERS_INIT_FAIL", [

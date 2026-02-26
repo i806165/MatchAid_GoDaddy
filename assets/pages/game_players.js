@@ -12,6 +12,7 @@
     activeTab: "roster",
     game: init.game || {},
     context: init.context || {},
+    portal: init.portal || "",
     players: [],
     favorites: [],
     groups: [],
@@ -121,7 +122,12 @@
       });
     }
     if (MA.chrome && MA.chrome.setBottomNav) {
-      MA.chrome.setBottomNav({ visible:["admin","edit","roster","pairings","teetimes","summary"], active:"roster", onNavigate:(id)=>MA.routerGo(id) });
+      const isPlayer = (state.portal === "PLAYER PORTAL");
+      const visible = isPlayer 
+        ? ["player", "roster", "summary"] 
+        : ["admin", "edit", "roster", "pairings", "teetimes", "summary"];
+
+      MA.chrome.setBottomNav({ visible: visible, active:"roster", onNavigate:(id)=>MA.routerGo(id) });
     }
   }
 
