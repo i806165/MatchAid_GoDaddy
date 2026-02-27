@@ -75,6 +75,11 @@
   }
   function cloneFilters(f){ return normalizeFilters(JSON.parse(JSON.stringify(f))); }
 
+  function getUserCtx() {
+  // Player portal canonical: user info is hydrated under init.context (Admin parity)
+    return (init && init.context) ? init.context : (init && init.user ? init.user : {});
+  }
+
   function setStatus(msg, level){
     if (typeof MA.setStatus === 'function') return MA.setStatus(msg || '', level || '');
     if (el.status) el.status.textContent = msg || '';
@@ -436,25 +441,26 @@
     if (action === 'register') {
       // In-Place Registration
       if (MA.TeeSetSelection) {
-        const user = init.user || {};
-        // Build player object for tee selection.
-        // Contract: must include ghin + gender + name parts (HI/selected tee can be looked up later)
-        const fallbackParts = String(user.name || "").trim().split(/\s+/);
-        const fallbackFirst = fallbackParts.slice(0, -1).join(" ") || fallbackParts[0] || "Player";
-        const fallbackLast  = fallbackParts.length > 1 ? fallbackParts[fallbackParts.length - 1] : "";
+          const user = getUserCtx(); // <-- KEY CHANGE (was init.user)
 
-        const player = {
-          ghin: String(user.ghin || "").trim(),
-          first_name: String(user.first_name || fallbackFirst).trim(),
-          last_name: String(user.last_name || fallbackLast).trim(),
-          gender: String(user.gender || "M").trim().toUpperCase().slice(0, 1), // safe fallback
-          // hi intentionally omitted; backend GHIN logic will determine it
-        };
+          const golfer0 = user.profileJson?.golfers?.[0] || null;
+          const userName = String(user.userName || user.name || golfer0?.player_name || "").trim();
 
-        if (!player.ghin) {
-          setStatus("Missing user GHIN; please re-login.", "error");
-          return;
-        }
+          const fallbackParts = userName.split(/\s+/).filter(Boolean);
+          const fallbackFirst = fallbackParts.slice(0, -1).join(" ") || fallbackParts[0] || "Player";
+          const fallbackLast  = fallbackParts.length > 1 ? fallbackParts[fallbackParts.length - 1] : "";
+
+          const player = {
+            ghin: String(user.userGHIN || user.ghin || golfer0?.ghin || "").trim(),   // <-- KEY CHANGE
+            first_name: String(golfer0?.first_name || user.first_name || fallbackFirst).trim(),
+            last_name:  String(golfer0?.last_name  || user.last_name  || fallbackLast).trim(),
+            gender:     String(golfer0?.gender     || user.gender     || "M").trim().toUpperCase().slice(0, 1),
+          };
+
+          if (!player.ghin) {
+            setStatus("Missing user GHIN; please re-login.", "error");
+            return;
+          }
 
         MA.TeeSetSelection.open({
           gameId: ggid,
@@ -462,9 +468,11 @@
           onSave: async (selectedTee) => {
             setStatus("Registering...", "info");
             try {
-              const apiPath = (MA.paths && MA.paths.apiGamePlayers)
-                ? MA.paths.apiGamePlayers + "/upsertGamePlayers.php"
-                : "/api/game_players/upsertGamePlayers.php";
+              const apiPath = (MA.paths && MA.paths.gamePlayersUpsert) ? MA.paths.gamePlayersUpsert : "";
+              if (!apiPath) {
+                setStatus("Missing route: MA.paths.gamePlayersUpsert", "error");
+                return;
+              }
 
               const res = await postJson(apiPath, { player, selectedTee });
               if (res && res.ok) {
@@ -485,8 +493,9 @@
       return;
     }
     if (action === "unregister") {
-      const user = init.user || {};
-      const playerGHIN = String(user.ghin || "").trim();
+      const user = getUserCtx();
+      const golfer0 = user.profileJson?.golfers?.[0] || null;
+      const playerGHIN = String(user.userGHIN || user.ghin || golfer0?.ghin || "").trim();
 
       if (!playerGHIN) {
         setStatus("Missing user GHIN; please re-login.", "error");
