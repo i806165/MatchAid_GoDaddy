@@ -76,24 +76,23 @@ if ($isReturn) {
 
 // Hydrate games list server-side (Option 2)
 $userClubId = strval($_SESSION['SessionClubID'] ?? '');
-$hydrated = hydratePlayerGamesList(strval($context['userGHIN'] ?? ''), $defaultFilters, $userClubId);
-// Pull from GHIN profileJson (if present) for self-registration parity with Admin Portal
-$golfer = null;
-if (!empty($context['profileJson']['golfers']) && is_array($context['profileJson']['golfers'])) {
-   $golfer = $context['profileJson']['golfers'][0] ?? null;
-}
 
-  $initPayload = [
-    'ok' => true,
-    ...$hydrated,
-    'user' => [
-      'ghin'       => strval($context['userGHIN'] ?? ''),
-      'name'       => strval($context['userName'] ?? ''),
-      'first_name' => strval($golfer['first_name'] ?? ''),
-      'last_name'  => strval($golfer['last_name'] ?? ''),
-      'gender'     => strval($golfer['gender'] ?? ''), // IMPORTANT: no default here; let JS decide fallback
-    ],
-  ];
+$g = $context['profileJson']['golfers'][0];
+
+// Hydrate list using the same canonical GHIN
+$hydrated = hydratePlayerGamesList((string)$g['ghin'], $defaultFilters, $userClubId);
+
+// Build init payload ONCE (do not overwrite later)
+$initPayload = [
+  'ok' => true,
+  ...$hydrated,
+  'user' => [
+    'ghin'       => (string)$g['ghin'],
+    'first_name' => (string)$g['first_name'],
+    'last_name'  => (string)$g['last_name'],
+    'gender'     => (string)$g['gender'],
+  ],
+];
 
 $paths = [
   'apiPlayerGames' => '/api/player_games',
