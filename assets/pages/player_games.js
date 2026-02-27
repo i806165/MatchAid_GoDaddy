@@ -441,17 +441,12 @@
     if (action === 'register') {
       // In-Place Registration
       if (MA.TeeSetSelection) {
-          const user = getUserCtx(); // <-- KEY CHANGE (was init.user)
-
-          const golfer0 = user.profileJson?.golfers?.[0] || null;
-          const userName = String(user.userName || user.name || golfer0?.player_name || "").trim();
-
-          const u = (init && init.user) ? init.user : {};
+          const u = init.user;
           const player = {
-            ghin: String(u.ghin).trim(),
-            first_name: String(u.first_name).trim(),
-            last_name: String(u.last_name).trim(),
-            gender: String(u.gender).trim().toUpperCase(), // expect "M" or "F"
+            ghin: u.ghin,
+            first_name: u.first_name,
+            last_name: u.last_name,
+            gender: u.gender,
           };
 
           if (!player.ghin) {
@@ -490,10 +485,7 @@
       return;
     }
     if (action === "unregister") {
-      const user = getUserCtx();
-      const golfer0 = user.profileJson?.golfers?.[0] || null;
-      const playerGHIN = String(user.userGHIN || user.ghin || golfer0?.ghin || "").trim();
-
+      const playerGHIN = String(init.user?.ghin || "").trim();
       if (!playerGHIN) {
         setStatus("Missing user GHIN; please re-login.", "error");
         return;
