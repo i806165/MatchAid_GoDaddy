@@ -77,7 +77,7 @@ if ($isReturn) {
 // Hydrate games list server-side (Option 2)
 $userClubId = strval($_SESSION['SessionClubID'] ?? '');
 
-$g = $context['profileJson']['golfers'][0];
+$g = $context['profile']['profileJson']['golfers'][0];
 
 // Hydrate list using the same canonical GHIN
 $hydrated = hydratePlayerGamesList((string)$g['ghin'], $defaultFilters, $userClubId);
