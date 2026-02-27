@@ -169,6 +169,7 @@
       { separator: true },
       { label: 'Add to Calendar', action: 'calendar', enabled: true },
     );
+    return items;
   }
 
   function renderCards(){
