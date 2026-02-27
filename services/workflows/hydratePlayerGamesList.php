@@ -223,6 +223,7 @@ function hydratePlayerGamesList(string $userGHIN, array $filters, string $userCl
       'playDate' => $playDate,
       'playTimeText' => substr((string)($g['dbGames_PlayTime'] ?? ''), 0, 5),
       'courseName' => (string)($g['dbGames_CourseName'] ?? ''),
+      'courseId' => (string)($g['dbGames_CourseID'] ?? ''),
       'facilityName' => (string)($g['dbGames_FacilityName'] ?? ''),
       'adminName' => (string)($g['dbGames_AdminName'] ?? ''),
       'privacy' => $privacy,

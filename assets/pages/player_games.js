@@ -140,7 +140,7 @@
 
     return [
       { label: 'Review Game', action: 'viewGame', enabled: true },
-      { label: isRegistered ? 'Unregister' : 'Register / Enroll', action: isRegistered ? 'unregister' : 'enroll', enabled: isRegistered || !regClosedish },
+      { label: isRegistered ? 'Unregister' : 'Register / Enroll', action: isRegistered ? 'unregister' : 'register', enabled: isRegistered || !regClosedish },
       { separator: true },
       { label: 'Add to Calendar', action: 'calendar', enabled: true },
       { label: 'Scorecard', action: 'scorecard', enabled: true },
@@ -433,8 +433,43 @@
     if (action === 'scorecard') {
       return routerGo("scorecard", {});
     }
-    if (action === 'enroll' || action === 'register') {
-      return routerGo("roster", {});
+    if (action === 'register') {
+      // In-Place Registration
+      if (MA.TeeSetSelection) {
+        const user = init.user || {};
+        // Construct player object for tee selection (defaults if profile incomplete)
+        const player = {
+          ghin: user.ghin,
+          first_name: (user.name || "").split(" ")[0] || "Player",
+          last_name: (user.name || "").split(" ").slice(1).join(" ") || "",
+          gender: "M", // Default, API will refine if profile found
+          hi: "0.0"
+        };
+
+        MA.TeeSetSelection.open({
+          gameId: ggid,
+          player: player,
+          onSave: async (selectedTee) => {
+            setStatus("Registering...", "info");
+            try {
+              const apiPath = (MA.paths && MA.paths.apiGamePlayers) ? MA.paths.apiGamePlayers + "/upsertGamePlayers.php" : "/api/game_players/upsertGamePlayers.php";
+              const res = await postJson(apiPath, { player, selectedTee });
+              if (res && res.ok) {
+                setStatus("Registered successfully.", "success");
+                await reloadGames(); // Refresh list to show "Registered" status
+              } else {
+                throw new Error(res?.message || "Registration failed.");
+              }
+            } catch (e) {
+              setStatus(e.message, "error");
+            }
+          }
+        });
+      } else {
+        // Fallback if module missing
+        return routerGo("roster", {});
+      }
+      return;
     }
     if (action === 'unregister') {
       alert('Unregister action not wired yet in this first-pass scaffold.');

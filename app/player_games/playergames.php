@@ -93,6 +93,8 @@ $paths = [
   'apiAdminGames'  => MA_ROUTE_API_ADMIN_GAMES ?? '/api/admin_games',
   'apiSession'     => MA_ROUTE_API_SESSION ?? '/api/session',
   'routerApi'      => MA_ROUTE_API_ROUTER ?? '/api/router',
+  'apiGHIN'        => MA_ROUTE_API_GHIN ?? '/api/GHIN',
+  'apiGamePlayers' => MA_ROUTE_API_GAME_PLAYERS ?? '/api/game_players',
 ];
 
 $maChromeTitle = 'Player Portal';
@@ -135,6 +137,7 @@ $maChromeLogoUrl = null;
   <script src="/assets/js/ma_shared.js"></script>
   <script src="/assets/modules/actions_menu.js?v=1"></script>
   <script src="/assets/modules/addCalendar.js?v=1"></script>
+  <script src="/assets/modules/teesetSelection.js?v=1"></script>
   <script src="/assets/pages/player_games.js"></script>
 </body>
 </html>
