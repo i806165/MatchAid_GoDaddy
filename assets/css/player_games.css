@@ -114,6 +114,20 @@
   min-height: var(--btnHeight);
 }
 
+/* Fix for MANAGE button layout (text link style) */
+.maGameCard__manageBtn.maCard__actionBtn {
+  width: auto;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--brandAccent);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .3px;
+  text-transform: uppercase;
+}
+
 @media (max-width: 520px){
   .maPlayerGameCard__line2,
   .maPlayerGameCard__line3{ align-items:flex-start; }

@@ -253,14 +253,14 @@
                 <button type="button" class="maCard__actionBtn maGameCard__manageBtn" data-role="menu" aria-label="Manage">MANAGE</button>
               </div>
               <div class="maPlayerGameCard__line2">
-                <div class="maPlayerGameCard__facts">${esc([playTime, adminName].filter(Boolean).join(' • '))}</div>
+                <div class="maPlayerGameCard__facts">${esc([playTime, 'Host ", adminName].filter(Boolean).join(' • '))}</div>
               </div>
               <div class="maPlayerGameCard__line3">
                 <div class="maPlayerGameCard__pillsGroup">
                   ${holes ? `<span class="maPill">${esc(holes)}</span>` : ''}
                   ${playerCount !== '' ? `<span class="maPill">Players: ${esc(playerCount)}</span>` : ''}
-                  ${isRegistered ? `<span class="maPill">Time: ${esc(yourTee || 'TBD')}</span>` : ''}
-                  ${isRegistered && yourTeeName ? `<span class="maPill">Tee: ${esc(yourTeeName)}</span>` : ''}
+                  ${isRegistered ? `<span class="maPill">TeeTime: ${esc(yourTee || 'TBD')}</span>` : ''}
+                  ${isRegistered && yourTeeName ? `<span class="maPill">TeeName: ${esc(yourTeeName)}</span>` : ''}
                   ${hiStats ? `<span class="maPill">HI: ${esc(hiStats)}</span>` : ''}
                   ${privacy ? `<span class="maPill">${esc(privacy)}</span>` : ''}
                 </div>
