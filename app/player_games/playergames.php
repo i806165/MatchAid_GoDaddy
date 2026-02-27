@@ -101,6 +101,9 @@ $paths = [
   'routerApi'      => MA_ROUTE_API_ROUTER ?? '/api/router',
   'apiGHIN'        => MA_ROUTE_API_GHIN ?? '/api/GHIN',
   'apiGamePlayers' => MA_ROUTE_API_GAME_PLAYERS ?? '/api/game_players',
+  'upsertGamePlayers' => (MA_ROUTE_API_GAME_PLAYERS ?? '/api/game_players') . '/upsertGamePlayers.php',
+  'deleteGamePlayers' => (MA_ROUTE_API_GAME_PLAYERS ?? '/api/game_players') . '/deleteGamePlayers.php',
+
 ];
 
 $maChromeTitle = 'Player Portal';

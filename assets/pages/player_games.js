@@ -468,9 +468,9 @@
           onSave: async (selectedTee) => {
             setStatus("Registering...", "info");
             try {
-              const apiPath = (MA.paths && MA.paths.gamePlayersUpsert) ? MA.paths.gamePlayersUpsert : "";
+              const apiPath = (MA.paths && MA.paths.upsertGamePlayers) ? MA.paths.upsertGamePlayers : "";
               if (!apiPath) {
-                setStatus("Missing route: MA.paths.gamePlayersUpsert", "error");
+                setStatus("Missing route: MA.paths.upsertGamePlayers", "error");
                 return;
               }
 
@@ -508,14 +508,13 @@
       setStatus("Unregistering...", "info");
 
       try {
-        const apiPath = (MA.paths && MA.paths.gamePlayersDelete) ? MA.paths.gamePlayersDelete : "";
+        const apiPath = (MA.paths && MA.paths.deleteGamePlayers) ? MA.paths.deleteGamePlayers : "";
         if (!apiPath) {
-          setStatus("Missing route: MA.paths.gamePlayersDelete", "error");
+          setStatus("Missing route: MA.paths.deleteGamePlayers", "error");
           return;
         }
 
         const res = await postJson(apiPath, { playerGHIN });
-
         if (res && res.ok) {
           setStatus("Unregistered.", "success");
           await reloadGames();
