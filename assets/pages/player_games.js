@@ -466,7 +466,7 @@
                 return;
               }
 
-              const res = await postJson(apiPath, { player, selectedTee });
+              const res = await MA.postJson(apiPath, { player, selectedTee });
               if (res && res.ok) {
                 setStatus("Registered successfully.", "success");
                 await reloadGames();
@@ -503,7 +503,7 @@
           return;
         }
 
-        const res = await postJson(apiPath, { playerGHIN });
+        const res = await MA.postJson(apiPath, { playerGHIN });
         if (res && res.ok) {
           setStatus("Unregistered.", "success");
           await reloadGames();
