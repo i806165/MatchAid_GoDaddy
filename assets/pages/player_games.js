@@ -153,16 +153,22 @@
     const isRegistered = enrollmentStatus === 'Registered';
     const regClosedish = ['Closed','Locked','Full'].includes(registrationStatus);
 
-    return [
+    const items = [
       { label:  'Register: New or Change', action: 'register', enabled: true },
-      { label:  'Unregister', action: 'unregister', enabled: isRegistered && !regClosedish },
+    ]
+
+    if (isRegistered) {
+      items.push({ label:  'Unregister', action: 'unregister', enabled: !regClosedish });
+    }
+
+    items.push(
       { separator: true },
       { label: 'Review Game', action: 'viewGame', enabled: true },
       { label: 'View Scorecard', action: 'scorecard', enabled: true },
       { label: 'Manage Player Roster', action: 'viewRoster', enabled: true },
       { separator: true },
       { label: 'Add to Calendar', action: 'calendar', enabled: true },
-    ];
+    );
   }
 
   function renderCards(){
@@ -222,9 +228,11 @@
       const playerCount = rowText(g, ['playerCount']);
       const hiStats = rowText(g, ['playerHIStats']);
       const yourTee = rowText(g, ['yourTeeTime']);
+      const yourTeeName = rowText(g, ['yourTeeSetName']);
       const privacy = rowText(g, ['privacy','dbGames_Privacy']);
       const holes = rowText(g, ['holes','dbGames_Holes']);
       const { enrollmentStatus, registrationStatus } = inferStatuses(g);
+      const isRegistered = enrollmentStatus === 'Registered';
 
       card.innerHTML = `
         <header class="maCard__hdr">
@@ -251,8 +259,9 @@
                 <div class="maPlayerGameCard__pillsGroup">
                   ${holes ? `<span class="maPill">${esc(holes)}</span>` : ''}
                   ${playerCount !== '' ? `<span class="maPill">Players: ${esc(playerCount)}</span>` : ''}
-                  ${yourTee ? `<span class="maPill">Time: ${esc(yourTee)}</span>` : ''}
-                  ${!yourTee && hiStats ? `<span class="maPill">HI: ${esc(hiStats)}</span>` : ''}
+                  ${isRegistered ? `<span class="maPill">Time: ${esc(yourTee || 'TBD')}</span>` : ''}
+                  ${isRegistered && yourTeeName ? `<span class="maPill">Tee: ${esc(yourTeeName)}</span>` : ''}
+                  ${hiStats ? `<span class="maPill">HI: ${esc(hiStats)}</span>` : ''}
                   ${privacy ? `<span class="maPill">${esc(privacy)}</span>` : ''}
                 </div>
                 <div class="maPlayerGameCard__pillsGroup maPlayerGameCard__pillsGroup--right">
