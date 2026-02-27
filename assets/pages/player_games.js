@@ -432,13 +432,13 @@
     const id = String(ggid || "").trim();
     if (!id) return "";
 
-    const raw = (state.rawGames || []).find(r => String(r.dbGames_GGID || r.ggid || r.dbGames_GGIDnum || "").trim() === id);
-    // Prefer explicit player teeSet fields if present
+    // Look in state.games (VM) which has player-specific data injected
+    const game = (state.games || []).find(g => String(g.ggid || "").trim() === id);
+
     return String(
-      raw?.yourTeeSetId ??
-      raw?.playerTeeSetId ??
-      raw?.dbPlayers_TeeSetID ??
-      raw?.teeSetId ??
+      game?.yourTeeSetId ??
+      game?.playerTeeSetId ??
+      game?.dbPlayers_TeeSetID ??
       ""
     ).trim();
   }

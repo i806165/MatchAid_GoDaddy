@@ -89,16 +89,15 @@ function hydratePlayerGamesList(string $userGHIN, array $filters, string $userCl
 
   // 3) Player enrollment set
   $myGGIDs = [];
-  $myTeeByGGID = [];
+  $myPlayerData = [];
   try {
-    $stP = $pdo->prepare("SELECT CAST(dbPlayers_GGID AS CHAR) AS ggid, COALESCE(CAST(dbPlayers_TeeTime AS CHAR),'') AS teeTime FROM db_Players WHERE CAST(dbPlayers_PlayerGHIN AS CHAR)=:u LIMIT 2000");
+    $stP = $pdo->prepare("SELECT * FROM db_Players WHERE CAST(dbPlayers_PlayerGHIN AS CHAR)=:u LIMIT 2000");
     $stP->execute([':u' => $userGHIN]);
     foreach (($stP->fetchAll(PDO::FETCH_ASSOC) ?: []) as $r) {
-      $ggid = trim((string)($r['ggid'] ?? ''));
+      $ggid = trim((string)($r['dbPlayers_GGID'] ?? ''));
       if ($ggid === '') continue;
       $myGGIDs[$ggid] = true;
-      $tee = trim((string)($r['teeTime'] ?? ''));
-      if ($tee !== '') $myTeeByGGID[$ggid] = $tee;
+      $myPlayerData[$ggid] = $r;
     }
   } catch (Throwable $e) {
     Logger::info('PLAYERGAMES_DBPLAYERS_WARN', ['msg' => $e->getMessage()]);
@@ -229,7 +228,8 @@ function hydratePlayerGamesList(string $userGHIN, array $filters, string $userCl
       'privacy' => $privacy,
       'playerCount' => $playerCount,
       'playerHIStats' => $playerHIStats,
-      'yourTeeTime' => (string)($myTeeByGGID[$ggid] ?? ''),
+      'yourTeeTime' => (string)($myPlayerData[$ggid]['dbPlayers_TeeTime'] ?? ''),
+      'yourTeeSetId' => (string)($myPlayerData[$ggid]['dbPlayers_TeeSetID'] ?? ''),
 
       // FIX: use $isEnrolled (was undefined $isRegistered)
       'isRegistered' => $isEnrolled,
