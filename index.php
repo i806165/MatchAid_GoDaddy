@@ -106,6 +106,8 @@ $playerPortalHref = "/index.php?portal=player";
       justify-content: space-between;
       gap: var(--gapMd);
     }
+    .hdr__inner > * { min-width: 0; }
+    
     .brand {
       display: flex;
       align-items: center;
