@@ -446,15 +446,12 @@
           const golfer0 = user.profileJson?.golfers?.[0] || null;
           const userName = String(user.userName || user.name || golfer0?.player_name || "").trim();
 
-          const fallbackParts = userName.split(/\s+/).filter(Boolean);
-          const fallbackFirst = fallbackParts.slice(0, -1).join(" ") || fallbackParts[0] || "Player";
-          const fallbackLast  = fallbackParts.length > 1 ? fallbackParts[fallbackParts.length - 1] : "";
-
+          const u = (init && init.user) ? init.user : {};
           const player = {
-            ghin: String(user.userGHIN || user.ghin || golfer0?.ghin || "").trim(),   // <-- KEY CHANGE
-            first_name: String(golfer0?.first_name || user.first_name || fallbackFirst).trim(),
-            last_name:  String(golfer0?.last_name  || user.last_name  || fallbackLast).trim(),
-            gender:     String(golfer0?.gender     || user.gender     || "M").trim().toUpperCase().slice(0, 1),
+            ghin: String(u.ghin).trim(),
+            first_name: String(u.first_name).trim(),
+            last_name: String(u.last_name).trim(),
+            gender: String(u.gender).trim().toUpperCase(), // expect "M" or "F"
           };
 
           if (!player.ghin) {
