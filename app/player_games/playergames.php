@@ -144,6 +144,6 @@ $maChromeLogoUrl = null;
   <script src="/assets/modules/actions_menu.js?v=1"></script>
   <script src="/assets/modules/addCalendar.js?v=1"></script>
   <script src="/assets/modules/teesetSelection.js?v=1"></script>
-  <script src="/assets/pages/player_games.js"></script>
+  <script src="/assets/pages/player_games.js?v=1"></script>
 </body>
 </html>
