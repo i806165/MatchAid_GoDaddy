@@ -429,7 +429,7 @@ $playerPortalHref = "/index.php?portal=player";
             <div class="ctaRow" role="group" aria-label="Portal navigation">
               <!-- Player Portal -->
               <a class="btn btn--primary"
-                 href="<?= htmlspecialchars($playerPortalHref) ?>"
+                 href="<?= htmlspecialchars($playerPortalHref) ?>">
                 <span aria-hidden="true">🏌️</span>
                 <span>Player Portal</span>
               </a>
