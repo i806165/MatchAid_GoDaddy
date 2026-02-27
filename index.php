@@ -3,6 +3,7 @@
 
 // Handle portal selection before rendering the page.
 // This sets the session variable so the login page knows where to return.
+//<meta name="viewport" content="width=device-width,initial-scale=1" />
 session_start();
 if (isset($_GET['portal'])) {
     $portal = trim((string)$_GET['portal']);
@@ -25,8 +26,7 @@ $playerPortalHref = "/index.php?portal=player";
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>MatchAid • Golf Game Management</title>
   <meta name="description" content="MatchAid helps golf groups run games smoothly — from admin setup to player participation." />
   <meta name="theme-color" content="#07432A" />
@@ -106,8 +106,7 @@ $playerPortalHref = "/index.php?portal=player";
       justify-content: space-between;
       gap: var(--gapMd);
     }
-    .hdr__inner > * { min-width: 0; }
-    
+
     .brand {
       display: flex;
       align-items: center;
