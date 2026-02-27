@@ -44,12 +44,11 @@
   gap:10px;
   min-width:0;
 }
-.maPlayerGameCard__line3{ align-items:flex-start; }
 
 .maPlayerGameCard__courseWrap,
 .maPlayerGameCard__facts,
 .maPlayerGameCard__statusText,
-.maPlayerGameCard__yourTee{
+.maPlayerGameCard__admin{
   min-width:0;
   overflow:hidden;
   text-overflow:ellipsis;
@@ -57,10 +56,8 @@
 }
 .maPlayerGameCard__courseWrap{ font-weight:900; color:var(--ink); }
 .maPlayerGameCard__facilityName,
-.maPlayerGameCard__facts,
-.maPlayerGameCard__yourTee{ color:var(--mutedText); font-weight:800; }
-.maPlayerGameCard__admin{ max-width:48%; text-align:right; color:var(--mutedText); font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.maPlayerGameCard__statusPills{ display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+.maPlayerGameCard__facts{ color:var(--mutedText); font-weight:800; }
+.maPlayerGameCard__admin{ color:var(--mutedText); font-weight:800; }
 
 .maPill{
   display:inline-flex;
@@ -77,6 +74,28 @@
 .maPill--success{ background: rgba(10,164,92,.08); border-color: rgba(10,164,92,.28); }
 .maPill--warn{ background: rgba(246,211,101,.18); border-color: rgba(0,0,0,.12); }
 .maPill--danger{ background: rgba(198,40,40,.08); border-color: rgba(198,40,40,.22); }
+
+/* Line 3 Pill Layout */
+.maPlayerGameCard__line3{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-top: 6px;
+}
+.maPlayerGameCard__pillsGroup{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.maPlayerGameCard__pillsGroup--right{
+  justify-content: flex-end;
+}
+/* Label/Value inside horizontal pill */
+.maPillLabel{ font-weight: 400; color: var(--mutedText); margin-right: 4px; font-size: 11px; }
+.maPillValue{ font-weight: 800; }
+
 
 .maDateBadge{
   width:62px; flex:0 0 auto; border:1px solid var(--borderSubtle); border-radius: var(--radiusLg);
@@ -98,7 +117,5 @@
 @media (max-width: 520px){
   .maPlayerGameCard__line2,
   .maPlayerGameCard__line3{ align-items:flex-start; }
-  .maPlayerGameCard__line2{ flex-direction:column; gap:4px; }
-  .maPlayerGameCard__line3{ flex-direction:column; gap:6px; }
-  .maPlayerGameCard__admin{ max-width:100%; text-align:left; }
+  .maPlayerGameCard__pillsGroup--right{ justify-content: flex-start; }
 }

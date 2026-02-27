@@ -121,6 +121,16 @@
     return { top, day: String(dt.getDate()), bot: dt.toLocaleDateString(undefined, { weekday: "short" }) };
   }
 
+  function formatTimeAmPm(str) {
+    if (!str) return '';
+    const [h, m] = str.split(':');
+    const H = parseInt(h, 10);
+    if (isNaN(H)) return str;
+    const ampm = H >= 12 ? 'PM' : 'AM';
+    const h12 = H % 12 || 12;
+    return `${h12}:${m}${ampm}`;
+  }
+
   function rowText(g, keys){
     for (const k of keys){
       const v = g?.[k];
@@ -204,7 +214,8 @@
       const ggid = rowText(g, ['ggid','dbGames_GGID']);
       const playDateRaw = rowText(g, ['playDate','dbGames_PlayDate']);
       const badge = formatPlayDateBadge(playDateRaw);
-      const playTime = rowText(g, ['playTimeText','dbGames_PlayTime']);
+      const playTimeRaw = rowText(g, ['playTimeText','dbGames_PlayTime']);
+      const playTime = formatTimeAmPm(playTimeRaw);
       const courseName = rowText(g, ['courseName','dbGames_CourseName']);
       const facilityName = rowText(g, ['facilityName','dbGames_FacilityName']);
       const adminName = rowText(g, ['adminName','dbGames_AdminName']);
@@ -212,6 +223,7 @@
       const hiStats = rowText(g, ['playerHIStats']);
       const yourTee = rowText(g, ['yourTeeTime']);
       const privacy = rowText(g, ['privacy','dbGames_Privacy']);
+      const holes = rowText(g, ['holes','dbGames_Holes']);
       const { enrollmentStatus, registrationStatus } = inferStatuses(g);
 
       card.innerHTML = `
@@ -231,17 +243,28 @@
               <div class="maPlayerGameCard__line1">
                 <div class="maPlayerGameCard__courseWrap">${esc(courseName)}${facilityName ? ` <span class="maPlayerGameCard__facilityName">• ${esc(facilityName)}</span>` : ''}</div>
                 <button type="button" class="maCard__actionBtn maGameCard__manageBtn" data-role="menu" aria-label="Manage">MANAGE</button>
-                <div class="maPlayerGameCard__admin">${esc(adminName)}</div>
               </div>
               <div class="maPlayerGameCard__line2">
-                <div class="maPlayerGameCard__facts">${esc([playTime, playerCount !== '' ? `Players: ${playerCount}` : '', privacy ? `Privacy: ${privacy}` : ''].filter(Boolean).join(' • '))}</div>
-                <div class="maPlayerGameCard__statusPills">
-                  <span class="maPill ${enrollmentStatus === 'Registered' ? 'maPill--success':''}">${esc(enrollmentStatus)}</span>
-                  <span class="maPill ${registrationStatus === 'Open' ? 'maPill--success' : (registrationStatus === 'Locked' || registrationStatus === 'Full' ? 'maPill--warn':'')}">${esc(registrationStatus)}</span>
-                </div>
+                <div class="maPlayerGameCard__facts">${esc([playTime, adminName].filter(Boolean).join(' • '))}</div>
               </div>
               <div class="maPlayerGameCard__line3">
-                <div class="maPlayerGameCard__yourTee">${esc(yourTee ? `Your Tee Time: ${yourTee}` : (hiStats ? `HI: ${hiStats}` : ''))}</div>
+                <div class="maPlayerGameCard__pillsGroup">
+                  ${holes ? `<span class="maPill">${esc(holes)}</span>` : ''}
+                  ${playerCount !== '' ? `<span class="maPill">Players: ${esc(playerCount)}</span>` : ''}
+                  ${yourTee ? `<span class="maPill">Time: ${esc(yourTee)}</span>` : ''}
+                  ${!yourTee && hiStats ? `<span class="maPill">HI: ${esc(hiStats)}</span>` : ''}
+                  ${privacy ? `<span class="maPill">${esc(privacy)}</span>` : ''}
+                </div>
+                <div class="maPlayerGameCard__pillsGroup maPlayerGameCard__pillsGroup--right">
+                  <span class="maPill ${enrollmentStatus === 'Registered' ? 'maPill--success':''}">
+                    <span class="maPillLabel">You are</span>
+                    <span class="maPillValue">${esc(enrollmentStatus)}</span>
+                  </span>
+                  <span class="maPill ${registrationStatus === 'Open' ? 'maPill--success' : (registrationStatus === 'Locked' || registrationStatus === 'Full' ? 'maPill--warn':'')}">
+                    <span class="maPillLabel">Registration</span>
+                    <span class="maPillValue">${esc(registrationStatus)}</span>
+                  </span>
+                </div>
               </div>
             </div>
           </div>
