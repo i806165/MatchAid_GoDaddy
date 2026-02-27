@@ -43,9 +43,6 @@
     tabStrip: document.getElementById("gpTabStrip"),
     controls: document.getElementById("gpTabControls"),
     body: document.getElementById("gpBody"),
-    teeOverlay: document.getElementById("maTeeOverlay"),
-    teeRows: document.getElementById("maTeeRows"),
-    teeCancel: document.getElementById("maTeeCancel"),
   };
 
   function safe(v){ return v == null ? "" : String(v); }
@@ -92,7 +89,6 @@
 
   async function boot(){
     applyChrome();
-    wireModal();
     await refreshPlayers();
     await refreshFavorites();
     if (!state.ghinState) state.ghinState = normalizeState(state.context.userState || "");
@@ -508,48 +504,22 @@
     });
   }
 
-  async function beginTeeFlow(player){
-    state.pendingPlayer = Object.assign({}, player);
-    const res = await MA.postJson(MA.paths.ghinGetTeeSets, { player: state.pendingPlayer });
-    if (!res?.ok) return MA.setStatus(res?.message || "Unable to get tee sets", "danger");
-    state.pendingPlayer.hi = safe(res.payload?.hi);
-    state.teeOptions = Array.isArray(res.payload?.teeSets) ? res.payload.teeSets : [];
-    const preferred = safe(state.pendingPlayer?.selectedTeeSetId);
-    state.selectedTee = state.teeOptions.find(t => safe(t.teeSetID || t.value) === preferred) || null;
-    openTeeModal();
-  }
+    async function beginTeeFlow(player){
+      state.pendingPlayer = Object.assign({}, player);
 
-  function wireModal(){
-    el.teeCancel.onclick = closeTeeModal;
-  }
+      const g = state.game || {};
+      const gameId = String(g.dbGames_GGID || g.dbGames_GGIDnum || g.ggid || "").trim();
 
-  function openTeeModal(){
-    const sub = document.getElementById("maTeeSubTitle");
-    if (sub) sub.textContent = `${safe(state.pendingPlayer?.first_name)} ${safe(state.pendingPlayer?.last_name)}`.trim();
-    el.teeRows.innerHTML = state.teeOptions.map((t, idx) => {
-      const id = safe(t.teeSetID || t.value);
-      const isSelected = state.selectedTee && safe(state.selectedTee.teeSetID || state.selectedTee.value) === id;
-      const line1 = `${safe(t.teeSetName || t.name || "Tee Set")} • CH ${safe(t.playerCH || t.ch || "")}`;
-      const line2 = `${safe(t.teeSetYards || t.yards || "")} yds • Slope ${safe(t.teeSetSlope || t.slope || "")} • CR ${safe(t.teeSetRating || t.rating || "")}`;
-      return `<div class="maCard gpTeeRow ${isSelected?"is-on":""}" data-tee-id="${esc(id)}"><div class="gpTeeLine1">${esc(line1)}${isSelected ? '<span class="gpSelectedPill">Selected</span>' : ''}</div><div class="gpTeeLine2">${esc(line2)}</div></div>`;
-    }).join("");
-    el.teeRows.querySelectorAll(".gpTeeRow").forEach(row => row.onclick = async () => {
-      el.teeRows.querySelectorAll(".gpTeeRow").forEach(r=>r.classList.remove("is-on"));
-      row.classList.add("is-on");
-      const id = row.getAttribute("data-tee-id");
-      state.selectedTee = state.teeOptions.find(t => safe(t.teeSetID || t.value) === safe(id)) || null;
-      await commitPending();
-    });
-    el.teeOverlay.classList.add("is-open");
-    el.teeOverlay.setAttribute("aria-hidden", "false");
-    document.body.classList.add("maOverlayOpen");
-  }
-
-  function closeTeeModal(){
-    el.teeOverlay.classList.remove("is-open");
-    el.teeOverlay.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("maOverlayOpen");
-  }
+      MA.TeeSetSelection.open({
+        gameId,
+        player: state.pendingPlayer,
+        currentTeeSetId: safe(state.pendingPlayer.selectedTeeSetId || ""),
+        onSave: async (selectedTee) => {
+          state.selectedTee = selectedTee || null;
+          await commitPending();
+        }
+      });
+    }
 
   async function commitPending(){
     if (!state.pendingPlayer || !state.selectedTee) return;
@@ -570,7 +540,6 @@
       MA.setStatus(res?.message || "Unable to save player", "danger");
       return;
     }
-    closeTeeModal();
     if (ghin.startsWith("NH")) MA.ghinSearch.close && MA.ghinSearch.close();
     state.pendingPlayer = null;
 

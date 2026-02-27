@@ -97,24 +97,6 @@
 .gpIconBtn[data-act="fav"]{ color:#1f6fd6; border-color:#9db9e7; }
 .gpIconBtn.is-fav{ background:#eaf2ff; color:#1f6fd6; border-color:#7ea5e4; }
 
-/* Tee Overlay Overrides */
-.maModalOverlay .maModal { max-width: 560px; }
-.maModal__title { font-size: 22px; line-height: 1.05; }
-.maModal__subtitle { margin-top: 2px; font-size: 18px; color: rgba(255,255,255,.92); line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-/* Tee Rows */
-.gpTeeRow {
-  border:1px solid var(--borderSubtle);
-  border-radius:8px;
-  background:#fff;
-  padding:8px;
-  cursor:pointer;
-}
-.gpTeeRow.is-on{ border-color:#7ea489; background:#f5faf6; box-shadow:0 0 0 1px rgba(126,164,137,.45) inset; }
-.gpTeeLine1{ font-size:13px; font-weight:700; line-height:1.2; }
-.gpTeeLine2{ margin-top:2px; font-size:11px; color:var(--mutedText); line-height:1.25; }
-.gpSelectedPill{ margin-left:8px; display:inline-flex; align-items:center; height:22px; padding:0 10px; border-radius:999px; border:1px solid #9dbca6; color:#3f6a4f; background:#edf6ef; font-size:12px; font-weight:700; }
-
 @media (max-width: 760px){
   .gpRow--favs{ grid-template-columns: minmax(0,1fr) 42px minmax(0,96px) 28px 54px; }
   .gpFieldFirst, .gpFieldLast{ min-width: 140px; }

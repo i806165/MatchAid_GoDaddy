@@ -139,6 +139,7 @@ window.MA.routes = {
 <script src="/assets/js/ma_shared.js"></script>
 <script src="/assets/modules/ghin_player_search.js"></script>
 <script src="/assets/modules/actions_menu.js?v=1"></script>
+<script src="/assets/modules/teesetSelection.js?v=1"></script>
 <script src="/assets/pages/game_players.js"></script>
 </body>
 </html>

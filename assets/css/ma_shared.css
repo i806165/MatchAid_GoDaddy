@@ -961,7 +961,11 @@ body {
 }
 
 /* Status variants (optional) */
-.maPill--success{ color: var(--success); }
+.maPill--success{
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 14%, var(--cardBg));
+  border: 1px solid color-mix(in srgb, var(--success) 35%, var(--border));
+}
 .maPill--warn{ color: var(--warn); }
 .maPill--danger{ color: var(--danger); }
 
@@ -1367,7 +1371,7 @@ body {
 
 .maModal{
   width: 100%;
-  max-width: none;
+  max-width: var(--modalMaxW);
   max-height: calc(100dvh - (20px + env(safe-area-inset-top) + env(safe-area-inset-bottom)));
 
   background: var(--modalSurface);
@@ -1544,6 +1548,16 @@ body {
   letter-spacing: .2px;
 }
 
+.maModal__subtitle{
+  margin-top:2px;
+  font-size:16px;
+  color: rgba(255,255,255,.92);
+  line-height:1.1;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
 .maTabPanel{ display: none; }
 .maTabPanel.is-active{ display: block; }
 
@@ -1658,3 +1672,17 @@ body {
 .maListRow__col--right{
   text-align: right;
 }
+
+.maListRow.is-selected{
+  border-color:#7ea489;
+  background:#f5faf6;
+  box-shadow:0 0 0 1px rgba(126,164,137,.45) inset;
+}
+
+.maListRow .maPill{
+  min-height:22px;
+  padding:0 10px;
+  font-size:12px;
+  font-weight:700;
+}
+

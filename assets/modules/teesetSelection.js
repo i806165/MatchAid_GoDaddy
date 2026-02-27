@@ -30,7 +30,7 @@
     div.className = "maModalOverlay";
     div.setAttribute("aria-hidden", "true");
     div.innerHTML = `
-      <div class="maModal" role="dialog" aria-modal="true" style="max-width: 480px;">
+      <div class="maModal" role="dialog" aria-modal="true">
         <header class="maModal__hdr">
           <div class="maModal__titles">
             <div class="maModal__title">Select Tee</div>
@@ -64,19 +64,15 @@
     const player = _config.player || {};
     const playerName = (player.name || (player.first_name + " " + player.last_name)).trim();
     elSub.textContent = playerName || "Player";
-    elRows.innerHTML = '<div class="maEmptyState">Loading tee sets...</div>';
+    elRows.innerHTML = '<div class="maEmptyState">Loading tee sets.</div>';
 
     elOverlay.style.display = "flex";
     elOverlay.setAttribute("aria-hidden", "false");
     document.documentElement.classList.add("maOverlayOpen");
 
     try {
-      // Fetch tee sets
-      // Note: The backend getTeeSets.php often relies on session game context, 
-      // which the caller (player_games.js) ensures via setGameSession.
       const apiPath = (MA.paths && MA.paths.apiGHIN) ? MA.paths.apiGHIN + "/getTeeSets.php" : "/api/GHIN/getTeeSets.php";
-      
-      const res = await MA.postJson(apiPath, { player: player });
+      const res = await MA.postJson(apiPath, { player });
       if (!res || !res.ok) throw new Error(res?.message || "Unable to load tee sets.");
 
       _teeOptions = Array.isArray(res.payload?.teeSets) ? res.payload.teeSets : [];
@@ -94,21 +90,30 @@
       return;
     }
 
+    const currentId = String(_config.currentTeeSetId || _config.selectedTeeSetId || "").trim();
+
     elRows.innerHTML = _teeOptions.map(t => {
-      const id = esc(t.teeSetID || t.value);
+      const rawId = String(t.teeSetID || t.value || "").trim();
+      const id = esc(rawId);
       const name = esc(t.teeSetName || t.name || "Tee");
       const ch = esc(t.playerCH || t.ch || "-");
       const yards = esc(t.teeSetYards || t.yards || "");
       const rating = esc(t.teeSetRating || t.rating || "");
       const slope = esc(t.teeSetSlope || t.slope || "");
 
+      const isSelected = currentId && rawId === currentId;
+
       return `
-        <div class="maCard maListRow" style="padding:12px; cursor:pointer;" data-id="${id}">
+        <div class="maCard maListRow ${isSelected ? "is-selected" : ""}" data-id="${id}">
           <div style="flex:1">
-            <div style="font-weight:800; font-size:14px; color:var(--ink);">${name} <span style="font-weight:400; color:var(--mutedText);">• CH ${ch}</span></div>
-            <div style="font-size:12px; color:var(--mutedText); margin-top:2px;">${yards} yds • ${rating} / ${slope}</div>
+            <div class="maListRow__col">
+              ${name}
+              <span style="font-weight:400; color:var(--mutedText);">• CH ${ch}</span>
+              ${isSelected ? `<span class="maPill maPill--success" style="margin-left:8px;">Selected</span>` : ``}
+            </div>
+            <div class="maListRow__col maListRow__col--muted">${yards} yds • Slope ${slope} • CR ${rating}</div>
           </div>
-          <div style="font-size:18px; color:var(--brandSecondary);">+</div>
+          <div class="maListRow__col" style="text-align:right; min-width:24px;">${isSelected ? "✓" : "+"}</div>
         </div>
       `;
     }).join("");

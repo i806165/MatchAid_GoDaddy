@@ -144,7 +144,8 @@
     const regClosedish = ['Closed','Locked','Full'].includes(registrationStatus);
 
     return [
-      { label: isRegistered ? 'Unregister' : 'Register / Enroll', action: isRegistered ? 'unregister' : 'register', enabled: isRegistered || !regClosedish },
+      { label:  'Register: New or Change', action: 'register', enabled: true },
+      { label:  'Unregister', action: 'unregister', enabled: isRegistered && !regClosedish },
       { separator: true },
       { label: 'Review Game', action: 'viewGame', enabled: true },
       { label: 'View Scorecard', action: 'scorecard', enabled: true },
@@ -427,6 +428,21 @@
     }
   }
 
+  function getCurrentTeeSetIdForGame(ggid){
+    const id = String(ggid || "").trim();
+    if (!id) return "";
+
+    const raw = (state.rawGames || []).find(r => String(r.dbGames_GGID || r.ggid || r.dbGames_GGIDnum || "").trim() === id);
+    // Prefer explicit player teeSet fields if present
+    return String(
+      raw?.yourTeeSetId ??
+      raw?.playerTeeSetId ??
+      raw?.dbPlayers_TeeSetID ??
+      raw?.teeSetId ??
+      ""
+    ).trim();
+  }
+
   async function onGameAction(g, action){
     const ggid = String(g.ggid || g.dbGames_GGID || '');
     if (!ggid) return;
@@ -462,6 +478,7 @@
         MA.TeeSetSelection.open({
           gameId: ggid,
           player,
+          currentTeeSetId: getCurrentTeeSetIdForGame(ggid),
           onSave: async (selectedTee) => {
             setStatus("Registering...", "info");
             try {
