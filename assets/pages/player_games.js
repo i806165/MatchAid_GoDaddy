@@ -144,11 +144,13 @@
     const regClosedish = ['Closed','Locked','Full'].includes(registrationStatus);
 
     return [
-      { label: 'Review Game', action: 'viewGame', enabled: true },
       { label: isRegistered ? 'Unregister' : 'Register / Enroll', action: isRegistered ? 'unregister' : 'register', enabled: isRegistered || !regClosedish },
       { separator: true },
+      { label: 'Review Game', action: 'viewGame', enabled: true },
+      { label: 'View Scorecard', action: 'scorecard', enabled: true },
+      { label: 'Manage Player Roster', action: 'viewRoster', enabled: true },
+      { separator: true },
       { label: 'Add to Calendar', action: 'calendar', enabled: true },
-      { label: 'Scorecard', action: 'scorecard', enabled: true },
     ];
   }
 
@@ -437,6 +439,9 @@
     }
     if (action === 'scorecard') {
       return routerGo("scorecard", {});
+    }
+    if (action === 'viewRoster') {
+      return routerGo("roster", {});
     }
     if (action === 'register') {
       // In-Place Registration

@@ -30,7 +30,7 @@
     div.className = "maModalOverlay";
     div.setAttribute("aria-hidden", "true");
     div.innerHTML = `
-      <div class="maModal" role="dialog" aria-modal="true">
+      <div class="maModal" role="dialog" aria-modal="true" style="max-width: 480px;">
         <header class="maModal__hdr">
           <div class="maModal__titles">
             <div class="maModal__title">Select Tee</div>
