@@ -437,26 +437,39 @@
       // In-Place Registration
       if (MA.TeeSetSelection) {
         const user = init.user || {};
-        // Construct player object for tee selection (defaults if profile incomplete)
+        // Build player object for tee selection.
+        // Contract: must include ghin + gender + name parts (HI/selected tee can be looked up later)
+        const fallbackParts = String(user.name || "").trim().split(/\s+/);
+        const fallbackFirst = fallbackParts.slice(0, -1).join(" ") || fallbackParts[0] || "Player";
+        const fallbackLast  = fallbackParts.length > 1 ? fallbackParts[fallbackParts.length - 1] : "";
+
         const player = {
-          ghin: user.ghin,
-          first_name: (user.name || "").split(" ")[0] || "Player",
-          last_name: (user.name || "").split(" ").slice(1).join(" ") || "",
-          gender: "M", // Default, API will refine if profile found
-          hi: "0.0"
+          ghin: String(user.ghin || "").trim(),
+          first_name: String(user.first_name || fallbackFirst).trim(),
+          last_name: String(user.last_name || fallbackLast).trim(),
+          gender: String(user.gender || "M").trim().toUpperCase().slice(0, 1), // safe fallback
+          // hi intentionally omitted; backend GHIN logic will determine it
         };
+
+        if (!player.ghin) {
+          setStatus("Missing user GHIN; please re-login.", "error");
+          return;
+        }
 
         MA.TeeSetSelection.open({
           gameId: ggid,
-          player: player,
+          player,
           onSave: async (selectedTee) => {
             setStatus("Registering...", "info");
             try {
-              const apiPath = (MA.paths && MA.paths.apiGamePlayers) ? MA.paths.apiGamePlayers + "/upsertGamePlayers.php" : "/api/game_players/upsertGamePlayers.php";
+              const apiPath = (MA.paths && MA.paths.apiGamePlayers)
+                ? MA.paths.apiGamePlayers + "/upsertGamePlayers.php"
+                : "/api/game_players/upsertGamePlayers.php";
+
               const res = await postJson(apiPath, { player, selectedTee });
               if (res && res.ok) {
                 setStatus("Registered successfully.", "success");
-                await reloadGames(); // Refresh list to show "Registered" status
+                await reloadGames();
               } else {
                 throw new Error(res?.message || "Registration failed.");
               }
@@ -471,8 +484,40 @@
       }
       return;
     }
-    if (action === 'unregister') {
-      alert('Unregister action not wired yet in this first-pass scaffold.');
+    if (action === "unregister") {
+      const user = init.user || {};
+      const playerGHIN = String(user.ghin || "").trim();
+
+      if (!playerGHIN) {
+        setStatus("Missing user GHIN; please re-login.", "error");
+        return;
+      }
+
+      const ok = window.confirm("Unregister from this game?");
+      if (!ok) return;
+
+      setStatus("Unregistering...", "info");
+
+      try {
+        const apiPath = (MA.paths && MA.paths.gamePlayersDelete) ? MA.paths.gamePlayersDelete : "";
+        if (!apiPath) {
+          setStatus("Missing route: MA.paths.gamePlayersDelete", "error");
+          return;
+        }
+
+        const res = await postJson(apiPath, { playerGHIN });
+
+        if (res && res.ok) {
+          setStatus("Unregistered.", "success");
+          await reloadGames();
+        } else {
+          throw new Error(res?.message || "Unable to unregister.");
+        }
+      } catch (e) {
+        console.error(e);
+        setStatus(e.message || "Unable to unregister.", "error");
+      }
+
       return;
     }
     if (action === 'calendar') {
