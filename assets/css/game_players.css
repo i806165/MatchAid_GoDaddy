@@ -110,3 +110,25 @@
 @media (min-width: 1600px){
   .gpShell{ width: min(100%, 1360px); }
 }
+
+/* Desktop canvas style (optional, matches game_maintenance) */
+@media (min-width: 980px) {
+  body {
+    background:
+      radial-gradient(1200px circle at 18% 8%,
+        color-mix(in srgb, var(--brandPrimary) 16%, transparent),
+        transparent 58%),
+      radial-gradient(900px circle at 82% 0%,
+        color-mix(in srgb, var(--brandSecondary) 16%, transparent),
+        transparent 60%),
+      linear-gradient(180deg,
+        color-mix(in srgb, var(--surfaceApp) 96%, black),
+        var(--surfaceApp));
+    background-attachment: fixed;
+  }
+
+  .maPage > .gsTabPanels {
+    width: min(980px, 100%);
+    margin: 0 auto;
+  }
+}
