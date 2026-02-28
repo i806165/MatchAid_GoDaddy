@@ -76,6 +76,7 @@ $playerPortalHref = "/index.php?portal=player";
       margin: 0;
       font-family: "Montserrat", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
       color: var(--text);
+      overflow-x: hidden;
       background:
         radial-gradient(1200px 800px at 15% 0%, rgba(63,118,82,0.30), transparent 55%),
         radial-gradient(900px 700px at 85% 15%, rgba(205,178,120,0.18), transparent 55%),
