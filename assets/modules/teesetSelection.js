@@ -56,6 +56,19 @@
   function esc(s) {
     return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
+  async function getOptions(config) {
+    const cfg = config || {};
+    const player = cfg.player || {};
+
+    const apiPath = (MA.paths && MA.paths.apiGHIN)
+      ? MA.paths.apiGHIN + "/getTeeSets.php"
+      : "/api/GHIN/getTeeSets.php";
+
+    const res = await MA.postJson(apiPath, { player });
+    if (!res || !res.ok) throw new Error(res?.message || "Unable to load tee sets.");
+
+    return Array.isArray(res.payload?.teeSets) ? res.payload.teeSets : [];
+  }
 
   async function open(config) {
     _config = config || {};
@@ -71,11 +84,7 @@
     document.documentElement.classList.add("maOverlayOpen");
 
     try {
-      const apiPath = (MA.paths && MA.paths.apiGHIN) ? MA.paths.apiGHIN + "/getTeeSets.php" : "/api/GHIN/getTeeSets.php";
-      const res = await MA.postJson(apiPath, { player });
-      if (!res || !res.ok) throw new Error(res?.message || "Unable to load tee sets.");
-
-      _teeOptions = Array.isArray(res.payload?.teeSets) ? res.payload.teeSets : [];
+      _teeOptions = await getOptions(_config);
       renderRows();
 
     } catch (e) {
@@ -143,7 +152,7 @@
     document.documentElement.classList.remove("maOverlayOpen");
   }
 
-  MA.TeeSetSelection = { open, close };
+  MA.TeeSetSelection = { open, close, getOptions };
   global.MA = MA;
 
 })(window);

@@ -26,6 +26,13 @@
     multiAddMode: false,
     multiAddSelected: [],
     multiAddBusy: false,
+    importText: "",
+    importRows: [],
+    importMode: "entry",     // entry | review
+    importBusy: false,
+    importTeeOptions: [],
+    importSelectedTeeId: "",
+    importSelectedTee: null,
     ghinState: "",
     ghinLast: "",
     ghinFirst: "",
@@ -34,13 +41,21 @@
     ghinStatus: "",
   };
 
-  const tabs = [
-    { id: "roster", label: "Roster" },
-    { id: "self", label: "Self" },
-    { id: "favorites", label: "Favorites" },
-    { id: "ghin", label: "GHIN" },
-    { id: "nonrated", label: "Non-Rated" }
-  ];
+  function isImportDesktopEnabled(){
+    return window.matchMedia("(min-width: 560px)").matches;
+  }
+
+  function getTabs(){
+    const baseTabs = [
+      { id: "roster", label: "Roster" },
+      { id: "self", label: "Self" },
+      { id: "favorites", label: "Favorites" },
+      { id: "ghin", label: "GHIN" },
+      { id: "nonrated", label: "Non-Rated" }
+    ];
+    if (isImportDesktopEnabled()) baseTabs.push({ id: "import", label: "Import" });
+    return baseTabs;
+  }
 
   const el = {
     tabStrip: document.getElementById("gpTabStrip"),
@@ -139,7 +154,78 @@
     renderControls();
     renderBody();
   }
-    function showBusyModal(message){
+    function parseImportLines(text){
+    return safe(text)
+      .split(/\r?\n/)
+      .map(s => s.trim())
+      .filter(Boolean);
+  }
+
+  function buildEmptyImportPlayer(){
+    return {
+      ghin: "",
+      first_name: "",
+      last_name: "",
+      name: "",
+      gender: "",
+      hi: ""
+    };
+  }
+
+  function buildImportRow(raw){
+    const trimmed = safe(raw).trim();
+    return {
+      source: "ghin",
+      raw: trimmed,
+      ghin: trimmed,
+      ok: false,
+      status: "",
+      error: "",
+      player: buildEmptyImportPlayer()
+    };
+  }
+
+  function canImportAllRows(){
+    return state.importRows.length > 0 && state.importRows.every(r => r.ok) && !!state.importSelectedTeeId;
+  }
+
+  async function ensureImportTeeOptions(){
+    if (state.importTeeOptions.length) return;
+
+    const userGender = safe(state.context?.userGender || "M");
+    const userName = splitName(state.context?.userName || "Player");
+    const proxyPlayer = {
+      ghin: safe(state.context?.userGHIN || "0"),
+      first_name: userName.first,
+      last_name: userName.last,
+      gender: userGender,
+      hi: safe(state.context?.userHI || "")
+    };
+
+    const g = state.game || {};
+    const gameId = String(g.dbGames_GGID || g.dbGames_GGIDnum || g.ggid || "").trim();
+
+    if (!MA.TeeSetSelection || typeof MA.TeeSetSelection.getOptions !== "function") {
+      MA.setStatus("Tee options service is unavailable.", "warn");
+      return;
+    }
+
+    const options = await MA.TeeSetSelection.getOptions({ gameId, player: proxyPlayer });
+    state.importTeeOptions = Array.isArray(options) ? options : [];
+  }
+
+  function getImportSelectedTee(){
+    return state.importTeeOptions.find(t =>
+      String(t.teeSetID || t.value || "") === String(state.importSelectedTeeId || "")
+    ) || null;
+  }
+
+  function resetImportMode(){
+    state.importMode = "entry";
+    state.importRows = [];
+  }
+
+  function showBusyModal(message){
     let overlay = document.getElementById("gpBusyModal");
     if (!overlay) {
       overlay = document.createElement("div");
@@ -198,6 +284,7 @@
     applyChrome();
     await refreshPlayers();
     await refreshFavorites();
+    if (isImportDesktopEnabled()) await ensureImportTeeOptions();
     if (!state.ghinState) state.ghinState = normalizeState(state.context.userState || "");
     renderTabs();
     render();
@@ -250,10 +337,13 @@
 
   function renderTabs(){
     el.tabStrip.classList.add("maSeg");
+        const tabs = getTabs();
     el.tabStrip.innerHTML = tabs.map(t=>`<button class="maSegBtn ${state.activeTab===t.id?"is-active":""}" data-tab="${t.id}" role="tab" aria-selected="${state.activeTab===t.id?"true":"false"}">${esc(t.label)}</button>`).join("");
+
     el.tabStrip.querySelectorAll(".maSegBtn").forEach(btn=>btn.addEventListener("click", async ()=>{
       state.activeTab = btn.dataset.tab;
       if (state.activeTab === "favorites") await refreshFavorites();
+      if (state.activeTab === "import") await ensureImportTeeOptions();
       if (state.activeTab !== "self") state.selfAutoLaunched = false;
       renderTabs();
       render();
@@ -364,6 +454,72 @@
 
       return;
     }
+        if (state.activeTab === "import") {
+      const teeOptions = state.importTeeOptions || [];
+      const teeValue = safe(state.importSelectedTeeId);
+      const teeOptionsHtml = [`<option value="">Select Tee</option>`].concat(
+        teeOptions.map(t => {
+          const id = safe(t.teeSetID || t.value || "");
+          const name = safe(t.teeName || t.label || t.name || "");
+          return `<option value="${esc(id)}">${esc(id)} • ${esc(name)}</option>`;
+        })
+      ).join("");
+
+      if (state.importMode === "entry") {
+        el.controls.innerHTML = `<div class="maFieldRow gpImportRow">
+          <div class="maField gpFieldTeeImport">
+            <select id="gpImportTee" class="maTextInput">${teeOptionsHtml}</select>
+          </div>
+          <div class="maField gpFieldBtn">
+            <div class="gpFavBtnRow">
+              <button id="gpBtnImportEvaluate" class="btn btnSecondary" type="button">Evaluate</button>
+            </div>
+          </div>
+        </div>
+        <div class="maFieldRow">
+          <div class="maField">
+            <div class="maHelpText">Enter one GHIN number per line. Import is available on desktop only.</div>
+          </div>
+        </div>`;
+
+        const sel = document.getElementById("gpImportTee");
+        if (sel) {
+          sel.value = teeValue;
+          sel.onchange = () => {
+            state.importSelectedTeeId = safe(sel.value);
+            state.importSelectedTee = getImportSelectedTee();
+          };
+        }
+
+        const btnEval = document.getElementById("gpBtnImportEvaluate");
+        if (btnEval) btnEval.onclick = evaluateImportRows;
+        return;
+      }
+
+      const selectedTee = getImportSelectedTee();
+      const teeDisplay = selectedTee
+        ? `${safe(selectedTee.teeSetID || selectedTee.value || "")} • ${safe(selectedTee.teeName || selectedTee.label || selectedTee.name || "")}`
+        : "No tee selected";
+
+      el.controls.innerHTML = `<div class="maFieldRow gpImportRow">
+        <div class="maField">
+          <div class="maHelpText">Assigned Tee: ${esc(teeDisplay)}</div>
+        </div>
+        <div class="maField gpFieldBtn">
+          <div class="gpFavBtnRow">
+            <button id="gpBtnImportBack" class="btn btnSecondary" type="button">Back</button>
+            <button id="gpBtnImportRun" class="btn btnSecondary" type="button" ${canImportAllRows() ? "" : "disabled"}>Import</button>
+          </div>
+        </div>
+      </div>`;
+
+      const btnBack = document.getElementById("gpBtnImportBack");
+      if (btnBack) btnBack.onclick = () => { resetImportMode(); render(); };
+
+      const btnRun = document.getElementById("gpBtnImportRun");
+      if (btnRun) btnRun.onclick = beginImportBatch;
+      return;
+    }
     if (state.activeTab === "nonrated") {
       el.controls.innerHTML = `<div class="maFieldRow gpNrRow">
         <div class="maField gpFieldFirst"><div class="maInputWrap gpInputClearWrap"><input id="gpNrFirst" class="maTextInput" placeholder="First name"><button id="gpNrFirstClear" class="clearBtn isHidden" type="button" aria-label="Clear first name">×</button></div></div>
@@ -466,6 +622,53 @@
         state.selfAutoLaunched = true;
         setTimeout(() => { addSelf(); }, 0);
       }
+      return;
+    }
+        if (state.activeTab === "import") {
+      if (state.importMode === "entry") {
+        el.body.innerHTML = `<section class="maPanel gpImportPanel">
+          <div class="maField">
+            <textarea id="gpImportText" class="maTextInput gpImportText" placeholder="6105388&#10;1234567&#10;7654321">${esc(state.importText)}</textarea>
+          </div>
+        </section>`;
+
+        const ta = document.getElementById("gpImportText");
+        if (ta) {
+          ta.oninput = () => {
+            state.importText = safe(ta.value);
+          };
+        }
+        return;
+      }
+
+      const rows = state.importRows.map((r) => {
+        const p = r.player || buildEmptyImportPlayer();
+        const tee = getImportSelectedTee();
+        const teeId = safe(tee?.teeSetID || tee?.value || "");
+        const teeName = safe(tee?.teeName || tee?.label || tee?.name || "");
+        return `<div class="maListRow gpRow gpRow--import">
+          <div class="maListRow__col">${esc(r.ghin || r.raw)}</div>
+          <div class="maListRow__col">${esc(p.name || "")}</div>
+          <div class="maListRow__col maListRow__col--right">${esc(p.gender || "")}</div>
+          <div class="maListRow__col maListRow__col--right">${esc(p.hi || "")}</div>
+          <div class="maListRow__col maListRow__col--right">${esc(teeId)}</div>
+          <div class="maListRow__col">${esc(teeName)}</div>
+          <div class="maListRow__col">${esc(r.status)}</div>
+        </div>`;
+      }).join("");
+
+      el.body.innerHTML = `<section class="maPanel gpImportPanel">
+        <div class="maListRow maListRow--hdr gpRow--import">
+          <div class="maListRow__col">GHIN</div>
+          <div class="maListRow__col">Name</div>
+          <div class="maListRow__col maListRow__col--right">G</div>
+          <div class="maListRow__col maListRow__col--right">HI</div>
+          <div class="maListRow__col maListRow__col--right">Tee ID</div>
+          <div class="maListRow__col">Tee Name</div>
+          <div class="maListRow__col">Status</div>
+        </div>
+        <div class="maListRows">${rows || `<div class="gpEmpty">No import rows evaluated.</div>`}</div>
+      </section>`;
       return;
     }
 
@@ -687,7 +890,158 @@
       hi: safe(row.hi)
     });
   }
-    async function beginBatchTeeFlow(){
+    async function evaluateImportRows(){
+    if (state.importBusy) return;
+
+    const selectedTee = getImportSelectedTee();
+    if (!selectedTee) {
+      MA.setStatus("Select a tee before evaluating import rows.", "warn");
+      return;
+    }
+
+    const lines = parseImportLines(state.importText);
+    if (!lines.length) {
+      MA.setStatus("Enter at least one GHIN number.", "warn");
+      return;
+    }
+
+    state.importBusy = true;
+    showBusyModal("Evaluating GHIN list...");
+
+    try {
+      const enrolledSet = new Set((state.players || []).map((p) => safe(p.dbPlayers_PlayerGHIN)));
+      const seen = new Set();
+      const rows = [];
+
+      let index = 0;
+      for (const raw of lines) {
+        index += 1;
+        updateBusyModal(`Evaluating ${index} of ${lines.length}...`);
+
+        const row = buildImportRow(raw);
+        const ghin = safe(row.ghin);
+
+        if (!/^\d+$/.test(ghin)) {
+          row.ok = false;
+          row.status = "Invalid GHIN";
+          row.error = "GHIN must be numeric";
+          rows.push(row);
+          continue;
+        }
+
+        if (seen.has(ghin)) {
+          row.ok = false;
+          row.status = "Duplicate in input";
+          row.error = "Duplicate GHIN in pasted list";
+          rows.push(row);
+          continue;
+        }
+        seen.add(ghin);
+
+        if (enrolledSet.has(ghin)) {
+          row.ok = false;
+          row.status = "Already in roster";
+          row.error = "Player is already in the roster";
+          rows.push(row);
+          continue;
+        }
+
+        const res = await MA.postJson(MA.paths.ghinPlayerSearch, { mode: "id", ghin });
+        const hit = Array.isArray(res?.payload?.rows) ? res.payload.rows[0] : null;
+
+        if (!res?.ok || !hit) {
+          row.ok = false;
+          row.status = "GHIN not found";
+          row.error = "No GHIN player found";
+          rows.push(row);
+          continue;
+        }
+
+        const nm = splitName(hit.name || "");
+        row.ok = true;
+        row.status = "OK";
+        row.error = "";
+        row.player = {
+          ghin: safe(hit.ghin || ghin),
+          first_name: safe(nm.first),
+          last_name: safe(nm.last),
+          name: safe(hit.name || ""),
+          gender: safe(hit.gender || ""),
+          hi: safe(hit.hi || "")
+        };
+        rows.push(row);
+      }
+
+      state.importRows = rows;
+      state.importSelectedTee = selectedTee;
+      state.importMode = "review";
+      render();
+      if (canImportAllRows()) MA.setStatus(`Evaluated ${rows.length} rows. All rows valid.`, "success");
+      else MA.setStatus(`Evaluated ${rows.length} rows. Fix errors before import.`, "warn");
+    } finally {
+      state.importBusy = false;
+      hideBusyModal();
+    }
+  }
+
+  async function beginImportBatch(){
+    if (state.importBusy) return;
+    if (!canImportAllRows()) {
+      MA.setStatus("All rows must be valid before import can proceed.", "warn");
+      return;
+    }
+    const selectedTee = getImportSelectedTee();
+    if (!selectedTee) {
+      MA.setStatus("Select a tee before importing.", "warn");
+      return;
+    }
+    await commitImportBatch(state.importRows.slice(), selectedTee);
+  }
+
+  async function commitImportBatch(rows, selectedTee){
+    if (!rows.length || !selectedTee) return;
+    state.importBusy = true;
+    showBusyModal(`Importing ${rows.length} players...`);
+
+    let added = 0;
+    let failed = 0;
+
+    try {
+      let index = 0;
+      for (const row of rows) {
+        index += 1;
+        updateBusyModal(`Importing ${index} of ${rows.length} players...`);
+
+        const p = row.player || buildEmptyImportPlayer();
+        const player = {
+          ghin: safe(p.ghin),
+          first_name: safe(p.first_name),
+          last_name: safe(p.last_name),
+          gender: safe(p.gender),
+          hi: safe(p.hi)
+        };
+
+        const res = await MA.postJson(MA.paths.gamePlayersUpsert, { player, selectedTee });
+        if (res?.ok) added++;
+        else failed++;
+      }
+
+      await refreshPlayers();
+      await refreshFavorites();
+      state.importText = "";
+      state.importRows = [];
+      state.importMode = "entry";
+      render();
+
+      if (failed) MA.setStatus(`Imported ${added} players. ${failed} failed.`, "warn");
+      else MA.setStatus(`Imported ${added} players.`, "success");
+    } finally {
+      state.importBusy = false;
+      hideBusyModal();
+    }
+  }
+
+  async function beginBatchTeeFlow(){
     if (state.multiAddBusy) return;
 
     const enrolledSet = new Set((state.players || []).map((p) => safe(p.dbPlayers_PlayerGHIN)));
