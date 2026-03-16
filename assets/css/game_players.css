@@ -1,3 +1,21 @@
+.maListRow--hdr {
+  background: var(--brandSecondary);
+  color: var(--brandSecondaryText);
+  font-weight: 700;
+  border-bottom: 1px solid var(--brandSecondary);
+}
+.maListRow--hdr .maListRow__col,
+.maListRow--hdr .gpMultiHdrToggle{
+  color: var(--brandSecondaryText);
+}
+.maListRow--hdr{
+  cursor: default;
+}
+.maListRow--hdr:hover,
+.maListRow--hdr:active{
+  background: var(--brandSecondary);
+}
+
 .gpShell{
   width: min(100%, 1280px);
   margin-inline: auto;
@@ -39,17 +57,6 @@
 .gpInputClearWrap .maTextInput{ padding-right: 30px; }
 .gpInputClearWrap .clearBtn{ position:absolute; right:4px; top:50%; transform:translateY(-50%); }
 .gpNrRow .maField{ min-width: 0; }
-
-.maListRow--hdr {
-  background: var(--brandSecondary);
-  color: var(--brandSecondaryText);
-  font-weight: 700;
-  border-bottom: 1px solid var(--brandSecondary);
-}
-.maListRow--hdr .maListRow__col,
-.maListRow--hdr .gpMultiHdrToggle{
-  color: var(--brandSecondaryText);
-}
 
 .gpRow--roster{
   display: grid;
