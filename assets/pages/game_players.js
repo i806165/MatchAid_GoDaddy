@@ -23,6 +23,9 @@
     teeOptions: [],
     selectedTee: null,
     selfAutoLaunched: false,
+    multiAddMode: false,
+    multiAddSelected: [],
+    multiAddBusy: false,
     ghinState: "",
     ghinLast: "",
     ghinFirst: "",
@@ -67,6 +70,74 @@
     if (!needle) return true;
     const hay = `${safe(f.name || f.playerName)} ${safe(f.lname || "")}`.toLowerCase();
     return hay.includes(needle);
+  }
+    function getFavoriteLastTee(f){
+    return safe(f?.lastCourse?.teeSetName || "");
+  }
+
+  function getFilteredFavorites(){
+    const q = safe(state.favNameFilter).trim().toLowerCase();
+    const grp = safe(state.favGroupFilter || "All groups");
+    state.favBroadened = false;
+
+    let filtered = (state.favorites || []).filter((f) => {
+      const tags = Array.isArray(f.groups) ? f.groups : [];
+      const inGroup = grp === "All groups" ? true : tags.includes(grp);
+      if (!inGroup) return false;
+      return favoriteMatchesSearch(f, q);
+    });
+
+    if (q && filtered.length === 0 && grp !== "All groups") {
+      state.favBroadened = true;
+      state.favGroupFilter = "All groups";
+      filtered = (state.favorites || []).filter((f) => favoriteMatchesSearch(f, q));
+    }
+
+    return filtered;
+  }
+
+  function isFavoriteSelected(ghin){
+    return state.multiAddSelected.includes(safe(ghin));
+  }
+
+  function toggleFavoriteSelected(ghin){
+    const id = safe(ghin);
+    if (!id) return;
+    if (isFavoriteSelected(id)) {
+      state.multiAddSelected = state.multiAddSelected.filter(x => x !== id);
+    } else {
+      state.multiAddSelected = state.multiAddSelected.concat(id);
+    }
+    renderControls();
+    renderBody();
+  }
+
+  function beginMultiAddMode(){
+    state.multiAddMode = true;
+    state.multiAddSelected = [];
+    renderControls();
+    renderBody();
+  }
+
+  function cancelMultiAddMode(){
+    state.multiAddMode = false;
+    state.multiAddSelected = [];
+    renderControls();
+    renderBody();
+  }
+
+  function toggleAllVisibleFavorites(){
+    const enrolledSet = new Set((state.players || []).map((p) => safe(p.dbPlayers_PlayerGHIN)));
+    const visibleSelectable = getFilteredFavorites()
+      .map(f => safe(f.playerGHIN))
+      .filter(Boolean)
+      .filter(ghin => !enrolledSet.has(ghin));
+
+    const allSelected = visibleSelectable.length > 0 && visibleSelectable.every(ghin => isFavoriteSelected(ghin));
+
+    state.multiAddSelected = allSelected ? [] : visibleSelectable.slice();
+    renderControls();
+    renderBody();
   }
 
   function formatDate(s) {
@@ -183,6 +254,23 @@
     }
     if (state.activeTab === "favorites") {
       const opts = ["All groups"].concat(state.groups || []).map(g => `<option value="${esc(g)}">${esc(g)}</option>`).join("");
+
+      const actionButtons = state.multiAddMode
+        ? `
+          <div class="gpFavBtnRow">
+            <button id="gpBtnSelectTee" class="btn btnPrimary" type="button" ${state.multiAddSelected.length ? "" : "disabled"}>
+              Select Tee${state.multiAddSelected.length ? ` (${state.multiAddSelected.length})` : ""}
+            </button>
+            <button id="gpBtnCancelMulti" class="btn btnSecondary" type="button">Cancel Multi-Select</button>
+          </div>
+        `
+        : `
+          <div class="gpFavBtnRow">
+            <button id="gpBtnMultiAdd" class="btn btnPrimary" type="button">Multi-Add</button>
+            <button id="gpBtnFavoritesPage" class="btn btnSecondary" type="button">Manage Favorites</button>
+          </div>
+        `;
+
       el.controls.innerHTML = `<div class="maFieldRow">
         <div class="maField gpFieldGroup">
           <select id="gpFavGroup" class="maTextInput">${opts}</select>
@@ -193,23 +281,28 @@
             <button id="gpFavSearchClear" class="clearBtn ${state.favNameFilter ? "" : "isHidden"}" type="button" aria-label="Clear filter">×</button>
           </div>
         </div>
-        <div class="maField gpFieldBtn"><button id="gpBtnFavoritesPage" class="btn btnSecondary" type="button">Manage Favorites</button></div>
+        <div class="maField gpFieldBtn">${actionButtons}</div>
       </div>`;
+
       el.controls.innerHTML += `<div class="maFieldRow"><div class="maField"><div id="gpFavHint" class="maHelpText gpHint ${state.favBroadened ? "" : "isHidden"}">No match in selected group — showing all groups.</div></div></div>`;
+
       const sel = document.getElementById("gpFavGroup");
       if (sel) {
         sel.value = state.favGroupFilter;
         sel.onchange = () => {
           state.favGroupFilter = safe(sel.value) || "All groups";
+          renderControls();
           renderBody();
         };
       }
+
       const inp = document.getElementById("gpFavFilter");
       const clr = document.getElementById("gpFavSearchClear");
       if (inp) {
         inp.oninput = () => {
           state.favNameFilter = safe(inp.value);
           if (clr) clr.classList.toggle("isHidden", !state.favNameFilter);
+          renderControls();
           renderBody();
         };
       }
@@ -217,9 +310,22 @@
         state.favNameFilter = "";
         if (inp) inp.value = "";
         clr.classList.add("isHidden");
+        renderControls();
         renderBody();
       };
-      document.getElementById("gpBtnFavoritesPage").onclick = () => MA.routerGo("favorites", { returnTo: "roster" });
+
+      const btnManage = document.getElementById("gpBtnFavoritesPage");
+      if (btnManage) btnManage.onclick = () => MA.routerGo("favorites", { returnTo: "roster" });
+
+      const btnMulti = document.getElementById("gpBtnMultiAdd");
+      if (btnMulti) btnMulti.onclick = beginMultiAddMode;
+
+      const btnCancel = document.getElementById("gpBtnCancelMulti");
+      if (btnCancel) btnCancel.onclick = cancelMultiAddMode;
+
+      const btnSelectTee = document.getElementById("gpBtnSelectTee");
+      if (btnSelectTee) btnSelectTee.onclick = beginBatchTeeFlow;
+
       return;
     }
     if (state.activeTab === "nonrated") {
@@ -329,50 +435,89 @@
 
     if (state.activeTab === "favorites") {
       const enrolledSet = new Set((state.players || []).map((p) => safe(p.dbPlayers_PlayerGHIN)));
-      const q = safe(state.favNameFilter).trim().toLowerCase();
-      const grp = safe(state.favGroupFilter || "All groups");
-      state.favBroadened = false;
-      let filtered = (state.favorites || []).filter((f) => {
-        const tags = Array.isArray(f.groups) ? f.groups : [];
-        const inGroup = grp === "All groups" ? true : tags.includes(grp);
-        if (!inGroup) return false;
-        return favoriteMatchesSearch(f, q);
-      });
-
-      if (q && filtered.length === 0 && grp !== "All groups") {
-        state.favBroadened = true;
-        state.favGroupFilter = "All groups";
-        filtered = (state.favorites || []).filter((f) => favoriteMatchesSearch(f, q));
-      }
+      const filtered = getFilteredFavorites();
 
       const grpEl = document.getElementById("gpFavGroup");
       if (grpEl && grpEl.value !== state.favGroupFilter) grpEl.value = state.favGroupFilter;
       const hintEl = document.getElementById("gpFavHint");
       if (hintEl) hintEl.classList.toggle("isHidden", !state.favBroadened);
 
+      if (!state.multiAddMode) {
+        const favRows = filtered.map((f) => {
+          const g = safe(f.playerGHIN);
+          const n = safe(f.name || f.playerName);
+          const enrolled = enrolledSet.has(g);
+          return `<div class="maListRow gpRow gpRow--ghin ${enrolled ? "" : "gpRowClickable"}" data-fav-ghin="${esc(g)}" data-act="addfav" data-disabled="${enrolled ? "1" : "0"}">
+            <div class="maListRow__col">${esc(n)}</div>
+            <div class="maListRow__col maListRow__col--right"></div>
+            <div class="maListRow__col maListRow__col--right">${esc(f.gender || "")}</div>
+            <div class="maListRow__col maListRow__col--right gpEnrolledMark">${enrolled ? "☑" : ""}</div>
+          </div>`;
+        }).join("");
+
+        el.body.innerHTML = `<section class="maPanel">
+          <div class="maListRow maListRow--hdr gpRow--ghin">
+            <div class="maListRow__col">Favorites</div>
+            <div class="maListRow__col maListRow__col--right">HI</div>
+            <div class="maListRow__col maListRow__col--right">G</div>
+            <div class="maListRow__col"></div>
+          </div>
+          <div class="maListRows">${favRows || `<div class="gpEmpty">No favorites found.</div>`}</div>
+        </section>`;
+
+        el.body.querySelectorAll("[data-act='addfav']").forEach(r=>r.onclick = (e) => {
+          if (r.getAttribute("data-disabled") === "1") return;
+          onAddFavoriteRow(e);
+        });
+        return;
+      }
+
+      const visibleSelectable = filtered
+        .map(f => safe(f.playerGHIN))
+        .filter(Boolean)
+        .filter(ghin => !enrolledSet.has(ghin));
+
+      const allSelected = visibleSelectable.length > 0 && visibleSelectable.every(ghin => isFavoriteSelected(ghin));
+      const hdrToggleText = allSelected ? "Clear" : "All";
+
       const favRows = filtered.map((f) => {
         const g = safe(f.playerGHIN);
         const n = safe(f.name || f.playerName);
         const enrolled = enrolledSet.has(g);
-        return `<div class="maListRow gpRow gpRow--ghin ${enrolled ? "" : "gpRowClickable"}" data-fav-ghin="${esc(g)}" data-act="addfav" data-disabled="${enrolled ? "1" : "0"}">
-          <div class="maListRow__col">${esc(n)}</div>
-          <div class="maListRow__col maListRow__col--right"></div>
+        const selected = isFavoriteSelected(g);
+        const lastTee = getFavoriteLastTee(f);
+
+        return `<div class="maListRow gpRow gpRow--favMulti ${selected ? "is-multiSelected" : ""} ${enrolled ? "is-multiDisabled" : "gpRowClickable"}" data-fav-ghin="${esc(g)}" data-act="multifav" data-disabled="${enrolled ? "1" : "0"}">
+          <div class="maListRow__col">
+            <button type="button" class="gpMultiCheck ${selected ? "is-on" : ""}" ${enrolled ? "disabled" : ""} aria-label="${selected ? "Deselect player" : "Select player"}">${selected ? "✓" : ""}</button>
+          </div>
+          <div class="maListRow__col">
+            ${esc(n)}
+            <div class="maListRow__col--muted gpLastTee">${esc(lastTee || "—")}</div>
+          </div>
           <div class="maListRow__col maListRow__col--right">${esc(f.gender || "")}</div>
           <div class="maListRow__col maListRow__col--right gpEnrolledMark">${enrolled ? "☑" : ""}</div>
         </div>`;
       }).join("");
+
       el.body.innerHTML = `<section class="maPanel">
-        <div class="maListRow maListRow--hdr gpRow--ghin">
+        <div class="maListRow maListRow--hdr gpRow--favMulti">
+          <div class="maListRow__col"><button type="button" id="gpHdrToggleAll" class="gpMultiHdrToggle">${hdrToggleText}</button></div>
           <div class="maListRow__col">Favorites</div>
-          <div class="maListRow__col maListRow__col--right">HI</div>
           <div class="maListRow__col maListRow__col--right">G</div>
-          <div class="maListRow__col"></div>
+          <div class="maListRow__col maListRow__col--right">In</div>
         </div>
         <div class="maListRows">${favRows || `<div class="gpEmpty">No favorites found.</div>`}</div>
       </section>`;
-      el.body.querySelectorAll("[data-act='addfav']").forEach(r=>r.onclick = (e) => {
-        if (r.getAttribute("data-disabled") === "1") return;
-        onAddFavoriteRow(e);
+
+      const hdrBtn = document.getElementById("gpHdrToggleAll");
+      if (hdrBtn) hdrBtn.onclick = toggleAllVisibleFavorites;
+
+      el.body.querySelectorAll("[data-act='multifav']").forEach(r => {
+        r.onclick = () => {
+          if (r.getAttribute("data-disabled") === "1") return;
+          toggleFavoriteSelected(r.getAttribute("data-fav-ghin"));
+        };
       });
       return;
     }
@@ -505,6 +650,91 @@
       gender: safe(row.gender),
       hi: safe(row.hi)
     });
+  }
+    async function beginBatchTeeFlow(){
+    if (state.multiAddBusy) return;
+
+    const enrolledSet = new Set((state.players || []).map((p) => safe(p.dbPlayers_PlayerGHIN)));
+    const filtered = getFilteredFavorites();
+    const selectedRows = filtered.filter((f) => {
+      const g = safe(f.playerGHIN);
+      return state.multiAddSelected.includes(g) && !enrolledSet.has(g);
+    });
+
+    if (!selectedRows.length) {
+      MA.setStatus("Select at least one favorite.", "warn");
+      return;
+    }
+
+    const genders = Array.from(new Set(selectedRows.map(f => safe(f.gender || "").toUpperCase()).filter(Boolean)));
+    if (genders.length > 1) {
+      MA.setStatus("Multi-Add currently requires selected favorites to share the same gender.", "warn");
+      return;
+    }
+
+    const firstRow = selectedRows[0];
+    const parts = safe(firstRow.name || firstRow.playerName || "").split(" ");
+    const proxyPlayer = {
+      ghin: safe(firstRow.playerGHIN),
+      first_name: parts.slice(0, -1).join(" ") || safe(firstRow.name || firstRow.playerName || ""),
+      last_name: parts.slice(-1).join(""),
+      gender: safe(firstRow.gender || "M"),
+      hi: safe(firstRow.hi || "0")
+    };
+
+    const g = state.game || {};
+    const gameId = String(g.dbGames_GGID || g.dbGames_GGIDnum || g.ggid || "").trim();
+
+    MA.TeeSetSelection.open({
+      mode: "batch",
+      gameId,
+      player: proxyPlayer,
+      subtitle: `Apply one tee to ${selectedRows.length} selected players`,
+      onSaveBatch: async (selectedTee) => {
+        await commitBatchPending(selectedRows, selectedTee);
+      }
+    });
+  }
+
+  async function commitBatchPending(selectedRows, selectedTee){
+    if (!selectedRows.length || !selectedTee) return;
+    state.multiAddBusy = true;
+
+    let added = 0;
+    let failed = 0;
+
+    try {
+      for (const row of selectedRows) {
+        const fullName = safe(row.name || row.playerName || "");
+        const parts = fullName.split(" ");
+        const first = parts.slice(0, -1).join(" ") || fullName;
+        const last = parts.slice(-1).join("");
+
+        const player = {
+          ghin: safe(row.playerGHIN),
+          first_name: first,
+          last_name: last,
+          gender: safe(row.gender || "M"),
+          hi: safe(row.hi || "0")
+        };
+
+        const res = await MA.postJson(MA.paths.gamePlayersUpsert, { player, selectedTee });
+        if (res?.ok) added++;
+        else failed++;
+      }
+
+      await refreshPlayers();
+      await refreshFavorites();
+      state.multiAddSelected = [];
+      state.multiAddMode = false;
+      renderControls();
+      renderBody();
+
+      if (failed) MA.setStatus(`Added ${added} favorites. ${failed} failed.`, "warn");
+      else MA.setStatus(`Added ${added} favorites.`, "success");
+    } finally {
+      state.multiAddBusy = false;
+    }
   }
 
     async function beginTeeFlow(player){

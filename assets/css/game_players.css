@@ -132,3 +132,79 @@
     margin: 0 auto;
   }
 }
+.gpFavBtnRow{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+}
+
+.gpRow--favMulti{
+  display:grid;
+  grid-template-columns: 34px minmax(0,1fr) 46px 34px;
+  align-items:center;
+  column-gap:6px;
+  padding:8px;
+}
+
+.gpMultiCheck{
+  width:22px;
+  height:22px;
+  border:1px solid var(--borderSubtle);
+  border-radius:999px;
+  background:var(--surfaceCard, #fff);
+  color:var(--brandPrimary);
+  font-weight:700;
+  line-height:20px;
+  text-align:center;
+  cursor:pointer;
+  padding:0;
+}
+
+.gpMultiCheck.is-on{
+  border-color:var(--brandPrimary);
+  background:color-mix(in srgb, var(--brandPrimary) 12%, white);
+}
+
+.gpMultiCheck:disabled{
+  cursor:default;
+  opacity:.45;
+}
+
+.gpMultiHdrToggle{
+  border:0;
+  background:transparent;
+  color:inherit;
+  font:inherit;
+  font-weight:700;
+  cursor:pointer;
+  padding:0;
+}
+
+.gpLastTee{
+  margin-top:2px;
+  font-size:11px;
+  color:var(--mutedText);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.gpRow.is-multiSelected{
+  background:color-mix(in srgb, var(--brandPrimary) 8%, white);
+}
+
+.gpRow.is-multiDisabled{
+  opacity:.72;
+  cursor:default;
+}
+
+@media (max-width: 560px){
+  .gpRow--favMulti{
+    grid-template-columns: 30px minmax(0,1fr) 42px 30px;
+  }
+
+  .gpFavBtnRow{
+    justify-content:flex-start;
+  }
+}

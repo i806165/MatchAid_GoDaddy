@@ -10,7 +10,7 @@
   const MA = global.MA || {};
   
   // Internal state
-  let _config = null; // { gameId, player, onSave }
+  let _config = null; // { gameId, player, onSave, onSaveBatch, mode, subtitle }
   let _teeOptions = [];
   let _selectedTee = null;
 
@@ -63,7 +63,7 @@
 
     const player = _config.player || {};
     const playerName = (player.name || (player.first_name + " " + player.last_name)).trim();
-    elSub.textContent = playerName || "Player";
+    elSub.textContent = _config.subtitle || playerName || "Player";
     elRows.innerHTML = '<div class="maEmptyState">Loading tee sets.</div>';
 
     elOverlay.style.display = "flex";
@@ -128,6 +128,10 @@
     if (!tee) return;
 
     close(); // Close UI immediately for responsiveness
+    if (_config.mode === "batch" && _config.onSaveBatch) {
+      _config.onSaveBatch(tee);
+      return;
+    }
     if (_config.onSave) _config.onSave(tee);
   }
 
