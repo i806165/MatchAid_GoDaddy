@@ -354,17 +354,20 @@
         const g = safe(f.playerGHIN);
         const n = safe(f.name || f.playerName);
         const enrolled = enrolledSet.has(g);
-        const lastTee = safe(f.lastCourse?.teeSetName || "");
-        return `<div class="maListRow gpRow gpRow--favs ${enrolled ? "" : "gpRowClickable"}" data-fav-ghin="${esc(g)}" data-act="addfav" data-disabled="${enrolled ? "1" : "0"}">
-          <div class="maListRow__col">${esc(n)}<div class="maListRow__col--muted gpSub">${esc(lastTee)}</div></div>
+        return `<div class="maListRow gpRow gpRow--ghin ${enrolled ? "" : "gpRowClickable"}" data-fav-ghin="${esc(g)}" data-act="addfav" data-disabled="${enrolled ? "1" : "0"}">
+          <div class="maListRow__col">${esc(n)}</div>
+          <div class="maListRow__col maListRow__col--right"></div>
           <div class="maListRow__col maListRow__col--right">${esc(f.gender || "")}</div>
-          <div class="maListRow__col maListRow__col--right maListRow__col--muted">${esc(lastTee || "")}</div>
           <div class="maListRow__col maListRow__col--right gpEnrolledMark">${enrolled ? "☑" : ""}</div>
-          <div class="maListRow__col"></div>
         </div>`;
       }).join("");
       el.body.innerHTML = `<section class="maPanel">
-        <div class="maListRow maListRow--hdr gpRow--favs"><div class="maListRow__col">Favorites</div><div class="maListRow__col maListRow__col--right">G</div><div class="maListRow__col maListRow__col--right">Last Tee</div><div class="maListRow__col"></div><div class="maListRow__col"></div></div>
+        <div class="maListRow maListRow--hdr gpRow--ghin">
+          <div class="maListRow__col">Favorites</div>
+          <div class="maListRow__col maListRow__col--right">HI</div>
+          <div class="maListRow__col maListRow__col--right">G</div>
+          <div class="maListRow__col"></div>
+        </div>
         <div class="maListRows">${favRows || `<div class="gpEmpty">No favorites found.</div>`}</div>
       </section>`;
       el.body.querySelectorAll("[data-act='addfav']").forEach(r=>r.onclick = (e) => {
