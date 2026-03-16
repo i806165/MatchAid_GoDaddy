@@ -139,6 +139,42 @@
     renderControls();
     renderBody();
   }
+    function showBusyModal(message){
+    let overlay = document.getElementById("gpBusyModal");
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = "gpBusyModal";
+      overlay.className = "maModalOverlay is-open";
+      overlay.innerHTML = `
+        <section class="maModal" role="dialog" aria-modal="true" aria-labelledby="gpBusyTitle">
+          <header class="maModal__hdr">
+            <div id="gpBusyTitle" class="maModal__title">Working</div>
+          </header>
+          <div class="maModal__body">
+            <div id="gpBusyMessage" class="gpBusyMessage"></div>
+          </div>
+        </section>
+      `;
+      document.body.appendChild(overlay);
+    } else {
+      overlay.classList.add("is-open");
+    }
+
+    const msg = document.getElementById("gpBusyMessage");
+    if (msg) msg.textContent = message || "Processing...";
+    document.body.classList.add("maOverlayOpen");
+  }
+
+  function updateBusyModal(message){
+    const msg = document.getElementById("gpBusyMessage");
+    if (msg) msg.textContent = message || "Processing...";
+  }
+
+  function hideBusyModal(){
+    const overlay = document.getElementById("gpBusyModal");
+    if (overlay) overlay.classList.remove("is-open");
+    document.body.classList.remove("maOverlayOpen");
+  }
 
   function formatDate(s) {
     if (!s) return "";
@@ -266,7 +302,7 @@
         `
         : `
           <div class="gpFavBtnRow">
-            <button id="gpBtnMultiAdd" class="btn btnPrimary" type="button">Multi-Add</button>
+            <button id="gpBtnMultiAdd" class="btn btnSecondary" type="button">Multi-Add</button>
             <button id="gpBtnFavoritesPage" class="btn btnSecondary" type="button">Manage Favorites</button>
           </div>
         `;
@@ -698,13 +734,18 @@
 
   async function commitBatchPending(selectedRows, selectedTee){
     if (!selectedRows.length || !selectedTee) return;
-    state.multiAddBusy = true;
+      state.multiAddBusy = true;
+      showBusyModal(`Adding ${selectedRows.length} selected favorites...`);
 
     let added = 0;
     let failed = 0;
 
     try {
+      let index = 0;
       for (const row of selectedRows) {
+        index += 1;
+        updateBusyModal(`Adding ${index} of ${selectedRows.length} selected favorites...`);
+
         const fullName = safe(row.name || row.playerName || "");
         const parts = fullName.split(" ");
         const first = parts.slice(0, -1).join(" ") || fullName;
@@ -727,13 +768,13 @@
       await refreshFavorites();
       state.multiAddSelected = [];
       state.multiAddMode = false;
-      renderControls();
-      renderBody();
+      render();
 
       if (failed) MA.setStatus(`Added ${added} favorites. ${failed} failed.`, "warn");
       else MA.setStatus(`Added ${added} favorites.`, "success");
     } finally {
       state.multiAddBusy = false;
+      hideBusyModal();
     }
   }
 

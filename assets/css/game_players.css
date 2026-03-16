@@ -208,3 +208,7 @@
     justify-content:flex-start;
   }
 }
+.gpBusyMessage{
+  text-align: center;
+  padding-block: var(--spaceMd);
+}
