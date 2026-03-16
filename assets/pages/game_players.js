@@ -294,7 +294,7 @@
       const actionButtons = state.multiAddMode
         ? `
           <div class="gpFavBtnRow">
-            <button id="gpBtnSelectTee" class="btn btnPrimary" type="button" ${state.multiAddSelected.length ? "" : "disabled"}>
+            <button id="gpBtnSelectTee" class="btn btnSecondary" type="button" ${state.multiAddSelected.length ? "" : "disabled"}>
               Select Tee${state.multiAddSelected.length ? ` (${state.multiAddSelected.length})` : ""}
             </button>
             <button id="gpBtnCancelMulti" class="btn btnSecondary" type="button">Cancel Multi-Select</button>

@@ -46,6 +46,10 @@
   font-weight: 700;
   border-bottom: 1px solid var(--brandSecondary);
 }
+.maListRow--hdr .maListRow__col,
+.maListRow--hdr .gpMultiHdrToggle{
+  color: var(--brandSecondaryText);
+}
 
 .gpRow--roster{
   display: grid;
