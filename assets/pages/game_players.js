@@ -482,8 +482,8 @@
 
           const label = [
             //id,  hide the teesetid from dropdown
-            name,
             gender && `(${gender.charAt(0)})`,
+            name,
             yards && `${yards} yds`,
             slope && `Slope ${slope}`,
             rating && `CR ${rating}`
