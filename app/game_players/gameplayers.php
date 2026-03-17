@@ -8,7 +8,7 @@ require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
-require_once MA_SERVICES . "/GHIN_API_Courses.php";
+require_once MA_SERVICES . "/GHIN/GHIN_API_Courses.php";
 
 $_SESSION["SessionFavLaunchMode"] = "registrations";
 $_SESSION["SessionFavReturnAction"] = "roster";

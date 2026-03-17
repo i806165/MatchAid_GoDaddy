@@ -500,7 +500,7 @@
         </div>
         <div class="maFieldRow">
           <div class="maField">
-            <div class="maHelpText">Enter one GHIN number per line. Import is available on desktop only.</div>
+            <div class="maHelpText">Enter one player GHIN number per line.</div>
           </div>
         </div>`;
 
