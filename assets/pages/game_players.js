@@ -209,8 +209,14 @@
           teeSetSlope: safe(totalRating?.SlopeRating || ""),
           teeSetRating: safe(totalRating?.CourseRating || "")
         };
+      })
+      .sort((a, b) => {
+        const genderDiff = safe(b.gender).localeCompare(safe(a.gender));
+        if (genderDiff !== 0) return genderDiff;
+
+        return Number(b.teeSetYards || 0) - Number(a.teeSetYards || 0);
       });
-  }
+    }
 
   async function ensureImportTeeOptions(){
     if (state.importTeeOptions.length) return;
