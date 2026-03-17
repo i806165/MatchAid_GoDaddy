@@ -526,7 +526,7 @@
 
       const selectedTee = getImportSelectedTee();
       const teeDisplay = selectedTee
-        ? `${safe(selectedTee.teeSetID || selectedTee.value || "")} • ${safe(selectedTee.teeName || selectedTee.label || selectedTee.name || "")}`
+        ? `${safe(selectedTee.teeSetName || selectedTee.label || selectedTee.name || "")}`
         : "No tee selected";
 
       el.controls.innerHTML = `<div class="maFieldRow gpImportRow">
@@ -690,7 +690,6 @@
           <div class="maListRow__col">Name</div>
           <div class="maListRow__col maListRow__col--right">G</div>
           <div class="maListRow__col maListRow__col--right">HI</div>
-          <div class="maListRow__col maListRow__col--right">Tee ID</div>
           <div class="maListRow__col">Tee Name</div>
           <div class="maListRow__col">Status</div>
         </div>
