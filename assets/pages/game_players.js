@@ -30,6 +30,7 @@
     importRows: [],
     importMode: "entry",     // entry | review
     importBusy: false,
+    courseTeePayload: init.courseTeePayload || null,
     importTeeOptions: [],
     importSelectedTeeId: "",
     importSelectedTee: null,
@@ -189,29 +190,36 @@
     return state.importRows.length > 0 && state.importRows.every(r => r.ok) && !!state.importSelectedTeeId;
   }
 
+  function hydrateImportTeeOptionsFromPayload(){
+    const payload = state.courseTeePayload || {};
+    const teeSets = Array.isArray(payload.TeeSets) ? payload.TeeSets : [];
+
+    state.importTeeOptions = teeSets
+      .filter(t => safe(t.TeeSetStatus) === "Active")
+      .map(t => {
+        const totalRating = Array.isArray(t.Ratings)
+          ? t.Ratings.find(r => safe(r.RatingType) === "Total")
+          : null;
+
+        return {
+          teeSetID: safe(t.TeeSetRatingId || ""),
+          teeSetName: safe(t.TeeSetRatingName || ""),
+          gender: safe(t.Gender || ""),
+          teeSetYards: safe(t.TotalYardage || ""),
+          teeSetSlope: safe(totalRating?.SlopeRating || ""),
+          teeSetRating: safe(totalRating?.CourseRating || "")
+        };
+      });
+  }
+
   async function ensureImportTeeOptions(){
     if (state.importTeeOptions.length) return;
 
-    const userGender = safe(state.context?.userGender || "M");
-    const userName = splitName(state.context?.userName || "Player");
-    const proxyPlayer = {
-      ghin: safe(state.context?.userGHIN || "0"),
-      first_name: userName.first,
-      last_name: userName.last,
-      gender: userGender,
-      hi: safe(state.context?.userHI || "")
-    };
+    hydrateImportTeeOptionsFromPayload();
 
-    const g = state.game || {};
-    const gameId = String(g.dbGames_GGID || g.dbGames_GGIDnum || g.ggid || "").trim();
-
-    if (!MA.TeeSetSelection || typeof MA.TeeSetSelection.getOptions !== "function") {
-      MA.setStatus("Tee options service is unavailable.", "warn");
-      return;
+    if (!state.importTeeOptions.length) {
+      MA.setStatus("No course tee sets were provided for this game.", "warn");
     }
-
-    const options = await MA.TeeSetSelection.getOptions({ gameId, player: proxyPlayer });
-    state.importTeeOptions = Array.isArray(options) ? options : [];
   }
 
   function getImportSelectedTee(){
@@ -454,14 +462,28 @@
 
       return;
     }
-        if (state.activeTab === "import") {
+    if (state.activeTab === "import") {
       const teeOptions = state.importTeeOptions || [];
       const teeValue = safe(state.importSelectedTeeId);
       const teeOptionsHtml = [`<option value="">Select Tee</option>`].concat(
         teeOptions.map(t => {
-          const id = safe(t.teeSetID || t.value || "");
-          const name = safe(t.teeName || t.label || t.name || "");
-          return `<option value="${esc(id)}">${esc(id)} • ${esc(name)}</option>`;
+          const id = safe(t.teeSetID || "");
+          const name = safe(t.teeSetName || "");
+          const gender = safe(t.gender || "");
+          const yards = safe(t.teeSetYards || "");
+          const slope = safe(t.teeSetSlope || "");
+          const rating = safe(t.teeSetRating || "");
+
+          const label = [
+            id,
+            name,
+            gender && `(${gender.charAt(0)})`,
+            yards && `${yards} yds`,
+            slope && `Slope ${slope}`,
+            rating && `CR ${rating}`
+          ].filter(Boolean).join(" • ");
+
+          return `<option value="${esc(id)}">${esc(label)}</option>`;
         })
       ).join("");
 

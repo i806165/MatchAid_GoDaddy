@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+// /app/game_players/gameplayers.php
 
 if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 
@@ -7,6 +8,7 @@ require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
+require_once MA_SERVICES . "/GHIN_API_Courses.php";
 
 $_SESSION["SessionFavLaunchMode"] = "registrations";
 $_SESSION["SessionFavReturnAction"] = "roster";
@@ -39,11 +41,17 @@ try {
   $gc = ServiceContextGame::getGameContext();
   $game = $gc["game"];
   $ggid = $gc["ggid"];
+  $courseTeePayload = [];
+
+  $courseId = trim((string)($game["dbGames_CourseID"] ?? ""));
+  $adminToken = trim((string)($_SESSION["SessionGHINAdminToken"] ?? ""));
+  $courseTeePayload = be_getCourseTeeSets($courseId, $adminToken);
 
   $initPayload = [
     "ok" => true,
     "ggid" => $ggid,
     "game" => $game,
+    "courseTeePayload" => $courseTeePayload,
     "context" => [
       "userState" => (string)($_SESSION["SessionUserState"] ?? ""),
       "userGHIN" => (string)($_SESSION["SessionGHINLogonID"] ?? ""),
