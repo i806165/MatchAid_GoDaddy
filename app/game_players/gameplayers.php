@@ -44,13 +44,9 @@ try {
   $courseTeePayload = [];
 
   $courseId = trim((string)($game["dbGames_CourseID"] ?? ""));
-  $adminToken = trim((string)($_SESSION["SessionGHINAdminToken"] ?? ""));
+  $adminToken = $_SESSION["SessionAdminToken"];
   $courseTeePayload = be_getCourseTeeSets($courseId, $adminToken);
 
-    Logger::info("GAMEPLAYERS_AFTER_TEE_LOAD", [
-      "teeSetCount" => is_array($courseTeePayload["TeeSets"] ?? null) ? count($courseTeePayload["TeeSets"]) : 0,
-      "ggid" => $ggid
-    ]);
 
   $initPayload = [
     "ok" => true,
