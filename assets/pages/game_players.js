@@ -679,7 +679,6 @@
           <div class="maListRow__col">${esc(p.name || "")}</div>
           <div class="maListRow__col maListRow__col--right">${esc(p.gender || "")}</div>
           <div class="maListRow__col maListRow__col--right">${esc(p.hi || "")}</div>
-          <div class="maListRow__col maListRow__col--right">${esc(teeId)}</div>
           <div class="maListRow__col">${esc(teeName)}</div>
           <div class="maListRow__col">${esc(r.status)}</div>
         </div>`;

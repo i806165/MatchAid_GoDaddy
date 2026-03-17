@@ -244,3 +244,25 @@
 .gpFieldTeeImport{
   min-width: 220px;
 }
+.gpRow--import{
+  display: grid;
+  grid-template-columns: 120px minmax(220px, 1.4fr) 48px 72px minmax(120px, 1fr) 110px;
+  align-items: center;
+  column-gap: 12px;
+}
+
+.gpRow--import .maListRow__col{
+  min-width: 0;
+}
+
+.gpRow--import .maListRow__col:nth-child(2),
+.gpRow--import .maListRow__col:nth-child(5),
+.gpRow--import .maListRow__col:nth-child(6){
+  text-align: left;
+}
+
+.gpRow--import .maListRow__col:nth-child(1),
+.gpRow--import .maListRow__col:nth-child(3),
+.gpRow--import .maListRow__col:nth-child(4){
+  white-space: nowrap;
+}
