@@ -481,7 +481,7 @@
           const rating = safe(t.teeSetRating || "");
 
           const label = [
-            id,
+            //id,  hide the teesetid from dropdown
             name,
             gender && `(${gender.charAt(0)})`,
             yards && `${yards} yds`,
