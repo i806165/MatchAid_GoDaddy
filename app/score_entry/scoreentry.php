@@ -33,6 +33,7 @@ $paths = [
   "apiSession"      => MA_ROUTE_API_SESSION,
   "routerApi"       => MA_ROUTE_API_ROUTER,
   "apiScoreEntry"   => MA_ROUTE_API_SCORE_ENTRY,
+  "apiScoreEntryLaunch" => MA_ROUTE_API_SCORE_ENTRY . "/launch.php",
   "apiScoreCard"    => MA_ROUTE_API_GAME_SCORECARD
 ];
 

@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 header('Content-Type: application/json; charset=utf-8');
 
-require_once __DIR__ . '/../../services/scoring/service_ScoreEntry.php';
-// TODO: require bootstrap / db helpers / getGameContext service in your app
+require_once __DIR__ . '/../../bootstrap.php';
+require_once MA_SERVICES . '/scoring/service_ScoreEntry.php';
+require_once MA_SERVICES . '/context/service_ContextGame.php';
 
 function respond(int $status, array $payload): void {
     http_response_code($status);

@@ -1,8 +1,11 @@
-/* /assets/pages/scoreentry.js */
+/* /assets/pages/score_entry.js */
 (function () {
   'use strict';
 
-  const boot = window.__SCORE_ENTRY_BOOTSTRAP__ || {};
+  const boot = window.__MA_INIT__ || window.__INIT__ || {};
+  const paths = (window.MA && window.MA.paths) ? window.MA.paths : {};
+  const routes = (window.MA && window.MA.routes) ? window.MA.routes : {};
+  
   const state = {
     payload: null,
     currentHole: 1,
@@ -36,8 +39,8 @@
   };
 
   function init() {
-    if (boot.initialPlayerKey) {
-      el.playerKey.value = boot.initialPlayerKey;
+    if (boot.scorecardKey) {
+      el.playerKey.value = boot.scorecardKey;
     }
     el.launchBtn?.addEventListener('click', launch);
     el.prevHoleBtn?.addEventListener('click', () => moveHole(-1));
@@ -59,12 +62,23 @@
     }
 
     try {
-      const res = await fetch(boot.launchApi, {
+      const launchUrl = paths.apiScoreEntryLaunch
+        || (routes.apiScoreEntry ? routes.apiScoreEntry + '/launch.php' : '/api/score_entry/launch.php');
+
+      const res = await fetch(launchUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerKey, holeNumber: 1 })
       });
-      const json = await res.json();
+
+      const text = await res.text();
+      let json;
+      try {
+        json = JSON.parse(text);
+      } catch (err) {
+        console.error('Non-JSON response from launch endpoint:', text);
+        throw new Error('Launch endpoint did not return JSON.');
+      }
       if (!res.ok || !json.ok) {
         throw new Error(json.message || 'Unable to launch score entry.');
       }
