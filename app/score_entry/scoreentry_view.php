@@ -2,64 +2,120 @@
 declare(strict_types=1);
 // /public_html/app/score_entry/scoreentry_view.php
 ?>
-<main class="maPageShell scoreEntryShell" id="scoreEntryRoot">
+<main class="maPage scoreEntryShell" id="scoreEntryRoot">
+
   <section class="maCard scoreLaunchCard" id="scoreLaunchCard">
-    <div class="maCardHeader">
+    <div class="maCard__hdr">
       <h1 class="maCardTitle">Score Entry</h1>
       <p class="maCardSubTitle">Enter the ScoreCard ID to launch the scoring group.</p>
     </div>
-    <div class="maCardBody scoreLaunchBody">
-      <label class="maLabel" for="scoreEntryPlayerKey">ScoreCard ID</label>
-      <div class="scoreLaunchRow">
-        <input id="scoreEntryPlayerKey" class="maTextInput" type="text" autocomplete="off" spellcheck="false" maxlength="32">
-        <button id="scoreEntryLaunchBtn" class="maBtn maBtnPrimary" type="button">Launch</button>
+    <div class="maCard__body">
+      <div class="maField">
+        <label class="maLabel" for="scoreEntryPlayerKey">ScoreCard ID</label>
+        <div class="scoreLaunchRow">
+          <input
+            id="scoreEntryPlayerKey"
+            class="maTextInput"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="32"
+          >
+          <button id="scoreEntryLaunchBtn" class="btn btnPrimary" type="button">Launch</button>
+        </div>
       </div>
       <div id="scoreEntryStatus" class="scoreEntryStatus" aria-live="polite"></div>
     </div>
   </section>
 
   <section class="maCard scoreContextCard isHidden" id="scoreContextCard">
-    <div class="scoreContextGrid">
-      <div><span class="scoreMetaLabel">Game</span><span id="ctxGameTitle" class="scoreMetaValue"></span></div>
-      <div><span class="scoreMetaLabel">Course</span><span id="ctxCourseName" class="scoreMetaValue"></span></div>
-      <div><span class="scoreMetaLabel">ScoreCard ID</span><span id="ctxPlayerKey" class="scoreMetaValue"></span></div>
-      <div><span class="scoreMetaLabel">Tee Time</span><span id="ctxTeeTime" class="scoreMetaValue"></span></div>
-      <div><span class="scoreMetaLabel">Flight</span><span id="ctxFlightId" class="scoreMetaValue"></span></div>
-      <div><span class="scoreMetaLabel">Pairing</span><span id="ctxPairingId" class="scoreMetaValue"></span></div>
+    <div class="maCard__body">
+      <div class="scoreContextGrid">
+        <div class="maField">
+          <label class="maLabel">Game</label>
+          <span id="ctxGameTitle" class="scoreMetaValue"></span>
+        </div>
+        <div class="maField">
+          <label class="maLabel">Course</label>
+          <span id="ctxCourseName" class="scoreMetaValue"></span>
+        </div>
+        <div class="maField">
+          <label class="maLabel">ScoreCard ID</label>
+          <span id="ctxPlayerKey" class="scoreMetaValue"></span>
+        </div>
+        <div class="maField">
+          <label class="maLabel">Tee Time</label>
+          <span id="ctxTeeTime" class="scoreMetaValue"></span>
+        </div>
+        <div class="maField">
+          <label class="maLabel">Flight</label>
+          <span id="ctxFlightId" class="scoreMetaValue"></span>
+        </div>
+        <div class="maField">
+          <label class="maLabel">Pairing</label>
+          <span id="ctxPairingId" class="scoreMetaValue"></span>
+        </div>
+      </div>
     </div>
   </section>
 
   <section class="maCard scoreCartCard isHidden" id="scoreCartCard">
-    <div class="maCardHeader"><h2 class="maCardTitle">Cart Configuration</h2></div>
-    <div class="maCardBody scoreCartGrid">
-      <label class="maLabel">Cart 1 Driver<select id="cart1Driver" class="maSelect"></select></label>
-      <label class="maLabel">Cart 1 Passenger<select id="cart1Passenger" class="maSelect"></select></label>
-      <label class="maLabel">Cart 2 Driver<select id="cart2Driver" class="maSelect"></select></label>
-      <label class="maLabel">Cart 2 Passenger<select id="cart2Passenger" class="maSelect"></select></label>
-      <div class="scoreCartActions"><button id="scoreCartConfirmBtn" class="maBtn maBtnPrimary" type="button">Confirm</button></div>
+    <div class="maCard__hdr">
+      <h2 class="maCardTitle">Cart Configuration</h2>
+    </div>
+    <div class="maCard__body">
+      <div class="scoreCartGrid">
+        <div class="maField">
+          <label class="maLabel" for="cart1Driver">Cart 1 Driver</label>
+          <select id="cart1Driver" class="maTextInput"></select>
+        </div>
+        <div class="maField">
+          <label class="maLabel" for="cart1Passenger">Cart 1 Passenger</label>
+          <select id="cart1Passenger" class="maTextInput"></select>
+        </div>
+        <div class="maField">
+          <label class="maLabel" for="cart2Driver">Cart 2 Driver</label>
+          <select id="cart2Driver" class="maTextInput"></select>
+        </div>
+        <div class="maField">
+          <label class="maLabel" for="cart2Passenger">Cart 2 Passenger</label>
+          <select id="cart2Passenger" class="maTextInput"></select>
+        </div>
+      </div>
+      <div class="scoreCartActions" style="margin-top:12px;">
+        <button id="scoreCartConfirmBtn" class="btn btnSecondary" type="button">Confirm</button>
+      </div>
     </div>
   </section>
 
   <section class="maCard scoreKeeperCard isHidden" id="scoreKeeperCard">
-    <div class="maCardHeader"><h2 class="maCardTitle">Choose Scorekeeper</h2></div>
-    <div class="maCardBody">
-      <div id="scoreKeeperChips" class="scoreKeeperChips"></div>
+    <div class="maCard__hdr">
+      <h2 class="maCardTitle">Choose Scorekeeper</h2>
+    </div>
+    <div class="maCard__body">
+      <div id="scoreKeeperChips" class="maChoiceChips"></div>
       <div id="scoreKeeperWelcome" class="scoreKeeperWelcome"></div>
     </div>
   </section>
 
   <section class="scoreEntryWork isHidden" id="scoreEntryWork">
-    <div class="scoreHoleNav maCard">
-      <div class="scoreHoleNavInner">
-        <button id="scorePrevHoleBtn" class="maBtn maBtnSecondary" type="button">Prev</button>
-        <select id="scoreHoleSelect" class="maSelect scoreHoleSelect"></select>
-        <button id="scoreNextHoleBtn" class="maBtn maBtnSecondary" type="button">Next</button>
+    <div class="maCard scoreHoleNav">
+      <div class="maCard__body">
+        <div class="scoreHoleNavInner">
+          <button id="scorePrevHoleBtn" class="btn" type="button">Prev</button>
+          <select id="scoreHoleSelect" class="maTextInput scoreHoleSelect"></select>
+          <button id="scoreNextHoleBtn" class="btn" type="button">Next</button>
+        </div>
       </div>
     </div>
 
     <section class="maCard scoreCollectorCard">
-      <div class="maCardHeader"><h2 class="maCardTitle">Collect Scores</h2></div>
-      <div class="maCardBody" id="scoreRowsContainer"></div>
+      <div class="maCard__hdr">
+        <h2 class="maCardTitle">Collect Scores</h2>
+      </div>
+      <div class="maCard__body">
+        <div id="scoreRowsContainer" class="scoreRows"></div>
+      </div>
     </section>
   </section>
 
@@ -68,10 +124,11 @@ declare(strict_types=1);
       <h3>Unsaved score changes</h3>
       <p>You have unsaved score changes. What would you like to do?</p>
       <div class="scoreDirtyActions">
-        <button value="save" class="maBtn maBtnPrimary">Save &amp; Continue</button>
-        <button value="discard" class="maBtn maBtnSecondary">Discard &amp; Leave</button>
-        <button value="cancel" class="maBtn maBtnSecondary">Cancel</button>
+        <button value="save" class="btn btnPrimary">Save &amp; Continue</button>
+        <button value="discard" class="btn">Discard &amp; Leave</button>
+        <button value="cancel" class="btn">Cancel</button>
       </div>
     </form>
   </dialog>
+
 </main>

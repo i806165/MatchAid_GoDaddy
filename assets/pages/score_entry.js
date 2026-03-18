@@ -2,10 +2,12 @@
 (function () {
   'use strict';
 
+  const MA = window.MA || {};
   const boot = window.__MA_INIT__ || window.__INIT__ || {};
   const paths = (window.MA && window.MA.paths) ? window.MA.paths : {};
   const routes = (window.MA && window.MA.routes) ? window.MA.routes : {};
-  
+  const chrome = MA.chrome || {};
+
   const state = {
     payload: null,
     currentHole: 1,
@@ -39,12 +41,14 @@
   };
 
   function init() {
-    if (boot.scorecardKey) {
+    if (boot.scorecardKey && el.playerKey) {
       el.playerKey.value = boot.scorecardKey;
     }
+
     el.launchBtn?.addEventListener('click', launch);
     el.prevHoleBtn?.addEventListener('click', () => moveHole(-1));
     el.nextHoleBtn?.addEventListener('click', () => moveHole(1));
+
     el.holeSelect?.addEventListener('change', async (e) => {
       const nextHole = parseInt(e.target.value, 10);
       if (Number.isInteger(nextHole)) {
@@ -54,10 +58,11 @@
   }
 
   async function launch() {
-    setStatus('Launching score entry…', 'info');
-    const playerKey = (el.playerKey.value || '').replace(/\s+/g, '').toUpperCase();
+    setPageStatus('Launching score entry…', 'info');
+
+    const playerKey = (el.playerKey?.value || '').replace(/\s+/g, '').toUpperCase();
     if (!playerKey) {
-      setStatus('Please enter a ScoreCard ID.', 'warn');
+      setPageStatus('Please enter a ScoreCard ID.', 'warn');
       return;
     }
 
@@ -79,6 +84,7 @@
         console.error('Non-JSON response from launch endpoint:', text);
         throw new Error('Launch endpoint did not return JSON.');
       }
+
       if (!res.ok || !json.ok) {
         throw new Error(json.message || 'Unable to launch score entry.');
       }
@@ -86,10 +92,18 @@
       state.payload = json.payload;
       state.currentHole = json.payload.currentHole || 1;
       state.dirty = false;
+
       renderLaunchPayload();
-      setStatus(state.payload.isGameDay ? 'Ready for score collection.' : 'Score entry is only available on the day of play.', state.payload.isGameDay ? 'ok' : 'warn');
+      applyChrome();
+
+      setPageStatus(
+        state.payload.isGameDay
+          ? 'Ready for score collection.'
+          : 'Score entry is only available on the day of play.',
+        state.payload.isGameDay ? 'ok' : 'warn'
+      );
     } catch (err) {
-      setStatus(err.message || 'Launch failed.', 'error');
+      setPageStatus(err.message || 'Launch failed.', 'error');
     }
   }
 
@@ -98,12 +112,14 @@
     if (!payload) return;
 
     const first = payload.players?.[0]?.playerRow || {};
+
     el.ctx.gameTitle.textContent = payload.gameRow?.dbGames_Title || '';
     el.ctx.courseName.textContent = payload.gameRow?.dbGames_CourseName || '';
     el.ctx.playerKey.textContent = first.dbPlayers_PlayerKey || '';
     el.ctx.teeTime.textContent = first.dbPlayers_TeeTime || '';
     el.ctx.flightId.textContent = first.dbPlayers_FlightID || '';
     el.ctx.pairingId.textContent = first.dbPlayers_PairingID || '';
+
     el.contextCard.classList.remove('isHidden');
 
     renderHoleOptions();
@@ -117,6 +133,7 @@
     let start = 1, end = 18;
     if (holesLabel === 'F9') end = 9;
     if (holesLabel === 'B9') start = 10;
+
     el.holeSelect.innerHTML = '';
     for (let h = start; h <= end; h += 1) {
       const opt = document.createElement('option');
@@ -130,17 +147,26 @@
   function renderKeeperChips() {
     const payload = state.payload;
     el.keeperChips.innerHTML = '';
+
     (payload.players || []).forEach((p) => {
       const row = p.scoreEntryRow || {};
       const btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'scoreKeeperChip';
+      btn.className = 'maChoiceChip';
       btn.textContent = row.playerName || '';
+
       btn.addEventListener('click', () => {
         state.scorerGHIN = row.playerGHIN || '';
+
+        el.keeperChips.querySelectorAll('.maChoiceChip').forEach((chip) => {
+          chip.classList.remove('is-selected');
+        });
+        btn.classList.add('is-selected');
+
         el.keeperWelcome.textContent = `Welcome, ${row.playerName || ''}`;
         el.work.classList.remove('isHidden');
       });
+
       el.keeperChips.appendChild(btn);
     });
   }
@@ -148,8 +174,10 @@
   function toggleByState() {
     const payload = state.payload;
     if (!payload) return;
+
     el.cartCard.classList.toggle('isHidden', !payload.requiresCartConfig);
     el.keeperCard.classList.remove('isHidden');
+
     if (!payload.isGameDay) {
       el.work.classList.add('isHidden');
     }
@@ -158,6 +186,7 @@
   function renderRows() {
     const payload = state.payload;
     if (!payload) return;
+
     el.rows.innerHTML = '';
 
     (payload.players || []).forEach((wrapper) => {
@@ -165,6 +194,7 @@
       const article = document.createElement('article');
       article.className = 'scorePlayerRow';
       article.dataset.playerId = row.playerId || '';
+
       article.innerHTML = `
         <div class="scorePlayerRowTop">
           <div class="scorePlayerNameBlock">
@@ -172,9 +202,9 @@
             <div class="scorePlayerMeta">HC ${escapeHtml(String(row.effectiveHC ?? ''))}</div>
           </div>
           <div class="scoreRawControls">
-            <button type="button" class="scoreAdjustBtn" data-dir="-1">−</button>
-            <input type="number" class="scoreRawInput" min="1" max="15" value="${row.rawScore ?? ''}">
-            <button type="button" class="scoreAdjustBtn" data-dir="1">+</button>
+            <button type="button" class="btn scoreAdjustBtn" data-dir="-1">−</button>
+            <input type="number" class="maTextInput scoreRawInput" min="1" max="15" value="${row.rawScore ?? ''}">
+            <button type="button" class="btn scoreAdjustBtn" data-dir="1">+</button>
           </div>
           <div class="scoreNetBox">
             <span class="scoreNetLabel">Net</span>
@@ -225,10 +255,14 @@
 
   function markDirty(playerId, rawScore, declared) {
     state.dirty = true;
+
     const wrapper = state.payload.players.find((p) => (p.scoreEntryRow?.playerId || '') === playerId);
     if (!wrapper) return;
+
     wrapper.scoreEntryRow.rawScore = rawScore;
-    wrapper.scoreEntryRow.netScore = (typeof rawScore === 'number') ? rawScore - Number(wrapper.scoreEntryRow.strokeAllocation || 0) : null;
+    wrapper.scoreEntryRow.netScore = (typeof rawScore === 'number')
+      ? rawScore - Number(wrapper.scoreEntryRow.strokeAllocation || 0)
+      : null;
     wrapper.scoreEntryRow.declared = declared;
   }
 
@@ -236,28 +270,29 @@
     const holes = Array.from(el.holeSelect.options).map((o) => Number(o.value));
     const idx = holes.indexOf(state.currentHole);
     if (idx < 0) return;
+
     const nextIdx = Math.max(0, Math.min(holes.length - 1, idx + direction));
     await transitionHole(holes[nextIdx]);
   }
 
   async function transitionHole(nextHole) {
     if (nextHole === state.currentHole) return;
+
     if (state.dirty) {
-      // TODO: replace with save API on next pass. For scaffold, just clear dirty after confirmation.
       const choice = await openDirtyDialog();
       if (choice === 'cancel') {
         el.holeSelect.value = String(state.currentHole);
         return;
       }
       if (choice === 'save') {
-        setStatus('Save API wiring is pending in the next pass. Dirty state cleared for scaffold preview.', 'warn');
+        setPageStatus('Save API wiring is pending in the next pass. Dirty state cleared for scaffold preview.', 'warn');
       }
       state.dirty = false;
     }
+
     state.currentHole = nextHole;
     el.holeSelect.value = String(nextHole);
-    // TODO: request rebuilt rows for next hole from backend or local rebuild using launch payload working state
-    setStatus(`Moved to Hole ${nextHole}. Backend row rebuild wiring is next.`, 'info');
+    setPageStatus(`Moved to Hole ${nextHole}. Backend row rebuild wiring is next.`, 'info');
   }
 
   function openDirtyDialog() {
@@ -266,19 +301,64 @@
         resolve(window.confirm('You have unsaved changes. Leave anyway?') ? 'discard' : 'cancel');
         return;
       }
+
       el.dirtyDialog.showModal();
+
       const handler = () => {
         el.dirtyDialog.removeEventListener('close', handler);
         resolve(el.dirtyDialog.returnValue || 'cancel');
       };
+
       el.dirtyDialog.addEventListener('close', handler);
     });
   }
 
-  function setStatus(message, level) {
+  function setPageStatus(message, level) {
     if (!el.status) return;
     el.status.textContent = message || '';
     el.status.dataset.level = level || 'info';
+  }
+
+  function applyChrome() {
+    const payload = state.payload || {};
+    const game = payload.gameRow || {};
+    const ctx = payload.launchContext || {};
+
+    const titleLine1 = 'Score Entry';
+    const titleLine2 = String(game.dbGames_Title || '');
+    const titleLine3 = [
+      String(game.dbGames_CourseName || ''),
+      String(ctx.playerKey || '')
+    ].filter(Boolean).join(' • ');
+
+    if (chrome && typeof chrome.setHeaderLines === 'function') {
+      chrome.setHeaderLines([titleLine1, titleLine2, titleLine3]);
+    }
+
+    if (chrome && typeof chrome.setActions === 'function') {
+      chrome.setActions({
+        left: { show: false },
+        right: { show: false }
+      });
+    }
+
+    if (chrome && typeof chrome.setBottomNav === 'function') {
+      chrome.setBottomNav({
+        visible: ['home'], //,'scoreentry', 'leaderboard', 'holechamps', 'scorecard'],
+        active: 'scoreentry',
+        onNavigate: (id) => {
+          if (state.dirty) {
+            openDirtyDialog().then((choice) => {
+              if (choice !== 'cancel' && typeof MA.routerGo === 'function') {
+                MA.routerGo(id);
+              }
+            });
+            return;
+          }
+          if (typeof MA.routerGo === 'function') MA.routerGo(id);
+        }
+      });
+    }
   }
 
   function escapeHtml(text) {
@@ -291,4 +371,5 @@
   }
 
   init();
+  applyChrome();
 })();

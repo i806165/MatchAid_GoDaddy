@@ -1,40 +1,242 @@
 /* /assets/css/score_entry.css */
-.scoreEntryShell { max-width: 980px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
-.isHidden { display: none !important; }
-.scoreLaunchRow { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; }
-.scoreEntryStatus { min-height: 24px; margin-top: 10px; }
-.scoreEntryStatus[data-level="error"] { color: #a61b1b; }
-.scoreEntryStatus[data-level="warn"] { color: #8a5b00; }
-.scoreEntryStatus[data-level="ok"] { color: #255f2f; }
-.scoreContextGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px 20px; }
-.scoreMetaLabel { display: block; font-size: 12px; opacity: 0.75; }
-.scoreMetaValue { display: block; font-weight: 600; }
-.scoreCartGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.scoreCartActions { grid-column: 1 / -1; }
-.scoreKeeperChips { display: flex; flex-wrap: wrap; gap: 10px; }
-.scoreKeeperChip { border: 1px solid currentColor; background: transparent; border-radius: 999px; padding: 8px 14px; cursor: pointer; }
-.scoreKeeperWelcome { margin-top: 12px; font-weight: 600; }
-.scoreHoleNavInner { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
-.scoreHoleSelect { min-width: 180px; justify-self: center; }
-.scoreCollectorCard .maCardBody { display: grid; gap: 12px; }
-.scorePlayerRow { border: 1px solid rgba(0,0,0,0.12); border-radius: 16px; padding: 14px; display: grid; gap: 10px; }
-.scorePlayerRowTop { display: grid; grid-template-columns: 1fr auto auto; gap: 14px; align-items: center; }
-.scorePlayerName { font-weight: 700; font-size: 1rem; }
-.scoreStrokeMark { margin-left: 4px; font-size: 0.95em; vertical-align: super; }
-.scorePlayerMeta, .scorePlayerDetail { font-size: 0.9rem; opacity: 0.85; }
-.scoreRawControls { display: inline-grid; grid-template-columns: 40px 72px 40px; gap: 6px; align-items: center; }
-.scoreAdjustBtn { height: 40px; border-radius: 10px; border: 1px solid rgba(0,0,0,.18); background: transparent; cursor: pointer; }
-.scoreRawInput { height: 40px; text-align: center; border-radius: 10px; border: 1px solid rgba(0,0,0,.18); }
-.scoreNetBox { min-width: 72px; text-align: center; }
-.scoreNetLabel { display: block; font-size: 12px; opacity: .75; }
-.scoreNetValue { display: block; font-weight: 700; font-size: 1.1rem; }
-.scorePlayerRowBottom { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
-.scoreDeclareWrap.isHidden { display: none; }
-.scoreDirtyDialog { border: none; border-radius: 20px; padding: 0; max-width: 420px; width: calc(100% - 32px); }
-.scoreDirtyDialogForm { padding: 20px; display: grid; gap: 14px; }
-.scoreDirtyActions { display: flex; flex-wrap: wrap; gap: 10px; }
-@media (max-width: 768px) {
-  .scoreContextGrid, .scoreCartGrid, .scorePlayerRowTop, .scorePlayerRowBottom { grid-template-columns: 1fr; }
-  .scoreLaunchRow, .scoreHoleNavInner { grid-template-columns: 1fr; }
-  .scoreRawControls { justify-content: start; }
+.scoreEntryShell{
+  max-width: 980px;
+  margin: 0 auto;
+  display: grid;
+  gap: var(--cardsGap);
+}
+
+.isHidden{ display:none !important; }
+
+/* Compact context grid inside shared maCard */
+.scoreContextGrid{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 18px;
+}
+
+.scoreMetaValue{
+  display: block;
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--ink);
+  line-height: 1.15;
+}
+
+/* Launch row: shared field/input/button, local layout only */
+.scoreLaunchRow{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.scoreEntryStatus{
+  min-height: 22px;
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.scoreEntryStatus[data-level="error"]{ color: var(--danger); }
+.scoreEntryStatus[data-level="warn"]{ color: #8a5b00; }
+.scoreEntryStatus[data-level="ok"]{ color: var(--success); }
+.scoreEntryStatus[data-level="info"]{ color: var(--ink); }
+
+/* COD cart setup */
+.scoreCartGrid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.scoreCartActions{
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Hole nav uses shared buttons/input, local layout only */
+.scoreHoleNavInner{
+  display: grid;
+  grid-template-columns: 110px 1fr 110px;
+  gap: 10px;
+  align-items: center;
+}
+
+.scoreHoleSelect{
+  max-width: 220px;
+  justify-self: center;
+}
+
+/* Collector rows */
+.scoreRows{
+  display: grid;
+  gap: 10px;
+}
+
+.scorePlayerRow{
+  border: 1px solid var(--cardBorder);
+  border-radius: var(--cardRadius);
+  box-shadow: var(--cardShadow);
+  background: var(--cardBg);
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.scorePlayerRowTop{
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+}
+
+.scorePlayerNameBlock{
+  min-width: 0;
+}
+
+.scorePlayerName{
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.15;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scoreStrokeMark{
+  margin-left: 4px;
+  font-size: .85em;
+  vertical-align: super;
+  color: var(--mutedText);
+}
+
+.scorePlayerMeta{
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--mutedText);
+}
+
+.scoreRawControls{
+  display: inline-grid;
+  grid-template-columns: 36px 64px 36px;
+  gap: 6px;
+  align-items: center;
+}
+
+.scoreAdjustBtn{
+  min-height: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+}
+
+.scoreRawInput{
+  width: 64px;
+  min-height: 36px;
+  height: 36px;
+  text-align: center;
+  padding: 0 8px;
+}
+
+.scoreNetBox{
+  min-width: 58px;
+  text-align: center;
+}
+
+.scoreNetLabel{
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--mutedText);
+  line-height: 1;
+}
+
+.scoreNetValue{
+  display: block;
+  margin-top: 2px;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--brandPrimary);
+}
+
+.scorePlayerRowBottom{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.scorePlayerDetail{
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--mutedText);
+  min-width: 0;
+}
+
+.scoreDeclareWrap{
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.scoreDeclareWrap input{
+  margin-right: 6px;
+}
+
+/* Dirty dialog */
+.scoreDirtyDialog{
+  border: none;
+  border-radius: var(--modalRadius);
+  padding: 0;
+  max-width: 420px;
+  width: calc(100% - 32px);
+  box-shadow: var(--modalShadow);
+}
+
+.scoreDirtyDialogForm{
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.scoreDirtyActions{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 768px){
+  .scoreContextGrid,
+  .scoreCartGrid,
+  .scoreLaunchRow,
+  .scoreHoleNavInner,
+  .scorePlayerRowTop,
+  .scorePlayerRowBottom{
+    grid-template-columns: 1fr;
+  }
+
+  .scoreHoleSelect{
+    max-width: none;
+    justify-self: stretch;
+  }
+
+  .scoreRawControls{
+    justify-content: start;
+  }
+
+  .scoreNetBox{
+    text-align: left;
+  }
+
+  .scorePlayerName{
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
 }
