@@ -34,6 +34,21 @@ final class ServiceDbPlayers
     $row = $st->fetch();
     return is_array($row) ? $row : null;
   }
+  
+    public static function getPlayersByPlayerKey(string $playerKey): array
+  {
+    $playerKey = trim($playerKey);
+    if ($playerKey === "") return [];
+
+    $pdo = Db::pdo();
+    $sql = "SELECT *
+            FROM db_Players
+            WHERE dbPlayers_PlayerKey = :playerKey
+            ORDER BY dbPlayers_PairingPos ASC, dbPlayers_LName ASC, dbPlayers_Name ASC, dbPlayers_PlayerGHIN ASC";
+    $st = $pdo->prepare($sql);
+    $st->execute([":playerKey" => $playerKey]);
+    return $st->fetchAll() ?: [];
+  }
 
   public static function upsertPlayer(array $row): array
   {

@@ -7,6 +7,7 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../../bootstrap.php';
 require_once MA_SERVICES . '/scoring/service_ScoreEntry.php';
 require_once MA_SERVICES . '/context/service_ContextGame.php';
+require_once MA_SVC_DB . '/service_dbPlayers.php';
 
 function respond(int $status, array $payload): void {
     http_response_code($status);
@@ -28,20 +29,34 @@ try {
         respond(400, ['ok' => false, 'message' => 'ScoreCard ID is required.']);
     }
 
-    // TODO: replace with canonical db/service calls
-    $launchedPlayer = null; // e.g. ServiceDbPlayers::findByPlayerKey($playerKey)
-    $gameRow = null;        // e.g. getGameContext($launchedPlayer['dbPlayers_GGID'])
-    $groupPlayers = [];     // e.g. ServiceDbPlayers::loadGroupPlayers(...)
-
-    if (!$launchedPlayer || !$gameRow) {
+    // Step 1: pull all players in the scoring pod by shared ScoreCard ID
+    $groupPlayers = ServiceDbPlayers::getPlayersByPlayerKey($playerKey);
+    if (!$groupPlayers || count($groupPlayers) === 0) {
         respond(404, ['ok' => false, 'message' => 'ScoreCard ID not found.']);
+    }
+
+    // Step 2: use first player row as launch anchor
+    $launchedPlayer = $groupPlayers[0];
+    $ggid = (int)($launchedPlayer['dbPlayers_GGID'] ?? 0);
+    if ($ggid <= 0) {
+        respond(404, ['ok' => false, 'message' => 'Game not found for ScoreCard ID.']);
+    }
+
+    // Step 3: hydrate session GGID so existing game context service can be reused
+    ServiceContextGame::setGameContext($ggid);
+    $gc = ServiceContextGame::getGameContext();
+    $gameRow = $gc['game'] ?? null;
+
+    if (!$gameRow) {
+        respond(404, ['ok' => false, 'message' => 'Game context not found.']);
     }
 
     $payload = ServiceScoreEntry::buildLaunchPayload($gameRow, $groupPlayers, $holeNumber);
     $payload['launchContext'] = [
         'playerKey' => $playerKey,
-        'groupLoadRule' => ServiceScoreEntry::resolveGroupLoadMode($gameRow, $launchedPlayer),
+        'groupLoadRule' => 'PlayerKey',
         'launchedPlayerId' => (string)($launchedPlayer['_id'] ?? ''),
+        'ggid' => (string)$ggid,
     ];
 
     respond(200, ['ok' => true, 'payload' => $payload]);
