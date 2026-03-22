@@ -76,7 +76,7 @@ final class ServiceScoreCard {
       $teeTime = trim((string)($first["dbPlayers_TeeTime"] ?? ""));
       $startHole = trim((string)($first["dbPlayers_StartHole"] ?? ""));
 
-      $gameHeader = [
+      $gameHeader = array_merge($gameRow, [
         "gameTitle" => (string)($gameRow["dbGames_Title"] ?? ""),
         "GGID" => (string)($gameRow["dbGames_GGID"] ?? ($gameRow["dbGames_GGIDNum"] ?? "")),
         "courseName" => (string)$courseName,
@@ -84,7 +84,7 @@ final class ServiceScoreCard {
         "holesPlayed" => (string)($gameRow["dbGames_Holes"] ?? "All 18"),
         "summaryText" => (string)($gameRow["dbGames_SummaryText"] ?? ""),
         "playerKey" => (string)($first["dbPlayers_PlayerKey"] ?? ""),
-      ];
+      ]);
 
       $teeSetIdsUsed = self::getTeeSetIdsUsed($playersInGroup);
 
@@ -202,14 +202,14 @@ final class ServiceScoreCard {
         }
       }
 
-      $out[] = [
+      $out[] = array_merge($player, [
         "playerName" => (string)($player["dbPlayers_Name"] ?? ""),
         "playerHC" => $playerHC,
         "tee" => $tee,
         "teeSetId" => trim((string)($player["dbPlayers_TeeSetID"] ?? "")),
         "playerKey" => (string)($player["dbPlayers_PlayerKey"] ?? ""),
         "strokes" => $strokes,
-      ];
+      ]);
     }
     return $out;
   }

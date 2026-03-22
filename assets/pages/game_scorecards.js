@@ -108,7 +108,6 @@
       }
 
       // Real player
-      html += "<tr>";
       const name = String(p.playerName || "").trim();
       const teeName = String(p.tee || "").trim();
 
@@ -121,7 +120,8 @@
         if (Number.isFinite(hcVal)) hcText = `(${hcVal})`;
       }
 
-      let rowHtml = "<tr>";
+      const gender = String(p.dbPlayers_Gender || "").trim();
+      let rowHtml = `<tr data-gender="${esc(gender)}">`;
       rowHtml += `<td class="scName">
         <div class="scPLine1">${esc(name)} ${hcText ? `<span class="scPHC">${esc(hcText)}</span>` : ""}</div>
         <div class="scPLine2">${esc(teeName)}</div>
@@ -224,7 +224,12 @@
     const teeTime = group.teeTime ? esc(group.teeTime) : "";
 
     // 3) Starting Hole (implied from tee time usually, or explicit if we had it)
-    const startHole = group.startHole ? `Hole ${esc(group.startHole)}` : "";
+    let suffix = group.startHoleSuffix || "";
+    if (!suffix && Array.isArray(group.players)) {
+      const p = group.players.find((x) => x && (x.dbPlayers_StartHoleSuffix || x.startHoleSuffix));
+      if (p) suffix = p.dbPlayers_StartHoleSuffix || p.startHoleSuffix;
+    }
+    const startHole = group.startHole ? `Hole ${esc(group.startHole)}${esc(suffix)}` : "";
 
     // 4) HC Effectivity
     // This comes from game object in init, not group.
@@ -232,19 +237,38 @@
     const hcDate = game.dbGames_HCEffectivityDate || "";
     let hcLabel = "";
     if (hcEff === "Date" && hcDate) hcLabel = `HC ${esc(hcDate)}`;
-    else if (hcEff && hcEff !== "PlayDate") hcLabel = `HC ${esc(hcEff)}`;
+    else if (hcEff) hcLabel = `HC ${esc(hcEff)}`;
 
     // Combine parts
-    const parts = [courseName, dateStr, teeTime, startHole, hcLabel].filter(Boolean);
+    const parts = [courseName, dateStr, teeTime, startHole].filter(Boolean);
     const subLine = parts.join(" • ");
 
-    // Header Line 3: Scoring System Details
-    let scoringLine = "";
+    // Header Line 3: Format + Segments
+    const gameformat = String(gh.dbGames_GameFormat || "").trim();
+    let segmentLabel = "";
+    if (String(gh.dbGames_RotationMethod) != "None") {
+      const seg = String(gh.dbGames_Segments || "");
+      if (seg) segmentLabel = `${seg}-Hole Segments`;
+    }
+
+    const allowance = game.dbGames_Allowance ? `${game.dbGames_Allowance}%` : "";
+    const line3 = [
+      gameformat,
+      String(game.dbGames_ScoringBasis || ""),
+      String(game.dbGames_StrokeDistribution || ""),
+      String(game.dbGames_ScoringMethod || ""),
+      hcLabel,
+      allowance,
+      segmentLabel
+    ].filter(Boolean).join(" • ");
+
+    // Header Line 4: Scoring System Details
+    let line4 = "";
     const sys = String(game.dbGames_ScoringSystem || "").trim();
     
     if (sys === "BestBall") {
       const cnt = game.dbGames_BestBallCnt || "1";
-      scoringLine = ` (${cnt}) Best Ball(s)`;
+      line4 = ` (${cnt}) Best Ball(s)`;
     } else if (sys === "DeclareHole") {
       // Format: H1:1, H2:2...
       try {
@@ -264,22 +288,22 @@
           const val = map[h] ?? map[String(h)];
           if (val != null) pairs.push(`H${h}:${val}`);
         }
-        if (pairs.length > 0) scoringLine = "Balls per Hole: " + pairs.join(" • ");
-        else scoringLine = "Hole Declarations1";
+        if (pairs.length > 0) line4 = "Balls per Hole: " + pairs.join(" • ");
+        else line4 = "Hole Declarations";
       } catch (e) {
-        scoringLine = "Hole Declarations2";
+        line4 = "Hole Declarations";
       }
     } else if (sys === "DeclarePlayer") {
-      scoringLine = String(game.dbGames_PlayerDeclarations + "x (per Player)" || "Game Declarations");
+      line4 = String((game.dbGames_PlayerDeclaration || "1") + "x (per Player)");
     } else if (sys) {
       // Fallback for other systems (e.g. "Individual")
-      scoringLine = sys;
+      line4 = sys;
     }
 
-
     // QR url contract (update later if your scoring URL differs)
+    const origin = window.location.origin;
     const qrUrl = qrKey && ggid
-      ? `https://www.matchaid.net/scorekeeping?ggid=${encodeURIComponent(ggid)}&key=${encodeURIComponent(qrKey)}`
+      ? `${origin}/app/score_entry/scoreentry.php?key=${encodeURIComponent(qrKey)}`
       : "";
 
       const scoreCardId = qrKey; // dbPlayers_PlayerKey (first player in group per your existing rule)
@@ -294,7 +318,8 @@
                 <div class="scHdrText">
                   <div class="scHdr__title">${title}</div>
                   <div class="scHdr__sub">${subLine}</div>
-                  ${scoringLine ? `<div class="scHdr__sub2">${esc(scoringLine)}</div>` : ""}
+                  ${line3 ? `<div class="scHdr__sub2" style="font-weight:700;">${esc(line3)}</div>` : ""}
+                  ${line4 ? `<div class="scHdr__sub2">${esc(line4)}</div>` : ""}
                 </div>
               </div>
 
