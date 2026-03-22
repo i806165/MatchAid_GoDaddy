@@ -59,12 +59,12 @@
       showModal("Recalculating handicaps...");
       
       // Pass 1: Refresh from GHIN (HI, CH)
-      updateModal("Refreshing GHIN data...");
+      updateModal("(Step 1 OF 2) Refreshing Player Handicaps (HI/CH)...");
       const res1 = await MA.postJson(`${base}/refreshHandicaps.php`, { ghin: "all" });
       if (!res1 || !res1.ok) throw new Error(res1?.message || "Refresh failed.");
 
       // Pass 2: Calculate Competition (PH, SO)
-      updateModal("Calculating competition handicaps...");
+      updateModal("(Step 2 OF 2) Refreshing Handicap Competition Values (PH/SO)...");
       const res2 = await MA.postJson(`${base}/calcPHSO.php`, { action: "all" });
       if (!res2 || !res2.ok) throw new Error(res2?.message || "Calculation failed.");
 
