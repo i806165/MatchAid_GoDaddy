@@ -714,17 +714,9 @@ function buildPatchFromUI() {
     const ok = confirm("Refresh handicaps for this game now?");
     if (!ok) return;
 
-    setBusy(true);
-    setStatus("Refreshing handicaps…", "info");
-    try {
-      const res = await apiGHIN("refreshHandicaps.php", {});
-      if (!res || !res.ok) throw new Error(res?.message || "Handicap refresh failed.");
+    if (MA.recalculateHandicaps) {
+      await MA.recalculateHandicaps(ghinApiBase);
       setStatus("Handicaps refreshed.", "success");
-    } catch (e) {
-      console.error(e);
-      setStatus(String(e.message || e), "error");
-    } finally {
-      setBusy(false);
     }
   }
 

@@ -1465,16 +1465,13 @@
       }
 
       // Trigger-4: Recalculate handicaps (Pass-A + Pass-B)
-      setStatus("Recalculating handicaps...", "info");
-      try {
-        // Pass-A: Base Refresh (HI/CH/Baseline PH)
-        await MA.postJson(`${apiGHIN}/refreshHandicaps.php`, { ghin: "all" });
-        // Pass-B: Competition Calc (PH/SO)
-        await MA.postJson(`${apiGHIN}/calcPHSO.php`, { action: "all" });
-        setStatus("Handicaps updated. Reloading...", "success");
-        window.location.reload(); // Refresh UI with new PH/SO values
-        return; // Stop here, reload will happen
-      } catch (e) { console.error("Recalc failed", e); }
+      if (MA.recalculateHandicaps) {
+        const ok = await MA.recalculateHandicaps(apiGHIN);
+        if (ok) {
+          window.location.reload(); // Refresh UI with new PH/SO values
+          return;
+        }
+      }
 
       clearDirty();
       render();
