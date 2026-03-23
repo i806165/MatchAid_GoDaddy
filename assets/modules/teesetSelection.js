@@ -105,7 +105,8 @@
       const rawId = String(t.teeSetID || t.value || "").trim();
       const id = esc(rawId);
       const name = esc(t.teeSetName || t.name || "Tee");
-      const ch = esc(t.playerCH || t.ch || "-");
+      let ch = esc(t.playerCH || t.ch || "-");
+      if (_config.mode === "batch") ch = "Var";
       const yards = esc(t.teeSetYards || t.yards || "");
       const rating = esc(t.teeSetRating || t.rating || "");
       const slope = esc(t.teeSetSlope || t.slope || "");
