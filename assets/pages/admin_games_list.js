@@ -664,6 +664,9 @@ function applyPreset(presetKey) {
     }
 
     const items = [
+      { label: "Add Game", action: () => handleGameAction({ action: "addGame" }) },
+      { label: "Import Games", action: () => handleGameAction({ action: "import" }) },
+      { separator: true },
       { label: "My Current Games", action: () => applyPreset("current") },
       { label: "My Past Games", action: () => applyPreset("past") },
       { separator: true },
@@ -671,9 +674,6 @@ function applyPreset(presetKey) {
       { label: "All Past Games", action: () => applyPreset("allPast") },
       { separator: true },
       { label: "Advanced Filters…", action: () => { if (typeof openFiltersModalFn === "function") openFiltersModalFn(); } },
-      { separator: true },
-      { label: "Add Game", action: () => handleGameAction({ action: "addGame" }) },
-      { label: "Import Games", action: () => handleGameAction({ action: "import" }) }
     ];
 
     MA.ui.openActionsMenu("Actions", items, "Admin Games List");
