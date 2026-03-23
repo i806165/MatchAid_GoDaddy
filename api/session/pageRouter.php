@@ -24,7 +24,7 @@ function pr_input(): array {
     }
 
     // Merge GET
-    foreach (["action","ggid","mode","returnTo","redirect","favPlayerGHIN"] as $k) {
+    foreach (["action","ggid","mode","returnTo","redirect","favPlayerGHIN", "scoreId"] as $k) {
         if (isset($_GET[$k]) && $_GET[$k] !== "") $data[$k] = $_GET[$k];
     }
 
@@ -39,6 +39,7 @@ $mode     = trim((string)($in["mode"] ?? ""));
 $returnTo = trim((string)($in["returnTo"] ?? ""));
 $doRedirect = (string)($in["redirect"] ?? "") === "1";
 $favPlayerGHIN = trim((string)($in["favPlayerGHIN"] ?? ""));
+$scoreId = trim((string)($in["scoreId"] ?? ""));
 
 // ----------------------------
 // EDIT THESE ROUTES TO MATCH YOUR /app FILES
@@ -47,18 +48,22 @@ $ROUTES = [
     // General
     "home"  => "/",
     "login" => "/app/login.php",
+
     "admin"    => "/app/admin_games/gameslist.php",
-    "favorites"   => "/app/favorite_players/favoriteplayers.php",
     "edit"     => "/app/game_maintenance/gamemaint.php",   // expects mode=add|edit (if your router appends it)
+    "settings"    => "/app/game_settings/gamesettings.php",
     "roster"   => "/app/game_players/gameplayers.php",
     "pairings" => "/app/game_pairings/gamepairings.php",
     "teetimes" => "/app/game_times/gametimes.php",
     "summary"  => "/app/game_summary/gamesummary.php",
     "scorecard"   => "/app/game_scorecards/scorecards.php",
-    "settings"    => "/app/game_settings/gamesettings.php",
+
+    "scoreentry"    => "/app/score_entry/scoreentry.php",
 
     "player"    => "/app/player_games/playergames.php",
     "import"   => "/app/game_import/gameimport.php",
+
+    "favorites"   => "/app/favorite_players/favoriteplayers.php",
 ];
 
 
@@ -90,9 +95,16 @@ $url = $ROUTES[$action];
 
 // append query params
 $q = [];
-if ($ggid !== "") $q["ggid"] = $ggid;
-if ($mode !== "") $q["mode"] = $mode;
-if ($returnTo !== "") $q["returnTo"] = $returnTo;
+
+if ($action === 'scoreentry') {
+    if ($scoreId !== '') {
+        $q['key'] = $scoreId;
+    }
+} else {
+    if ($ggid !== "") $q["ggid"] = $ggid;
+    if ($mode !== "") $q["mode"] = $mode;
+    if ($returnTo !== "") $q["returnTo"] = $returnTo;
+}
 
 if (!empty($q)) {
     $sep = (strpos($url, "?") === false) ? "?" : "&";

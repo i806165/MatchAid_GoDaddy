@@ -81,6 +81,16 @@
     return `${dayName} ${mm}/${dd}/${yy}`;
   }
 
+  function getFormattedStartHole(player) {
+    if (!player) return "";
+    const isShotgun = state.game?.dbGames_TOMethod === 'Shotgun';
+    let startHole = player.dbPlayers_StartHole;
+    if (isShotgun && player.dbPlayers_StartHoleSuffix) {
+        startHole = `${startHole || ''}${player.dbPlayers_StartHoleSuffix}`;
+    }
+    return startHole;
+  }
+
   function showActionHint(msg, level) {
     if (!el.actionHint) return;
     el.actionHint.style.display = "block";
@@ -260,7 +270,7 @@
         const ph = numberOrDash(p.dbPlayers_PH);
         const so = numberOrDash(p.dbPlayers_SO);
         const time = valueOrDash(p.dbPlayers_TeeTime);
-        const start = valueOrDash(p.dbPlayers_StartHole);
+        const start = valueOrDash(getFormattedStartHole(p));
         const flight = valueOrDash(p.dbPlayers_FlightID);
         const fPos = valueOrDash(p.dbPlayers_FlightPos);
         const pair = valueOrDash(p.dbPlayers_PairingID);
@@ -294,7 +304,7 @@
         const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
 
         const time = valueOrDash(p.dbPlayers_TeeTime);
-        const start = valueOrDash(p.dbPlayers_StartHole);
+        const start = valueOrDash(getFormattedStartHole(p));
         const tee = valueOrDash(p.dbPlayers_TeeSetName);
 
         const ch = numberOrDash(p.dbPlayers_CH);
@@ -362,8 +372,8 @@
           const ch = numberOrDash(p.dbPlayers_CH);
           const ph = numberOrDash(p.dbPlayers_PH);
           const so = numberOrDash(p.dbPlayers_SO);
-          const time = valueOrDash(p.dbPlayers_TeeTime);
-          const start = valueOrDash(p.dbPlayers_StartHole);
+          const time = valueOrDash(p.dbPlayers_TeeTime); 
+          const start = valueOrDash(getFormattedStartHole(p));
           const fPos = valueOrDash(p.dbPlayers_FlightPos);
           const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
 
@@ -408,7 +418,7 @@
             const ph = numberOrDash(p.dbPlayers_PH);
             const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
             const time = valueOrDash(p.dbPlayers_TeeTime);
-            const start = valueOrDash(p.dbPlayers_StartHole);
+            const start = valueOrDash(getFormattedStartHole(p));
             const tee = valueOrDash(p.dbPlayers_TeeSetName);
             const ch = numberOrDash(p.dbPlayers_CH);
             const hi = numberOrDash(p.dbPlayers_HI);
@@ -452,7 +462,7 @@
 
         if (typeof MA.routerGo === "function") {
           try {
-            MA.routerGo("score", { scoreId: scoreId });
+            MA.routerGo("scoreentry", { scoreId: scoreId });
             return;
           } catch (err) {
             console.warn(err);
@@ -489,7 +499,7 @@
         `"` + safeString(p.dbPlayers_PH).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_SO).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_TeeTime).replace(/"/g, '""') + `"`,
-        `"` + safeString(p.dbPlayers_StartHole).replace(/"/g, '""') + `"`,
+        `"` + safeString(getFormattedStartHole(p)).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_FlightID).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_FlightPos).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_PairingID).replace(/"/g, '""') + `"`,
@@ -546,6 +556,7 @@
         <tbody>`;
 
     const buildRow = (p) => {
+      const startHole = getFormattedStartHole(p);
       return `<tr>
         <td>${esc(p.dbPlayers_Name)}</td>
         <td>${esc(p.dbPlayers_TeeSetName)}</td>
@@ -554,7 +565,7 @@
         <td align="center">${esc(p.dbPlayers_PH)}</td>
         <td align="center">${esc(p.dbPlayers_SO)}</td>
         <td align="center">${esc(p.dbPlayers_TeeTime)}</td>
-        <td align="center">${esc(p.dbPlayers_StartHole)}</td>
+        <td align="center">${esc(startHole)}</td>
         <td align="center">${esc(p.dbPlayers_FlightID)}</td>
         <td align="center">${esc(p.dbPlayers_FlightPos)}</td>
         <td align="center">${esc(p.dbPlayers_PairingID)}</td>
