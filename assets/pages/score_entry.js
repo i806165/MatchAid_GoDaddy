@@ -192,12 +192,10 @@
       btn.addEventListener('click', () => {
         state.scorerGHIN = row.playerGHIN || '';
 
-        el.keeperChips.querySelectorAll('.maChoiceChip').forEach((chip) => {
-          chip.classList.remove('is-selected');
-        });
-        btn.classList.add('is-selected');
-
-        el.keeperWelcome.textContent = `Welcome, ${row.playerName || ''}`;
+        // Hide setup views to focus strictly on scoring
+        el.contextCard.classList.add('isHidden');
+        el.cartCard.classList.add('isHidden');
+        el.keeperCard.classList.add('isHidden');
         el.work.classList.remove('isHidden');
       });
 
