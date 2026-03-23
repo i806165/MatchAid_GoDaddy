@@ -7,6 +7,13 @@
   const paths = (window.MA && window.MA.paths) ? window.MA.paths : {};
   const routes = (window.MA && window.MA.routes) ? window.MA.routes : {};
   const chrome = MA.chrome || {};
+  
+  const apiUrls = {
+  launch: paths.apiScoreEntryLaunch
+    || (routes.apiScoreEntry ? routes.apiScoreEntry + '/launch.php' : '/api/score_entry/launch.php'),
+  saveScores: paths.apiScoreEntrySaveScores
+    || (routes.apiScoreEntry ? routes.apiScoreEntry + '/saveScores.php' : '/api/score_entry/saveScores.php')
+};
 
   const state = {
     payload: null,
@@ -67,10 +74,10 @@
     }
 
     try {
-      const launchUrl = paths.apiScoreEntryLaunch
-        || (routes.apiScoreEntry ? routes.apiScoreEntry + '/launch.php' : '/api/score_entry/launch.php');
+//      const launchUrl = paths.apiScoreEntryLaunch
+//        || (routes.apiScoreEntry ? routes.apiScoreEntry + '/launch.php' : '/api/score_entry/launch.php');
 
-      const res = await fetch(launchUrl, {
+      const res = await fetch(apiUrls.launch, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerKey, holeNumber: 1 })
@@ -90,6 +97,11 @@
       }
 
       state.payload = json.payload;
+      (state.payload.players || []).forEach((wrapper) => {
+        if (!wrapper.originalScoresJson) {
+          wrapper.originalScoresJson = deepClone(wrapper.scoresJson || null);
+        }
+      });
       state.currentHole = json.payload.currentHole || 1;
       state.dirty = false;
 
@@ -233,8 +245,18 @@
     article.querySelectorAll('.scoreAdjustBtn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const dir = Number(btn.dataset.dir || 0);
-        const current = Number(input.value || 0);
-        const next = Math.max(1, Math.min(15, (current || 0) + dir));
+        const par = Number(wrapper.scoreEntryRow?.par || 0);
+        const rawText = String(input.value || '').trim();
+        const hasCurrentValue = rawText !== '' && !Number.isNaN(Number(rawText));
+
+        let next;
+        if (!hasCurrentValue) {
+          next = par > 0 ? par : 1;
+        } else {
+          next = Number(rawText) + dir;
+        }
+
+        next = Math.max(1, Math.min(15, next));
         input.value = String(next);
         net.textContent = String(next - strokeAllocation);
         markDirty(playerId, next, !!declare?.checked);
@@ -252,6 +274,137 @@
       markDirty(playerId, raw || null, !!declare.checked);
     });
   }
+  function updateWorkingScoresJson(wrapper, rawScore, declared) {
+    if (!wrapper) return;
+
+    const row = wrapper.scoreEntryRow || {};
+    const holeNumber = Number(state.currentHole || row.holeNumber || 0);
+    if (!holeNumber) return;
+
+    if (!wrapper.scoresJson || !Array.isArray(wrapper.scoresJson.Scores) || !wrapper.scoresJson.Scores[0]) {
+      wrapper.scoresJson = { Scores: [{}] };
+    }
+
+    const summary = wrapper.scoresJson.Scores[0];
+    const holeDetails = Array.isArray(summary.hole_details) ? [...summary.hole_details] : [];
+
+    const newHole = {
+      adjusted_gross_score: rawScore,
+      raw_score: rawScore,
+      hole_number: holeNumber,
+      par: row.par ?? null,
+      stroke_allocation: row.strokeAllocation ?? 0,
+      declared: declared === true
+    };
+
+    const idx = holeDetails.findIndex((h) => Number(h.hole_number) === holeNumber);
+
+    if (rawScore === null || rawScore === '' || Number.isNaN(Number(rawScore))) {
+      if (idx >= 0) holeDetails.splice(idx, 1);
+    } else if (idx >= 0) {
+      holeDetails[idx] = newHole;
+    } else {
+      holeDetails.push(newHole);
+    }
+
+    holeDetails.sort((a, b) => Number(a.hole_number || 0) - Number(b.hole_number || 0));
+
+    summary.hole_details = holeDetails;
+    summary.number_of_played_holes = holeDetails.length;
+
+    const gross = holeDetails.reduce((sum, h) => sum + Number(h.raw_score || h.adjusted_gross_score || 0), 0);
+    const net = holeDetails.reduce((sum, h) => sum + (Number(h.raw_score || h.adjusted_gross_score || 0) - Number(h.stroke_allocation || 0)), 0);
+
+    summary.adjusted_gross_score = gross;
+    summary.net_score = net;
+    summary.edited = true;
+
+    wrapper.scoresJson.Scores[0] = summary;
+  }
+
+  function buildSaveRequest(nextHole) {
+    const payload = deepClone(state.payload || {});
+    payload.currentHole = Number(state.currentHole || 0);
+    payload.nextHole = Number(nextHole || state.currentHole || 0);
+    payload.scorerGHIN = String(state.scorerGHIN || '');
+
+    return payload;
+  }
+
+  function patchReturnedScores(saveResult) {
+    const updates = Array.isArray(saveResult?.players) ? saveResult.players : [];
+    if (!state.payload || !Array.isArray(state.payload.players)) return;
+
+    updates.forEach((updated) => {
+      const ggid = String(updated.dbPlayers_GGID || '');
+      const ghin = String(updated.dbPlayers_PlayerGHIN || '');
+      const scoresJson = updated.dbPlayers_Scores || null;
+
+      const wrapper = state.payload.players.find((p) => {
+        const pr = p.playerRow || {};
+        return String(pr.dbPlayers_GGID || '') === ggid
+          && String(pr.dbPlayers_PlayerGHIN || '') === ghin;
+      });
+
+      if (!wrapper) return;
+
+      wrapper.scoresJson = deepClone(scoresJson);
+      wrapper.originalScoresJson = deepClone(scoresJson);
+    });
+  }
+
+  async function saveScoresSilently(nextHole) {
+    if (!state.payload) return { ok: true };
+
+    if (!state.scorerGHIN) {
+      return {
+        ok: false,
+        conflict: false,
+        message: 'Please choose the scorekeeper before entering scores.'
+      };
+    }
+
+    const res = await fetch(apiUrls.saveScores, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(buildSaveRequest(nextHole))
+    });
+
+    const text = await res.text();
+    let json;
+    try {
+      json = JSON.parse(text);
+    } catch (err) {
+      console.error('Non-JSON response from saveScores endpoint:', text);
+      throw new Error('saveScores endpoint did not return JSON.');
+    }
+
+    return json;
+  }
+
+  function resetToLaunch(message) {
+    state.payload = null;
+    state.currentHole = 1;
+    state.scorerGHIN = '';
+    state.dirty = false;
+
+    el.contextCard?.classList.add('isHidden');
+    el.cartCard?.classList.add('isHidden');
+    el.keeperCard?.classList.add('isHidden');
+    el.work?.classList.add('isHidden');
+
+    if (el.keeperChips) el.keeperChips.innerHTML = '';
+    if (el.keeperWelcome) el.keeperWelcome.textContent = '';
+    if (el.rows) el.rows.innerHTML = '';
+    if (el.holeSelect) el.holeSelect.innerHTML = '';
+
+    applyChrome();
+    setPageStatus(message || 'Returned to launch.', 'warn');
+  }
+
+  function deepClone(value) {
+    return value == null ? value : JSON.parse(JSON.stringify(value));
+  }
 
   function markDirty(playerId, rawScore, declared) {
     state.dirty = true;
@@ -264,6 +417,8 @@
       ? rawScore - Number(wrapper.scoreEntryRow.strokeAllocation || 0)
       : null;
     wrapper.scoreEntryRow.declared = declared;
+
+    updateWorkingScoresJson(wrapper, rawScore, declared);
   }
 
   async function moveHole(direction) {
@@ -278,21 +433,32 @@
   async function transitionHole(nextHole) {
     if (nextHole === state.currentHole) return;
 
-    if (state.dirty) {
-      const choice = await openDirtyDialog();
-      if (choice === 'cancel') {
-        el.holeSelect.value = String(state.currentHole);
-        return;
-      }
-      if (choice === 'save') {
-        setPageStatus('Save API wiring is pending in the next pass. Dirty state cleared for scaffold preview.', 'warn');
-      }
-      state.dirty = false;
-    }
+    try {
+      if (state.dirty) {
+        const saveResult = await saveScoresSilently(nextHole);
 
-    state.currentHole = nextHole;
-    el.holeSelect.value = String(nextHole);
-    setPageStatus(`Moved to Hole ${nextHole}. Backend row rebuild wiring is next.`, 'info');
+        if (!saveResult.ok) {
+          if (saveResult.conflict) {
+            resetToLaunch(saveResult.message || 'Another scorer is already updating this scorecard. Your current hole entries were not saved.');
+            return;
+          }
+          setPageStatus(saveResult.message || 'Unable to save scores.', 'error');
+          el.holeSelect.value = String(state.currentHole);
+          return;
+        }
+
+        patchReturnedScores(saveResult);
+        state.dirty = false;
+      }
+
+      state.currentHole = nextHole;
+      renderHoleOptions();
+      renderRows();
+      setPageStatus(`Moved to Hole ${nextHole}.`, 'info');
+    } catch (err) {
+      setPageStatus(err.message || 'Unable to change holes.', 'error');
+      el.holeSelect.value = String(state.currentHole);
+    }
   }
 
   function openDirtyDialog() {
@@ -344,18 +510,43 @@
 
     if (chrome && typeof chrome.setBottomNav === 'function') {
       chrome.setBottomNav({
-        visible: ['home'], //,'scoreentry', 'leaderboard', 'holechamps', 'scorecard'],
+        visible: ['home','scoreentry'], //, 'leaderboard', 'holechamps', 'scorecard'],
         active: 'scoreentry',
         onNavigate: (id) => {
-          if (state.dirty) {
-            openDirtyDialog().then((choice) => {
-              if (choice !== 'cancel' && typeof MA.routerGo === 'function') {
-                MA.routerGo(id);
-              }
-            });
+          if (!state.dirty) {
+            if (typeof MA.routerGo === 'function') MA.routerGo(id);
             return;
           }
-          if (typeof MA.routerGo === 'function') MA.routerGo(id);
+
+          openDirtyDialog().then(async (choice) => {
+            if (choice === 'cancel') return;
+
+            if (choice === 'discard') {
+              state.dirty = false;
+              if (typeof MA.routerGo === 'function') MA.routerGo(id);
+              return;
+            }
+
+            if (choice === 'save') {
+              try {
+                const saveResult = await saveScoresSilently(state.currentHole);
+                if (!saveResult.ok) {
+                  if (saveResult.conflict) {
+                    resetToLaunch(saveResult.message || 'Another scorer is already updating this scorecard.');
+                    return;
+                  }
+                  setPageStatus(saveResult.message || 'Unable to save before leaving.', 'error');
+                  return;
+                }
+
+                patchReturnedScores(saveResult);
+                state.dirty = false;
+                if (typeof MA.routerGo === 'function') MA.routerGo(id);
+              } catch (err) {
+                setPageStatus(err.message || 'Unable to save before leaving.', 'error');
+              }
+            }
+          });
         }
       });
     }

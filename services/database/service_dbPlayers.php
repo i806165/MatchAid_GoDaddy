@@ -49,6 +49,31 @@ final class ServiceDbPlayers
     $st->execute([":playerKey" => $playerKey]);
     return $st->fetchAll() ?: [];
   }
+  public static function updateGamePlayerFields(string $ggid, string $playerGHIN, array $fields): array
+  {
+    $existing = self::getPlayerByGGIDGHIN($ggid, $playerGHIN);
+    if (!$existing) return [];
+
+    $pdo = Db::pdo();
+    $setParts = [];
+    $params = [":ggid" => trim($ggid), ":ghin" => trim($playerGHIN)];
+
+    foreach ($fields as $k => $v) {
+      $setParts[] = "$k = :$k";
+      $params[":$k"] = $v;
+    }
+
+    if (!$setParts) return $existing;
+
+    $sql = "UPDATE db_Players
+            SET " . implode(", ", $setParts) . "
+            WHERE dbPlayers_GGID = :ggid
+              AND dbPlayers_PlayerGHIN = :ghin";
+    $st = $pdo->prepare($sql);
+    $st->execute($params);
+
+    return self::getPlayerByGGIDGHIN($ggid, $playerGHIN) ?? [];
+  }
 
   public static function upsertPlayer(array $row): array
   {

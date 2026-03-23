@@ -3,6 +3,7 @@ declare(strict_types=1);
 // /public_html/services/scoring/service_ScoreEntry.php
 
 require_once __DIR__ . '/service_ScoreCard.php';
+require_once MA_SVC_DB . '/service_dbPlayers.php';
 
 /**
  * ServiceScoreEntry
@@ -26,6 +27,7 @@ final class ServiceScoreEntry
             $scoresJson = self::buildOrHydratePlayerScores($gameRow, $playerRow);
             $players[] = [
                 'playerRow' => $playerRow,
+                'originalScoresJson' => $playerRow['dbPlayers_Scores'] ?? null,
                 'scoresJson' => $scoresJson,
                 'scoreEntryRow' => self::buildScoreEntryRow($gameRow, $playerRow, $scoresJson, $holeNumber),
             ];
@@ -319,6 +321,201 @@ final class ServiceScoreEntry
         return ['mode' => 'pairing_id', 'value' => $pairingId];
     }
 
+    public static function saveScoresForGroup(array $request): array
+    {
+        $gameRow = is_array($request['gameRow'] ?? null) ? $request['gameRow'] : [];
+        $players = is_array($request['players'] ?? null) ? $request['players'] : [];
+        $scorerGHIN = trim((string)($request['scorerGHIN'] ?? ''));
+        $currentHole = intval($request['currentHole'] ?? 0);
+        $nextHole = intval($request['nextHole'] ?? $currentHole);
+
+        if (!$gameRow || !$players) {
+            return ['ok' => false, 'conflict' => false, 'message' => 'Missing game or player payload.'];
+        }
+        if ($scorerGHIN === '') {
+            return ['ok' => false, 'conflict' => false, 'message' => 'Scorekeeper is required.'];
+        }
+        if ($currentHole <= 0) {
+            return ['ok' => false, 'conflict' => false, 'message' => 'Invalid current hole.'];
+        }
+
+        $firstPlayerRow = is_array($players[0]['playerRow'] ?? null) ? $players[0]['playerRow'] : [];
+        $ggid = trim((string)($firstPlayerRow['dbPlayers_GGID'] ?? $gameRow['dbGames_GGID'] ?? ''));
+        $playerKey = trim((string)($firstPlayerRow['dbPlayers_PlayerKey'] ?? ''));
+
+        if ($ggid === '' || $playerKey === '') {
+            return ['ok' => false, 'conflict' => false, 'message' => 'Missing group identity.'];
+        }
+
+        $currentDbPlayers = ServiceDbPlayers::getPlayersByPlayerKey($playerKey);
+        if (!$currentDbPlayers) {
+            return ['ok' => false, 'conflict' => false, 'message' => 'Scoring group not found.'];
+        }
+
+        $conflicts = self::detectGroupScoreConflicts($players, $currentDbPlayers);
+        if ($conflicts) {
+            return [
+                'ok' => false,
+                'conflict' => true,
+                'message' => 'Another scorer is already updating this scorecard. Your current hole entries were not saved.',
+                'players' => [],
+                'nextHole' => $nextHole
+            ];
+        }
+
+        $validatedStartHole = self::validateStartHoleForSide(
+            (string)($firstPlayerRow['dbPlayers_StartHole'] ?? ''),
+            (string)($gameRow['dbGames_Holes'] ?? 'All 18')
+        );
+
+        $savedPlayers = [];
+        foreach ($players as $submittedWrapper) {
+            $submittedPlayerRow = is_array($submittedWrapper['playerRow'] ?? null) ? $submittedWrapper['playerRow'] : [];
+            $playerGHIN = trim((string)($submittedPlayerRow['dbPlayers_PlayerGHIN'] ?? ''));
+            if ($playerGHIN === '') {
+                return ['ok' => false, 'conflict' => false, 'message' => 'One or more players are missing GHIN IDs.'];
+            }
+
+            $currentDbPlayer = null;
+            foreach ($currentDbPlayers as $dbPlayer) {
+                if ((string)($dbPlayer['dbPlayers_GGID'] ?? '') === $ggid
+                    && (string)($dbPlayer['dbPlayers_PlayerGHIN'] ?? '') === $playerGHIN) {
+                    $currentDbPlayer = $dbPlayer;
+                    break;
+                }
+            }
+            if (!$currentDbPlayer) {
+                return ['ok' => false, 'conflict' => false, 'message' => 'One or more players could not be reloaded.'];
+            }
+
+            $fields = self::buildSavedPlayerFields(
+                $gameRow,
+                $submittedWrapper,
+                $currentDbPlayer,
+                $currentHole,
+                $scorerGHIN,
+                $validatedStartHole
+            );
+
+            $saved = ServiceDbPlayers::updateGamePlayerFields($ggid, $playerGHIN, $fields);
+            if (!$saved) {
+                return ['ok' => false, 'conflict' => false, 'message' => 'Unable to persist score updates.'];
+            }
+
+            $savedPlayers[] = [
+                'dbPlayers_GGID' => (string)($saved['dbPlayers_GGID'] ?? $ggid),
+                'dbPlayers_PlayerGHIN' => (string)($saved['dbPlayers_PlayerGHIN'] ?? $playerGHIN),
+                'dbPlayers_Scores' => $saved['dbPlayers_Scores'] ?? null,
+            ];
+        }
+
+        return [
+            'ok' => true,
+            'conflict' => false,
+            'message' => 'Scores saved.',
+            'players' => $savedPlayers,
+            'nextHole' => $nextHole
+        ];
+    }
+
+    public static function detectGroupScoreConflicts(array $submittedPlayers, array $currentDbPlayers): array
+    {
+        $conflicts = [];
+        foreach ($submittedPlayers as $wrapper) {
+            $playerRow = is_array($wrapper['playerRow'] ?? null) ? $wrapper['playerRow'] : [];
+            $ggid = (string)($playerRow['dbPlayers_GGID'] ?? '');
+            $ghin = (string)($playerRow['dbPlayers_PlayerGHIN'] ?? '');
+
+            if ($ggid === '' || $ghin === '') {
+                continue;
+            }
+
+            $currentDbPlayer = null;
+            foreach ($currentDbPlayers as $dbPlayer) {
+                if ((string)($dbPlayer['dbPlayers_GGID'] ?? '') === $ggid
+                    && (string)($dbPlayer['dbPlayers_PlayerGHIN'] ?? '') === $ghin) {
+                    $currentDbPlayer = $dbPlayer;
+                    break;
+                }
+            }
+            if (!$currentDbPlayer) {
+                $conflicts[] = (string)($playerRow['dbPlayers_Name'] ?? $ghin);
+                continue;
+            }
+
+            $original = $wrapper['originalScoresJson'] ?? null;
+            $current = $currentDbPlayer['dbPlayers_Scores'] ?? null;
+
+            if (self::canonicalizeJsonish($original) !== self::canonicalizeJsonish($current)) {
+                $conflicts[] = (string)($playerRow['dbPlayers_Name'] ?? $ghin);
+            }
+        }
+
+        return $conflicts;
+    }
+
+    public static function buildSavedPlayerFields(
+        array $gameRow,
+        array $submittedWrapper,
+        array $currentDbPlayer,
+        int $holeNumber,
+        string $scorerGHIN,
+        string $validatedStartHole
+    ): array {
+        $scoreEntryRow = is_array($submittedWrapper['scoreEntryRow'] ?? null) ? $submittedWrapper['scoreEntryRow'] : [];
+        $submittedPlayerRow = is_array($submittedWrapper['playerRow'] ?? null) ? $submittedWrapper['playerRow'] : [];
+        $workingScoresJson = is_array($submittedWrapper['scoresJson'] ?? null) ? $submittedWrapper['scoresJson'] : ($currentDbPlayer['dbPlayers_Scores'] ?? []);
+
+        $rawScore = $scoreEntryRow['rawScore'] ?? null;
+        $declared = !empty($scoreEntryRow['declared']);
+
+        if ($rawScore !== null && $rawScore !== '') {
+            self::assertValidRawScore($rawScore);
+            $newScoresJson = self::applyHoleScore(
+                $gameRow,
+                $currentDbPlayer,
+                $workingScoresJson,
+                $holeNumber,
+                (float)$rawScore,
+                $declared
+            );
+        } else {
+            $newScoresJson = self::clearHoleScore(
+                $gameRow,
+                $currentDbPlayer,
+                $workingScoresJson,
+                $holeNumber
+            );
+        }
+
+        $pairingPos = (string)($submittedPlayerRow['dbPlayers_PairingPos'] ?? $currentDbPlayer['dbPlayers_PairingPos'] ?? '');
+        if (!in_array($pairingPos, ['1', '2', '3', '4'], true)) {
+            $pairingPos = (string)($currentDbPlayer['dbPlayers_PairingPos'] ?? '');
+        }
+
+        return [
+            'dbPlayers_Scores' => $newScoresJson,
+            'dbPlayers_ScoreKeeper' => $scorerGHIN,
+            'dbPlayers_StartHole' => $validatedStartHole,
+            'dbPlayers_PairingPos' => $pairingPos,
+        ];
+    }
+
+    public static function validateStartHoleForSide(?string $startHole, string $teeSide): string
+    {
+        $allowed = [];
+        if ($teeSide === 'F9') {
+            $allowed = array_map('strval', range(1, 9));
+        } elseif ($teeSide === 'B9') {
+            $allowed = array_map('strval', range(10, 18));
+        } else {
+            $allowed = array_map('strval', range(1, 18));
+        }
+
+        $clean = trim((string)$startHole);
+        return in_array($clean, $allowed, true) ? $clean : $allowed[0];
+    }
+
     private static function deriveNumberOfHoles(string $holesLabel): int
     {
         return ($holesLabel === 'F9' || $holesLabel === 'B9') ? 9 : 18;
@@ -343,4 +540,45 @@ final class ServiceScoreEntry
     {
         return is_numeric($value) ? (float)$value : null;
     }
+    
+    private static function assertValidRawScore($value): void
+    {
+        if (!is_numeric($value)) {
+            throw new RuntimeException('Raw score must be numeric.');
+        }
+
+        $num = (float)$value;
+        if ($num < 1 || $num > 15) {
+            throw new RuntimeException('Raw score must be between 1 and 15.');
+        }
+    }
+
+    private static function canonicalizeJsonish($value): string
+    {
+        $normalized = self::sortRecursive($value);
+        return json_encode($normalized, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
+
+    private static function sortRecursive($value)
+    {
+        if (!is_array($value)) {
+            return $value;
+        }
+
+        $isAssoc = array_keys($value) !== range(0, count($value) - 1);
+
+        if ($isAssoc) {
+            ksort($value);
+            foreach ($value as $k => $v) {
+                $value[$k] = self::sortRecursive($v);
+            }
+            return $value;
+        }
+
+        foreach ($value as $idx => $v) {
+            $value[$idx] = self::sortRecursive($v);
+        }
+        return $value;
+    }
+
 }
