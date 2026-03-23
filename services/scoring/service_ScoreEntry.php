@@ -28,7 +28,7 @@ final class ServiceScoreEntry
             $scoresJson = self::buildOrHydratePlayerScores($gameRow, $playerRow);
             $players[] = [
                 'playerRow' => $playerRow,
-                'originalScoresJson' => $playerRow['dbPlayers_Scores'] ?? null,
+                'originalScoresJson' => $scoresJson,
                 'scoresJson' => $scoresJson,
                 'scoreEntryRow' => self::buildScoreEntryRow($gameRow, $playerRow, $scoresJson, $holeNumber),
             ];
@@ -353,7 +353,7 @@ final class ServiceScoreEntry
             return ['ok' => false, 'conflict' => false, 'message' => 'Scoring group not found.'];
         }
 
-        $conflicts = self::detectGroupScoreConflicts($players, $currentDbPlayers);
+        $conflicts = self::detectGroupScoreConflicts($players, $currentDbPlayers, $gameRow);
         if ($conflicts) {
             return [
                 'ok' => false,
@@ -428,7 +428,7 @@ final class ServiceScoreEntry
         ];
     }
 
-    public static function detectGroupScoreConflicts(array $submittedPlayers, array $currentDbPlayers): array
+    public static function detectGroupScoreConflicts(array $submittedPlayers, array $currentDbPlayers, array $gameRow): array
     {
         $conflicts = [];
         foreach ($submittedPlayers as $wrapper) {
@@ -455,7 +455,7 @@ final class ServiceScoreEntry
             }
 
             $original = $wrapper['originalScoresJson'] ?? null;
-            $current = $currentDbPlayer['dbPlayers_Scores'] ?? null;
+            $current = self::buildOrHydratePlayerScores($gameRow, $currentDbPlayer);
 
             if (self::canonicalizeJsonish($original) !== self::canonicalizeJsonish($current)) {
                 $conflicts[] = (string)($playerRow['dbPlayers_Name'] ?? $ghin);
