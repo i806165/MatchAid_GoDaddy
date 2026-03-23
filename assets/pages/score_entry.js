@@ -146,6 +146,15 @@
     el.ctx.pairingId.textContent = first.dbPlayers_PairingID || '';
 
     el.contextCard.classList.remove('isHidden');
+    el.contextCard.style.cursor = 'pointer';
+
+    // Reveal keeper selection when user taps the context card.
+    const showKeeper = () => {
+      el.keeperCard?.classList.remove('isHidden');
+      el.contextCard.style.cursor = 'default';
+      el.contextCard.removeEventListener('click', showKeeper);
+    };
+    el.contextCard.addEventListener('click', showKeeper);
 
     renderHoleOptions();
     renderKeeperChips();
@@ -201,7 +210,7 @@
     if (!payload) return;
 
     el.cartCard.classList.toggle('isHidden', !payload.requiresCartConfig);
-    el.keeperCard.classList.remove('isHidden');
+    // el.keeperCard.classList.remove('isHidden'); // Now shown via contextCard click
 
     if (!payload.isGameDay) {
       el.work.classList.add('isHidden');
@@ -403,6 +412,7 @@
 
     toggleLaunchPanel(true);
     el.contextCard?.classList.add('isHidden');
+    if (el.contextCard) el.contextCard.style.cursor = 'default';
     el.cartCard?.classList.add('isHidden');
     el.keeperCard?.classList.add('isHidden');
     el.work?.classList.add('isHidden');
