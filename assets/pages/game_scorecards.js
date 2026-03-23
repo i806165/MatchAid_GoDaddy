@@ -438,7 +438,7 @@
     if (chrome && typeof chrome.setBottomNav === "function") {
       chrome.setBottomNav({
         visible: ["admin", "edit", "roster", "pairings", "teetimes", "summary"],
-        active: "summary",
+        active: "scorecard",
         onNavigate: (id) => { if (typeof MA.routerGo === "function") MA.routerGo(id); }
       });
     }

@@ -115,5 +115,10 @@
       <span class="maNavIcon" aria-hidden="true">⭳</span>
       <span class="maNavLabel">Import Games</span>
     </button>
+   
+    <button class="maNavBtn" data-nav="scoreentry" aria-label="Enter Scores">
+      <span class="maNavIcon" aria-hidden="true">📄</span>
+      <span class="maNavLabel">Enter Scores</span>
+    </button>
   </nav>
 </footer>

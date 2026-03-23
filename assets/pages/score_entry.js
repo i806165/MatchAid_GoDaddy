@@ -451,6 +451,27 @@
         state.dirty = false;
       }
 
+      // Reload payload for the new hole so Par/Yardage/HCP update correctly
+      const firstP = state.payload?.players?.[0];
+      const pKey = firstP?.playerRow?.dbPlayers_PlayerKey;
+
+      if (pKey) {
+        const res = await fetch(apiUrls.launch, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playerKey: pKey, holeNumber: nextHole })
+        });
+        const json = await res.json();
+        if (json.ok && json.payload) {
+          state.payload = json.payload;
+          (state.payload.players || []).forEach((wrapper) => {
+            if (!wrapper.originalScoresJson) {
+              wrapper.originalScoresJson = deepClone(wrapper.scoresJson || null);
+            }
+          });
+        }
+      }
+
       state.currentHole = nextHole;
       renderHoleOptions();
       renderRows();

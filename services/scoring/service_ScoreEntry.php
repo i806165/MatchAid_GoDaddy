@@ -24,6 +24,7 @@ final class ServiceScoreEntry
     {
         $players = [];
         foreach ($groupPlayers as $playerRow) {
+            $playerRow = self::hydrateJsonFields($playerRow);
             $scoresJson = self::buildOrHydratePlayerScores($gameRow, $playerRow);
             $players[] = [
                 'playerRow' => $playerRow,
@@ -381,6 +382,7 @@ final class ServiceScoreEntry
                 if ((string)($dbPlayer['dbPlayers_GGID'] ?? '') === $ggid
                     && (string)($dbPlayer['dbPlayers_PlayerGHIN'] ?? '') === $playerGHIN) {
                     $currentDbPlayer = $dbPlayer;
+                    $currentDbPlayer = self::hydrateJsonFields($dbPlayer);
                     break;
                 }
             }
@@ -400,6 +402,14 @@ final class ServiceScoreEntry
             $saved = ServiceDbPlayers::updateGamePlayerFields($ggid, $playerGHIN, $fields);
             if (!$saved) {
                 return ['ok' => false, 'conflict' => false, 'message' => 'Unable to persist score updates.'];
+            }
+
+            // Ensure the response payload has array scores (ServiceDbPlayers might return string or array)
+            if (isset($saved['dbPlayers_Scores']) && is_string($saved['dbPlayers_Scores'])) {
+                $decoded = json_decode($saved['dbPlayers_Scores'], true);
+                if (is_array($decoded)) {
+                    $saved['dbPlayers_Scores'] = $decoded;
+                }
             }
 
             $savedPlayers[] = [
@@ -435,6 +445,7 @@ final class ServiceScoreEntry
                 if ((string)($dbPlayer['dbPlayers_GGID'] ?? '') === $ggid
                     && (string)($dbPlayer['dbPlayers_PlayerGHIN'] ?? '') === $ghin) {
                     $currentDbPlayer = $dbPlayer;
+                    $currentDbPlayer = self::hydrateJsonFields($dbPlayer);
                     break;
                 }
             }
@@ -494,7 +505,7 @@ final class ServiceScoreEntry
         }
 
         return [
-            'dbPlayers_Scores' => $newScoresJson,
+            'dbPlayers_Scores' => json_encode($newScoresJson), // Ensure we save as string
             'dbPlayers_ScoreKeeper' => $scorerGHIN,
             'dbPlayers_StartHole' => $validatedStartHole,
             'dbPlayers_PairingPos' => $pairingPos,
@@ -581,4 +592,20 @@ final class ServiceScoreEntry
         return $value;
     }
 
+    private static function hydrateJsonFields(array $row): array
+    {
+        if (isset($row['dbPlayers_TeeSetDetails']) && is_string($row['dbPlayers_TeeSetDetails'])) {
+            $val = json_decode($row['dbPlayers_TeeSetDetails'], true);
+            if (is_array($val)) {
+                $row['dbPlayers_TeeSetDetails'] = $val;
+            }
+        }
+        if (isset($row['dbPlayers_Scores']) && is_string($row['dbPlayers_Scores'])) {
+            $val = json_decode($row['dbPlayers_Scores'], true);
+            if (is_array($val)) {
+                $row['dbPlayers_Scores'] = $val;
+            }
+        }
+        return $row;
+    }
 }
