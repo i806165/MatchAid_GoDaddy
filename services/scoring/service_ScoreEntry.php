@@ -276,8 +276,10 @@ final class ServiceScoreEntry
         $declared = $savedHole ? !empty($savedHole['declared']) : false;
         $netScore = is_numeric($rawScore) ? ((float)$rawScore - $strokeAllocation) : null;
 
+        $pid = ($playerRow['dbPlayers_GGID'] ?? '') . '_' . ($playerRow['dbPlayers_PlayerGHIN'] ?? '');
+
         return [
-            'playerId' => (string)($playerRow['_id'] ?? ''),
+            'playerId' => $pid,
             'playerGHIN' => (string)($playerRow['dbPlayers_PlayerGHIN'] ?? ''),
             'playerKey' => (string)($playerRow['dbPlayers_PlayerKey'] ?? ''),
             'playerName' => (string)($playerRow['dbPlayers_Name'] ?? ''),
