@@ -105,6 +105,7 @@
       state.currentHole = json.payload.currentHole || 1;
       state.dirty = false;
 
+      toggleLaunchPanel(false);
       renderLaunchPayload();
       applyChrome();
 
@@ -116,6 +117,18 @@
       );
     } catch (err) {
       setPageStatus(err.message || 'Launch failed.', 'error');
+    }
+  }
+
+  function toggleLaunchPanel(show) {
+    const panel = document.getElementById('scoreEntryLaunchPanel')
+      || el.playerKey?.closest('.card')
+      || el.playerKey?.closest('.maCard');
+
+    if (panel) {
+      panel.classList.toggle('isHidden', !show);
+    } else {
+      el.playerKey?.parentElement?.classList.toggle('isHidden', !show);
     }
   }
 
@@ -388,6 +401,7 @@
     state.scorerGHIN = '';
     state.dirty = false;
 
+    toggleLaunchPanel(true);
     el.contextCard?.classList.add('isHidden');
     el.cartCard?.classList.add('isHidden');
     el.keeperCard?.classList.add('isHidden');
@@ -525,7 +539,9 @@
     if (chrome && typeof chrome.setActions === 'function') {
       chrome.setActions({
         left: { show: false },
-        right: { show: false }
+        right: { show: !!state.payload, label: 'Start Over', onClick: () => {
+          if (window.confirm('Exit score entry?')) resetToLaunch('Session ended.');
+        }}
       });
     }
 
