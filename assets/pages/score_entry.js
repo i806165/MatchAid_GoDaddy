@@ -191,7 +191,7 @@
     for (let h = start; h <= end; h += 1) {
       const opt = document.createElement('option');
       opt.value = String(h);
-      opt.textContent = `Hole ${h}`;
+      opt.textContent = String(h);
       if (h === state.currentHole) opt.selected = true;
       el.holeSelect.appendChild(opt);
     }
@@ -234,24 +234,55 @@
       article.className = 'scorePlayerRow';
       article.dataset.playerId = row.playerId || '';
 
+      const fullName = String(row.playerName || '').trim();
+      const nameParts = fullName.split(/\s+/).filter(Boolean);
+      const firstName = escapeHtml(nameParts[0] || '');
+      const lastName = escapeHtml(nameParts.length > 1 ? nameParts.slice(1).join(' ') : '');
+      const effectiveHC = escapeHtml(String(row.effectiveHC ?? ''));
+      const teeSetName = escapeHtml(row.teeSetName || '');
+      const yardage = escapeHtml(String(row.yardage ?? '—'));
+      const par = escapeHtml(String(row.par ?? '—'));
+      const holeHcp = escapeHtml(String(row.holeHcp ?? '—'));
+      const playerStrokes = escapeHtml(String(row.strokeAllocation ?? '0'));
+      const netScore = escapeHtml(String(row.netScore ?? '—'));
+
       article.innerHTML = `
-        <div class="scorePlayerRowTop">
-          <div class="scorePlayerNameBlock">
-            <div class="scorePlayerName">${escapeHtml(row.playerName || '')}<span class="scoreStrokeMark">${escapeHtml(row.strokeSuperscript || '')}</span></div>
-            <div class="scorePlayerMeta">HC ${escapeHtml(String(row.effectiveHC ?? ''))}</div>
+        <div class="scorePlayerLaneTop">
+          <div class="scorePlayerIdentity">
+            <div class="scorePlayerFirstName">${firstName}</div>
+            <div class="scorePlayerLastName">${lastName} <span class="scorePlayerHandicap">(${effectiveHC})</span></div>
           </div>
-          <div class="scoreRawControls">
-            <button type="button" class="btn scoreAdjustBtn" data-dir="-1">−</button>
-            <input type="number" class="maTextInput scoreRawInput" min="1" max="15" value="${row.rawScore ?? ''}">
-            <button type="button" class="btn scoreAdjustBtn" data-dir="1">+</button>
-          </div>
-          <div class="scoreNetBox">
-            <span class="scoreNetLabel">Net</span>
-            <span class="scoreNetValue">${row.netScore ?? '—'}</span>
+
+          <div class="scoreScoreBox">
+            <div class="scoreRawControls">
+              <button type="button" class="btn scoreAdjustBtn" data-dir="-1" aria-label="Decrease score for ${escapeHtml(fullName)}">−</button>
+              <input
+                type="number"
+                class="maTextInput scoreRawInput"
+                min="1"
+                max="15"
+                value="${row.rawScore ?? ''}"
+                aria-label="Raw score for ${escapeHtml(fullName)}">
+              <button type="button" class="btn scoreAdjustBtn" data-dir="1" aria-label="Increase score for ${escapeHtml(fullName)}">+</button>
+            </div>
           </div>
         </div>
-        <div class="scorePlayerRowBottom">
-          <div class="scorePlayerDetail">${escapeHtml(row.teeSetName || '')} | Par ${row.par ?? '—'} | ${row.yardage ?? '—'} yds | HCP ${row.holeHcp ?? '—'}</div>
+
+        <div class="scorePlayerLaneMeta">
+          <div class="scorePlayerDetail">
+            <span class="scoreMetaToken scoreMetaTokenTee">${teeSetName}</span>
+            <span class="scoreMetaSep">•</span>
+            <span class="scoreMetaToken">${yardage}</span>
+            <span class="scoreMetaSep">•</span>
+            <span class="scoreMetaToken">P${par}</span>
+            <span class="scoreMetaSep">•</span>
+            <span class="scoreMetaToken">HCP ${holeHcp}</span>
+            <span class="scoreMetaSep">•</span>
+            <span class="scoreMetaToken scoreMetaTokenStroke">${playerStrokes}</span>
+            <span class="scoreMetaSep">•</span>
+            <span class="scoreMetaToken scoreMetaTokenNet">N${netScore}</span>
+          </div>
+
           <label class="scoreDeclareWrap ${state.payload?.gameRow?.dbGames_ScoringSystem === 'DeclarePlayer' ? '' : 'isHidden'}">
             <input type="checkbox" class="scoreDeclareCheck" ${row.declared ? 'checked' : ''}> Declare
           </label>
@@ -264,7 +295,7 @@
 
   function bindRowEvents(article, wrapper) {
     const input = article.querySelector('.scoreRawInput');
-    const net = article.querySelector('.scoreNetValue');
+    const net = article.querySelector('.scoreMetaTokenNet');
     const declare = article.querySelector('.scoreDeclareCheck');
     const playerId = wrapper.scoreEntryRow?.playerId;
     const strokeAllocation = Number(wrapper.scoreEntryRow?.strokeAllocation || 0);
@@ -285,7 +316,7 @@
 
         next = Math.max(1, Math.min(15, next));
         input.value = String(next);
-        net.textContent = String(next - strokeAllocation);
+        net.textContent = raw ? `N${String(raw - strokeAllocation)}` : 'N—';
         markDirty(playerId, next, !!declare?.checked);
       });
     });
