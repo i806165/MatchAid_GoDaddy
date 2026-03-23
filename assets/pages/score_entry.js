@@ -28,6 +28,7 @@
     status: document.getElementById('scoreEntryStatus'),
     contextCard: document.getElementById('scoreContextCard'),
     cartCard: document.getElementById('scoreCartCard'),
+    cartNextBtn: document.getElementById('scoreCartNextBtn'),
     keeperCard: document.getElementById('scoreKeeperCard'),
     keeperChips: document.getElementById('scoreKeeperChips'),
     keeperWelcome: document.getElementById('scoreKeeperWelcome'),
@@ -52,6 +53,18 @@
       el.playerKey.value = boot.scorecardKey;
     }
 
+    // Ensure Cart 'Next' button exists for the linear flow
+    if (!el.cartNextBtn && el.cartCard) {
+      const div = document.createElement('div');
+      div.className = 'maFieldRow';
+      div.style.justifyContent = 'flex-end';
+      div.style.marginTop = '16px';
+      div.innerHTML = '<button id="scoreCartNextBtn" class="btn btnPrimary" type="button">Next</button>';
+      el.cartCard.appendChild(div);
+      el.cartNextBtn = div.querySelector('button');
+    }
+
+    el.cartNextBtn?.addEventListener('click', showKeeperSelection);
     el.launchBtn?.addEventListener('click', launch);
     el.prevHoleBtn?.addEventListener('click', () => moveHole(-1));
     el.nextHoleBtn?.addEventListener('click', () => moveHole(1));
@@ -146,20 +159,26 @@
     el.ctx.pairingId.textContent = first.dbPlayers_PairingID || '';
 
     el.contextCard.classList.remove('isHidden');
-    el.contextCard.style.cursor = 'pointer';
-
-    // Reveal keeper selection when user taps the context card.
-    const showKeeper = () => {
-      el.keeperCard?.classList.remove('isHidden');
-      el.contextCard.style.cursor = 'default';
-      el.contextCard.removeEventListener('click', showKeeper);
-    };
-    el.contextCard.addEventListener('click', showKeeper);
+    el.contextCard.style.cursor = 'default'; // Reset if previously set
 
     renderHoleOptions();
     renderKeeperChips();
-    toggleByState();
     renderRows();
+
+    // Linear Flow: Cart Setup -> Keeper Selection -> Scoring
+    if (payload.requiresCartConfig) {
+      el.cartCard.classList.remove('isHidden');
+      el.keeperCard.classList.add('isHidden');
+    } else {
+      showKeeperSelection();
+    }
+    
+    el.work.classList.add('isHidden');
+  }
+
+  function showKeeperSelection() {
+    el.cartCard.classList.add('isHidden');
+    el.keeperCard.classList.remove('isHidden');
   }
 
   function renderHoleOptions() {
@@ -192,27 +211,15 @@
       btn.addEventListener('click', () => {
         state.scorerGHIN = row.playerGHIN || '';
 
-        // Hide setup views to focus strictly on scoring
-        el.contextCard.classList.add('isHidden');
-        el.cartCard.classList.add('isHidden');
-        el.keeperCard.classList.add('isHidden');
+        // Transition to Scoring: Hide Setup (Context + Keeper), Show Work
+        el.contextCard.classList.add('isHidden'); // Pane-1b
+        el.keeperCard.classList.add('isHidden');  // Pane-4
+        el.cartCard.classList.add('isHidden');    // Ensure hidden
         el.work.classList.remove('isHidden');
       });
 
       el.keeperChips.appendChild(btn);
     });
-  }
-
-  function toggleByState() {
-    const payload = state.payload;
-    if (!payload) return;
-
-    el.cartCard.classList.toggle('isHidden', !payload.requiresCartConfig);
-    // el.keeperCard.classList.remove('isHidden'); // Now shown via contextCard click
-
-    if (!payload.isGameDay) {
-      el.work.classList.add('isHidden');
-    }
   }
 
   function renderRows() {
