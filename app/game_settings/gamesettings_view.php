@@ -90,12 +90,12 @@
 
           <div class="maFieldRow">
             <div class="maField" id="divBestBall">
-              <label class="maLabel" for="gsBestBallCnt">Best Ball Count</label>
+              <label class="maLabel" for="gsBestBallCnt">Count of Best Ball(s)</label>
               <select id="gsBestBallCnt" class="maTextInput"></select>
             </div>
 
             <div class="maField" id="divPlayerDecl">
-              <label class="maLabel" for="gsPlayerDeclaration">Player Declaration</label>
+              <label class="maLabel" for="gsPlayerDeclaration">Balls to Declare per Player</label>
               <select id="gsPlayerDeclaration" class="maTextInput"></select>
             </div>
           </div>
