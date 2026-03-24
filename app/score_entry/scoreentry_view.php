@@ -100,20 +100,17 @@ declare(strict_types=1);
 
   <section class="scoreEntryWork isHidden" id="scoreEntryWork">
     <div class="maCard scoreHoleNav">
-      <div class="maCard__body">
+      <div class="maCard__body scoreHoleNavBody">
         <div class="scoreHoleNavInner">
           <button id="scorePrevHoleBtn" class="btn" type="button">Prev</button>
-          <select id="scoreHoleSelect" class="maTextInput scoreHoleSelect"></select>
+          <select id="scoreHoleSelect" class="maTextInput scoreHoleSelect" aria-label="Hole"></select>
           <button id="scoreNextHoleBtn" class="btn" type="button">Next</button>
         </div>
       </div>
     </div>
 
     <section class="maCard scoreCollectorCard">
-      <div class="maCard__hdr">
-        <h2 class="maCardTitle">Collect Scores</h2>
-      </div>
-      <div class="maCard__body">
+      <div class="maCard__body scoreCollectorBody">
         <div id="scoreRowsContainer" class="scoreRows"></div>
       </div>
     </section>

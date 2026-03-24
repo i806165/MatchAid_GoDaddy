@@ -58,14 +58,23 @@
 /* Hole nav uses shared buttons/input, local layout only */
 .scoreHoleNavInner{
   display: grid;
-  grid-template-columns: 110px 1fr 110px;
-  gap: 10px;
+  grid-template-columns: 88px minmax(0, 1fr) 88px;
+  gap: 8px;
   align-items: center;
 }
 
 .scoreHoleSelect{
-  max-width: 220px;
-  justify-self: center;
+  max-width: none;
+  width: 100%;
+  justify-self: stretch;
+  text-align: center;
+  font-size: 18px !important;
+  font-weight: 900;
+}
+
+.scoreHoleNavBody{
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
 
 /* Collector rows */
@@ -238,12 +247,13 @@
   }
 
   .scoreHoleNavInner{
-    grid-template-columns: 78px 1fr 78px;
-    gap: 8px;
+    grid-template-columns: 76px minmax(0, 1fr) 76px;
+    gap: 6px;
   }
 
   .scoreHoleSelect{
     max-width: none;
+    width: 100%;
     justify-self: stretch;
     text-align: center;
     font-size: 18px !important;
@@ -252,30 +262,30 @@
 
   .scorePlayerLaneTop{
     grid-template-columns: minmax(0,1fr) auto;
-    gap: 8px;
-    align-items: start;
+    gap: 10px;
+    align-items: center;
   }
 
   .scorePlayerLaneMeta{
     grid-template-columns: minmax(0,1fr);
-    gap: 6px;
+    gap: 4px;
   }
 
   .scoreRawControls{
-    grid-template-columns: 42px 64px 42px;
+    grid-template-columns: 40px 68px 40px;
     gap: 4px;
   }
 
   .scoreAdjustBtn{
-    min-height: 42px;
-    height: 42px;
-    min-width: 42px;
+    min-height: 40px;
+    height: 40px;
+    min-width: 40px;
   }
 
   .scoreRawInput{
-    width: 64px;
-    min-height: 42px;
-    height: 42px;
+    width: 68px;
+    min-height: 40px;
+    height: 40px;
   }
 
   .scorePlayerFirstName,

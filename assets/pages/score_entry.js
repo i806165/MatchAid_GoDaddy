@@ -316,7 +316,7 @@
 
         next = Math.max(1, Math.min(15, next));
         input.value = String(next);
-        net.textContent = raw ? `N${String(raw - strokeAllocation)}` : 'N—';
+        net.textContent = `N${String(next - strokeAllocation)}`;
         markDirty(playerId, next, !!declare?.checked);
       });
     });
