@@ -20,7 +20,7 @@ declare(strict_types=1);
             spellcheck="false"
             maxlength="32"
           >
-          <button id="scoreEntryLaunchBtn" class="btn btnPrimary" type="button">Launch</button>
+          <button id="scoreEntryLaunchBtn" class="btn btnSecondary" type="button">Launch</button>
         </div>
       </div>
 
@@ -32,7 +32,7 @@ declare(strict_types=1);
 
   <section class="maCard scoreContextCard isHidden" id="scoreContextCard">
     <div class="maCard__hdr">
-      <div class="maCard__title">Scoring Conditions</div>
+      <div class="maCard__title">Game Settings</div>
     </div>
     <div class="maCard__body">
       <div class="scoreContextGrid">
@@ -42,7 +42,7 @@ declare(strict_types=1);
         </div>
 
         <div class="maField">
-          <label class="maLabel">Flight</label>
+          <label class="maLabel">Match</label>
           <span id="ctxFlightId" class="scoreMetaValue"></span>
         </div>
 
@@ -63,7 +63,7 @@ declare(strict_types=1);
           <span id="ctxGameFormat" class="scoreMetaValue"></span>
         </div>
         <div class="maField">
-          <label class="maLabel">Segments + Rotation</label>
+          <label class="maLabel">Segments / Rotation</label>
           <span id="ctxSegmentsRotation" class="scoreMetaValue"></span>
         </div>
         <div class="maField">
@@ -71,7 +71,7 @@ declare(strict_types=1);
           <span id="ctxScoringMethod" class="scoreMetaValue"></span>
         </div>
         <div class="maField">
-          <label class="maLabel">HC Method / Allocation / Effectivity</label>
+          <label class="maLabel">HCP Method / Allowance% / HCP Effectivity</label>
           <span id="ctxHCSettings" class="scoreMetaValue"></span>
         </div>
         <div class="maField">

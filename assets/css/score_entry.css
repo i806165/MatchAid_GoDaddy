@@ -1,5 +1,10 @@
 /* /assets/css/score_entry.css */
 
+.maCard__hdr {
+  color: var(--brandSecondaryText);
+  background: var(--brandSecondary);
+}
+
 .scoreEntryShell{
   max-width: 980px;
   margin: 0 auto;

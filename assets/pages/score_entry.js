@@ -62,7 +62,7 @@
       div.className = 'maFieldRow';
       div.style.justifyContent = 'flex-end';
       div.style.marginTop = '16px';
-      div.innerHTML = '<button id="scoreCartNextBtn" class="btn btnPrimary" type="button">Next</button>';
+      div.innerHTML = '<button id="scoreCartNextBtn" class="btn btnSecondary" type="button">Next</button>';
       el.cartCard.appendChild(div);
       el.cartNextBtn = div.querySelector('button');
     }
