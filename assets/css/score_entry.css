@@ -193,13 +193,6 @@
   color: var(--ink);
 }
 
-.scoreDeclareWrap{
-  color: var(--ink);
-  white-space: nowrap;
-  font-size: 13px;
-  font-weight: 800;
-}
-
 .scorePlayerDeclareRow{
   display: grid;
   justify-content: end;
@@ -231,9 +224,22 @@
   padding: 0 2px;
 }
 
-.scoreDeclareWrap input{
-  margin-right: 6px;
-}
+  .scoreDeclareWrap{
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ink);
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .scoreDeclareWrap input[type="checkbox"]{
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    flex: 0 0 auto;
+  }
 
 /* Dirty dialog */
 .scoreDirtyDialog{
