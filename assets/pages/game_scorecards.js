@@ -383,7 +383,6 @@
   function renderPages(rows) {
     clearHost();
     if (!el.host) return;
-    console.log("[SCORECARDS] Rendering pages for rows:", rows.length);
 
     if (!rows.length) {
       if (el.empty) el.empty.style.display = "block";
@@ -446,7 +445,6 @@
 
   function initPage() {
     try {
-      //console.log("[SCORECARDS] Init payload:", init);
       const payload = normalizePayload(scorecards);
       payload.meta = init.meta || payload.meta || {};      
       if (!el.host) console.error("[SCORECARDS] DOM Error: #scHost element not found.");

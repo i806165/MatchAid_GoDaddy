@@ -296,8 +296,6 @@
       (Array.isArray(g.teamB) && g.teamB.length > 0)
     );
     
-    console.log("[GT_CARD]", g.id, { isFlightGroup: g.isFlightGroup, hasTeams, teamA: g.teamA, teamB: g.teamB });
-    
     if (hasTeams) {
        // Match Play: Split rows
        const namesA = (Array.isArray(g.teamA) && g.teamA.length) ? g.teamA.join(" · ") : "";
@@ -494,7 +492,6 @@
 
     try {
       const payload = { action: "SAVE", ggid: state.meta?.ggid || init.ggid || "", assignments };
-      console.log("[GAME_TIMES] save payload", payload);
 
       const res = await postJson(apiGameTimes, payload);
       if (!res || !res.ok) throw new Error(res?.message || "Save failed.");
@@ -589,8 +586,6 @@
       window.location.assign(returnToUrl);
       return;
     }
-
-    console.log("[GAME_TIMES] init", init);
 
     state.groups = sortForDisplay(state.groups || []);
     snapshotOriginal();

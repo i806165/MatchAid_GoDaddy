@@ -134,6 +134,7 @@ $maChromeLogoUrl = null;
 
   <script src="/assets/js/ma_shared.js"></script>
   <script src="/assets/modules/recalculate_handicaps.js"></script>
+  <script src="/assets/modules/addCalendar.js"></script>
   <script src="/assets/pages/game_settings.js"></script>
 </body>
 </html>

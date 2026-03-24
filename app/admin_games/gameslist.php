@@ -51,17 +51,6 @@ $context = [
   "clubName"    => $clubName,
 ];
 
-// Log what we got back (you asked for this)
-Logger::info("GAMESLIST_USERCTX", [
-  "ok" => true,
-  "userGHIN" => $context["userGHIN"],
-  "clubId" => $context["clubId"],
-  "clubName" => $context["clubName"],
-  "hasAdminToken" => !empty($context["adminToken"]),
-  "hasUserToken" => !empty($context["userToken"]),
-  "profileType" => is_array($context["userProfile"] ?? null) ? "array" : gettype($context["userProfile"] ?? null),
-]);
-
 // 2) Default filters
 //    - First-time fresh: use hard-coded presets (today → today+30, ME)
 //    - Return to page: if AP_* session filters exist, restore those
@@ -109,14 +98,6 @@ if ($isReturn) {
     "adminScope" => $scope,
     "selectedAdminKeys" => $selected,
   ];
-
-  Logger::info("GAMESLIST_FILTERS_RESTORE", [
-    "path" => "return",
-    "dateFrom" => $dateFrom,
-    "dateTo" => $dateTo,
-    "adminScope" => $scope,
-    "selectedCount" => count($selected),
-  ]);
 } else {
   $defaultFilters = [
     "mode" => $defaultMode,
@@ -125,14 +106,6 @@ if ($isReturn) {
     "adminScope" => $defaultScope,
     "selectedAdminKeys" => $defaultSelected,
   ];
-
-  Logger::info("GAMESLIST_FILTERS_RESTORE", [
-    "path" => "fresh",
-    "dateFrom" => $defaultDateFrom,
-    "dateTo" => $defaultDateTo,
-    "adminScope" => $defaultScope,
-    "selectedCount" => count($defaultSelected),
-  ]);
 }
 
 // 3) Hydrate INIT payload (admins + games + header)

@@ -135,13 +135,7 @@ function badgeParts(ymd) {
       // For UI selection markings, always send the UI-selected keys
       selectedAdminKeys: computeUiAdminKeys()
     };
-//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    console.log("[MA][QUERY] scope=", state.filters.adminScope,
-      "dateFrom=", payloadGames.dateFrom,
-      "dateTo=", payloadGames.dateTo,
-      "selectedAdminKeys=", payloadGames.selectedAdminKeys
-    );
-//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
     const gamesRes = await apiAdmin("queryGames.php", payloadGames);
     if (gamesRes?.payload) applyRenderGames(gamesRes.payload);
 
@@ -160,10 +154,6 @@ function badgeParts(ymd) {
   // ---- INIT (from PHP injected window.__MA_INIT__/__INIT__) ----
   function applyInit(payload) {
     cachedInit = payload || {};
-//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-    console.log("[MA][INIT] games.raw len:", Array.isArray(cachedInit?.games?.vm) ? cachedInit.games.vm.length : "no vm",
-            "games.raw len:", Array.isArray(cachedInit?.games?.raw) ? cachedInit.games.raw.length : "no raw");
-//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     try {
       const header = cachedInit.header || {};
 
@@ -779,10 +769,7 @@ function wireFiltersModal() {
   // ------------------------------------------------------------
   // modal open/close helpers (preserve + revert behavior)
   // ------------------------------------------------------------
-  //let pendingFrom = '';
-  //let pendingTo = '';
-  //let pendingAdmin = '';
-  //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  
   let pendingFrom = '';
   let pendingTo = '';
   let pendingScope = 'ME';
@@ -792,8 +779,6 @@ function wireFiltersModal() {
     // snapshot current filter state so Cancel/Close can revert
     pendingFrom = String(state.filters?.dateFrom || '');
     pendingTo = String(state.filters?.dateTo || '');
-    //pendingAdmin = String(state.filters?.adminGhin || '');
-    //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
     pendingSelectedKeys = Array.from(state.admins?.selectedKeys || []);
 
     // seed UI from current state
