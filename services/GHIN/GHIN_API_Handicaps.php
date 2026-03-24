@@ -92,16 +92,11 @@ function be_getHandicapbyPeriod(string $parmPeriod, $parmBegDate, $parmEndDate, 
         $requestBody["DateEnd"]   = $DateEnd;
     }
 
-    error_log("[be_getHandicapbyPeriod] URL: " . $GHINurl);
-    error_log("[be_getHandicapbyPeriod] Body: " . json_encode($requestBody));
-
     // NOTE: your HttpClient::postJson throws on non-2xx, like your Wix code did.
-    $res = HttpClient::postJson($GHINurl, $requestBody, [
+    return HttpClient::postJson($GHINurl, $requestBody, [
         "accept: application/json",
         "Authorization: Bearer " . $myToken,
     ]);
-    error_log("[be_getHandicapbyPeriod] Response: " . json_encode($res));
-    return $res;
 }
 
 /**
@@ -227,12 +222,7 @@ function be_getCoursePHSO(array $parmGolfers, string $parmToken): array
         "accept: application/json",
         "Authorization: Bearer " . $myToken,
     ];
-    error_log("[be_getCoursePHSO] URL: " . $GHINurl);
-    error_log("[be_getCoursePHSO] Body: " . json_encode($requestBody));
-    error_log("[be_getCoursePHSO] Headers: " . json_encode($headers));
-    $res = HttpClient::postJson($GHINurl, $requestBody, $headers);
-    error_log("[be_getCoursePHSO] Response: " . json_encode($res));
-    return $res;
+    return HttpClient::postJson($GHINurl, $requestBody, $headers);
 }
 
 /**

@@ -38,11 +38,6 @@ function be_loginGHIN(string $GHIN, string $PASSCODE): array
         "token" => "nonblank",
     ];
     
-    $payloadForLog = $payload;
-    $payloadForLog["user"]["password"] = "********";
-    error_log("[be_loginGHIN] url=" . $loginUrl);
-    error_log("[be_loginGHIN] payload=" . json_encode($payloadForLog));
-
     return HttpClient::postJson($loginUrl, $payload, [
         "accept: application/json",
         "Content-Type: application/json",
@@ -84,6 +79,5 @@ function be_getAdminCredentialsByClub(string $clubId): ?array
         return null;
     }
 
-    error_log("[be_getAdminCredentialsByClub] FOUND secret={$secretName} ghin={$u}");
     return ["ghin" => $u, "password" => $p];
 }
