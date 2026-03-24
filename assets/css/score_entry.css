@@ -237,26 +237,7 @@
     grid-template-columns: 1fr;
   }
 
-  .scoreHoleSelect{
-    max-width: none;
-    justify-self: stretch;
-  }
-
-  .scoreRawControls{
-    justify-content: start;
-  }
-
-  .scoreNetBox{
-    text-align: left;
-  }
-
-  .scorePlayerName{
-    white-space: normal;
-    overflow: visible;
-    text-overflow: clip;
-  }
-
-    .scoreHoleNavInner{
+  .scoreHoleNavInner{
     grid-template-columns: 78px 1fr 78px;
     gap: 8px;
   }
@@ -308,5 +289,4 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-
 }
