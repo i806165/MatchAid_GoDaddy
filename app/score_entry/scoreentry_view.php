@@ -84,24 +84,24 @@ declare(strict_types=1);
 
   <section class="maCard scoreCartCard isHidden" id="scoreCartCard">
     <div class="maCard__hdr">
-      <h2 class="maCardTitle">Cart Configuration</h2>
+      <div class="maCard__title">Cart Configuration</div>
     </div>
     <div class="maCard__body">
       <div class="scoreCartGrid">
         <div class="maField">
-          <label class="maLabel" for="cart1Driver">Cart 1 Driver</label>
+          <label id="cart1DriverLabel" class="maLabel" for="cart1Driver">Cart 1 Driver</label>
           <select id="cart1Driver" class="maTextInput"></select>
         </div>
         <div class="maField">
-          <label class="maLabel" for="cart1Passenger">Cart 1 Passenger</label>
+          <label id="cart1PassengerLabel" class="maLabel" for="cart1Passenger">Cart 1 Passenger</label>
           <select id="cart1Passenger" class="maTextInput"></select>
         </div>
         <div class="maField">
-          <label class="maLabel" for="cart2Driver">Cart 2 Driver</label>
+          <label id="cart2DriverLabel" class="maLabel" for="cart2Driver">Cart 2 Driver</label>
           <select id="cart2Driver" class="maTextInput"></select>
         </div>
         <div class="maField">
-          <label class="maLabel" for="cart2Passenger">Cart 2 Passenger</label>
+          <label id="cart2PassengerLabel" class="maLabel" for="cart2Passenger">Cart 2 Passenger</label>
           <select id="cart2Passenger" class="maTextInput"></select>
         </div>
       </div>

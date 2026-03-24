@@ -67,7 +67,7 @@
       el.cartNextBtn = div.querySelector('button');
     }
 
-    el.cartNextBtn?.addEventListener('click', showKeeperSelection);
+    el.cartNextBtn?.addEventListener('click', confirmCartConfiguration);
     el.launchBtn?.addEventListener('click', launch);
     el.prevHoleBtn?.addEventListener('click', () => moveHole(-1));
     el.nextHoleBtn?.addEventListener('click', () => moveHole(1));
@@ -187,6 +187,7 @@
     renderHoleOptions();
     renderKeeperChips();
     renderRows();
+    configureCartCard();
 
     // Linear Flow: Cart Setup -> Keeper Selection -> Scoring
     if (payload.requiresCartConfig) {
@@ -244,6 +245,102 @@
       el.keeperChips.appendChild(btn);
     });
   }
+
+  function getCartPlayers() {
+  return (state.payload?.players || []).map((wrapper) => {
+    const pr = wrapper.playerRow || {};
+    const sr = wrapper.scoreEntryRow || {};
+    return {
+      wrapper,
+      ghin: String(pr.dbPlayers_PlayerGHIN || sr.playerGHIN || ''),
+      name: String(pr.dbPlayers_Name || sr.playerName || ''),
+      pairingPos: String(pr.dbPlayers_PairingPos || sr.pairingPos || '')
+    };
+  }).filter((p) => p.ghin && p.name);
+}
+
+function configureCartCard() {
+  const players = getCartPlayers();
+  const isCOD = String(state.payload?.gameRow?.dbGames_RotationMethod || '') === 'COD';
+
+  const labels = isCOD
+    ? ['Cart 1 Driver', 'Cart 1 Passenger', 'Cart 2 Driver', 'Cart 2 Passenger']
+    : ['Player 1', 'Player 2', 'Player 3', 'Player 4'];
+
+  if (el.cart1DriverLabel) el.cart1DriverLabel.textContent = labels[0];
+  if (el.cart1PassengerLabel) el.cart1PassengerLabel.textContent = labels[1];
+  if (el.cart2DriverLabel) el.cart2DriverLabel.textContent = labels[2];
+  if (el.cart2PassengerLabel) el.cart2PassengerLabel.textContent = labels[3];
+
+  const options = [{ label: '', value: '' }].concat(
+    players.map((p) => ({ label: p.name, value: p.ghin }))
+  );
+
+  [el.cart1Driver, el.cart1Passenger, el.cart2Driver, el.cart2Passenger].forEach((select) => {
+    if (!select) return;
+    select.innerHTML = '';
+    options.forEach((opt) => {
+      const node = document.createElement('option');
+      node.value = opt.value;
+      node.textContent = opt.label;
+      select.appendChild(node);
+    });
+    select.value = '';
+  });
+
+  players.forEach((p) => {
+    switch (p.pairingPos) {
+      case '1':
+        if (el.cart1Driver) el.cart1Driver.value = p.ghin;
+        break;
+      case '2':
+        if (el.cart1Passenger) el.cart1Passenger.value = p.ghin;
+        break;
+      case '3':
+        if (el.cart2Driver) el.cart2Driver.value = p.ghin;
+        break;
+      case '4':
+        if (el.cart2Passenger) el.cart2Passenger.value = p.ghin;
+        break;
+    }
+  });
+}
+
+function confirmCartConfiguration() {
+  const assignments = [
+    { select: el.cart1Driver, pos: '1' },
+    { select: el.cart1Passenger, pos: '2' },
+    { select: el.cart2Driver, pos: '3' },
+    { select: el.cart2Passenger, pos: '4' }
+  ];
+
+  const selected = [];
+  const seen = new Set();
+
+  for (const item of assignments) {
+    const ghin = String(item.select?.value || '');
+    if (!ghin) continue;
+    if (seen.has(ghin)) {
+      setPageStatus('Each cart position must have a unique player.', 'warn');
+      return;
+    }
+    seen.add(ghin);
+    selected.push({ ghin, pos: item.pos });
+  }
+
+  (state.payload?.players || []).forEach((wrapper) => {
+    const pr = wrapper.playerRow || {};
+    const sr = wrapper.scoreEntryRow || {};
+    const ghin = String(pr.dbPlayers_PlayerGHIN || sr.playerGHIN || '');
+    const match = selected.find((x) => x.ghin === ghin);
+    const pos = match ? match.pos : '';
+
+    if (pr) pr.dbPlayers_PairingPos = pos;
+    if (sr) sr.pairingPos = pos;
+  });
+
+  showKeeperSelection();
+}
 
   function renderRows() {
     const payload = state.payload;
