@@ -21,7 +21,7 @@ declare(strict_types=1);
             spellcheck="false"
             maxlength="32"
           >
-          <button id="scoreEntryLaunchBtn" class="btn btnPrimary" type="button">Launch</button>
+          <button id="scoreEntryLaunchBtn" class="btn btnSecondary" type="button">Launch</button>
         </div>
       </div>
       <div id="scoreEntryStatus" class="scoreEntryStatus" aria-live="polite"></div>
@@ -102,9 +102,9 @@ declare(strict_types=1);
     <div class="maCard scoreHoleNav">
       <div class="maCard__body scoreHoleNavBody">
         <div class="scoreHoleNavInner">
-          <button id="scorePrevHoleBtn" class="btn" type="button">Prev</button>
+          <button id="scorePrevHoleBtn" class="btn btnSecondary" type="button">Prev</button>
           <select id="scoreHoleSelect" class="maTextInput scoreHoleSelect" aria-label="Hole"></select>
-          <button id="scoreNextHoleBtn" class="btn" type="button">Next</button>
+          <button id="scoreNextHoleBtn" class="btn btnSecondary" type="button">Next</button>
         </div>
       </div>
     </div>

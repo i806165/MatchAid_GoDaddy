@@ -56,25 +56,39 @@
 }
 
 /* Hole nav uses shared buttons/input, local layout only */
+.scoreHoleNavBody{
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
 .scoreHoleNavInner{
   display: grid;
-  grid-template-columns: 88px minmax(0, 1fr) 88px;
-  gap: 8px;
+  grid-template-columns: 108px 84px 108px;
+  justify-content: center;
+  gap: 10px;
   align-items: center;
 }
 
-.scoreHoleSelect{
-  max-width: none;
-  width: 100%;
-  justify-self: stretch;
-  text-align: center;
-  font-size: 18px !important;
-  font-weight: 900;
+.scoreHoleNavInner > .btn{
+  min-height: 46px;
+  height: 46px;
+  font-size: 18px;
+  font-weight: 800;
 }
 
-.scoreHoleNavBody{
-  padding-top: 10px;
-  padding-bottom: 10px;
+.scoreHoleSelect{
+  width: 84px;
+  min-width: 84px;
+  max-width: 84px;
+  min-height: 46px;
+  height: 46px;
+  padding-left: 12px;
+  padding-right: 28px;
+  text-align: center;
+  text-align-last: center;
+  font-size: 24px !important;
+  font-weight: 900;
+  justify-self: center;
 }
 
 /* Collector rows */
@@ -247,16 +261,29 @@
   }
 
   .scoreHoleNavInner{
-    grid-template-columns: 76px minmax(0, 1fr) 76px;
-    gap: 6px;
+    grid-template-columns: 104px 78px 104px;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .scoreHoleNavInner > .btn{
+    min-height: 48px;
+    height: 48px;
+    font-size: 18px;
   }
 
   .scoreHoleSelect{
-    max-width: none;
-    width: 100%;
-    justify-self: stretch;
+    width: 78px;
+    min-width: 78px;
+    max-width: 78px;
+    min-height: 48px;
+    height: 48px;
+    padding-left: 10px;
+    padding-right: 26px;
+    justify-self: center;
     text-align: center;
-    font-size: 18px !important;
+    text-align-last: center;
+    font-size: 24px !important;
     font-weight: 900;
   }
 
