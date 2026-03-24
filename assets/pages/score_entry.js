@@ -414,9 +414,9 @@ function confirmCartConfiguration() {
 
         <div class="scorePlayerMetaRow">
           <div class="scorePlayerDetail">
-            <span class="scoreMetaToken">${teeSetName}</span>
+            <span class="scoreMetaToken">Tee ${teeSetName}</span>
             <span class="scoreMetaSep">•</span>
-            <span class="scoreMetaToken">${yardage} yds</span>
+            <span class="scoreMetaToken">${yardage}yds</span>
             <span class="scoreMetaSep">•</span>
             <span class="scoreMetaToken">Par ${par}</span>
             <span class="scoreMetaSep">•</span>
