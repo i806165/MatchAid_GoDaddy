@@ -270,17 +270,17 @@
 
         <div class="scorePlayerLaneMeta">
           <div class="scorePlayerDetail">
-            <span class="scoreMetaToken scoreMetaTokenTee">Tee: ${teeSetName}</span>
+            <span class="scoreMetaToken scoreMetaTokenTee">Tee ${teeSetName}</span>
             <span class="scoreMetaSep">•</span>
-            <span class="scoreMetaToken">{yardage}yds</span>
+            <span class="scoreMetaToken">${yardage}yds</span>
             <span class="scoreMetaSep">•</span>
-            <span class="scoreMetaToken">Par: ${par}</span>
+            <span class="scoreMetaToken">Par ${par}</span>
             <span class="scoreMetaSep">•</span>
             <span class="scoreMetaToken">HCP ${holeHcp}</span>
             <span class="scoreMetaSep">•</span>
-            <span class="scoreMetaToken scoreMetaTokenStroke">Strokes: ${playerStrokes}</span>
+            <span class="scoreMetaToken scoreMetaTokenStroke">Strokes ${playerStrokes}</span>
             <span class="scoreMetaSep">•</span>
-            <span class="scoreMetaToken scoreMetaTokenNet">Net: ${netScore}</span>
+            <span class="scoreMetaToken scoreMetaTokenNet">Net ${netScore}</span>
           </div>
 
           <label class="scoreDeclareWrap ${state.payload?.gameRow?.dbGames_ScoringSystem === 'DeclarePlayer' ? '' : 'isHidden'}">

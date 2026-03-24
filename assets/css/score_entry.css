@@ -266,16 +266,16 @@
     gap: 8px;
   }
 
-  .scoreHoleNavInner > .btn{
-    min-height: 48px;
-    height: 48px;
-    font-size: 18px;
+  .scoreHoleNavInner{
+    grid-template-columns: 104px 195px 104px;
+    justify-content: center;
+    gap: 8px;
   }
 
   .scoreHoleSelect{
-    width: 78px;
-    min-width: 78px;
-    max-width: 78px;
+    width: 195px;
+    min-width: 195px;
+    max-width: 195px;
     min-height: 48px;
     height: 48px;
     padding-left: 10px;
