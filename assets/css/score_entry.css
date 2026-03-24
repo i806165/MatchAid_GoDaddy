@@ -1,4 +1,5 @@
 /* /assets/css/score_entry.css */
+
 .scoreEntryShell{
   max-width: 980px;
   margin: 0 auto;
@@ -8,22 +9,7 @@
 
 .isHidden{ display:none !important; }
 
-/* Compact context grid inside shared maCard */
-.scoreContextGrid{
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px 18px;
-}
-
-.scoreMetaValue{
-  display: block;
-  font-size: 14px;
-  font-weight: 900;
-  color: var(--ink);
-  line-height: 1.15;
-}
-
-/* Launch row: shared field/input/button, local layout only */
+/* Scoring Launchpad */
 .scoreLaunchRow{
   display: grid;
   grid-template-columns: 1fr auto;
@@ -31,17 +17,21 @@
   align-items: end;
 }
 
-.scoreEntryStatus{
-  min-height: 22px;
-  margin-top: 8px;
-  font-size: 13px;
-  font-weight: 800;
+.scoreLaunchHelp{
+  margin-top: 12px;
 }
 
-.scoreEntryStatus[data-level="error"]{ color: var(--danger); }
-.scoreEntryStatus[data-level="warn"]{ color: #8a5b00; }
-.scoreEntryStatus[data-level="ok"]{ color: var(--success); }
-.scoreEntryStatus[data-level="info"]{ color: var(--ink); }
+/* Scoring Conditions */
+.scoreContextGrid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+
+.scoreMetaValue{
+  display: block;
+  line-height: 1.15;
+}
 
 /* COD cart setup */
 .scoreCartGrid{
@@ -55,7 +45,14 @@
   justify-content: flex-end;
 }
 
-/* Hole nav uses shared buttons/input, local layout only */
+/* Scorekeeper */
+.scoreKeeperChips{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Hole nav */
 .scoreHoleNavBody{
   padding-top: 12px;
   padding-bottom: 12px;
@@ -72,8 +69,6 @@
 .scoreHoleNavInner > .btn{
   min-height: 46px;
   height: 46px;
-  font-size: 18px;
-  font-weight: 800;
 }
 
 .scoreHoleSelect{
@@ -86,8 +81,6 @@
   padding-right: 28px;
   text-align: center;
   text-align-last: center;
-  font-size: 24px !important;
-  font-weight: 900;
   justify-self: center;
 }
 
@@ -108,7 +101,7 @@
 }
 
 .scorePlayerRow{
-  padding: 8px 10px;
+  padding: 10px 10px;
   display: grid;
   gap: 6px;
   background: var(--cardBg);
@@ -121,7 +114,7 @@
 
 .scorePlayerLaneTop{
   display: grid;
-  grid-template-columns: minmax(0,1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 10px;
   align-items: center;
 }
@@ -129,28 +122,20 @@
 .scorePlayerIdentity{
   min-width: 0;
   display: grid;
-  gap: 1px;
+  gap: 2px;
 }
 
 .scorePlayerFirstName,
-.scorePlayerLastName{
-  min-width: 0;
-  font-weight: 900;
-  line-height: 1.05;
+.scorePlayerLastName,
+.scorePlayerHandicap{
+  line-height: 1.1;
   color: var(--ink);
-}
-
-.scorePlayerFirstName{
   font-size: 16px;
-}
-
-.scorePlayerLastName{
-  font-size: 16px;
+  font-weight: 800;
 }
 
 .scorePlayerHandicap{
-  color: var(--mutedText);
-  font-weight: 800;
+  color: inherit;
 }
 
 .scoreScoreBox{
@@ -161,69 +146,84 @@
 
 .scoreRawControls{
   display: inline-grid;
-  grid-template-columns: 40px 68px 40px;
+  grid-template-columns: 42px 72px 42px;
   gap: 6px;
   align-items: center;
 }
 
 .scoreAdjustBtn{
-  min-height: 40px;
-  height: 40px;
-  min-width: 40px;
+  min-height: 42px;
+  height: 42px;
+  min-width: 42px;
   padding: 0;
-  font-size: 22px;
-  font-weight: 900;
+  font-size: 16px;
+  font-weight: 800;
 }
 
 .scoreRawInput{
-  width: 68px;
-  min-height: 40px;
-  height: 40px;
+  width: 72px;
+  min-height: 42px;
+  height: 42px;
   text-align: center;
   padding: 0 8px;
-  font-size: 22px !important;
-  font-weight: 900;
+  font-size: 16px;
+  font-weight: 800;
 }
 
-.scorePlayerLaneMeta{
+.scorePlayerResultRow{
   display: grid;
-  grid-template-columns: minmax(0,1fr) auto;
-  gap: 10px;
+  justify-content: end;
+}
+
+.scorePlayerResultText{
+  display: inline-flex;
   align-items: center;
+  gap: 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.scoreResultToken{
+  color: var(--ink);
+}
+
+.scoreDeclareWrap{
+  color: var(--ink);
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.scorePlayerDeclareRow{
+  display: grid;
+  justify-content: end;
+}
+
+
+.scorePlayerMetaRow{
+  display: grid;
+  justify-content: start;
 }
 
 .scorePlayerDetail{
   min-width: 0;
-  font-size: 12px;
-  font-weight: 800;
   line-height: 1.15;
-  color: var(--ink);
+  color: var(--mutedText);
+  font-size: 11px;
+  font-weight: 400;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .scoreMetaToken{
-  color: var(--mutedText);
-}
-
-.scoreMetaTokenTee,
-.scoreMetaTokenStroke,
-.scoreMetaTokenNet{
-  color: var(--ink);
-  font-weight: 900;
+  color: inherit;
 }
 
 .scoreMetaSep{
   color: var(--mutedText);
   padding: 0 2px;
-}
-
-.scoreDeclareWrap{
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--ink);
-  white-space: nowrap;
 }
 
 .scoreDeclareWrap input{
@@ -261,12 +261,6 @@
   }
 
   .scoreHoleNavInner{
-    grid-template-columns: 104px 78px 104px;
-    justify-content: center;
-    gap: 8px;
-  }
-
-  .scoreHoleNavInner{
     grid-template-columns: 104px 195px 104px;
     justify-content: center;
     gap: 8px;
@@ -283,45 +277,46 @@
     justify-self: center;
     text-align: center;
     text-align-last: center;
-    font-size: 24px !important;
-    font-weight: 900;
+  }
+
+  .scoreHoleNavInner > .btn{
+    min-height: 48px;
+    height: 48px;
   }
 
   .scorePlayerLaneTop{
-    grid-template-columns: minmax(0,1fr) auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 10px;
     align-items: center;
   }
 
-  .scorePlayerLaneMeta{
-    grid-template-columns: minmax(0,1fr);
-    gap: 4px;
-  }
-
   .scoreRawControls{
-    grid-template-columns: 40px 68px 40px;
+    grid-template-columns: 42px 72px 42px;
     gap: 4px;
   }
 
   .scoreAdjustBtn{
-    min-height: 40px;
-    height: 40px;
-    min-width: 40px;
+    min-height: 42px;
+    height: 42px;
+    min-width: 42px;
   }
 
   .scoreRawInput{
-    width: 68px;
-    min-height: 40px;
-    height: 40px;
+    width: 72px;
+    min-height: 42px;
+    height: 42px;
   }
 
-  .scorePlayerFirstName,
-  .scorePlayerLastName{
-    font-size: 15px;
+  .scorePlayerResultRow,
+  .scorePlayerDeclareRow{
+    justify-content: end;
+  }
+
+  .scorePlayerMetaRow{
+    justify-content: start;
   }
 
   .scorePlayerDetail{
-    font-size: 11px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

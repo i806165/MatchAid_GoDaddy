@@ -25,10 +25,9 @@
   const el = {
     playerKey: document.getElementById('scoreEntryPlayerKey'),
     launchBtn: document.getElementById('scoreEntryLaunchBtn'),
-    status: document.getElementById('scoreEntryStatus'),
     contextCard: document.getElementById('scoreContextCard'),
     cartCard: document.getElementById('scoreCartCard'),
-    cartNextBtn: document.getElementById('scoreCartNextBtn'),
+    cartNextBtn: document.getElementById('scoreCartConfirmBtn'),
     keeperCard: document.getElementById('scoreKeeperCard'),
     keeperChips: document.getElementById('scoreKeeperChips'),
     keeperWelcome: document.getElementById('scoreKeeperWelcome'),
@@ -39,12 +38,16 @@
     rows: document.getElementById('scoreRowsContainer'),
     dirtyDialog: document.getElementById('scoreDirtyDialog'),
     ctx: {
-      gameTitle: document.getElementById('ctxGameTitle'),
-      courseName: document.getElementById('ctxCourseName'),
-      playerKey: document.getElementById('ctxPlayerKey'),
       teeTime: document.getElementById('ctxTeeTime'),
       flightId: document.getElementById('ctxFlightId'),
-      pairingId: document.getElementById('ctxPairingId')
+      pairingId: document.getElementById('ctxPairingId'),
+      playTime: document.getElementById('ctxPlayTime'),
+      holes: document.getElementById('ctxHoles'),
+      gameFormat: document.getElementById('ctxGameFormat'),
+      segmentsRotation: document.getElementById('ctxSegmentsRotation'),
+      scoringMethod: document.getElementById('ctxScoringMethod'),
+      hcSettings: document.getElementById('ctxHCSettings'),
+      strokeDistribution: document.getElementById('ctxStrokeDistribution')
     }
   };
 
@@ -149,11 +152,31 @@
     const payload = state.payload;
     if (!payload) return;
 
+    const g = payload.gameRow || {};
     const first = payload.players?.[0]?.playerRow || {};
 
-    el.ctx.gameTitle.textContent = payload.gameRow?.dbGames_Title || '';
-    el.ctx.courseName.textContent = payload.gameRow?.dbGames_CourseName || '';
-    el.ctx.playerKey.textContent = first.dbPlayers_PlayerKey || '';
+    const hcEffectivity =
+      String(g.dbGames_HCEffectivity || '') +
+      (g.dbGames_HCEffectivityDate ? ` ${g.dbGames_HCEffectivityDate}` : '');
+
+    const segmentsRotation = [
+      String(g.dbGames_Segments || ''),
+      String(g.dbGames_RotationMethod || '')
+    ].filter(Boolean).join(' / ');
+
+    const hcSettings = [
+      String(g.dbGames_HCMethod || ''),
+      g.dbGames_Allowance ? `${g.dbGames_Allowance}%` : '',
+      hcEffectivity
+    ].filter(Boolean).join(' / ');
+
+    el.ctx.playTime.textContent = first.dbPlayers_TeeTime || g.dbGames_PlayTime || '';
+    el.ctx.holes.textContent = g.dbGames_Holes || '';
+    el.ctx.gameFormat.textContent = g.dbGames_GameFormat || '';
+    el.ctx.segmentsRotation.textContent = segmentsRotation;
+    el.ctx.scoringMethod.textContent = g.dbGames_ScoringMethod || '';
+    el.ctx.hcSettings.textContent = hcSettings;
+    el.ctx.strokeDistribution.textContent = g.dbGames_StrokeDistribution || '';
     el.ctx.teeTime.textContent = first.dbPlayers_TeeTime || '';
     el.ctx.flightId.textContent = first.dbPlayers_FlightID || '';
     el.ctx.pairingId.textContent = first.dbPlayers_PairingID || '';
@@ -268,24 +291,30 @@
           </div>
         </div>
 
-        <div class="scorePlayerLaneMeta">
-          <div class="scorePlayerDetail">
-            <span class="scoreMetaToken scoreMetaTokenTee">Tee ${teeSetName}</span>
+        <div class="scorePlayerResultRow">
+          <div class="scorePlayerResultText">
+            <span class="scoreResultToken">Strokes ${playerStrokes}</span>
             <span class="scoreMetaSep">•</span>
-            <span class="scoreMetaToken">${yardage}yds</span>
+            <span class="scoreResultToken">Net ${netScore}</span>
+          </div>
+        </div>
+
+        <div class="scorePlayerDeclareRow ${state.payload?.gameRow?.dbGames_ScoringSystem === 'DeclarePlayer' ? '' : 'isHidden'}">
+          <label class="scoreDeclareWrap">
+            <input type="checkbox" class="scoreDeclareCheck" ${row.declared ? 'checked' : ''}> Declare
+          </label>
+        </div>
+
+        <div class="scorePlayerMetaRow">
+          <div class="scorePlayerDetail">
+            <span class="scoreMetaToken">${teeSetName}</span>
+            <span class="scoreMetaSep">•</span>
+            <span class="scoreMetaToken">${yardage} yds</span>
             <span class="scoreMetaSep">•</span>
             <span class="scoreMetaToken">Par ${par}</span>
             <span class="scoreMetaSep">•</span>
             <span class="scoreMetaToken">HCP ${holeHcp}</span>
-            <span class="scoreMetaSep">•</span>
-            <span class="scoreMetaToken scoreMetaTokenStroke">Strokes ${playerStrokes}</span>
-            <span class="scoreMetaSep">•</span>
-            <span class="scoreMetaToken scoreMetaTokenNet">Net ${netScore}</span>
           </div>
-
-          <label class="scoreDeclareWrap ${state.payload?.gameRow?.dbGames_ScoringSystem === 'DeclarePlayer' ? '' : 'isHidden'}">
-            <input type="checkbox" class="scoreDeclareCheck" ${row.declared ? 'checked' : ''}> Declare
-          </label>
         </div>`;
 
       bindRowEvents(article, wrapper);
@@ -295,7 +324,7 @@
 
   function bindRowEvents(article, wrapper) {
     const input = article.querySelector('.scoreRawInput');
-    const net = article.querySelector('.scoreMetaTokenNet');
+    const net = article.querySelector('.scoreResultToken:last-child');
     const declare = article.querySelector('.scoreDeclareCheck');
     const playerId = wrapper.scoreEntryRow?.playerId;
     const strokeAllocation = Number(wrapper.scoreEntryRow?.strokeAllocation || 0);
@@ -316,14 +345,14 @@
 
         next = Math.max(1, Math.min(15, next));
         input.value = String(next);
-        net.textContent = `N${String(next - strokeAllocation)}`;
+        net.textContent = `Net ${String(next - strokeAllocation)}`;
         markDirty(playerId, next, !!declare?.checked);
       });
     });
 
     input?.addEventListener('change', () => {
       const raw = Number(input.value || 0);
-      net.textContent = raw ? String(raw - strokeAllocation) : '—';
+      net.textContent = raw ? `Net ${String(raw - strokeAllocation)}` : 'Net —';
       markDirty(playerId, raw || null, !!declare?.checked);
     });
 
@@ -560,10 +589,10 @@
     });
   }
 
-  function setPageStatus(message, level) {
-    if (!el.status) return;
-    el.status.textContent = message || '';
-    el.status.dataset.level = level || 'info';
+  function setPageStatus(message, level){
+    if (typeof MA.setStatus === 'function') {
+      MA.setStatus(message || '', level || 'info');
+    }
   }
 
   function applyChrome() {

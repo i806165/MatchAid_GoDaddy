@@ -6,8 +6,7 @@ declare(strict_types=1);
 
   <section class="maCard scoreLaunchCard" id="scoreLaunchCard">
     <div class="maCard__hdr">
-      <h1 class="maCardTitle">Score Entry</h1>
-      <p class="maCardSubTitle">Enter the ScoreCard ID to launch the scoring group.</p>
+      <div class="maCard__title">Scoring Launchpad</div>
     </div>
     <div class="maCard__body">
       <div class="maField">
@@ -21,39 +20,63 @@ declare(strict_types=1);
             spellcheck="false"
             maxlength="32"
           >
-          <button id="scoreEntryLaunchBtn" class="btn btnSecondary" type="button">Launch</button>
+          <button id="scoreEntryLaunchBtn" class="btn btnPrimary" type="button">Launch</button>
         </div>
       </div>
-      <div id="scoreEntryStatus" class="scoreEntryStatus" aria-live="polite"></div>
+
+      <div class="scoreLaunchHelp">
+        Enter the ScoreCard ID to launch the scoring group.
+      </div>
     </div>
   </section>
 
   <section class="maCard scoreContextCard isHidden" id="scoreContextCard">
+    <div class="maCard__hdr">
+      <div class="maCard__title">Scoring Conditions</div>
+    </div>
     <div class="maCard__body">
       <div class="scoreContextGrid">
-        <div class="maField">
-          <label class="maLabel">Game</label>
-          <span id="ctxGameTitle" class="scoreMetaValue"></span>
-        </div>
-        <div class="maField">
-          <label class="maLabel">Course</label>
-          <span id="ctxCourseName" class="scoreMetaValue"></span>
-        </div>
-        <div class="maField">
-          <label class="maLabel">ScoreCard ID</label>
-          <span id="ctxPlayerKey" class="scoreMetaValue"></span>
-        </div>
         <div class="maField">
           <label class="maLabel">Tee Time</label>
           <span id="ctxTeeTime" class="scoreMetaValue"></span>
         </div>
+
         <div class="maField">
           <label class="maLabel">Flight</label>
           <span id="ctxFlightId" class="scoreMetaValue"></span>
         </div>
+
         <div class="maField">
           <label class="maLabel">Pairing</label>
           <span id="ctxPairingId" class="scoreMetaValue"></span>
+        </div>
+        <div class="maField">
+          <label class="maLabel">Play Time</label>
+          <span id="ctxPlayTime" class="scoreMetaValue"></span>
+        </div>
+        <div class="maField">
+          <label class="maLabel">Holes</label>
+          <span id="ctxHoles" class="scoreMetaValue"></span>
+        </div>
+        <div class="maField">
+          <label class="maLabel">Game Format</label>
+          <span id="ctxGameFormat" class="scoreMetaValue"></span>
+        </div>
+        <div class="maField">
+          <label class="maLabel">Segments + Rotation</label>
+          <span id="ctxSegmentsRotation" class="scoreMetaValue"></span>
+        </div>
+        <div class="maField">
+          <label class="maLabel">Scoring Method</label>
+          <span id="ctxScoringMethod" class="scoreMetaValue"></span>
+        </div>
+        <div class="maField">
+          <label class="maLabel">HC Method / Allocation / Effectivity</label>
+          <span id="ctxHCSettings" class="scoreMetaValue"></span>
+        </div>
+        <div class="maField">
+          <label class="maLabel">Stroke Distribution</label>
+          <span id="ctxStrokeDistribution" class="scoreMetaValue"></span>
         </div>
       </div>
     </div>
@@ -90,10 +113,10 @@ declare(strict_types=1);
 
   <section class="maCard scoreKeeperCard isHidden" id="scoreKeeperCard">
     <div class="maCard__hdr">
-      <h2 class="maCardTitle">Choose Scorekeeper</h2>
+      <div class="maCard__title">Scorekeeper</div>
     </div>
     <div class="maCard__body">
-      <div id="scoreKeeperChips" class="maChoiceChips"></div>
+      <div id="scoreKeeperChips" class="maChoiceChips scoreKeeperChips"></div>
       <div id="scoreKeeperWelcome" class="scoreKeeperWelcome"></div>
     </div>
   </section>
