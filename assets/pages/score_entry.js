@@ -28,6 +28,16 @@
     contextCard: document.getElementById('scoreContextCard'),
     cartCard: document.getElementById('scoreCartCard'),
     cartNextBtn: document.getElementById('scoreCartConfirmBtn'),
+    
+    cart1Driver: document.getElementById('cart1Driver'),
+    cart1Passenger: document.getElementById('cart1Passenger'),
+    cart2Driver: document.getElementById('cart2Driver'),
+    cart2Passenger: document.getElementById('cart2Passenger'),
+    cart1DriverLabel: document.getElementById('cart1DriverLabel'),
+    cart1PassengerLabel: document.getElementById('cart1PassengerLabel'),
+    cart2DriverLabel: document.getElementById('cart2DriverLabel'),
+    cart2PassengerLabel: document.getElementById('cart2PassengerLabel'),
+
     keeperCard: document.getElementById('scoreKeeperCard'),
     keeperChips: document.getElementById('scoreKeeperChips'),
     keeperWelcome: document.getElementById('scoreKeeperWelcome'),
