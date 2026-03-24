@@ -193,6 +193,15 @@
   text-overflow: ellipsis;
 }
 
+.gpGroupCard__title{
+  cursor: pointer; /* Hint that it's clickable */
+}
+.gpGroupCard__title.is-expanded {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  cursor: default;
+}
 .gpGroupCard__meta{
   /* No longer used, title is now one line */
   display: none;
@@ -217,20 +226,30 @@
 .gpCardRow:last-child { border-bottom: none; }
 
 .gpCardRow__del {
-  flex: 0 0 20px;
-  height: 20px;
+  /* Tappable area increased for mobile usability */
+  flex: 0 0 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--danger);
   font-weight: 900;
   cursor: pointer;
-  border-radius: 4px;
-  font-size: 14px;
+  border-radius: 50%; /* Circle looks better for a single character button */
+  font-size: 16px; /* Slightly larger X */
   line-height: 1;
+  
+  /* Reset button styles */
+  border: none;
+  background: transparent;
+  padding: 0;
 }
 .gpCardRow__del:hover {
   background: rgba(198, 40, 40, 0.1);
+}
+/* Hide button when it has no content (for the flight slot) */
+.gpCardRow__del:empty {
+  visibility: hidden;
 }
 
 .gpCardRow__info {
@@ -241,6 +260,13 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  cursor: pointer; /* Hint that it's clickable */
+}
+.gpCardRow__info.is-expanded {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  cursor: default;
 }
 
 .gpRowBtn{
