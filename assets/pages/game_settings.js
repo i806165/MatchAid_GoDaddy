@@ -44,15 +44,16 @@
   };
 
   const competitionConfig = {
-    PairPair: { label: "Pair vs. Pair", value: "PairPair" },
-    PairField:{ label: "Pair vs. Field",value: "PairField" },
+    PairPair: { label: "Pair v. another Pair", value: "PairPair" },
+    PairField:{ label: "Pair v. the Field",value: "PairField" },
   };
 
   const scoringSystemOptions = [
-    { label: "All Scores",        value: "AllScores" },
-    { label: "Best Ball",         value: "BestBall" },
-    { label: "Hole Declarations", value: "DeclareHole" },
-    { label: "Game Declarations", value: "DeclarePlayer" },
+    { label: "Use All Scores",        value: "AllScores" },
+    { label: "Use N Best Ball(s)",         value: "BestBall" },
+    { label: "Use N Scores-Set per Hole", value: "DeclareHole" },
+    { label: "Use N Scores-Set per Group (33/44)", value: "DeclarePlayer" },
+    { label: "Declare Scores at your Discretion", value: "DeclareManual" },
   ];
 
   const toMethodOptions = [

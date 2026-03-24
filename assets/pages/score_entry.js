@@ -406,7 +406,7 @@ function confirmCartConfiguration() {
           </div>
         </div>
 
-        <div class="scorePlayerDeclareRow ${state.payload?.gameRow?.dbGames_ScoringSystem === 'DeclarePlayer' ? '' : 'isHidden'}">
+        <div class="scorePlayerDeclareRow ${['DeclarePlayer', 'DeclareManual'].includes(state.payload?.gameRow?.dbGames_ScoringSystem) ? '' : 'isHidden'}">
           <label class="scoreDeclareWrap">
             <input type="checkbox" class="scoreDeclareCheck" ${row.declared ? 'checked' : ''}> Declare
           </label>
