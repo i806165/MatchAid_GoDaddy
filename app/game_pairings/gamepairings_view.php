@@ -55,7 +55,7 @@
         <header class="maPanel__hdr">
           <div class="gpPanelHdr">
             <div class="gpPanelHdr__left">
-              <button class="iconBtn gpGlobalToggleBtn" type="button" aria-label="Collapse All" title="Collapse All" style="width:28px; height:28px; border-radius:50%;">
+              <button class="iconBtn gpGlobalToggleBtn" type="button" aria-label="Collapse All" title="Collapse All" style="width:28px; height:28px; border-radius:6px;">
                 <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor"><path d="M19 13H5v-2h14v2z"/></svg>
               </button>
             </div>
@@ -125,7 +125,7 @@
         <header class="maPanel__hdr">
           <div class="gpPanelHdr">
             <div class="gpPanelHdr__left">
-              <button class="iconBtn gpGlobalToggleBtn" type="button" aria-label="Collapse All" title="Collapse All" style="width:28px; height:28px; border-radius:50%;">
+              <button class="iconBtn gpGlobalToggleBtn" type="button" aria-label="Collapse All" title="Collapse All" style="width:28px; height:28px; border-radius:6px;">
                 <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor"><path d="M19 13H5v-2h14v2z"/></svg>
               </button>
             </div>
