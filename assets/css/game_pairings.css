@@ -150,9 +150,29 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 12px;
+  gap: 8px;
+  padding: 6px 8px;
   border-bottom: 1px solid var(--borderSubtle);
   background: rgba(7,67,42,.05);
+}
+
+/* New: Toggle Button for expand/collapse */
+.gpToggleBtn {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--brandSecondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gpToggleBtn:hover { background: rgba(0,0,0,0.05); }
+.gpToggleBtn svg {
+  width: 20px; height: 20px; fill: currentColor;
 }
 
 /* Card Header Actions */
@@ -193,10 +213,8 @@
   text-overflow: ellipsis;
 }
 
-.gpGroupCard__title{
-  cursor: pointer; /* Hint that it's clickable */
-}
 .gpGroupCard__title.is-expanded {
+  /* This is for the long-text-wrapping feature, separate from collapse */
   white-space: normal;
   overflow: visible;
   text-overflow: clip;
@@ -210,6 +228,22 @@
 .gpGroupCard__body{
   display: flex;
   flex-direction: column;
+}
+
+/* New: Expand/Collapse visibility rules */
+/* Default state (expanded) */
+.gpGroupCard .gpGroupCard__hdr--collapsed {
+  display: none;
+}
+
+/* Collapsed state */
+.gpGroupCard.is-collapsed .gpGroupCard__hdr--expanded,
+.gpGroupCard.is-collapsed .gpGroupCard__body {
+  display: none;
+}
+
+.gpGroupCard.is-collapsed .gpGroupCard__hdr--collapsed {
+  display: flex;
 }
 
 /* Card Row Layout */

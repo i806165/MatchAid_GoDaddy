@@ -861,6 +861,13 @@
       const title = `${flightPrefix}Pairing ${pid}`;
       const meta = `Sum PH: ${sumPH} • Avg PH: ${avgPH}`;
 
+      // New summary title for collapsed view
+      const summaryTitle = `Pairing ${pid}: ${rows.map(p => p.lname).join(" • ")}`;
+
+      // SVG Icons
+      const iconMinus = `<svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>`;
+      const iconPlus = `<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`;
+
       const body = rows.map(p => {
         const safeGHIN = esc(p.playerGHIN);
         // Row Info: TeeSet Name, HI:#, CH:#, PH:# SO:#
@@ -884,9 +891,11 @@
       
       // Header Icons: Unpair (broken link), Edit (pencil)
       return `
-        <div class="gpGroupCard${selectedClass}" data-action="selectPairing" data-pairing-id="${esc(pid)}">
-          <div class="gpGroupCard__hdr">
-            <div class="gpGroupCard__title" data-action="toggle-truncate" title="${esc(title)} • ${esc(meta)}">${esc(title)} • ${esc(meta)}</div>
+        <div class="gpGroupCard${selectedClass}" data-pairing-id="${esc(pid)}">
+          <!-- Expanded Header -->
+          <div class="gpGroupCard__hdr gpGroupCard__hdr--expanded">
+            <button class="gpToggleBtn" type="button" data-action="toggle-collapse" title="Collapse">${iconMinus}</button>
+            <div class="gpGroupCard__title" title="${esc(title)} • ${esc(meta)}">${esc(title)} • ${esc(meta)}</div>
             <div class="gpCardActions">
               <button class="gpCardActionBtn" type="button" data-action="unpairGroup" data-pairing-id="${esc(pid)}" title="Unpair">
                 <svg viewBox="0 0 24 24"><path d="M2 12c0 2.76 2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1 0-1.59 1.21-2.9 2.76-3.07L8.73 11H8v2h2.73L13 15.27V17h1.73l4.01 4L20 19.74 3.27 3 2 4.27z M17 7h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1 0 1.43-0.98 2.63-2.31 2.98l1.46 1.46C20.88 15.61 22 13.95 22 12c0-2.76-2.24-5-5-5zm-1 4h-2.19l2 2H16z"/></svg>
@@ -896,6 +905,12 @@
               </button>
             </div>
           </div>
+          <!-- Collapsed Header -->
+          <div class="gpGroupCard__hdr gpGroupCard__hdr--collapsed">
+            <button class="gpToggleBtn" type="button" data-action="toggle-collapse" title="Expand">${iconPlus}</button>
+            <div class="gpGroupCard__title" title="${esc(summaryTitle)}">${esc(summaryTitle)}</div>
+          </div>
+          <!-- Body -->
           <div class="gpGroupCard__body">${body}</div>
         </div>`;
     }).join("");
@@ -977,10 +992,24 @@
         sched.startHole ? `H ${sched.startHole}${sched.startHoleSuffix || ""}` : ""
       ].filter(Boolean).join(" • ");
 
+      // New summary title for collapsed view
+      const teamANames = teamA.names.join(", ");
+      const teamBNames = teamB.names.join(", ");
+      let summaryTitle = `Match ${esc(fid)}: `;
+      if (teamANames) summaryTitle += `Team A: ${esc(teamANames)}`;
+      if (teamANames && teamBNames) summaryTitle += " vs. ";
+      if (teamBNames) summaryTitle += `Team B: ${esc(teamBNames)}`;
+
+      // SVG Icons
+      const iconMinus = `<svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>`;
+      const iconPlus = `<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`;
+
       return `
         <div class="gpGroupCard" data-flight-id="${esc(fid)}">
-          <div class="gpGroupCard__hdr">
-            <div class="gpGroupCard__title" data-action="toggle-truncate" title="Match ${esc(fid)} • ${esc(meta)}">Match ${esc(fid)} • ${esc(meta)}</div>
+          <!-- Expanded Header -->
+          <div class="gpGroupCard__hdr gpGroupCard__hdr--expanded">
+            <button class="gpToggleBtn" type="button" data-action="toggle-collapse" title="Collapse">${iconMinus}</button>
+            <div class="gpGroupCard__title" title="Match ${esc(fid)} • ${esc(meta)}">Match ${esc(fid)} • ${esc(meta)}</div>
             <div class="gpCardActions">
               <button class="gpCardActionBtn" type="button" data-action="unmatchFlight" data-flight-id="${esc(fid)}" title="Unmatch">
                 <svg viewBox="0 0 24 24"><path d="M2 12c0 2.76 2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1 0-1.59 1.21-2.9 2.76-3.07L8.73 11H8v2h2.73L13 15.27V17h1.73l4.01 4L20 19.74 3.27 3 2 4.27z M17 7h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1 0 1.43-0.98 2.63-2.31 2.98l1.46 1.46C20.88 15.61 22 13.95 22 12c0-2.76-2.24-5-5-5zm-1 4h-2.19l2 2H16z"/></svg>
@@ -990,6 +1019,12 @@
               </button>
             </div>
           </div>
+          <!-- Collapsed Header -->
+          <div class="gpGroupCard__hdr gpGroupCard__hdr--collapsed">
+            <button class="gpToggleBtn" type="button" data-action="toggle-collapse" title="Expand">${iconPlus}</button>
+            <div class="gpGroupCard__title" title="${esc(summaryTitle)}">${summaryTitle}</div>
+          </div>
+          <!-- Body -->
           <div class="gpGroupCard__body">
             ${renderTeamSlot(fid, "A", teamA)}
             ${renderTeamSlot(fid, "B", teamB)}
@@ -1088,12 +1123,6 @@
       state.selectedPlayerGHINs.add(id);
     }
     renderUnpairedList();
-    setHints();
-  }
-
-  function selectPairing(pid) {
-    state.targetPairingId = String(pid || "");
-    renderPairingsCanvas();
     setHints();
   }
 
@@ -1566,6 +1595,13 @@
       if (!a) return;
       const action = a.dataset.action;
 
+      if (action === "toggle-collapse") {
+        const card = a.closest(".gpGroupCard");
+        if (card) {
+          card.classList.toggle("is-collapsed");
+        }
+        return;
+      }
       if (action === "toggle-truncate") {
         // Only toggle if the text is actually overflowing
         if (a.scrollWidth > a.clientWidth) {
@@ -1576,10 +1612,6 @@
 
       if (action === "selectUnpaired") {
         selectUnpaired(a.dataset.ghin);
-        return;
-      }
-      if (action === "selectPairing") {
-        selectPairing(a.dataset.pairingId);
         return;
       }
       if (action === "editFlight") {
