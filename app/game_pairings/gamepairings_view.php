@@ -54,6 +54,11 @@
       <section class="maPanel maPanel--primary" aria-label="Pairings canvas">
         <header class="maPanel__hdr">
           <div class="gpPanelHdr">
+            <div class="gpPanelHdr__left">
+              <button class="iconBtn gpGlobalToggleBtn" type="button" aria-label="Collapse All" title="Collapse All" style="width:28px; height:28px; border-radius:50%;">
+                <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor"><path d="M19 13H5v-2h14v2z"/></svg>
+              </button>
+            </div>
             <div class="gpPanelHdr__title">Pairings</div>
             <div class="gpPanelHdr__actions">
               <button class="maBtn maBtn--sm gpMobileAddBtn" type="button" id="gpBtnTrayPair">Add Pairing</button>
@@ -119,6 +124,11 @@
       <section class="maPanel maPanel--primary" aria-label="Matches canvas">
         <header class="maPanel__hdr">
           <div class="gpPanelHdr">
+            <div class="gpPanelHdr__left">
+              <button class="iconBtn gpGlobalToggleBtn" type="button" aria-label="Collapse All" title="Collapse All" style="width:28px; height:28px; border-radius:50%;">
+                <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor"><path d="M19 13H5v-2h14v2z"/></svg>
+              </button>
+            </div>
             <div class="gpPanelHdr__title">Matches</div>
             <div class="gpPanelHdr__actions">
               <button class="maBtn maBtn--sm gpMobileAddBtn" type="button" id="gpBtnTrayMatch">Add Match</button>

@@ -22,6 +22,7 @@
     tabMatchBtn: document.getElementById("gpTabMatch"),
     panelsWrap: document.getElementById("gpTabPanels"),
     // Pair tab
+    btnPairToggleAll: document.querySelector('[data-tab-panel="pair"] .gpGlobalToggleBtn'),
     pairingsCanvas: document.getElementById("gpPairingsCanvas"),
     unpairedList: document.getElementById("gpUnpairedList"),
     unpairedCount: document.getElementById("gpUnpairedCount"),
@@ -32,6 +33,7 @@
     hintPair: document.getElementById("gpHintPair"),
     btnAssignToPairing: document.getElementById("gpBtnAssignToPairing"),
     // Match tab
+    btnMatchToggleAll: document.querySelector('[data-tab-panel="match"] .gpGlobalToggleBtn'),
     flightsCanvas: document.getElementById("gpFlightsCanvas"),
     unmatchedList: document.getElementById("gpUnmatchedList"),
     unmatchedCount: document.getElementById("gpUnmatchedCount"),
@@ -68,6 +70,7 @@
     editMode: false, // For card editing
     // Dirty map by GHIN
     dirty: new Set(),
+    allCollapsed: false, // Global expand/collapse state
     busy: false,
   };
 
@@ -763,6 +766,7 @@
     state.targetPairingId = "";
     state.targetFlightId = "";
     state.targetFlightPos = "";
+    state.allCollapsed = false;
 
     render();
   }
@@ -778,6 +782,7 @@
       renderUnmatchedList();
       setHints();
     }
+    updateToggleAllIcon();
   }
 
   function setHints() {
@@ -816,6 +821,21 @@
     // Update Master Checkboxes (Clear Only)
     updateMasterCheck(el.unpairedMasterCheck, state.selectedPlayerGHINs.size > 0);
     updateMasterCheck(el.unmatchedMasterCheck, state.selectedPairingIds.size > 0);
+  }
+
+  function toggleAllCards() {
+    state.allCollapsed = !state.allCollapsed;
+    render();
+  }
+
+  function updateToggleAllIcon() {
+    const btn = state.activeTab === 'pair' ? el.btnPairToggleAll : el.btnMatchToggleAll;
+    if (!btn) return;
+    const iconMinus = `<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor"><path d="M19 13H5v-2h14v2z"/></svg>`;
+    const iconPlus = `<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`;
+
+    btn.innerHTML = state.allCollapsed ? iconPlus : iconMinus;
+    btn.title = state.allCollapsed ? "Expand All" : "Collapse All";
   }
 
   function updateMasterCheck(el, hasSelection) {
@@ -888,10 +908,11 @@
       }).join("");
 
       const selectedClass = (state.targetPairingId === pid) ? " is-target" : "";
+      const collapsedClass = state.allCollapsed ? " is-collapsed" : "";
       
       // Header Icons: Unpair (broken link), Edit (pencil)
       return `
-        <div class="gpGroupCard${selectedClass}" data-pairing-id="${esc(pid)}">
+        <div class="gpGroupCard${selectedClass}${collapsedClass}" data-pairing-id="${esc(pid)}">
           <!-- Expanded Header -->
           <div class="gpGroupCard__hdr gpGroupCard__hdr--expanded">
             <button class="gpToggleBtn" type="button" data-action="toggle-collapse" title="Collapse">${iconMinus}</button>
@@ -1004,8 +1025,9 @@
       const iconMinus = `<svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>`;
       const iconPlus = `<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`;
 
+      const collapsedClass = state.allCollapsed ? " is-collapsed" : "";
       return `
-        <div class="gpGroupCard" data-flight-id="${esc(fid)}">
+        <div class="gpGroupCard${collapsedClass}" data-flight-id="${esc(fid)}">
           <!-- Expanded Header -->
           <div class="gpGroupCard__hdr gpGroupCard__hdr--expanded">
             <button class="gpToggleBtn" type="button" data-action="toggle-collapse" title="Collapse">${iconMinus}</button>
@@ -1519,6 +1541,9 @@
         if (btn && !btn.disabled) setActiveTab(btn.dataset.tab);
       });
     }
+
+    if (el.btnPairToggleAll) el.btnPairToggleAll.addEventListener("click", toggleAllCards);
+    if (el.btnMatchToggleAll) el.btnMatchToggleAll.addEventListener("click", toggleAllCards);
 
     if (el.btnTrayPair) el.btnTrayPair.addEventListener("click", toggleMobileTray);
     if (el.btnTrayMatch) el.btnTrayMatch.addEventListener("click", toggleMobileTray);
