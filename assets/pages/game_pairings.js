@@ -787,18 +787,15 @@
 
   function setHints() {
     if (el.hintPair) {
-      const unpairedCount = state.players.filter(p => String(p.pairingId || "000") === "000").length;
       if (state.editMode) {
-        el.hintPair.textContent = `EDIT MODE: Selected ${state.selectedPlayerGHINs.size}. Tap Assign>> to add to Pairing ${state.targetPairingId}.`;
+        el.hintPair.textContent = `EDIT MODE: Selected ${state.selectedPlayerGHINs.size}. Tap Assign >> to add to Pairing ${state.targetPairingId}.`;
       } else {
         if (isMobile()) {
-          el.hintPair.textContent = `${unpairedCount} unpaired.Tap Add Pairing to begin pairing`;
+          el.hintPair.textContent = "Tap Add Pairing to open tray.";
         } else {
           el.hintPair.textContent = state.selectedPlayerGHINs.size > 0
-            ? `Selected ${state.selectedPlayerGHINs.size}. Tap Assign>> to create a new pairing`
-            : unpairedCount > 0
-              ? `${unpairedCount} unpaired. Select players, then tap Assign>>.`
-              : "No unpaired players.";
+            ? `Selected ${state.selectedPlayerGHINs.size}. Tap Assign >> to create new, or tap a card to add.`
+            : "Select unpaired players, then tap Assign >>.";
         }
       }
     }
