@@ -823,6 +823,18 @@
     updateMasterCheck(el.unmatchedMasterCheck, state.selectedPairingIds.size > 0);
   }
 
+  function updateMasterCheck(el, hasSelection) {
+    if (!el) return;
+    if (hasSelection) {
+      el.classList.add("has-selection");
+      // Minus icon
+      el.innerHTML = `<svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>`;
+    } else {
+      el.classList.remove("has-selection");
+      el.innerHTML = "";
+    }
+  }
+
   function toggleAllCards() {
     state.allCollapsed = !state.allCollapsed;
     render();
@@ -836,18 +848,6 @@
 
     btn.innerHTML = state.allCollapsed ? iconPlus : iconMinus;
     btn.title = state.allCollapsed ? "Expand All" : "Collapse All";
-  }
-
-  function updateMasterCheck(el, hasSelection) {
-    if (!el) return;
-    if (hasSelection) {
-      el.classList.add("has-selection");
-      // Minus icon
-      el.innerHTML = `<svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>`;
-    } else {
-      el.classList.remove("has-selection");
-      el.innerHTML = "";
-    }
   }
 
   // ---- Pairings tab UI ----
@@ -1009,8 +1009,8 @@
       const teamB = buildTeamSummary(fid, "B");
       const sched = getContainerSchedule({ type: "flight", id: fid });
       const meta = [
-        sched.teeTime ? `Tee Time ${sched.teeTime}` : "",
-        sched.startHole ? `Start ${sched.startHole}${sched.startHoleSuffix || ""}` : ""
+        sched.teeTime ? `TT ${sched.teeTime}` : "",
+        sched.startHole ? `H ${sched.startHole}${sched.startHoleSuffix || ""}` : ""
       ].filter(Boolean).join(" • ");
 
       // New summary title for collapsed view

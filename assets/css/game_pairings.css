@@ -87,7 +87,7 @@
 
 /* Mobile Close Button (Left) */
 .gpPanelHdr__left {
-  display: none; /* Hidden on desktop */
+  display: flex; /* Was hidden on desktop */
   position: absolute;
   left: 10px;
 }
