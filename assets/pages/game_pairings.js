@@ -1009,8 +1009,8 @@
       const teamB = buildTeamSummary(fid, "B");
       const sched = getContainerSchedule({ type: "flight", id: fid });
       const meta = [
-        sched.teeTime ? `TT ${sched.teeTime}` : "",
-        sched.startHole ? `H ${sched.startHole}${sched.startHoleSuffix || ""}` : ""
+        sched.teeTime ? `Tee Time ${sched.teeTime}` : "",
+        sched.startHole ? `Start ${sched.startHole}${sched.startHoleSuffix || ""}` : ""
       ].filter(Boolean).join(" • ");
 
       // New summary title for collapsed view
