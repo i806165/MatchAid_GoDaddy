@@ -111,6 +111,7 @@ $maChromeLogoUrl = null;
       <button type="button" class="maSegBtn is-active" data-tab="general" role="tab" aria-selected="true">General</button>
       <button type="button" class="maSegBtn" data-tab="scoring" role="tab" aria-selected="false">Scoring</button>
       <button type="button" class="maSegBtn" data-tab="handicaps" role="tab" aria-selected="false">Handicaps</button>
+      <button type="button" class="maSegBtn" data-tab="customPoints" role="tab" aria-selected="false">Custom Points</button>
     </div>
   </div>
 

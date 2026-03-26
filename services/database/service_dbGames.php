@@ -186,6 +186,38 @@ public static function queryGames(array $args): array {
       return ($daysAfter >= $daysBefore) ? 'asc' : 'desc';
   }
 
+  /**
+   * Sourced from prior games for the current admin where dbGames_CustomScores is non-blank and valid.
+   * Deduplicates by templateName, keeping the most recent.
+   */
+  public static function getRecallTemplates(string $adminGHIN): array {
+    if ($adminGHIN === "") return [];
+    $pdo = Db::pdo();
+    $sql = "SELECT dbGames_CustomScores 
+            FROM db_Games 
+            WHERE dbGames_AdminGHIN = :admin 
+              AND dbGames_CustomScores IS NOT NULL 
+              AND TRIM(dbGames_CustomScores) <> '' 
+              AND TRIM(dbGames_CustomScores) <> '[]' 
+              AND TRIM(dbGames_CustomScores) <> '{}'
+            ORDER BY dbGames_PlayDate DESC";
+    $st = $pdo->prepare($sql);
+    $st->execute([':admin' => $adminGHIN]);
+    $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    $templates = [];
+    foreach ($rows as $row) {
+        $data = json_decode($row['dbGames_CustomScores'], true);
+        if (!$data || empty($data['templateName'])) continue;
+
+        $key = strtolower(trim($data['templateName']));
+        if (!isset($templates[$key])) {
+            $templates[$key] = $data;
+        }
+    }
+    return array_values($templates);
+  }
+
   // -----------------------------
   // Game Maintenance Helpers
   // -----------------------------
@@ -280,7 +312,8 @@ public static function queryGames(array $args): array {
       "dbGames_PlayerDeclaration", "dbGames_HCMethod", "dbGames_Allowance",
       "dbGames_StrokeDistribution", "dbGames_HCEffectivity", "dbGames_HCEffectivityDate",
       // Array fields (will be json_encoded)
-      "dbGames_BlindPlayers", "dbGames_StablefordPoints", "dbGames_HoleDeclaration"
+      "dbGames_BlindPlayers", "dbGames_StablefordPoints", "dbGames_HoleDeclaration",
+      "dbGames_CustomScores"
     ];
 
     $clean = [];

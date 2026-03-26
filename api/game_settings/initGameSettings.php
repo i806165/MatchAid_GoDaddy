@@ -11,6 +11,7 @@ require_once MA_API_LIB . '/Logger.php';
 require_once MA_SERVICES . '/context/service_ContextUser.php';
 require_once MA_SERVICES . '/context/service_ContextGame.php';
 require_once MA_SVC_DB . '/service_dbPlayers.php';
+require_once MA_SVC_DB . '/service_dbGames.php';
 require_once MA_SERVICES . "/GHIN/GHIN_API_Courses.php";
 
 header('Content-Type: application/json; charset=utf-8');
@@ -26,6 +27,10 @@ try {
   $gameCtx = ServiceContextGame::getGameContext();
   $ggid = $gameCtx["ggid"];
   $game = $gameCtx["game"];
+
+  // Fetch recall templates for the admin
+  $adminGHIN = (string)($game["dbGames_AdminGHIN"] ?? "");
+  $recallTemplates = ServiceDbGames::getRecallTemplates($adminGHIN);
 
   // 3. Get Roster
   $roster = ServiceDbPlayers::getGamePlayers((string)$ggid);
@@ -52,6 +57,7 @@ try {
     "game" => $game,
     "roster" => $roster,
     "coursePars" => $coursePars,
+    "recallTemplates" => $recallTemplates,
   ];
 
   echo json_encode(["ok" => true, "payload" => $payload], JSON_UNESCAPED_SLASHES);

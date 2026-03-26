@@ -121,6 +121,7 @@
       general: document.getElementById("gsPanelGeneral"),
       scoring: document.getElementById("gsPanelScoring"),
       handicaps: document.getElementById("gsPanelHandicaps"),
+      customPoints: document.getElementById("gsPanelCustomPoints"),
     },
 
     // General
@@ -146,6 +147,12 @@
     cardStableford: document.getElementById("gsCardStableford"),
     listStableford: document.getElementById("gsListStableford"),
     resetStableford: document.getElementById("gsResetStableford"),
+    
+    // Custom Points
+    recallPattern: document.getElementById("gsRecallPattern"),
+    templateName: document.getElementById("gsTemplateName"),
+    customPointsRows: document.getElementById("gsCustomPointsRows"),
+    btnClearCustomPoints: document.getElementById("gsBtnClearCustomPoints"),
 
     // Handicaps
     hcMethod: document.getElementById("gsHCMethod"),
@@ -168,10 +175,12 @@
     roster: [],       // tolerate alternate naming
     coursePars: [],
     courseParsByHole: null,
+    recallTemplates: [],
 
     stableford: [],   // [{reltoPar, points}]
     holeDecls: [],    // [{_id,hole,count}]
     activeTab: "general",
+    customScores: { templateName: "", items: [] },
     dirty: false,
     busy: false,
   };
@@ -419,6 +428,84 @@
     }
   }
 
+  // ---- Custom Points render (8 fixed rows) ----
+  function renderCustomPoints() {
+    if (!el.customPointsRows) return;
+    el.customPointsRows.innerHTML = "";
+
+    const items = state.customScores?.items || [];
+    
+    for (let i = 0; i < 8; i++) {
+      const item = items[i] || { label: "", points: "", awardTo: "" };
+      const row = document.createElement("div");
+      row.className = "maFieldRow";
+      row.style.marginTop = "8px"; row.style.gap = "8px"; row.style.alignItems = "center";
+
+      const labelIn = document.createElement("input");
+      labelIn.type = "text"; labelIn.className = "maTextInput"; labelIn.style.flex = "1";
+      labelIn.placeholder = "Item label"; labelIn.value = item.label || "";
+      labelIn.dataset.idx = i; labelIn.dataset.field = "label";
+
+      const pointsIn = document.createElement("input");
+      pointsIn.type = "number"; pointsIn.className = "maTextInput"; pointsIn.style.width = "80px";
+      pointsIn.style.textAlign = "center"; pointsIn.value = (item.points ?? "");
+      pointsIn.dataset.idx = i; pointsIn.dataset.field = "points";
+
+      const awardSel = document.createElement("select");
+      awardSel.className = "maTextInput"; awardSel.style.width = "120px";
+      awardSel.innerHTML = `<option value="">Select...</option><option value="Player">Player</option><option value="Team">Team</option>`;
+      awardSel.value = item.awardTo || "";
+      awardSel.dataset.idx = i; awardSel.dataset.field = "awardTo";
+
+      const onInput = (e) => {
+        const idx = parseInt(e.target.dataset.idx, 10);
+        if (!state.customScores.items) state.customScores.items = [];
+        if (!state.customScores.items[idx]) state.customScores.items[idx] = { label: "", points: "", awardTo: "" };
+        
+        const val = (e.target.dataset.field === "points") ? e.target.value : e.target.value.trim();
+        state.customScores.items[idx][e.target.dataset.field] = val;
+        setDirty(true);
+      };
+
+      labelIn.addEventListener("change", onInput);
+      pointsIn.addEventListener("change", onInput);
+      awardSel.addEventListener("change", onInput);
+
+      row.appendChild(labelIn); row.appendChild(pointsIn); row.appendChild(awardSel);
+      el.customPointsRows.appendChild(row);
+    }
+  }
+
+  function populateRecallDropdown() {
+    if (!el.recallPattern) return;
+    const current = el.recallPattern.value;
+    el.recallPattern.innerHTML = '<option value="">Select template...</option>';
+    (state.recallTemplates || []).forEach(t => {
+      const opt = document.createElement("option");
+      opt.value = t.templateName;
+      opt.textContent = t.templateName;
+      el.recallPattern.appendChild(opt);
+    });
+    el.recallPattern.value = current;
+  }
+
+  function loadRecallTemplate(name) {
+    const t = (state.recallTemplates || []).find(x => x.templateName === name);
+    if (!t) return;
+
+    if (state.dirty) {
+      if (!confirm("This will overwrite your current entries. Continue?")) {
+        el.recallPattern.value = "";
+        return;
+      }
+    }
+
+    state.customScores = JSON.parse(JSON.stringify(t)); 
+    if (el.templateName) el.templateName.value = state.customScores.templateName || "";
+    renderCustomPoints();
+    setDirty(true);
+  }
+
   // ---- Chrome ----
   function applyChrome() {
     if (chrome && typeof chrome.setHeaderLines === "function") {
@@ -477,6 +564,14 @@
 
     // BestBall is dependency-built (MatchPlay restriction)
     setSelectOptions(el.bestBallCnt, bestBallOptionsForFormat("StrokePlay"));
+    
+    populateRecallDropdown();
+  }
+
+  function parseCustomScores(val) {
+    if (!val) return { templateName: "", items: [] };
+    if (typeof val === "object") return val;
+    try { return JSON.parse(val); } catch (e) { return { templateName: "", items: [] }; }
   }
 
   function populateBlindPlayerSelect() {
@@ -563,6 +658,11 @@
     // Stableford + hole decls
     state.stableford = normalizeStableford(g.dbGames_StablefordPoints);
     state.holeDecls = normalizeHoleDecls(g.dbGames_HoleDeclaration);
+
+    // Custom scores
+    state.customScores = parseCustomScores(g.dbGames_CustomScores);
+    if (el.templateName) el.templateName.value = state.customScores.templateName || "";
+    renderCustomPoints();
   }
 
   // ---- Dependency logic (Wix parity core) ----
@@ -725,6 +825,7 @@
     // Refresh renders when visible (keeps UX consistent)
     if (showStableford) renderStableford();
     if (showHoleDecl) renderHoleDecls();
+    if (state.activeTab === "customPoints") renderCustomPoints();
 
     // Blind select enabled only when checkbox checked
     if (el.blindPlayer && el.useBlind) {
@@ -778,6 +879,41 @@
       ? (state.holeDecls || []).map(r => ({ hole: Number(r.hole), count: String(r.count || "0") }))
       : [];
 
+    // Custom scores normalization & validation
+    let customScores = null;
+    const rawItems = state.customScores?.items || [];
+    const items = [];
+    const seenLabels = new Set();
+    
+    for (const it of rawItems) {
+      const label = (it.label || "").trim();
+      const points = it.points !== "" ? Number(it.points) : NaN;
+      const awardTo = (it.awardTo || "").trim();
+
+      if (!label && isNaN(points) && !awardTo) continue;
+
+      const lKey = label.toLowerCase();
+      if (seenLabels.has(lKey)) throw new Error(`Duplicate label in Custom Points: "${label}"`);
+      seenLabels.add(lKey);
+
+      if (!label || isNaN(points) || !awardTo) {
+        throw new Error("Custom Points rows must have a Label, Numeric Points, and Award To (or be fully blank).");
+      }
+      
+      items.push({ label, points, awardTo });
+    }
+
+    if (items.length > 0) {
+      const tName = (el.templateName?.value || "").trim();
+      if (!tName) throw new Error("Template Name is required when Custom Points exist.");
+      
+      // Enforce template name uniqueness against library (ignoring case)
+      const sameNameOtherContent = (state.recallTemplates || []).find(t => t.templateName.toLowerCase() === tName.toLowerCase() && JSON.stringify(t.items) !== JSON.stringify(items));
+      if (sameNameOtherContent) throw new Error(`Template name "${tName}" already exists with different items.`);
+
+      customScores = { templateName: tName, items };
+    }
+
     const patch = {
       dbGames_GGID: state.ggid, // harmless if server ignores; helpful for logs
       dbGames_GameFormat: String(el.gameFormat?.value || "StrokePlay"),
@@ -802,6 +938,7 @@
 
       dbGames_StablefordPoints: stableford,
       dbGames_HoleDeclaration: holeDecls,
+      dbGames_CustomScores: customScores
     };
 
     return patch;
@@ -917,6 +1054,26 @@
     }
     wireDirty(el.blindPlayer);
 
+    if (el.recallPattern) {
+      el.recallPattern.addEventListener("change", () => loadRecallTemplate(el.recallPattern.value));
+    }
+    if (el.templateName) {
+      el.templateName.addEventListener("change", () => {
+        state.customScores.templateName = el.templateName.value.trim();
+        setDirty(true);
+      });
+    }
+    if (el.btnClearCustomPoints) {
+      el.btnClearCustomPoints.addEventListener("click", () => {
+        if (!confirm("Clear this custom points pattern?")) return;
+        state.customScores = { templateName: "", items: [] };
+        if (el.templateName) el.templateName.value = "";
+        if (el.recallPattern) el.recallPattern.value = "";
+        renderCustomPoints();
+        setDirty(true);
+      });
+    }
+
     if (el.resetStableford) {
       el.resetStableford.addEventListener("click", () => {
         const ok = confirm("Reset Stableford points to defaults?");
@@ -945,6 +1102,8 @@
 
     state.coursePars = Array.isArray(init.coursePars) ? init.coursePars : [];
     state.courseParsByHole = buildCourseParsByHole(state.coursePars);
+    
+    state.recallTemplates = Array.isArray(init.recallTemplates) ? init.recallTemplates : [];
 
     return true;
   }
