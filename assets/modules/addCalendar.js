@@ -84,8 +84,8 @@
     let hh = fallbackHour;
     let mm = fallbackMinute;
 
-    // Strict HH:mm parsing (allows H:mm too)
-    if (/^\d{1,2}:\d{2}$/.test(timePart)) {
+    // HH:mm parsing (allows optional :ss from DB)
+    if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(timePart)) {
       const pieces = timePart.split(":").map(Number);
       const h = pieces[0];
       const m = pieces[1];
@@ -243,8 +243,9 @@
     const commentsPlain = htmlToPlainText(commentsRich);
 
     // Normalize HH:mm for the canonical event object
-    const normalizedStartTime = /^\d{1,2}:\d{2}$/.test(String(playTime).trim())
-      ? String(playTime).trim()
+    const timeStr = String(playTime).trim();
+    const normalizedStartTime = /^\d{1,2}:\d{2}(:\d{2})?$/.test(timeStr)
+      ? timeStr.substring(0, 5)
       : "08:00";
 
     // Compute explicit end date/time (+4h) for parity with Wix caller pattern
