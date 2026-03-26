@@ -442,6 +442,7 @@ public static function queryGames(array $args): array {
     $g["dbGames_HoleDeclaration"] = $g["dbGames_HoleDeclaration"] ?? "[]";
     $g["dbGames_StablefordPoints"] = $g["dbGames_StablefordPoints"] ?? "[]";
     $g["dbGames_TeeTimeList"] = $g["dbGames_TeeTimeList"] ?? "[]";
+    $g["dbGames_CustomScores"] = $g["dbGames_CustomScores"] ?? "[]";
 
     // Handicap defaults (new contract)
     $g["dbGames_HCEffectivity"] = $g["dbGames_HCEffectivity"] ?? "PlayDate";
