@@ -7,6 +7,7 @@
   const paths = (window.MA && window.MA.paths) ? window.MA.paths : {};
   const routes = (window.MA && window.MA.routes) ? window.MA.routes : {};
   const chrome = MA.chrome || {};
+  const apiAdmin = MA.apiAdminGames;
   
   const apiUrls = {
     launch: paths.apiScoreEntryLaunch
@@ -141,9 +142,7 @@
 
       // Instantiate game GGID into session variable
       const ggid = state.payload?.gameRow?.dbGames_GGID;
-      if (ggid && typeof MA.apiAdminGames === 'function') {
-        await MA.apiAdminGames("setGameSession.php", { ggid });
-      }
+      await apiAdmin("setGameSession.php", { ggid });
 
       toggleLaunchPanel(false);
       renderLaunchPayload();
