@@ -853,7 +853,7 @@
 
     if (chrome && typeof chrome.setBottomNav === 'function') {
       chrome.setBottomNav({
-        visible: ['home','scoreentry'], //, 'leaderboard', 'holechamps', 'scorecard'],
+        visible: ['home','scoreentry', 'scorecardPlayer', 'scorecardGroup', 'scorecardGame'], //, 'leaderboard', 'holechamps', 'scorecard'],
         active: 'scoreentry',
         onNavigate: (id) => {
           if (!state.dirty) {
