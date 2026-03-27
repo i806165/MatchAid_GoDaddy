@@ -37,7 +37,19 @@
   function applyChrome(){
     const subtitle = init.header?.subtitle || [game.dbGames_CourseName, formatDate(game.dbGames_PlayDate)].filter(Boolean).join(' • ');
     if (chrome.setHeaderLines) chrome.setHeaderLines(['Scorecard', init.header?.title || 'Scorecards', subtitle]);
-    if (chrome.setBottomNav) chrome.setBottomNav({ visible: ['home','scoreentry', 'scorecardPlayer', 'scorecardGroup', 'scorecardGame'], active: '', onNavigate: (id)=> MA.routerGo?.(id) });
+
+    const activeNav =
+        state.mode === 'player' ? 'scorecardPlayer' :
+        state.mode === 'group'  ? 'scorecardGroup'  :
+        'scorecardGame';
+        
+    if (chrome.setBottomNav) {
+      chrome.setBottomNav({
+        visible: ['home', 'scoreentry', 'scorecardPlayer', 'scorecardGroup', 'scorecardGame'],
+        active: activeNav,
+        onNavigate: (id) => MA.routerGo?.(id)
+      });
+    }
   }
 
   function renderControls(){

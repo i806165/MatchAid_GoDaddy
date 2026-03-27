@@ -4,6 +4,13 @@ declare(strict_types=1);
 
 function renderScorecardSharedPage(array $initPayload, string $pageTitle): void {
   global $maChromeTitle, $maChromeSubtitle, $pageCardTitle;
+
+  $paths = [
+  "apiSession" => MA_ROUTE_API_SESSION,
+  "routerApi"  => MA_ROUTE_API_ROUTER,
+];
+
+
   $maChromeTitle = $pageTitle;
   $maChromeSubtitle = $initPayload['header']['subtitle'] ?? '';
   $pageCardTitle = $pageTitle;
@@ -20,7 +27,19 @@ function renderScorecardSharedPage(array $initPayload, string $pageTitle): void 
 <?php require_once MA_INCLUDES . '/chromeHeader.php'; ?>
 <main class="maPage" id="scPage"><?php require __DIR__ . '/scorecardShared_view.php'; ?></main>
 <?php require_once MA_INCLUDES . '/chromeFooter.php'; ?>
-<script>window.MA=window.MA||{};window.__INIT__=<?= json_encode($initPayload, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;window.__MA_INIT__=window.__INIT__;</script>
+
+<script>
+  window.MA = window.MA || {};
+
+  window.MA.paths = <?= json_encode($paths, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+  window.__INIT__ = <?= json_encode($initPayload, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+
+  window.__MA_INIT__ = window.__INIT__;
+  window.MA.routes = Object.assign({}, window.MA.routes || {}, {
+    router: window.MA.paths.routerApi
+  });
+</script>
+
 <script src="/assets/js/ma_shared.js?v=1"></script>
 <script src="/assets/pages/scorecardShared.js?v=1"></script>
 </body></html>
