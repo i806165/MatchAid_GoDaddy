@@ -63,6 +63,10 @@ $maChromeLogoUrl = null;
 
 <script>
   window.MA = window.MA || {};
+  window.MA.paths = Object.assign({}, window.MA.paths || {}, {
+    routerApi: <?= json_encode(MA_ROUTE_API_ROUTER, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>
+  });
+
   window.__INIT__ = <?= json_encode($initPayload, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
   window.__MA_INIT__ = window.__INIT__;
 </script>
