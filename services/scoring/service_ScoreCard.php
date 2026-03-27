@@ -179,7 +179,7 @@ final class ServiceScoreCard {
   }
 
   public static function buildCourseInfoTableRows(array $gameRow, array $players): array {
-    $holesStd = range(1, 18);
+    $holesStd = self::holesStandard();
     $allYards = []; $allHcp = []; $allPar = [];
 
     foreach ($players as $player) {
@@ -245,7 +245,7 @@ final class ServiceScoreCard {
       "rating" => $rating,
       "gender" => $gender,
     ];
-    for ($num = 1; $num <= 18; $num++) {
+    foreach (self::holesStandard() as $num) {
       $row["h".$num] = (string)($values[$num-1] ?? "");
     }
     $subtotalFields = ["3a","3b","3c","3d","3e","3f","6a","6b","6c","9a","9b","9c"];
@@ -276,7 +276,7 @@ final class ServiceScoreCard {
   }
 
   private static function courseRowEquals(array $a, array $b): bool {
-    for ($h = 1; $h <= 18; $h++) {
+    foreach (self::holesStandard() as $h) {
       if (($a["h".$h] ?? null) !== ($b["h".$h] ?? null)) return false;
     }
     return true;
@@ -284,7 +284,7 @@ final class ServiceScoreCard {
 
   private static function splitTotalFromMap(array $kpiMap): array {
     $vals = [];
-    for ($i=1;$i<=18;$i++) $vals[] = intval($kpiMap[$i] ?? 0);
+    foreach (self::holesStandard() as $i) $vals[] = intval($kpiMap[$i] ?? 0);
     $sum = fn($arr) => array_sum($arr);
 
     return [
