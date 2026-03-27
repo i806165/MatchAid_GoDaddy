@@ -139,6 +139,12 @@
       state.currentHole = json.payload.currentHole || 1;
       state.dirty = false;
 
+      // Instantiate game GGID into session variable
+      const ggid = state.payload?.gameRow?.dbGames_GGID;
+      if (ggid && typeof MA.apiAdminGames === 'function') {
+        await MA.apiAdminGames("setGameSession.php", { ggid });
+      }
+
       toggleLaunchPanel(false);
       renderLaunchPayload();
       applyChrome();

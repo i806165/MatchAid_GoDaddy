@@ -1,6 +1,6 @@
 <?php
-// /public_html/app/scorecardShared/scorecardShared.php
 declare(strict_types=1);
+// /public_html/app/scorecardShared/scorecardShared.php
 
 function renderScorecardSharedPage(array $initPayload, string $pageTitle): void {
   global $maChromeTitle, $maChromeSubtitle, $pageCardTitle;

@@ -1,6 +1,6 @@
 <?php
-// /public_html/api/session/pageRouter.php
 declare(strict_types=1);
+// /public_html/api/session/pageRouter.php
 
 require_once __DIR__ . "/../../bootstrap.php";
 
@@ -56,7 +56,11 @@ $ROUTES = [
     "pairings" => "/app/game_pairings/gamepairings.php",
     "teetimes" => "/app/game_times/gametimes.php",
     "summary"  => "/app/game_summary/gamesummary.php",
+    
     "scorecard"   => "/app/game_scorecards/scorecards.php",
+    "scorecardPlayer" => "/app/scorecardShared/scorecardPlayer.php",
+    "scorecardGroup" => "/app/scorecardShared/scorecardGroup.php",
+    "scorecardGame" => "/app/scorecardShared/scorecardGame.php",
 
     "scoreentry"    => "/app/score_entry/scoreentry.php",
 

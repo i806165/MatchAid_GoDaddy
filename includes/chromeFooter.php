@@ -120,5 +120,71 @@
       <span class="maNavIcon" aria-hidden="true">📄</span>
       <span class="maNavLabel">Enter Scores</span>
     </button>
+
+    <button class="maNavBtn" data-nav="scorecardPlayer" aria-label="Player Scorecard">
+      <span class="maNavIcon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true">
+          <!-- card -->
+          <path d="M6.5 3.8h9.2c1 0 1.8.8 1.8 1.8v12.8c0 1-.8 1.8-1.8 1.8H6.5c-1 0-1.8-.8-1.8-1.8V5.6c0-1 .8-1.8 1.8-1.8z"></path>
+          <!-- header cutout -->
+          <rect x="7.3" y="6.5" width="7.6" height="1.1" rx=".55" fill="white"></rect>
+          <!-- grid cutouts -->
+          <rect x="7.3" y="9.1" width="2.7" height="2.0" rx=".3" fill="white"></rect>
+          <rect x="10.7" y="9.1" width="2.7" height="2.0" rx=".3" fill="white"></rect>
+          <rect x="14.1" y="9.1" width="1.8" height="2.0" rx=".3" fill="white"></rect>
+          <rect x="7.3" y="11.8" width="2.7" height="2.0" rx=".3" fill="white"></rect>
+          <rect x="10.7" y="11.8" width="2.7" height="2.0" rx=".3" fill="white"></rect>
+          <rect x="14.1" y="11.8" width="1.8" height="2.0" rx=".3" fill="white"></rect>
+          <!-- player badge -->
+          <circle cx="18.3" cy="16.8" r="2.3"></circle>
+          <circle cx="18.3" cy="16.0" r=".75" fill="white"></circle>
+          <path d="M17.1 18.1c.25-.7.8-1.05 1.2-1.05s.95.35 1.2 1.05" fill="white"></path>
+        </svg>
+      </span>
+      <span class="maNavLabel">Player Card</span>
+    </button>
+
+    <button class="maNavBtn" data-nav="scorecardGroup" aria-label="Group Scorecard">
+      <span class="maNavIcon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true">
+          <!-- card -->
+          <path d="M5.5 4.0h10.2c1 0 1.8.8 1.8 1.8v12.4c0 1-.8 1.8-1.8 1.8H5.5c-1 0-1.8-.8-1.8-1.8V5.8c0-1 .8-1.8 1.8-1.8z"></path>
+          <!-- header cutout -->
+          <rect x="6.4" y="6.4" width="8.4" height="1.0" rx=".5" fill="white"></rect>
+          <!-- score cells -->
+          <rect x="6.4" y="8.8" width="2.3" height="1.8" rx=".25" fill="white"></rect>
+          <rect x="9.2" y="8.8" width="2.3" height="1.8" rx=".25" fill="white"></rect>
+          <rect x="12.0" y="8.8" width="2.3" height="1.8" rx=".25" fill="white"></rect>
+          <rect x="6.4" y="11.2" width="2.3" height="1.8" rx=".25" fill="white"></rect>
+          <rect x="9.2" y="11.2" width="2.3" height="1.8" rx=".25" fill="white"></rect>
+          <rect x="12.0" y="11.2" width="2.3" height="1.8" rx=".25" fill="white"></rect>
+          <!-- group badge -->
+          <circle cx="18.4" cy="15.2" r="1.25"></circle>
+          <circle cx="20.6" cy="16.4" r="1.0"></circle>
+          <circle cx="16.3" cy="16.4" r="1.0"></circle>
+        </svg>
+      </span>
+      <span class="maNavLabel">Group Card</span>
+    </button>
+
+    <button class="maNavBtn" data-nav="scorecardGame" aria-label="Game Scorecards">
+      <span class="maNavIcon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true">
+          <!-- stacked cards -->
+          <path d="M7.5 4.0h8.8c.9 0 1.7.8 1.7 1.7v10.8c0 .9-.8 1.7-1.7 1.7H7.5c-.9 0-1.7-.8-1.7-1.7V5.7c0-.9.8-1.7 1.7-1.7z"></path>
+          <path d="M5.8 6.0H4.9c-.8 0-1.4.6-1.4 1.4v10c0 .8.6 1.4 1.4 1.4h8.3c.8 0 1.4-.6 1.4-1.4v-.6H7.5c-1.5 0-2.7-1.2-2.7-2.7V6.0z" opacity=".35"></path>
+          <!-- header cutout -->
+          <rect x="8.2" y="6.3" width="7.3" height="1.0" rx=".5" fill="white"></rect>
+          <!-- score cells -->
+          <rect x="8.2" y="8.6" width="2.1" height="1.6" rx=".25" fill="white"></rect>
+          <rect x="10.9" y="8.6" width="2.1" height="1.6" rx=".25" fill="white"></rect>
+          <rect x="13.6" y="8.6" width="1.6" height="1.6" rx=".25" fill="white"></rect>
+          <rect x="8.2" y="10.9" width="2.1" height="1.6" rx=".25" fill="white"></rect>
+          <rect x="10.9" y="10.9" width="2.1" height="1.6" rx=".25" fill="white"></rect>
+          <rect x="13.6" y="10.9" width="1.6" height="1.6" rx=".25" fill="white"></rect>
+        </svg>
+      </span>
+      <span class="maNavLabel">Game Cards</span>
+    </button>
   </nav>
 </footer>
