@@ -461,7 +461,7 @@ final class ServiceScoreEntry
                 if ((string)($dbPlayer['dbPlayers_GGID'] ?? '') === $ggid
                     && (string)($dbPlayer['dbPlayers_PlayerGHIN'] ?? '') === $playerGHIN) {
                     $currentDbPlayer = $dbPlayer;
-                    $currentDbPlayer = self::hydrateJsonFields($dbPlayer);
+                    $currentDbPlayer = self::hydratePlayerFields($dbPlayer);
                     break;
                 }
             }
@@ -524,7 +524,7 @@ final class ServiceScoreEntry
                 if ((string)($dbPlayer['dbPlayers_GGID'] ?? '') === $ggid
                     && (string)($dbPlayer['dbPlayers_PlayerGHIN'] ?? '') === $ghin) {
                     $currentDbPlayer = $dbPlayer;
-                    $currentDbPlayer = self::hydrateJsonFields($dbPlayer);
+                    $currentDbPlayer = self::hydratePlayerFields($dbPlayer);
                     break;
                 }
             }
