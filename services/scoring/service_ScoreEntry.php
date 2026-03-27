@@ -20,11 +20,21 @@ final class ServiceScoreEntry
 {
     public const SCORE_DAY_OFFSET_HOURS = 6; // business rule per current discussion
 
-    public static function buildLaunchPayload(array $gameRow, array $groupPlayers, int $holeNumber): array
+    // ==========================================================================
+    // 1. Public Entry Points
+    // ==========================================================================
+
+    public static function buildLaunchPayload(array $gameRow, array $groupPlayers, int $holeNumber, string $playerKey = ''): array
     {
         $players = [];
+        $launchedPlayer = $groupPlayers[0] ?? [];
+        $ggid = (string)($launchedPlayer['dbPlayers_GGID'] ?? $gameRow['dbGames_GGID'] ?? '');
+
         foreach ($groupPlayers as $playerRow) {
-            $playerRow = self::hydrateJsonFields($playerRow);
+            // Ensure JSON fields are arrays
+            $playerRow = self::hydratePlayerFields($playerRow);
+            
+            // Build or hydrate the canonical scores structure
             $scoresJson = self::buildOrHydratePlayerScores($gameRow, $playerRow);
             $players[] = [
                 'playerRow' => $playerRow,
@@ -40,29 +50,50 @@ final class ServiceScoreEntry
             'isGameDay' => self::isScoreEntryAllowedToday($gameRow),
             'requiresCartConfig' => trim((string)($gameRow['dbGames_RotationMethod'] ?? '')) === 'COD',
             'players' => $players,
+            'launchContext' => [
+                'playerKey' => $playerKey,
+                'groupLoadRule' => 'PlayerKey',
+                'launchedPlayerId' => (string)($launchedPlayer['_id'] ?? ''),
+                'ggid' => $ggid,
+            ]
         ];
     }
 
-    public static function isScoreEntryAllowedToday(array $gameRow, ?DateTimeImmutable $now = null): bool
+    public static function saveScoresForGroup(array $request): array
     {
-        $playDateRaw = trim((string)($gameRow['dbGames_PlayDate'] ?? ''));
-        if ($playDateRaw === '') {
-            return false;
-        }
-
-        $tz = new DateTimeZone('America/New_York');
-        $now = $now ? $now->setTimezone($tz) : new DateTimeImmutable('now', $tz);
-        $adjustedNow = $now->modify(sprintf('+%d hours', self::SCORE_DAY_OFFSET_HOURS));
-        $today = $adjustedNow->format('Y-m-d');
-
-        try {
-            $playDate = (new DateTimeImmutable($playDateRaw, $tz))->format('Y-m-d');
-        } catch (Throwable $e) {
-            return false;
-        }
-
-        return $today === $playDate;
+        return self::persistScores($request);
     }
+
+    public static function resolveGroupLoadMode(array $gameRow, array $launchedPlayer): array
+    {
+        $toMethod = trim((string)($gameRow['dbGames_TOMethod'] ?? ''));
+        $gameFormat = trim((string)($gameRow['dbGames_GameFormat'] ?? ''));
+        $startHole = trim((string)($launchedPlayer['dbPlayers_StartHole'] ?? ''));
+        $teeTime = trim((string)($launchedPlayer['dbPlayers_TeeTime'] ?? ''));
+        $flightId = trim((string)($launchedPlayer['dbPlayers_FlightID'] ?? ''));
+        $pairingId = trim((string)($launchedPlayer['dbPlayers_PairingID'] ?? '000'));
+
+        if (strcasecmp($toMethod, 'ShotGun') === 0 && $startHole !== '') {
+            return ['mode' => 'start_hole', 'value' => $startHole];
+        }
+        if ($teeTime !== '') {
+            return ['mode' => 'tee_time', 'value' => $teeTime];
+        }
+        if (stripos($gameFormat, 'Match') !== false && $flightId !== '') {
+            return ['mode' => 'flight_id', 'value' => $flightId];
+        }
+        return ['mode' => 'pairing_id', 'value' => $pairingId];
+    }
+
+    // ==========================================================================
+    // 2. Launch Payload Building
+    // ==========================================================================
+
+    // Logic contained within buildLaunchPayload in section 1.
+
+    // ==========================================================================
+    // 3. Player Score JSON Hydration
+    // ==========================================================================
 
     public static function buildOrHydratePlayerScores(array $gameRow, array $playerRow): array
     {
@@ -96,6 +127,8 @@ final class ServiceScoreEntry
 
         $existingSummary = $existingScores['Scores'][0];
         $hydratedSummary = array_merge($baseSummary, $existingSummary);
+        
+        // Ensure course/tee identity matches game context
         $hydratedSummary['played_at'] = $baseSummary['played_at'];
         $hydratedSummary['course_id'] = $baseSummary['course_id'];
         $hydratedSummary['course_name'] = $baseSummary['course_name'];
@@ -104,16 +137,11 @@ final class ServiceScoreEntry
         $hydratedSummary['gender'] = $baseSummary['gender'];
         $hydratedSummary['course_handicap'] = $baseSummary['course_handicap'];
         $hydratedSummary['number_of_holes'] = $baseSummary['number_of_holes'];
+        
         $hydratedSummary['hole_details'] = self::normalizeHoleDetails($existingSummary['hole_details'] ?? []);
 
         $recalculated = self::recalculateScoreSummary($gameRow, $playerRow, $hydratedSummary);
         return ['Scores' => [$recalculated]];
-    }
-
-    public static function calculateEffectiveHandicap(array $gameRow, array $playerRow): float
-    {
-        // Delegate to centralized logic in ServiceScoreCard
-        return ServiceScoreCard::calculateEffectiveHandicap($gameRow, $playerRow);
     }
 
     public static function normalizeHoleDetails($holeDetails): array
@@ -145,28 +173,36 @@ final class ServiceScoreEntry
         return array_values($byHole);
     }
 
-    public static function recalculateScoreSummary(array $gameRow, array $playerRow, array $summary): array
+    private static function deriveNumberOfHoles(string $holesLabel): int
     {
-        $effectiveHC = self::calculateEffectiveHandicap($gameRow, $playerRow);
-        $holeDetails = self::normalizeHoleDetails($summary['hole_details'] ?? []);
+        return ($holesLabel === 'F9' || $holesLabel === 'B9') ? 9 : 18;
+    }
 
-        $grossTotal = 0.0;
-        $netTotal = 0.0;
-        foreach ($holeDetails as $holeDetail) {
-            $raw = self::numOrZero($holeDetail['raw_score'] ?? ($holeDetail['adjusted_gross_score'] ?? 0));
-            $alloc = self::numOrZero($holeDetail['stroke_allocation'] ?? 0);
-            $grossTotal += $raw;
-            $netTotal += ($raw - $alloc);
+    // ==========================================================================
+    // 4. Hole Row Builders
+    // ==========================================================================
+
+    public static function isScoreEntryAllowedToday(array $gameRow, ?DateTimeImmutable $now = null): bool
+    {
+        $playDateRaw = trim((string)($gameRow['dbGames_PlayDate'] ?? ''));
+        if ($playDateRaw === '') {
+            return false;
         }
 
-        $summary['number_of_played_holes'] = count($holeDetails);
-        $summary['adjusted_gross_score'] = $grossTotal;
-        $summary['net_score'] = $netTotal;
-        $summary['course_handicap'] = (string)$effectiveHC;
-        $summary['hole_details'] = $holeDetails;
+        $tz = new DateTimeZone('America/New_York');
+        $now = $now ? $now->setTimezone($tz) : new DateTimeImmutable('now', $tz);
+        $adjustedNow = $now->modify(sprintf('+%d hours', self::SCORE_DAY_OFFSET_HOURS));
+        $today = $adjustedNow->format('Y-m-d');
 
-        return $summary;
+        try {
+            $playDate = (new DateTimeImmutable($playDateRaw, $tz))->format('Y-m-d');
+        } catch (Throwable $e) {
+            return false;
+        }
+
+        return $today === $playDate;
     }
+
 
     public static function applyHoleScore(
         array $gameRow,
@@ -293,28 +329,79 @@ final class ServiceScoreEntry
         ];
     }
 
-    public static function resolveGroupLoadMode(array $gameRow, array $launchedPlayer): array
+    public static function validateStartHoleForSide(?string $startHole, string $teeSide): string
     {
-        $toMethod = trim((string)($gameRow['dbGames_TOMethod'] ?? ''));
-        $gameFormat = trim((string)($gameRow['dbGames_GameFormat'] ?? ''));
-        $startHole = trim((string)($launchedPlayer['dbPlayers_StartHole'] ?? ''));
-        $teeTime = trim((string)($launchedPlayer['dbPlayers_TeeTime'] ?? ''));
-        $flightId = trim((string)($launchedPlayer['dbPlayers_FlightID'] ?? ''));
-        $pairingId = trim((string)($launchedPlayer['dbPlayers_PairingID'] ?? '000'));
+        $allowed = [];
+        if ($teeSide === 'F9') {
+            $allowed = array_map('strval', range(1, 9));
+        } elseif ($teeSide === 'B9') {
+            $allowed = array_map('strval', range(10, 18));
+        } else {
+            $allowed = array_map('strval', range(1, 18));
+        }
 
-        if (strcasecmp($toMethod, 'ShotGun') === 0 && $startHole !== '') {
-            return ['mode' => 'start_hole', 'value' => $startHole];
-        }
-        if ($teeTime !== '') {
-            return ['mode' => 'tee_time', 'value' => $teeTime];
-        }
-        if (stripos($gameFormat, 'Match') !== false && $flightId !== '') {
-            return ['mode' => 'flight_id', 'value' => $flightId];
-        }
-        return ['mode' => 'pairing_id', 'value' => $pairingId];
+        $clean = trim((string)$startHole);
+        return in_array($clean, $allowed, true) ? $clean : $allowed[0];
     }
 
-    public static function saveScoresForGroup(array $request): array
+    private static function strokeSuperscript(float $value): string
+    {
+        static $map = [
+            '-5' => '⁻⁵', '-4' => '⁻⁴', '-3' => '⁻³', '-2' => '⁻²', '-1' => '⁻¹',
+            '1' => '¹', '2' => '²', '3' => '³', '4' => '⁴', '5' => '⁵',
+        ];
+        $key = (string)intval($value);
+        return $map[$key] ?? ($value == 0 ? '' : $key);
+    }
+
+    // ==========================================================================
+    // 5. Score Summary Recalculation
+    // ==========================================================================
+
+    public static function calculateEffectiveHandicap(array $gameRow, array $playerRow): float
+    {
+        // Delegate to centralized logic in ServiceScoreCard
+        return ServiceScoreCard::calculateEffectiveHandicap($gameRow, $playerRow);
+    }
+
+    public static function recalculateScoreSummary(array $gameRow, array $playerRow, array $summary): array
+    {
+        $effectiveHC = self::calculateEffectiveHandicap($gameRow, $playerRow);
+        $holeDetails = self::normalizeHoleDetails($summary['hole_details'] ?? []);
+
+        $grossTotal = 0.0;
+        $netTotal = 0.0;
+        foreach ($holeDetails as $holeDetail) {
+            $raw = self::numOrZero($holeDetail['raw_score'] ?? ($holeDetail['adjusted_gross_score'] ?? 0));
+            $alloc = self::numOrZero($holeDetail['stroke_allocation'] ?? 0);
+            $grossTotal += $raw;
+            $netTotal += ($raw - $alloc);
+        }
+
+        $summary['number_of_played_holes'] = count($holeDetails);
+        $summary['adjusted_gross_score'] = $grossTotal;
+        $summary['net_score'] = $netTotal;
+        $summary['course_handicap'] = (string)$effectiveHC;
+        $summary['hole_details'] = $holeDetails;
+
+        return $summary;
+    }
+
+    private static function numOrZero($value): float
+    {
+        return is_numeric($value) ? (float)$value : 0.0;
+    }
+
+    private static function numOrNull($value): ?float
+    {
+        return is_numeric($value) ? (float)$value : null;
+    }
+
+    // ==========================================================================
+    // 6. Save / Conflict Handling
+    // ==========================================================================
+
+    public static function persistScores(array $request): array
     {
         $gameRow = is_array($request['gameRow'] ?? null) ? $request['gameRow'] : [];
         $players = is_array($request['players'] ?? null) ? $request['players'] : [];
@@ -345,7 +432,7 @@ final class ServiceScoreEntry
             return ['ok' => false, 'conflict' => false, 'message' => 'Scoring group not found.'];
         }
 
-        $conflicts = self::detectGroupScoreConflicts($players, $currentDbPlayers, $gameRow);
+        $conflicts = self::detectSaveConflict($players, currentDbPlayers: $currentDbPlayers, gameRow: $gameRow);
         if ($conflicts) {
             return [
                 'ok' => false,
@@ -420,7 +507,7 @@ final class ServiceScoreEntry
         ];
     }
 
-    public static function detectGroupScoreConflicts(array $submittedPlayers, array $currentDbPlayers, array $gameRow): array
+    public static function detectSaveConflict(array $submittedPlayers, array $currentDbPlayers, array $gameRow): array
     {
         $conflicts = [];
         foreach ($submittedPlayers as $wrapper) {
@@ -504,58 +591,6 @@ final class ServiceScoreEntry
         ];
     }
 
-    public static function validateStartHoleForSide(?string $startHole, string $teeSide): string
-    {
-        $allowed = [];
-        if ($teeSide === 'F9') {
-            $allowed = array_map('strval', range(1, 9));
-        } elseif ($teeSide === 'B9') {
-            $allowed = array_map('strval', range(10, 18));
-        } else {
-            $allowed = array_map('strval', range(1, 18));
-        }
-
-        $clean = trim((string)$startHole);
-        return in_array($clean, $allowed, true) ? $clean : $allowed[0];
-    }
-
-    private static function deriveNumberOfHoles(string $holesLabel): int
-    {
-        return ($holesLabel === 'F9' || $holesLabel === 'B9') ? 9 : 18;
-    }
-
-    private static function strokeSuperscript(float $value): string
-    {
-        static $map = [
-            '-5' => '⁻⁵', '-4' => '⁻⁴', '-3' => '⁻³', '-2' => '⁻²', '-1' => '⁻¹',
-            '1' => '¹', '2' => '²', '3' => '³', '4' => '⁴', '5' => '⁵',
-        ];
-        $key = (string)intval($value);
-        return $map[$key] ?? ($value == 0 ? '' : $key);
-    }
-
-    private static function numOrZero($value): float
-    {
-        return is_numeric($value) ? (float)$value : 0.0;
-    }
-
-    private static function numOrNull($value): ?float
-    {
-        return is_numeric($value) ? (float)$value : null;
-    }
-    
-    private static function assertValidRawScore($value): void
-    {
-        if (!is_numeric($value)) {
-            throw new RuntimeException('Raw score must be numeric.');
-        }
-
-        $num = (float)$value;
-        if ($num < 1 || $num > 15) {
-            throw new RuntimeException('Raw score must be between 1 and 15.');
-        }
-    }
-
     private static function canonicalizeJsonish($value): string
     {
         $normalized = self::sortRecursive($value);
@@ -584,7 +619,34 @@ final class ServiceScoreEntry
         return $value;
     }
 
-    private static function hydrateJsonFields(array $row): array
+    private static function assertValidRawScore($value): void
+    {
+        if (!is_numeric($value)) {
+            throw new RuntimeException('Raw score must be numeric.');
+        }
+
+        $num = (float)$value;
+        if ($num < 1 || $num > 15) {
+            throw new RuntimeException('Raw score must be between 1 and 15.');
+        }
+    }
+
+    // ==========================================================================
+    // 7. Date-Gating and Eligibility
+    // ==========================================================================
+
+    // Logic contained within isScoreEntryAllowedToday in section 1.
+    
+    public static function validateDateGate(array $gameRow): bool
+    {
+        return self::isScoreEntryAllowedToday($gameRow);
+    }
+
+    // ==========================================================================
+    // 8. Generic Helpers
+    // ==========================================================================
+
+    private static function hydratePlayerFields(array $row): array
     {
         if (isset($row['dbPlayers_TeeSetDetails']) && is_string($row['dbPlayers_TeeSetDetails'])) {
             $val = json_decode($row['dbPlayers_TeeSetDetails'], true);

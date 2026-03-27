@@ -9,11 +9,15 @@
   const chrome = MA.chrome || {};
   
   const apiUrls = {
-  launch: paths.apiScoreEntryLaunch
-    || (routes.apiScoreEntry ? routes.apiScoreEntry + '/launch.php' : '/api/score_entry/launch.php'),
-  saveScores: paths.apiScoreEntrySaveScores
-    || (routes.apiScoreEntry ? routes.apiScoreEntry + '/saveScores.php' : '/api/score_entry/saveScores.php')
-};
+    launch: paths.apiScoreEntryLaunch
+      || (routes.apiScoreEntry ? routes.apiScoreEntry + '/launch.php' : '/api/score_entry/launch.php'),
+    saveScores: paths.apiScoreEntrySaveScores
+      || (routes.apiScoreEntry ? routes.apiScoreEntry + '/saveScores.php' : '/api/score_entry/saveScores.php')
+  };
+
+  // ==========================================================================
+  // 1. Bootstrap / State
+  // ==========================================================================
 
   const state = {
     payload: null,
@@ -21,6 +25,39 @@
     scorerGHIN: '',
     dirty: false,
   };
+
+  function init() {
+    if (boot.scorecardKey && el.playerKey) {
+      el.playerKey.value = boot.scorecardKey;
+    }
+
+    // Ensure Cart 'Next' button exists for the linear flow
+    if (!el.cartNextBtn && el.cartCard) {
+      const div = document.createElement('div');
+      div.className = 'maFieldRow';
+      div.style.justifyContent = 'flex-end';
+      div.style.marginTop = '16px';
+      div.innerHTML = '<button id="scoreCartNextBtn" class="btn btnSecondary" type="button">Next</button>';
+      el.cartCard.appendChild(div);
+      el.cartNextBtn = div.querySelector('button');
+    }
+
+    el.cartNextBtn?.addEventListener('click', confirmCartConfiguration);
+    el.launchBtn?.addEventListener('click', launch);
+    el.prevHoleBtn?.addEventListener('click', () => moveHole(-1));
+    el.nextHoleBtn?.addEventListener('click', () => moveHole(1));
+
+    el.holeSelect?.addEventListener('change', async (e) => {
+      const nextHole = parseInt(e.target.value, 10);
+      if (Number.isInteger(nextHole)) {
+        await transitionHole(nextHole);
+      }
+    });
+  }
+
+  // ==========================================================================
+  // 2. DOM Cache
+  // ==========================================================================
 
   const el = {
     playerKey: document.getElementById('scoreEntryPlayerKey'),
@@ -61,38 +98,12 @@
     }
   };
 
-  function init() {
-    if (boot.scorecardKey && el.playerKey) {
-      el.playerKey.value = boot.scorecardKey;
-    }
-
-    // Ensure Cart 'Next' button exists for the linear flow
-    if (!el.cartNextBtn && el.cartCard) {
-      const div = document.createElement('div');
-      div.className = 'maFieldRow';
-      div.style.justifyContent = 'flex-end';
-      div.style.marginTop = '16px';
-      div.innerHTML = '<button id="scoreCartNextBtn" class="btn btnSecondary" type="button">Next</button>';
-      el.cartCard.appendChild(div);
-      el.cartNextBtn = div.querySelector('button');
-    }
-
-    el.cartNextBtn?.addEventListener('click', confirmCartConfiguration);
-    el.launchBtn?.addEventListener('click', launch);
-    el.prevHoleBtn?.addEventListener('click', () => moveHole(-1));
-    el.nextHoleBtn?.addEventListener('click', () => moveHole(1));
-
-    el.holeSelect?.addEventListener('change', async (e) => {
-      const nextHole = parseInt(e.target.value, 10);
-      if (Number.isInteger(nextHole)) {
-        await transitionHole(nextHole);
-      }
-    });
-  }
+  // ==========================================================================
+  // 3. Launch Flow
+  // ==========================================================================
 
   async function launch() {
     setPageStatus('Launching score entry…', 'info');
-
     const playerKey = (el.playerKey?.value || '').replace(/\s+/g, '').toUpperCase();
     if (!playerKey) {
       setPageStatus('Please enter a ScoreCard ID.', 'warn');
@@ -100,9 +111,6 @@
     }
 
     try {
-//      const launchUrl = paths.apiScoreEntryLaunch
-//        || (routes.apiScoreEntry ? routes.apiScoreEntry + '/launch.php' : '/api/score_entry/launch.php');
-
       const res = await fetch(apiUrls.launch, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -143,6 +151,18 @@
       );
     } catch (err) {
       setPageStatus(err.message || 'Launch failed.', 'error');
+    }
+  }
+
+  function toggleLaunchPanel(show) {
+    const panel = document.getElementById('scoreEntryLaunchPanel')
+      || el.playerKey?.closest('.card')
+      || el.playerKey?.closest('.maCard');
+
+    if (panel) {
+      panel.classList.toggle('isHidden', !show);
+    } else {
+      el.playerKey?.parentElement?.classList.toggle('isHidden', !show);
     }
   }
 
@@ -210,10 +230,9 @@
     el.work.classList.add('isHidden');
   }
 
-  function showKeeperSelection() {
-    el.cartCard.classList.add('isHidden');
-    el.keeperCard.classList.remove('isHidden');
-  }
+  // ==========================================================================
+  // 4. Context Rendering
+  // ==========================================================================
 
   function renderHoleOptions() {
     const holesLabel = state.payload?.gameRow?.dbGames_Holes || 'All 18';
@@ -229,6 +248,107 @@
       if (h === state.currentHole) opt.selected = true;
       el.holeSelect.appendChild(opt);
     }
+  }
+
+  // ==========================================================================
+  // 5. Cart Workflow
+  // ==========================================================================
+
+  function getCartPlayers() {
+    return (state.payload?.players || []).map((wrapper) => {
+      const pr = wrapper.playerRow || {};
+      const sr = wrapper.scoreEntryRow || {};
+      return {
+        wrapper,
+        ghin: String(pr.dbPlayers_PlayerGHIN || sr.playerGHIN || ''),
+        name: String(pr.dbPlayers_Name || sr.playerName || ''),
+        pairingPos: String(pr.dbPlayers_PairingPos || sr.pairingPos || '')
+      };
+    }).filter((p) => p.ghin && p.name);
+  }
+
+  function configureCartCard() {
+    const players = getCartPlayers();
+    const isCOD = String(state.payload?.gameRow?.dbGames_RotationMethod || '') === 'COD';
+
+    const labels = isCOD
+      ? ['Cart 1 Driver', 'Cart 1 Passenger', 'Cart 2 Driver', 'Cart 2 Passenger']
+      : ['Player 1', 'Player 2', 'Player 3', 'Player 4'];
+
+    if (el.cart1DriverLabel) el.cart1DriverLabel.textContent = labels[0];
+    if (el.cart1PassengerLabel) el.cart1PassengerLabel.textContent = labels[1];
+    if (el.cart2DriverLabel) el.cart2DriverLabel.textContent = labels[2];
+    if (el.cart2PassengerLabel) el.cart2PassengerLabel.textContent = labels[3];
+
+    const options = [{ label: '', value: '' }].concat(
+      players.map((p) => ({ label: p.name, value: p.ghin }))
+    );
+
+    [el.cart1Driver, el.cart1Passenger, el.cart2Driver, el.cart2Passenger].forEach((select) => {
+      if (!select) return;
+      select.innerHTML = '';
+      options.forEach((opt) => {
+        const node = document.createElement('option');
+        node.value = opt.value;
+        node.textContent = opt.label;
+        select.appendChild(node);
+      });
+      select.value = '';
+    });
+
+    players.forEach((p) => {
+      switch (p.pairingPos) {
+        case '1': if (el.cart1Driver) el.cart1Driver.value = p.ghin; break;
+        case '2': if (el.cart1Passenger) el.cart1Passenger.value = p.ghin; break;
+        case '3': if (el.cart2Driver) el.cart2Driver.value = p.ghin; break;
+        case '4': if (el.cart2Passenger) el.cart2Passenger.value = p.ghin; break;
+      }
+    });
+  }
+
+  function confirmCartConfiguration() {
+    const assignments = [
+      { select: el.cart1Driver, pos: '1' },
+      { select: el.cart1Passenger, pos: '2' },
+      { select: el.cart2Driver, pos: '3' },
+      { select: el.cart2Passenger, pos: '4' }
+    ];
+
+    const selected = [];
+    const seen = new Set();
+
+    for (const item of assignments) {
+      const ghin = String(item.select?.value || '');
+      if (!ghin) continue;
+      if (seen.has(ghin)) {
+        setPageStatus('Each cart position must have a unique player.', 'warn');
+        return;
+      }
+      seen.add(ghin);
+      selected.push({ ghin, pos: item.pos });
+    }
+
+    (state.payload?.players || []).forEach((wrapper) => {
+      const pr = wrapper.playerRow || {};
+      const sr = wrapper.scoreEntryRow || {};
+      const ghin = String(pr.dbPlayers_PlayerGHIN || sr.playerGHIN || '');
+      const match = selected.find((x) => x.ghin === ghin);
+      const pos = match ? match.pos : '';
+
+      if (pr) pr.dbPlayers_PairingPos = pos;
+      if (sr) sr.pairingPos = pos;
+    });
+
+    showKeeperSelection();
+  }
+
+  // ==========================================================================
+  // 6. Scorekeeper Workflow
+  // ==========================================================================
+
+  function showKeeperSelection() {
+    el.cartCard.classList.add('isHidden');
+    el.keeperCard.classList.remove('isHidden');
   }
 
   function renderKeeperChips() {
@@ -256,101 +376,71 @@
     });
   }
 
-  function getCartPlayers() {
-  return (state.payload?.players || []).map((wrapper) => {
-    const pr = wrapper.playerRow || {};
-    const sr = wrapper.scoreEntryRow || {};
-    return {
-      wrapper,
-      ghin: String(pr.dbPlayers_PlayerGHIN || sr.playerGHIN || ''),
-      name: String(pr.dbPlayers_Name || sr.playerName || ''),
-      pairingPos: String(pr.dbPlayers_PairingPos || sr.pairingPos || '')
-    };
-  }).filter((p) => p.ghin && p.name);
-}
+  // ==========================================================================
+  // 7. Hole Navigation
+  // ==========================================================================
 
-function configureCartCard() {
-  const players = getCartPlayers();
-  const isCOD = String(state.payload?.gameRow?.dbGames_RotationMethod || '') === 'COD';
+  async function moveHole(direction) {
+    const holes = Array.from(el.holeSelect.options).map((o) => Number(o.value));
+    const idx = holes.indexOf(state.currentHole);
+    if (idx < 0) return;
 
-  const labels = isCOD
-    ? ['Cart 1 Driver', 'Cart 1 Passenger', 'Cart 2 Driver', 'Cart 2 Passenger']
-    : ['Player 1', 'Player 2', 'Player 3', 'Player 4'];
-
-  if (el.cart1DriverLabel) el.cart1DriverLabel.textContent = labels[0];
-  if (el.cart1PassengerLabel) el.cart1PassengerLabel.textContent = labels[1];
-  if (el.cart2DriverLabel) el.cart2DriverLabel.textContent = labels[2];
-  if (el.cart2PassengerLabel) el.cart2PassengerLabel.textContent = labels[3];
-
-  const options = [{ label: '', value: '' }].concat(
-    players.map((p) => ({ label: p.name, value: p.ghin }))
-  );
-
-  [el.cart1Driver, el.cart1Passenger, el.cart2Driver, el.cart2Passenger].forEach((select) => {
-    if (!select) return;
-    select.innerHTML = '';
-    options.forEach((opt) => {
-      const node = document.createElement('option');
-      node.value = opt.value;
-      node.textContent = opt.label;
-      select.appendChild(node);
-    });
-    select.value = '';
-  });
-
-  players.forEach((p) => {
-    switch (p.pairingPos) {
-      case '1':
-        if (el.cart1Driver) el.cart1Driver.value = p.ghin;
-        break;
-      case '2':
-        if (el.cart1Passenger) el.cart1Passenger.value = p.ghin;
-        break;
-      case '3':
-        if (el.cart2Driver) el.cart2Driver.value = p.ghin;
-        break;
-      case '4':
-        if (el.cart2Passenger) el.cart2Passenger.value = p.ghin;
-        break;
-    }
-  });
-}
-
-function confirmCartConfiguration() {
-  const assignments = [
-    { select: el.cart1Driver, pos: '1' },
-    { select: el.cart1Passenger, pos: '2' },
-    { select: el.cart2Driver, pos: '3' },
-    { select: el.cart2Passenger, pos: '4' }
-  ];
-
-  const selected = [];
-  const seen = new Set();
-
-  for (const item of assignments) {
-    const ghin = String(item.select?.value || '');
-    if (!ghin) continue;
-    if (seen.has(ghin)) {
-      setPageStatus('Each cart position must have a unique player.', 'warn');
-      return;
-    }
-    seen.add(ghin);
-    selected.push({ ghin, pos: item.pos });
+    const nextIdx = Math.max(0, Math.min(holes.length - 1, idx + direction));
+    await transitionHole(holes[nextIdx]);
   }
 
-  (state.payload?.players || []).forEach((wrapper) => {
-    const pr = wrapper.playerRow || {};
-    const sr = wrapper.scoreEntryRow || {};
-    const ghin = String(pr.dbPlayers_PlayerGHIN || sr.playerGHIN || '');
-    const match = selected.find((x) => x.ghin === ghin);
-    const pos = match ? match.pos : '';
+  async function transitionHole(nextHole) {
+    if (nextHole === state.currentHole) return;
 
-    if (pr) pr.dbPlayers_PairingPos = pos;
-    if (sr) sr.pairingPos = pos;
-  });
+    try {
+      if (state.dirty) {
+        const saveResult = await saveScoresSilently(nextHole);
+        if (!saveResult.ok) {
+          if (saveResult.conflict) {
+            resetToLaunch(saveResult.message || 'Another scorer is already updating this scorecard.');
+            return;
+          }
+          setPageStatus(saveResult.message || 'Unable to save scores.', 'error');
+          el.holeSelect.value = String(state.currentHole);
+          return;
+        }
+        patchReturnedScores(saveResult);
+        state.dirty = false;
+      }
 
-  showKeeperSelection();
-}
+      const firstP = state.payload?.players?.[0];
+      const pKey = firstP?.playerRow?.dbPlayers_PlayerKey;
+
+      if (pKey) {
+        const res = await fetch(apiUrls.launch, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ playerKey: pKey, holeNumber: nextHole })
+        });
+        const json = await res.json();
+        if (json.ok && json.payload) {
+          state.payload = json.payload;
+          (state.payload.players || []).forEach((wrapper) => {
+            if (!wrapper.originalScoresJson) {
+              wrapper.originalScoresJson = deepClone(wrapper.scoresJson || null);
+            }
+          });
+        }
+      }
+
+      state.currentHole = nextHole;
+      renderHoleOptions();
+      renderRows();
+      setPageStatus(`Moved to Hole ${nextHole}.`, 'info');
+    } catch (err) {
+      setPageStatus(err.message || 'Unable to change holes.', 'error');
+      el.holeSelect.value = String(state.currentHole);
+    }
+  }
+
+  // ==========================================================================
+  // 8. Collector Row Rendering
+  // ==========================================================================
 
   function renderRows() {
     const payload = state.payload;
@@ -469,6 +559,22 @@ function confirmCartConfiguration() {
       markDirty(playerId, raw || null, !!declare.checked);
     });
   }
+
+  function markDirty(playerId, rawScore, declared) {
+    state.dirty = true;
+
+    const wrapper = state.payload.players.find((p) => (p.scoreEntryRow?.playerId || '') === playerId);
+    if (!wrapper) return;
+
+    wrapper.scoreEntryRow.rawScore = rawScore;
+    wrapper.scoreEntryRow.netScore = (typeof rawScore === 'number')
+      ? rawScore - Number(wrapper.scoreEntryRow.strokeAllocation || 0)
+      : null;
+    wrapper.scoreEntryRow.declared = declared;
+
+    updateWorkingScoresJson(wrapper, rawScore, declared);
+  }
+
   function updateWorkingScoresJson(wrapper, rawScore, declared) {
     if (!wrapper) return;
 
@@ -516,6 +622,36 @@ function confirmCartConfiguration() {
 
     wrapper.scoresJson.Scores[0] = summary;
   }
+
+  // ==========================================================================
+  // 9. Dirty-State / Dialog Handling
+  // ==========================================================================
+
+  function openDirtyDialog() {
+    return new Promise((resolve) => {
+      if (!el.dirtyDialog?.showModal) {
+        resolve(window.confirm('You have unsaved changes. Leave anyway?') ? 'discard' : 'cancel');
+        return;
+      }
+
+      el.dirtyDialog.showModal();
+
+      const handler = () => {
+        el.dirtyDialog.removeEventListener('close', handler);
+        resolve(el.dirtyDialog.returnValue || 'cancel');
+      };
+
+      el.dirtyDialog.addEventListener('close', handler);
+    });
+  }
+
+  function clearDirty() {
+    state.dirty = false;
+  }
+
+  // ==========================================================================
+  // 10. Save / Persist
+  // ==========================================================================
 
   function buildSaveRequest(nextHole) {
     const payload = deepClone(state.payload || {});
@@ -577,6 +713,10 @@ function confirmCartConfiguration() {
     return json;
   }
 
+  // ==========================================================================
+  // 11. Chrome and Status Helpers
+  // ==========================================================================
+
   function resetToLaunch(message) {
     state.payload = null;
     state.currentHole = 1;
@@ -597,104 +737,6 @@ function confirmCartConfiguration() {
 
     applyChrome();
     setPageStatus(message || 'Returned to launch.', 'warn');
-  }
-
-  function deepClone(value) {
-    return value == null ? value : JSON.parse(JSON.stringify(value));
-  }
-
-  function markDirty(playerId, rawScore, declared) {
-    state.dirty = true;
-
-    const wrapper = state.payload.players.find((p) => (p.scoreEntryRow?.playerId || '') === playerId);
-    if (!wrapper) return;
-
-    wrapper.scoreEntryRow.rawScore = rawScore;
-    wrapper.scoreEntryRow.netScore = (typeof rawScore === 'number')
-      ? rawScore - Number(wrapper.scoreEntryRow.strokeAllocation || 0)
-      : null;
-    wrapper.scoreEntryRow.declared = declared;
-
-    updateWorkingScoresJson(wrapper, rawScore, declared);
-  }
-
-  async function moveHole(direction) {
-    const holes = Array.from(el.holeSelect.options).map((o) => Number(o.value));
-    const idx = holes.indexOf(state.currentHole);
-    if (idx < 0) return;
-
-    const nextIdx = Math.max(0, Math.min(holes.length - 1, idx + direction));
-    await transitionHole(holes[nextIdx]);
-  }
-
-  async function transitionHole(nextHole) {
-    if (nextHole === state.currentHole) return;
-
-    try {
-      if (state.dirty) {
-        const saveResult = await saveScoresSilently(nextHole);
-
-        if (!saveResult.ok) {
-          if (saveResult.conflict) {
-            resetToLaunch(saveResult.message || 'Another scorer is already updating this scorecard. Your current hole entries were not saved.');
-            return;
-          }
-          setPageStatus(saveResult.message || 'Unable to save scores.', 'error');
-          el.holeSelect.value = String(state.currentHole);
-          return;
-        }
-
-        patchReturnedScores(saveResult);
-        state.dirty = false;
-      }
-
-      // Reload payload for the new hole so Par/Yardage/HCP update correctly
-      const firstP = state.payload?.players?.[0];
-      const pKey = firstP?.playerRow?.dbPlayers_PlayerKey;
-
-      if (pKey) {
-        const res = await fetch(apiUrls.launch, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ playerKey: pKey, holeNumber: nextHole })
-        });
-        const json = await res.json();
-        if (json.ok && json.payload) {
-          state.payload = json.payload;
-          (state.payload.players || []).forEach((wrapper) => {
-            if (!wrapper.originalScoresJson) {
-              wrapper.originalScoresJson = deepClone(wrapper.scoresJson || null);
-            }
-          });
-        }
-      }
-
-      state.currentHole = nextHole;
-      renderHoleOptions();
-      renderRows();
-      setPageStatus(`Moved to Hole ${nextHole}.`, 'info');
-    } catch (err) {
-      setPageStatus(err.message || 'Unable to change holes.', 'error');
-      el.holeSelect.value = String(state.currentHole);
-    }
-  }
-
-  function openDirtyDialog() {
-    return new Promise((resolve) => {
-      if (!el.dirtyDialog?.showModal) {
-        resolve(window.confirm('You have unsaved changes. Leave anyway?') ? 'discard' : 'cancel');
-        return;
-      }
-
-      el.dirtyDialog.showModal();
-
-      const handler = () => {
-        el.dirtyDialog.removeEventListener('close', handler);
-        resolve(el.dirtyDialog.returnValue || 'cancel');
-      };
-
-      el.dirtyDialog.addEventListener('close', handler);
-    });
   }
 
   function setPageStatus(message, level){
@@ -770,6 +812,14 @@ function confirmCartConfiguration() {
         }
       });
     }
+  }
+
+  // ==========================================================================
+  // 12. Generic DOM / Utility Helpers
+  // ==========================================================================
+
+  function deepClone(value) {
+    return value == null ? value : JSON.parse(JSON.stringify(value));
   }
 
   function escapeHtml(text) {

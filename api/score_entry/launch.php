@@ -51,13 +51,16 @@ try {
         respond(404, ['ok' => false, 'message' => 'Game context not found.']);
     }
 
-    $payload = ServiceScoreEntry::buildLaunchPayload($gameRow, $groupPlayers, $holeNumber);
-    $payload['launchContext'] = [
-        'playerKey' => $playerKey,
-        'groupLoadRule' => 'PlayerKey',
-        'launchedPlayerId' => (string)($launchedPlayer['_id'] ?? ''),
-        'ggid' => (string)$ggid,
-    ];
+    //$payload = ServiceScoreEntry::buildLaunchPayload($gameRow, $groupPlayers, $holeNumber);
+    //$payload['launchContext'] = [
+    //    'playerKey' => $playerKey,
+    //    'groupLoadRule' => 'PlayerKey',
+    //    'launchedPlayerId' => (string)($launchedPlayer['_id'] ?? ''),
+    //    'ggid' => (string)$ggid,
+    //];
+       // Delegate payload building to service
+    $payload = ServiceScoreEntry::buildLaunchPayload($gameRow, $groupPlayers, $holeNumber, $playerKey);
+
 
     respond(200, ['ok' => true, 'payload' => $payload]);
 } catch (Throwable $e) {
