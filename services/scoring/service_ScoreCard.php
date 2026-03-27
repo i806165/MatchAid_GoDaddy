@@ -966,20 +966,22 @@ final class ServiceScoreCard {
       foreach ($sides as $label => $sidePlayers) {
         $totals[] = [
           "label" => "TEAM " . $label . " TOTAL",
-          "cells" => self::calculateToParRow($holes, $sidePlayers)
+          "cells" => self::calculateToParRow($gameRow, $holes, $sidePlayers)
         ];
       }
     } else {
       $totals[] = [
         "label" => "GROUP TOTAL",
-        "cells" => self::calculateToParRow($holes, $players)
+        "cells" => self::calculateToParRow($gameRow, $holes, $players)
       ];
     }
     return $totals;
   }
 
-  private static function calculateToParRow(array $holes, array $players): array {
+  private static function calculateToParRow(array $gameRow, array $holes, array $players): array {
     $rowCells = [];
+    $isNet = (trim((string)($gameRow["dbGames_ScoringMethod"] ?? "NET")) !== "ADJ GROSS");
+
     $sumOutScore = 0.0; $sumOutPar = 0.0; $outPlayed = false;
     $sumInScore = 0.0;  $sumInPar = 0.0;  $inPlayed = false;
     $sumTotScore = 0.0; $sumTotPar = 0.0; $totPlayed = false;
@@ -989,7 +991,8 @@ final class ServiceScoreCard {
       foreach ($players as $p) {
         $cell = $p["holes"]["h" . $h] ?? null;
         if ($cell && !empty($cell["declared"]) && $cell["gross"] !== null) {
-          $hScore += floatval($cell["gross"]);
+          $val = $isNet ? floatval($cell["net"] ?? $cell["gross"]) : floatval($cell["gross"]);
+          $hScore += $val;
           $hPar += floatval($cell["par"] ?? 0);
           $hPlayed = true;
         }
