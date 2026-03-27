@@ -141,8 +141,13 @@
       state.dirty = false;
 
       // Instantiate game GGID into session variable
+      //const ggid = state.payload?.gameRow?.dbGames_GGID;
+      //await apiAdmin("setGameSession.php", { ggid });
+      
       const ggid = state.payload?.gameRow?.dbGames_GGID;
-      await apiAdmin("setGameSession.php", { ggid });
+      console.log('[score_entry] setting game session GGID:', ggid);
+      const setGameSessionResult = await apiAdmin("setGameSession.php", { ggid });
+      console.log('[score_entry] setGameSession result:', setGameSessionResult);
 
       toggleLaunchPanel(false);
       renderLaunchPayload();
