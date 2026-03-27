@@ -89,12 +89,16 @@
   function renderPlayerRows(players, cardState){
     return (players || []).map((p)=>{
       const main = `<tr><td class="scName"><div class="scPLine1">${esc(p.playerName)} <span class="scPHC">${esc(p.playerHC ? '('+p.playerHC+')' : '')}</span></div><div class="scPLine2">${esc(p.tee || '')}</div></td>
-        ${holesToCells((h)=> renderPlayerCell(p, h))}
-        ${renderTotalsCols(totalForPlayer(p,'out'), totalForPlayer(p,'in'), totalForPlayer(p,'tot'), cardState)}
+        ${holesToCells((h)=> renderPlayerCell(p, h))} <!-- Holes 1-9 -->
+        ${renderTotalsCols(totalForPlayer(p,'out'), '', '', cardState)} <!-- Out Total -->
+        ${holesToCells((h)=> h>=10 ? renderPlayerCell(p, h) : '', 10)} <!-- Holes 10-18 -->
+        ${renderTotalsCols('', totalForPlayer(p,'in'), totalForPlayer(p,'tot'), cardState)} <!-- In and Total -->
       </tr>`;
       const detail = `<tr class="scDetailRow ${cardState.teamExpanded ? '' : 'is-hidden'}"><td class="scName">Stroke Marks</td>
-        ${holesToCells((h)=> `<td>${esc(String(p.holes?.['h'+h]?.strokeMarks || ''))}</td>`)}
-        ${renderTotalsCols('', '', '', cardState)}
+        ${holesToCells((h)=> `<td>${esc(String(p.holes?.['h'+h]?.strokeMarks || ''))}</td>`)} <!-- Holes 1-9 Stroke Marks -->
+        ${renderTotalsCols('', '', '', cardState)} <!-- Empty cells for alignment -->
+        ${holesToCells((h)=> h>=10 ? `<td>${esc(String(p.holes?.['h'+h]?.strokeMarks || ''))}</td>` : '', 10)} <!-- Holes 10-18 Stroke Marks -->
+        ${renderTotalsCols('', '', '', cardState)} <!-- Empty cells for alignment -->
       </tr>`;
       return main + detail;
     }).join('');
