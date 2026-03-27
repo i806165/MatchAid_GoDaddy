@@ -44,6 +44,9 @@ final class ServiceScoreEntry
             ];
         }
 
+        // Resolve declarations based on rules before returning to UI
+        self::resolveDeclaredScores($gameRow, $players, $holeNumber);
+
         return [
             'gameRow' => $gameRow,
             'currentHole' => $holeNumber,
@@ -176,6 +179,92 @@ final class ServiceScoreEntry
     private static function deriveNumberOfHoles(string $holesLabel): int
     {
         return ($holesLabel === 'F9' || $holesLabel === 'B9') ? 9 : 18;
+    }
+
+    // ==========================================================================
+    // 3.5 Declaration Engine
+    // ==========================================================================
+
+    public static function resolveDeclaredScores(array $gameRow, array &$players, int $holeNumber): void
+    {
+        $scoringSystem = (string)($gameRow['dbGames_ScoringSystem'] ?? 'BestBall');
+        $competition = (string)($gameRow['dbGames_Competition'] ?? 'PairField');
+        $scoringMethod = (string)($gameRow['dbGames_ScoringMethod'] ?? 'NET');
+
+        // 1. Manual modes exit early
+        if (in_array($scoringSystem, ['DeclareManual', 'DeclarePlayer'], true)) {
+            return;
+        }
+
+        // 2. Determine evaluation partitions (Group vs Side)
+        $partitions = [];
+        foreach ($players as $idx => $wrapper) {
+            $side = ($competition === 'PairPair') ? (string)($wrapper['playerRow']['dbPlayers_FlightPos'] ?? 'A') : 'GROUP';
+            $partitions[$side][] = [
+                'idx' => $idx,
+                'raw' => $wrapper['scoreEntryRow']['rawScore'] ?? null,
+                'net' => $wrapper['scoreEntryRow']['netScore'] ?? null,
+                'pos' => (int)($wrapper['playerRow']['dbPlayers_PairingPos'] ?? 99)
+            ];
+        }
+
+        // 3. Resolve each partition
+        foreach ($partitions as $side => $rows) {
+            // Filter to only rows with valid scores
+            $validRows = array_filter($rows, fn($r) => is_numeric($r['raw']));
+
+            // Determine N (number of scores to declare)
+            $n = 1;
+            if ($scoringSystem === 'AllScores') {
+                $n = count($validRows);
+            } elseif ($scoringSystem === 'DeclareHole') {
+                $holeDecls = $gameRow['dbGames_HoleDeclaration'] ?? [];
+                if (is_string($holeDecls)) $holeDecls = json_decode($holeDecls, true) ?: [];
+                $foundHole = array_values(array_filter($holeDecls, fn($h) => (int)($h['hole'] ?? 0) === $holeNumber));
+                $n = (int)($foundHole[0]['count'] ?? 1);
+            } elseif ($scoringSystem === 'BestBall') {
+                $n = (int)($gameRow['dbGames_BestBall'] ?? 1);
+            }
+
+            // Sort by: Metric -> then Gross -> then Position
+            usort($validRows, function($a, $b) use ($scoringMethod) {
+                $metricA = ($scoringMethod === 'ADJ GROSS') ? $a['raw'] : $a['net'];
+                $metricB = ($scoringMethod === 'ADJ GROSS') ? $b['raw'] : $b['net'];
+
+                if ($metricA != $metricB) return $metricA <=> $metricB;
+                if ($a['raw'] != $b['raw']) return $a['raw'] <=> $b['raw'];
+                return $a['pos'] <=> $b['pos'];
+            });
+
+            $declaredIndices = array_column(array_slice($validRows, 0, $n), 'idx');
+
+            // Apply updates to the original players array
+            foreach ($rows as $row) {
+                $pIdx = $row['idx'];
+                $isDeclared = in_array($pIdx, $declaredIndices, true);
+                
+                $players[$pIdx]['scoreEntryRow']['declared'] = $isDeclared;
+                $players[$pIdx]['scoreEntryRow']['declaredSource'] = 'system';
+
+                // Re-sync the hydrated JSON object
+                self::syncHoleDetailDeclaration($players[$pIdx], $holeNumber, $isDeclared);
+            }
+        }
+    }
+
+    private static function syncHoleDetailDeclaration(array &$wrapper, int $holeNumber, bool $isDeclared): void
+    {
+        if (!isset($wrapper['scoresJson']['Scores'][0])) return;
+        $details = &$wrapper['scoresJson']['Scores'][0]['hole_details'];
+        if (!is_array($details)) return;
+
+        foreach ($details as &$detail) {
+            if ((int)($detail['hole_number'] ?? 0) === $holeNumber) {
+                $detail['declared'] = $isDeclared;
+                $detail['declaredSource'] = 'system';
+                break;
+            }
+        }
     }
 
     // ==========================================================================
@@ -442,6 +531,9 @@ final class ServiceScoreEntry
                 'nextHole' => $nextHole
             ];
         }
+
+        // Authoritatively resolve declarations for automatic modes before persisting
+        self::resolveDeclaredScores($gameRow, $players, $currentHole);
 
         $validatedStartHole = self::validateStartHoleForSide(
             (string)($firstPlayerRow['dbPlayers_StartHole'] ?? ''),

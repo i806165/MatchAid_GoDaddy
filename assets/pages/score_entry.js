@@ -445,6 +445,70 @@
   }
 
   // ==========================================================================
+  // 7.5 Declaration Engine (JS Mirror)
+  // ==========================================================================
+
+  function resolveDeclaredScores() {
+    const payload = state.payload;
+    if (!payload) return;
+
+    const g = payload.gameRow || {};
+    const scoringSystem = g.dbGames_ScoringSystem || 'BestBall';
+    const competition = g.dbGames_Competition || 'PairField';
+    const scoringMethod = g.dbGames_ScoringMethod || 'NET';
+
+    if (['DeclareManual', 'DeclarePlayer'].includes(scoringSystem)) return;
+
+    const partitions = {};
+    payload.players.forEach((wrapper, idx) => {
+      const side = (competition === 'PairPair') ? (wrapper.playerRow?.dbPlayers_FlightPos || 'A') : 'GROUP';
+      if (!partitions[side]) partitions[side] = [];
+      partitions[side].push({
+        idx,
+        raw: wrapper.scoreEntryRow.rawScore,
+        net: wrapper.scoreEntryRow.netScore,
+        pos: parseInt(wrapper.playerRow?.dbPlayers_PairingPos || '99', 10)
+      });
+    });
+
+    Object.values(partitions).forEach(rows => {
+      const validRows = rows.filter(r => typeof r.raw === 'number');
+      
+      let n = 1;
+      if (scoringSystem === 'AllScores') {
+        n = validRows.length;
+      } else if (scoringSystem === 'DeclareHole') {
+        const holeDecls = Array.isArray(g.dbGames_HoleDeclaration) ? g.dbGames_HoleDeclaration : [];
+        const found = holeDecls.find(h => parseInt(h.hole, 10) === state.currentHole);
+        n = parseInt(found?.count || '1', 10);
+      } else if (scoringSystem === 'BestBall') {
+        n = parseInt(g.dbGames_BestBall || '1', 10);
+      }
+
+      validRows.sort((a, b) => {
+        const metricA = (scoringMethod === 'ADJ GROSS') ? a.raw : a.net;
+        const metricB = (scoringMethod === 'ADJ GROSS') ? b.raw : b.net;
+        if (metricA !== metricB) return metricA - metricB;
+        if (a.raw !== b.raw) return a.raw - b.raw;
+        return a.pos - b.pos;
+      });
+
+      const declaredIndices = validRows.slice(0, n).map(r => r.idx);
+
+      rows.forEach(row => {
+        const wrapper = payload.players[row.idx];
+        const isDeclared = declaredIndices.includes(row.idx);
+        
+        wrapper.scoreEntryRow.declared = isDeclared;
+        updateWorkingScoresJson(wrapper, wrapper.scoreEntryRow.rawScore, isDeclared);
+      });
+    });
+
+    // Refresh the UI to show new checkboxes/net values
+    renderRows();
+  }
+
+  // ==========================================================================
   // 8. Collector Row Rendering
   // ==========================================================================
 
@@ -471,6 +535,10 @@
       const holeHcp = escapeHtml(String(row.holeHcp ?? '—'));
       const playerStrokes = escapeHtml(String(row.strokeAllocation ?? '0'));
       const netScore = escapeHtml(String(row.netScore ?? '—'));
+
+      const scoringSystem = state.payload?.gameRow?.dbGames_ScoringSystem;
+      const isAuto = !['DeclareManual', 'DeclarePlayer'].includes(scoringSystem);
+      const showDeclare = ['DeclarePlayer', 'DeclareManual', 'BestBall', 'DeclareHole', 'AllScores'].includes(scoringSystem);
 
       article.innerHTML = `
         <div class="scorePlayerLaneTop">
@@ -502,10 +570,10 @@
           </div>
         </div>
 
-        <div class="scorePlayerDeclareRow ${['DeclarePlayer', 'DeclareManual'].includes(state.payload?.gameRow?.dbGames_ScoringSystem) ? '' : 'isHidden'}">
+        <div class="scorePlayerDeclareRow ${showDeclare ? '' : 'isHidden'}">
           <label class="scoreDeclareWrap">
             Declare
-            <input type="checkbox" class="scoreDeclareCheck" ${row.declared ? 'checked' : ''}>
+            <input type="checkbox" class="scoreDeclareCheck" ${row.declared ? 'checked' : ''} ${isAuto ? 'disabled' : ''}>
           </label>
         </div>
 
@@ -563,6 +631,7 @@
     declare?.addEventListener('change', () => {
       const raw = Number(input.value || 0);
       markDirty(playerId, raw || null, !!declare.checked);
+      resolveDeclaredScores();
     });
   }
 
@@ -579,6 +648,12 @@
     wrapper.scoreEntryRow.declared = declared;
 
     updateWorkingScoresJson(wrapper, rawScore, declared);
+    
+    // Auto-resolve declarations if in an automatic mode
+    const scoringSystem = state.payload?.gameRow?.dbGames_ScoringSystem;
+    if (!['DeclareManual', 'DeclarePlayer'].includes(scoringSystem)) {
+        resolveDeclaredScores();
+    }
   }
 
   function updateWorkingScoresJson(wrapper, rawScore, declared) {
