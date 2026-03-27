@@ -2,63 +2,32 @@
 // /public_html/app/game_scorecards/scorecards.php
 declare(strict_types=1);
 
-if (session_status() !== PHP_SESSION_ACTIVE) {
-  session_start();
-}
-
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
+require_once MA_API . "/game_scorecard/initScoreCard.php";
 
-Logger::info("SCORECARDS_ENTRY", [
-  "uri" => $_SERVER["REQUEST_URI"] ?? "",
-  "ghin" => $_SESSION["SessionGHINLogonID"] ?? "",
-  "ggid" => $_SESSION["SessionStoredGGID"] ?? "",
-  "loginTime" => $_SESSION["SessionLoginTime"] ?? "",
-]);
-
-// 1) USER context hydration (Rule-2)
+// 1. USER context hydration
 $ctx = ServiceUserContext::getUserContext();
 if (!$ctx || empty($ctx["ok"])) {
   header("Location: " . MA_ROUTE_LOGIN);
   exit;
 }
 
-// 2) GAME context hydration
+// 2. GAME context hydration
 try {
-  $gc = ServiceContextGame::getGameContext();
-  $game = $gc["game"] ?? [];
-  $ggid = $gc["ggid"] ?? null;
-
+  $ggid = ServiceContextGame::getStoredGGID();
   if (!$ggid) {
-    header("Location: /app/admin_games/gameslist.php");
-    exit;
+    $ggidInput = $_GET['ggid'] ?? $_SESSION['SessionStoredGGID'] ?? '';
+    if ($ggidInput) ServiceContextGame::setGameContext((int)$ggidInput);
+    $ggid = ServiceContextGame::getStoredGGID();
   }
-
-  // Build INIT payload (server embeds) via API module function
-  require_once MA_API . "/game_scorecard/initScoreCard.php";
+  if (!$ggid) throw new RuntimeException("No game selected.");
   $initPayload = initScoreCard((string)$ggid, $ctx);
-
-  // Standard INIT wrappers + helpers
-  $initPayload["ok"] = true;
-  $initPayload["returnTo"] = "/app/admin_games/gameslist.php";
-  $initPayload["header"] = [
-    "subtitle" => (string)($game["dbGames_Title"] ?? "") . " - GGID " . (string)$ggid
-  ];
 } catch (Throwable $e) {
-  Logger::error("SCORECARDS_INIT_FAIL", ["err" => $e->getMessage()]);
-  header("Location: " . MA_ROUTE_LOGIN);
-  exit;
+  die("Scorecard Init Error: " . $e->getMessage());
 }
-
-// Provide path constants to JS (no hard-coded paths in JS)
-$paths = [
-  "apiSession"       => MA_ROUTE_API_SESSION,
-  "routerApi"        => MA_ROUTE_API_ROUTER,
-  "apiGHIN"          => MA_ROUTE_API_GHIN,
-  "apiScorecardsInit"=> MA_ROUTE_API_GAME_SCORECARD . "/initScoreCard.php",
-];
 
 // Chrome values (picked up by chromeHeader.php)
 $maChromeTitle = "Scorecards";
@@ -91,18 +60,8 @@ $maChromeLogoUrl = null;
 
 <script>
   window.MA = window.MA || {};
-
-  window.MA.paths = <?= json_encode($paths, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
   window.__INIT__ = <?= json_encode($initPayload, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-
-  // Canonical aliases/pattern
   window.__MA_INIT__ = window.__INIT__;
-  window.MA.routes = {
-    router: window.MA.paths.routerApi,
-    login: <?= json_encode(MA_ROUTE_LOGIN) ?>,
-    apiGHIN: window.MA.paths.apiGHIN,
-    apiScorecardsInit: window.MA.paths.apiScorecardsInit
-  };
 </script>
 
 <script src="/assets/js/ma_shared.js?v=1"></script>

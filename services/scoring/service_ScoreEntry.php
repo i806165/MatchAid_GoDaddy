@@ -112,18 +112,8 @@ final class ServiceScoreEntry
 
     public static function calculateEffectiveHandicap(array $gameRow, array $playerRow): float
     {
-        $scoringMethod = trim((string)($gameRow['dbGames_ScoringMethod'] ?? 'NET'));
-        $hcMethod = trim((string)($gameRow['dbGames_HCMethod'] ?? 'CH'));
-
-        if ($scoringMethod === 'ADJ GROSS') {
-            return 0.0;
-        }
-
-        $raw = (str_starts_with($hcMethod, 'SO'))
-            ? ($playerRow['dbPlayers_SO'] ?? 0)
-            : ($playerRow['dbPlayers_PH'] ?? 0);
-
-        return is_numeric($raw) ? (float)$raw : 0.0;
+        // Delegate to centralized logic in ServiceScoreCard
+        return ServiceScoreCard::calculateEffectiveHandicap($gameRow, $playerRow);
     }
 
     public static function normalizeHoleDetails($holeDetails): array

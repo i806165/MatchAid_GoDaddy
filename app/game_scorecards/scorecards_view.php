@@ -10,6 +10,9 @@
       </div>
     </header>
     <div class="maCard__body">
+      <!-- Future controls area placeholder -->
+      <div id="scControls" class="maControlArea" style="display:none;"></div>
+
       <div id="scHost" class="scHost" aria-label="Scorecard pages"></div>
       <div id="scEmpty" class="maEmpty" style="display:none;">No scorecards available.</div>
     </div>

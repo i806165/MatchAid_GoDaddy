@@ -9,357 +9,95 @@ declare(strict_types=1);
  */
 final class ServiceScoreCard {
 
-  private static function holesStandard(): array {
-    return range(1, 18);
-  }
-
-  public static function acquireScorecardRosterFromPlayers(array $players, string $ggid): array {
-    return ["ggid" => (string)$ggid, "players" => $players];
-  }
+  // ==========================================================================
+  // 1. Public Payload Builders
+  // ==========================================================================
 
   /**
-   * Build blank scorecard payload.
-   * Returns: ["competition"=>..., "grouping"=>..., "rows"=> [...]]
+   * Build blank scorecard payload for pre-round printing.
    */
   public static function buildBlankScorecardPayload(array $gameRow, array $players): array {
-    if (!$gameRow) {
-      throw new RuntimeException("buildBlankScorecardPayload: missing gameRow");
-    }
-    if (!is_array($players)) $players = [];
+    if (!$gameRow) throw new RuntimeException("buildBlankScorecardPayload: missing gameRow");
+    $players = is_array($players) ? $players : [];
 
-    $competition = trim((string)($gameRow["dbGames_Competition"] ?? "PairField")); // PairPair | PairField
-    $grouping = ($competition === "PairPair") ? "flight" : "pairing";
-
-    // 1) Group players
-    $groupsMap = ($grouping === "flight")
-      ? self::groupPlayersByFlight($players)
-      : self::groupPlayersByPairing($players);
-
-    // 2) Common course name formatting
-    $facility = trim((string)($gameRow["dbGames_FacilityName"] ?? ""));
-    $course = trim((string)($gameRow["dbGames_CourseName"] ?? ""));
-    $rawCourseName = trim($facility . " " . $course);
-    $courseName = preg_replace('/\b(.+)\b \1/', '$1', $rawCourseName);
+    $groupingMode = self::determineGroupingModeFromGame($gameRow);
+    $groupsMap = self::buildGroupsMap($players, $groupingMode);
+    $groupIds = self::buildGroupIds($groupsMap);
 
     $rows = [];
-    $groupIds = array_keys($groupsMap);
-    usort($groupIds, fn($a,$b) => strcmp((string)$a, (string)$b));
-
-    foreach ($groupIds as $groupId) {
-      $playersInGroup = $groupsMap[$groupId] ?? [];
-
-      // Sort stable: FlightID, FlightPos, PairingID, PairingPos, then last/name
-      usort($playersInGroup, function($a,$b){
-        $aFlight = self::normStr($a["dbPlayers_FlightID"] ?? "", "ZZZ");
-        $bFlight = self::normStr($b["dbPlayers_FlightID"] ?? "", "ZZZ");
-        if ($aFlight !== $bFlight) return strcmp($aFlight, $bFlight);
-
-        $aFlightPos = self::normInt($a["dbPlayers_FlightPos"] ?? null, 999);
-        $bFlightPos = self::normInt($b["dbPlayers_FlightPos"] ?? null, 999);
-        if ($aFlightPos !== $bFlightPos) return $aFlightPos <=> $bFlightPos;
-
-        $aPair = self::normStr($a["dbPlayers_PairingID"] ?? "", "ZZZ");
-        $bPair = self::normStr($b["dbPlayers_PairingID"] ?? "", "ZZZ");
-        if ($aPair !== $bPair) return strcmp($aPair, $bPair);
-
-        $aPairPos = self::normInt($a["dbPlayers_PairingPos"] ?? null, 999);
-        $bPairPos = self::normInt($b["dbPlayers_PairingPos"] ?? null, 999);
-        if ($aPairPos !== $bPairPos) return $aPairPos <=> $bPairPos;
-
-        $aName = self::normStr($a["dbPlayers_LName"] ?? ($a["dbPlayers_Name"] ?? ""), "ZZZ");
-        $bName = self::normStr($b["dbPlayers_LName"] ?? ($b["dbPlayers_Name"] ?? ""), "ZZZ");
-        return strcmp($aName, $bName);
-      });
-
-      $first = $playersInGroup[0] ?? [];
-      $flightID = trim((string)($first["dbPlayers_FlightID"] ?? ""));
-      $teeTime = trim((string)($first["dbPlayers_TeeTime"] ?? ""));
-      $startHole = trim((string)($first["dbPlayers_StartHole"] ?? ""));
-
-      $gameHeader = array_merge($gameRow, [
-        "gameTitle" => (string)($gameRow["dbGames_Title"] ?? ""),
-        "GGID" => (string)($gameRow["dbGames_GGID"] ?? ($gameRow["dbGames_GGIDNum"] ?? "")),
-        "courseName" => (string)$courseName,
-        "playDate" => (string)($gameRow["gameDateDDDMMDDYY"] ?? ($gameRow["dbGames_PlayDate"] ?? "")),
-        "holesPlayed" => (string)($gameRow["dbGames_Holes"] ?? "All 18"),
-        "summaryText" => (string)($gameRow["dbGames_SummaryText"] ?? ""),
-        "playerKey" => (string)($first["dbPlayers_PlayerKey"] ?? ""),
-      ]);
-
-      $teeSetIdsUsed = self::getTeeSetIdsUsed($playersInGroup);
-
-      $courseInfoAllRows = self::buildCourseInfoTableRows($gameRow, $playersInGroup);
-      $courseInfoFilteredRows = self::filterCourseRowsToTeeSetsUsed($courseInfoAllRows, $teeSetIdsUsed);
-
-      $rows[] = [
-        "competition" => $competition,
-        "grouping" => $grouping,
-        "groupId" => (string)$groupId,
-
-        "pairingID" => trim((string)($first["dbPlayers_PairingID"] ?? ($groupId ?? ""))),
-        "flightID" => $flightID,
-        "teeTime" => $teeTime,
-        "startHole" => $startHole,
-
-        "courseInfo" => $courseInfoFilteredRows,
-        "players" => self::buildPlayersArray($playersInGroup, $gameRow),
-        "gameHeader" => $gameHeader,
-      ];
+    foreach ($groupIds as $id) {
+      $playersInGroup = self::sortPlayersForScorecard($groupsMap[$id] ?? []);
+      $rows[] = self::buildGroupRowPayload($gameRow, $playersInGroup, $id, $groupingMode);
     }
-
-    return ["competition" => $competition, "grouping" => $grouping, "rows" => $rows];
-  }
-
-  // ---------------- helpers ----------------
-
-  private static function groupPlayersByFlight(array $players): array {
-    $map = [];
-    foreach ($players as $p) {
-      $fid = trim((string)($p["dbPlayers_FlightID"] ?? ""));
-      if ($fid === "") $fid = "1";
-      if (!isset($map[$fid])) $map[$fid] = [];
-      $map[$fid][] = $p;
-    }
-    return $map;
-  }
-
-  public static function groupPlayersByPairing(array $players): array {
-    $map = [];
-    foreach ($players as $p) {
-      $pid = (string)($p["dbPlayers_PairingID"] ?? "000");
-      if ($pid === "") $pid = "000";
-      if (!isset($map[$pid])) $map[$pid] = [];
-      $map[$pid][] = $p;
-    }
-    // stable order by PairingPos
-    foreach ($map as &$arr) {
-      usort($arr, fn($a,$b) => self::normInt($a["dbPlayers_PairingPos"] ?? 0,0) <=> self::normInt($b["dbPlayers_PairingPos"] ?? 0,0));
-    }
-    unset($arr);
-    return $map;
-  }
-
-  private static function normStr($v, string $fallback=""): string {
-    $s = trim((string)($v ?? ""));
-    return $s !== "" ? $s : $fallback;
-  }
-
-  private static function normInt($v, int $fallback=0): int {
-    $n = intval(trim((string)($v ?? "")));
-    return is_numeric($v) ? $n : $fallback;
-  }
-
-  public static function getTeeSetIdsUsed(array $playersInGroup): array {
-    $set = [];
-    foreach ($playersInGroup as $p) {
-      $id = trim((string)($p["dbPlayers_TeeSetID"] ?? ""));
-      if ($id !== "") $set[$id] = true;
-    }
-    return $set; // associative set
-  }
-
-  public static function filterCourseRowsToTeeSetsUsed(array $courseRows, array $teeSetIdsUsedSet): array {
-    $out = [];
-    foreach ($courseRows as $row) {
-      $label = (string)($row["label"] ?? "");
-      if ($label === "Par" || $label === "HCP") {
-        $out[] = $row;
-        continue;
-      }
-      $teeSetId = (string)($row["teeSetId"] ?? "");
-      if ($teeSetId !== "" && isset($teeSetIdsUsedSet[$teeSetId])) {
-        $out[] = $row;
-      }
-    }
-    return $out;
-  }
-
-  public static function buildPlayersArray(array $playersInGroup, array $gameRow): array {
-    $scoringMethod = trim((string)($gameRow["dbGames_ScoringMethod"] ?? "NET")); // NET | ADJ GROSS
-    $hcMethod = trim((string)($gameRow["dbGames_HCMethod"] ?? "CH")); // CH | SO-*
-    $isAdjGross = ($scoringMethod === "ADJ GROSS");
-
-    $out = [];
-    foreach ($playersInGroup as $player) {
-      $tee = (string)($player["dbPlayers_TeeSetName"] ?? "");
-      $playerHC = 0;
-
-      if (!$isAdjGross) {
-        $useSO = ($hcMethod === "SO" || str_starts_with($hcMethod, "SO"));
-        $raw = $useSO ? ($player["dbPlayers_SO"] ?? 0) : ($player["dbPlayers_PH"] ?? 0);
-        $playerHC = is_numeric($raw) ? floatval($raw) : 0;
-      }
-
-      $strokes = [];
-      if (!$isAdjGross && $playerHC != 0) {
-        $teeDetails = $player["dbPlayers_TeeSetDetails"] ?? null;
-        $teeHoles = is_array($teeDetails) ? ($teeDetails["holes"] ?? $teeDetails["Holes"] ?? []) : [];
-        $allocMap = self::buildStrokeAllocationMap($gameRow, $playerHC, $teeHoles);
-
-        foreach ($allocMap as $holeNum => $v) {
-          $num = intval($v);
-          if ($num !== 0) $strokes["h".$holeNum] = $num;
-        }
-      }
-
-      $out[] = array_merge($player, [
-        "playerName" => (string)($player["dbPlayers_Name"] ?? ""),
-        "playerHC" => $playerHC,
-        "tee" => $tee,
-        "teeSetId" => trim((string)($player["dbPlayers_TeeSetID"] ?? "")),
-        "playerKey" => (string)($player["dbPlayers_PlayerKey"] ?? ""),
-        "strokes" => $strokes,
-      ]);
-    }
-    return $out;
-  }
-
-  // ---------------- Course table rows ----------------
-
-  public static function buildCourseInfoTableRows(array $gameRow, array $players): array {
-    $holesStd = self::holesStandard();
-    $allYards = [];
-    $allHcp = [];
-    $allPar = [];
-
-    foreach ($players as $player) {
-      $teeSetID = $player["dbPlayers_TeeSetID"] ?? null;
-      $teeLabel = $player["dbPlayers_TeeSetName"] ?? null;
-      $teeDetails = $player["dbPlayers_TeeSetDetails"] ?? null;
-      $holes = is_array($teeDetails) ? ($teeDetails["holes"] ?? $teeDetails["Holes"] ?? null) : null;
-      if (!$teeSetID || !$teeLabel || !is_array($holes)) continue;
-
-      $courseMap = self::getCourseInfoMap($gameRow, $player);
-
-      $yardages = []; $pars = []; $hcp = [];
-      foreach ($courseMap as $hole => $info) {
-        $h = intval($hole);
-        $yardages[$h] = $info["yardage"] ?? 0;
-        $pars[$h] = $info["par"] ?? 0;
-        $hcp[$h] = $info["hcp"] ?? 0;
-      }
-
-      $holesToPlay = (string)($gameRow["dbGames_Holes"] ?? "All 18");
-      $gender = (string)($player["dbPlayers_Gender"] ?? "Unknown");
-      $ratings = is_array($teeDetails) ? ($teeDetails["Ratings"] ?? []) : [];
-      if (empty($ratings)) $ratings = is_array($teeDetails) ? ($teeDetails["ratings"] ?? []) : [];
-
-      $ratingEntry = null;
-      foreach ($ratings as $r) {
-        if (!is_array($r)) continue;
-        $rt = $r["RatingType"] ?? $r["rating_type"] ?? "";
-        if ($holesToPlay === "F9" && $rt === "Front") $ratingEntry = $r;
-        else if ($holesToPlay === "B9" && $rt === "Back") $ratingEntry = $r;
-        else if ($holesToPlay !== "F9" && $holesToPlay !== "B9" && $rt === "Total") $ratingEntry = $r;
-      }
-      $slope = is_array($ratingEntry) ? floatval($ratingEntry["SlopeRating"] ?? $ratingEntry["slope_rating"] ?? 0) : 0;
-      $rating = is_array($ratingEntry) ? floatval($ratingEntry["CourseRating"] ?? $ratingEntry["course_rating"] ?? 0) : 0;
-
-      $allYards[] = self::buildCourseRow((string)$teeLabel, (string)$teeSetID, "Yards", array_map(fn($h)=> (string)($yardages[$h] ?? 0), $holesStd), self::splitTotalFromMap($yardages), "Yards", 1, $slope, $rating, $gender);
-      $allHcp[] = self::buildCourseRow("HCP", (string)$teeSetID, "HCP", array_map(fn($h)=> (string)($hcp[$h] ?? 0), $holesStd), self::splitTotalFromMap($hcp), "HCP", 2, $slope, $rating, $gender);
-      $allPar[] = self::buildCourseRow("Par", (string)$teeSetID, "Par", array_map(fn($h)=> (string)($pars[$h] ?? 0), $holesStd), self::splitTotalFromMap($pars), "Par", 3, $slope, $rating, $gender);
-    }
-
-    $dedupY = self::dedupeCourseRows($allYards);
-    $dedupH = self::dedupeCourseRows($allHcp);
-    $dedupP = self::dedupeCourseRows($allPar);
-
-    $final = [];
-    foreach ($dedupY as $yardRow) {
-      $teeSetId = (string)($yardRow["teeSetId"] ?? "");
-      $final[] = $yardRow;
-
-      if (count($dedupH) > 1) {
-        foreach ($dedupH as $r) if ((string)($r["teeSetId"] ?? "") === $teeSetId) { $final[] = $r; break; }
-      }
-      if (count($dedupP) > 1) {
-        foreach ($dedupP as $r) if ((string)($r["teeSetId"] ?? "") === $teeSetId) { $final[] = $r; break; }
-      }
-    }
-
-    if (count($dedupP) === 1) $final[] = $dedupP[0];
-    if (count($dedupH) === 1) $final[] = $dedupH[0];
-
-    return $final;
-  }
-
-  private static function dedupeCourseRows(array $courseRows): array {
-    $grouped = [];
-    foreach ($courseRows as $row) {
-      $key = (string)($row["label"] ?? "");
-      if (!isset($grouped[$key])) $grouped[$key] = [];
-      $grouped[$key][] = $row;
-    }
-
-    $result = [];
-    foreach ($grouped as $rows) {
-      $unique = [];
-      foreach ($rows as $r) {
-        $found = false;
-        foreach ($unique as $u) {
-          if (self::courseRowEquals($u, $r)) { $found = true; break; }
-        }
-        if (!$found) $unique[] = $r;
-      }
-      foreach ($unique as $u) $result[] = $u;
-    }
-    return $result;
-  }
-
-  private static function courseRowEquals(array $a, array $b): bool {
-    foreach (self::holesStandard() as $h) {
-      if (($a["h".$h] ?? null) !== ($b["h".$h] ?? null)) return false;
-    }
-    return true;
-  }
-
-  private static function buildCourseRow(string $label, string $teeSetId, string $teeLabel, array $values, array $totals, string $lineType, int $lineSeq, float $slope, float $rating, string $gender): array {
-    $row = [
-      "rowType" => "Course",
-      "label" => $label,
-      "tee" => $teeLabel,
-      "teeSetId" => $teeSetId,
-      "cols" => array_map('strval', $values),
-
-      "lineType" => $lineType,
-      "lineSeq" => $lineSeq,
-      "slope" => $slope,
-      "rating" => $rating,
-      "gender" => $gender,
-    ];
-
-    $holesStd = self::holesStandard();
-    foreach ($holesStd as $idx => $num) {
-      $row["h".$num] = (string)($values[$idx] ?? "");
-    }
-
-    $subtotalFields = ["3a","3b","3c","3d","3e","3f","6a","6b","6c","9a","9b","9c"];
-    foreach ($subtotalFields as $k) {
-      $row[$k] = ($label === "HCP") ? "" : (string)($totals[$k] ?? "-");
-    }
-    return $row;
-  }
-
-  private static function splitTotalFromMap(array $kpiMap): array {
-    $vals = [];
-    for ($i=1;$i<=18;$i++) $vals[] = intval($kpiMap[$i] ?? 0);
-    $sum = fn($arr) => array_sum($arr);
 
     return [
-      "3a" => (string)$sum(array_slice($vals,0,3)),
-      "3b" => (string)$sum(array_slice($vals,3,3)),
-      "3c" => (string)$sum(array_slice($vals,6,3)),
-      "3d" => (string)$sum(array_slice($vals,9,3)),
-      "3e" => (string)$sum(array_slice($vals,12,3)),
-      "3f" => (string)$sum(array_slice($vals,15,3)),
-      "6a" => (string)$sum(array_slice($vals,0,6)),
-      "6b" => (string)$sum(array_slice($vals,6,6)),
-      "6c" => (string)$sum(array_slice($vals,12,6)),
-      "9a" => (string)$sum(array_slice($vals,0,9)),
-      "9b" => (string)$sum(array_slice($vals,9,9)),
-      "9c" => (string)$sum($vals),
+      "competition" => trim((string)($gameRow["dbGames_Competition"] ?? "PairField")),
+      "grouping" => $groupingMode,
+      "rows" => $rows
     ];
   }
+
+  // ==========================================================================
+  // 2. Scorecard Scope Orchestration
+  // ==========================================================================
+
+  private static function determineGroupingModeFromGame(array $gameRow): string {
+    return (trim((string)($gameRow["dbGames_Competition"] ?? "")) === "PairPair") ? "flight" : "pairing";
+  }
+
+  public static function buildGroupsMap(array $players, string $mode): array {
+    $map = [];
+    foreach ($players as $p) {
+      $id = ($mode === "flight") ? self::normStr($p["dbPlayers_FlightID"] ?? "", "1") : self::normStr($p["dbPlayers_PairingID"] ?? "", "000");
+      if (!isset($map[$id])) $map[$id] = [];
+      $map[$id][] = $p;
+    }
+    return $map;
+  }
+
+  public static function buildGroupIds(array $map): array {
+    $keys = array_keys($map);
+    usort($keys, fn($a, $b) => strcmp((string)$a, (string)$b));
+    return $keys;
+  }
+
+  public static function sortPlayersForScorecard(array $players): array {
+    usort($players, function($a, $b) {
+      $aFlight = self::normStr($a["dbPlayers_FlightID"] ?? "", "ZZZ");
+      $bFlight = self::normStr($b["dbPlayers_FlightID"] ?? "", "ZZZ");
+      if ($aFlight !== $bFlight) return strcmp($aFlight, $bFlight);
+      $aPairPos = self::normInt($a["dbPlayers_PairingPos"] ?? null, 999);
+      $bPairPos = self::normInt($b["dbPlayers_PairingPos"] ?? null, 999);
+      if ($aPairPos !== $bPairPos) return $aPairPos <=> $bPairPos;
+      return strcmp(self::normStr($a["dbPlayers_LName"] ?? ""), self::normStr($b["dbPlayers_LName"] ?? ""));
+    });
+    return $players;
+  }
+
+  // ==========================================================================
+  // 3. Header and Meta Assembly
+  // ==========================================================================
+
+  private static function buildCourseName(array $gameRow): string {
+    $fac = trim((string)($gameRow["dbGames_FacilityName"] ?? ""));
+    $crs = trim((string)($gameRow["dbGames_CourseName"] ?? ""));
+    return preg_replace('/\b(.+)\b \1/', '$1', trim("$fac $crs"));
+  }
+
+  private static function buildGameHeader(array $gameRow, array $firstPlayer, string $courseName): array {
+    return array_merge($gameRow, [
+      "gameTitle" => (string)($gameRow["dbGames_Title"] ?? ""),
+      "GGID" => (string)($gameRow["dbGames_GGID"] ?? ""),
+      "courseName" => $courseName,
+      "playDate" => (string)($gameRow["dbGames_PlayDate"] ?? ""),
+      "holesPlayed" => (string)($gameRow["dbGames_Holes"] ?? "All 18"),
+      "playerKey" => (string)($firstPlayer["dbPlayers_PlayerKey"] ?? ""),
+    ]);
+  }
+
+  // ==========================================================================
+  // 4. Course Info Assembly
+  // ==========================================================================
 
   public static function getCourseInfoMap(array $gameRow, array $player): array {
     $teeDetails = $player["dbPlayers_TeeSetDetails"] ?? null;
@@ -384,24 +122,20 @@ final class ServiceScoreCard {
       }
     }
 
-    // spin-based hcp rank (default spin size 6)
     $spinSize = 6;
     $numSpins = (int)ceil(18 / $spinSize);
     for ($spinIndex=0;$spinIndex<$numSpins;$spinIndex++){
       $start = $spinIndex*$spinSize + 1;
       $end = min(($spinIndex+1)*$spinSize, 18);
-
       $spin = [];
       foreach ($map as $hn=>$data){
         if ($hn >= $start && $hn <= $end) $spin[$hn] = $data;
       }
-
       uasort($spin, function($a,$b){
         $ah = intval($a["hcp"] ?? 100);
         $bh = intval($b["hcp"] ?? 100);
         return $ah <=> $bh;
       });
-
       $rank=1;
       foreach ($spin as $hn=>$data){
         $map[$hn]["hcpSpin"] = $rank;
@@ -419,7 +153,213 @@ final class ServiceScoreCard {
     return $map;
   }
 
-  // ---------------- Stroke allocation (dots) ----------------
+  public static function getTeeSetIdsUsed(array $playersInGroup): array {
+    $set = [];
+    foreach ($playersInGroup as $p) {
+      $id = trim((string)($p["dbPlayers_TeeSetID"] ?? ""));
+      if ($id !== "") $set[$id] = true;
+    }
+    return $set;
+  }
+
+  public static function filterCourseRowsToTeeSetsUsed(array $courseRows, array $teeSetIdsUsedSet): array {
+    $out = [];
+    foreach ($courseRows as $row) {
+      $label = (string)($row["label"] ?? "");
+      if ($label === "Par" || $label === "HCP") {
+        $out[] = $row;
+        continue;
+      }
+      $teeSetId = (string)($row["teeSetId"] ?? "");
+      if ($teeSetId !== "" && isset($teeSetIdsUsedSet[$teeSetId])) {
+        $out[] = $row;
+      }
+    }
+    return $out;
+  }
+
+  public static function buildCourseInfoTableRows(array $gameRow, array $players): array {
+    $holesStd = range(1, 18);
+    $allYards = []; $allHcp = []; $allPar = [];
+
+    foreach ($players as $player) {
+      $teeSetID = $player["dbPlayers_TeeSetID"] ?? null;
+      $teeLabel = $player["dbPlayers_TeeSetName"] ?? null;
+      $teeDetails = $player["dbPlayers_TeeSetDetails"] ?? null;
+      if (!$teeSetID || !$teeLabel || !is_array($teeDetails)) continue;
+
+      $courseMap = self::getCourseInfoMap($gameRow, $player);
+      $yardages = []; $pars = []; $hcp = [];
+      foreach ($courseMap as $hole => $info) {
+        $h = intval($hole);
+        $yardages[$h] = $info["yardage"] ?? 0;
+        $pars[$h] = $info["par"] ?? 0;
+        $hcp[$h] = $info["hcp"] ?? 0;
+      }
+
+      $holesToPlay = (string)($gameRow["dbGames_Holes"] ?? "All 18");
+      $gender = (string)($player["dbPlayers_Gender"] ?? "Unknown");
+      $ratings = is_array($teeDetails["Ratings"] ?? null) ? $teeDetails["Ratings"] : ($teeDetails["ratings"] ?? []);
+      $ratingEntry = null;
+      foreach ($ratings as $r) {
+        $rt = $r["RatingType"] ?? $r["rating_type"] ?? "";
+        if ($holesToPlay === "F9" && $rt === "Front") $ratingEntry = $r;
+        else if ($holesToPlay === "B9" && $rt === "Back") $ratingEntry = $r;
+        else if (!in_array($holesToPlay, ["F9","B9"]) && $rt === "Total") $ratingEntry = $r;
+      }
+      $slope = floatval($ratingEntry["SlopeRating"] ?? $ratingEntry["slope_rating"] ?? 0);
+      $rating = floatval($ratingEntry["CourseRating"] ?? $ratingEntry["course_rating"] ?? 0);
+
+      $allYards[] = self::buildCourseRow((string)$teeLabel, (string)$teeSetID, "Yards", array_map(fn($h)=> (string)($yardages[$h] ?? 0), $holesStd), self::splitTotalFromMap($yardages), "Yards", 1, $slope, $rating, $gender);
+      $allHcp[] = self::buildCourseRow("HCP", (string)$teeSetID, "HCP", array_map(fn($h)=> (string)($hcp[$h] ?? 0), $holesStd), self::splitTotalFromMap($hcp), "HCP", 2, $slope, $rating, $gender);
+      $allPar[] = self::buildCourseRow("Par", (string)$teeSetID, "Par", array_map(fn($h)=> (string)($pars[$h] ?? 0), $holesStd), self::splitTotalFromMap($pars), "Par", 3, $slope, $rating, $gender);
+    }
+
+    $dedupY = self::dedupeCourseRows($allYards);
+    $dedupH = self::dedupeCourseRows($allHcp);
+    $dedupP = self::dedupeCourseRows($allPar);
+
+    $final = [];
+    foreach ($dedupY as $yardRow) {
+      $teeSetId = (string)($yardRow["teeSetId"] ?? "");
+      $final[] = $yardRow;
+      if (count($dedupH) > 1) { foreach ($dedupH as $r) if ((string)($r["teeSetId"] ?? "") === $teeSetId) { $final[] = $r; break; } }
+      if (count($dedupP) > 1) { foreach ($dedupP as $r) if ((string)($r["teeSetId"] ?? "") === $teeSetId) { $final[] = $r; break; } }
+    }
+    if (count($dedupP) === 1) $final[] = $dedupP[0];
+    if (count($dedupH) === 1) $final[] = $dedupH[0];
+
+    return $final;
+  }
+
+  private static function buildCourseRow(string $label, string $teeSetId, string $teeLabel, array $values, array $totals, string $lineType, int $lineSeq, float $slope, float $rating, string $gender): array {
+    $row = [
+      "rowType" => "Course",
+      "label" => $label,
+      "tee" => $teeLabel,
+      "teeSetId" => $teeSetId,
+      "cols" => array_map('strval', $values),
+      "lineType" => $lineType,
+      "lineSeq" => $lineSeq,
+      "slope" => $slope,
+      "rating" => $rating,
+      "gender" => $gender,
+    ];
+    for ($num = 1; $num <= 18; $num++) {
+      $row["h".$num] = (string)($values[$num-1] ?? "");
+    }
+    $subtotalFields = ["3a","3b","3c","3d","3e","3f","6a","6b","6c","9a","9b","9c"];
+    foreach ($subtotalFields as $k) {
+      $row[$k] = ($label === "HCP") ? "" : (string)($totals[$k] ?? "-");
+    }
+    return $row;
+  }
+
+  private static function dedupeCourseRows(array $courseRows): array {
+    $grouped = [];
+    foreach ($courseRows as $row) {
+      $key = (string)($row["label"] ?? "");
+      if (!isset($grouped[$key])) $grouped[$key] = [];
+      $grouped[$key][] = $row;
+    }
+    $result = [];
+    foreach ($grouped as $rows) {
+      $unique = [];
+      foreach ($rows as $r) {
+        $found = false;
+        foreach ($unique as $u) { if (self::courseRowEquals($u, $r)) { $found = true; break; } }
+        if (!$found) $unique[] = $r;
+      }
+      foreach ($unique as $u) $result[] = $u;
+    }
+    return $result;
+  }
+
+  private static function courseRowEquals(array $a, array $b): bool {
+    for ($h = 1; $h <= 18; $h++) {
+      if (($a["h".$h] ?? null) !== ($b["h".$h] ?? null)) return false;
+    }
+    return true;
+  }
+
+  private static function splitTotalFromMap(array $kpiMap): array {
+    $vals = [];
+    for ($i=1;$i<=18;$i++) $vals[] = intval($kpiMap[$i] ?? 0);
+    $sum = fn($arr) => array_sum($arr);
+
+    return [
+      "3a" => (string)$sum(array_slice($vals,0,3)),
+      "3b" => (string)$sum(array_slice($vals,3,3)),
+      "3c" => (string)$sum(array_slice($vals,6,3)),
+      "3d" => (string)$sum(array_slice($vals,9,3)),
+      "3e" => (string)$sum(array_slice($vals,12,3)),
+      "3f" => (string)$sum(array_slice($vals,15,3)),
+      "6a" => (string)$sum(array_slice($vals,0,6)),
+      "6b" => (string)$sum(array_slice($vals,6,6)),
+      "6c" => (string)$sum(array_slice($vals,12,6)),
+      "9a" => (string)$sum(array_slice($vals,0,9)),
+      "9b" => (string)$sum(array_slice($vals,9,9)),
+      "9c" => (string)$sum($vals),
+    ];
+  }
+
+  // ==========================================================================
+  // 5. Player Scorecard Context Assembly
+  // ==========================================================================
+
+  public static function buildGroupRowPayload(array $gameRow, array $players, $groupId, string $mode): array {
+    $first = $players[0] ?? [];
+    $courseName = self::buildCourseName($gameRow);
+    $teeSetIdsUsed = self::getTeeSetIdsUsed($players);
+    $courseRows = self::filterCourseRowsToTeeSetsUsed(self::buildCourseInfoTableRows($gameRow, $players), $teeSetIdsUsed);
+    return [
+      "groupId" => (string)$groupId,
+      "grouping" => $mode,
+      "pairingID" => (string)($first["dbPlayers_PairingID"] ?? ""),
+      "flightID" => (string)($first["dbPlayers_FlightID"] ?? ""),
+      "teeTime" => (string)($first["dbPlayers_TeeTime"] ?? ""),
+      "startHole" => (string)($first["dbPlayers_StartHole"] ?? ""),
+      "courseInfo" => $courseRows,
+      "players" => self::buildPlayersArray($players, $gameRow),
+      "gameHeader" => self::buildGameHeader($gameRow, $first, $courseName),
+    ];
+  }
+
+  public static function buildPlayersArray(array $playersInGroup, array $gameRow): array {
+    $isAdjGross = (trim((string)($gameRow["dbGames_ScoringMethod"] ?? "NET")) === "ADJ GROSS");
+    $out = [];
+    foreach ($playersInGroup as $player) {
+      $playerHC = self::calculateEffectiveHandicap($gameRow, $player);
+      $strokes = [];
+      if (!$isAdjGross && $playerHC != 0) {
+        $teeDetails = $player["dbPlayers_TeeSetDetails"] ?? null;
+        $teeHoles = is_array($teeDetails) ? ($teeDetails["holes"] ?? $teeDetails["Holes"] ?? []) : [];
+        $allocMap = self::buildStrokeAllocationMap($gameRow, $playerHC, $teeHoles);
+        foreach ($allocMap as $holeNum => $v) {
+          if (intval($v) !== 0) $strokes["h".$holeNum] = intval($v);
+        }
+      }
+      $out[] = array_merge($player, [
+        "playerName" => (string)($player["dbPlayers_Name"] ?? ""),
+        "playerHC" => $playerHC,
+        "tee" => (string)($player["dbPlayers_TeeSetName"] ?? ""),
+        "teeSetId" => trim((string)($player["dbPlayers_TeeSetID"] ?? "")),
+        "strokes" => $strokes,
+      ]);
+    }
+    return $out;
+  }
+
+  // ==========================================================================
+  // 6. Handicap and Stroke Allocation
+  // ==========================================================================
+
+  public static function calculateEffectiveHandicap(array $gameRow, array $playerRow): float {
+    if (trim((string)($gameRow["dbGames_ScoringMethod"] ?? "")) === "ADJ GROSS") return 0.0;
+    $useSO = str_starts_with(trim((string)($gameRow["dbGames_HCMethod"] ?? "CH")), "SO");
+    $raw = $useSO ? ($playerRow["dbPlayers_SO"] ?? 0) : ($playerRow["dbPlayers_PH"] ?? 0);
+    return is_numeric($raw) ? (float)$raw : 0.0;
+  }
 
   public static function buildStrokeAllocationMap(array $gameRow, $playerHC, array $teeSetHoles = []): array {
     $holes = [];
@@ -431,122 +371,69 @@ final class ServiceScoreCard {
         "hcpSpin" => intval($h["hcpSpin"] ?? ($h["Allocation"] ?? $h["allocation"] ?? 99)),
       ];
     }
-    $holes = array_values(array_filter($holes, fn($h) => $h["Number"] > 0));
-
-    $strokeMap = [];
-    foreach ($holes as $h) $strokeMap[$h["Number"]] = 0;
-
-    $strokeMode = (string)($gameRow["dbGames_StrokeDistribution"] ?? "Standard");
-    $holesToPlay = (string)($gameRow["dbGames_Holes"] ?? "All 18");
-    $rotation = (string)($gameRow["dbGames_RotationMethod"] ?? "");
-
-    // Filter holes for F9/B9
-    $filtered = array_values(array_filter($holes, function($h) use ($holesToPlay){
+    $filtered = array_values(array_filter($holes, function($h) use ($gameRow){
+      $holesToPlay = (string)($gameRow["dbGames_Holes"] ?? "All 18");
       if ($holesToPlay === "F9") return $h["Number"] >= 1 && $h["Number"] <= 9;
       if ($holesToPlay === "B9") return $h["Number"] >= 10 && $h["Number"] <= 18;
       return true;
     }));
-
+    $strokeMap = [];
+    foreach ($holes as $h) $strokeMap[$h["Number"]] = 0;
     if (!is_numeric($playerHC) || floatval($playerHC) == 0) return $strokeMap;
-
     $hc = floatval($playerHC);
-
-    // Standard allocation unless COD+nonstandard
+    $rotation = (string)($gameRow["dbGames_RotationMethod"] ?? "");
+    $strokeMode = (string)($gameRow["dbGames_StrokeDistribution"] ?? "Standard");
     if ($rotation !== "COD" || $strokeMode === "Standard") {
-      // Plus handicap: give back -1 to easiest holes
       if ($hc < 0) {
         $giveBack = (int)abs($hc);
-        $sortedEasy = $filtered;
-        usort($sortedEasy, fn($a,$b) => $b["Allocation"] <=> $a["Allocation"]); // 18..1
-        for ($i=0;$i<$giveBack;$i++){
-          $hole = $sortedEasy[$i % max(1,count($sortedEasy))] ?? null;
-          if ($hole) $strokeMap[$hole["Number"]] = -1;
-        }
-        return $strokeMap;
-      }
-
-      $base = (int)floor($hc / 18);
-      $remainder = (int)($hc % 18);
-
-      foreach ($filtered as $h) $strokeMap[$h["Number"]] = $base;
-
-      $sortedHardest = $filtered;
-      usort($sortedHardest, fn($a,$b) => $a["Allocation"] <=> $b["Allocation"]); // 1..18
-      for ($i=0;$i<$remainder;$i++){
-        $hole = $sortedHardest[$i % max(1,count($sortedHardest))] ?? null;
-        if ($hole) $strokeMap[$hole["Number"]] += 1;
+        usort($filtered, fn($a,$b) => $b["Allocation"] <=> $a["Allocation"]);
+        for ($i=0;$i<$giveBack;$i++) if ($h = $filtered[$i % count($filtered)]) $strokeMap[$h["Number"]] = -1;
+      } else {
+        $base = (int)floor($hc / 18); $rem = (int)($hc % 18);
+        foreach ($filtered as $h) $strokeMap[$h["Number"]] = $base;
+        usort($filtered, fn($a,$b) => $a["Allocation"] <=> $b["Allocation"]);
+        for ($i=0;$i<$rem;$i++) if ($h = $filtered[$i % count($filtered)]) $strokeMap[$h["Number"]] += 1;
       }
       return $strokeMap;
     }
-
-    // Balanced-Rounded (COD + Balanced-Rounded)
     if ($rotation === "COD" && $strokeMode === "Balanced-Rounded") {
-      $isPlus = ($hc < 0);
-      $total = (int)abs($hc);
-      $strokesPerSpin = (int)floor($total / 3);
-      $extra = $total % 3;
-
+      $isPlus = ($hc < 0); $total = (int)abs($hc);
+      $basePer = (int)floor($total / 3); $rem = $total % 3;
       $spins = [[],[],[]];
       foreach ($filtered as $h){
-        if ($h["Number"] >= 1 && $h["Number"] <= 6) $spins[0][] = $h;
-        else if ($h["Number"] >= 7 && $h["Number"] <= 12) $spins[1][] = $h;
-        else $spins[2][] = $h;
+        if ($h["Number"] <= 6) $spins[0][]=$h; else if ($h["Number"] <= 12) $spins[1][]=$h; else $spins[2][]=$h;
       }
-
       foreach ($spins as $idx=>$spin){
-        $sorted = $spin;
-        usort($sorted, function($a,$b) use ($isPlus){
-          return $isPlus ? ($b["hcpSpin"] <=> $a["hcpSpin"]) : ($a["hcpSpin"] <=> $b["hcpSpin"]);
-        });
-        $count = $strokesPerSpin + ($idx < $extra ? 1 : 0);
-        for ($i=0;$i<$count;$i++){
-          $hole = $sorted[$i % max(1,count($sorted))] ?? null;
-          if ($hole) $strokeMap[$hole["Number"]] += $isPlus ? -1 : 1;
-        }
+        usort($spin, fn($a,$b) => $isPlus ? ($b["hcpSpin"] <=> $a["hcpSpin"]) : ($a["hcpSpin"] <=> $b["hcpSpin"]));
+        $count = $basePer + ($idx < $rem ? 1 : 0);
+        for ($i=0;$i<$count;$i++) if ($h = $spin[$i % count($spin)]) $strokeMap[$h["Number"]] += $isPlus ? -1 : 1;
       }
       return $strokeMap;
     }
-
-    // Balanced (non-rounded)
-    if ($strokeMode === "Balanced") {
-      $isPlus = ($hc < 0);
-      $strokes = (int)abs($hc);
-      $basePer = (int)floor($strokes / 3);
-      $extra = $strokes % 3;
-
-      $spins = [[],[],[]];
-      foreach ($filtered as $h){
-        if ($h["Number"] >= 1 && $h["Number"] <= 6) $spins[0][] = $h;
-        else if ($h["Number"] >= 7 && $h["Number"] <= 12) $spins[1][] = $h;
-        else $spins[2][] = $h;
-      }
-
-      foreach ($spins as $spin){
-        $sorted = $spin;
-        usort($sorted, function($a,$b) use ($isPlus){
-          return $isPlus ? ($b["hcpSpin"] <=> $a["hcpSpin"]) : ($a["hcpSpin"] <=> $b["hcpSpin"]);
-        });
-        for ($i=0;$i<$basePer;$i++){
-          $hole = $sorted[$i % max(1,count($sorted))] ?? null;
-          if ($hole) $strokeMap[$hole["Number"]] += $isPlus ? -1 : 1;
-        }
-      }
-
-      // distribute remainder to untouched holes hardest/easiest by Allocation
-      $assigned = [];
-      foreach ($strokeMap as $hn=>$val) if ($val != 0) $assigned[intval($hn)] = true;
-
-      $remaining = array_values(array_filter($filtered, fn($h)=> !isset($assigned[$h["Number"]])));
-      usort($remaining, function($a,$b) use ($isPlus){
-        return $isPlus ? ($b["Allocation"] <=> $a["Allocation"]) : ($a["Allocation"] <=> $b["Allocation"]);
-      });
-      for ($i=0;$i<$extra;$i++){
-        $hole = $remaining[$i] ?? null;
-        if ($hole) $strokeMap[$hole["Number"]] += $isPlus ? -1 : 1;
-      }
-      return $strokeMap;
-    }
-
     return $strokeMap;
+  }
+
+  // ==========================================================================
+  // 7. Future Scorecard View-Model Adapters
+  // ==========================================================================
+
+  // Stubs for later in-play/post-play summary logic
+
+  // ==========================================================================
+  // 8. Generic Utility Helpers
+  // ==========================================================================
+
+  public static function normStr($v, string $fallback=""): string {
+    $s = trim((string)($v ?? ""));
+    return $s !== "" ? $s : $fallback;
+  }
+
+  public static function normInt($v, int $fallback=0): int {
+    $s = trim((string)($v ?? ""));
+    return is_numeric($s) ? (int)$s : $fallback;
+  }
+
+  private static function holesStandard(): array {
+    return range(1, 18);
   }
 }

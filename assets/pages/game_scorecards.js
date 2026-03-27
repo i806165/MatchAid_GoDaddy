@@ -8,38 +8,190 @@
 (function () {
   "use strict";
 
+  // ==========================================================================
+  // 1. Bootstrap / INIT
+  // ==========================================================================
   const MA = window.MA || {};
   const chrome = MA.chrome || {};
   const init = window.__INIT__ || window.__MA_INIT__ || {};
   const game = init.game || {};
-  const scorecards = init.scorecards || init; // fallback during transition
-  
-  const setStatus = (msg, level) => (typeof MA.setStatus === "function" ? MA.setStatus(msg, level) : console.log("[STATUS]", level || "info", msg));
+  const scorecards = init.scorecards || {};
 
-  const el = {
-    host: document.getElementById("scHost"),
-    empty: document.getElementById("scEmpty"),
-  };
-
+  // ==========================================================================
+  // 2. Generic DOM Helpers
+  // ==========================================================================
   function esc(s) {
     return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
-
   function qs(name) {
     try { return new URLSearchParams(window.location.search).get(name); } catch { return null; }
   }
+  function clearHost() {
+    const host = document.getElementById("scHost");
+    if (host) host.innerHTML = "";
+  }
+  function formatDate(s) {
+    if (!s) return "";
+    let d = String(s).match(/^\d{4}-\d{2}-\d{2}$/) ? new Date(...s.split("-").map((n, i) => i === 1 ? n - 1 : n)) : new Date(s);
+    if (isNaN(d.getTime())) return s;
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yy = String(d.getFullYear()).slice(-2);
+    return `${dayName} ${mm}/${dd}/${yy}`;
+  }
 
+  // ==========================================================================
+  // 3. Payload Normalization
+  // ==========================================================================
   function normalizePayload(p) {
-    const competition = String(p?.competition ?? "");
-    const grouping = String(p?.grouping ?? "");
+    const competition = String(p?.competition || "");
+    const grouping = String(p?.grouping || "");
     const rows = Array.isArray(p?.rows) ? p.rows : [];
     const meta = p?.meta || {};
     return { competition, grouping, rows, meta };
   }
 
+  // ==========================================================================
+  // 4. Shared Scorecard Render Primitives
+  // ==========================================================================
+  function buildStrokeMark(n) {
+    const num = Number(n || 0);
+    if (!Number.isFinite(num) || num === 0) return "";
+    return `<sup class="scStrokeSup" aria-label="strokes">${num < 0 ? "−" : ""}${Math.abs(num)}</sup>`;
+  }
+
+  function renderTable(group) {
+    const courseRows = Array.isArray(group.courseInfo) ? group.courseInfo : [];
+    const players = Array.isArray(group.players) ? group.players : [];
+    const isAdjGross = (String(game.dbGames_ScoringMethod || "").toUpperCase() === "ADJ GROSS");
+    const isMatchPlay = (String(group.competition || "").toLowerCase() === "pairpair");
+    
+    let html = '<table class="scTable" role="table" aria-label="scorecard"><thead><tr><th class="scName">HOLE</th>';
+    for (let h = 1; h <= 9; h++) html += `<th>${h}</th>`;
+    html += '<th class="scMeta">Out</th>';
+    for (let h = 10; h <= 18; h++) html += `<th>${h}</th>`;
+    html += '<th class="scMeta">In</th><th class="scMeta">Tot</th></tr></thead><tbody>';
+
+    courseRows.forEach((r) => {
+      html += `<tr><td class="scName">${esc(r.label)}${r.tee && !["Par","HCP"].includes(r.label) ? " — " + esc(r.tee) : ""}</td>`;
+      for (let h = 1; h <= 9; h++) html += `<td>${esc(r["h" + h] ?? "")}</td>`;
+      html += `<td class="scMeta">${esc(r["9a"] ?? "")}</td>`;
+      for (let h = 10; h <= 18; h++) html += `<td>${esc(r["h" + h] ?? "")}</td>`;
+      html += `<td class="scMeta">${esc(r["9b"] ?? "")}</td><td class="scMeta">${esc(r["9c"] ?? "")}</td></tr>`;
+    });
+
+    const rowsToRender = isMatchPlay ? [players[0], players[1], null, players[2], players[3], null] : [...players.slice(0,4), null, null];
+
+    rowsToRender.forEach(p => {
+      html += "<tr>";
+      if (!p) {
+        html += '<td class="scName">&nbsp;</td>' + '<td></td>'.repeat(9) + '<td class="scMeta"></td>' + '<td></td>'.repeat(9) + '<td class="scMeta"></td><td class="scMeta"></td>';
+      } else {
+        const hcText = !isAdjGross && Number.isFinite(Number(p.playerHC)) ? `(${p.playerHC})` : "";
+        html += `<td class="scName"><div class="scPLine1">${esc(p.playerName)} <span class="scPHC">${esc(hcText)}</span></div><div class="scPLine2">${esc(p.tee || "")}</div></td>`;
+        for (let h = 1; h <= 9; h++) html += `<td class="scStrokeCell">${buildStrokeMark(p.strokes?.["h" + h])}</td>`;
+        html += '<td class="scMeta"></td>';
+        for (let h = 10; h <= 18; h++) html += `<td class="scStrokeCell">${buildStrokeMark(p.strokes?.["h" + h])}</td>`;
+        html += '<td class="scMeta"></td><td class="scMeta"></td>';
+      }
+      html += "</tr>";
+    });
+    return html + "</tbody></table>";
+  }
+
+  function renderGroup(group) {
+    const courseRowsCount = Array.isArray(group.courseInfo) ? group.courseInfo.length : 0;
+    const densityClass = (courseRowsCount + 6 > 14) ? "scDenseC" : (courseRowsCount + 6 > 12) ? "scDenseB" : (courseRowsCount + 6 > 10) ? "scDenseA" : "";
+    const gh = group.gameHeader || {};
+    const subLine = [esc(gh.courseName), formatDate(gh.playDate), group.teeTime ? esc(group.teeTime) : ""].filter(Boolean).join(" • ");
+    const scoreCardId = String(gh.playerKey || "").trim();
+    const qrUrl = (scoreCardId && gh.GGID) ? `${window.location.origin}/app/score_entry/scoreentry.php?key=${encodeURIComponent(scoreCardId)}` : "";
+
+    return `<div class="scGroup ${densityClass}"><div class="scHdr"><div class="scHdr__left"><div class="scHdrTop"><img class="scLogo" src="/assets/images/MatchAidLogoSquare.jpeg" alt="MatchAid" /><div class="scHdrText"><div class="scHdr__title">${esc(gh.gameTitle || "Game")}</div><div class="scHdr__sub">${subLine}</div></div></div></div><div class="scHdr__right"><div class="scHdrRightText"><div class="scHdrLink">Live Scoring at ${window.location.host}/app/score_entry/scoreentry.php</div><div class="scHdrKey">Use ScoreCard-ID: <span class="scHdrKeyVal">${esc(scoreCardId)}</span></div></div><div class="scQR">${qrUrl ? `<img alt="QR" src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(qrUrl)}">` : ""}</div></div></div>${renderTable(group)}${renderFooter(group)}</div>`;
+  }
+
+  function renderFooter(group) {
+    const gh = group.gameHeader || {};
+    const left = [gh.GGID ? `Game ${gh.GGID}` : "", group.flightID ? `Match ${group.flightID}` : "", group.pairingID ? `Pairing ${group.pairingID}` : ""].filter(Boolean).join(" • ");
+    return `<div class="scFooter"><div class="scFooterRow"><div class="scFooterBox"><div class="scFooterLine"></div><div class="scFooterLabel">SCORER</div></div><div class="scFooterBox"><div class="scFooterLine"></div><div class="scFooterLabel">ATTEST</div></div></div><div class="scFooterMeta"><div class="scFooterLeft">${esc(left)}</div><div class="scFooterRight">© ${new Date().getFullYear()} MatchAid</div></div></div>`;
+  }
+
+  function renderPages(rows) {
+    const host = document.getElementById("scHost");
+    const empty = document.getElementById("scEmpty");
+    if (!host) return;
+    clearHost();
+    if (!rows.length) { if (empty) empty.style.display = "block"; return; }
+    if (empty) empty.style.display = "none";
+    for (let i = 0; i < rows.length; i += 2) {
+      const page = document.createElement("section");
+      page.className = "scPage";
+      page.innerHTML = renderGroup(rows[i]) + (rows[i+1] ? `<div class="scPage__divider"></div>${renderGroup(rows[i+1])}` : "");
+      host.appendChild(page);
+    }
+  }
+
+  // ==========================================================================
+  // 5. Display-Mode Adapters
+  // ==========================================================================
+  function getActiveValueMode() { return "blank"; }
+  function getCellDisplayValue(p, hole) { return ""; }
+  function getRowTotals(p) { return { out: "", in: "", tot: "" }; }
+  function getSummaryRows(p) { return []; }
+
+  // ==========================================================================
+  // 6. Expansion-State Adapters
+  // ==========================================================================
+  function isPlayerExpanded(pId) { return false; }
+  function isTotalsExpanded() { return false; }
+  function renderExpandedPlayerRows(p) { return ""; }
+  function renderExpandedTotalsColumns(p) { return ""; }
+
+  // ==========================================================================
+  // 7. Page Actions / Print
+  // ==========================================================================
+  function onPrint() { try { window.print(); } catch (e) {} }
+  function applyChrome() {
+    const subtitle = [game.dbGames_CourseName, formatDate(game.dbGames_PlayDate)].filter(Boolean).join(" • ");
+    if (chrome.setHeaderLines) chrome.setHeaderLines(["Scorecard", game.dbGames_Title || "Game", subtitle]);
+    if (chrome.setActions) chrome.setActions({ right: { show: true, label: "Print", onClick: onPrint } });
+    if (chrome.setBottomNav) chrome.setBottomNav({ visible: ["admin", "edit", "roster", "pairings", "teetimes", "summary"], active: "scorecard", onNavigate: (id) => MA.routerGo?.(id) });
+  }
+  function bindActions() {}
+
+  // ==========================================================================
+  // 8. Page Controller
+  // ==========================================================================
+  function render() {
+    const payload = normalizePayload(scorecards);
+    renderPages(payload.rows);
+  }
+  function initialize() {
+    applyChrome();
+    render();
+    if (qs("autoprint") === "1") setTimeout(onPrint, 250);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize);
+  else initialize();
+})();
+
   function clearHost() {
     if (el.host) el.host.innerHTML = "";
   }
+
+  // ==========================================================================
+  // 3. Payload Normalization
+  // ==========================================================================
+  function normalizePayload(p) {
+    const competition = String(p?.competition || "");
+    const grouping = String(p?.grouping || "");
+    const rows = Array.isArray(p?.rows) ? p.rows : [];
+    const meta = p?.meta || {};
+    return { competition, grouping, rows, meta };
+  }
+
+  // ==================== Shared Scorecard Render Primitives ====================
 
   function buildStrokeMark(n) {
     const num = Number(n || 0);
@@ -49,6 +201,25 @@
     const abs = Math.abs(num);
     const sign = num < 0 ? "−" : ""; // nicer minus
     return `<sup class="scStrokeSup" aria-label="strokes">${sign}${abs}</sup>`;
+  }
+
+  function formatDate(s) {
+    if (!s) return "";
+    let d = null;
+    if (String(s).match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const [y, m, day] = s.split("-").map(Number);
+      d = new Date(y, m - 1, day);
+    } else {
+      d = new Date(s);
+    }
+    if (isNaN(d.getTime())) return s;
+    
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yy = String(d.getFullYear()).slice(-2);
+    
+    return `${dayName} ${mm}/${dd}/${yy}`;
   }
 
   function renderTable(group, densityClass) {
@@ -174,28 +345,6 @@
     return html;
   }
 
-  function formatDate(s) {
-    if (!s) return "";
-    // Try to parse YYYY-MM-DD or similar
-    // Note: "2026-02-21" parses as UTC in JS Date usually, but we want local date parts.
-    // Best to split string if ISO.
-    let d = null;
-    if (String(s).match(/^\d{4}-\d{2}-\d{2}$/)) {
-      const [y, m, day] = s.split("-").map(Number);
-      d = new Date(y, m - 1, day);
-    } else {
-      d = new Date(s); // fallback
-    }
-    if (isNaN(d.getTime())) return s; // return original if invalid
-    
-    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' }); // Sat
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    const yy = String(d.getFullYear()).slice(-2);
-    
-    return `${dayName} ${mm}/${dd}/${yy}`;
-  }
-
   function renderGroup(group) {
     // Calculate Density
     const courseRows = Array.isArray(group.courseInfo) ? group.courseInfo.length : 0;
@@ -208,105 +357,10 @@
     else if (totalRows > 10) densityClass = "scDenseA";
 
     const gh = group.gameHeader || {};
-    const title = esc(gh.gameTitle || "Game");
-    const courseName = esc(gh.courseName || "");
-    const qrKey = String(gh.playerKey || "").trim();
-    const ggid = esc(gh.GGID || "");
-
-    // Header Line 2 Construction
-    // 1) Date: dd mm/dd/yy (e.g. Sat 02/21/26)
-    let dateStr = "";
-    if (gh.playDate) {
-      dateStr = formatDate(gh.playDate);
-    }
-
-    // 2) Tee Time
-    const teeTime = group.teeTime ? esc(group.teeTime) : "";
-
-    // 3) Starting Hole (implied from tee time usually, or explicit if we had it)
-    let suffix = group.startHoleSuffix || "";
-    if (!suffix && Array.isArray(group.players)) {
-      const p = group.players.find((x) => x && (x.dbPlayers_StartHoleSuffix || x.startHoleSuffix));
-      if (p) suffix = p.dbPlayers_StartHoleSuffix || p.startHoleSuffix;
-    }
-    const startHole = group.startHole ? `Hole ${esc(group.startHole)}${esc(suffix)}` : "";
-
-    // 4) HC Effectivity
-    // This comes from game object in init, not group.
-    const hcEff = game.dbGames_HCEffectivity || "";
-    const hcDate = game.dbGames_HCEffectivityDate || "";
-    let hcLabel = "";
-    if (hcEff === "Date" && hcDate) hcLabel = `HC ${esc(hcDate)}`;
-    else if (hcEff) hcLabel = `HC ${esc(hcEff)}`;
-
-    // Combine parts
-    const parts = [courseName, dateStr, teeTime, startHole].filter(Boolean);
-    const subLine = parts.join(" • ");
-
-    // Header Line 3: Format + Segments
-    const gameformat = String(gh.dbGames_GameFormat || "").trim();
-    let segmentLabel = "";
-    if (String(gh.dbGames_RotationMethod) != "None") {
-      const seg = String(gh.dbGames_Segments || "");
-      if (seg) segmentLabel = `${seg}-Hole Segments`;
-    }
-
-    const allowance = game.dbGames_Allowance ? `${game.dbGames_Allowance}%` : "";
-    const line3 = [
-      gameformat,
-      String(game.dbGames_ScoringBasis || ""),
-      String(game.dbGames_StrokeDistribution || ""),
-      String(game.dbGames_ScoringMethod || ""),
-      hcLabel,
-      allowance,
-      segmentLabel
-    ].filter(Boolean).join(" • ");
-
-    // Header Line 4: Scoring System Details
-    let line4 = "";
-    const sys = String(game.dbGames_ScoringSystem || "").trim();
-    
-    if (sys === "BestBall") {
-      const cnt = game.dbGames_BestBallCnt || "1";
-      line4 = ` (${cnt}) Best Ball(s)`;
-    } else if (sys === "DeclareHole") {
-      // Format: H1:1, H2:2...
-      try {
-        const raw = JSON.parse(game.dbGames_HoleDeclaration || "[]");
-        // Normalize to map: hole -> count
-        const map = {};
-        if (Array.isArray(raw)) {
-          raw.forEach(r => { if (r && r.hole) map[r.hole] = r.count; });
-        } else {
-          // fallback if stored as object { "1": "2" }
-          Object.assign(map, raw);
-        }
-
-        const pairs = [];
-        // We'll iterate 1..18
-        for (let h=1; h<=18; h++) {
-          const val = map[h] ?? map[String(h)];
-          if (val != null) pairs.push(`H${h}:${val}`);
-        }
-        if (pairs.length > 0) line4 = "Balls per Hole: " + pairs.join(" • ");
-        else line4 = "Hole Declarations";
-      } catch (e) {
-        line4 = "Hole Declarations";
-      }
-    } else if (sys === "DeclarePlayer") {
-      line4 = String((game.dbGames_PlayerDeclaration || "1") + "x (per Player)");
-    } else if (sys) {
-      // Fallback for other systems (e.g. "Individual")
-      line4 = sys;
-    }
-
-    // QR url contract (update later if your scoring URL differs)
+    const subLine = [esc(gh.courseName), formatDate(gh.playDate), group.teeTime ? esc(group.teeTime) : ""].filter(Boolean).join(" • ");
+    const scoreCardId = String(gh.playerKey || "").trim();
     const origin = window.location.origin;
-    const qrUrl = qrKey && ggid
-      ? `${origin}/app/score_entry/scoreentry.php?key=${encodeURIComponent(qrKey)}`
-      : "";
-
-      const scoreCardId = qrKey; // dbPlayers_PlayerKey (first player in group per your existing rule)
+    const qrUrl = (scoreCardId && gh.GGID) ? `${origin}/app/score_entry/scoreentry.php?key=${encodeURIComponent(scoreCardId)}` : "";
 
       return `
         <div class="scGroup ${densityClass}">
@@ -316,15 +370,11 @@
               <div class="scHdrTop">
                 <img class="scLogo" src="/assets/images/MatchAidLogoSquare.jpeg" alt="MatchAid" />
                 <div class="scHdrText">
-                  <div class="scHdr__title">${title}</div>
+                  <div class="scHdr__title">${esc(gh.gameTitle || "Game")}</div>
                   <div class="scHdr__sub">${subLine}</div>
-                  ${line3 ? `<div class="scHdr__sub2" style="font-weight:700;">${esc(line3)}</div>` : ""}
-                  ${line4 ? `<div class="scHdr__sub2">${esc(line4)}</div>` : ""}
                 </div>
               </div>
-
             </div>
-
             <div class="scHdr__right">
               <div class="scHdrRightText">
                 <div class="scHdrLink">Live Scoring at ${window.location.host}/app/score_entry/scoreentry.php</div>
@@ -402,38 +452,44 @@
     }
   }
 
+  // ==========================================================================
+  // 5. Display-Mode Adapters
+  // ==========================================================================
+
+  function getActiveValueMode() { return "blank"; }
+  function getCellDisplayValue(p, hole) { return ""; }
+  function getRowTotals(p) { return { out: "", in: "", tot: "" }; }
+  function getSummaryRows(p) { return []; }
+
+  // ==========================================================================
+  // 6. Expansion-State Adapters
+  // ==========================================================================
+
+  function isPlayerExpanded(pId) { return false; }
+  function isTotalsExpanded() { return false; }
+  function renderExpandedPlayerRows(p) { return ""; }
+  function renderExpandedTotalsColumns(p) { return ""; }
+
+  // ==========================================================================
+  // 7. Page Actions / Print
+  // ==========================================================================
+
   function onPrint() {
     try { window.print(); } catch (e) { /* ignore */ }
   }
-
-  function openActionsMenu() {
-    if (!MA.ui || !MA.ui.openActionsMenu) return;
-    
-    const items = [
-      { label: "Game Settings", action: "settings", params: { returnTo: "scorecard" } },
-      { separator: true },
-      { label: "Print", action: onPrint }
-    ];
-    MA.ui.openActionsMenu("Actions", items);
-  }
-
-  function applyChrome(payload) {
+  function applyChrome() {
     const title = String(game.dbGames_Title || "Game");
     const course = String(game.dbGames_CourseName || "");
     const date = formatDate(game.dbGames_PlayDate);
     const subtitle = [course, date].filter(Boolean).join(" • ");
-
     if (chrome && typeof chrome.setHeaderLines === "function") {
       chrome.setHeaderLines(["Scorecard", title, subtitle]);
     }
-
     if (chrome && typeof chrome.setActions === "function") {
       chrome.setActions({
-        left: { show: true, label: "Actions", onClick: openActionsMenu },
         right: { show: true, label: "Print", onClick: onPrint }
       });
     }
-
     if (chrome && typeof chrome.setBottomNav === "function") {
       chrome.setBottomNav({
         visible: ["admin", "edit", "roster", "pairings", "teetimes", "summary"],
@@ -442,17 +498,22 @@
       });
     }
   }
+  function bindActions() {
+    // Placeholder for future expansion toggle events
+  }
 
-  function initPage() {
+  // ==========================================================================
+  // 8. Page Controller
+  // ==========================================================================
+
+  function render() {
+    const payload = normalizePayload(scorecards);
+    renderPages(payload.rows || []);
+  }
+  function initialize() {
     try {
-      const payload = normalizePayload(scorecards);
-      payload.meta = init.meta || payload.meta || {};      
-      if (!el.host) console.error("[SCORECARDS] DOM Error: #scHost element not found.");
-
-      applyChrome(payload);
-      renderPages(payload.rows || []);
-      setStatus("Ready.", "success");
-
+      applyChrome();
+      render();
       const ap = qs("autoprint");
       if (String(ap || "") === "1") {
         setTimeout(onPrint, 250);
@@ -463,6 +524,6 @@
     }
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initPage);
-  else initPage();
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize);
+  else initialize();
 })();

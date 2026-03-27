@@ -4,53 +4,46 @@ declare(strict_types=1);
 
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Db.php";
-require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/scoring/service_ScoreCard.php";
 
-/**
- * initScoreCard
- * Used two ways:
- *  (A) included by /app/game_scorecards/scorecards.php to embed INIT (preferred)
- *  (B) called directly as an API endpoint returning JSON
- */
 function initScoreCard(string $ggid, array $ctx = []): array {
+  // ==========================================================================
+  // Hydration
+  // ==========================================================================
   $ggid = trim($ggid);
-  if ($ggid === "") {
-    return ["ok" => false, "error" => "missing_ggid"];
-  }
+  if ($ggid === "") return ["ok" => false, "error" => "missing_ggid"];
 
   $pdo = Db::pdo();
 
-  // Load game row
+  // 1. Load Game
   $stmt = $pdo->prepare("SELECT * FROM db_Games WHERE dbGames_GGID = :ggid LIMIT 1");
   $stmt->execute([":ggid" => $ggid]);
   $game = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
-  // Load player rows
+  // 2. Load Players
   $stmtP = $pdo->prepare("SELECT * FROM db_Players WHERE dbPlayers_GGID = :ggid ORDER BY dbPlayers_PairingID, dbPlayers_PairingPos");
   $stmtP->execute([":ggid" => $ggid]);
   $players = $stmtP->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-  // Decode TeeSetDetails JSON if stored as string
+  // 3. Normalize JSON Fields
   foreach ($players as &$p) {
-    foreach (["dbPlayers_TeeSetDetails", "dbPlayers_TeeSetDetailsJSON"] as $k) {
-      if (isset($p[$k]) && is_string($p[$k]) && trim($p[$k]) !== "") {
-        $decoded = json_decode($p[$k], true);
-        if (is_array($decoded)) {
-          $p["dbPlayers_TeeSetDetails"] = $decoded;
-          break;
-        }
-      }
+    $jsonRaw = $p["dbPlayers_TeeSetDetails"] ?? $p["dbPlayers_TeeSetDetailsJSON"] ?? "";
+    if (is_string($jsonRaw) && trim($jsonRaw) !== "") {
+      $decoded = json_decode($jsonRaw, true);
+      if (is_array($decoded)) $p["dbPlayers_TeeSetDetails"] = $decoded;
     }
   }
   unset($p);
 
+  // ==========================================================================
+  // Payload Dispatch
+  // ==========================================================================
   $scorecards = ServiceScoreCard::buildBlankScorecardPayload($game, $players);
 
   return [
     "ok" => true,
-    "game" => $game,          // raw db_Games row (no transformations)
-    "players" => $players,    // raw db_Players rows (optional but recommended)
+    "game" => $game,
+    "players" => $players,
     "scorecards" => $scorecards,
     "meta" => [
       "playerCount" => count($players),
