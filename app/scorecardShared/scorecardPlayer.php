@@ -7,8 +7,8 @@ require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_API . "/game_scorecard/initScoreCard.php";
 require_once __DIR__ . "/scorecardShared.php";
 
-$ctx = ServiceUserContext::getUserContext();
-if (!$ctx || empty($ctx['ok'])) { header('Location: ' . MA_ROUTE_LOGIN); exit; }
+//$ctx = ServiceUserContext::getUserContext();
+//if (!$ctx || empty($ctx['ok'])) { header('Location: ' . MA_ROUTE_LOGIN); exit; }
 try {
   $ggid = ServiceContextGame::getStoredGGID();
   if (!$ggid) {
