@@ -144,19 +144,39 @@ function renderGroup(group) {
   // ==========================================================================
   const gameFormat = String(gh.dbGames_GameFormat || game.dbGames_GameFormat || "").trim();
   const scoringBasis = String(game.dbGames_ScoringBasis || "").trim();
-  const strokeDist = String(game.dbGames_StrokeDistribution || "").trim();
   const scoringMethod = String(game.dbGames_ScoringMethod || "").trim();
+  const strokeDist = String(game.dbGames_StrokeDistribution || "").trim();
   const allowanceRaw = String(game.dbGames_Allowance || "").trim();
 
   const hcEff = String(game.dbGames_HCEffectivity || "").trim();
   const hcDate = String(game.dbGames_HCEffectivityDate || "").trim();
 
+  let formatLabel = "";
+  if (gameFormat && scoringBasis && scoringMethod) {
+    formatLabel = `Format: ${esc(gameFormat)} based on ${esc(scoringBasis)} using ${esc(scoringMethod)} scoring`;
+  } else if (gameFormat && scoringBasis) {
+    formatLabel = `Format: ${esc(gameFormat)} based on ${esc(scoringBasis)}`;
+  } else if (gameFormat && scoringMethod) {
+    formatLabel = `Format: ${esc(gameFormat)} using ${esc(scoringMethod)} scoring`;
+  } else if (gameFormat) {
+    formatLabel = `Format: ${esc(gameFormat)}`;
+  }
+
+  const isGrossScoring = scoringMethod.toUpperCase() === "GROSS" || scoringMethod.toUpperCase() === "ADJ GROSS";
+
   let hcLabel = "";
-  if (hcEff === "Date" && hcDate) hcLabel = `HC Effective ${esc(hcDate)}`;
-  else if (hcEff) hcLabel = `HC Effective ${esc(hcEff)}`;
+  if (!isGrossScoring) {
+    if (hcEff === "Date" && hcDate) hcLabel = `HC Effective as of ${esc(hcDate)}`;
+    else if (hcEff) hcLabel = `HCP Effective using ${esc(hcEff)}`;
+  }
 
   let allowanceLabel = "";
-  if (allowanceRaw) allowanceLabel = `Allowance ${esc(allowanceRaw)}%`;
+  if (!isGrossScoring && allowanceRaw) {
+    allowanceLabel = `Allowance ${esc(allowanceRaw)}%`;
+  }
+
+  let strokeDistLabel = "";
+  if (strokeDist) strokeDistLabel = `Stroke Distribution ${esc(strokeDist)}`;
 
   let segmentLabel = "";
   if (String(gh.dbGames_RotationMethod || game.dbGames_RotationMethod || "").trim() !== "None") {
@@ -165,12 +185,10 @@ function renderGroup(group) {
   }
 
   const line3 = [
-    gameFormat,
-    scoringBasis,
-    strokeDist,
-    scoringMethod,
+    formatLabel,
     hcLabel,
     allowanceLabel,
+    strokeDistLabel,
     segmentLabel
   ].filter(Boolean).join(" • ");
 
