@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 require_once __DIR__ . "/../../bootstrap.php";
+
+if (session_status() !== PHP_SESSION_ACTIVE) {
+  session_start();
+}
+
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
@@ -19,11 +24,9 @@ if (!$ctx || empty($ctx["ok"])) {
 try {
   $ggid = ServiceContextGame::getStoredGGID();
   if (!$ggid) {
-    $ggidInput = $_GET['ggid'] ?? $_SESSION['SessionStoredGGID'] ?? '';
-    if ($ggidInput) ServiceContextGame::setGameContext((int)$ggidInput);
-    $ggid = ServiceContextGame::getStoredGGID();
+    error_log('[MA][ERROR][SCORECARDS_ENTRY] Missing SessionStoredGGID.');
+    throw new RuntimeException("No game selected.");
   }
-  if (!$ggid) throw new RuntimeException("No game selected.");
   $initPayload = initScoreCard((string)$ggid, $ctx);
 } catch (Throwable $e) {
   die("Scorecard Init Error: " . $e->getMessage());

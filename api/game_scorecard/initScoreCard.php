@@ -123,10 +123,15 @@ function initScoreCard(string $ggid, array $ctx = []): array {
 
 /**
  * initScoredScoreCard
- * New shared initializer for:
+ * Shared initializer for in-game / post-game scored scorecards.
+ *
+ * Used for:
  * - player scorecard
  * - group scorecard
  * - game scorecards
+ *
+ * This initializer does NOT require user context.
+ * It relies only on GGID, mode, scope, and persisted game/player/score data.
  *
  * $mode:
  * - player
@@ -138,7 +143,7 @@ function initScoreCard(string $ggid, array $ctx = []): array {
  * - group : selected group identifier
  * - game  : ignored
  */
-function initScoredScoreCard(string $ggid, string $mode = "game", string $scope = "", array $ctx = []): array {
+function initScoredScoreCard(string $ggid, string $mode = "game", string $scope = ""): array {
   $hydrated = hydrateScoreCardContext($ggid);
   if (empty($hydrated["ok"])) {
     return [
@@ -196,7 +201,7 @@ if (php_sapi_name() !== "cli" && basename($_SERVER["SCRIPT_NAME"] ?? "") === "in
     if ($mode === "blank") {
       $out = initScoreCard($ggid, []);
     } else {
-      $out = initScoredScoreCard($ggid, $mode, $scope, []);
+      $out = initScoredScoreCard($ggid, $mode, $scope);
     }
 
     echo json_encode($out, JSON_UNESCAPED_SLASHES);
