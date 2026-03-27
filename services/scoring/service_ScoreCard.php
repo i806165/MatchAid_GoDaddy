@@ -777,7 +777,7 @@ final class ServiceScoreCard {
         self::accumulateModeTotals($totals["diff"], $holeNumber, $diff);
         self::accumulateModeTotals($totals["points"], $holeNumber, $points);
 
-        $cells[] = [
+        $cells["h" . $holeNumber] = [
           "hole" => $holeNumber,
           "gross" => $gross,
           "net" => $net,
@@ -787,6 +787,12 @@ final class ServiceScoreCard {
           "strokeMarks" => $strokeCount,
           "shape" => self::classifyScoreShape($diff),
           "par" => $par,
+          "display" => [
+            "gross"  => self::formatMaybeNumber($gross),
+            "net"    => self::formatMaybeNumber($net),
+            "diff"   => self::formatDiffDisplay($diff),
+            "points" => self::formatMaybeNumber($points),
+          ]
         ];
       }
 
