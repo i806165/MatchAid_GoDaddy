@@ -100,6 +100,7 @@
     return html + "</tbody></table>";
   }
 
+  /*
   function renderGroup(group) {
     const courseRowsCount = Array.isArray(group.courseInfo) ? group.courseInfo.length : 0;
     const densityClass = (courseRowsCount + 6 > 14) ? "scDenseC" : (courseRowsCount + 6 > 12) ? "scDenseB" : (courseRowsCount + 6 > 10) ? "scDenseA" : "";
@@ -110,6 +111,169 @@
 
     return `<div class="scGroup ${densityClass}"><div class="scHdr"><div class="scHdr__left"><div class="scHdrTop"><img class="scLogo" src="/assets/images/MatchAidLogoSquare.jpeg" alt="MatchAid" /><div class="scHdrText"><div class="scHdr__title">${esc(gh.gameTitle || "Game")}</div><div class="scHdr__sub">${subLine}</div></div></div></div><div class="scHdr__right"><div class="scHdrRightText"><div class="scHdrLink">Live Scoring at ${window.location.host}/app/score_entry/scoreentry.php</div><div class="scHdrKey">Use ScoreCard-ID: <span class="scHdrKeyVal">${esc(scoreCardId)}</span></div></div><div class="scQR">${qrUrl ? `<img alt="QR" src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(qrUrl)}">` : ""}</div></div></div>${renderTable(group)}${renderFooter(group)}</div>`;
   }
+  */
+
+function renderGroup(group) {
+  const courseRowsCount = Array.isArray(group.courseInfo) ? group.courseInfo.length : 0;
+  const densityClass =
+    (courseRowsCount + 6 > 14) ? "scDenseC" :
+    (courseRowsCount + 6 > 12) ? "scDenseB" :
+    (courseRowsCount + 6 > 10) ? "scDenseA" : "";
+
+  const gh = group.gameHeader || {};
+  const title = esc(gh.gameTitle || "Game");
+
+  // ==========================================================================
+  // Header Line 2
+  // ==========================================================================
+  const courseName = esc(gh.courseName || "");
+  const dateStr = gh.playDate ? formatDate(gh.playDate) : "";
+  const teeTime = group.teeTime ? esc(group.teeTime) : "";
+
+  let suffix = group.startHoleSuffix || "";
+  if (!suffix && Array.isArray(group.players)) {
+    const p = group.players.find((x) => x && (x.dbPlayers_StartHoleSuffix || x.startHoleSuffix));
+    if (p) suffix = p.dbPlayers_StartHoleSuffix || p.startHoleSuffix;
+  }
+  const startHole = group.startHole ? `Start: Hole ${esc(group.startHole)}${esc(suffix)}` : "";
+
+  const subLine = [courseName, dateStr, teeTime, startHole].filter(Boolean).join(" • ");
+
+  // ==========================================================================
+  // Header Line 3
+  // ==========================================================================
+  const gameFormat = String(gh.dbGames_GameFormat || game.dbGames_GameFormat || "").trim();
+  const scoringBasis = String(game.dbGames_ScoringBasis || "").trim();
+  const strokeDist = String(game.dbGames_StrokeDistribution || "").trim();
+  const scoringMethod = String(game.dbGames_ScoringMethod || "").trim();
+  const allowanceRaw = String(game.dbGames_Allowance || "").trim();
+
+  const hcEff = String(game.dbGames_HCEffectivity || "").trim();
+  const hcDate = String(game.dbGames_HCEffectivityDate || "").trim();
+
+  let hcLabel = "";
+  if (hcEff === "Date" && hcDate) hcLabel = `HC Effective ${esc(hcDate)}`;
+  else if (hcEff) hcLabel = `HC Effective ${esc(hcEff)}`;
+
+  let allowanceLabel = "";
+  if (allowanceRaw) allowanceLabel = `Allowance ${esc(allowanceRaw)}%`;
+
+  let segmentLabel = "";
+  if (String(gh.dbGames_RotationMethod || game.dbGames_RotationMethod || "").trim() !== "None") {
+    const seg = String(gh.dbGames_Segments || game.dbGames_Segments || "").trim();
+    if (seg) segmentLabel = `${esc(seg)}-Hole Segments`;
+  }
+
+  const line3 = [
+    gameFormat,
+    scoringBasis,
+    strokeDist,
+    scoringMethod,
+    hcLabel,
+    allowanceLabel,
+    segmentLabel
+  ].filter(Boolean).join(" • ");
+
+  // ==========================================================================
+  // Header Line 4
+  // ==========================================================================
+  const sys = String(game.dbGames_ScoringSystem || "").trim();
+  let line4 = "";
+
+  if (sys === "BestBall") {
+    const cnt =
+      String(
+        game.dbGames_BestBallCnt ||
+        game.dbGames_BestBall ||
+        ""
+      ).trim();
+
+    line4 = cnt
+      ? `Scoring System: Best ${esc(cnt)} Ball${cnt === "1" ? "" : "s"}`
+      : "Scoring System: Best Ball";
+
+  } else if (sys === "DeclareHole") {
+    try {
+      const raw = game.dbGames_HoleDeclaration;
+      const parsed = typeof raw === "string" ? JSON.parse(raw || "{}") : (raw || {});
+      const map = {};
+
+      if (Array.isArray(parsed)) {
+        parsed.forEach((r) => {
+          if (r && r.hole != null) map[r.hole] = r.count;
+        });
+      } else {
+        Object.assign(map, parsed);
+      }
+
+      const pairs = [];
+      for (let h = 1; h <= 18; h++) {
+        const val = map[h] ?? map[String(h)];
+        if (val != null && val !== "") pairs.push(`H${h}:${val}`);
+      }
+
+      line4 = pairs.length
+        ? `Scoring System: Declare by Hole (${pairs.join(" • ")})`
+        : "Scoring System: Declare by Hole";
+
+    } catch (e) {
+      line4 = "Scoring System: Declare by Hole";
+    }
+
+  } else if (sys === "DeclarePlayer") {
+    const perPlayer = String(game.dbGames_PlayerDeclaration || "1").trim();
+    line4 = `Scoring System: Declare by Player (${esc(perPlayer)}x per player)`;
+
+  } else if (sys === "DeclareManual") {
+    line4 = "Scoring System: Declare Scores Discretionally";
+
+  } else if (sys === "AllScores") {
+    line4 = "Scoring System: Use All Scores";
+
+  } else if (sys) {
+    line4 = `Scoring System: ${esc(sys)}`;
+  }
+
+  // ==========================================================================
+  // QR / Right Side
+  // ==========================================================================
+  const scoreCardId = String(gh.playerKey || "").trim();
+  const qrUrl =
+    (scoreCardId && gh.GGID)
+      ? `${window.location.origin}/app/score_entry/scoreentry.php?key=${encodeURIComponent(scoreCardId)}`
+      : "";
+
+  return `
+    <div class="scGroup ${densityClass}">
+      <div class="scHdr">
+        <div class="scHdr__left">
+          <div class="scHdrTop">
+            <img class="scLogo" src="/assets/images/MatchAidLogoSquare.jpeg" alt="MatchAid" />
+            <div class="scHdrText">
+              <div class="scHdr__title">${title}</div>
+              <div class="scHdr__sub">${subLine}</div>
+              ${line3 ? `<div class="scHdr__sub2" style="font-weight:700;">${esc(line3)}</div>` : ""}
+              ${line4 ? `<div class="scHdr__sub2">${esc(line4)}</div>` : ""}
+            </div>
+          </div>
+        </div>
+
+        <div class="scHdr__right">
+          <div class="scHdrRightText">
+            <div class="scHdrLink">Live Scoring at ${window.location.host}/app/score_entry/scoreentry.php</div>
+            <div class="scHdrKey">Use ScoreCard-ID: <span class="scHdrKeyVal">${esc(scoreCardId)}</span></div>
+          </div>
+          <div class="scQR">
+            ${qrUrl ? `<img alt="QR" src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(qrUrl)}">` : ""}
+          </div>
+        </div>
+      </div>
+
+      ${renderTable(group)}
+      ${renderFooter(group)}
+    </div>
+  `;
+}
 
   function renderFooter(group) {
     const gh = group.gameHeader || {};
