@@ -140,14 +140,13 @@
 
   function renderCard(row){
     const cardState = ensureCardState(row.groupId || row.pairingID || row.flightID || 'row');
-    const gh = row.gameHeader || {};
     const title = state.mode === 'player'
       ? ((row.players && row.players[0]?.playerName) || 'Player Scorecard')
       : (row.pairingID ? `Pairing ${row.pairingID}` : (row.flightID ? `Match ${row.flightID}` : `Group ${row.groupId}`));
-    const sub = [gh.courseName, formatDate(gh.playDate), row.teeTime].filter(Boolean).join(' • ');
+    const headerText = [title, row.teeTime].filter(Boolean).join(' • ');
     return `<section class="scGroupCard ${cardState.expanded ? '' : 'is-collapsed'}" data-groupid="${esc(row.groupId || '')}">
       <div class="scGroupCard__hdr">
-        <div><div class="scGroupCard__title">${esc(title)}</div><div class="scGroupCard__sub">${esc(sub)}</div></div>
+        <div><div class="scGroupCard__title">${esc(headerText)}</div></div>
         <div class="scGroupCard__actions">
           <button type="button" class="scMiniBtn" data-card-toggle="${esc(row.groupId || '')}">${cardState.expanded ? 'Collapse Card' : 'Expand Card'}</button>
           <button type="button" class="scMiniBtn" data-team-toggle="${esc(row.groupId || '')}">${cardState.teamExpanded ? 'Hide Detail' : 'Show Detail'}</button>

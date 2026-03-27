@@ -25,6 +25,7 @@ function renderScorecardSharedPage(array $initPayload, string $pageTitle): void 
 <link rel="stylesheet" href="/assets/css/scorecardShared.css?v=1" />
 </head><body>
 <?php require_once MA_INCLUDES . '/chromeHeader.php'; ?>
+<div id="scControls" class="maControlArea"></div>
 <main class="maPage" id="scPage"><?php require __DIR__ . '/scorecardShared_view.php'; ?></main>
 <?php require_once MA_INCLUDES . '/chromeFooter.php'; ?>
 

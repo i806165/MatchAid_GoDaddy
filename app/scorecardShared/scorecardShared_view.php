@@ -10,7 +10,6 @@
       </div>
     </header>
     <div class="maCard__body">
-      <div id="scControls" class="maControlArea"></div>
       <div id="scHost" class="scHost scHost--browser" aria-label="Scorecard pages"></div>
       <div id="scEmpty" class="maEmpty" style="display:none;">No scorecards available.</div>
     </div>

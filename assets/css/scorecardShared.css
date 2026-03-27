@@ -10,8 +10,8 @@
 .scCtlBtn.is-active{ background:var(--brandPrimary); color:#fff; border-color:var(--brandPrimary); }
 .scGroupCard{ border:1px solid var(--borderSubtle); border-radius:14px; overflow:hidden; background:#fff; }
 .scGroupCard__hdr{ display:flex; justify-content:space-between; gap:12px; align-items:flex-start; padding:12px 14px; border-bottom:1px solid var(--borderSubtle); }
-.scGroupCard__title{ font-weight:800; font-size:16px; line-height:1.2; }
-.scGroupCard__sub{ font-size:12px; color:rgba(0,0,0,.65); font-weight:700; margin-top:2px; }
+.scGroupCard__title{ font-weight:800; font-size:14px; line-height:1.2; }
+.scGroupCard__sub{ display: none; }
 .scGroupCard__actions{ display:flex; gap:8px; flex-wrap:wrap; }
 .scMiniBtn{ border:1px solid var(--borderSubtle); background:#fff; border-radius:10px; padding:6px 10px; font-weight:700; font-size:12px; }
 .scGroupCard__summary{ padding:10px 14px; font-size:13px; font-weight:700; color:rgba(0,0,0,.72); border-bottom:1px solid var(--borderSubtle); }

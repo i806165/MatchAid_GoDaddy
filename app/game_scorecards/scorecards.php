@@ -55,6 +55,7 @@ $maChromeLogoUrl = null;
 
 <?php require_once MA_INCLUDES . "/chromeHeader.php"; ?>
 
+<div id="scControls" class="maControlArea" style="display:none;"></div>
 <main class="maPage" id="scPage">
   <?php require_once __DIR__ . "/scorecards_view.php"; ?>
 </main>
