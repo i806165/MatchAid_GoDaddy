@@ -104,12 +104,28 @@
     }).join('');
   }
 
-  function renderPlayerCell(player, holeNumber){
+  function renderPlayerCell(player, holeNumber, isTotal = false){
+    if (isTotal) {
+      return `<td><div class="scCell scCell--total"><span class="scCellVal">${esc(player?.['h'+holeNumber] ?? '')}</span></div></td>`;
+    }
     const cell = player?.holes?.['h'+holeNumber] || {};
     const classes = ['scCell'];
     if (cell.declared) classes.push('scCell--declared');
     if (cell.shape) classes.push('scCell--' + cell.shape);
     return `<td><div class="${classes.join(' ')}"><span class="scCellVal">${esc(valueForCell(cell))}</span>${cell.strokeMarks ? `<span class="scCellMarks">${esc(String(cell.strokeMarks))}</span>` : ''}</div></td>`;
+  }
+
+  function renderTotalRows(totals, cardState){
+    return (totals || []).map(row => {
+      const metaClass = cardState.colsExpanded ? '' : ' is-compact';
+      return `<tr class="scTotalRow">
+        <td class="scName">${esc(row.label)}</td>
+        ${holesToCells((h)=> renderPlayerCell(row.cells, h, true))}
+        ${renderTotalsCols(row.cells?.['9a'] ?? '', '', '', cardState)}
+        ${holesToCells((h)=> h>=10 ? renderPlayerCell(row.cells, h, true) : '', 10)}
+        ${renderTotalsCols('', row.cells?.['9b'] ?? '', row.cells?.['9c'] ?? '', cardState)}
+      </tr>`;
+    }).join('');
   }
 
   function renderTotalsCols(outVal, inVal, totVal, cardState){
@@ -120,11 +136,6 @@
   function renderHeaderRow(cardState){
     const metaClass = cardState.colsExpanded ? '' : ' is-compact';
     return `<thead><tr><th class="scName">HOLE</th>${holesToCells((h)=> `<th>${h}</th>`)}<th class="scMeta scMetaCol scMetaCol--minor${metaClass}">Out</th>${holesToCells((h)=> h>=10 ? `<th>${h}</th>` : '', 10)}<th class="scMeta scMetaCol scMetaCol--minor${metaClass}">In</th><th class="scMeta scMetaCol${metaClass}">Tot</th></tr></thead>`;
-  }
-
-  function renderSummaryRow(summary, cardState){
-    if (!summary) return '';
-    return `<div class="scGroupCard__summary">${esc(summary.label || '')}: ${esc(summary.value || '')}</div>`;
   }
 
   function renderCard(row){
@@ -143,9 +154,8 @@
           <button type="button" class="scMiniBtn" data-cols-toggle="${esc(row.groupId || '')}">${cardState.colsExpanded ? 'Compact Columns' : 'Expand Columns'}</button>
         </div>
       </div>
-      ${renderSummaryRow(row.summary, cardState)}
       <div class="scGroupCard__body">
-        <div class="scGroup scDenseA"><table class="scTable ${cardState.colsExpanded ? '' : 'scTable--compact'}" role="table" aria-label="scorecard">${renderHeaderRow(cardState)}<tbody>${buildCourseRows(row.courseInfo, cardState)}${renderPlayerRows(row.players, cardState)}</tbody></table></div>
+        <div class="scGroup scDenseA"><table class="scTable ${cardState.colsExpanded ? '' : 'scTable--compact'}" role="table" aria-label="scorecard">${renderHeaderRow(cardState)}<tbody>${buildCourseRows(row.courseInfo, cardState)}${renderPlayerRows(row.players, cardState)}${renderTotalRows(row.columnTotals, cardState)}</tbody></table></div>
       </div>
     </section>`;
   }

@@ -626,7 +626,7 @@ final class ServiceScoreCard {
     $fullPlayers = self::decorateScoredPlayers($gameRow, $base["players"]);
 
     $base["players"] = self::filterSelectedPlayer($fullPlayers, $selectedPlayerId);
-    $base["summary"] = self::buildTeamSummary($gameRow, $fullPlayers);
+    $base["columnTotals"] = self::buildColumnTotals($gameRow, $fullPlayers);
     $base["meta"] = [
       "supportsPoints" => self::deriveScoringBasis($gameRow) === "Points",
       "selectedPlayerId" => $selectedPlayerId,
@@ -951,43 +951,64 @@ final class ServiceScoreCard {
     return ($n > 0 ? "+" : "") . (string)$n;
   }
 
-  private static function buildTeamSummary(array $gameRow, array $players): array {
-    $basis = self::deriveScoringBasis($gameRow);
+  private static function buildColumnTotals(array $gameRow, array $players): array {
+    $holes = self::holesForGame($gameRow);
+    $totals = [];
     $competition = trim((string)($gameRow["dbGames_Competition"] ?? "PairField"));
 
-    $gross = 0.0;
-    $net = 0.0;
-    $points = 0.0;
+    if ($competition === "PairPair") {
+      $sides = [];
+      foreach ($players as $p) {
+        $side = self::normStr($p["dbPlayers_FlightPos"] ?? "A", "A");
+        $sides[$side][] = $p;
+      }
+      ksort($sides);
+      foreach ($sides as $label => $sidePlayers) {
+        $totals[] = [
+          "label" => "TEAM " . $label . " TOTAL",
+          "cells" => self::calculateToParRow($holes, $sidePlayers)
+        ];
+      }
+    } else {
+      $totals[] = [
+        "label" => "GROUP TOTAL",
+        "cells" => self::calculateToParRow($holes, $players)
+      ];
+    }
+    return $totals;
+  }
 
-    foreach ($players as $player) {
-      foreach (($player["holes"] ?? []) as $cell) {
-        if (empty($cell["declared"])) continue;
-        if ($cell["gross"] !== null) $gross += floatval($cell["gross"]);
-        if ($cell["net"] !== null) $net += floatval($cell["net"]);
-        if ($cell["points"] !== null) $points += floatval($cell["points"]);
+  private static function calculateToParRow(array $holes, array $players): array {
+    $rowCells = [];
+    $sumOutScore = 0.0; $sumOutPar = 0.0; $outPlayed = false;
+    $sumInScore = 0.0;  $sumInPar = 0.0;  $inPlayed = false;
+    $sumTotScore = 0.0; $sumTotPar = 0.0; $totPlayed = false;
+
+    foreach ($holes as $h) {
+      $hScore = 0.0; $hPar = 0.0; $hPlayed = false;
+      foreach ($players as $p) {
+        $cell = $p["holes"]["h" . $h] ?? null;
+        if ($cell && !empty($cell["declared"]) && $cell["gross"] !== null) {
+          $hScore += floatval($cell["gross"]);
+          $hPar += floatval($cell["par"] ?? 0);
+          $hPlayed = true;
+        }
+      }
+      if ($hPlayed) {
+        $rowCells["h" . $h] = self::formatDiffDisplay($hScore - $hPar);
+        if ($h <= 9) { $sumOutScore += $hScore; $sumOutPar += $hPar; $outPlayed = true; }
+        else { $sumInScore += $hScore; $sumInPar += $hPar; $inPlayed = true; }
+        $sumTotScore += $hScore; $sumTotPar += $hPar; $totPlayed = true;
+      } else {
+        $rowCells["h" . $h] = "";
       }
     }
 
-    $variant = ($basis === "Points")
-      ? "points"
-      : ((in_array($basis, ["Holes", "Skins"], true) || $competition === "PairPair") ? "team" : "scorecard");
+    $rowCells["9a"] = $outPlayed ? self::formatDiffDisplay($sumOutScore - $sumOutPar) : "";
+    $rowCells["9b"] = $inPlayed  ? self::formatDiffDisplay($sumInScore - $sumInPar) : "";
+    $rowCells["9c"] = $totPlayed ? self::formatDiffDisplay($sumTotScore - $sumTotPar) : "";
 
-    return [
-      "variant" => $variant,
-      "grossTotal" => self::formatMaybeNumber($gross),
-      "netTotal" => self::formatMaybeNumber($net),
-      "pointsTotal" => self::formatMaybeNumber($points),
-      "label" => match ($variant) {
-        "points" => "Team Points",
-        "team" => "Team Status",
-        default => "Declared Totals",
-      },
-      "value" => match ($variant) {
-        "points" => self::formatMaybeNumber($points),
-        "team" => "Gross " . self::formatMaybeNumber($gross) . " • Net " . self::formatMaybeNumber($net),
-        default => "Gross " . self::formatMaybeNumber($gross) . " • Net " . self::formatMaybeNumber($net),
-      },
-    ];
+    return $rowCells;
   }
 
   // ==========================================================================
