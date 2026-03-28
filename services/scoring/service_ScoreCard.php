@@ -526,6 +526,13 @@ final class ServiceScoreCard {
     return $result;
   }
 
+  private static function courseRowEquals(array $a, array $b): bool {
+    foreach (self::holesStandard() as $h) {
+      if (($a["h" . $h] ?? null) !== ($b["h" . $h] ?? null)) return false;
+    }
+    return true;
+  }
+
   private static function splitTotalFromMap(array $kpiMap, bool $diffMode = false): array {
     $vals = [];
     foreach (self::holesStandard() as $i) {
