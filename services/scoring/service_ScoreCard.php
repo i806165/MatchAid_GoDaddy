@@ -766,14 +766,16 @@ final class ServiceScoreCard {
             : ($gross - $strokeCount);
         }
 
-        $diff = null;
+        $grossDiff = null;
         if ($gross !== null && $par !== null) {
-          $diff = $gross - $par;
+          $grossDiff = $gross - $par;
         }
 
+        $netDiff = ($net !== null && $par !== null) ? ($net - $par) : null;
+
         $points = null;
-        if (self::deriveScoringBasis($gameRow) === "Points" && $declared && $diff !== null) {
-          $points = self::stablefordPointsForDiff((int)round($diff), $stablefordMap);
+        if (self::deriveScoringBasis($gameRow) === "Points" && $declared && $grossDiff !== null) {
+          $points = self::stablefordPointsForDiff((int)round($grossDiff), $stablefordMap);
         }
 
         $modeValues["gross"][$holeNumber] = $gross;
@@ -785,11 +787,14 @@ final class ServiceScoreCard {
           "hole" => $holeNumber,
           "gross" => $gross,
           "net" => $net,
-          "diff" => $diff,
+          "diff" => $grossDiff,
           "points" => $points,
           "declared" => $declared,
           "strokeMarks" => $strokeCount,
-          "shape" => self::classifyScoreShape($diff),
+          "shapes" => [
+            "gross" => self::classifyScoreShape($grossDiff),
+            "net"   => self::classifyScoreShape($netDiff)
+          ],
           "par" => $par,
           "display" => [
             "gross"  => self::formatMaybeNumber($gross),

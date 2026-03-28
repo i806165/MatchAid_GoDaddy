@@ -183,7 +183,8 @@
     const cell = player?.holes?.['h'+holeNumber] || {};
     const classes = ['scCell'];
     if (cell.declared) classes.push('scCell--declared');
-    if (cell.shape) classes.push('scCell--' + cell.shape);
+    const shape = cell.shapes?.[state.valueMode] || cell.shape;
+    if (shape && shape !== 'par') classes.push('scCell--' + shape);
     return `<td class="${furled ? 'is-furled' : ''}"><div class="${classes.join(' ')}"><span class="scCellVal">${esc(valueForCell(cell))}</span>${cell.strokeMarks ? `<span class="scCellMarks">${esc(String(cell.strokeMarks))}</span>` : ''}</div></td>`;
   }
 
