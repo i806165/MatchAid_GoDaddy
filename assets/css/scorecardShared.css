@@ -7,22 +7,22 @@
 .scCtlBtn--icon .scIcon{ width:20px; height:20px; fill:currentColor; }
 .scCtlBtn.is-active{ background:var(--brandPrimary); color:#fff; border-color:var(--brandPrimary); }
 .scGroupCard{ border:1px solid var(--borderSubtle); border-radius:14px; overflow:hidden; background:#fff; }
-.scGroupCard__hdr{ display:flex; justify-content:space-between; gap:12px; align-items:flex-start; padding:12px 14px; border-bottom:1px solid var(--borderSubtle); }
+.scGroupCard__hdr{ display:flex; justify-content:space-between; gap:12px; align-items:center; padding:6px 12px; border-bottom:1px solid var(--borderSubtle); }
 .scGroupCard__hdr--collapsed{ background:rgba(0,0,0,0.03); }
 .scGroupCard.is-collapsed .scGroupCard__hdr--expanded,
 .scGroupCard.is-collapsed .scGroupCard__body{ display:none; }
 .scGroupCard:not(.is-collapsed) .scGroupCard__hdr--collapsed{ display:none; }
 
 .scGroupCard__titleRow{ display:flex; align-items:center; gap:10px; min-width:0; flex:1; }
-.scToggleBtn{ flex:0 0 28px; width:28px; height:28px; border-radius:50%; border:none; background:transparent; color:var(--brandSecondary); cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
+.scToggleBtn{ flex:0 0 24px; width:24px; height:24px; border-radius:50%; border:none; background:transparent; color:var(--brandSecondary); cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
 .scToggleBtn:hover{ background:rgba(0,0,0,0.05); }
-.scToggleBtn svg{ width:20px; height:20px; fill:currentColor; }
+.scToggleBtn svg{ width:18px; height:18px; fill:currentColor; }
 
 .scGroupCard__title{ font-weight:800; font-size:14px; line-height:1.2; }
 .scGroupCard__sub{ display: none; }
 .scGroupCard__actions{ display:flex; gap:8px; flex-wrap:wrap; }
 .scMiniBtn{ border:1px solid var(--borderSubtle); background:#fff; border-radius:10px; padding:6px 10px; font-weight:700; font-size:12px; }
-.scGroupCard__summary{ padding:10px 14px; font-size:13px; font-weight:700; color:rgba(0,0,0,.72); border-bottom:1px solid var(--borderSubtle); }
+.scGroupCard__summary{ padding:6px 12px; font-size:13px; font-weight:700; color:rgba(0,0,0,.72); border-bottom:1px solid var(--borderSubtle); }
 .scGroupCard.is-collapsed .scGroupCard__body{ display:none; }
 .scTable td.scName{ white-space:normal; }
 
