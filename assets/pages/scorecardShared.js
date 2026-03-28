@@ -83,7 +83,12 @@
       `<svg viewBox="0 0 24 24" class="scIcon"><path d="M19 13H5v-2h14v2z"/></svg>` : 
       `<svg viewBox="0 0 24 24" class="scIcon"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`;
 
-    const modes = [ ['gross','Gross'], ['net','Net'], ['diff','Diff'] ].concat(supportsPoints ? [['points','Points']] : []);
+    const modes = [ 
+      ['gross','Gross'], 
+      ['net','Net'], 
+      ['grossDiff','Gross +/-'], 
+      ['netDiff', 'Net +/-'] 
+    ].concat(supportsPoints ? [['points','Points']] : []);
     dom.controls.innerHTML = `<div class="scBrowserControls">
       <div class="scBrowserControls__group">
         <button id="scGlobalToggle" class="scCtlBtn scCtlBtn--icon" type="button" title="Toggle All Cards">${icon}</button>
@@ -117,7 +122,12 @@
       else if (key === '9c') val = 'Tot';
       else val = 'S' + (key.charCodeAt(1) - 96);
     } else {
-      val = options.isPlayer ? totalForPlayer(rowData, key) : (rowData[key] ?? rowData.cells?.[key] ?? '-');
+      if (options.isPlayer) {
+        val = totalForPlayer(rowData, key);
+      } else {
+        const cell = rowData[key] ?? rowData.cells?.[key];
+        val = (cell && typeof cell === 'object') ? (cell.display?.[state.valueMode] ?? '-') : (cell ?? '-');
+      }
     }
     const tag = options.isHeader ? 'th' : 'td';
     const dSeg = (key !== '9c') ? `data-segment="${segmentId}"` : '';
@@ -178,20 +188,35 @@
   function renderPlayerCell(player, holeNumber, isTotal = false, cardState = {}){
     const furled = cardState.furledSegments?.[getSegmentForHole(holeNumber)];
     if (isTotal) {
-      return `<td class="${furled ? 'is-furled' : ''}"><div class="scCell scCell--total"><span class="scCellVal">${esc(player?.['h'+holeNumber] ?? '')}</span></div></td>`;
+      const cell = player?.['h'+holeNumber];
+      const val = (cell && typeof cell === 'object') ? (cell.display?.[state.valueMode] ?? '-') : (cell ?? '-');
+      return `<td class="${furled ? 'is-furled' : ''}"><div class="scCell scCell--total"><span class="scCellVal">${esc(val)}</span></div></td>`;
     }
     const cell = player?.holes?.['h'+holeNumber] || {};
     const classes = ['scCell'];
     if (cell.declared) classes.push('scCell--declared');
-    const shape = cell.shapes?.[state.valueMode] || cell.shape;
+    
+    let sm = state.valueMode;
+    if (sm === 'grossDiff') sm = 'gross';
+    if (sm === 'netDiff') sm = 'net';
+    const shape = cell.shapes?.[sm] || cell.shape;
+
     if (shape && shape !== 'par') classes.push('scCell--' + shape);
     return `<td class="${furled ? 'is-furled' : ''}"><div class="${classes.join(' ')}"><span class="scCellVal">${esc(valueForCell(cell))}</span>${cell.strokeMarks ? `<span class="scCellMarks">${esc(String(cell.strokeMarks))}</span>` : ''}</div></td>`;
   }
 
   function renderTotalRows(totals, cardState){
+    const kpiLabel = 
+        state.valueMode === 'gross' ? 'GROSS' :
+        state.valueMode === 'net'   ? 'NET' :
+        state.valueMode === 'grossDiff' ? 'GROSS +/-' :
+        state.valueMode === 'netDiff' ? 'NET +/-' :
+        state.valueMode === 'points' ? 'POINTS' : '';
+
     return (totals || []).map(row => {
+      const label = `${row.label} ${kpiLabel}`.trim();
       return `<tr class="scTotalRow">
-        <td class="scName" data-action="toggle-all-segments">${esc(row.label)}</td>
+        <td class="scName" data-action="toggle-all-segments">${esc(label)}</td>
         ${renderUnifiedRow(cardState, row.cells, { isTotal: true })}
       </tr>`;
     }).join('');

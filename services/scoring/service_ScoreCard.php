@@ -748,7 +748,7 @@ final class ServiceScoreCard {
       $detailsByHole = self::extractHoleDetailsByNumber($scoreJson);
 
       $cells = [];
-      $modeValues = ["gross" => [], "net" => [], "diff" => [], "points" => []];
+      $modeValues = ["gross" => [], "net" => [], "grossDiff" => [], "netDiff" => [], "points" => []];
 
       $courseMap = self::getCourseInfoMap($gameRow, $player);
 
@@ -778,10 +778,11 @@ final class ServiceScoreCard {
           $points = self::stablefordPointsForDiff((int)round($grossDiff), $stablefordMap);
         }
 
-        $modeValues["gross"][$holeNumber] = $gross;
-        $modeValues["net"][$holeNumber] = $net;
-        $modeValues["diff"][$holeNumber] = $diff;
-        $modeValues["points"][$holeNumber] = $points;
+        $modeValues["gross"][$holeNumber]     = $gross;
+        $modeValues["net"][$holeNumber]       = $net;
+        $modeValues["grossDiff"][$holeNumber] = $grossDiff;
+        $modeValues["netDiff"][$holeNumber]   = $netDiff;
+        $modeValues["points"][$holeNumber]    = $points;
 
         $cells["h" . $holeNumber] = [
           "hole" => $holeNumber,
@@ -799,7 +800,8 @@ final class ServiceScoreCard {
           "display" => [
             "gross"  => self::formatMaybeNumber($gross),
             "net"    => self::formatMaybeNumber($net),
-            "diff"   => self::formatDiffDisplay($diff),
+            "grossDiff" => self::formatDiffDisplay($grossDiff),
+            "netDiff"   => self::formatDiffDisplay($netDiff),
             "points" => self::formatMaybeNumber($points),
           ]
         ];
@@ -811,7 +813,8 @@ final class ServiceScoreCard {
         "totals" => [
           "gross" => self::splitTotalFromMap($modeValues["gross"], false),
           "net" => self::splitTotalFromMap($modeValues["net"], false),
-          "diff" => self::splitTotalFromMap($modeValues["diff"], true),
+          "grossDiff" => self::splitTotalFromMap($modeValues["grossDiff"], true),
+          "netDiff" => self::splitTotalFromMap($modeValues["netDiff"], true),
           "points" => self::splitTotalFromMap($modeValues["points"], false),
         ],
       ]);
@@ -950,46 +953,64 @@ final class ServiceScoreCard {
       foreach ($sides as $label => $sidePlayers) {
         $totals[] = [
           "label" => "TEAM " . $label . " TOTAL",
-          "cells" => self::calculateToParRow($gameRow, $holes, $sidePlayers)
+          "cells" => self::calculateTeamTotals($gameRow, $holes, $sidePlayers)
         ];
       }
     } else {
       $totals[] = [
         "label" => "GROUP TOTAL",
-        "cells" => self::calculateToParRow($gameRow, $holes, $players)
+        "cells" => self::calculateTeamTotals($gameRow, $holes, $players)
       ];
     }
     return $totals;
   }
 
-  private static function calculateToParRow(array $gameRow, array $holes, array $players): array {
+  private static function calculateTeamTotals(array $gameRow, array $holes, array $players): array {
     $rowCells = [];
-    $isNet = (trim((string)($gameRow["dbGames_ScoringMethod"] ?? "NET")) !== "ADJ GROSS");
-
-    $holeValues = [];
+    $sums = ["gross" => [], "net" => [], "grossDiff" => [], "netDiff" => [], "points" => []];
 
     foreach ($holes as $h) {
-      $hScore = 0.0; $hPar = 0.0; $hPlayed = false;
       foreach ($players as $p) {
         $cell = $p["holes"]["h" . $h] ?? null;
         if ($cell && !empty($cell["declared"]) && $cell["gross"] !== null) {
-          $val = $isNet ? floatval($cell["net"] ?? $cell["gross"]) : floatval($cell["gross"]);
-          $hScore += $val;
-          $hPar += floatval($cell["par"] ?? 0);
-          $hPlayed = true;
+          $par = floatval($cell["par"] ?? 0);
+          $g = floatval($cell["gross"]);
+          $n = floatval($cell["net"]);
+          
+          $sums["gross"][$h] = ($sums["gross"][$h] ?? 0.0) + $g;
+          $sums["net"][$h]   = ($sums["net"][$h] ?? 0.0)   + $n;
+          $sums["grossDiff"][$h] = ($sums["grossDiff"][$h] ?? 0.0) + ($g - $par);
+          $sums["netDiff"][$h]   = ($sums["netDiff"][$h]   ?? 0.0) + ($n - $par);
+          $sums["points"][$h]    = ($sums["points"][$h]    ?? 0.0) + floatval($cell["points"] ?? 0);
         }
       }
-      if ($hPlayed) {
-        $diff = $hScore - $hPar;
-        $rowCells["h" . $h] = self::formatDiffDisplay($diff);
-        $holeValues[$h] = $diff;
+
+      if (isset($sums["gross"][$h])) {
+        $rowCells["h" . $h] = [
+          "display" => [
+            "gross"     => self::formatMaybeNumber($sums["gross"][$h]),
+            "net"       => self::formatMaybeNumber($sums["net"][$h]),
+            "grossDiff" => self::formatDiffDisplay($sums["grossDiff"][$h]),
+            "netDiff"   => self::formatDiffDisplay($sums["netDiff"][$h]),
+            "points"    => self::formatMaybeNumber($sums["points"][$h]),
+          ]
+        ];
       } else {
         $rowCells["h" . $h] = "";
       }
     }
 
-    $segments = self::splitTotalFromMap($holeValues, true);
-    return array_merge($rowCells, $segments);
+    $modes = ["gross", "net", "grossDiff", "netDiff", "points"];
+    foreach ($modes as $m) {
+      $isDiff = str_ends_with($m, "Diff");
+      $segs = self::splitTotalFromMap($sums[$m], $isDiff);
+      foreach ($segs as $k => $val) {
+        if (!isset($rowCells[$k])) $rowCells[$k] = ["display" => []];
+        $rowCells[$k]["display"][$m] = $val;
+      }
+    }
+
+    return $rowCells;
   }
   // ==========================================================================
   // 8. Generic Utility Helpers
