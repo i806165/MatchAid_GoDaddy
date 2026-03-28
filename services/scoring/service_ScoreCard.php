@@ -526,33 +526,35 @@ final class ServiceScoreCard {
     return $result;
   }
 
-  private static function courseRowEquals(array $a, array $b): bool {
-    foreach (self::holesStandard() as $h) {
-      if (($a["h" . $h] ?? null) !== ($b["h" . $h] ?? null)) return false;
-    }
-    return true;
-  }
-
-  private static function splitTotalFromMap(array $kpiMap): array {
+  private static function splitTotalFromMap(array $kpiMap, bool $diffMode = false): array {
     $vals = [];
     foreach (self::holesStandard() as $i) {
-      $vals[] = intval($kpiMap[$i] ?? 0);
+      $vals[] = isset($kpiMap[$i]) ? $kpiMap[$i] : null;
     }
-    $sum = fn($arr) => array_sum($arr);
+
+    $sum = function($arr) use ($diffMode) {
+      $s = 0.0; $any = false;
+      foreach ($arr as $v) { if ($v !== null) { $s += floatval($v); $any = true; } }
+      if (!$any) return "";
+      if ($diffMode) return self::formatDiffDisplay($s);
+      $rounded = round($s);
+      if (abs($s - $rounded) < 0.00001) return (string)intval($rounded);
+      return number_format($s, 1);
+    };
 
     return [
-      "3a" => (string)$sum(array_slice($vals, 0, 3)),
-      "3b" => (string)$sum(array_slice($vals, 3, 3)),
-      "3c" => (string)$sum(array_slice($vals, 6, 3)),
-      "3d" => (string)$sum(array_slice($vals, 9, 3)),
-      "3e" => (string)$sum(array_slice($vals, 12, 3)),
-      "3f" => (string)$sum(array_slice($vals, 15, 3)),
-      "6a" => (string)$sum(array_slice($vals, 0, 6)),
-      "6b" => (string)$sum(array_slice($vals, 6, 6)),
-      "6c" => (string)$sum(array_slice($vals, 12, 6)),
-      "9a" => (string)$sum(array_slice($vals, 0, 9)),
-      "9b" => (string)$sum(array_slice($vals, 9, 9)),
-      "9c" => (string)$sum($vals),
+      "3a" => $sum(array_slice($vals, 0, 3)),
+      "3b" => $sum(array_slice($vals, 3, 3)),
+      "3c" => $sum(array_slice($vals, 6, 3)),
+      "3d" => $sum(array_slice($vals, 9, 3)),
+      "3e" => $sum(array_slice($vals, 12, 3)),
+      "3f" => $sum(array_slice($vals, 15, 3)),
+      "6a" => $sum(array_slice($vals, 0, 6)),
+      "6b" => $sum(array_slice($vals, 6, 6)),
+      "6c" => $sum(array_slice($vals, 12, 6)),
+      "9a" => $sum(array_slice($vals, 0, 9)),
+      "9b" => $sum(array_slice($vals, 9, 9)),
+      "9c" => $sum($vals),
     ];
   }
 
@@ -982,9 +984,7 @@ final class ServiceScoreCard {
     $rowCells = [];
     $isNet = (trim((string)($gameRow["dbGames_ScoringMethod"] ?? "NET")) !== "ADJ GROSS");
 
-    $sumOutScore = 0.0; $sumOutPar = 0.0; $outPlayed = false;
-    $sumInScore = 0.0;  $sumInPar = 0.0;  $inPlayed = false;
-    $sumTotScore = 0.0; $sumTotPar = 0.0; $totPlayed = false;
+    $holeValues = [];
 
     foreach ($holes as $h) {
       $hScore = 0.0; $hPar = 0.0; $hPlayed = false;
@@ -998,18 +998,17 @@ final class ServiceScoreCard {
         }
       }
       if ($hPlayed) {
-        $rowCells["h" . $h] = self::formatDiffDisplay($hScore - $hPar);
-        if ($h <= 9) { $sumOutScore += $hScore; $sumOutPar += $hPar; $outPlayed = true; }
-        else { $sumInScore += $hScore; $sumInPar += $hPar; $inPlayed = true; }
-        $sumTotScore += $hScore; $sumTotPar += $hPar; $totPlayed = true;
+        $diff = $hScore - $hPar;
+        $rowCells["h" . $h] = self::formatDiffDisplay($diff);
+        $holeValues[$h] = $diff;
       } else {
         $rowCells["h" . $h] = "";
       }
     }
 
-    $rowCells["9a"] = $outPlayed ? self::formatDiffDisplay($sumOutScore - $sumOutPar) : "";
-    $rowCells["9b"] = $inPlayed  ? self::formatDiffDisplay($sumInScore - $sumInPar) : "";
-    $rowCells["9c"] = $totPlayed ? self::formatDiffDisplay($sumTotScore - $sumTotPar) : "";
+    $segments = self::splitTotalFromMap($holeValues, true);
+    return array_merge($rowCells, $segments);
+  }
 
     return $rowCells;
   }

@@ -42,6 +42,19 @@
     return 's' + Math.ceil(h / size);
   }
 
+  function getSegmentConfig(){
+    const segStr = String(game.dbGames_Segments || '9');
+    const holesStr = String(game.dbGames_Holes || 'All 18');
+    const size = (segStr === 'None') ? 18 : parseInt(segStr, 10);
+    const prefix = (size === 18) ? '9' : String(size);
+    
+    let start = 1, end = 18;
+    if (holesStr === 'F9') end = 9;
+    if (holesStr === 'B9') start = 10;
+
+    return { size, prefix, hasTot: (size === 9 && holesStr === 'All 18'), start, end };
+  }
+
   function applyChrome(){
     const subtitle = init.header?.subtitle || [game.dbGames_CourseName, formatDate(game.dbGames_PlayDate)].filter(Boolean).join(' • ');
     // If subtitle exists, it usually contains play date. Let's make it richer
@@ -93,17 +106,59 @@
     renderControls();
   }
 
+  function renderSummaryCell(cardState, rowData, key, segmentId, options = {}) {
+    const isCompact = !cardState.colsExpanded;
+    const classes = ['scMeta', 'scMetaCol'];
+    if (key !== '9c') classes.push('scMetaCol--minor');
+    if (isCompact) classes.push('is-compact');
+    
+    let val = '';
+    if (options.isHeader) {
+      if (key === '9a') val = 'Out'; else if (key === '9b') val = 'In'; else if (key === '9c') val = 'Tot';
+      else val = 'S' + (key.charCodeAt(1) - 96);
+    } else {
+      val = rowData[key] ?? rowData.cells?.[key] ?? '';
+      if (options.isPlayer) {
+        const pk = (key === '9a' ? 'out' : (key === '9b' ? 'in' : (key === '9c' ? 'tot' : '')));
+        if (pk) val = totalForPlayer(rowData, pk);
+      }
+    }
+    const tag = options.isHeader ? 'th' : 'td';
+    const dSeg = (key !== '9c') ? `data-segment="${segmentId}"` : '';
+    return `<${tag} class="${classes.join(' ')}" ${dSeg}>${esc(val)}</${tag}>`;
+  }
+
+  function renderUnifiedRow(cardState, rowData, options = {}) {
+    const seg = getSegmentConfig();
+    let html = '';
+    
+    const numSegments = Math.ceil((seg.end - seg.start + 1) / seg.size);
+
+    for (let i = 0; i < numSegments; i++) {
+      const currentStart = seg.start + (i * seg.size);
+      const currentEnd = Math.min(currentStart + seg.size - 1, seg.end);
+      const sId = 's' + Math.ceil(currentStart / seg.size); const furled = cardState.furledSegments[sId];
+      for (let h = currentStart; h <= currentEnd; h++) {
+        if (options.isHeader) html += `<th class="${furled ? 'is-furled' : ''}">${h}</th>`;
+        else if (options.isCourse) html += `<td class="${furled ? 'is-furled' : ''}">${esc(rowData['h'+h] ?? '')}</td>`;
+        else if (options.isPlayer) html += renderPlayerCell(rowData, h, false, cardState);
+        else if (options.isTotal) html += renderPlayerCell(rowData, h, true, cardState);
+        else if (options.isStroke) html += `<td class="${furled ? 'is-furled' : ''}">${esc(String(rowData.holes?.['h'+h]?.strokeMarks || ''))}</td>`;
+      }
+      // Map segment index to appropriate data key (a, b, c...)
+      const key = seg.prefix + String.fromCharCode(97 + (Math.ceil(currentStart / seg.size) - 1));
+      html += renderSummaryCell(cardState, rowData, key, sId, options);
+    }
+    if (seg.hasTot) html += renderSummaryCell(cardState, rowData, '9c', 'tot', options);
+    return html;
+  }
+
   function buildCourseRows(courseRows, cardState){
     return (courseRows || []).map((r)=>{
       return `<tr><td class="scName">${esc(r.label)}${r.tee && !['Par','HCP'].includes(r.label) ? ' — ' + esc(r.tee) : ''}</td>
-        ${holesToCells((h)=> `<td class="${cardState.furledSegments[getSegmentForHole(h)] ? 'is-furled' : ''}">${esc(r['h'+h] ?? '')}</td>`)}
-        ${renderCourseMeta(r, cardState)}
+        ${renderUnifiedRow(cardState, r, { isCourse: true })}
       </tr>`;
     }).join('');
-  }
-
-  function holesToCells(cb,start){
-    let html=''; const from = start || 1; const to = 18; for(let h=from; h<=to; h++){ if(from===1 && h>9) break; html += cb(h); } return html;
   }
 
   function valueForCell(cell){ return cell?.display?.[state.valueMode] ?? ''; }
@@ -112,17 +167,9 @@
 
   function renderPlayerRows(players, cardState){
     return (players || []).map((p)=>{
-      const main = `<tr><td class="scName"><div class="scPLine1">${esc(p.playerName)} <span class="scPHC">${esc(p.playerHC ? '('+p.playerHC+')' : '')}</span></div><div class="scPLine2">${esc(p.tee || '')}</div></td>
-        ${holesToCells((h)=> renderPlayerCell(p, h, false, cardState))}
-        ${renderTotalsCols(totalForPlayer(p,'out'), '', '', cardState, 's1')}
-        ${holesToCells((h)=> h>=10 ? renderPlayerCell(p, h, false, cardState) : '', 10)}
-        ${renderTotalsCols('', totalForPlayer(p,'in'), totalForPlayer(p,'tot'), cardState, 's2')}
-      </tr>`;
+      const main = `<tr><td class="scName"><div class="scPLine1">${esc(p.playerName)} <span class="scPHC">${esc(p.playerHC ? '('+p.playerHC+')' : '')}</span></div><div class="scPLine2">${esc(p.tee || '')}</div></td>${renderUnifiedRow(cardState, p, { isPlayer: true, isPlayerRow: true })}</tr>`;
       const detail = `<tr class="scDetailRow ${cardState.teamExpanded ? '' : 'is-hidden'}"><td class="scName">Stroke Marks</td>
-        ${holesToCells((h)=> `<td class="${cardState.furledSegments[getSegmentForHole(h)] ? 'is-furled' : ''}">${esc(String(p.holes?.['h'+h]?.strokeMarks || ''))}</td>`)}
-        ${renderTotalsCols('', '', '', cardState, 's1')}
-        ${holesToCells((h)=> h>=10 ? `<td class="${cardState.furledSegments[getSegmentForHole(h)] ? 'is-furled' : ''}">${esc(String(p.holes?.['h'+h]?.strokeMarks || ''))}</td>` : '', 10)}
-        ${renderTotalsCols('', '', '', cardState)} <!-- Empty cells for alignment -->
+        ${renderUnifiedRow(cardState, p, { isStroke: true })}
       </tr>`;
       return main + detail;
     }).join('');
@@ -144,39 +191,13 @@
     return (totals || []).map(row => {
       return `<tr class="scTotalRow">
         <td class="scName" data-action="toggle-all-segments">${esc(row.label)}</td>
-        ${holesToCells((h)=> renderPlayerCell(row.cells, h, true, cardState))}
-        ${renderTotalsCols(row.cells?.['9a'] ?? '', '', '', cardState, 's1')}
-        ${holesToCells((h)=> h>=10 ? renderPlayerCell(row.cells, h, true, cardState) : '', 10)}
-        ${renderTotalsCols('', row.cells?.['9b'] ?? '', row.cells?.['9c'] ?? '', cardState, 's2')}
+        ${renderUnifiedRow(cardState, row.cells, { isTotal: true })}
       </tr>`;
     }).join('');
   }
 
-  function renderCourseMeta(r, cardState){
-    const s1F = cardState.colsExpanded ? '' : ' is-compact';
-    return `<td class="scMeta scMetaCol scMetaCol--minor${s1F}" data-segment="s1">${esc(r['9a'] ?? '')}</td>
-            <td class="scMeta scMetaCol scMetaCol--minor${s1F}" data-segment="s2">${esc(r['9b'] ?? '')}</td>
-            <td class="scMeta scMetaCol${s1F}">${esc(r['9c'] ?? '')}</td>`;
-  }
-
-  function renderTotalsCols(outVal, inVal, totVal, cardState, segmentId){
-    const metaClass = cardState.colsExpanded ? '' : ' is-compact';
-    const outTd = outVal !== undefined ? `<td class="scMeta scMetaCol scMetaCol--minor${metaClass}" ${segmentId?`data-segment="${segmentId}"`:''}>${esc(outVal)}</td>` : '';
-    const inTd = inVal !== undefined ? `<td class="scMeta scMetaCol scMetaCol--minor${metaClass}" ${segmentId?`data-segment="${segmentId}"`:''}>${esc(inVal)}</td>` : '';
-    const totTd = totVal !== undefined ? `<td class="scMeta scMetaCol${metaClass}">${esc(totVal)}</td>` : '';
-    return outTd + inTd + totTd;
-  }
-
   function renderHeaderRow(cardState){
-    const mc = cardState.colsExpanded ? '' : ' is-compact';
-    return `<thead><tr>
-      <th class="scName" data-action="toggle-all-segments">HOLE</th>
-      ${holesToCells((h)=> `<th class="${cardState.furledSegments[getSegmentForHole(h)] ? 'is-furled' : ''}">${h}</th>`)}
-      <th class="scMeta scMetaCol scMetaCol--minor${mc}" data-segment="s1">Out</th>
-      ${holesToCells((h)=> h>=10 ? `<th class="${cardState.furledSegments[getSegmentForHole(h)] ? 'is-furled' : ''}">${h}</th>` : '', 10)}
-      <th class="scMeta scMetaCol scMetaCol--minor${mc}" data-segment="s2">In</th>
-      <th class="scMeta scMetaCol${mc}">Tot</th>
-    </tr></thead>`;
+    return `<thead><tr><th class="scName" data-action="toggle-all-segments">HOLE</th>${renderUnifiedRow(cardState, {}, { isHeader: true })}</tr></thead>`;
   }
 
   function getCardSummaryTitle(row){
@@ -257,6 +278,10 @@
           segments.forEach(segId => {
             s.furledSegments[segId] = !currentlyAnyFurled;
           });
+          const cfg = getSegmentConfig();
+          const segs = []; for(let i=1; i<=(18/cfg.size); i++) segs.push('s'+i);
+          const anyOn = segs.some(id => s.furledSegments[id]);
+          segs.forEach(id => s.furledSegments[id] = !anyOn);
           renderBody();
         });
       });
