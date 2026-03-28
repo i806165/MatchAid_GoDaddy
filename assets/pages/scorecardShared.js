@@ -155,7 +155,7 @@
 
   function buildCourseRows(courseRows, cardState){
     return (courseRows || []).map((r)=>{
-      return `<tr><td class="scName">${esc(r.label)}${r.tee && !['Par','HCP'].includes(r.label) ? ' — ' + esc(r.tee) : ''}</td>
+      return `<tr><td class="scName" data-action="toggle-all-segments">${esc(r.label)}${r.tee && !['Par','HCP'].includes(r.label) ? ' — ' + esc(r.tee) : ''}</td>
         ${renderUnifiedRow(cardState, r, { isCourse: true })}
       </tr>`;
     }).join('');
@@ -167,8 +167,8 @@
 
   function renderPlayerRows(players, cardState){
     return (players || []).map((p)=>{
-      const main = `<tr><td class="scName"><div class="scPLine1">${esc(p.playerName)} <span class="scPHC">${esc(p.playerHC ? '('+p.playerHC+')' : '')}</span></div><div class="scPLine2">${esc(p.tee || '')}</div></td>${renderUnifiedRow(cardState, p, { isPlayer: true, isPlayerRow: true })}</tr>`;
-      const detail = `<tr class="scDetailRow ${cardState.teamExpanded ? '' : 'is-hidden'}"><td class="scName">Stroke Marks</td>
+      const main = `<tr><td class="scName" data-action="toggle-all-segments"><div class="scPLine1">${esc(p.playerName)} <span class="scPHC">${esc(p.playerHC ? '('+p.playerHC+')' : '')}</span></div><div class="scPLine2">${esc(p.tee || '')}</div></td>${renderUnifiedRow(cardState, p, { isPlayer: true, isPlayerRow: true })}</tr>`;
+      const detail = `<tr class="scDetailRow ${cardState.teamExpanded ? '' : 'is-hidden'}"><td class="scName" data-action="toggle-all-segments">Stroke Marks</td>
         ${renderUnifiedRow(cardState, p, { isStroke: true })}
       </tr>`;
       return main + detail;
