@@ -114,14 +114,12 @@
     
     let val = '';
     if (options.isHeader) {
-      if (key === '9a') val = 'Out'; else if (key === '9b') val = 'In'; else if (key === '9c') val = 'Tot';
+      if (key === '9a') val = 'Out'; 
+      else if (key === '9b') val = 'In'; 
+      else if (key === '9c') val = 'Tot';
       else val = 'S' + (key.charCodeAt(1) - 96);
     } else {
-      val = rowData[key] ?? rowData.cells?.[key] ?? '';
-      if (options.isPlayer) {
-        const pk = (key === '9a' ? 'out' : (key === '9b' ? 'in' : (key === '9c' ? 'tot' : '')));
-        if (pk) val = totalForPlayer(rowData, pk);
-      }
+      val = options.isPlayer ? totalForPlayer(rowData, key) : (rowData[key] ?? rowData.cells?.[key] ?? '');
     }
     const tag = options.isHeader ? 'th' : 'td';
     const dSeg = (key !== '9c') ? `data-segment="${segmentId}"` : '';
@@ -271,15 +269,11 @@
       // Master Accordion Toggle
       card.querySelectorAll('[data-action="toggle-all-segments"]').forEach(el => {
         el.addEventListener('click', () => {
-          const allHoles = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18];
-          const segments = new Set(allHoles.map(getSegmentForHole));
-          const currentlyAnyFurled = Object.values(s.furledSegments).some(v => v === true);
-          
-          segments.forEach(segId => {
-            s.furledSegments[segId] = !currentlyAnyFurled;
-          });
           const cfg = getSegmentConfig();
-          const segs = []; for(let i=1; i<=(18/cfg.size); i++) segs.push('s'+i);
+          const startSeg = Math.ceil(cfg.start / cfg.size);
+          const numSegs = Math.ceil((cfg.end - cfg.start + 1) / cfg.size);
+          const segs = []; for(let i=0; i<numSegs; i++) segs.push('s' + (startSeg + i));
+          
           const anyOn = segs.some(id => s.furledSegments[id]);
           segs.forEach(id => s.furledSegments[id] = !anyOn);
           renderBody();

@@ -529,16 +529,16 @@ final class ServiceScoreCard {
   private static function splitTotalFromMap(array $kpiMap, bool $diffMode = false): array {
     $vals = [];
     foreach (self::holesStandard() as $i) {
-      $vals[] = isset($kpiMap[$i]) ? $kpiMap[$i] : null;
+      $vals[] = (isset($kpiMap[$i]) && $kpiMap[$i] !== "") ? $kpiMap[$i] : null;
     }
 
     $sum = function($arr) use ($diffMode) {
       $s = 0.0; $any = false;
-      foreach ($arr as $v) { if ($v !== null) { $s += floatval($v); $any = true; } }
+      foreach ($arr as $v) { if ($v !== null && $v !== "") { $s += floatval($v); $any = true; } }
       if (!$any) return "";
-      if ($diffMode) return self::formatDiffDisplay($s);
+      if ($diffMode) return ServiceScoreCard::formatDiffDisplay($s);
       $rounded = round($s);
-      if (abs($s - $rounded) < 0.00001) return (string)intval($rounded);
+      if (abs($s - $rounded) < 0.0001) return (string)intval($rounded);
       return number_format($s, 1);
     };
 
@@ -741,12 +741,7 @@ final class ServiceScoreCard {
       $detailsByHole = self::extractHoleDetailsByNumber($scoreJson);
 
       $cells = [];
-      $totals = [
-        "gross" => ["out" => 0.0, "in" => 0.0, "tot" => 0.0, "playedOut" => 0, "playedIn" => 0, "playedTot" => 0],
-        "net"   => ["out" => 0.0, "in" => 0.0, "tot" => 0.0, "playedOut" => 0, "playedIn" => 0, "playedTot" => 0],
-        "diff"  => ["out" => 0.0, "in" => 0.0, "tot" => 0.0, "playedOut" => 0, "playedIn" => 0, "playedTot" => 0],
-        "points"=> ["out" => 0.0, "in" => 0.0, "tot" => 0.0, "playedOut" => 0, "playedIn" => 0, "playedTot" => 0],
-      ];
+      $modeValues = ["gross" => [], "net" => [], "diff" => [], "points" => []];
 
       $courseMap = self::getCourseInfoMap($gameRow, $player);
 
@@ -774,10 +769,10 @@ final class ServiceScoreCard {
           $points = self::stablefordPointsForDiff((int)round($diff), $stablefordMap);
         }
 
-        self::accumulateModeTotals($totals["gross"], $holeNumber, $gross);
-        self::accumulateModeTotals($totals["net"], $holeNumber, $net);
-        self::accumulateModeTotals($totals["diff"], $holeNumber, $diff);
-        self::accumulateModeTotals($totals["points"], $holeNumber, $points);
+        $modeValues["gross"][$holeNumber] = $gross;
+        $modeValues["net"][$holeNumber] = $net;
+        $modeValues["diff"][$holeNumber] = $diff;
+        $modeValues["points"][$holeNumber] = $points;
 
         $cells["h" . $holeNumber] = [
           "hole" => $holeNumber,
@@ -802,10 +797,10 @@ final class ServiceScoreCard {
         "playerId" => self::playerIdentity($player),
         "holes" => $cells,
         "totals" => [
-          "gross" => self::finalizeNumericTotals($totals["gross"], false),
-          "net" => self::finalizeNumericTotals($totals["net"], false),
-          "diff" => self::finalizeNumericTotals($totals["diff"], true),
-          "points" => self::finalizeNumericTotals($totals["points"], false),
+          "gross" => self::splitTotalFromMap($modeValues["gross"], false),
+          "net" => self::splitTotalFromMap($modeValues["net"], false),
+          "diff" => self::splitTotalFromMap($modeValues["diff"], true),
+          "points" => self::splitTotalFromMap($modeValues["points"], false),
         ],
       ]);
     }
@@ -910,31 +905,6 @@ final class ServiceScoreCard {
     if ($d === 1) return "bogey";
     if ($d >= 2) return "bogeyplus";
     return "par";
-  }
-
-  private static function accumulateModeTotals(array &$totals, int $holeNumber, $value): void {
-    if ($value === null || $value === "") return;
-    $num = floatval($value);
-    $bucket = ($holeNumber <= 9) ? "out" : "in";
-    $playedKey = ($holeNumber <= 9) ? "playedOut" : "playedIn";
-    $totals[$bucket] += $num;
-    $totals["tot"] += $num;
-    $totals[$playedKey] += 1;
-    $totals["playedTot"] += 1;
-  }
-
-  private static function finalizeNumericTotals(array $totals, bool $diffMode): array {
-    return [
-      "out" => ($totals["playedOut"] > 0)
-        ? ($diffMode ? self::formatDiffDisplay($totals["out"]) : self::formatMaybeNumber($totals["out"]))
-        : "",
-      "in" => ($totals["playedIn"] > 0)
-        ? ($diffMode ? self::formatDiffDisplay($totals["in"]) : self::formatMaybeNumber($totals["in"]))
-        : "",
-      "tot" => ($totals["playedTot"] > 0)
-        ? ($diffMode ? self::formatDiffDisplay($totals["tot"]) : self::formatMaybeNumber($totals["tot"]))
-        : "",
-    ];
   }
 
   private static function formatMaybeNumber($value): string {
