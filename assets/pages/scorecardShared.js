@@ -139,12 +139,14 @@
       else if (options.isStroke) html += `<td class="${furled ? 'is-furled' : ''}">${esc(String(rowData.holes?.['h'+h]?.strokeMarks || ''))}</td>`;
 
       // If at segment boundary or end of range, insert summary anchor
-      if (h % seg.size === 0 || h === seg.end) {
+      const isSegEnd = (h % seg.size === 0);
+      const isRangeEnd = (h === seg.end);
+
+      if (isSegEnd || isRangeEnd) {
         const segIndex = Math.ceil(h / seg.size);
-        const key = (seg.size === 18 ? '9' : String(seg.size)) + String.fromCharCode(96 + segIndex);
-        if (!(h === 18 && seg.hasTot)) {
-           html += renderSummaryCell(cardState, rowData, key, sId, options);
-        }
+        let key = (seg.size === 18 ? '9' : String(seg.size)) + String.fromCharCode(96 + segIndex);
+        if (seg.size === 18 && isRangeEnd) key = '9c';
+        html += renderSummaryCell(cardState, rowData, key, sId, options);
       }
     }
     if (seg.hasTot) html += renderSummaryCell(cardState, rowData, '9c', 'tot', options);
