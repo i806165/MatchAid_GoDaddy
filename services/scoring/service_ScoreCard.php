@@ -1009,10 +1009,6 @@ final class ServiceScoreCard {
     $segments = self::splitTotalFromMap($holeValues, true);
     return array_merge($rowCells, $segments);
   }
-
-    return $rowCells;
-  }
-
   // ==========================================================================
   // 8. Generic Utility Helpers
   // ==========================================================================
