@@ -30,7 +30,7 @@
     return `${dayName} ${mm}/${dd}/${yy}`;
   }
   function ensureCardState(groupId){
-    if(!state.cardStates[groupId]) state.cardStates[groupId] = { expanded:true, teamExpanded:false, colsExpanded:false, furledSegments: {} };
+    if(!state.cardStates[groupId]) state.cardStates[groupId] = { expanded:true, teamExpanded:false, furledSegments: {} };
     return state.cardStates[groupId];
   }
   function activeRows(){ return Array.isArray(payload.rows) ? payload.rows : []; }
@@ -107,10 +107,8 @@
   }
 
   function renderSummaryCell(cardState, rowData, key, segmentId, options = {}) {
-    const isCompact = !cardState.colsExpanded;
     const classes = ['scMeta', 'scMetaCol'];
     if (key !== '9c') classes.push('scMetaCol--minor');
-    if (isCompact) classes.push('is-compact');
     
     let val = '';
     if (options.isHeader) {
@@ -119,7 +117,7 @@
       else if (key === '9c') val = 'Tot';
       else val = 'S' + (key.charCodeAt(1) - 96);
     } else {
-      val = options.isPlayer ? totalForPlayer(rowData, key) : (rowData[key] ?? rowData.cells?.[key] ?? '');
+      val = options.isPlayer ? totalForPlayer(rowData, key) : (rowData[key] ?? rowData.cells?.[key] ?? '-');
     }
     const tag = options.isHeader ? 'th' : 'td';
     const dSeg = (key !== '9c') ? `data-segment="${segmentId}"` : '';
@@ -129,23 +127,25 @@
   function renderUnifiedRow(cardState, rowData, options = {}) {
     const seg = getSegmentConfig();
     let html = '';
-    
-    const numSegments = Math.ceil((seg.end - seg.start + 1) / seg.size);
 
-    for (let i = 0; i < numSegments; i++) {
-      const currentStart = seg.start + (i * seg.size);
-      const currentEnd = Math.min(currentStart + seg.size - 1, seg.end);
-      const sId = 's' + Math.ceil(currentStart / seg.size); const furled = cardState.furledSegments[sId];
-      for (let h = currentStart; h <= currentEnd; h++) {
-        if (options.isHeader) html += `<th class="${furled ? 'is-furled' : ''}">${h}</th>`;
-        else if (options.isCourse) html += `<td class="${furled ? 'is-furled' : ''}">${esc(rowData['h'+h] ?? '')}</td>`;
-        else if (options.isPlayer) html += renderPlayerCell(rowData, h, false, cardState);
-        else if (options.isTotal) html += renderPlayerCell(rowData, h, true, cardState);
-        else if (options.isStroke) html += `<td class="${furled ? 'is-furled' : ''}">${esc(String(rowData.holes?.['h'+h]?.strokeMarks || ''))}</td>`;
+    for (let h = seg.start; h <= seg.end; h++) {
+      const sId = getSegmentForHole(h);
+      const furled = cardState.furledSegments[sId];
+
+      if (options.isHeader) html += `<th class="${furled ? 'is-furled' : ''}">${h}</th>`;
+      else if (options.isCourse) html += `<td class="${furled ? 'is-furled' : ''}">${esc(rowData['h'+h] ?? '')}</td>`;
+      else if (options.isPlayer) html += renderPlayerCell(rowData, h, false, cardState);
+      else if (options.isTotal) html += renderPlayerCell(rowData, h, true, cardState);
+      else if (options.isStroke) html += `<td class="${furled ? 'is-furled' : ''}">${esc(String(rowData.holes?.['h'+h]?.strokeMarks || ''))}</td>`;
+
+      // If at segment boundary or end of range, insert summary anchor
+      if (h % seg.size === 0 || h === seg.end) {
+        const segIndex = Math.ceil(h / seg.size);
+        const key = (seg.size === 18 ? '9' : String(seg.size)) + String.fromCharCode(96 + segIndex);
+        if (!(h === 18 && seg.hasTot)) {
+           html += renderSummaryCell(cardState, rowData, key, sId, options);
+        }
       }
-      // Map segment index to appropriate data key (a, b, c...)
-      const key = seg.prefix + String.fromCharCode(97 + (Math.ceil(currentStart / seg.size) - 1));
-      html += renderSummaryCell(cardState, rowData, key, sId, options);
     }
     if (seg.hasTot) html += renderSummaryCell(cardState, rowData, '9c', 'tot', options);
     return html;
@@ -229,9 +229,6 @@
           <button class="scToggleBtn" type="button" data-card-toggle="${esc(gid)}" title="Collapse Card">${iconMinus}</button>
           <div class="scGroupCard__title">${esc(headerText)}</div>
         </div>
-        <div class="scGroupCard__actions">
-          <button type="button" class="scMiniBtn" data-cols-toggle="${esc(gid)}">${cardState.colsExpanded ? 'Expand' : 'Compact'}</button>
-        </div>
       </div>
 
       <!-- Collapsed Header -->
@@ -243,14 +240,13 @@
       </div>
 
       <div class="scGroupCard__body">
-        <div class="scGroup scDenseA"><table class="scTable ${cardState.colsExpanded ? '' : 'scTable--compact'}" role="table" aria-label="scorecard">${renderHeaderRow(cardState)}<tbody>${buildCourseRows(row.courseInfo, cardState)}${renderPlayerRows(row.players, cardState)}${renderTotalRows(row.columnTotals, cardState)}</tbody></table></div>
+        <div class="scGroup scDenseA"><table class="scTable" role="table" aria-label="scorecard">${renderHeaderRow(cardState)}<tbody>${buildCourseRows(row.courseInfo, cardState)}${renderPlayerRows(row.players, cardState)}${renderTotalRows(row.columnTotals, cardState)}</tbody></table></div>
       </div>
     </section>`;
   }
 
   function bindCardActions(){
     dom.host.querySelectorAll('[data-card-toggle]').forEach((btn)=> btn.addEventListener('click', ()=> { const s = ensureCardState(btn.dataset.cardToggle); s.expanded = !s.expanded; renderBody(); }));
-    dom.host.querySelectorAll('[data-cols-toggle]').forEach((btn)=> btn.addEventListener('click', ()=> { const s = ensureCardState(btn.dataset.colsToggle); s.colsExpanded = !s.colsExpanded; renderBody(); }));
 
     // Accordion Delegation
     dom.host.querySelectorAll('.scGroupCard').forEach(card => {

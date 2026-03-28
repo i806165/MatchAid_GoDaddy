@@ -43,8 +43,6 @@
 
 .scDetailRow td{ background:#fafafa; font-size:10px; }
 .scDetailRow.is-hidden{ display:none; }
-.scMetaCol.is-compact{ display:none; }
-.scTable--compact .scMetaCol.scMetaCol--minor{ display:none; }
 .scPageSummary{ display:flex; justify-content:space-between; gap:12px; font-size:12px; font-weight:700; color:rgba(0,0,0,.7); }
 @media (max-width: 820px){
   .scGroupCard__hdr{ flex-direction:column; }

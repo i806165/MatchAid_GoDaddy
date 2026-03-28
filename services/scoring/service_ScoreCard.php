@@ -542,8 +542,8 @@ final class ServiceScoreCard {
     $sum = function($arr) use ($diffMode) {
       $s = 0.0; $any = false;
       foreach ($arr as $v) { if ($v !== null && $v !== "") { $s += floatval($v); $any = true; } }
-      if (!$any) return "";
-      if ($diffMode) return ServiceScoreCard::formatDiffDisplay($s);
+      if (!$any) return "-";
+      if ($diffMode) return self::formatDiffDisplay($s);
       $rounded = round($s);
       if (abs($s - $rounded) < 0.0001) return (string)intval($rounded);
       return number_format($s, 1);
