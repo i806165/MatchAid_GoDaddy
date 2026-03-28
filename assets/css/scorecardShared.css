@@ -1,15 +1,23 @@
 /* /assets/css/scorecardShared.css */
 .scHost--browser { gap: 12px; }
-.scBrowserControls{
-  display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
-}
+.scBrowserControls{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
 .scBrowserControls__group{ display:flex; gap:8px; flex-wrap:wrap; }
-.scCtlBtn{
-  border:1px solid var(--borderSubtle); background:#fff; border-radius:999px; padding:8px 12px; font-weight:700;
-}
+.scCtlBtn{ border:1px solid var(--borderSubtle); background:#fff; border-radius:999px; padding:8px 12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+.scCtlBtn--icon{ width:34px; height:34px; padding:0; }
+.scCtlBtn--icon .scIcon{ width:20px; height:20px; fill:currentColor; }
 .scCtlBtn.is-active{ background:var(--brandPrimary); color:#fff; border-color:var(--brandPrimary); }
 .scGroupCard{ border:1px solid var(--borderSubtle); border-radius:14px; overflow:hidden; background:#fff; }
 .scGroupCard__hdr{ display:flex; justify-content:space-between; gap:12px; align-items:flex-start; padding:12px 14px; border-bottom:1px solid var(--borderSubtle); }
+.scGroupCard__hdr--collapsed{ background:rgba(0,0,0,0.03); }
+.scGroupCard.is-collapsed .scGroupCard__hdr--expanded,
+.scGroupCard.is-collapsed .scGroupCard__body{ display:none; }
+.scGroupCard:not(.is-collapsed) .scGroupCard__hdr--collapsed{ display:none; }
+
+.scGroupCard__titleRow{ display:flex; align-items:center; gap:10px; min-width:0; flex:1; }
+.scToggleBtn{ flex:0 0 28px; width:28px; height:28px; border-radius:50%; border:none; background:transparent; color:var(--brandSecondary); cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
+.scToggleBtn:hover{ background:rgba(0,0,0,0.05); }
+.scToggleBtn svg{ width:20px; height:20px; fill:currentColor; }
+
 .scGroupCard__title{ font-weight:800; font-size:14px; line-height:1.2; }
 .scGroupCard__sub{ display: none; }
 .scGroupCard__actions{ display:flex; gap:8px; flex-wrap:wrap; }
@@ -17,15 +25,22 @@
 .scGroupCard__summary{ padding:10px 14px; font-size:13px; font-weight:700; color:rgba(0,0,0,.72); border-bottom:1px solid var(--borderSubtle); }
 .scGroupCard.is-collapsed .scGroupCard__body{ display:none; }
 .scTable td.scName{ white-space:normal; }
+
 .scCell{ position:relative; min-height:24px; display:flex; align-items:center; justify-content:center; }
 .scCellVal{ font-weight:800; }
-.scCell--declared{ background:rgba(0, 168, 89, 0.2); }
+.scCell--declared{ background:rgba(0, 168, 89, 0.12); }
+
 .scCell--birdie .scCellVal{ border-radius:999px; border:1.8px solid #000; display:inline-flex; min-width:20px; height:20px; align-items:center; justify-content:center; padding:0 5px; }
 .scCell--eagle .scCellVal{ border-radius:999px; border:1.8px double #000; display:inline-flex; min-width:20px; height:20px; align-items:center; justify-content:center; padding:0 5px; }
 .scCell--bogey .scCellVal{ border:1.8px solid #000; display:inline-flex; min-width:20px; height:20px; align-items:center; justify-content:center; padding:0 5px; }
 .scCell--bogeyplus .scCellVal{ border:2px solid #000; display:inline-flex; min-width:20px; height:20px; align-items:center; justify-content:center; padding:0 5px; box-shadow: inset 0 0 0 1px #000; }
 .scCellMarks{ position:absolute; top:1px; right:2px; font-size:9px; font-weight:700; color:rgba(0,0,0,.7); }
 .scTotalRow td{ background:rgba(0,0,0,0.12); font-weight:800; border-top: 1px solid rgba(0,0,0,0.2); color: #000; }
+.scTable th.scMeta, .scTable td.scName{ cursor:pointer; }
+.scTable th.scMeta:hover, .scTable td.scName:hover{ background:rgba(0,0,0,0.05); }
+
+.is-furled{ display:none !important; }
+
 .scDetailRow td{ background:#fafafa; font-size:10px; }
 .scDetailRow.is-hidden{ display:none; }
 .scMetaCol.is-compact{ display:none; }
