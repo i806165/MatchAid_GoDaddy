@@ -33,8 +33,11 @@ $paths = [
   "routerApi"       => MA_ROUTE_API_ROUTER,
   "apiScoreEntry"   => MA_ROUTE_API_SCORE_ENTRY,
   "apiScoreEntryLaunch" => MA_ROUTE_API_SCORE_ENTRY . "/launch.php",
+  "apiScoreHome"    => MA_ROUTE_API_SCORE_HOME,
   "apiScoreCard"    => MA_ROUTE_API_GAME_SCORECARD,
-  "apiAdminGames" => MA_ROUTE_API_ADMIN_GAMES
+  "apiAdminGames"   => MA_ROUTE_API_ADMIN_GAMES,
+  "scoreEntry"      => MA_ROUTE_SCORE_ENTRY,
+  "scoreHome"       => MA_ROUTE_SCORE_HOME
 ];
 
 // Chrome values

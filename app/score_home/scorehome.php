@@ -44,6 +44,12 @@ if ($isResumeReady && $urlKey === "") {
     exit;
 }
 
+$paths = [
+    "apiScoreHome" => MA_ROUTE_API_SCORE_HOME,
+    "scoreEntry"   => MA_ROUTE_SCORE_ENTRY,
+    "routerApi"    => MA_ROUTE_API_ROUTER
+];
+
 // 4. Build payload
 $initPayload = [
     "ok" => true,

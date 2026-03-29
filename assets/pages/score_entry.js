@@ -14,9 +14,10 @@
       || (routes.apiScoreEntry ? routes.apiScoreEntry + '/launch.php' : '/api/score_entry/launch.php'),
     saveScores: paths.apiScoreEntrySaveScores
       || (routes.apiScoreEntry ? routes.apiScoreEntry + '/saveScores.php' : '/api/score_entry/saveScores.php'),
-    setScorerContext: '/api/score_home/setScorerContext.php',
-    setHole: '/api/score_entry/setHoleContext.php',
-    clearContext: '/api/score_entry/clearContext.php'
+    setScorerContext: (paths.apiScoreHome || '/api/score_home') + '/setScorerContext.php',
+    setHole: (paths.apiScoreEntry || '/api/score_entry') + '/setHoleContext.php',
+    clearContext: (paths.apiScoreEntry || '/api/score_entry') + '/clearContext.php',
+    scoreHome: paths.scoreHome || '/app/score_home/scorehome.php'
   };
 
   // ==========================================================================
@@ -753,7 +754,7 @@
         right: { show: !!state.payload, label: 'Restart', onClick: async () => {
           if (window.confirm('Clear session and restart?')) {
             await fetch(apiUrls.clearContext);
-            window.location.href = '/app/score_home/scorehome.php';
+            window.location.href = apiUrls.scoreHome;
           }
         }}
       });

@@ -13,6 +13,35 @@
     </div>
   </section>
 
+  <section class="maCard isHidden" id="shCartCard">
+    <header class="maCard__hdr"><div class="maCard__title">CART CONFIGURATION</div></header>
+    <div class="maCard__body">
+      <div class="maFieldRow">
+        <div class="maField">
+          <label class="maLabel" for="shCart1Driver">Cart 1 Driver</label>
+          <select id="shCart1Driver" class="maTextInput"></select>
+        </div>
+        <div class="maField">
+          <label class="maLabel" for="shCart1Passenger">Cart 1 Passenger</label>
+          <select id="shCart1Passenger" class="maTextInput"></select>
+        </div>
+      </div>
+      <div class="maFieldRow">
+        <div class="maField">
+          <label class="maLabel" for="shCart2Driver">Cart 2 Driver</label>
+          <select id="shCart2Driver" class="maTextInput"></select>
+        </div>
+        <div class="maField">
+          <label class="maLabel" for="shCart2Passenger">Cart 2 Passenger</label>
+          <select id="shCart2Passenger" class="maTextInput"></select>
+        </div>
+      </div>
+      <div style="margin-top:12px; display:flex; justify-content:flex-end;">
+        <button id="shBtnCartConfirm" class="btn btnSecondary" type="button">Confirm</button>
+      </div>
+    </div>
+  </section>
+
   <section class="maCard isHidden" id="shScorerCard">
     <header class="maCard__hdr"><div class="maCard__title">WHO IS SCORING?</div></header>
     <div class="maCard__body">

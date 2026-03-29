@@ -17,4 +17,9 @@ ServiceScoreEntry::setScoringPodGGID($ggid);
 ServiceScoreEntry::setScorecardKey($key);
 ServiceContextGame::setGameContext($ggid);
 
-ma_respond(200, ['ok' => true, 'payload' => ['players' => $players]]);
+$gc = ServiceContextGame::getGameContext();
+
+ma_respond(200, ['ok' => true, 'payload' => [
+    'players' => $players,
+    'game' => $gc['game'] ?? null
+]]);

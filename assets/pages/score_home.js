@@ -2,13 +2,34 @@
 (function() {
   'use strict';
   const MA = window.MA || {};
+  const paths = MA.paths || {};
+  const apiUrls = {
+    scoreHome: (paths.apiScoreHome || '/api/score_home') + '/score_home.php',
+    setScorerContext: (paths.apiScoreHome || '/api/score_home') + '/setScorerContext.php',
+    scoreEntry: paths.scoreEntry || '/app/score_entry/scoreentry.php'
+  };
+
   const el = {
     playerKey: document.getElementById('shPlayerKey'),
     btnLaunch: document.getElementById('shBtnLaunch'),
     launchCard: document.getElementById('shLaunchCard'),
+
+    cartCard: document.getElementById('shCartCard'),
+    cart1Driver: document.getElementById('shCart1Driver'),
+    cart1Passenger: document.getElementById('shCart1Passenger'),
+    cart2Driver: document.getElementById('shCart2Driver'),
+    cart2Passenger: document.getElementById('shCart2Passenger'),
+    btnCartConfirm: document.getElementById('shBtnCartConfirm'),
+
     scorerCard: document.getElementById('shScorerCard'),
     scorerChips: document.getElementById('shScorerChips'),
     gatingMsg: document.getElementById('shGatingMsg')
+  };
+
+  const state = {
+    players: [],
+    game: null,
+    cartAssignments: null
   };
 
   async function onLaunch() {
@@ -17,7 +38,7 @@
 
     try {
       MA.setStatus('Validating...', 'info');
-      const res = await MA.postJson('/api/score_home/score_home.php', { playerKey: key });
+      const res = await MA.postJson(apiUrls.scoreHome, { playerKey: key });
       if (!res.ok) throw new Error(res.message);
 
       // Check Game Day Gating (Commented logic per request)
@@ -29,11 +50,55 @@
       }
       */
 
-      renderScorers(res.payload.players);
-      el.launchCard.classList.add('isHidden');
-      el.scorerCard.classList.remove('isHidden');
+      state.players = res.payload.players || [];
+      state.game = res.payload.game || {};
+
+      // Determine setup branch: Cart config (COD) vs direct Scorer selection
+      if (state.game.dbGames_RotationMethod === 'COD') {
+        renderCartOptions();
+        el.launchCard.classList.add('isHidden');
+        el.cartCard.classList.remove('isHidden');
+      } else {
+        showScorerStep();
+      }
+
       MA.setStatus('Ready.', 'success');
     } catch (e) { MA.setStatus(e.message, 'error'); }
+  }
+
+  function renderCartOptions() {
+    const selects = [el.cart1Driver, el.cart1Passenger, el.cart2Driver, el.cart2Passenger];
+    selects.forEach(sel => {
+      if (!sel) return;
+      sel.innerHTML = '<option value=""></option>';
+      state.players.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.dbPlayers_PlayerGHIN;
+        opt.textContent = p.dbPlayers_Name;
+        sel.appendChild(opt);
+      });
+    });
+  }
+
+  function onConfirmCart() {
+    const picks = [el.cart1Driver.value, el.cart1Passenger.value, el.cart2Driver.value, el.cart2Passenger.value].filter(Boolean);
+    const unique = new Set(picks);
+    if (unique.size !== picks.length) return MA.setStatus('Each cart position must have a unique player.', 'warn');
+
+    state.cartAssignments = {};
+    if (el.cart1Driver.value) state.cartAssignments[el.cart1Driver.value] = '1';
+    if (el.cart1Passenger.value) state.cartAssignments[el.cart1Passenger.value] = '2';
+    if (el.cart2Driver.value) state.cartAssignments[el.cart2Driver.value] = '3';
+    if (el.cart2Passenger.value) state.cartAssignments[el.cart2Passenger.value] = '4';
+
+    showScorerStep();
+  }
+
+  function showScorerStep() {
+    renderScorers(state.players);
+    el.launchCard.classList.add('isHidden');
+    el.cartCard.classList.add('isHidden');
+    el.scorerCard.classList.remove('isHidden');
   }
 
   function renderScorers(players) {
@@ -43,13 +108,17 @@
       btn.className = 'maChoiceChip';
       btn.textContent = p.dbPlayers_Name;
       btn.onclick = async () => {
-        await MA.postJson('/api/score_home/setScorerContext.php', { ghin: p.dbPlayers_PlayerGHIN });
-        window.location.href = '/app/score_entry/scoreentry.php';
+        await MA.postJson(apiUrls.setScorerContext, { 
+          ghin: p.dbPlayers_PlayerGHIN,
+          carts: state.cartAssignments 
+        });
+        window.location.href = apiUrls.scoreEntry;
       };
       el.scorerChips.appendChild(btn);
     });
   }
 
   el.btnLaunch.onclick = onLaunch;
+  el.btnCartConfirm.onclick = onConfirmCart;
   el.playerKey.onkeydown = (e) => { if (e.key === 'Enter') onLaunch(); };
 })();

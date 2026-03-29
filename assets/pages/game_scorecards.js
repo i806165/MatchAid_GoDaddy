@@ -14,6 +14,7 @@
   const MA = window.MA || {};
   const chrome = MA.chrome || {};
   const init = window.__INIT__ || window.__MA_INIT__ || {};
+  const paths = MA.paths || {};
   const game = init.game || {};
   const scorecards = init.scorecards || {};
 
@@ -258,7 +259,7 @@ function renderGroup(group) {
   const scoreCardId = String(gh.playerKey || "").trim();
   const qrUrl =
     (scoreCardId && gh.GGID)
-      ? `${window.location.origin}/app/score_entry/scoreentry.php?key=${encodeURIComponent(scoreCardId)}`
+      ? `${window.location.origin}${paths.scoreEntry || '/app/score_entry/scoreentry.php'}?key=${encodeURIComponent(scoreCardId)}`
       : "";
 
   return `
