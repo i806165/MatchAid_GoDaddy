@@ -33,13 +33,13 @@
   };
 
   async function onLaunch() {
-    const key = el.playerKey.value.trim().toUpperCase();
+    const key = (el.playerKey?.value || '').trim().toUpperCase();
     if (!key) return MA.setStatus('Please enter a ScoreCard ID.', 'warn');
 
     try {
       MA.setStatus('Validating...', 'info');
       const res = await MA.postJson(apiUrls.scoreHome, { playerKey: key });
-      if (!res.ok) throw new Error(res.message);
+      if (res.ok === false) throw new Error(res.message || 'Validation failed');
 
       // Check Game Day Gating (Bypass via canSave which includes testing mode)
       if (!res.payload.canSave) {
@@ -138,8 +138,8 @@
     }
   }
 
-  el.btnLaunch.onclick = onLaunch;
-  el.btnCartConfirm.onclick = onConfirmCart;
-  el.playerKey.onkeydown = (e) => { if (e.key === 'Enter') onLaunch(); };
+  if (el.btnLaunch) el.btnLaunch.onclick = onLaunch;
+  if (el.btnCartConfirm) el.btnCartConfirm.onclick = onConfirmCart;
+  if (el.playerKey) el.playerKey.onkeydown = (e) => { if (e.key === 'Enter') onLaunch(); };
   applyChrome();
 })();
