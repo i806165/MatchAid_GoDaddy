@@ -106,9 +106,9 @@
 }
 
 .scorePlayerRow{
-  padding: 10px 10px;
+  padding: 14px 14px 12px 14px;
   display: grid;
-  gap: 6px;
+  gap: 10px;
   background: var(--cardBg);
   border-top: 1px solid var(--cardBorder);
 }
@@ -117,30 +117,87 @@
   border-top: none;
 }
 
-.scorePlayerLaneTop{
+.scorePlayerMain{
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
+  gap: 14px;
   align-items: center;
 }
 
-.scorePlayerIdentity{
+.scorePlayerBadge{
+  width: 100%;
   min-width: 0;
+  min-height: 118px;
+  border-radius: 28px;
+  border: 2px solid color-mix(in srgb, var(--brandPrimary) 24%, var(--cardBorder));
+  padding: 16px 18px 14px 18px;
   display: grid;
-  gap: 2px;
+  grid-template-rows: 1fr auto;
+  align-items: start;
+  text-align: left;
+  box-sizing: border-box;
+  transition: transform .08s ease, background-color .12s ease, border-color .12s ease;
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
 }
 
-.scorePlayerFirstName,
-.scorePlayerLastName,
-.scorePlayerHandicap{
-  line-height: 1.1;
+.scorePlayerBadge--manual{
+  cursor: pointer;
+}
+
+.scorePlayerBadge--manual:active{
+  transform: scale(.985);
+}
+
+.scorePlayerBadge--auto{
+  cursor: default;
+}
+
+.scorePlayerBadge.is-declared{
+  background: #8fd16f;
+  color: #ffffff;
+  border-color: color-mix(in srgb, #8fd16f 55%, var(--brandPrimary));
+}
+
+.scorePlayerBadge.is-undeclared{
+  background: #f4f4f2;
   color: var(--ink);
-  font-size: 16px;
-  font-weight: 800;
+  border-color: var(--cardBorder);
 }
 
-.scorePlayerHandicap{
-  color: inherit;
+.scorePlayerBadgeName{
+  min-width: 0;
+}
+
+.scorePlayerBadgeLast{
+  line-height: 1.0;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scorePlayerBadgeFirst{
+  margin-top: 4px;
+  line-height: 1.0;
+  font-size: 15px;
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.scorePlayerBadgeStatus{
+  margin-top: 10px;
+  line-height: 1.05;
+  font-size: 15px;
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .scoreScoreBox{
@@ -151,53 +208,32 @@
 
 .scoreRawControls{
   display: inline-grid;
-  grid-template-columns: 42px 72px 42px;
-  gap: 6px;
+  grid-template-columns: 70px 118px 70px;
+  gap: 10px;
   align-items: center;
 }
 
 .scoreAdjustBtn{
-  min-height: 42px;
-  height: 42px;
-  min-width: 42px;
+  min-height: 70px;
+  height: 70px;
+  min-width: 70px;
   padding: 0;
-  font-size: 16px;
-  font-weight: 800;
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1;
+  border-radius: 24px;
 }
 
 .scoreRawInput{
-  width: 72px;
-  min-height: 42px;
-  height: 42px;
+  width: 118px;
+  min-height: 70px;
+  height: 70px;
   text-align: center;
-  padding: 0 8px;
-  font-size: 16px;
-  font-weight: 800;
+  padding: 0 10px;
+  font-size: 30px;
+  font-weight: 900;
+  border-radius: 24px;
 }
-
-.scorePlayerResultRow{
-  display: grid;
-  justify-content: end;
-}
-
-.scorePlayerResultText{
-  display: inline-flex;
-  align-items: center;
-  gap: 0;
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.scoreResultToken{
-  color: var(--ink);
-}
-
-.scorePlayerDeclareRow{
-  display: grid;
-  justify-content: end;
-}
-
 
 .scorePlayerMetaRow{
   display: grid;
@@ -208,7 +244,7 @@
   min-width: 0;
   line-height: 1.15;
   color: var(--mutedText);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 800;
   white-space: nowrap;
   overflow: hidden;
@@ -221,47 +257,7 @@
 
 .scoreMetaSep{
   color: var(--mutedText);
-  padding: 0 2px;
-}
-
-  .scoreDeclareWrap{
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    color: var(--ink);
-    white-space: nowrap;
-    font-size: 13px;
-    font-weight: 800;
-  }
-
-  .scoreDeclareWrap input[type="checkbox"]{
-    width: 20px;
-    height: 20px;
-    margin: 0;
-    flex: 0 0 auto;
-  }
-
-/* Dirty dialog */
-.scoreDirtyDialog{
-  border: none;
-  border-radius: var(--modalRadius);
-  padding: 0;
-  max-width: 420px;
-  width: calc(100% - 32px);
-  box-shadow: var(--modalShadow);
-}
-
-.scoreDirtyDialogForm{
-  padding: 18px;
-  display: grid;
-  gap: 12px;
-}
-
-.scoreDirtyActions{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: flex-end;
+  padding: 0 4px;
 }
 
 @media (max-width: 768px){
@@ -295,41 +291,83 @@
     height: 48px;
   }
 
-  .scorePlayerLaneTop{
+  .scorePlayerRow{
+    padding: 14px 12px 12px 12px;
+    gap: 10px;
+  }
+
+  .scorePlayerMain{
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 10px;
     align-items: center;
   }
 
+  .scorePlayerBadge{
+    min-height: 108px;
+    padding: 14px 16px 12px 16px;
+    border-radius: 26px;
+  }
+
+  .scorePlayerBadgeLast{
+    font-size: 19px;
+  }
+
+  .scorePlayerBadgeFirst{
+    font-size: 14px;
+  }
+
+  .scorePlayerBadgeStatus{
+    font-size: 14px;
+  }
+
   .scoreRawControls{
-    grid-template-columns: 42px 72px 42px;
-    gap: 4px;
+    grid-template-columns: 54px 88px 54px;
+    gap: 8px;
   }
 
   .scoreAdjustBtn{
-    min-height: 42px;
-    height: 42px;
-    min-width: 42px;
+    min-height: 54px;
+    height: 54px;
+    min-width: 54px;
+    font-size: 26px;
+    border-radius: 18px;
   }
 
   .scoreRawInput{
-    width: 72px;
-    min-height: 42px;
-    height: 42px;
-  }
-
-  .scorePlayerResultRow,
-  .scorePlayerDeclareRow{
-    justify-content: end;
-  }
-
-  .scorePlayerMetaRow{
-    justify-content: start;
+    width: 88px;
+    min-height: 54px;
+    height: 54px;
+    font-size: 26px;
+    border-radius: 18px;
   }
 
   .scorePlayerDetail{
+    font-size: 13px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
+}
+
+/* Dirty dialog */
+.scoreDirtyDialog{
+  border: none;
+  border-radius: var(--modalRadius);
+  padding: 0;
+  max-width: 420px;
+  width: calc(100% - 32px);
+  box-shadow: var(--modalShadow);
+}
+
+.scoreDirtyDialogForm{
+  padding: 18px;
+  display: grid;
+  gap: 12px;
+}
+
+.scoreDirtyActions{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
 }

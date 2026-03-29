@@ -414,153 +414,153 @@
   // 8. Collector Row Rendering
   // ==========================================================================
 
-  function renderRows() {
-    const payload = state.payload;
-    if (!payload) return;
+function renderRows() {
+  const payload = state.payload;
+  if (!payload) return;
 
-    el.rows.innerHTML = '';
+  el.rows.innerHTML = '';
 
-    (payload.players || []).forEach((wrapper) => {
-      const row = wrapper.scoreEntryRow || {};
-      const article = document.createElement('article');
-      article.className = 'scorePlayerRow';
-      article.dataset.playerId = row.playerId || '';
+  (payload.players || []).forEach((wrapper) => {
+    const row = wrapper.scoreEntryRow || {};
+    const article = document.createElement('article');
+    article.className = 'scorePlayerRow';
+    article.dataset.playerId = row.playerId || '';
 
-      const fullName = String(row.playerName || '').trim();
-      const nameParts = fullName.split(/\s+/).filter(Boolean);
-      const firstName = escapeHtml(nameParts[0] || '');
-      const lastName = escapeHtml(nameParts.length > 1 ? nameParts.slice(1).join(' ') : '');
-      const effectiveHC = escapeHtml(String(row.effectiveHC ?? ''));
-      const teeSetName = escapeHtml(row.teeSetName || '');
-      const yardage = escapeHtml(String(row.yardage ?? '—'));
-      const par = escapeHtml(String(row.par ?? '—'));
-      const holeHcp = escapeHtml(String(row.holeHcp ?? '—'));
-      const playerStrokes = escapeHtml(String(row.strokeAllocation ?? '0'));
-      const netScore = escapeHtml(String(row.netScore ?? '—'));
+    const fullName = String(row.playerName || '').trim();
+    const nameParts = fullName.split(/\s+/).filter(Boolean);
+    const firstName = escapeHtml(nameParts[0] || '');
+    const lastName = escapeHtml(nameParts.length > 1 ? nameParts.slice(1).join(' ') : (nameParts[0] || ''));
+    const teeSetName = escapeHtml(row.teeSetName || '');
+    const yardage = escapeHtml(String(row.yardage ?? '—'));
+    const par = escapeHtml(String(row.par ?? '—'));
+    const holeHcp = escapeHtml(String(row.holeHcp ?? '—'));
+    const netScore = (row.netScore === null || row.netScore === undefined || row.netScore === '')
+      ? '—'
+      : escapeHtml(String(row.netScore));
 
-      const payload = state.payload || {};
-      const scoringSystem = payload.gameRow?.dbGames_ScoringSystem;
-      const isAuto = !['DeclareManual', 'DeclarePlayer'].includes(scoringSystem);
-      const showDeclare = ['DeclarePlayer', 'DeclareManual', 'BestBall', 'DeclareHole', 'AllScores'].includes(scoringSystem);
+    const payloadGame = state.payload || {};
+    const scoringSystem = String(payloadGame.gameRow?.dbGames_ScoringSystem || '');
+    const isManualDeclare = ['DeclarePlayer', 'DeclareManual'].includes(scoringSystem);
+    const isAutoDeclare = !isManualDeclare;
+    const isDeclared = !!row.declared;
 
-      // Game Day Gating: Disable inputs if not testing and not game day
-      // const isDisabled = !payload.isGameDay ? 'disabled' : '';
-      const isDisabled = ''; // Leave commented for testing per request
+    const badgeTag = isManualDeclare ? 'button' : 'div';
+    const badgeClasses = [
+      'scorePlayerBadge',
+      isManualDeclare ? 'scorePlayerBadge--manual' : 'scorePlayerBadge--auto',
+      isDeclared ? 'is-declared' : 'is-undeclared'
+    ].join(' ');
 
-      article.innerHTML = `
-        <div class="scorePlayerLaneTop">
-          <div class="scorePlayerIdentity">
-            <div class="scorePlayerFirstName">${firstName}</div>
-            <div class="scorePlayerLastName">${lastName} <span class="scorePlayerHandicap">(${effectiveHC})</span></div>
+    const badgeAttrs = isManualDeclare
+      ? 'type="button"'
+      : '';
+
+    article.innerHTML = `
+      <div class="scorePlayerMain">
+        <${badgeTag} class="${badgeClasses}" ${badgeAttrs}>
+          <div class="scorePlayerBadgeName">
+            <div class="scorePlayerBadgeLast">${lastName}</div>
+            ${firstName && firstName !== lastName ? `<div class="scorePlayerBadgeFirst">${firstName}</div>` : ''}
           </div>
+          <div class="scorePlayerBadgeStatus">NET ${netScore}</div>
+        </${badgeTag}>
 
-          <div class="scoreScoreBox">
-            <div class="scoreRawControls">
-              <button type="button" class="btn scoreAdjustBtn" data-dir="-1" ${isDisabled}>−</button>
-              <input
-                type="number"
-                class="maTextInput scoreRawInput"
-                min="1"
-                max="15"
-                value="${row.rawScore ?? ''}" ${isDisabled}>
-              <button type="button" class="btn scoreAdjustBtn" data-dir="1" ${isDisabled}>+</button>
-            </div>
+        <div class="scoreScoreBox">
+          <div class="scoreRawControls">
+            <button type="button" class="btn scoreAdjustBtn" data-dir="-1">−</button>
+            <input
+              type="number"
+              class="maTextInput scoreRawInput"
+              min="1"
+              max="15"
+              value="${row.rawScore ?? ''}">
+            <button type="button" class="btn scoreAdjustBtn" data-dir="1">+</button>
           </div>
         </div>
+      </div>
 
-        <div class="scorePlayerResultRow">
-          <div class="scorePlayerResultText">
-            <span class="scoreResultToken">Strokes ${playerStrokes}</span>
-            <span class="scoreMetaSep">•</span>
-            <span class="scoreResultToken">Net ${netScore}</span>
-          </div>
+      <div class="scorePlayerMetaRow">
+        <div class="scorePlayerDetail">
+          <span class="scoreMetaToken">Tee ${teeSetName}</span>
+          <span class="scoreMetaSep">•</span>
+          <span class="scoreMetaToken">${yardage}yds</span>
+          <span class="scoreMetaSep">•</span>
+          <span class="scoreMetaToken">Par ${par}</span>
+          <span class="scoreMetaSep">•</span>
+          <span class="scoreMetaToken">HCP ${holeHcp}</span>
         </div>
+      </div>`;
 
-        <div class="scorePlayerDeclareRow ${showDeclare ? '' : 'isHidden'}">
-          <label class="scoreDeclareWrap">
-            Declare
-            <input type="checkbox" class="scoreDeclareCheck" ${row.declared ? 'checked' : ''} ${isAuto ? 'disabled' : ''}>
-          </label>
-        </div>
+    bindRowEvents(article, wrapper, { isManualDeclare, isAutoDeclare });
+    el.rows.appendChild(article);
+  });
+}
 
-        <div class="scorePlayerMetaRow">
-          <div class="scorePlayerDetail">
-            <span class="scoreMetaToken">Tee ${teeSetName}</span>
-            <span class="scoreMetaSep">•</span>
-            <span class="scoreMetaToken">${yardage}yds</span>
-            <span class="scoreMetaSep">•</span>
-            <span class="scoreMetaToken">Par ${par}</span>
-            <span class="scoreMetaSep">•</span>
-            <span class="scoreMetaToken">HCP ${holeHcp}</span>
-          </div>
-        </div>`;
+  function bindRowEvents(article, wrapper, options = {}) {
+  const input = article.querySelector('.scoreRawInput');
+  const badge = article.querySelector('.scorePlayerBadge');
+  const playerId = wrapper.scoreEntryRow?.playerId;
+  const strokeAllocation = Number(wrapper.scoreEntryRow?.strokeAllocation || 0);
+  const isManualDeclare = !!options.isManualDeclare;
 
-      bindRowEvents(article, wrapper);
-      el.rows.appendChild(article);
+  article.querySelectorAll('.scoreAdjustBtn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const dir = Number(btn.dataset.dir || 0);
+      const par = Number(wrapper.scoreEntryRow?.par || 0);
+      const rawText = String(input.value || '').trim();
+      const hasCurrentValue = rawText !== '' && !Number.isNaN(Number(rawText));
+
+      let next;
+      if (!hasCurrentValue) {
+        next = par > 0 ? par : 1;
+      } else {
+        next = Number(rawText) + dir;
+      }
+
+      next = Math.max(1, Math.min(15, next));
+      input.value = String(next);
+      markDirty(playerId, next, !!wrapper.scoreEntryRow?.declared);
+    });
+  });
+
+  input?.addEventListener('change', () => {
+    const rawText = String(input.value || '').trim();
+    const raw = rawText === '' ? null : Number(rawText);
+    markDirty(playerId, (raw === null || Number.isNaN(raw)) ? null : raw, !!wrapper.scoreEntryRow?.declared);
+  });
+
+  if (isManualDeclare && badge) {
+    badge.addEventListener('click', () => {
+      const rawText = String(input?.value || '').trim();
+      const raw = rawText === '' ? null : Number(rawText);
+      const nextDeclared = !wrapper.scoreEntryRow?.declared;
+      markDirty(playerId, (raw === null || Number.isNaN(raw)) ? null : raw, nextDeclared);
     });
   }
+}
 
-  function bindRowEvents(article, wrapper) {
-    const input = article.querySelector('.scoreRawInput');
-    const net = article.querySelector('.scoreResultToken:last-child');
-    const declare = article.querySelector('.scoreDeclareCheck');
-    const playerId = wrapper.scoreEntryRow?.playerId;
-    const strokeAllocation = Number(wrapper.scoreEntryRow?.strokeAllocation || 0);
+function markDirty(playerId, rawScore, declared) {
+  state.dirty = true;
 
-    article.querySelectorAll('.scoreAdjustBtn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const dir = Number(btn.dataset.dir || 0);
-        const par = Number(wrapper.scoreEntryRow?.par || 0);
-        const rawText = String(input.value || '').trim();
-        const hasCurrentValue = rawText !== '' && !Number.isNaN(Number(rawText));
+  const wrapper = state.payload.players.find((p) => (p.scoreEntryRow?.playerId || '') === playerId);
+  if (!wrapper) return;
 
-        let next;
-        if (!hasCurrentValue) {
-          next = par > 0 ? par : 1;
-        } else {
-          next = Number(rawText) + dir;
-        }
+  wrapper.scoreEntryRow.rawScore = rawScore;
+  wrapper.scoreEntryRow.netScore = (typeof rawScore === 'number')
+    ? rawScore - Number(wrapper.scoreEntryRow.strokeAllocation || 0)
+    : null;
+  wrapper.scoreEntryRow.declared = declared;
 
-        next = Math.max(1, Math.min(15, next));
-        input.value = String(next);
-        net.textContent = `Net ${String(next - strokeAllocation)}`;
-        markDirty(playerId, next, !!declare?.checked);
-      });
-    });
+  updateWorkingScoresJson(wrapper, rawScore, declared);
 
-    input?.addEventListener('change', () => {
-      const raw = Number(input.value || 0);
-      net.textContent = raw ? `Net ${String(raw - strokeAllocation)}` : 'Net —';
-      markDirty(playerId, raw || null, !!declare?.checked);
-    });
-
-    declare?.addEventListener('change', () => {
-      const raw = Number(input.value || 0);
-      markDirty(playerId, raw || null, !!declare.checked);
-      resolveDeclaredScores();
-    });
+  const scoringSystem = state.payload?.gameRow?.dbGames_ScoringSystem;
+  if (!['DeclareManual', 'DeclarePlayer'].includes(scoringSystem)) {
+    resolveDeclaredScores();
+    return;
   }
 
-  function markDirty(playerId, rawScore, declared) {
-    state.dirty = true;
-
-    const wrapper = state.payload.players.find((p) => (p.scoreEntryRow?.playerId || '') === playerId);
-    if (!wrapper) return;
-
-    wrapper.scoreEntryRow.rawScore = rawScore;
-    wrapper.scoreEntryRow.netScore = (typeof rawScore === 'number')
-      ? rawScore - Number(wrapper.scoreEntryRow.strokeAllocation || 0)
-      : null;
-    wrapper.scoreEntryRow.declared = declared;
-
-    updateWorkingScoresJson(wrapper, rawScore, declared);
-    
-    // Auto-resolve declarations if in an automatic mode
-    const scoringSystem = state.payload?.gameRow?.dbGames_ScoringSystem;
-    if (!['DeclareManual', 'DeclarePlayer'].includes(scoringSystem)) {
-        resolveDeclaredScores();
-    }
-  }
+  renderRows();
+}
 
   function updateWorkingScoresJson(wrapper, rawScore, declared) {
     if (!wrapper) return;
