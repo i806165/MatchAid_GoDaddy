@@ -376,7 +376,7 @@
         state.scorerGHIN = row.playerGHIN || '';
 
         // Persist Scorer Context to Session
-        await fetch('/api/session/setScorerContext.php', {
+        await fetch('/api/score_entry/setScorerContext.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ghin: state.scorerGHIN })

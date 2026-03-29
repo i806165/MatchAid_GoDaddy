@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
-// /public_html/api/session/setScorerContext.php
+// /public_html/api/score_entry/setScorerContext.php
 
 require_once __DIR__ . "/../../bootstrap.php";
-require_once MA_SERVICES . "/context/service_UserContext.php";
+require_once MA_SERVICES . "/context/service_ContextUser.php";
 
 $input = json_decode(file_get_contents('php://input'), true);
 $ghin = (string)($input['ghin'] ?? '');
