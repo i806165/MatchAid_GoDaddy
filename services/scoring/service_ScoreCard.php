@@ -199,8 +199,7 @@ final class ServiceScoreCard {
 
     foreach ($players as $p) {
       $candidates = [
-        self::normStr($p["dbPlayers_PlayerID"] ?? ""),
-        self::normStr($p["dbPlayers_GHIN"] ?? ""),
+        self::normStr($p["dbPlayers_PlayerGHIN"] ?? ""),
         self::normStr($p["dbPlayers_PlayerKey"] ?? ""),
       ];
       foreach ($candidates as $c) {
@@ -1038,9 +1037,7 @@ final class ServiceScoreCard {
   }
 
   private static function playerIdentity(array $player): string {
-    $id = self::normStr($player["dbPlayers_PlayerID"] ?? "");
-    if ($id !== "") return $id;
-    $ghin = self::normStr($player["dbPlayers_GHIN"] ?? "");
+    $ghin = self::normStr($player["dbPlayers_PlayerGHIN"] ?? "");
     if ($ghin !== "") return $ghin;
     return self::normStr($player["dbPlayers_PlayerKey"] ?? "");
   }
