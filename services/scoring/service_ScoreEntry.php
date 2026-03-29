@@ -21,6 +21,46 @@ final class ServiceScoreEntry
     public const SCORE_DAY_OFFSET_HOURS = 6; // business rule per current discussion
 
     // ==========================================================================
+    // 0. Session Context Helpers
+    // ==========================================================================
+
+    public static function setScorerContext(string $ghin): void {
+        if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+        $_SESSION['SessionScorerGHIN'] = trim($ghin);
+    }
+
+    public static function setScorecardKey(string $key): void {
+        if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+        $_SESSION['SessionScorecardKey'] = strtoupper(trim($key));
+    }
+
+    public static function getScorecardKey(): ?string {
+        if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+        return $_SESSION['SessionScorecardKey'] ?? null;
+    }
+
+    public static function setScoringPodGGID(int $ggid): void {
+        if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+        $_SESSION['ScoringPodGGID'] = $ggid;
+    }
+
+    public static function getScoringPodGGID(): ?int {
+        if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+        return isset($_SESSION['ScoringPodGGID']) ? (int)$_SESSION['ScoringPodGGID'] : null;
+    }
+
+    public static function clearScoringSession(): void {
+        if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+        unset($_SESSION['SessionScorerGHIN'], $_SESSION['SessionScorecardKey'], $_SESSION['SessionCurrentHole'], $_SESSION['ScoringPodGGID']);
+    }
+
+    public static function getEffectivePlayerGHIN(): ?string {
+        if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+        $ghin = $_SESSION['SessionScorerGHIN'] ?? $_SESSION['SessionGHINLogonID'] ?? null;
+        return ($ghin !== null && trim((string)$ghin) !== "") ? trim((string)$ghin) : null;
+    }
+
+    // ==========================================================================
     // 1. Public Entry Points
     // ==========================================================================
 

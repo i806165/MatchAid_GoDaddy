@@ -16,7 +16,9 @@
       || (routes.apiScoreEntry ? routes.apiScoreEntry + '/saveScores.php' : '/api/score_entry/saveScores.php'),
     setScorerContext: routes.apiScoreEntry 
       ? routes.apiScoreEntry + '/setScorerContext.php' 
-      : '/api/score_entry/setScorerContext.php'
+      : '/api/score_entry/setScorerContext.php',
+    setHole: '/api/score_entry/setHoleContext.php',
+    clearContext: '/api/score_entry/clearContext.php'
   };
 
   // ==========================================================================
@@ -25,7 +27,7 @@
 
   const state = {
     payload: null,
-    currentHole: 1,
+    currentHole: boot.currentHole || 1,
     scorerGHIN: '',
     dirty: false,
   };
@@ -448,6 +450,9 @@
         }
       }
 
+      // Persist hole to session
+      await MA.postJson(apiUrls.setHole, { hole: nextHole });
+
       state.currentHole = nextHole;
       renderHoleOptions();
       renderRows();
@@ -859,15 +864,18 @@
     if (chrome && typeof chrome.setActions === 'function') {
       chrome.setActions({
         left: { show: false },
-        right: { show: !!state.payload, label: 'Start Over', onClick: () => {
-          if (window.confirm('Exit score entry?')) resetToLaunch('Session ended.');
+        right: { show: !!state.payload, label: 'Restart', onClick: async () => {
+          if (window.confirm('Clear session and restart?')) {
+            await fetch(apiUrls.clearContext);
+            window.location.href = '/app/score_home/scorehome.php';
+          }
         }}
       });
     }
 
     if (chrome && typeof chrome.setBottomNav === 'function') {
       chrome.setBottomNav({
-        visible: ['home','scoreentry', 'scorecardPlayer', 'scorecardGroup', 'scorecardGame'], //, 'leaderboard', 'holechamps', 'scorecard'],
+        visible: ['home','scoreentry', 'scorecardPlayer', 'scorecardGroup', 'scorecardGame'],
         active: 'scoreentry',
         onNavigate: (id) => {
           if (!state.dirty) {

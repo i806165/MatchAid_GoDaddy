@@ -36,6 +36,7 @@ define('MA_ROUTE_API_GAME_TIMES',  '/api/game_times');
 define('MA_ROUTE_API_GAME_SUMMARY', '/api/game_summary');
 define('MA_ROUTE_API_FAVORITE_PLAYERS', '/api/favorite_players');
 define('MA_ROUTE_API_GAME_SCORECARD', '/api/game_scorecard');
+define('MA_ROUTE_SCORE_HOME', '/app/score_home/scorehome.php');
 define('MA_ROUTE_API_SCORE_ENTRY', '/api/score_entry');
 define('MA_ROUTE_SCORE_ENTRY', '/app/score_entry/scoreentry.php');
 

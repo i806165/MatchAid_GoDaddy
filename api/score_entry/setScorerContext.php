@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
+require_once MA_SERVICES . "/scoring/service_ScoreEntry.php";
 
 $input = ma_json_in();
 $ghin = trim((string)($input['ghin'] ?? ''));
 
 if ($ghin !== "") {
-    ServiceUserContext::setScorerContext($ghin);
+    ServiceScoreEntry::setScorerContext($ghin);
     ma_respond(200, ['ok' => true]);
 }
 
