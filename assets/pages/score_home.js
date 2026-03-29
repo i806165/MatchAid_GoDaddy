@@ -50,19 +50,6 @@
     });
   }
 
-  function applyChrome() {
-    const chrome = MA.chrome || {};
-    if (chrome.setBottomNav) {
-      chrome.setBottomNav({
-        // Entry Point Navigation: High level exits
-        visible: ['home', 'player', 'admin'],
-        active: '',
-        onNavigate: (id) => MA.routerGo ? MA.routerGo(id) : null
-      });
-    }
-  }
-
   el.btnLaunch.onclick = onLaunch;
   el.playerKey.onkeydown = (e) => { if (e.key === 'Enter') onLaunch(); };
-  applyChrome();
 })();

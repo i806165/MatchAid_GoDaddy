@@ -5,7 +5,6 @@ declare(strict_types=1);
 if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 
 require_once __DIR__ . "/../../bootstrap.php";
-require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_SERVICES . "/scoring/service_ScoreEntry.php";
 require_once MA_SVC_DB . "/service_dbPlayers.php";

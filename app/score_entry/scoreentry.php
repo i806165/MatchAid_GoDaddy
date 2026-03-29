@@ -23,7 +23,7 @@ $initPayload = [
   "scorecardKey" => $scorecardKey,
   "currentHole" => (int)($_SESSION['SessionCurrentHole'] ?? 1),
   "header" => [
-    "subtitle" => "Enter ScoreCard ID"
+    "subtitle" => "Ready to Score"
   ]
 ];
 

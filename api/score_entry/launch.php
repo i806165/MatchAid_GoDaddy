@@ -44,6 +44,8 @@ try {
 
     // Step 3: hydrate session GGID so existing game context service can be reused
     ServiceContextGame::setGameContext($ggid);
+    ServiceScoreEntry::setScoringPodGGID($ggid);
+    ServiceScoreEntry::setScorecardKey($playerKey);
     $gc = ServiceContextGame::getGameContext();
     $gameRow = $gc['game'] ?? null;
 
