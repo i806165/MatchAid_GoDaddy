@@ -58,12 +58,12 @@ $ROUTES = [
     "summary"  => "/app/game_summary/gamesummary.php",
     
     "scorecard"   => "/app/game_scorecards/scorecards.php",
+
     "scorehome"   => "/app/score_home/scorehome.php",
+    "scoreentry"    => "/app/score_home/scoreentry.php",
     "scorecardPlayer" => "/app/scorecardShared/scorecardPlayer.php",
     "scorecardGroup" => "/app/scorecardShared/scorecardGroup.php",
     "scorecardGame" => "/app/scorecardShared/scorecardGame.php",
-
-    "scoreentry"    => "/app/score_home/scorehome.php",
 
     "player"    => "/app/player_games/playergames.php",
     "import"   => "/app/game_import/gameimport.php",

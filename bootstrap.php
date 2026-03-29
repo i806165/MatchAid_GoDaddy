@@ -23,6 +23,7 @@ define('MA_APP',       MA_ROOT . '/app');
 define('MA_INCLUDES',  MA_ROOT . '/includes');
 define('MA_API_SESSION', MA_API . '/session');
 define('MA_ROUTE_LOGIN', '/app/login/login.php');
+
 define('MA_ROUTE_HOME',  '/');
 define('MA_ROUTE_API_ADMIN_GAMES', '/api/admin_games');
 define('MA_ROUTE_ADMIN_GAMES',     '/app/admin_games/gameslist.php');
@@ -38,6 +39,7 @@ define('MA_ROUTE_API_FAVORITE_PLAYERS', '/api/favorite_players');
 define('MA_ROUTE_API_GAME_SCORECARD', '/api/game_scorecard');
 define('MA_ROUTE_SCORE_HOME', '/app/score_home/scorehome.php');
 define('MA_ROUTE_API_SCORE_ENTRY', '/api/score_entry');
+define('MA_ROUTE_API_SCORE_HOME', '/api/score_home');
 define('MA_ROUTE_SCORE_ENTRY', '/app/score_entry/scoreentry.php');
 
 // Global testing flag: Set to true to bypass game-day score entry gating
