@@ -70,7 +70,12 @@ $maChromeSubtitle = $initPayload["header"]["subtitle"];
 <?php require MA_INCLUDES . '/chromeHeader.php'; ?>
 <main class="maPage"><?php require __DIR__ . '/scorehome_view.php'; ?></main>
 <?php require MA_INCLUDES . '/chromeFooter.php'; ?>
-<script>window.__INIT__ = <?= json_encode($initPayload) ?>;</script>
+
+<script>
+  window.MA = window.MA || {};
+  window.MA.paths = <?= json_encode($paths, JSON_UNESCAPED_SLASHES) ?>;
+
+window.__INIT__ = <?= json_encode($initPayload) ?>;</script>
 <script src="/assets/js/ma_shared.js"></script>
 <script src="/assets/pages/score_home.js"></script>
 </body></html>

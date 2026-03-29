@@ -41,15 +41,15 @@
       const res = await MA.postJson(apiUrls.scoreHome, { playerKey: key });
       if (!res.ok) throw new Error(res.message);
 
-      // Check Game Day Gating
-      if (!res.payload.isGameDay && !MA_TESTING_MODE) { // MA_TESTING_MODE is a global PHP constant, not directly available in JS unless passed. Assuming it's for server-side bypass.
+      // Check Game Day Gating (Bypass via canSave which includes testing mode)
+      if (!res.payload.canSave) {
         el.launchCard.classList.add('isHidden');
         el.cartCard.classList.add('isHidden'); // Ensure cart card is also hidden
         el.scorerCard.classList.add('isHidden'); // Ensure scorer card is also hidden
         el.gatingMsg.classList.remove('isHidden');
         return;
       }
-      
+
       state.players = res.payload.players || [];
       state.game = res.payload.game || {};
 
@@ -62,6 +62,7 @@
         showScorerStep();
       }
 
+      applyChrome();
       MA.setStatus('Ready.', 'success');
     } catch (e) { MA.setStatus(e.message, 'error'); }
   }
@@ -118,7 +119,27 @@
     });
   }
 
+  function applyChrome() {
+    const game = state.game || {};
+    const title1 = 'Scoring Setup';
+    const title2 = game.dbGames_Title || '';
+    const title3 = game.dbGames_CourseName || '';
+
+    if (MA.chrome && typeof MA.chrome.setHeaderLines === 'function') {
+      MA.chrome.setHeaderLines([title1, title2, title3]);
+    }
+
+    if (MA.chrome && typeof MA.chrome.setBottomNav === 'function') {
+      MA.chrome.setBottomNav({
+        visible: ['home', 'admin', 'summary','player'],
+        active: '',
+        onNavigate: (id) => (typeof MA.routerGo === 'function' ? MA.routerGo(id) : null)
+      });
+    }
+  }
+
   el.btnLaunch.onclick = onLaunch;
   el.btnCartConfirm.onclick = onConfirmCart;
   el.playerKey.onkeydown = (e) => { if (e.key === 'Enter') onLaunch(); };
+  applyChrome();
 })();
