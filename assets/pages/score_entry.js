@@ -33,10 +33,12 @@
   };
 
   function init() {
-    if (boot.scorecardKey && el.playerKey) {
-      el.playerKey.value = boot.scorecardKey;
+    // Auto-Resume: If session scorecardKey exists, bypass launch input
+    if (boot.scorecardKey) {
+        if (el.playerKey) el.playerKey.value = boot.scorecardKey;
+        launch(); 
     }
-
+    
     // Ensure Cart 'Next' button exists for the linear flow
     if (!el.cartNextBtn && el.cartCard) {
       const div = document.createElement('div');
@@ -109,12 +111,11 @@
   // ==========================================================================
 
   async function launch() {
-    setPageStatus('Launching score entry…', 'info');
-    const playerKey = (el.playerKey?.value || '').replace(/\s+/g, '').toUpperCase();
+    const playerKey = boot.scorecardKey || (el.playerKey?.value || '').replace(/\s+/g, '').toUpperCase();
     if (!playerKey) {
-      setPageStatus('Please enter a ScoreCard ID.', 'warn');
       return;
     }
+    setPageStatus('Loading round...', 'info');
 
     try {
       const res = await fetch(apiUrls.launch, {
@@ -145,14 +146,8 @@
       state.currentHole = json.payload.currentHole || 1;
       state.dirty = false;
 
-      // Instantiate game GGID into session variable
-      //const ggid = state.payload?.gameRow?.dbGames_GGID;
-      //await apiAdmin("setGameSession.php", { ggid });
-      
       const ggid = state.payload?.gameRow?.dbGames_GGID;
-      console.log('[score_entry] setting game session GGID:', ggid);
-      const setGameSessionResult = await apiAdmin("setGameSession.php", { ggid });
-      console.log('[score_entry] setGameSession result:', setGameSessionResult);
+      await apiAdmin("setGameSession.php", { ggid });
 
       toggleLaunchPanel(false);
       renderLaunchPayload();
@@ -555,9 +550,14 @@
       const playerStrokes = escapeHtml(String(row.strokeAllocation ?? '0'));
       const netScore = escapeHtml(String(row.netScore ?? '—'));
 
-      const scoringSystem = state.payload?.gameRow?.dbGames_ScoringSystem;
+      const payload = state.payload || {};
+      const scoringSystem = payload.gameRow?.dbGames_ScoringSystem;
       const isAuto = !['DeclareManual', 'DeclarePlayer'].includes(scoringSystem);
       const showDeclare = ['DeclarePlayer', 'DeclareManual', 'BestBall', 'DeclareHole', 'AllScores'].includes(scoringSystem);
+
+      // Game Day Gating: Disable inputs if not testing and not game day
+      // const isDisabled = !payload.isGameDay ? 'disabled' : '';
+      const isDisabled = ''; // Leave commented for testing per request
 
       article.innerHTML = `
         <div class="scorePlayerLaneTop">
@@ -568,15 +568,14 @@
 
           <div class="scoreScoreBox">
             <div class="scoreRawControls">
-              <button type="button" class="btn scoreAdjustBtn" data-dir="-1" aria-label="Decrease score for ${escapeHtml(fullName)}">−</button>
+              <button type="button" class="btn scoreAdjustBtn" data-dir="-1" ${isDisabled}>−</button>
               <input
                 type="number"
                 class="maTextInput scoreRawInput"
                 min="1"
                 max="15"
-                value="${row.rawScore ?? ''}"
-                aria-label="Raw score for ${escapeHtml(fullName)}">
-              <button type="button" class="btn scoreAdjustBtn" data-dir="1" aria-label="Increase score for ${escapeHtml(fullName)}">+</button>
+                value="${row.rawScore ?? ''}" ${isDisabled}>
+              <button type="button" class="btn scoreAdjustBtn" data-dir="1" ${isDisabled}>+</button>
             </div>
           </div>
         </div>

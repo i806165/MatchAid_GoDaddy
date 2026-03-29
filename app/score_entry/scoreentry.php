@@ -7,22 +7,21 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 }
 
 require_once __DIR__ . "/../../bootstrap.php";
+require_once MA_SERVICES . "/scoring/service_ScoreEntry.php";
 require_once MA_API_LIB . "/Logger.php";
 
-Logger::info("SCOREENTRY_ENTRY", [
-  "uri" => $_SERVER["REQUEST_URI"] ?? "",
-  "scorecardKey" => $_GET["key"] ?? "",
-  "storedGGID" => $_SESSION["SessionStoredGGID"] ?? "",
-]);
-
-// Optional incoming scorecard key from URL
-$scorecardKey = trim((string)($_GET["key"] ?? ""));
+// 1. Authoritative Session Check
+$scorecardKey = ServiceScoreEntry::getScorecardKey();
+if (!$scorecardKey) {
+    header("Location: " . MA_ROUTE_SCORE_HOME);
+    exit;
+}
 
 // Minimal init payload only.
-// Score Entry uses split hydration (page shell first, launch/group load via endpoint).
 $initPayload = [
   "ok" => true,
   "scorecardKey" => $scorecardKey,
+  "currentHole" => (int)($_SESSION['SessionCurrentHole'] ?? 1),
   "header" => [
     "subtitle" => "Enter ScoreCard ID"
   ]

@@ -40,6 +40,9 @@ define('MA_ROUTE_SCORE_HOME', '/app/score_home/scorehome.php');
 define('MA_ROUTE_API_SCORE_ENTRY', '/api/score_entry');
 define('MA_ROUTE_SCORE_ENTRY', '/app/score_entry/scoreentry.php');
 
+// Global testing flag: Set to true to bypass game-day score entry gating
+define('MA_TESTING_MODE', true);
+
 ini_set("log_errors", "1");
 ini_set("error_log", MA_ROOT . "/logs/matchaid.log");
 

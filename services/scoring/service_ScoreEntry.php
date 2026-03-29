@@ -87,11 +87,15 @@ final class ServiceScoreEntry
         // Resolve declarations based on rules before returning to UI
         self::resolveDeclaredScores($gameRow, $players, $holeNumber);
 
+        $isAllowedToday = self::isScoreEntryAllowedToday($gameRow);
+        $requiresCart = trim((string)($gameRow['dbGames_RotationMethod'] ?? '')) === 'COD';
+        $canSave = MA_TESTING_MODE || $isAllowedToday;
+
         return [
             'gameRow' => $gameRow,
             'currentHole' => $holeNumber,
-            'isGameDay' => self::isScoreEntryAllowedToday($gameRow),
-            'requiresCartConfig' => trim((string)($gameRow['dbGames_RotationMethod'] ?? '')) === 'COD',
+            'isGameDay' => $isAllowedToday,
+            'requiresCartConfig' => $requiresCart && $canSave,
             'players' => $players,
             'launchContext' => [
                 'playerKey' => $playerKey,

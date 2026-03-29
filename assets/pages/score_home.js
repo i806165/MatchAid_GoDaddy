@@ -1,4 +1,4 @@
-/* /assets/pages/scorehome.js */
+/* /assets/pages/score_home.js */
 (function() {
   'use strict';
   const MA = window.MA || {};
@@ -7,20 +7,32 @@
     btnLaunch: document.getElementById('shBtnLaunch'),
     launchCard: document.getElementById('shLaunchCard'),
     scorerCard: document.getElementById('shScorerCard'),
-    scorerChips: document.getElementById('shScorerChips')
+    scorerChips: document.getElementById('shScorerChips'),
+    gatingMsg: document.getElementById('shGatingMsg')
   };
 
   async function onLaunch() {
     const key = el.playerKey.value.trim().toUpperCase();
-    if (!key) return MA.setStatus('Enter a ScoreCard ID.', 'warn');
+    if (!key) return MA.setStatus('Please enter a ScoreCard ID.', 'warn');
 
     try {
+      MA.setStatus('Validating...', 'info');
       const res = await MA.postJson('/api/score_home.php', { playerKey: key });
       if (!res.ok) throw new Error(res.message);
+
+      // Check Game Day Gating (Commented logic per request)
+      /*
+      if (!res.payload.isGameDay) {
+        el.launchCard.classList.add('isHidden');
+        el.gatingMsg.classList.remove('isHidden');
+        return;
+      }
+      */
 
       renderScorers(res.payload.players);
       el.launchCard.classList.add('isHidden');
       el.scorerCard.classList.remove('isHidden');
+      MA.setStatus('Ready.', 'success');
     } catch (e) { MA.setStatus(e.message, 'error'); }
   }
 
@@ -39,15 +51,18 @@
   }
 
   function applyChrome() {
-    if (MA.chrome.setBottomNav) {
-      MA.chrome.setBottomNav({
+    const chrome = MA.chrome || {};
+    if (chrome.setBottomNav) {
+      chrome.setBottomNav({
+        // Entry Point Navigation: High level exits
         visible: ['home', 'player', 'admin'],
         active: '',
-        onNavigate: (id) => MA.routerGo?.(id)
+        onNavigate: (id) => MA.routerGo ? MA.routerGo(id) : null
       });
     }
   }
 
   el.btnLaunch.onclick = onLaunch;
+  el.playerKey.onkeydown = (e) => { if (e.key === 'Enter') onLaunch(); };
   applyChrome();
 })();
