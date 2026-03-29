@@ -700,6 +700,25 @@
     return json;
   }
 
+  function openActionsMenu() {
+    if (!MA.ui || !MA.ui.openActionsMenu) return;
+
+    const items = [
+      {
+        label: 'Restart Scoring Session',
+        danger: true,
+        action: async () => {
+          if (window.confirm('Clear session and restart?')) {
+            await fetch(apiUrls.clearContext);
+            window.location.href = apiUrls.scoreHome;
+          }
+        }
+      }
+    ];
+
+    MA.ui.openActionsMenu("Scoring Actions", items);
+  }
+
   // ==========================================================================
   // 11. Chrome and Status Helpers
   // ==========================================================================
@@ -750,13 +769,8 @@
 
     if (chrome && typeof chrome.setActions === 'function') {
       chrome.setActions({
-        left: { show: false },
-        right: { show: !!state.payload, label: 'Restart', onClick: async () => {
-          if (window.confirm('Clear session and restart?')) {
-            await fetch(apiUrls.clearContext);
-            window.location.href = apiUrls.scoreHome;
-          }
-        }}
+        left: { show: !!state.payload, label: 'Actions', onClick: openActionsMenu },
+        right: { show: false }
       });
     }
 
