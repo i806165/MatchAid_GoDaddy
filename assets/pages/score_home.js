@@ -17,7 +17,7 @@
 
     try {
       MA.setStatus('Validating...', 'info');
-      const res = await MA.postJson('/api/score_home.php', { playerKey: key });
+      const res = await MA.postJson('/api/score_entry/score_home.php', { playerKey: key });
       if (!res.ok) throw new Error(res.message);
 
       // Check Game Day Gating (Commented logic per request)
