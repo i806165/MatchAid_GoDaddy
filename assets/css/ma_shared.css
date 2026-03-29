@@ -93,7 +93,7 @@
   --btnPrimaryBg: var(--bg);
   --btnPrimaryText: var(--ink);
   --btnPrimaryBorder: var(--btnBorder);
-  --btnSecondaryBg: var(--brandSecondary);
+  --btnSecondaryBg: var(--brandAccent); /*var(--brandSecondary); */
   --btnSecondaryText: var(--brandPrimaryText);
   --btnSecondaryBorder: color-mix(in srgb, var(--brandSecondary) 70%, black);
   --btnLinkText: var(--brandAccent);
