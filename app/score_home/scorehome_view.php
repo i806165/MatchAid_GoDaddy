@@ -19,4 +19,10 @@
       <div class="maChoiceChips" id="shScorerChips"></div>
     </div>
   </section>
+
+  <!-- Game Day Gating Msg -->
+  <div id="shGatingMsg" class="maEmptyState isHidden" style="border-color:var(--warn); color:var(--ink);">
+    Score entry is only available on the day of play.
+    <br><small>Bypassed in Testing Mode.</small>
+  </div>
 </div>

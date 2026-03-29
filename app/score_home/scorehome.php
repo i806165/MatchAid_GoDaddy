@@ -51,16 +51,20 @@ $initPayload = [
     "isResumeReady" => $isResumeReady,
     "header" => ["subtitle" => $isResumeReady ? "Ready to Play" : "Scoring Setup"]
 ];
+
+$maChromeTitle = "Scoring Home";
+$maChromeSubtitle = $initPayload["header"]["subtitle"];
 ?>
 <!DOCTYPE html><html lang="en"><head>
 <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>MatchAid — Scoring Home</title>
 <link rel="stylesheet" href="/assets/css/ma_shared.css" />
+<link rel="stylesheet" href="/assets/css/score_home.css" />
 </head><body>
 <?php require MA_INCLUDES . '/chromeHeader.php'; ?>
 <main class="maPage"><?php require __DIR__ . '/scorehome_view.php'; ?></main>
 <?php require MA_INCLUDES . '/chromeFooter.php'; ?>
 <script>window.__INIT__ = <?= json_encode($initPayload) ?>;</script>
 <script src="/assets/js/ma_shared.js"></script>
-<script src="/assets/pages/scorehome.js"></script>
+<script src="/assets/pages/score_home.js"></script>
 </body></html>

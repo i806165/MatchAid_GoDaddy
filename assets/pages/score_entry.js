@@ -68,11 +68,6 @@
   // ==========================================================================
 
   const el = {
-    playerKey: document.getElementById('scoreEntryPlayerKey'),
-    launchBtn: document.getElementById('scoreEntryLaunchBtn'),
-    contextCard: document.getElementById('scoreContextCard'),
-    cartCard: document.getElementById('scoreCartCard'),
-    cartNextBtn: document.getElementById('scoreCartConfirmBtn'),
     
     cart1Driver: document.getElementById('cart1Driver'),
     cart1Passenger: document.getElementById('cart1Passenger'),
@@ -83,9 +78,6 @@
     cart2DriverLabel: document.getElementById('cart2DriverLabel'),
     cart2PassengerLabel: document.getElementById('cart2PassengerLabel'),
 
-    keeperCard: document.getElementById('scoreKeeperCard'),
-    keeperChips: document.getElementById('scoreKeeperChips'),
-    keeperWelcome: document.getElementById('scoreKeeperWelcome'),
     work: document.getElementById('scoreEntryWork'),
     holeSelect: document.getElementById('scoreHoleSelect'),
     prevHoleBtn: document.getElementById('scorePrevHoleBtn'),
@@ -111,11 +103,10 @@
   // ==========================================================================
 
   async function launch() {
-    const playerKey = boot.scorecardKey || (el.playerKey?.value || '').replace(/\s+/g, '').toUpperCase();
+    const playerKey = boot.scorecardKey;
     if (!playerKey) {
       return;
     }
-    setPageStatus('Loading round...', 'info');
 
     try {
       const res = await fetch(apiUrls.launch, {
