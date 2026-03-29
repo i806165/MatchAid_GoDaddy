@@ -21,7 +21,7 @@ $gc = ServiceContextGame::getGameContext();
 
 $gameRow = $gc['game'] ?? null;
 $isGameDay = $gameRow ? ServiceScoreEntry::isScoreEntryAllowedToday($gameRow) : false;
-$canSave = MA_TESTING_MODE || $isGameDay;
+$canSave = true; // Force bypass the day of play check
 
 ma_respond(200, ['ok' => true, 'payload' => [
     'players' => $players,
