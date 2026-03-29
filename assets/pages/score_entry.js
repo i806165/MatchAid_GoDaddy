@@ -372,8 +372,15 @@
       btn.className = 'maChoiceChip';
       btn.textContent = row.playerName || '';
 
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         state.scorerGHIN = row.playerGHIN || '';
+
+        // Persist Scorer Context to Session
+        await fetch('/api/session/setScorerContext.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ghin: state.scorerGHIN })
+        });
 
         // Transition to Scoring: Hide Setup (Context + Keeper), Show Work
         el.contextCard.classList.add('isHidden'); // Pane-1b

@@ -85,13 +85,15 @@ final class ServiceScoreCard {
 
     $groupingMode = self::determineGroupingModeFromGame($gameRow);
     $groupsMap = self::buildGroupsMap($players, $groupingMode);
-    $playersInGroup = self::sortPlayersForScorecard($groupsMap[$groupId] ?? []);
+    $selected = self::findSelectedPlayer($players, $groupId);
+    $realGroupId = $selected ? self::normStr($selected["dbPlayers_PlayerKey"] ?? "", "000") : $groupId;
+    $playersInGroup = self::sortPlayersForScorecard($groupsMap[$realGroupId] ?? []);
 
     return [
       "mode" => "group",
       "competition" => trim((string)($gameRow["dbGames_Competition"] ?? "PairField")),
       "grouping" => $groupingMode,
-      "rows" => $playersInGroup ? [self::buildScoredGroupRowPayload($gameRow, $playersInGroup, $groupId, $groupingMode, null)] : [],
+      "rows" => $playersInGroup ? [self::buildScoredGroupRowPayload($gameRow, $playersInGroup, $realGroupId, $groupingMode, null)] : [],
       "meta" => self::buildScorecardMeta($gameRow, $players),
     ];
   }
@@ -120,9 +122,7 @@ final class ServiceScoreCard {
       ];
     }
 
-    $groupId = ($groupingMode === "flight")
-      ? self::normStr($selected["dbPlayers_FlightID"] ?? "", "1")
-      : self::normStr($selected["dbPlayers_PairingID"] ?? "", "000");
+    $groupId = self::normStr($selected["dbPlayers_PlayerKey"] ?? "", "000");
 
     $groupsMap = self::buildGroupsMap($players, $groupingMode);
     $groupPlayers = self::sortPlayersForScorecard($groupsMap[$groupId] ?? []);
@@ -162,9 +162,7 @@ final class ServiceScoreCard {
   public static function buildGroupsMap(array $players, string $mode): array {
     $map = [];
     foreach ($players as $p) {
-      $id = ($mode === "flight")
-        ? self::normStr($p["dbPlayers_FlightID"] ?? "", "1")
-        : self::normStr($p["dbPlayers_PairingID"] ?? "", "000");
+      $id = self::normStr($p["dbPlayers_PlayerKey"] ?? "", "000");
       if (!isset($map[$id])) $map[$id] = [];
       $map[$id][] = $p;
     }
