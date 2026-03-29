@@ -4,8 +4,8 @@
   const MA = window.MA || {};
   const paths = MA.paths || {};
   const apiUrls = {
-    scoreHome: (paths.apiScoreHome || '/api/score_home') + '/score_home.php',
-    setScorerContext: (paths.apiScoreHome || '/api/score_home') + '/setScorerContext.php',
+    scoreHome: (paths.apiScoreHome || '/api/initScoreHome') + '/initScoreHome.php',
+    setScorerContext: (paths.apiScoreHome || '/api/initScoreHome') + '/setScorerContext.php',
     scoreEntry: paths.scoreEntry || '/app/score_entry/scoreentry.php'
   };
 
