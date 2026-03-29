@@ -31,25 +31,10 @@
   };
 
   function init() {
-    // Auto-Resume: If session scorecardKey exists, bypass launch input
     if (boot.scorecardKey) {
-        if (el.playerKey) el.playerKey.value = boot.scorecardKey;
-        launch(); 
-    }
-    
-    // Ensure Cart 'Next' button exists for the linear flow
-    if (!el.cartNextBtn && el.cartCard) {
-      const div = document.createElement('div');
-      div.className = 'maFieldRow';
-      div.style.justifyContent = 'flex-end';
-      div.style.marginTop = '16px';
-      div.innerHTML = '<button id="scoreCartNextBtn" class="btn btnSecondary" type="button">Next</button>';
-      el.cartCard.appendChild(div);
-      el.cartNextBtn = div.querySelector('button');
+        launch();
     }
 
-    el.cartNextBtn?.addEventListener('click', confirmCartConfiguration);
-    el.launchBtn?.addEventListener('click', launch);
     el.prevHoleBtn?.addEventListener('click', () => moveHole(-1));
     el.nextHoleBtn?.addEventListener('click', () => moveHole(1));
 
@@ -66,16 +51,6 @@
   // ==========================================================================
 
   const el = {
-    
-    cart1Driver: document.getElementById('cart1Driver'),
-    cart1Passenger: document.getElementById('cart1Passenger'),
-    cart2Driver: document.getElementById('cart2Driver'),
-    cart2Passenger: document.getElementById('cart2Passenger'),
-    cart1DriverLabel: document.getElementById('cart1DriverLabel'),
-    cart1PassengerLabel: document.getElementById('cart1PassengerLabel'),
-    cart2DriverLabel: document.getElementById('cart2DriverLabel'),
-    cart2PassengerLabel: document.getElementById('cart2PassengerLabel'),
-
     work: document.getElementById('scoreEntryWork'),
     holeSelect: document.getElementById('scoreHoleSelect'),
     prevHoleBtn: document.getElementById('scorePrevHoleBtn'),
@@ -138,95 +113,18 @@
       const ggid = state.payload?.gameRow?.dbGames_GGID;
       await apiAdmin("setGameSession.php", { ggid });
 
-      toggleLaunchPanel(false);
       renderLaunchPayload();
       applyChrome();
-
-      setPageStatus(
-        state.payload.isGameDay
-          ? 'Ready for score collection.'
-          : 'Score entry is only available on the day of play.',
-        state.payload.isGameDay ? 'ok' : 'warn'
-      );
     } catch (err) {
       setPageStatus(err.message || 'Launch failed.', 'error');
     }
   }
 
-  function toggleLaunchPanel(show) {
-    const panel = document.getElementById('scoreEntryLaunchPanel')
-      || el.playerKey?.closest('.card')
-      || el.playerKey?.closest('.maCard');
-
-    if (panel) {
-      panel.classList.toggle('isHidden', !show);
-    } else {
-      el.playerKey?.parentElement?.classList.toggle('isHidden', !show);
-    }
-  }
-
-  function toggleLaunchPanel(show) {
-    const panel = document.getElementById('scoreEntryLaunchPanel')
-      || el.playerKey?.closest('.card')
-      || el.playerKey?.closest('.maCard');
-
-    if (panel) {
-      panel.classList.toggle('isHidden', !show);
-    } else {
-      el.playerKey?.parentElement?.classList.toggle('isHidden', !show);
-    }
-  }
-
   function renderLaunchPayload() {
-    const payload = state.payload;
-    if (!payload) return;
-
-    const g = payload.gameRow || {};
-    const first = payload.players?.[0]?.playerRow || {};
-
-    const hcEffectivity =
-      String(g.dbGames_HCEffectivity || '') +
-      (g.dbGames_HCEffectivityDate ? ` ${g.dbGames_HCEffectivityDate}` : '');
-
-    const segmentsRotation = [
-      String(g.dbGames_Segments || ''),
-      String(g.dbGames_RotationMethod || '')
-    ].filter(Boolean).join(' / ');
-
-    const hcSettings = [
-      String(g.dbGames_HCMethod || ''),
-      g.dbGames_Allowance ? `${g.dbGames_Allowance}%` : '',
-      hcEffectivity
-    ].filter(Boolean).join(' / ');
-
-    el.ctx.playTime.textContent = first.dbPlayers_TeeTime || g.dbGames_PlayTime || '';
-    el.ctx.holes.textContent = g.dbGames_Holes || '';
-    el.ctx.gameFormat.textContent = g.dbGames_GameFormat || '';
-    el.ctx.segmentsRotation.textContent = segmentsRotation;
-    el.ctx.scoringMethod.textContent = g.dbGames_ScoringMethod || '';
-    el.ctx.hcSettings.textContent = hcSettings;
-    el.ctx.strokeDistribution.textContent = g.dbGames_StrokeDistribution || '';
-    el.ctx.teeTime.textContent = first.dbPlayers_TeeTime || '';
-    el.ctx.flightId.textContent = first.dbPlayers_FlightID || '';
-    el.ctx.pairingId.textContent = first.dbPlayers_PairingID || '';
-
-    el.contextCard.classList.remove('isHidden');
-    el.contextCard.style.cursor = 'default'; // Reset if previously set
-
     renderHoleOptions();
-    renderKeeperChips();
     renderRows();
-    configureCartCard();
-
-    // Linear Flow: Cart Setup -> Keeper Selection -> Scoring
-    if (payload.requiresCartConfig) {
-      el.cartCard.classList.remove('isHidden');
-      el.keeperCard.classList.add('isHidden');
-    } else {
-      showKeeperSelection();
-    }
     
-    el.work.classList.add('isHidden');
+    el.work.classList.remove('isHidden');
   }
 
   // ==========================================================================
