@@ -5,14 +5,12 @@ declare(strict_types=1);
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 
-$input = json_decode(file_get_contents('php://input'), true);
-$ghin = (string)($input['ghin'] ?? '');
+$input = ma_json_in();
+$ghin = trim((string)($input['ghin'] ?? ''));
 
 if ($ghin !== "") {
     ServiceUserContext::setScorerContext($ghin);
-    echo json_encode(['ok' => true]);
-} else {
-    http_response_code(400);
-    echo json_encode(['ok' => false, 'message' => 'GHIN required']);
+    ma_respond(200, ['ok' => true]);
 }
-exit;
+
+ma_respond(400, ['ok' => false, 'message' => 'GHIN required']);

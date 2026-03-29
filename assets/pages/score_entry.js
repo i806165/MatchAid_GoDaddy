@@ -13,7 +13,10 @@
     launch: paths.apiScoreEntryLaunch
       || (routes.apiScoreEntry ? routes.apiScoreEntry + '/launch.php' : '/api/score_entry/launch.php'),
     saveScores: paths.apiScoreEntrySaveScores
-      || (routes.apiScoreEntry ? routes.apiScoreEntry + '/saveScores.php' : '/api/score_entry/saveScores.php')
+      || (routes.apiScoreEntry ? routes.apiScoreEntry + '/saveScores.php' : '/api/score_entry/saveScores.php'),
+    setScorerContext: routes.apiScoreEntry 
+      ? routes.apiScoreEntry + '/setScorerContext.php' 
+      : '/api/score_entry/setScorerContext.php'
   };
 
   // ==========================================================================
@@ -376,7 +379,7 @@
         state.scorerGHIN = row.playerGHIN || '';
 
         // Persist Scorer Context to Session
-        await fetch('/api/score_entry/setScorerContext.php', {
+        await fetch(apiUrls.setScorerContext, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ghin: state.scorerGHIN })
