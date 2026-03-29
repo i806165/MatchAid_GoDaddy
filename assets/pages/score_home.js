@@ -17,7 +17,7 @@
 
     try {
       MA.setStatus('Validating...', 'info');
-      const res = await MA.postJson('/api/score_entry/score_home.php', { playerKey: key });
+      const res = await MA.postJson('/api/score_home/score_home.php', { playerKey: key });
       if (!res.ok) throw new Error(res.message);
 
       // Check Game Day Gating (Commented logic per request)
@@ -43,7 +43,7 @@
       btn.className = 'maChoiceChip';
       btn.textContent = p.dbPlayers_Name;
       btn.onclick = async () => {
-        await MA.postJson('/api/score_entry/setScorerContext.php', { ghin: p.dbPlayers_PlayerGHIN });
+        await MA.postJson('/api/score_home/setScorerContext.php', { ghin: p.dbPlayers_PlayerGHIN });
         window.location.href = '/app/score_entry/scoreentry.php';
       };
       el.scorerChips.appendChild(btn);

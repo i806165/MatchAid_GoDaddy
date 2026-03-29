@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-// /public_html/api/score_entry/score_home.php
+// /public_html/api/score_home/score_home.php
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_SERVICES . "/scoring/service_ScoreEntry.php";

@@ -14,9 +14,7 @@
       || (routes.apiScoreEntry ? routes.apiScoreEntry + '/launch.php' : '/api/score_entry/launch.php'),
     saveScores: paths.apiScoreEntrySaveScores
       || (routes.apiScoreEntry ? routes.apiScoreEntry + '/saveScores.php' : '/api/score_entry/saveScores.php'),
-    setScorerContext: routes.apiScoreEntry 
-      ? routes.apiScoreEntry + '/setScorerContext.php' 
-      : '/api/score_entry/setScorerContext.php',
+    setScorerContext: '/api/score_home/setScorerContext.php',
     setHole: '/api/score_entry/setHoleContext.php',
     clearContext: '/api/score_entry/clearContext.php'
   };

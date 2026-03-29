@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-// /public_html/api/score_entry/setScorerContext.php
+// /public_html/api/score_home/setScorerContext.php
 
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
