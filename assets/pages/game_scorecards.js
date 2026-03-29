@@ -259,7 +259,7 @@ function renderGroup(group) {
   const scoreCardId = String(gh.playerKey || "").trim();
   const qrUrl =
     (scoreCardId && gh.GGID)
-      ? `${window.location.origin}${paths.scoreEntry || '/app/score_entry/scoreentry.php'}?key=${encodeURIComponent(scoreCardId)}`
+      ? `${window.location.origin}${paths.scoreHome || '/app/score_home/scorehome.php'}?key=${encodeURIComponent(scoreCardId)}`
       : "";
 
   return `

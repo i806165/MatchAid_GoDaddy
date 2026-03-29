@@ -11,9 +11,11 @@ require_once MA_SERVICES . "/scoring/service_ScoreEntry.php";
 require_once MA_API_LIB . "/Logger.php";
 
 // 1. Authoritative Session Check
+$urlKey = trim((string)($_GET['key'] ?? ''));
 $scorecardKey = ServiceScoreEntry::getScorecardKey();
+
 if (!$scorecardKey) {
-    header("Location: " . MA_ROUTE_SCORE_HOME);
+    header("Location: " . MA_ROUTE_SCORE_HOME . ($urlKey ? "?key=$urlKey" : ""));
     exit;
 }
 

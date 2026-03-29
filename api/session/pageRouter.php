@@ -101,7 +101,7 @@ $url = $ROUTES[$action];
 // append query params
 $q = [];
 
-if ($action === 'scoreentry') {
+if ($action === 'scorehome') {
     if ($scoreId !== '') {
         $q['key'] = $scoreId;
     }
