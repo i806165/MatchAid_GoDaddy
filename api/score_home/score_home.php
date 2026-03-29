@@ -19,7 +19,13 @@ ServiceContextGame::setGameContext($ggid);
 
 $gc = ServiceContextGame::getGameContext();
 
+$gameRow = $gc['game'] ?? null;
+$isGameDay = $gameRow ? ServiceScoreEntry::isScoreEntryAllowedToday($gameRow) : false;
+$canSave = MA_TESTING_MODE || $isGameDay;
+
 ma_respond(200, ['ok' => true, 'payload' => [
     'players' => $players,
-    'game' => $gc['game'] ?? null
+    'game' => $gameRow,
+    'isGameDay' => $isGameDay,
+    'canSave' => $canSave
 ]]);

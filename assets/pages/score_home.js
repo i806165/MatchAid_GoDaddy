@@ -41,20 +41,20 @@
       const res = await MA.postJson(apiUrls.scoreHome, { playerKey: key });
       if (!res.ok) throw new Error(res.message);
 
-      // Check Game Day Gating (Commented logic per request)
-      /*
-      if (!res.payload.isGameDay) {
+      // Check Game Day Gating
+      if (!res.payload.isGameDay && !MA_TESTING_MODE) { // MA_TESTING_MODE is a global PHP constant, not directly available in JS unless passed. Assuming it's for server-side bypass.
         el.launchCard.classList.add('isHidden');
+        el.cartCard.classList.add('isHidden'); // Ensure cart card is also hidden
+        el.scorerCard.classList.add('isHidden'); // Ensure scorer card is also hidden
         el.gatingMsg.classList.remove('isHidden');
         return;
       }
-      */
-
+      
       state.players = res.payload.players || [];
       state.game = res.payload.game || {};
 
       // Determine setup branch: Cart config (COD) vs direct Scorer selection
-      if (state.game.dbGames_RotationMethod === 'COD') {
+      if (state.game.dbGames_RotationMethod === 'COD' && res.payload.canSave) { // Only show cart if COD and scoring is allowed
         renderCartOptions();
         el.launchCard.classList.add('isHidden');
         el.cartCard.classList.remove('isHidden');
