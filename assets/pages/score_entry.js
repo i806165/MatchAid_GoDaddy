@@ -428,7 +428,7 @@ function renderRows() {
 
     const fullName = String(row.playerName || '').trim();
     const nameParts = fullName.split(/\s+/).filter(Boolean);
-    const firstName = escapeHtml(nameParts[0] || '');
+    let firstName = escapeHtml(nameParts[0] || '');
     const lastName = escapeHtml(nameParts.length > 1 ? nameParts.slice(1).join(' ') : (nameParts[0] || ''));
     const teeSetName = escapeHtml(row.teeSetName || '');
     const yardage = escapeHtml(String(row.yardage ?? '—'));
@@ -440,6 +440,10 @@ function renderRows() {
 
     const payloadGame = state.payload || {};
     const scoringSystem = String(payloadGame.gameRow?.dbGames_ScoringSystem || '');
+    const scoringMethod = String(payloadGame.gameRow?.dbGames_ScoringMethod || '');
+    if (scoringMethod.toUpperCase() === 'NET' && row.effectiveHC != null) {
+      firstName += ` (${escapeHtml(String(row.effectiveHC))})`;
+    }
     const isManualDeclare = ['DeclarePlayer', 'DeclareManual'].includes(scoringSystem);
     const isAutoDeclare = !isManualDeclare;
     const isDeclared = !!row.declared;
