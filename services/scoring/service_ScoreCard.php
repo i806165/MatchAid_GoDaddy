@@ -77,7 +77,7 @@ final class ServiceScoreCard {
   /**
    * Build one scored group card.
    */
-  public static function buildGroupScorecardPayload(array $gameRow, array $players, string $groupId): array {
+  public static function buildGroupScorecardPayload(array $gameRow, array $players, string $selectedPlayerId): array {
     if (!$gameRow) {
       throw new RuntimeException("buildGroupScorecardPayload: missing gameRow");
     }
@@ -85,8 +85,8 @@ final class ServiceScoreCard {
 
     $groupingMode = self::determineGroupingModeFromGame($gameRow);
     $groupsMap = self::buildGroupsMap($players, $groupingMode);
-    $selected = self::findSelectedPlayer($players, $groupId);
-    $realGroupId = $selected ? self::normStr($selected["dbPlayers_PlayerKey"] ?? "", "000") : $groupId;
+    $selected = self::findSelectedPlayer($players, $selectedPlayerId);
+    $realGroupId = $selected ? self::normStr($selected["dbPlayers_PlayerKey"] ?? "", "000") : $selectedPlayerId;
     $playersInGroup = self::sortPlayersForScorecard($groupsMap[$realGroupId] ?? []);
 
     return [
