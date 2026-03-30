@@ -750,7 +750,7 @@ body {
   opacity: .9;
 }
 
-/* ========= Actions menu (modal overlay + panel)============ */
+/* ========= Actions menu (modal overlay + panel)  DEPRECATED DO NOTE USE ============ */
 .actionMenuOverlay{
   position: fixed;
   inset: 0;
@@ -1382,6 +1382,58 @@ body {
   border-top: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg) 96%, black);
 }
+/* ==========================================================================
+   ACTIONS MENU (maModal variant)
+   - Shell uses maModal / maModalOverlay
+   - Rows remain actionMenu_item for semantic reuse
+   ========================================================================== */
+
+.maModal .actionMenu_subtitle{
+  margin: 0 0 8px 0;
+  font-weight: 800;
+  font-size: var(--chromeSubtitleSize);
+  color: var(--mutedText);
+}
+
+.maModal .actionMenu_item{
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+  padding: 14px 16px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  font-weight: 900;
+  font-size: var(--fieldValueSize);
+  color: var(--ink);
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid rgba(0,0,0,.10);
+}
+
+.maModal .actionMenu_item:hover{
+  background: var(--pressedBg);
+}
+
+.maModal .actionMenu_item.disabled{
+  opacity: .50;
+  cursor: default;
+  color: var(--mutedText);
+}
+
+.maModal .actionMenu_item.danger{
+  color: var(--danger);
+}
+
+.maModal .actionMenu_divider{
+  height: 8px;
+  background: #f0f0f0;
+  margin: 0;
+}
+
 /* ==========================================================================
    CARDS 
    --------------------------------------------------------------------------
