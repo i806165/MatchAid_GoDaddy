@@ -438,9 +438,20 @@ function renderRows() {
       ? '—'
       : escapeHtml(String(row.netScore));
 
+    let netDisplay = netScore;
+    if (row.netScore != null && row.par != null && row.netScore !== '') {
+      const n = Number(row.netScore);
+      const p = Number(row.par);
+      const diff = n - p;
+      const diffText = diff === 0 ? 'E' : (diff > 0 ? '+' : '') + diff;
+      netDisplay = `${netScore} • ${diffText}`;
+    }
+
     const payloadGame = state.payload || {};
     const scoringSystem = String(payloadGame.gameRow?.dbGames_ScoringSystem || '');
     const scoringMethod = String(payloadGame.gameRow?.dbGames_ScoringMethod || '');
+    const labelPrefix = scoringMethod.toUpperCase() === 'ADJ GROSS' ? 'GROSS' : 'NET';
+
     if (scoringMethod.toUpperCase() === 'NET' && row.effectiveHC != null) {
       firstName += ` (${escapeHtml(String(row.effectiveHC))})`;
     }
@@ -466,7 +477,7 @@ function renderRows() {
             <div class="scorePlayerBadgeLast">${lastName}</div>
             ${firstName && firstName !== lastName ? `<div class="scorePlayerBadgeFirst">${firstName}</div>` : ''}
           </div>
-          <div class="scorePlayerBadgeStatus">NET ${netScore}</div>
+          <div class="scorePlayerBadgeStatus">${labelPrefix} ${netDisplay}</div>
         </${badgeTag}>
 
         <div class="scoreScoreBox">
@@ -549,13 +560,16 @@ function markDirty(playerId, rawScore, declared) {
   const wrapper = state.payload.players.find((p) => (p.scoreEntryRow?.playerId || '') === playerId);
   if (!wrapper) return;
 
+    // Guard: If no score is entered, force declared to false
+    const effectiveDeclared = (rawScore === null || rawScore === '' || Number.isNaN(Number(rawScore))) ? false : declared;
+
   wrapper.scoreEntryRow.rawScore = rawScore;
   wrapper.scoreEntryRow.netScore = (typeof rawScore === 'number')
     ? rawScore - Number(wrapper.scoreEntryRow.strokeAllocation || 0)
     : null;
-  wrapper.scoreEntryRow.declared = declared;
+    wrapper.scoreEntryRow.declared = effectiveDeclared;
 
-  updateWorkingScoresJson(wrapper, rawScore, declared);
+    updateWorkingScoresJson(wrapper, rawScore, effectiveDeclared);
 
   const scoringSystem = state.payload?.gameRow?.dbGames_ScoringSystem;
   if (!['DeclareManual', 'DeclarePlayer'].includes(scoringSystem)) {
