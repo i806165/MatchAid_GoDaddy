@@ -196,13 +196,15 @@
 
   /* Modal shell */
   --modalMaxW: 520px;
+  --modalMaxH: 92dvh;
+  --modalViewportGap: 20px;
   --modalRadius: 18px;
   --modalShadow: 0 14px 34px rgba(0,0,0,.18);
 
   /* Drawer shell */
   --drawerMaxW: 720px;
   --drawerTopRadius: 18px;
-  --drawerMaxH: 92dvh;
+  --drawerMaxH: var(--modalMaxH);
 
     /* Card shell */
   --cardBg: var(--panelBg);
@@ -1329,17 +1331,28 @@ body {
 .maModal{
   width: 100%;
   max-width: var(--modalMaxW);
-  max-height: calc(100dvh - (20px + env(safe-area-inset-top) + env(safe-area-inset-bottom)));
+
+  /* Legacy Fallback for older browsers */
+  max-height: 92vh; 
+  /* 
+     Industry Standard: Use Dynamic Viewport Height (dvh) and Safe Area Insets 
+     to ensure the modal never expands past the visible screen or behind notches.
+  */
+  max-height: min(var(--modalMaxH), calc(100dvh - (var(--modalViewportGap) + env(safe-area-inset-top) + env(safe-area-inset-bottom))));
 
   background: var(--modalSurface);
   border: 1px solid var(--border);
   border-radius: var(--modalRadius);
   box-shadow: var(--modalShadow);
-  overflow: hidden;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   min-height: 0;
+  /* Shell should not scroll or have padding; internal body handles that to allow pinned headers/footers */
+  overflow: hidden;
+  padding: 0;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .maModal__hdr{
@@ -1368,7 +1381,7 @@ body {
   min-height: 0;
   overflow: auto;
   padding: 14px;
-  overscroll-behavior: contain;
+  overscroll-behavior: contain;  /* Prevents the underlying page from scrolling when modal reaches its limits */
   -webkit-overflow-scrolling: touch;
 }
 
