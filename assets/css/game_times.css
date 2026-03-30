@@ -19,11 +19,6 @@
   justify-content: flex-end;
 }
 
-.gtInlineIcon {
-  width: 16px;
-  height: 16px;
-  flex: 0 0 16px;
-}
 @media (min-width: 980px){
 
   /* 1) Desktop backdrop ("outside the canvas") */

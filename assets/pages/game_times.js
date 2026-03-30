@@ -342,25 +342,39 @@
     `;
   }
 
-  // ---- Pickers ----
-  function openTimePicker(groupId) {
-    const arr = Array.isArray(state.meta?.availableTimes) ? state.meta.availableTimes : [];
-    const items = ['<div class="actionMenu_item" data-gt-time="">(Clear)</div>']
-      .concat(arr.map((t, idx) => `<div class="actionMenu_item" data-gt-time="${esc(t)}">${esc(t)}</div>`))
-      .join("");
+    function buildActionRows(values, attrName, labelPrefix) {
+      return (Array.isArray(values) ? values : []).map((value) => {
+        const raw = String(value ?? "");
+        const label = labelPrefix ? `${labelPrefix} ${raw}` : raw;
+        return `<button class="actionMenu_item" type="button" ${attrName}="${esc(raw)}">${esc(label)}</button>`;
+      }).join("");
+    }
 
-    // Use shared MA.ui.openActionsMenu but inject custom HTML body logic via a workaround or
-    // better yet, map these to standard items if possible. 
-    // Since game_times uses custom pickers (chips/lists), we can use the shared overlay's DOM if exposed,
-    // OR adapt openActionsMenu to support custom HTML body.
-    // However, the prompt asks to match game_pairings.js pattern which uses MA.ui.openActionsMenu.
-    // game_pairings uses standard items. game_times needs custom pickers.
-    // We will use the shared MA.ui.openActionsMenu but pass a custom render function or HTML string if supported,
-    // OR we can use the shared overlay DOM directly like game_pairings does for its modal?
-    // Actually, game_pairings uses a custom modal for AutoPair.
-    // Let's stick to the existing custom menu logic for pickers but use the shared overlay ID "actionMenuOverlay".
-    
-    openCustomMenu("Tee Time", "Select a time.", items, (host) => {
+    function buildHoleMenuRows(holes) {
+      const list = Array.isArray(holes) ? holes.map((h) => String(h)) : [];
+      const top = [];
+
+      if (list.includes("1")) top.push("1");
+      if (list.includes("10")) top.push("10");
+
+      const topRows = top.length
+        ? buildActionRows(top, 'data-gt-hole', 'Hole')
+        : "";
+
+      const allRows = buildActionRows(list, 'data-gt-hole', 'Hole');
+
+      if (topRows && allRows) {
+        return `${topRows}<div class="actionMenu_divider"></div>${allRows}`;
+      }
+      return topRows || allRows;
+    }
+
+  // ---- Pickers ----
+    function openTimePicker(groupId) {
+      const arr = Array.isArray(state.meta?.availableTimes) ? state.meta.availableTimes : [];
+      const items = buildActionRows(arr, 'data-gt-time', '');
+
+      openCustomMenu("Tee Time", "Select a time.", items, (host) => {
         host.querySelectorAll("[data-gt-time]").forEach((node) => {
           node.addEventListener("click", () => {
             const t = node.getAttribute("data-gt-time") || "";
@@ -369,22 +383,27 @@
           });
         });
       });
-  }
+    }
 
-  function openHolePicker(groupId) {
-    const holes = Array.isArray(state.meta?.availableHoles) ? state.meta.availableHoles : [];
-    const chips = holes.map((h) => `<button type="button" class="maChoiceChip" data-gt-hole="${esc(h)}">${esc(h)}</button>`).join("");
+    function openHolePicker(groupId) {
+      const holes = Array.isArray(state.meta?.availableHoles) ? state.meta.availableHoles : [];
+      const items = buildHoleMenuRows(holes);
 
-    openCustomMenu("Start Hole", isShotgun() ? "Select a hole (then choose slot)." : "Select a hole.", `<div class="maChoiceChips">${chips}</div>`, (host) => {
-        host.querySelectorAll("[data-gt-hole]").forEach((node) => {
-          node.addEventListener("click", () => {
-            const h = node.getAttribute("data-gt-hole") || "";
-            closeMenu();
-            assignHole(groupId, h);
+      openCustomMenu(
+        "Start Hole",
+        isShotgun() ? "Select a hole (then choose slot)." : "Select a hole.",
+        items,
+        (host) => {
+          host.querySelectorAll("[data-gt-hole]").forEach((node) => {
+            node.addEventListener("click", () => {
+              const h = node.getAttribute("data-gt-hole") || "";
+              closeMenu();
+              assignHole(groupId, h);
+            });
           });
-        });
-      });
-  }
+        }
+      );
+    }
 
   function openSuffixPicker(groupId) {
     if (!isShotgun()) return;
@@ -398,40 +417,39 @@
     }
 
     const arr = suffixList();
-    const chips = arr.map((s) => {
+    const items = arr.map((s) => {
       const ok = !takenSuffixes(time, hole, groupId).has(s);
-      const cls = ok ? "maChoiceChip" : "maChoiceChip is-disabled";
-      return `<button type="button" class="${cls}" data-gt-suffix="${esc(s)}" ${ok ? "" : "disabled"}>${esc(s)}</button>`;
+      const dangerClass = ok ? "" : " disabled";
+      const disabledAttr = ok ? "" : " disabled";
+      return `<button class="actionMenu_item${dangerClass}" type="button" data-gt-suffix="${esc(s)}"${disabledAttr}>Slot ${esc(s)}</button>`;
     }).join("");
 
-    openCustomMenu("Shotgun Slot", `Time ${esc(time)} • Hole ${esc(hole)}`, `<div class="maChoiceChips">${chips}</div>`, (host) => {
-        host.querySelectorAll("[data-gt-suffix]").forEach((node) => {
-          node.addEventListener("click", () => {
-            const s = node.getAttribute("data-gt-suffix") || "";
-            closeMenu();
-            assignSuffix(groupId, s);
-          });
+    openCustomMenu("Shotgun Slot", `Time ${esc(time)} • Hole ${esc(hole)}`, items, (host) => {
+      host.querySelectorAll("[data-gt-suffix]").forEach((node) => {
+        node.addEventListener("click", () => {
+          const s = node.getAttribute("data-gt-suffix") || "";
+          closeMenu();
+          assignSuffix(groupId, s);
         });
       });
+    });
   }
 
   // Helper to reuse the shared overlay for custom content (Pickers)
   function openCustomMenu(title, subtitle, bodyHtml, onWire) {
-    // We can reuse the structure created by actions_menu.js
     let overlay = document.getElementById("maActionMenuOverlay");
     if (!overlay) {
-      // Create it if missing (lazy init similar to actions_menu.js)
       overlay = document.createElement("div");
       overlay.id = "maActionMenuOverlay";
       overlay.className = "actionMenuOverlay";
       overlay.innerHTML = '<div id="maActionMenuHost"></div>';
       document.body.appendChild(overlay);
-      
-      // Wire click-outside
+
       overlay.addEventListener("click", (e) => {
         if (e.target === overlay) closeMenu();
       });
     }
+
     const host = document.getElementById("maActionMenuHost");
     if (!host) return;
 
@@ -444,10 +462,12 @@
               <div class="actionMenu_title">${esc(title)}</div>
               ${subtitle ? `<div class="actionMenu_subtitle">${esc(subtitle)}</div>` : ""}
             </div>
-            <button class="actionMenu_closeBtn" type="button" data-close="1">✕</button>
+            <button class="iconBtn btnPrimary" type="button" data-close="1" aria-label="Close">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
           </div>
         </div>
-        <div class="actionMenu_body">${bodyHtml}</div>
+        ${bodyHtml}
       </div>
     `;
 
@@ -456,11 +476,9 @@
     overlay.setAttribute("aria-hidden", "false");
     document.documentElement.classList.add("maOverlayOpen");
 
-    // Wire close
     const closeBtn = host.querySelector("[data-close='1']");
     if (closeBtn) closeBtn.addEventListener("click", closeMenu);
-    
-    // Wire custom events
+
     if (typeof onWire === "function") onWire(host);
   }
 
