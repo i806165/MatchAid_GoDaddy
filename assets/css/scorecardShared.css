@@ -3,8 +3,6 @@
 .scBrowserControls{ display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
 .scBrowserControls__group{ display:flex; gap:8px; flex-wrap:wrap; }
 .scCtlBtn{ border:1px solid var(--borderSubtle); background:#fff; border-radius:999px; padding:8px 12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
-.scCtlBtn--icon{ width:34px; height:34px; padding:0; }
-.scCtlBtn--icon .scIcon{ width:20px; height:20px; fill:currentColor; }
 .scCtlBtn.is-active{ background:var(--brandPrimary); color:#fff; border-color:var(--brandPrimary); }
 .scGroupCard{ border:1px solid var(--borderSubtle); border-radius:14px; overflow:hidden; background:#fff; }
 .scGroupCard__hdr{ display:flex; justify-content:space-between; gap:12px; align-items:center; padding:6px 12px; border-bottom:1px solid var(--borderSubtle); }
@@ -14,9 +12,6 @@
 .scGroupCard:not(.is-collapsed) .scGroupCard__hdr--collapsed{ display:none; }
 
 .scGroupCard__titleRow{ display:flex; align-items:center; gap:10px; min-width:0; flex:1; }
-.scToggleBtn{ flex:0 0 24px; width:24px; height:24px; border-radius:50%; border:none; background:transparent; color:var(--brandSecondary); cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
-.scToggleBtn:hover{ background:rgba(0,0,0,0.05); }
-.scToggleBtn svg{ width:18px; height:18px; fill:currentColor; }
 
 .scGroupCard__title{ font-weight:800; font-size:14px; line-height:1.2; }
 .scGroupCard__sub{ display: none; }

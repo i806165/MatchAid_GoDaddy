@@ -79,9 +79,10 @@
   function renderControls(){
     if(!dom.controls) return;
     const supportsPoints = !!payload.meta?.supportsPoints;
-    const icon = state.globalExpanded ? 
-      `<svg viewBox="0 0 24 24" class="scIcon"><path d="M19 13H5v-2h14v2z"/></svg>` : 
-      `<svg viewBox="0 0 24 24" class="scIcon"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`;
+    const iconMinus = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+    const iconPlus = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+
+    const icon = state.globalExpanded ? iconMinus : iconPlus;
 
     const modes = [ 
       ['gross','Gross'], 
@@ -91,7 +92,7 @@
     ].concat(supportsPoints ? [['points','Points']] : []);
     dom.controls.innerHTML = `<div class="scBrowserControls">
       <div class="scBrowserControls__group">
-        <button id="scGlobalToggle" class="scCtlBtn scCtlBtn--icon" type="button" title="Toggle All Cards">${icon}</button>
+        <button id="scGlobalToggle" class="iconBtn btnSecondary" type="button" title="Toggle All Cards">${icon}</button>
         ${modes.map(([key,label]) => `<button class="scCtlBtn ${state.valueMode===key?'is-active':''}" type="button" data-mode="${key}">${label}</button>`).join('')}
       </div>
       <div class="scPageSummary"><span>${esc(init.header?.title || '')}</span><span>${esc(game.dbGames_GameFormat || '')} ${esc(game.dbGames_ScoringMethod || '')}</span></div>
@@ -247,14 +248,14 @@
     const headerText = [title, row.teeTime].filter(Boolean).join(' • ');
     const summaryTitle = getCardSummaryTitle(row);
 
-    const iconMinus = `<svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>`;
-    const iconPlus = `<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`;
+    const iconMinus = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+    const iconPlus = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
 
     return `<section class="scGroupCard ${cardState.expanded ? '' : 'is-collapsed'}" data-groupid="${esc(gid)}">
       <!-- Expanded Header -->
       <div class="scGroupCard__hdr scGroupCard__hdr--expanded">
         <div class="scGroupCard__titleRow">
-          <button class="scToggleBtn" type="button" data-card-toggle="${esc(gid)}" title="Collapse Card">${iconMinus}</button>
+          <button class="iconBtn btnSecondary" type="button" data-card-toggle="${esc(gid)}" title="Collapse Card">${iconMinus}</button>
           <div class="scGroupCard__title">${esc(headerText)}</div>
         </div>
       </div>
@@ -262,7 +263,7 @@
       <!-- Collapsed Header -->
       <div class="scGroupCard__hdr scGroupCard__hdr--collapsed">
         <div class="scGroupCard__titleRow">
-          <button class="scToggleBtn" type="button" data-card-toggle="${esc(gid)}" title="Expand Card">${iconPlus}</button>
+          <button class="iconBtn btnSecondary" type="button" data-card-toggle="${esc(gid)}" title="Expand Card">${iconPlus}</button>
           <div class="scGroupCard__title">${esc(summaryTitle)}</div>
         </div>
       </div>
