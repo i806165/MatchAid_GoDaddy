@@ -97,6 +97,7 @@ final class ServiceScoreEntry
             'isGameDay' => $isAllowedToday,
             'requiresCartConfig' => $requiresCart && $canSave,
             'players' => $players,
+            'scorerGHIN' => self::getEffectivePlayerGHIN(),
             'launchContext' => [
                 'playerKey' => $playerKey,
                 'groupLoadRule' => 'PlayerKey',

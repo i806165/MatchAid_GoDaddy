@@ -103,6 +103,7 @@
       }
 
       state.payload = json.payload;
+      state.scorerGHIN = json.payload.scorerGHIN || '';
       (state.payload.players || []).forEach((wrapper) => {
         if (!wrapper.originalScoresJson) {
           wrapper.originalScoresJson = deepClone(wrapper.scoresJson || null);
@@ -444,7 +445,7 @@ function renderRows() {
       const p = Number(row.par);
       const diff = n - p;
       const diffText = diff === 0 ? 'E' : (diff > 0 ? '+' : '') + diff;
-      netDisplay = `${netScore} • ${diffText}`;
+      netDisplay = `${netScore} | ${diffText}`;
     }
 
     const payloadGame = state.payload || {};
