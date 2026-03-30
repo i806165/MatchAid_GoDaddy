@@ -1043,6 +1043,28 @@ body {
   user-select: none;
 }
 
+/* Square icon button (calendar, etc.) */
+.iconBtn{
+  width: var(--btnHeight);
+  height: var(--btnHeight);
+  flex: 0 0 var(--btnHeight);
+  padding: 0;
+  border-radius: var(--radiusSq);
+  border: 1px solid var(--btnBorder);
+  background: var(--btnBg);
+  color: var(--btnText);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.iconBtn:active{
+  background: var(--btnPressedBg);
+  transform: scale(.98);
+}
+
 .btn:active{
   background: var(--btnPressedBg);
   transform: scale(.98);
@@ -1102,28 +1124,6 @@ body {
   cursor: pointer;
   font-weight: 700;
   font-family: var(--fontFamilyBase);
-}
-
-/* Square icon button (calendar, etc.) */
-.iconBtn{
-  width: var(--btnHeight);
-  height: var(--btnHeight);
-  flex: 0 0 var(--btnHeight);
-  padding: 0;
-  border-radius: var(--radiusSq);
-  border: 1px solid var(--btnBorder);
-  background: var(--btnBg);
-  color: var(--btnText);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  user-select: none;
-}
-
-.iconBtn:active{
-  background: var(--btnPressedBg);
-  transform: scale(.98);
 }
 
 /* Pill button (rounded action chip) */
