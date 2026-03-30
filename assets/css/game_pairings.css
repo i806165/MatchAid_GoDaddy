@@ -168,18 +168,6 @@
   text-overflow: ellipsis;
 }
 
-.gpGroupCard__title.is-expanded {
-  /* This is for the long-text-wrapping feature, separate from collapse */
-  white-space: normal;
-  overflow: visible;
-  text-overflow: clip;
-  cursor: default;
-}
-.gpGroupCard__meta{
-  /* No longer used, title is now one line */
-  display: none;
-}
-
 .gpGroupCard__body{
   display: flex;
   flex-direction: column;
@@ -229,28 +217,6 @@
   overflow: visible;
   text-overflow: clip;
   cursor: default;
-}
-
-.gpRowBtn{
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid var(--borderSubtle);
-  background: #fff;
-  font-size: 12px;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.gpRowBtn:hover{
-  background: rgba(0,0,0,.02);
-}
-
-.gpRowBtn:active{
-  background: rgba(0,0,0,.04);
 }
 
 /* Assign Button: White bg, Green outline/text */

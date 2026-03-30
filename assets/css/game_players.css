@@ -112,7 +112,7 @@
 
 @media (max-width: 560px){
   .gpRow--favs{ grid-template-columns: minmax(0,1fr) 38px minmax(0,88px) 34px 34px; }
-  .gpRow--ghin{ grid-template-columns: minmax(0,1fr) 50px 42px 30px; }
+  .gpRow--ghin{ grid-template-columns: minmax(0,1fr) 50px 42px 34px; }
 }
 
 @media (min-width: 1600px){
@@ -209,7 +209,7 @@
 
 @media (max-width: 560px){
   .gpRow--favMulti{
-    grid-template-columns: 30px minmax(0,1fr) 42px 30px;
+    grid-template-columns: 34px minmax(0,1fr) 42px 34px;
   }
 
   .gpFavBtnRow{
