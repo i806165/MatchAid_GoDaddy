@@ -133,11 +133,6 @@ main.maPage .maListRow__col--muted {
     overflow: hidden;
     text-overflow: ellipsis;
   }
-
-  /* Keep icon buttons from shrinking */
-  main.maPage .iconBtn{
-    flex: 0 0 auto;
-  }
 }
 
 @media (min-width: 980px){

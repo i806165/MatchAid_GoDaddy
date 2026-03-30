@@ -301,7 +301,9 @@
         <div class="maListRow" data-ghin="${escapeHtml(f.playerGHIN)}">
           <div class="maListRow__col">${name}</div>
           <div class="maListRow__col maListRow__col--muted">${ghin}${groups ? " • " + groups : ""}</div>
-          <button class="iconBtn" type="button" data-act="delete" aria-label="Delete">🗑</button>
+          <button class="iconBtn btnPrimary" type="button" data-act="delete" aria-label="Delete">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
         </div>
       `;
     }).join("");

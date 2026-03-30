@@ -515,21 +515,6 @@ body {
   border-bottom: 1px solid var(--borderSubtle);
 }
 
-.maAdminPick__hdrBtn{
-  height: 36px;
-  width: 44px;
-  border: 1px solid rgba(255,255,255,.25);
-  background: rgba(255,255,255,.10);
-  border-radius: 12px;
-  color: inherit;
-  cursor: pointer;
-  font-weight: 900;
-}
-
-.maAdminPick__hdrBtn:hover{
-  background: rgba(255,255,255,.18);
-}
-
 .maAdminPick__hdrName{
   font-weight: 900;
   letter-spacing: .2px;
@@ -594,22 +579,6 @@ body {
   display: flex;
   align-items: center;
   flex: 0 0 auto;
-}
-
-.maAdminRow__heart{
-  font-size: 18px;
-  padding: 6px 8px;
-  border-radius: 12px;
-  color: var(--mutedText);
-  cursor: pointer;
-}
-
-.maAdminRow__heart:hover{
-  background: var(--pressedBg);
-}
-
-.maAdminRow__heart.on{
-  color: var(--danger);
 }
 
 
@@ -1176,21 +1145,6 @@ body {
   transform: scale(.98);
 }
 
-/* Hover (desktop) */
-@media (hover:hover){
-  .btn:hover,
-  .iconBtn:hover,
-  .pillBtn:hover{
-    background: var(--btnHoverBg);
-  }
-}
-
-/* Hover (desktop) */
-@media (hover:hover){
-  .maNavBtn:hover{
-    background: rgba(0,0,0,.04);
-  }
-}
 /* ==========================================================================
    PAGE TYPES + PANELS + OVERLAY FAMILY
    --------------------------------------------------------------------------

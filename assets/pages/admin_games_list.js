@@ -385,14 +385,19 @@ cardsEl.innerHTML = state.games.dbRows
       .map((a) => {
         const on = state.admins.selectedKeys.has(a.key);
         const fav = state.admins.favoriteKeys.has(a.key);
+        const checkIcon = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+        const heartIcon = fav 
+          ? `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 2 7.5 2c1.74 0 3.41.81 4.5 2.09C13.09 2.81 14.76 2 16.5 2 19.58 2 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`
+          : `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.84-8.84 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`;
+
         return `
         <div class="maAdminRow" data-adminkey="${esc(a.key)}">
           <div class="maAdminRow__left">
-            <div class="maAdminRow__check ${on ? "on" : ""}">${on ? "✓" : ""}</div>
+            <div class="maAdminRow__check ${on ? "on" : ""}">${on ? checkIcon : ""}</div>
             <div class="maAdminRow__name">${esc(a.name || a.key)}</div>
           </div>
           <div class="maAdminRow__right">
-            <div class="maAdminRow__heart ${fav ? "on" : ""}" data-heart="1" title="Toggle favorite">${fav ? "♥" : "♡"}</div>
+            <button class="iconBtn btnSecondary maAdminRow__heart" type="button" data-heart="1" title="Toggle favorite">${heartIcon}</button>
           </div>
         </div>
       `;
@@ -681,7 +686,9 @@ function applyPreset(presetKey) {
               <div class="actionMenu_title">${esc(g.dbGames_Title || "Game")}</div>
               <div class="actionMenu_subtitle">${esc(dateLine)} ${esc(g.dbGames_PlayTime || "")}</div>
             </div>
-            <button class="actionMenu_closeBtn" type="button" data-closemenu="1">✕</button>
+            <button class="iconBtn btnPrimary" type="button" data-closemenu="1">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
           </div>
         </div>
 
