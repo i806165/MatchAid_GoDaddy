@@ -14,11 +14,6 @@
 .scGroupCard__titleRow{ display:flex; align-items:center; gap:10px; min-width:0; flex:1; }
 
 .scGroupCard__title{ font-weight:800; font-size:14px; line-height:1.2; }
-.scGroupCard__sub{ display: none; }
-.scGroupCard__actions{ display:flex; gap:8px; flex-wrap:wrap; }
-.scMiniBtn{ border:1px solid var(--borderSubtle); background:#fff; border-radius:10px; padding:6px 10px; font-weight:700; font-size:12px; }
-.scGroupCard__summary{ padding:6px 12px; font-size:13px; font-weight:700; color:rgba(0,0,0,.72); border-bottom:1px solid var(--borderSubtle); }
-.scGroupCard.is-collapsed .scGroupCard__body{ display:none; }
 .scTable td.scName{ white-space:normal; }
 
 .scCell{ position:relative; min-height:24px; display:flex; align-items:center; justify-content:center; }

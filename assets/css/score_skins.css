@@ -1,0 +1,11 @@
+/* /assets/css/score_skins.css */
+
+.scTable th.scName, 
+.scTable td.scName {
+  width: 110px;
+}
+
+.scTable th.scMetaCol, 
+.scTable td.scMetaCol {
+  width: auto;
+}
