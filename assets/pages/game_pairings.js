@@ -923,7 +923,7 @@
             <div class="gpGroupCard__title" title="${esc(title)} • ${esc(meta)}">${esc(title)} • ${esc(meta)}</div>
             <div class="gpCardActions">
               <button class="iconBtn btnSecondary" type="button" data-action="unpairGroup" data-pairing-id="${esc(pid)}" title="Unpair">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.84 18.84A8 8 0 0 1 9 20H4a8 8 0 0 1 0-16h5a8 8 0 0 1 4.95 1.7"></path><path d="M10.85 12.15a2 2 0 0 0 2.15-.35"></path><line x1="2" y1="2" x2="22" y2="22"></line></svg>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h2a5 5 0 0 1 0 10h-2m-6 0H7A5 5 0 0 1 7 7h2"></path><line x1="8" y1="12" x2="16" y2="12"></line><line x1="2" y1="2" x2="22" y2="22"></line></svg>
               </button>
               <button class="iconBtn btnSecondary" type="button" data-action="editPairing" data-pairing-id="${esc(pid)}" title="Edit">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
@@ -1038,7 +1038,7 @@
             <div class="gpGroupCard__title" title="Match ${esc(fid)} • ${esc(meta)}">Match ${esc(fid)} • ${esc(meta)}</div>
             <div class="gpCardActions">
               <button class="iconBtn btnSecondary" type="button" data-action="unmatchFlight" data-flight-id="${esc(fid)}" title="Unmatch">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.84 18.84A8 8 0 0 1 9 20H4a8 8 0 0 1 0-16h5a8 8 0 0 1 4.95 1.7"></path><path d="M10.85 12.15a2 2 0 0 0 2.15-.35"></path><line x1="2" y1="2" x2="22" y2="22"></line></svg>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h2a5 5 0 0 1 0 10h-2m-6 0H7A5 5 0 0 1 7 7h2"></path><line x1="8" y1="12" x2="16" y2="12"></line><line x1="2" y1="2" x2="22" y2="22"></line></svg>
               </button>
               <button class="iconBtn btnSecondary" type="button" data-action="editFlight" data-flight-id="${esc(fid)}" title="Edit">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>

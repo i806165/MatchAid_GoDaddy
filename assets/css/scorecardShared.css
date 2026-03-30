@@ -25,11 +25,11 @@
 .scCellVal{ font-weight:800; }
 .scCell--declared{ background:rgba(0, 168, 89, 0.12); }
 
-.scCell--birdie .scCellVal{ border-radius:999px; border:1.8px solid #000; display:inline-flex; min-width:20px; height:20px; align-items:center; justify-content:center; padding:0 5px; }
-.scCell--eagle .scCellVal{ border-radius:999px; border:1.8px double #000; display:inline-flex; min-width:20px; height:20px; align-items:center; justify-content:center; padding:0 5px; }
-.scCell--bogey .scCellVal{ border:1.8px solid #000; display:inline-flex; min-width:20px; height:20px; align-items:center; justify-content:center; padding:0 5px; }
-.scCell--bogeyplus .scCellVal{ border:2px solid #000; display:inline-flex; min-width:20px; height:20px; align-items:center; justify-content:center; padding:0 5px; box-shadow: inset 0 0 0 1px #000; }
-.scCellMarks{ position:absolute; top:1px; right:2px; font-size:9px; font-weight:700; color:rgba(0,0,0,.7); }
+.scCell--birdie .scCellVal{ border-radius:999px; border:1.8px solid #000; display:inline-flex; min-width:16px; height:16px; align-items:center; justify-content:center; padding:0 5px; }
+.scCell--eagle .scCellVal{ border-radius:999px; border:1.8px double #000; display:inline-flex; min-width:16px; height:16px; align-items:center; justify-content:center; padding:0 5px; }
+.scCell--bogey .scCellVal{ border:1.8px solid #000; display:inline-flex; min-width:16px; height:16px; align-items:center; justify-content:center; padding:0 5px; }
+.scCell--bogeyplus .scCellVal{ border:2px solid #000; display:inline-flex; min-width:16px; height:16px; align-items:center; justify-content:center; padding:0 5px; box-shadow: inset 0 0 0 1px #000; }
+.scCellMarks{ position:absolute; top:2px; right:2px; font-size:7px; font-weight:700; color:rgba(0,0,0,.7); }
 .scTotalRow td{ background:rgba(0,0,0,0.12); font-weight:800; border-top: 1px solid rgba(0,0,0,0.2); color: #000; }
 .scTable th.scMeta, .scTable td.scName{ cursor:pointer; }
 .scTable th.scMeta:hover, .scTable td.scName:hover{ background:rgba(0,0,0,0.05); }

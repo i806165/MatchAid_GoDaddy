@@ -441,7 +441,7 @@
     if (!overlay) {
       overlay = document.createElement("div");
       overlay.id = "maActionMenuOverlay";
-      overlay.className = "actionMenuOverlay";
+      overlay.className = "maModalOverlay";
       overlay.innerHTML = '<div id="maActionMenuHost"></div>';
       document.body.appendChild(overlay);
 
@@ -472,7 +472,7 @@
     `;
 
     host.innerHTML = html;
-    overlay.classList.add("open");
+    overlay.classList.add("is-open");
     overlay.setAttribute("aria-hidden", "false");
     document.documentElement.classList.add("maOverlayOpen");
 
@@ -488,7 +488,7 @@
     } else {
       const overlay = document.getElementById("maActionMenuOverlay");
       if (overlay) {
-        overlay.classList.remove("open");
+        overlay.classList.remove("is-open");
         overlay.setAttribute("aria-hidden", "true");
       }
       document.documentElement.classList.remove("maOverlayOpen");
