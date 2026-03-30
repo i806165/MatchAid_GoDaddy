@@ -40,7 +40,7 @@ function ensureOverlay() {
   MA.ui.closeActionsMenu = function () {
     const el = document.getElementById("maActionMenuOverlay");
     if (el) {
-      el.classList.remove("open");
+      el.classList.remove("is-open");
       el.setAttribute("aria-hidden", "true");
       const host = document.getElementById("maActionMenuHost");
       if (host) host.innerHTML = "";
@@ -86,7 +86,7 @@ function ensureOverlay() {
     `;
 
     host.innerHTML = html;
-    overlay.classList.add("open");
+    overlay.classList.add("is-open");
     overlay.setAttribute("aria-hidden", "false");
     setOverlayLock(true);
 
