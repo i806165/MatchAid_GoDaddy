@@ -36,7 +36,9 @@
             <div class="maModal__title">Select Tee</div>
             <div class="maModal__subtitle" id="maTeeSelSub"></div>
           </div>
-          <button type="button" class="closeBtn" id="maTeeSelCancel">Cancel</button>
+          <button type="button" class="iconBtn btnPrimary" id="maTeeSelCancel" aria-label="Close">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
         </header>
         <div class="maModal__body">
           <div id="maTeeSelRows" class="maCards"></div>
@@ -112,6 +114,7 @@
       const slope = esc(t.teeSetSlope || t.slope || "");
 
       const isSelected = currentId && rawId === currentId;
+      const checkIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
 
       return `
         <div class="maCard maListRow ${isSelected ? "is-selected" : ""}" data-id="${id}">
@@ -123,7 +126,7 @@
             </div>
             <div class="maListRow__col maListRow__col--muted">${yards} yds • Slope ${slope} • CR ${rating}</div>
           </div>
-          <div class="maListRow__col" style="text-align:right; min-width:24px;">${isSelected ? "✓" : "+"}</div>
+          <div class="maListRow__col" style="text-align:right; min-width:24px;">${isSelected ? checkIcon : "+"}</div>
         </div>
       `;
     }).join("");

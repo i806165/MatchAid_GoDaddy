@@ -55,8 +55,8 @@
         <header class="maPanel__hdr">
           <div class="gpPanelHdr">
             <div class="gpPanelHdr__left">
-              <button class="iconBtn gpGlobalToggleBtn" type="button" aria-label="Collapse All" title="Collapse All" style="width:28px; height:28px; border-radius:6px;">
-                <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor"><path d="M19 13H5v-2h14v2z"/></svg>
+              <button class="iconBtn btnSecondary gpGlobalToggleBtn" type="button" aria-label="Collapse All" title="Collapse All">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
               </button>
             </div>
             <div class="gpPanelHdr__title">Pairings</div>
@@ -125,8 +125,8 @@
         <header class="maPanel__hdr">
           <div class="gpPanelHdr">
             <div class="gpPanelHdr__left">
-              <button class="iconBtn gpGlobalToggleBtn" type="button" aria-label="Collapse All" title="Collapse All" style="width:28px; height:28px; border-radius:6px;">
-                <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor"><path d="M19 13H5v-2h14v2z"/></svg>
+              <button class="iconBtn btnSecondary gpGlobalToggleBtn" type="button" aria-label="Collapse All" title="Collapse All">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
               </button>
             </div>
             <div class="gpPanelHdr__title">Matches</div>

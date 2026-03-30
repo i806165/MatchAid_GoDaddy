@@ -270,7 +270,9 @@
     header.className = "maModal__hdr";
     header.innerHTML = `
       <div class="maModal__title">Auto-Pair</div>
-      <button class="closeBtn" type="button">✕</button>
+      <button class="iconBtn btnPrimary" type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
     `;
 
     // 3. Controls (Setup Mode)
@@ -828,7 +830,7 @@
     if (hasSelection) {
       el.classList.add("has-selection");
       // Minus icon
-      el.innerHTML = `<svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>`;
+      el.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
     } else {
       el.classList.remove("has-selection");
       el.innerHTML = "";
@@ -843,8 +845,8 @@
   function updateToggleAllIcon() {
     const btn = state.activeTab === 'pair' ? el.btnPairToggleAll : el.btnMatchToggleAll;
     if (!btn) return;
-    const iconMinus = `<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor"><path d="M19 13H5v-2h14v2z"/></svg>`;
-    const iconPlus = `<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`;
+    const iconMinus = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+    const iconPlus = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
 
     btn.innerHTML = state.allCollapsed ? iconPlus : iconMinus;
     btn.title = state.allCollapsed ? "Expand All" : "Collapse All";
@@ -885,8 +887,8 @@
       const summaryTitle = `Pairing ${pid}: ${rows.map(p => p.lname).join(" • ")}`;
 
       // SVG Icons
-      const iconMinus = `<svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>`;
-      const iconPlus = `<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`;
+      const iconMinus = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+      const iconPlus = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
 
       const body = rows.map(p => {
         const safeGHIN = esc(p.playerGHIN);
@@ -902,7 +904,9 @@
 
         return `
           <div class="gpCardRow">
-            <button type="button" class="gpCardRow__del" data-action="removeFromPair" data-ghin="${safeGHIN}" aria-label="Remove ${esc(p.name)} from pairing">X</button>
+            <button type="button" class="iconBtn btnPrimary gpCardRow__del" data-action="removeFromPair" data-ghin="${safeGHIN}" aria-label="Remove ${esc(p.name)} from pairing">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
             <div class="gpCardRow__info" data-action="toggle-truncate" title="${esc(info)}">${esc(info)}</div>
           </div>`;
       }).join("");
@@ -915,20 +919,20 @@
         <div class="gpGroupCard${selectedClass}${collapsedClass}" data-pairing-id="${esc(pid)}">
           <!-- Expanded Header -->
           <div class="gpGroupCard__hdr gpGroupCard__hdr--expanded">
-            <button class="gpToggleBtn" type="button" data-action="toggle-collapse" title="Collapse">${iconMinus}</button>
+            <button class="iconBtn btnSecondary" type="button" data-action="toggle-collapse" title="Collapse">${iconMinus}</button>
             <div class="gpGroupCard__title" title="${esc(title)} • ${esc(meta)}">${esc(title)} • ${esc(meta)}</div>
             <div class="gpCardActions">
-              <button class="gpCardActionBtn" type="button" data-action="unpairGroup" data-pairing-id="${esc(pid)}" title="Unpair">
-                <svg viewBox="0 0 24 24"><path d="M2 12c0 2.76 2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1 0-1.59 1.21-2.9 2.76-3.07L8.73 11H8v2h2.73L13 15.27V17h1.73l4.01 4L20 19.74 3.27 3 2 4.27z M17 7h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1 0 1.43-0.98 2.63-2.31 2.98l1.46 1.46C20.88 15.61 22 13.95 22 12c0-2.76-2.24-5-5-5zm-1 4h-2.19l2 2H16z"/></svg>
+              <button class="iconBtn btnSecondary" type="button" data-action="unpairGroup" data-pairing-id="${esc(pid)}" title="Unpair">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.84 18.84A8 8 0 0 1 9 20H4a8 8 0 0 1 0-16h5a8 8 0 0 1 4.95 1.7"></path><path d="M10.85 12.15a2 2 0 0 0 2.15-.35"></path><line x1="2" y1="2" x2="22" y2="22"></line></svg>
               </button>
-              <button class="gpCardActionBtn" type="button" data-action="editPairing" data-pairing-id="${esc(pid)}" title="Edit">
-                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+              <button class="iconBtn btnSecondary" type="button" data-action="editPairing" data-pairing-id="${esc(pid)}" title="Edit">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
               </button>
             </div>
           </div>
           <!-- Collapsed Header -->
           <div class="gpGroupCard__hdr gpGroupCard__hdr--collapsed">
-            <button class="gpToggleBtn" type="button" data-action="toggle-collapse" title="Expand">${iconPlus}</button>
+            <button class="iconBtn btnSecondary" type="button" data-action="toggle-collapse" title="Expand">${iconPlus}</button>
             <div class="gpGroupCard__title" title="${esc(summaryTitle)}">${esc(summaryTitle)}</div>
           </div>
           <!-- Body -->
@@ -959,7 +963,7 @@
       const sel = state.selectedPlayerGHINs.has(String(p.playerGHIN));
       const cls = sel ? "maListRow is-selected" : "maListRow";
       const checkHtml = sel 
-        ? `<div class="gpRowCheck is-selected"><svg viewBox="0 0 24 24" style="fill:#fff;width:16px;height:16px;"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>`
+        ? `<div class="gpRowCheck is-selected"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>`
         : `<div class="gpRowCheck"></div>`;
       
       // Unpaired List: TeeSet Name, HI:#, CH:#, PH:# SO:# separated by dot
@@ -1022,28 +1026,28 @@
       if (teamBNames) summaryTitle += `Team B: ${esc(teamBNames)}`;
 
       // SVG Icons
-      const iconMinus = `<svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14v2z"/></svg>`;
-      const iconPlus = `<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>`;
+      const iconMinus = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+      const iconPlus = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
 
       const collapsedClass = state.allCollapsed ? " is-collapsed" : "";
       return `
         <div class="gpGroupCard${collapsedClass}" data-flight-id="${esc(fid)}">
           <!-- Expanded Header -->
           <div class="gpGroupCard__hdr gpGroupCard__hdr--expanded">
-            <button class="gpToggleBtn" type="button" data-action="toggle-collapse" title="Collapse">${iconMinus}</button>
+            <button class="iconBtn btnSecondary" type="button" data-action="toggle-collapse" title="Collapse">${iconMinus}</button>
             <div class="gpGroupCard__title" title="Match ${esc(fid)} • ${esc(meta)}">Match ${esc(fid)} • ${esc(meta)}</div>
             <div class="gpCardActions">
-              <button class="gpCardActionBtn" type="button" data-action="unmatchFlight" data-flight-id="${esc(fid)}" title="Unmatch">
-                <svg viewBox="0 0 24 24"><path d="M2 12c0 2.76 2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1 0-1.59 1.21-2.9 2.76-3.07L8.73 11H8v2h2.73L13 15.27V17h1.73l4.01 4L20 19.74 3.27 3 2 4.27z M17 7h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1 0 1.43-0.98 2.63-2.31 2.98l1.46 1.46C20.88 15.61 22 13.95 22 12c0-2.76-2.24-5-5-5zm-1 4h-2.19l2 2H16z"/></svg>
+              <button class="iconBtn btnSecondary" type="button" data-action="unmatchFlight" data-flight-id="${esc(fid)}" title="Unmatch">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.84 18.84A8 8 0 0 1 9 20H4a8 8 0 0 1 0-16h5a8 8 0 0 1 4.95 1.7"></path><path d="M10.85 12.15a2 2 0 0 0 2.15-.35"></path><line x1="2" y1="2" x2="22" y2="22"></line></svg>
               </button>
-              <button class="gpCardActionBtn" type="button" data-action="editFlight" data-flight-id="${esc(fid)}" title="Edit">
-                <svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+              <button class="iconBtn btnSecondary" type="button" data-action="editFlight" data-flight-id="${esc(fid)}" title="Edit">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
               </button>
             </div>
           </div>
           <!-- Collapsed Header -->
           <div class="gpGroupCard__hdr gpGroupCard__hdr--collapsed">
-            <button class="gpToggleBtn" type="button" data-action="toggle-collapse" title="Expand">${iconPlus}</button>
+            <button class="iconBtn btnSecondary" type="button" data-action="toggle-collapse" title="Expand">${iconPlus}</button>
             <div class="gpGroupCard__title" title="${esc(summaryTitle)}">${summaryTitle}</div>
           </div>
           <!-- Body -->
@@ -1083,8 +1087,8 @@
 
     return `
       <div class="gpCardRow ${isTarget ? "is-selected" : ""}" data-action="selectFlightSlot" data-flight-id="${esc(flightId)}" data-flight-pos="${esc(flightPos)}">
-        <button type="button" class="gpCardRow__del" ${hasPairing ? `data-action="removePairingFromFlight" data-flight-id="${esc(flightId)}" data-flight-pos="${esc(flightPos)}" data-pairing-id="${esc(team.pairingId)}"` : ''} aria-label="Remove pairing from flight">
-           ${hasPairing ? "X" : ""}
+        <button type="button" class="iconBtn btnPrimary gpCardRow__del" ${hasPairing ? `data-action="removePairingFromFlight" data-flight-id="${esc(flightId)}" data-flight-pos="${esc(flightPos)}" data-pairing-id="${esc(team.pairingId)}"` : ''} aria-label="Remove pairing from flight">
+           ${hasPairing ? `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>` : ""}
         </button>
         <div class="gpCardRow__info" data-action="toggle-truncate" title="${esc(info)}">${esc(info)}</div>
       </div>`;
@@ -1112,7 +1116,7 @@
       const sel = state.selectedPairingIds.has(String(r.pairingId));
       const cls = sel ? "maListRow is-selected" : "maListRow";
       const checkHtml = sel 
-        ? `<div class="gpRowCheck is-selected"><svg viewBox="0 0 24 24" style="fill:#fff;width:16px;height:16px;"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg></div>`
+        ? `<div class="gpRowCheck is-selected"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>`
         : `<div class="gpRowCheck"></div>`;
       return `
         <div class="${cls}" data-action="selectUnmatched" data-pairing-id="${esc(r.pairingId)}">

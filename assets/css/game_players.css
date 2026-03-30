@@ -60,7 +60,7 @@
 
 .gpRow--roster{
   display: grid;
-  grid-template-columns: minmax(0,1fr) 32px 58px;
+  grid-template-columns: minmax(0,1fr) 34px 34px;
   align-items: center;
   column-gap: 6px;
   padding: 8px;
@@ -68,7 +68,7 @@
 
 .gpRow--favs{
   display: grid;
-  grid-template-columns: minmax(0,1fr) 48px minmax(0,120px) 32px 58px;
+  grid-template-columns: minmax(0,1fr) 48px minmax(0,120px) 34px 34px;
   align-items: center;
   column-gap: 6px;
   padding: 8px;
@@ -105,16 +105,13 @@
 .gpEnrolledMark{ color:#1f6fd6; font-weight:700; }
 .gpRow[data-disabled="1"]{ cursor:default; opacity:.72; }
 
-.gpIconBtn[data-act="fav"]{ color:#1f6fd6; border-color:#9db9e7; }
-.gpIconBtn.is-fav{ background:#eaf2ff; color:#1f6fd6; border-color:#7ea5e4; }
-
 @media (max-width: 760px){
-  .gpRow--favs{ grid-template-columns: minmax(0,1fr) 42px minmax(0,96px) 28px 54px; }
+  .gpRow--favs{ grid-template-columns: minmax(0,1fr) 42px minmax(0,96px) 34px 34px; }
   .gpFieldFirst, .gpFieldLast{ min-width: 140px; }
 }
 
 @media (max-width: 560px){
-  .gpRow--favs{ grid-template-columns: minmax(0,1fr) 38px minmax(0,88px) 26px 50px; }
+  .gpRow--favs{ grid-template-columns: minmax(0,1fr) 38px minmax(0,88px) 34px 34px; }
   .gpRow--ghin{ grid-template-columns: minmax(0,1fr) 50px 42px 30px; }
 }
 
@@ -152,17 +149,17 @@
 
 .gpRow--favMulti{
   display:grid;
-  grid-template-columns: 34px minmax(0,1fr) 46px 34px;
+  grid-template-columns: 34px minmax(0,1fr) 46px 34px; /* Already 34px for multi-check */
   align-items:center;
   column-gap:6px;
   padding:8px;
 }
 
 .gpMultiCheck{
-  width:22px;
-  height:22px;
-  border:1px solid var(--borderSubtle);
-  border-radius:999px;
+  width: var(--btnHeight);
+  height: var(--btnHeight);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--radiusSq);
   background:var(--surfaceCard, #fff);
   color:var(--brandPrimary);
   font-weight:700;

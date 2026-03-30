@@ -595,11 +595,13 @@
         const ghin = safe(r.ghin);
         const isEnrolled = enrolled.has(ghin);
         const club = safe(r.club_name || r.clubName || "").trim();
+        const checkIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+
         return `<div class="maListRow gpRow gpRow--ghin ${isEnrolled ? "" : "gpRowClickable"}" data-act="ghin-row" data-ghin="${esc(ghin)}" data-disabled="${isEnrolled ? "1" : "0"}">
           <div class="maListRow__col">${esc(r.name || ghin)}${club ? ` • ${esc(club)}` : ""}</div>
           <div class="maListRow__col maListRow__col--right">${esc(r.hi || "")}</div>
           <div class="maListRow__col maListRow__col--right">${esc(r.gender || "")}</div>
-          <div class="maListRow__col maListRow__col--right gpEnrolledMark">${isEnrolled ? "☑" : ""}</div>
+          <div class="maListRow__col maListRow__col--right gpEnrolledMark">${isEnrolled ? checkIcon : ""}</div>
         </div>`;
       }).join("");
       const status = state.ghinStatus ? `<div class="gpInlineStatus">${esc(state.ghinStatus)}</div>` : "";
@@ -712,11 +714,13 @@
           const g = safe(f.playerGHIN);
           const n = safe(f.name || f.playerName);
           const enrolled = enrolledSet.has(g);
+          const checkIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+
           return `<div class="maListRow gpRow gpRow--ghin ${enrolled ? "" : "gpRowClickable"}" data-fav-ghin="${esc(g)}" data-act="addfav" data-disabled="${enrolled ? "1" : "0"}">
             <div class="maListRow__col">${esc(n)}</div>
             <div class="maListRow__col maListRow__col--right"></div>
             <div class="maListRow__col maListRow__col--right">${esc(f.gender || "")}</div>
-            <div class="maListRow__col maListRow__col--right gpEnrolledMark">${enrolled ? "☑" : ""}</div>
+            <div class="maListRow__col maListRow__col--right gpEnrolledMark">${enrolled ? checkIcon : ""}</div>
           </div>`;
         }).join("");
 
@@ -751,17 +755,19 @@
         const enrolled = enrolledSet.has(g);
         const selected = isFavoriteSelected(g);
         const lastTee = getFavoriteLastTee(f);
+        const checkIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+        const checkIconSm = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
 
         return `<div class="maListRow gpRow gpRow--favMulti ${selected ? "is-multiSelected" : ""} ${enrolled ? "is-multiDisabled" : "gpRowClickable"}" data-fav-ghin="${esc(g)}" data-act="multifav" data-disabled="${enrolled ? "1" : "0"}">
           <div class="maListRow__col">
-            <button type="button" class="gpMultiCheck ${selected ? "is-on" : ""}" ${enrolled ? "disabled" : ""} aria-label="${selected ? "Deselect player" : "Select player"}">${selected ? "✓" : ""}</button>
+            <button type="button" class="gpMultiCheck ${selected ? "is-on" : ""}" ${enrolled ? "disabled" : ""} aria-label="${selected ? "Deselect player" : "Select player"}">${selected ? checkIconSm : ""}</button>
           </div>
           <div class="maListRow__col">
             ${esc(n)}
             <div class="maListRow__col--muted gpLastTee">${esc(lastTee || "—")}</div>
           </div>
           <div class="maListRow__col maListRow__col--right">${esc(f.gender || "")}</div>
-          <div class="maListRow__col maListRow__col--right gpEnrolledMark">${enrolled ? "☑" : ""}</div>
+          <div class="maListRow__col maListRow__col--right gpEnrolledMark">${enrolled ? checkIcon : ""}</div>
         </div>`;
       }).join("");
 
@@ -799,10 +805,15 @@
       const meta = [hi && `HI ${hi}`, ch && `CH ${ch}`, ph && `PH ${ph}`, so && `SO ${so}`, pairing].filter(Boolean).join(" · ");
       const teeName = safe(p.dbPlayers_TeeSetName || "");
       const nameLine = teeName ? `${safe(p.dbPlayers_Name)} · ${teeName}` : safe(p.dbPlayers_Name);
+
+      const heartIcon = isFav 
+        ? `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 2 7.5 2c1.74 0 3.41.81 4.5 2.09C13.09 2.81 14.76 2 16.5 2 19.58 2 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`
+        : `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.84-8.84 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`;
+
       return `<div class="maListRow gpRow gpRow--roster" data-ghin="${esc(ghin)}">
         <div class="maListRow__col">${esc(nameLine)}<div class="maListRow__col--muted gpSub">${esc(meta)}</div></div>
-        <button class="iconBtn gpIconBtn ${isFav?"is-fav":""}" data-act="fav" title="Favorites" aria-label="Favorites">${isFav?"♥":"♡"}</button>
-        <button class="iconBtn gpIconBtn" data-act="del" title="Remove" aria-label="Remove">✕</button>
+        <button class="iconBtn btnSecondary" data-act="fav" title="Favorites" aria-label="Favorites">${heartIcon}</button>
+        <button class="iconBtn btnPrimary" data-act="del" title="Remove" aria-label="Remove"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
       </div>`;
     }).join("");
 

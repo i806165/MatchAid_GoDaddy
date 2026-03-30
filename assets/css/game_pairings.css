@@ -156,51 +156,6 @@
   background: rgba(7,67,42,.05);
 }
 
-/* New: Toggle Button for expand/collapse */
-.gpToggleBtn {
-  flex: 0 0 28px;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: none;
-  background: transparent;
-  color: var(--brandSecondary);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.gpToggleBtn:hover { background: rgba(0,0,0,0.05); }
-.gpToggleBtn svg {
-  width: 20px; height: 20px; fill: currentColor;
-}
-
-/* Card Header Actions */
-.gpCardActions {
-  display: flex;
-  gap: 4px;
-}
-.gpCardActionBtn {
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  color: var(--brandSecondary);
-  border-radius: 4px;
-}
-.gpCardActionBtn:hover {
-  background: rgba(0,0,0,0.05);
-}
-.gpCardActionBtn svg {
-  width: 18px;
-  height: 18px;
-  fill: currentColor;
-}
-
 .gpGroupCard__title{
   font-size: 13px;
   font-weight: 950;
@@ -258,33 +213,6 @@
   background: rgba(11,95,255,.08);
 }
 .gpCardRow:last-child { border-bottom: none; }
-
-.gpCardRow__del {
-  /* Tappable area increased for mobile usability */
-  flex: 0 0 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--danger);
-  font-weight: 900;
-  cursor: pointer;
-  border-radius: 50%; /* Circle looks better for a single character button */
-  font-size: 16px; /* Slightly larger X */
-  line-height: 1;
-  
-  /* Reset button styles */
-  border: none;
-  background: transparent;
-  padding: 0;
-}
-.gpCardRow__del:hover {
-  background: rgba(198, 40, 40, 0.1);
-}
-/* Hide button when it has no content (for the flight slot) */
-.gpCardRow__del:empty {
-  visibility: hidden;
-}
 
 .gpCardRow__info {
   flex: 1;
@@ -346,9 +274,9 @@
 
 /* Row Checkbox */
 .gpRowCheck {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
+  width: var(--btnHeight);
+  height: var(--btnHeight);
+  border-radius: var(--radiusSq);
   border: 1px solid var(--borderSubtle);
   display: flex;
   align-items: center;
@@ -367,8 +295,8 @@
 
 /* Master Header Checkbox (Clear Only) */
 .gpMasterCheck {
-  width: 24px; height: 24px;
-  border-radius: 6px;
+  width: var(--btnHeight); height: var(--btnHeight);
+  border-radius: var(--radiusSq);
   border: 1px solid var(--borderSubtle);
   display: flex; align-items: center; justify-content: center;
   color: #fff;

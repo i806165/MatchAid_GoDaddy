@@ -46,8 +46,9 @@ function mountOnce() {
   const hdr = el("div", "maModal__hdr", "");
   _title = el("div", "maModal__title", "GHIN Player Search");
 
-  _btnClose = el("button", "btn btnSecondary", "Close");
+  _btnClose = el("button", "iconBtn btnPrimary", "");
   _btnClose.type = "button";
+  _btnClose.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
 
   hdr.appendChild(_title);
   hdr.appendChild(_btnClose);
@@ -266,6 +267,7 @@ function renderRows(rows, truncated) {
     const club = safeStr(row.club_name || row.clubName || "").trim(); // display
 
     const already = _cfg.existingGHINs && _cfg.existingGHINs.has(ghin);
+    const checkIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
 
     const item = el("div", "maListRow ghinRow", "");
     item.setAttribute("data-ghin", ghin);
@@ -286,8 +288,7 @@ function renderRows(rows, truncated) {
 
     const c4 = el("div", "maListRow__col maListRow__col--right ghinColMark", "");
     if (already) {
-      const checkMarkInCircle = "☑"; 
-      c4.textContent = checkMarkInCircle;          // <-- THIS is the missing line
+      c4.innerHTML = checkIcon;
       c4.classList.add("blue-checkmark");
       item.classList.add("is-disabled");
     }
