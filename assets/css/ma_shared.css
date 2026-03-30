@@ -12,7 +12,8 @@
   /* Brand */
   --brandPrimary: #07432A;
   --brandSecondary: #3F7652;
-  --brandAccent: #0b5fff;
+  --brandColor3: #0066CC;
+  --brandAccent: #0b5fff; /*24a0ed or #0b5fff or 0066CC */
   --brandPrimaryText: #ffffff;
   --brandPrimaryTextMuted: rgba(255,255,255,.78);
   --brandSecondaryText: #ffffff;
@@ -93,7 +94,7 @@
   --btnPrimaryBg: var(--bg);
   --btnPrimaryText: var(--ink);
   --btnPrimaryBorder: var(--btnBorder);
-  --btnSecondaryBg: var(--brandAccent); /*var(--brandSecondary); */
+  --btnSecondaryBg: var(--brandColor3); /*var(--brandSecondary); */
   --btnSecondaryText: var(--brandPrimaryText);
   --btnSecondaryBorder: color-mix(in srgb, var(--brandSecondary) 70%, black);
   --btnLinkText: var(--brandAccent);

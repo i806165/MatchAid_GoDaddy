@@ -155,9 +155,12 @@
 }
 
 .scorePlayerBadge.is-declared{
-  background: #8fd16f;
-  color: #ffffff;
-  border-color: color-mix(in srgb, #8fd16f 55%, var(--brandPrimary));
+  background: var(--brandSecondary);
+  color: var(--brandPrimaryText);   
+  border-color: var(--ink) 24%;
+  /* background: #8fd16f; */
+  /* color: #ffffff; */
+  /*border-color: color-mix(in srgb, #8fd16f 55%, var(--brandPrimary)); */
 }
 
 .scorePlayerBadge.is-undeclared{

@@ -7,7 +7,7 @@
         <label class="maLabel" for="shPlayerKey">Enter 6-digit ID from printed card</label>
         <div class="maInputWrap">
           <input type="text" id="shPlayerKey" class="maTextInput" placeholder="e.g. ABC-123" value="<?= htmlspecialchars($urlKey) ?>">
-          <button id="shBtnLaunch" class="btn btnPrimary" type="button">Launch</button>
+          <button id="shBtnLaunch" class="btn btnSecondary" type="button">Launch</button>
         </div>
       </div>
     </div>
