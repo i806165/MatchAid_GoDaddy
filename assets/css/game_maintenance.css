@@ -10,7 +10,7 @@
 
 .gmCourseRow{
   display:flex;
-  align-items:flex-start;
+  align-items:center;
   justify-content:space-between;
   gap:12px;
   flex-wrap: wrap;
@@ -19,6 +19,33 @@
 .gmCourseRow .gmCourseSummary{
   flex: 1 1 auto;
   min-width: 0;
+}
+
+.gmCourseSummary{
+  display:flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-height: var(--btnHeight);
+  padding: 10px 12px;
+  border: 1px solid var(--controlBorder);
+  border-radius: var(--controlRadius);
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.gmCourseLine1{
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--ink);
+  line-height: 1.2;
+}
+
+.gmCourseLine2{
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--mutedText);
+  line-height: 1.2;
 }
 
 .gmTimeRow{
@@ -68,22 +95,6 @@
 
 .gmHint{
   margin-top: 10px;
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--mutedText);
-}
-
-.gmCourseSummary{
-  display:flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.gmCourseLine1{
-  font-size: 14px;
-  font-weight: 900;
-  color: var(--ink);
-}
-.gmCourseLine2{
   font-size: 12px;
   font-weight: 800;
   color: var(--mutedText);

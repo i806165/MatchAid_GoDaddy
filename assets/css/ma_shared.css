@@ -196,8 +196,8 @@
 
   /* Modal shell */
   --modalMaxW: 520px;
-  --modalMaxH: 92dvh;
-  --modalViewportGap: 20px;
+  --modalMaxH: 88dvh;
+  --modalViewportGap: 40px;
   --modalRadius: 18px;
   --modalShadow: 0 14px 34px rgba(0,0,0,.18);
 
@@ -1316,9 +1316,9 @@ body {
   align-items: center;
   justify-content: center;
   padding:
-        calc(10px + env(safe-area-inset-top))
+        calc(20px + env(safe-area-inset-top))
         6px
-        calc(10px + env(safe-area-inset-bottom))
+        calc(20px + env(safe-area-inset-bottom))
         6px;
   background: var(--overlayBgDim);
   z-index: var(--overlayZ);
@@ -1333,7 +1333,7 @@ body {
   max-width: var(--modalMaxW);
 
   /* Legacy Fallback for older browsers */
-  max-height: 92vh; 
+  max-height: 88vh; 
   /* 
      Industry Standard: Use Dynamic Viewport Height (dvh) and Safe Area Insets 
      to ensure the modal never expands past the visible screen or behind notches.
