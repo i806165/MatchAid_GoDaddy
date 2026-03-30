@@ -108,6 +108,7 @@
   --controlBorder: var(--borderSubtle);
   --controlRadius: 14px;
   --radiusMd: 10px;
+  --radiusSq: 6px;
   --radiusLg: 12px;
 
   /* Segmented controls */
@@ -1136,8 +1137,9 @@ body {
 .iconBtn{
   width: var(--btnHeight);
   height: var(--btnHeight);
+  flex: 0 0 var(--btnHeight);
   padding: 0;
-  border-radius: var(--btnRadius);
+  border-radius: var(--radiusSq);
   border: 1px solid var(--btnBorder);
   background: var(--btnBg);
   color: var(--btnText);
@@ -1686,4 +1688,3 @@ body {
   font-size:12px;
   font-weight:700;
 }
-
