@@ -86,7 +86,7 @@
       const res = await fetch(apiUrls.launch, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerKey, holeNumber: 1 })
+        body: JSON.stringify({ playerKey, holeNumber: state.currentHole })
       });
 
       const text = await res.text();
@@ -291,7 +291,10 @@
     const idx = holes.indexOf(state.currentHole);
     if (idx < 0) return;
 
-    const nextIdx = Math.max(0, Math.min(holes.length - 1, idx + direction));
+    let nextIdx = idx + direction;
+    if (nextIdx < 0) nextIdx = holes.length - 1;
+    else if (nextIdx >= holes.length) nextIdx = 0;
+
     await transitionHole(holes[nextIdx]);
   }
 
@@ -460,6 +463,10 @@ function renderRows() {
     const isAutoDeclare = !isManualDeclare;
     const isDeclared = !!row.declared;
 
+    const parNum = Number(row.par || 0);
+    const scoreNum = Number(row.rawScore || 0);
+    const shape = getScoreShape(scoreNum, parNum);
+
     const badgeTag = isManualDeclare ? 'button' : 'div';
     const badgeClasses = [
       'scorePlayerBadge',
@@ -486,7 +493,7 @@ function renderRows() {
             <button type="button" class="btn scoreAdjustBtn" data-dir="-1">−</button>
             <input
               type="number"
-              class="maTextInput scoreRawInput"
+              class="maTextInput scoreRawInput ${shape ? 'scCell--' + shape : ''}"
               min="1"
               max="15"
               value="${row.rawScore ?? ''}">
@@ -852,6 +859,16 @@ function markDirty(playerId, rawScore, declared) {
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  }
+
+  function getScoreShape(score, par) {
+    if (!score || !par || isNaN(score) || isNaN(par) || score === 0) return '';
+    const diff = score - par;
+    if (diff <= -2) return 'eagle';
+    if (diff === -1) return 'birdie';
+    if (diff === 1) return 'bogey';
+    if (diff >= 2) return 'bogeyplus';
+    return '';
   }
 
   init();
