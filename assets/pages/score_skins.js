@@ -23,7 +23,7 @@
     if (chrome.setHeaderLines) chrome.setHeaderLines(['Hole Champions', init.header?.title || 'Skins', subtitle]);
     if (chrome.setBottomNav) {
       chrome.setBottomNav({
-        visible: ['home', 'scoreentry', 'scorecardPlayer', 'scorecardGroup', 'scorecardGame', 'skins'],
+        visible: ['home', 'scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoreskins'],
         active: 'skins',
         onNavigate: (id) => MA.routerGo?.(id)
       });
