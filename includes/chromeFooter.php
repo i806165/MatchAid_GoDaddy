@@ -186,5 +186,17 @@
       </span>
       <span class="maNavLabel">Game Cards</span>
     </button>
+
+    <button type="button" class="maNavBtn" data-nav="scoreskins" aria-label="Skins">
+      <span class="maNavIcon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true">
+          <!-- money bag silhouette -->
+          <path d="M16 9c0-1.66-1.34-3-3-3h-2c-1.66 0-3 1.34-3 3 0 .78.32 1.49.82 2H7c-1.1 0-2 .9-2 2v5c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2v-5c0-1.1-.9-2-2-2h-1.82c.5-.51.82-1.22.82-2z"></path>
+          <!-- dollar sign cutout -->
+          <path d="M12.5 13c-1.3 0-2 .6-2 1.5s.7 1.5 2 1.5 2 .6 2 1.5-.7 1.5-2 1.5v1h-1v-1c-1.3 0-2-.6-2-1.5h1.5c0 .6.7 1 1.5 1s1.5-.4 1.5-1-.7-1-2-1-2-.6-2-1.5.7-1.5 2-1.5v-1h1v1c1.3 0 2 .6 2 1.5h-1.5c0-.6-.7-1-1.5-1z" fill="white"></path>
+        </svg>
+      </span>
+      <span class="maNavLabel">Skins</span>
+    </button>
   </nav>
 </footer>
