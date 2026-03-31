@@ -1,11 +1,66 @@
 /* /assets/css/score_skins.css */
 
-.scTable th.scName, 
-.scTable td.scName {
-  width: 110px;
+/* Standardize Skins Table alignment and typography */
+.scTable {
+  table-layout: fixed;
+  font-family: var(--fontFamilyBase);
+  font-size: 12px;
 }
 
-.scTable th.scMetaCol, 
+/* Hole / Par Column */
+.scTable th.scName, 
+.scTable td.scName {
+  width: 140px;
+  font-weight: 800;
+  color: var(--ink);
+  text-align: left;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+/* Header standard: Match dashboard style */
+.scTable thead th {
+  background-color: var(--surfaceApp);
+  color: var(--mutedText);
+  font-weight: 900;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 12px 4px;
+  border-bottom: 2px solid var(--borderSubtle);
+}
+
+/* Table Body standard */
+.scTable td {
+  height: 48px;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--borderSubtle);
+}
+
+/* Score Columns: Center aligned, override default scMeta width */
+.scTable th.scMeta,
 .scTable td.scMetaCol {
   width: auto;
+  text-align: center;
+}
+
+/* Style the Par detail within the Name column */
+.scName .scPHC {
+  color: var(--brandSecondary);
+  font-weight: 700;
+  font-size: 11px;
+  opacity: 0.85;
+}
+
+/* Winner text highlight */
+.scMetaCol strong {
+  font-weight: 800;
+  color: var(--brandAccent);
+}
+
+/* Muted tie state */
+.scTied {
+  opacity: 0.5;
+  font-size: 0.9em;
+  font-weight: 600;
 }

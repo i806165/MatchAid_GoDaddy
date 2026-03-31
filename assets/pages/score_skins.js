@@ -96,7 +96,7 @@
       return `<strong>${esc(displayName)} (${displayScore})</strong>`;
     } else {
       // Tie feedback per refinement
-      return `<span style="opacity:0.5; font-size:0.9em; font-weight:600;">${tied.length} Tied ${displayScore}</span>`;
+      return `<span class="scTied">${tied.length} Tied ${displayScore}</span>`;
     }
   }
 
