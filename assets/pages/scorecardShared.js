@@ -69,7 +69,7 @@
         
     if (chrome.setBottomNav) {
       chrome.setBottomNav({
-        visible: ['home', 'scoreentry', 'scorecardPlayer', 'scorecardGroup', 'scorecardGame'],
+        visible: ['home', 'scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoreskins'],
         active: activeNav,
         onNavigate: (id) => MA.routerGo?.(id)
       });

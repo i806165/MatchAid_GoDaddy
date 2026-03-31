@@ -795,7 +795,7 @@ function markDirty(playerId, rawScore, declared) {
 
     if (chrome && typeof chrome.setBottomNav === 'function') {
       chrome.setBottomNav({
-        visible: ['home','scoreentry', 'scorecardPlayer', 'scorecardGroup', 'scorecardGame'],
+        visible: ['home','scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoreskins'],
         active: 'scoreentry',
         onNavigate: (id) => {
           if (!state.dirty) {
