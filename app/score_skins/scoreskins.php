@@ -27,8 +27,24 @@ try {
   $game = $gc["game"];
   $ggid = $gc["ggid"];
 
+  // Load player rows and hydrate JSON fields (parity with scorecard initializers)
+  $stmtP = Db::pdo()->prepare("
+    SELECT *
+      FROM db_Players
+     WHERE dbPlayers_GGID = :ggid
+     ORDER BY dbPlayers_PairingID, dbPlayers_PairingPos, dbPlayers_FlightID, dbPlayers_FlightPos
+  ");
+  $stmtP->execute([":ggid" => (string)$ggid]);
+  $players = $stmtP->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+  foreach ($players as &$p) {
+    if (isset($p["dbPlayers_TeeSetDetails"]) && is_string($p["dbPlayers_TeeSetDetails"])) $p["dbPlayers_TeeSetDetails"] = json_decode($p["dbPlayers_TeeSetDetails"], true);
+    if (isset($p["dbPlayers_Scores"]) && is_string($p["dbPlayers_Scores"])) $p["dbPlayers_Scores"] = json_decode($p["dbPlayers_Scores"], true);
+  }
+  unset($p);
+
   // Re-use the heavy-duty scorecard builder to get hole-by-hole dots and scores
-  $payload = ServiceScoreCard::buildGameScorecardsPayload((string)$ggid, "game");
+  $payload = ServiceScoreCard::buildGameScorecardsPayload($game, $players);
 
   $initPayload = [
     "ok" => true,
