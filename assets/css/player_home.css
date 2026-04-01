@@ -1,6 +1,6 @@
-/* /assets/css/player_games.css
+/* /assets/css/player_home.css
    Player Portal Games — page-specific styles
-   Reuses ma_shared.css primitives; page file only handles card internals + minor overrides.
+   Aligned with admin_games_list.css patterns.
 */
 
 /* Card header uses brand green to match existing portal pattern */
@@ -17,47 +17,56 @@
   font-weight: 800;
 }
 
-.maPlayerGameCard__body{
+.maGameCard__hdrAdmin{
+  color: var(--brandPrimaryTextMuted);
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  text-align: right;
+  margin-right: 8px;
+}
+
+.maGameCard__body{
   display:flex;
   flex-direction:column;
   gap:8px;
 }
-.maPlayerGameCard__top{
+.maGameCard__top{
   display:flex;
   gap:12px;
   align-items:center;
   min-width:0;
 }
-.maPlayerGameCard__meta{
+.maGameCard__meta{
   flex:1 1 auto;
   min-width:0;
   display:flex;
   flex-direction:column;
   gap:6px;
 }
-.maPlayerGameCard__line1,
-.maPlayerGameCard__line2,
-.maPlayerGameCard__line3{
+.maGameCard__line1,
+.maGameCard__line2,
+.maGameCard__line3{
   display:flex;
   justify-content:space-between;
-  align-items:center;
+  align-items: baseline;
   gap:10px;
   min-width:0;
 }
 
-.maPlayerGameCard__courseWrap,
-.maPlayerGameCard__facts,
-.maPlayerGameCard__statusText,
-.maPlayerGameCard__admin{
+.maGameCard__courseWrap,
+.maGameCard__facts,
+.maGameCard__admin{
   min-width:0;
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
 }
-.maPlayerGameCard__courseWrap{ font-weight:900; color:var(--ink); }
-.maPlayerGameCard__facilityName,
-.maPlayerGameCard__facts{ color:var(--mutedText); font-weight:800; }
-.maPlayerGameCard__admin{ color:var(--mutedText); font-weight:800; }
+.maGameCard__courseWrap{ flex: 1 1 auto; font-weight:900; color:var(--ink); }
+.maGameCard__facilityName{ color:var(--mutedText); font-weight:900; }
+.maGameCard__facts{ flex: 1 1 auto; color:var(--mutedText); font-weight:800; }
 
 .maPill{
   display:inline-flex;
@@ -75,24 +84,6 @@
 .maPill--warn{ background: rgba(246,211,101,.18); border-color: rgba(0,0,0,.12); }
 .maPill--danger{ background: rgba(198,40,40,.08); border-color: rgba(198,40,40,.22); }
 
-/* Line 3 Pill Layout */
-.maPlayerGameCard__line3{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-top: 6px;
-}
-.maPlayerGameCard__pillsGroup{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.maPlayerGameCard__pillsGroup--right{
-  justify-content: flex-end;
-}
-/* Label/Value inside horizontal pill */
 .maPillLabel{ font-weight: 400; color: var(--mutedText); margin-right: 4px; font-size: 11px; }
 .maPillValue{ font-weight: 800; }
 
@@ -104,15 +95,6 @@
 .maDateBadge__top{ background:var(--brandSecondary); color:#fff; font-size:12px; font-weight:900; text-align:center; padding:6px 0 5px; }
 .maDateBadge__mid{ color:var(--ink); font-size:22px; font-weight:950; text-align:center; padding:8px 0 2px; }
 .maDateBadge__bot{ color:var(--mutedText); font-size:12px; font-weight:900; text-align:center; padding:0 0 8px; }
-
-.maPlayerGameCard__actions{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-}
-.maPlayerGameCard__actionBtn{
-  min-height: var(--btnHeight);
-}
 
 /* Fix for MANAGE button layout (text link style) */
 .maGameCard__manageBtn.maCard__actionBtn {
@@ -129,7 +111,7 @@
 }
 
 @media (max-width: 520px){
-  .maPlayerGameCard__line2,
-  .maPlayerGameCard__line3{ align-items:flex-start; }
-  .maPlayerGameCard__pillsGroup--right{ justify-content: flex-start; }
+  .maGameCard__manageBtn { display: none; }
+  .maGameCard__line2,
+  .maGameCard__line3 { flex-wrap: wrap; }
 }
