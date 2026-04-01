@@ -10,7 +10,7 @@
     <!-- Buttons can be shown/hidden/enabled/active by JS -->
     <button type="button" class="maNavBtn" data-nav="home" aria-label="Home">
       <span class="maNavIcon" aria-hidden="true">⌂</span>
-      <span class="maNavLabel">Home</span>
+      <span class="maNavLabel">MatchAid Home</span>
     </button>
 
     <button type="button" class="maNavBtn" data-nav="adminOld" aria-label="Admin">
@@ -46,7 +46,7 @@
           <path d="M8.65 13.8a.55.55 0 1 0 0 .9" fill="white"></path>
         </svg>
       </span>
-      <span class="maNavLabel">Admin Games</span>
+      <span class="maNavLabel">Admin Home</span>
     </button>
 
     <button type="button" class="maNavBtn" data-nav="player" aria-label="Player">
@@ -76,7 +76,7 @@
           <path d="M17.5 13.6l.7-.7c.2-.2.5-.2.7 0l.6.6c.2.2.2.5 0 .7l-.7.7-1.3-1.3z" fill="white"></path>
         </svg>
       </span>
-      <span class="maNavLabel">Player Games</span>
+      <span class="maNavLabel">Player Home</span>
     </button>
 
     <button type="button" class="maNavBtn" data-nav="edit" aria-label="Edit">
