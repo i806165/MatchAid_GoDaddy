@@ -128,7 +128,7 @@
     if (isNaN(H)) return str;
     const ampm = H >= 12 ? 'PM' : 'AM';
     const h12 = H % 12 || 12;
-    return `${h12}:${m}${ampm}`;
+    return `${h12}:${m} ${ampm}`;
   }
 
   function rowText(g, keys){
@@ -153,9 +153,10 @@
     const isRegistered = enrollmentStatus === 'Registered';
     const regClosedish = ['Closed','Locked','Full'].includes(registrationStatus);
 
+    const registerLabel = isRegistered ? 'Change Tee Set' : 'Register for Game';
     const items = [
-      { label:  'Register: New or Change', action: 'register', enabled: true },
-    ]
+      { label: registerLabel, action: 'register', enabled: true },
+    ];
 
     if (isRegistered) {
       items.push({ label:  'Unregister', action: 'unregister', enabled: !regClosedish });
@@ -243,11 +244,20 @@
 
       let line3Html = '';
       if (isRegistered) {
-        const personalInfo = [yourTee, yourTeeName].filter(Boolean).join(" • ");
+        const personalParts = [];
+        if (yourTee) personalParts.push(`TeeTime: ${formatTimeAmPm(yourTee)}`);
+        if (yourTeeName) personalParts.push(`Tee: ${yourTeeName}`);
+        if (Number(playerCount) > 0 && hiStats) personalParts.push(`HI: ${hiStats}`);
+
+        const personalInfo = personalParts.join(" • ");
         line3Html = `<span class="maPill maPill--success"><span class="maPillValue">Registered</span></span>`;
         if (personalInfo) line3Html += `<span class="maGameCard__facts" style="margin-left:8px;">${esc(personalInfo)}</span>`;
       } else {
-        const discoveryInfo = [privacy, hiStats ? `HI: ${hiStats}` : null].filter(Boolean).join(" • ");
+        const discoveryParts = [];
+        if (privacy) discoveryParts.push(privacy);
+        if (Number(playerCount) > 0 && hiStats) discoveryParts.push(`HI: ${hiStats}`);
+
+        const discoveryInfo = discoveryParts.join(" • ");
         const regClass = registrationStatus === 'Open' ? 'maPill--success' : 'maPill--warn';
         line3Html = `<span class="maPill ${regClass}"><span class="maPillValue">${esc(registrationStatus)}</span></span>`;
         if (discoveryInfo) line3Html += `<span class="maGameCard__facts" style="margin-left:8px;">${esc(discoveryInfo)}</span>`;
