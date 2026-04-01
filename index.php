@@ -15,7 +15,7 @@ if (isset($_GET['portal'])) {
     } elseif ($portal === 'player') {
         $_SESSION['SessionPortal'] = 'PLAYER PORTAL';
         session_write_close();
-        header('Location: /app/player_games/playergames.php');
+        header('Location: /app/player_home/playerhome.php');
         exit;
     }
 }
