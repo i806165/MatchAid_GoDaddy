@@ -1,5 +1,5 @@
 <?php
-// /public_html/app/player_games/playergames.php
+// /public_html/app/player_home/playerhome.php
 // First-pass scaffold using admin-games implementation pattern.
 declare(strict_types=1);
 
@@ -95,7 +95,7 @@ $initPayload = [
 ];
 
 $paths = [
-  'apiPlayerGames' => '/api/player_games',
+  'apiPlayerGames' => '/api/player_home',
   'apiAdminGames'  => MA_ROUTE_API_ADMIN_GAMES ?? '/api/admin_games',
   'apiSession'     => MA_ROUTE_API_SESSION ?? '/api/session',
   'routerApi'      => MA_ROUTE_API_ROUTER ?? '/api/router',
@@ -120,13 +120,13 @@ $maChromeLogoUrl = null;
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/assets/css/ma_shared.css">
-  <link rel="stylesheet" href="/assets/css/player_games.css?v=1">
+  <link rel="stylesheet" href="/assets/css/player_home.css?v=1">
 </head>
 <body>
   <?php include __DIR__ . '/../../includes/chromeHeader.php'; ?>
 
   <main class="maPage" role="main">
-    <?php include __DIR__ . '/playergames_view.php'; ?>
+    <?php include __DIR__ . '/playerhome_view.php'; ?>
   </main>
 
   <?php include __DIR__ . '/../../includes/chromeFooter.php'; ?>
@@ -147,6 +147,6 @@ $maChromeLogoUrl = null;
   <script src="/assets/modules/actions_menu.js?v=1"></script>
   <script src="/assets/modules/addCalendar.js?v=1"></script>
   <script src="/assets/modules/teesetSelection.js?v=1"></script>
-  <script src="/assets/pages/player_games.js?v=1"></script>
+  <script src="/assets/pages/player_home.js?v=1"></script>
 </body>
 </html>

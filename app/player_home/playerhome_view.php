@@ -1,4 +1,4 @@
-<!-- /app/player_games/playergames_view.php -->
+<!-- /app/player_home/playerhome_view.php -->
 <!-- Player Portal games list view (Wix HTML ID parity where practical) -->
 
 <div id="emptyState" class="maEmptyState" style="display:none;">

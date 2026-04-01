@@ -1,4 +1,4 @@
-/* /assets/pages/player_games.js
+/* /assets/pages/player_home.js
    Player Portal Games List (GoDaddy refactor scaffold)
    - Follows admin_games_list.js page pattern
    - Preserves many Wix HTML IDs in the PHP view
@@ -13,7 +13,7 @@
   const routes = MA.routes || {};
   const chrome = MA.chrome || {};
 
-  const apiBase = routes.apiPlayerGames || '/api/player_games';
+  const apiBase = routes.apiPlayerGames || '/api/player_home';
   const routerGo = typeof MA.routerGo === 'function' ? MA.routerGo : null;
 
   const el = {

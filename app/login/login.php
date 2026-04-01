@@ -11,7 +11,7 @@ require_once __DIR__ . "/../../bootstrap.php";
  */
 $ROUTES = [
   "home"   => "/",
-  "player" => "/app/player_games/playergames.php",
+  "player" => "/app/player_home/playerhome.php",
   "admin" => "/app/admin_games/gameslist.php",
 ];
 

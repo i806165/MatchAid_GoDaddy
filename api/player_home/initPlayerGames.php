@@ -1,5 +1,5 @@
 <?php
-// /public_html/api/player_games/initPlayerGames.php
+// /public_html/api/player_home/initPlayerGames.php
 // First-pass API: derives player-portal list by adapting existing admin_games/queryGames payload,
 // then applies player visibility and registration projections server-side where possible.
 declare(strict_types=1);
