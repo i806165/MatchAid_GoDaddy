@@ -247,7 +247,7 @@
         const personalParts = [];
         if (yourTee) personalParts.push(`TeeTime: ${formatTimeAmPm(yourTee)}`);
         if (yourTeeName) personalParts.push(`Tee: ${yourTeeName}`);
-        if (Number(playerCount) > 0 && hiStats) personalParts.push(`HI: ${hiStats}`);
+        if (Number(playerCount) > 0 && hiStats) personalParts.push(`Range: ${hiStats}`);
 
         const personalInfo = personalParts.join(" • ");
         line3Html = `<span class="maPill maPill--success"><span class="maPillValue">Registered</span></span>`;

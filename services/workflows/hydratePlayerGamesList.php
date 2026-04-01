@@ -183,6 +183,17 @@ function hydratePlayerGamesList(string $userGHIN, array $filters, string $userCl
     }
 
     $visible = ($allowByAdmin || $allowByEnrollment || $allowByClubPrivacy);
+
+    // Refine visibility based on the specific intent of the quick preset
+    if ($quickPreset === 'MYSCHEDULE' || $quickPreset === 'HISTORY') {
+        // Strict commitment only: Admin or Registered
+        $visible = ($allowByAdmin || $allowByEnrollment);
+    } elseif ($quickPreset === 'FAVORITES') {
+        // Show if involved OR if it's an authorized club game from a favorited admin
+        $isFavAdmin = isset($favSet[$admin]);
+        $visible = ($allowByAdmin || $allowByEnrollment || ($allowByClubPrivacy && $isFavAdmin));
+    }
+
     if (!$visible) continue;
 
     $playDate = substr((string)($g['dbGames_PlayDate'] ?? ''), 0, 10);
