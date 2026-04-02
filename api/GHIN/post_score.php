@@ -22,18 +22,14 @@ if ($userToken === '' || $userGHIN === '') {
 
 $input = json_decode(file_get_contents('php://input'), true);
 $ggid = (int)($input['ggid'] ?? 0);
-$playerGHIN = trim((string)($input['playerGHIN'] ?? ''));
 
-if ($ggid <= 0 || $playerGHIN === '') {
-    echo json_encode(['ok' => false, 'message' => 'Missing game or player identity.']);
+if ($ggid <= 0) {
+    echo json_encode(['ok' => false, 'message' => 'Missing game identity.']);
     exit;
 }
 
-// Enforce self-posting security rule
-if ($playerGHIN !== $userGHIN) {
-    echo json_encode(['ok' => false, 'message' => 'You can only post your own score to GHIN.']);
-    exit;
-}
+// playerGHIN is authoritatively determined from session by the service
+$playerGHIN = $userGHIN;
 
 $result = ServiceGHINScores::postScoreToGHIN($ggid, $playerGHIN, $userToken);
 echo json_encode($result);

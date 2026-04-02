@@ -243,6 +243,7 @@ function hydratePlayerGamesList(string $userGHIN, array $filters, string $userCl
       'yourTeeSetId' => (string)($myPlayerData[$ggid]['dbPlayers_TeeSetID'] ?? ''),
       'yourTeeSetName' => (string)($myPlayerData[$ggid]['dbPlayers_TeeSetName'] ?? ''),
       'scoreId' => (string)($myPlayerData[$ggid]['dbPlayers_PlayerKey'] ?? ''),
+      'ghinPostId' => (string)($myPlayerData[$ggid]['dbPlayers_GHINPostID'] ?? ''),
 
       // FIX: use $isEnrolled (was undefined $isRegistered)
       'isRegistered' => $isEnrolled,

@@ -94,42 +94,21 @@
       if (playerInGroup.dbPlayers_GHINPostID) {
         items.push({ label: 'Score Posted to GHIN', disabled: true });
       } else {
-        items.push({ label: 'Post to GHIN', action: handleGhinPost });
+        items.push({ 
+          label: 'Post to GHIN', 
+          action: () => MA.ghinPostScores.open({ 
+            ggid: game.dbGames_GGID,
+            onPosted: (res) => {
+              playerInGroup.dbPlayers_GHINPostID = res.ghinPostId;
+              applyChrome();
+            }
+          })
+        });
       }
     }
 
     if (items.length) {
       MA.ui.openActionsMenu("Scorecard Actions", items);
-    }
-  }
-
-  async function handleGhinPost() {
-    if (!confirm("Are you sure you want to post this score to GHIN?")) return;
-
-    if (typeof MA.setStatus === 'function') MA.setStatus("Posting to GHIN...", "info");
-
-    const rows = activeRows();
-    const playerInGroup = rows[0]?.players[0]; // Access the first player in the first group
-    if (!playerInGroup) {
-      if (typeof MA.setStatus === 'function') MA.setStatus("Player data not found for posting.", "error");
-      return;
-    }
-    const req = {
-      ggid: game.dbGames_GGID,
-      playerGHIN: playerInGroup.dbPlayers_PlayerGHIN // Use the correct property name
-    };
-    try {
-      const res = await MA.postJson('/api/GHIN/post_score.php', req);
-      if (res && res.ok) {
-        if (typeof MA.setStatus === 'function') MA.setStatus("Score posted to GHIN successfully!", "success");
-        // Update local payload and re-render header to reflect posted state
-        playerInGroup.dbPlayers_GHINPostID = res.ghinPostId;
-        applyChrome();
-      } else {
-        if (typeof MA.setStatus === 'function') MA.setStatus(res.message || "Failed to post score to GHIN.", "error");
-      }
-    } catch (err) {
-      if (typeof MA.setStatus === 'function') MA.setStatus("An error occurred while posting.", "error");
     }
   }
 

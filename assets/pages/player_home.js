@@ -162,6 +162,12 @@
       items.push({ label:  'Unregister', action: 'unregister', enabled: !regClosedish });
     }
 
+    if (isRegistered) {
+      const posted = rowText(g, ['ghinPostId']);
+      if (posted) items.push({ label: 'Score Posted to GHIN', disabled: true });
+      else items.push({ label: 'Post to GHIN', action: 'ghinPost', enabled: true });
+    }
+
     items.push(
       { separator: true },
       { label: 'Add Player or Guest', action: 'viewRoster', enabled: true },
@@ -512,6 +518,12 @@
     }
     if (action === 'scorecard') {
       return routerGo("scorecard", {});
+    }
+    if (action === 'ghinPost') {
+      return MA.ghinPostScores.open({ 
+        ggid: ggid, 
+        onPosted: () => reloadGames() 
+      });
     }
     if (action === 'viewRoster') {
       return routerGo("roster", {});
