@@ -88,10 +88,10 @@
 
     const items = [];
     const rows = activeRows();
-    if (state.mode === 'player' && rows.length > 0) {
-      const p = rows[0];
+    if (state.mode === 'player' && rows.length > 0 && rows[0].players && rows[0].players.length > 0) {
+      const playerInGroup = rows[0].players[0]; // Access the first player in the first group
       // If already posted, show a disabled confirmation state
-      if (p.dbPlayers_GHINPostID) {
+      if (playerInGroup.dbPlayers_GHINPostID) {
         items.push({ label: 'Score Posted to GHIN', disabled: true });
       } else {
         items.push({ label: 'Post to GHIN', action: handleGhinPost });
@@ -109,18 +109,21 @@
     if (typeof MA.setStatus === 'function') MA.setStatus("Posting to GHIN...", "info");
 
     const rows = activeRows();
-    const p = rows[0];
+    const playerInGroup = rows[0]?.players[0]; // Access the first player in the first group
+    if (!playerInGroup) {
+      if (typeof MA.setStatus === 'function') MA.setStatus("Player data not found for posting.", "error");
+      return;
+    }
     const req = {
       ggid: game.dbGames_GGID,
-      playerGHIN: p.playerGHIN
+      playerGHIN: playerInGroup.dbPlayers_PlayerGHIN // Use the correct property name
     };
-
     try {
       const res = await MA.postJson('/api/GHIN/post_score.php', req);
       if (res && res.ok) {
         if (typeof MA.setStatus === 'function') MA.setStatus("Score posted to GHIN successfully!", "success");
         // Update local payload and re-render header to reflect posted state
-        p.dbPlayers_GHINPostID = res.ghinPostId;
+        playerInGroup.dbPlayers_GHINPostID = res.ghinPostId;
         applyChrome();
       } else {
         if (typeof MA.setStatus === 'function') MA.setStatus(res.message || "Failed to post score to GHIN.", "error");
