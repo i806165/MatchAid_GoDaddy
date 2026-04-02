@@ -42,6 +42,7 @@ function renderScorecardSharedPage(array $initPayload, string $pageTitle): void 
 </script>
 
 <script src="/assets/js/ma_shared.js?v=1"></script>
+<script src="/assets/modules/ghin_post_scores.js?v=1"></script>
 <script src="/assets/pages/scorecardShared.js?v=1"></script>
 </body></html>
 <?php }
