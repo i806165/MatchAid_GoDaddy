@@ -801,9 +801,11 @@
     }
 
     if (chrome && typeof chrome.setBottomNav === "function") {
-      const isPlayer = (state.portal === "PLAYER PORTAL");
-      const visible = isPlayer 
-        ? ["player", "roster", "summary"] 
+      // Identify launch source from hydrated state
+      const isPlayerPortal = (state.portal === "PLAYER PORTAL");
+      // Define visibility based on portal context
+      const visible = isPlayerPortal 
+        ? ['home', 'scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoreskins']
         : ["admin", "edit", "roster", "pairings", "teetimes", "summary"];
 
       chrome.setBottomNav({
