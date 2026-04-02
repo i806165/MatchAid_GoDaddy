@@ -164,9 +164,11 @@
 
     items.push(
       { separator: true },
+      { label: 'Add Player or Guest', action: 'viewRoster', enabled: true },
       { label: 'Review Game', action: 'viewGame', enabled: true },
+      { separator: true },
+      { label: 'Enter Scores', action: 'scorehome', enabled: true },
       { label: 'View Scorecard', action: 'scorecard', enabled: true },
-      { label: 'Manage Player Roster', action: 'viewRoster', enabled: true },
       { separator: true },
       { label: 'Add to Calendar', action: 'calendar', enabled: true },
     );
@@ -501,6 +503,10 @@
     await apiAdmin("setGameSession.php", { ggid });
 
     // First-pass routing/actions (non-destructive). Can be wired to final routes later.
+    if (action === 'scorehome') {
+      const key = rowText(g, ['playerKey', 'dbPlayers_PlayerKey']);
+      return routerGo("scorehome", { key: key });
+    }
     if (action === 'viewGame') {
       return routerGo("summary", {});
     }

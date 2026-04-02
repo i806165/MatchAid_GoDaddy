@@ -462,7 +462,7 @@
 
         if (typeof MA.routerGo === "function") {
           try {
-            MA.routerGo("scorehome", { scoreId: scoreId });
+            MA.routerGo("scorehome", { key: scoreId });
             return;
           } catch (err) {
             console.warn(err);
