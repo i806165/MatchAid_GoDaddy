@@ -142,4 +142,11 @@
   if (el.btnCartConfirm) el.btnCartConfirm.onclick = onConfirmCart;
   if (el.playerKey) el.playerKey.onkeydown = (e) => { if (e.key === 'Enter') onLaunch(); };
   applyChrome();
+
+  // Auto-launch if a key was provided in the URL initialization
+  const initData = window.__INIT__ || {};
+  if (initData.urlKey && el.playerKey) {
+    el.playerKey.value = initData.urlKey;
+    onLaunch();
+  }
 })();
