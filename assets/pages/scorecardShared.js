@@ -62,6 +62,13 @@
 
     if (chrome.setHeaderLines) chrome.setHeaderLines(['Scorecard', init.header?.title || 'Scorecards', subtitle]);
 
+    if (chrome.setActions) {
+      chrome.setActions({
+        left: { show: state.mode === 'player', label: 'Actions', onClick: openActionsMenu },
+        right: { show: false }
+      });
+    }
+
     const activeNav =
         state.mode === 'player' ? 'scorecardPlayer' :
         state.mode === 'group'  ? 'scorecardGroup'  :
@@ -73,6 +80,53 @@
         active: activeNav,
         onNavigate: (id) => MA.routerGo?.(id)
       });
+    }
+  }
+
+  function openActionsMenu() {
+    if (!MA.ui || !MA.ui.openActionsMenu) return;
+
+    const items = [];
+    const rows = activeRows();
+    if (state.mode === 'player' && rows.length > 0) {
+      const p = rows[0];
+      // If already posted, show a disabled confirmation state
+      if (p.dbPlayers_GHINPostID) {
+        items.push({ label: 'Score Posted to GHIN', disabled: true });
+      } else {
+        items.push({ label: 'Post to GHIN', action: handleGhinPost });
+      }
+    }
+
+    if (items.length) {
+      MA.ui.openActionsMenu("Scorecard Actions", items);
+    }
+  }
+
+  async function handleGhinPost() {
+    if (!confirm("Are you sure you want to post this score to GHIN?")) return;
+
+    if (typeof MA.setStatus === 'function') MA.setStatus("Posting to GHIN...", "info");
+
+    const rows = activeRows();
+    const p = rows[0];
+    const req = {
+      ggid: game.dbGames_GGID,
+      playerGHIN: p.playerGHIN
+    };
+
+    try {
+      const res = await MA.postJson('/api/GHIN/post_score.php', req);
+      if (res && res.ok) {
+        if (typeof MA.setStatus === 'function') MA.setStatus("Score posted to GHIN successfully!", "success");
+        // Update local payload and re-render header to reflect posted state
+        p.dbPlayers_GHINPostID = res.ghinPostId;
+        applyChrome();
+      } else {
+        if (typeof MA.setStatus === 'function') MA.setStatus(res.message || "Failed to post score to GHIN.", "error");
+      }
+    } catch (err) {
+      if (typeof MA.setStatus === 'function') MA.setStatus("An error occurred while posting.", "error");
     }
   }
 
