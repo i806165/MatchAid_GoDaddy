@@ -88,23 +88,18 @@
 
     const items = [];
     const rows = activeRows();
-    if (state.mode === 'player' && rows.length > 0 && rows[0].players && rows[0].players.length > 0) {
-      const playerInGroup = rows[0].players[0]; // Access the first player in the first group
-      // If already posted, show a disabled confirmation state
-      if (playerInGroup.dbPlayers_GHINPostID) {
-        items.push({ label: 'Score Posted to GHIN', disabled: true });
-      } else {
-        items.push({ 
-          label: 'Post to GHIN', 
-          action: () => MA.ghinPostScores.open({ 
-            ggid: game.dbGames_GGID,
-            onPosted: (res) => {
-              playerInGroup.dbPlayers_GHINPostID = res.ghinPostId;
-              applyChrome();
-            }
-          })
-        });
-      }
+    if (state.mode === 'player') {
+      items.push({ 
+        label: 'Post to GHIN', 
+        action: () => MA.ghinPostScores.open({ 
+          ggid: game.dbGames_GGID,
+          onPosted: (res) => {
+            const p = rows[0]?.players?.[0];
+            if (p) p.dbPlayers_GHINPostID = res.ghinPostId;
+            applyChrome();
+          }
+        })
+      });
     }
 
     if (items.length) {

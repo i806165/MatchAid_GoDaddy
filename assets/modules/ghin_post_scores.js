@@ -20,6 +20,15 @@
     _overlay = document.createElement("div");
     _overlay.id = "ghinPostOverlay";
     _overlay.className = "maModalOverlay";
+
+    // Clicking outside the modal does not dismiss it
+    _overlay.addEventListener("click", (e) => {
+      if (e.target === _overlay) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    });
+
     document.body.appendChild(_overlay);
   }
 
@@ -34,61 +43,94 @@
   async function open(config) {
     _config = config || {};
     if (!_config.ggid) return console.error("GHIN Posting: Missing GGID.");
-
     ensureOverlay();
-    if (typeof MA.setStatus === 'function') MA.setStatus("Preparing score review...", "info");
 
     try {
+      if (typeof MA.setStatus === 'function') MA.setStatus("Preparing score review...", "info");
       const payload = await fetchReviewData(_config.ggid);
-      renderModal(payload);
+      
+      // Perform internal defensive checks on the fetched data
+      let blocker = "";
+      const p = payload.scorecards?.rows?.[0]?.players?.[0];
+      const userGhin = window.__MA_INIT__?.user?.ghin || window.__INIT__?.user?.ghin;
+
+      if (!userGhin) blocker = "GHIN identity not found. Please log in.";
+      else if (p?.dbPlayers_GHINPostID) blocker = "This round has already been posted to GHIN.";
+      else if (!p) blocker = "Score summary data is incomplete.";
+
+      renderModal(payload, blocker);
     } catch (e) {
-      if (typeof MA.setStatus === 'function') MA.setStatus(e.message, "error");
+      renderModal(null, e.message || "Unable to load score summary.");
     }
   }
 
-  function renderModal(payload) {
-    const game = payload.game || {};
-    const p = payload.scorecards?.rows?.[0]?.players?.[0];
-    if (!p) throw new Error("Score summary data is incomplete.");
-
-    const holes = payload.meta?.holes === 'B9' ? Array.from({length:9},(_,i)=>i+10) : Array.from({length:payload.meta?.holes === 'F9' ? 9 : 18},(_,i)=>i+1);
+  function renderModal(payload, blockerMessage) {
+    const game = payload?.game || {};
+    const p = payload?.scorecards?.rows?.[0]?.players?.[0];
+    const holes = payload?.meta?.holes === 'B9' ? Array.from({length:9},(_,i)=>i+10) : Array.from({length:payload?.meta?.holes === 'F9' ? 9 : 18},(_,i)=>i+1);
     
+    // Extract summary scores from the payload totals
+    const scoreOut = p?.totals?.gross?.['9a'] || '—';
+    const scoreIn  = p?.totals?.gross?.['9b'] || '—';
+    const scoreTot = p?.totals?.gross?.['9c'] || '—';
+
     let scoreRowsHtml = '';
-    holes.forEach(h => {
-      const score = p.holes?.['h' + h]?.display?.gross || '—';
-      scoreRowsHtml += `
-        <div class="maListRow">
-          <div class="maListRow__col">Hole ${h}</div>
-          <div class="maListRow__col maListRow__col--right" style="font-weight:800;">${esc(score)}</div>
-        </div>`;
-    });
+    if (p) {
+      holes.forEach(h => {
+        const score = p.holes?.['h' + h]?.display?.gross || '—';
+        scoreRowsHtml += `
+          <div class="maListRow">
+            <div class="maListRow__col">Hole ${h}</div>
+            <div class="maListRow__col maListRow__col--right" style="font-weight:800;">${esc(score)}</div>
+          </div>`;
+      });
+    }
+
+    const isBlocked = !!blockerMessage;
 
     _overlay.innerHTML = `
       <section class="maModal" style="max-width:400px;">
         <header class="maModal__hdr">
           <div class="maModal__titles">
             <div class="maModal__title">Confirm GHIN Posting</div>
-            <div class="maModal__subtitle">${esc(game.dbGames_Title)}</div>
+            <div class="maModal__subtitle">${esc(game.dbGames_Title || "Post Scores")}</div>
           </div>
+          <button id="btnGhinClose" class="iconBtn btnPrimary" type="button" aria-label="Close">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
         </header>
         <div class="maModal__controls">
-          <div class="maHelpText" style="margin-bottom:10px;">
-            ${esc(game.dbGames_CourseName)} • ${esc(p.tee)}
+          <div class="maHelpText" style="margin-bottom:12px; font-weight:700;">
+            ${esc(game.dbGames_CourseName)} • ${esc(p?.tee || "No Tee Set")}
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:16px; padding:10px; background:rgba(0,0,0,0.04); border-radius:8px;">
+            <div class="maPillKV"><span class="maPillLabel">OUT</span><span class="maPillValue">${esc(scoreOut)}</span></div>
+            <div class="maPillKV"><span class="maPillLabel">IN</span><span class="maPillValue">${esc(scoreIn)}</span></div>
+            <div class="maPillKV"><span class="maPillLabel">TOTAL</span><span class="maPillValue" style="color:var(--brandColor3);">${esc(scoreTot)}</span></div>
           </div>
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
             <button id="btnGhinCancel" class="btn btnSecondary" type="button">Cancel</button>
-            <button id="btnGhinConfirm" class="btn btnPrimary" type="button" style="background:var(--success); color:#fff; border-color:var(--success);">Post to GHIN</button>
+            <button id="btnGhinConfirm" class="btn btnPrimary" type="button"
+              ${isBlocked ? 'disabled' : ''}
+              style="background:${isBlocked ? 'var(--mutedText)' : 'var(--success)'}; color:#fff; border-color:transparent;">
+              Post to GHIN
+            </button>
           </div>
         </div>
         <div class="maModal__body" style="padding:0;">
-          <div class="maListRows">${scoreRowsHtml}</div>
+          <div class="maListRows">${scoreRowsHtml || '<div class="maEmptyState">No score data available.</div>'}</div>
         </div>
+        ${isBlocked ? `
+          <footer class="maModal__ftr" style="background:var(--statusWarnBg); color:var(--statusWarnText); padding:12px; font-size:13px; font-weight:700; text-align:center; display:block; border-top:1px solid rgba(0,0,0,0.1);">
+            ${esc(blockerMessage)}
+          </footer>` : ''}
       </section>
     `;
 
     _overlay.classList.add("is-open");
     document.documentElement.classList.add("maOverlayOpen");
 
+    _overlay.querySelector('#btnGhinClose').onclick = close;
     _overlay.querySelector('#btnGhinCancel').onclick = close;
     _overlay.querySelector('#btnGhinConfirm').onclick = executePost;
   }
