@@ -49,6 +49,7 @@ try {
   $initPayload = [
     "ok" => true,
     "ggid" => $ggid,
+    "portal" => $_SESSION["SessionPortal"] ?? "",
     "game" => $game,
     "scorecards" => $payload,
     "header" => [

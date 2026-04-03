@@ -76,7 +76,7 @@
         
         
     if (chrome.setBottomNav) {
-      const portal = init.portal || "";
+      const portal = init.portal || init.payload?.portal || "";
       const homeRoute = (portal === "ADMIN PORTAL") ? "admin" 
                       : (portal === "PLAYER PORTAL" ? "player" : "home");
 
