@@ -801,8 +801,12 @@ function markDirty(playerId, rawScore, declared) {
     }
 
     if (chrome && typeof chrome.setBottomNav === 'function') {
+      const portal = boot.portal || boot.payload?.portal || "";
+      const homeRoute = (portal === "ADMIN PORTAL") ? "admin" 
+                      : (portal === "PLAYER PORTAL" ? "player" : "home");
+
       chrome.setBottomNav({
-        visible: ['home','scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoreskins'],
+        visible: [homeRoute, 'scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoreskins'],
         active: 'scoreentry',
         onNavigate: (id) => {
           if (!state.dirty) {

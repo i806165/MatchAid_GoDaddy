@@ -110,6 +110,7 @@ if ($isReturn) {
 
 // 3) Hydrate INIT payload (admins + games + header)
 $initPayload = hydrateAdminGamesList($context, $defaultFilters);
+$initPayload['portal'] = $_SESSION["SessionPortal"];
 
 // Provide path constants to JS
 $paths = [

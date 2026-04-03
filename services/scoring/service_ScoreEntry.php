@@ -94,6 +94,7 @@ final class ServiceScoreEntry
         return [
             'gameRow' => $gameRow,
             'currentHole' => $holeNumber,
+            'portal' => $_SESSION["SessionPortal"] ?? "",
             'isGameDay' => $isAllowedToday,
             'requiresCartConfig' => $requiresCart && $canSave,
             'players' => $players,

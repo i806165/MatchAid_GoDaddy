@@ -85,6 +85,7 @@ $hydrated = hydratePlayerGamesList((string)$g['ghin'], $defaultFilters, $userClu
 // Build init payload ONCE (do not overwrite later)
 $initPayload = [
   'ok' => true,
+  'portal' => $_SESSION["SessionPortal"],
   ...$hydrated,
   'user' => [
     'ghin'       => (string)$g['ghin'],

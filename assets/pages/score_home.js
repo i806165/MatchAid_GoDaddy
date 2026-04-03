@@ -130,8 +130,12 @@
     }
 
     if (MA.chrome && typeof MA.chrome.setBottomNav === 'function') {
+      const portal = initData.portal || "";
+      const homeRoute = (portal === "ADMIN PORTAL") ? "admin" 
+                      : (portal === "PLAYER PORTAL" ? "player" : "home");
+
       MA.chrome.setBottomNav({
-        visible: ['home', 'admin', 'summary','player'],
+        visible: [homeRoute, 'scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoreskins'],
         active: '',
         onNavigate: (id) => (typeof MA.routerGo === 'function' ? MA.routerGo(id) : null)
       });

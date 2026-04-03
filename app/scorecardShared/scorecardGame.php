@@ -19,6 +19,7 @@ try {
   }
 
   $initPayload = initScoredScoreCard((string)$ggid, 'game', '');
+  $initPayload['portal'] = $_SESSION["SessionPortal"] ?? "";
 
 } catch (Throwable $e) {
   error_log('[MA][ERROR][SCORECARD_GAME_INIT] ' . $e->getMessage());

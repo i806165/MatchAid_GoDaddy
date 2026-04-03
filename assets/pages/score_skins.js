@@ -22,8 +22,12 @@
     const subtitle = [game.dbGames_CourseName, formatDate(game.dbGames_PlayDate)].filter(Boolean).join(' • ');
     if (chrome.setHeaderLines) chrome.setHeaderLines(['Hole Champions', init.header?.title || 'Skins', subtitle]);
     if (chrome.setBottomNav) {
+      const portal = init.portal || "";
+      const homeRoute = (portal === "ADMIN PORTAL") ? "admin" 
+                      : (portal === "PLAYER PORTAL" ? "player" : "home");
+
       chrome.setBottomNav({
-        visible: ['home', 'scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoreskins'],
+        visible: [homeRoute, 'scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoreskins'],
         active: 'skins',
         onNavigate: (id) => MA.routerGo?.(id)
       });
