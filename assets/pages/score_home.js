@@ -3,6 +3,7 @@
   'use strict';
   const MA = window.MA || {};
   const paths = MA.paths || {};
+  const initData = window.__INIT__ || {};
   const apiUrls = {
     scoreHome: (paths.apiScoreHome || '/api/initScoreHome') + '/initScoreHome.php',
     setScorerContext: (paths.apiScoreHome || '/api/initScoreHome') + '/setScorerContext.php',
@@ -148,7 +149,6 @@
   applyChrome();
 
   // Auto-launch if a key was provided in the URL initialization
-  const initData = window.__INIT__ || {};
   if (initData.urlKey && el.playerKey) {
     el.playerKey.value = initData.urlKey;
     onLaunch();
