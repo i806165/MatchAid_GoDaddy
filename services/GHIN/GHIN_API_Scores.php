@@ -42,11 +42,18 @@ final class ServiceGHINScores
 
             $response = HttpClient::postJson($url, $payload, $headers);
 
-            // GHIN API returns the new unique identifier in 'score_id'
-            $ghinPostId = (string)($response['score_id'] ?? $response['id'] ?? '');
+            // Log the resulting payload returned by GHIN
+            Logger::info("GHIN_SCORE_POST_RESPONSE", [
+                'ggid' => $ggid,
+                'playerGHIN' => $playerGHIN,
+                'response' => $response
+            ]);
+
+            // GHIN API returns the new unique identifier inside the 'score' object
+            $ghinPostId = (string)($response['score']['id'] ?? $response['score_id'] ?? $response['id'] ?? '');
 
             if ($ghinPostId !== '') {
-                ServiceDbPlayers::updateGamePlayerFields($ggid, $playerGHIN, [
+                ServiceDbPlayers::updateGamePlayerFields((string)$ggid, (string)$playerGHIN, [
                     'dbPlayers_GHINPostID' => $ghinPostId,
                     'dbPlayers_GHINPostTime' => date('Y-m-d H:i:s')
                 ]);
