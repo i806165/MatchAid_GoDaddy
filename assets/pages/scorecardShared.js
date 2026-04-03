@@ -74,9 +74,14 @@
         state.mode === 'group'  ? 'scorecardGroup'  :
         'scorecardGame';
         
+        
     if (chrome.setBottomNav) {
+      const portal = init.portal || "";
+      const homeRoute = (portal === "ADMIN PORTAL") ? "admin" 
+                      : (portal === "PLAYER PORTAL" ? "player" : "home");
+
       chrome.setBottomNav({
-        visible: ['home', 'scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoreskins'],
+        visible: [homeRoute, 'scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoreskins'],
         active: activeNav,
         onNavigate: (id) => MA.routerGo?.(id)
       });
