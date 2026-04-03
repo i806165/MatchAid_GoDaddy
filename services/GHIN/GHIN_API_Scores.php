@@ -13,7 +13,7 @@ final class ServiceGHINScores
     {
         try {
             $game = ServiceDbGames::getGameByGGID($ggid);
-            $player = ServiceDbPlayers::getGamePlayers($ggid, $playerGHIN);
+            $player = ServiceDbPlayers::getPlayerByGGIDGHIN((string)$ggid, $playerGHIN);
 
             if (!$game || !$player) {
                 return ['ok' => false, 'message' => 'Game or Player record not found.'];
