@@ -173,10 +173,9 @@
       { label: 'Add Player or Guest', action: 'viewRoster', enabled: true },
       { label: 'Review Game', action: 'viewGame', enabled: true },
       { separator: true },
-      { label: 'Enter Scores', action: 'scorehome', enabled: true },
-      { label: 'View Scorecard', action: 'scorecard', enabled: true },
+      { label: 'Open Scoring Portal', action: 'scorehome', enabled: true },
       { separator: true },
-      { label: 'Add to Calendar', action: 'calendar', enabled: true },
+      { label: 'Add Game to Calendar', action: 'calendar', enabled: true },
     );
     return items;
   }
