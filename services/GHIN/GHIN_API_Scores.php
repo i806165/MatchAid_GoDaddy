@@ -31,7 +31,7 @@ final class ServiceGHINScores
             ]);
 
             // INTERCEPT: Return early during testing to prevent live GHIN posting
-            return ['ok' => true, 'message' => 'DRY RUN: Score logged but not posted to GHIN.', 'ghinPostId' => 'DEBUG_' . time()];
+            //return ['ok' => true, 'message' => 'DRY RUN: Score logged but not posted to GHIN.', 'ghinPostId' => 'DEBUG_' . time()];
 
             $url = "https://api.ghin.com/api/v1/scores/hbh.json";
             $headers = [
