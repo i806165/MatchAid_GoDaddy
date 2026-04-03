@@ -89,9 +89,10 @@ final class ServiceGHINScores
             "game_type" => "net_score",
             "transferred" => false,
             "last_name" => (string)($player['dbPlayers_LName'] ?? ''),
+            "number_of_played_holes" => 0, // Updated after the loop
             "tm_username" => (string)($_SESSION['SessionUserName'] ?? ''),
             "tm_association_club" => (string)($_SESSION['SessionClubName'] ?? ''),
-            "tm_league_or_event" => (string)($game['dbGames_Title'] ?? ''),
+            "tm_league_or_event" => '',
             "hole_details" => []
         ];
 
@@ -123,7 +124,8 @@ final class ServiceGHINScores
                 ];
             }
         }
-        $payload['number_of_played_holes'] = $playedCount;
+        // Count of the holes that do not have blanks (raw_score > 0)
+        $payload["number_of_played_holes"] = $playedCount;
 
         return $payload;
     }
