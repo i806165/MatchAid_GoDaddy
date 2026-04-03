@@ -30,7 +30,8 @@
   const state = {
     players: [],
     game: null,
-    cartAssignments: null
+    cartAssignments: null,
+    portal: ""
   };
 
   async function onLaunch() {
@@ -53,6 +54,7 @@
 
       state.players = res.payload.players || [];
       state.game = res.payload.game || {};
+      state.portal = res.payload.portal || "";
 
       // Determine setup branch: Cart config (COD) vs direct Scorer selection
       if (state.game.dbGames_RotationMethod === 'COD' && res.payload.canSave) { // Only show cart if COD and scoring is allowed
@@ -131,7 +133,7 @@
     }
 
     if (MA.chrome && typeof MA.chrome.setBottomNav === 'function') {
-      const portal = initData.portal || "";
+      const portal = state.portal || initData.portal || "";
       const homeRoute = (portal === "ADMIN PORTAL") ? "admin" 
                       : (portal === "PLAYER PORTAL" ? "player" : "home");
 

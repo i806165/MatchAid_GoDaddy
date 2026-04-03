@@ -54,6 +54,7 @@ $paths = [
 $initPayload = [
     "ok" => true,
     "urlKey" => $urlKey,
+    "portal" => $_SESSION["SessionPortal"] ?? "",
     "isResumeReady" => $isResumeReady,
     "header" => ["subtitle" => $isResumeReady ? "Ready to Play" : "Scoring Setup"]
 ];

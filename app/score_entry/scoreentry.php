@@ -22,6 +22,7 @@ if (!$scorecardKey) {
 // Minimal init payload only.
 $initPayload = [
   "ok" => true,
+  "portal" => $_SESSION["SessionPortal"] ?? "",
   "scorecardKey" => $scorecardKey,
   "currentHole" => (int)($_SESSION['SessionCurrentHole'] ?? 1),
   "header" => [
