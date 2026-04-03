@@ -27,8 +27,6 @@ final class ServiceGHINScores
 
             // TEMPORARY: Log the JSON payload for testing purposes
             Logger::info("GHIN_SCORE_POST_DEBUG", [
-                'ggid' => $ggid,
-                'playerGHIN' => $playerGHIN,
                 'payload' => $payload
             ]);
 
@@ -82,6 +80,15 @@ final class ServiceGHINScores
             "score_type" => "H",
             "number_of_holes" => ($holeScope === 'F9' || $holeScope === 'B9') ? 9 : 18,
             "gender" => (string)$player['dbPlayers_Gender'],
+            "override_confirmation" => "false",
+            "is_manual" => "false",
+            "source" => "GHINcom",
+            "with_gps" => false,
+            "with_watch" => false,
+            "game_score" => true,
+            "game_type" => "net_score",
+            "transferred" => false,
+            "last_name" => (string)($player['dbPlayers_LName'] ?? ''),
             "tm_username" => (string)($_SESSION['SessionUserName'] ?? ''),
             "tm_association_club" => (string)($_SESSION['SessionClubName'] ?? ''),
             "tm_league_or_event" => (string)($game['dbGames_Title'] ?? ''),
