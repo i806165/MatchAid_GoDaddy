@@ -32,9 +32,11 @@
     document.body.appendChild(_overlay);
   }
 
-  async function fetchReviewData(ggid) {
-    // Call initScoreCard in player mode to get the review payload
-    const res = await fetch(`/api/game_scorecard/initScoreCard.php?mode=player&ggid=${ggid}`);
+  async function fetchReviewData() {
+    // Dedicated endpoint pulls GGID and Identity from session. 
+    // No GGID or Scope needed in the URL per architectural rules.
+    const base = (MA.paths && MA.paths.apiGHIN) ? MA.paths.apiGHIN : "/api/GHIN";
+    const res = await fetch(`${base}/lauchGHINPostScores.php`);
     const json = await res.json();
     if (!json || !json.ok) throw new Error(json?.message || "Unable to load score summary.");
     return json;
@@ -47,7 +49,7 @@
 
     try {
       if (typeof MA.setStatus === 'function') MA.setStatus("Preparing score review...", "info");
-      const payload = await fetchReviewData(_config.ggid);
+      const payload = await fetchReviewData();
       
       // Perform internal defensive checks on the fetched data
       let blocker = "";
@@ -141,7 +143,8 @@
     btn.textContent = "Posting...";
 
     try {
-      const res = await MA.postJson('/api/GHIN/post_score.php', { ggid: _config.ggid });
+      const base = (MA.paths && MA.paths.apiGHIN) ? MA.paths.apiGHIN : "/api/GHIN";
+      const res = await MA.postJson(`${base}/post_score.php`, { ggid: _config.ggid });
       if (res && res.ok) {
         if (typeof MA.setStatus === 'function') MA.setStatus("Score posted to GHIN successfully!", "success");
         close();
