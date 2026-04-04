@@ -55,6 +55,7 @@ $initPayload = [
     "ok" => true,
     "urlKey" => $urlKey,
     "portal" => $_SESSION["SessionPortal"] ?? "",
+    "sessionGhin" => $_SESSION["SessionGHINLogonID"] ?? "",
     "isResumeReady" => $isResumeReady,
     "header" => ["subtitle" => $isResumeReady ? "Ready to Play" : "Scoring Setup"]
 ];

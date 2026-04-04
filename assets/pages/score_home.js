@@ -31,6 +31,7 @@
     players: [],
     game: null,
     cartAssignments: null,
+    autoScorerGhin: "",
     portal: ""
   };
 
@@ -56,11 +57,20 @@
       state.game = res.payload.game || {};
       state.portal = res.payload.portal || "";
 
+      // Detect auto-selection path (Player or Admin portal)
+      const sessionGhin = initData.sessionGhin || "";
+      if (sessionGhin && (state.portal === "PLAYER PORTAL" || state.portal === "ADMIN PORTAL")) {
+        state.autoScorerGhin = sessionGhin;
+      }
+
       // Determine setup branch: Cart config (COD) vs direct Scorer selection
       if (state.game.dbGames_RotationMethod === 'COD' && res.payload.canSave) { // Only show cart if COD and scoring is allowed
         renderCartOptions();
         el.launchCard.classList.add('isHidden');
         el.cartCard.classList.remove('isHidden');
+      } else if (state.autoScorerGhin) {
+        await finalizeScorerContext(state.autoScorerGhin);
+        return;
       } else {
         showScorerStep();
       }
@@ -84,7 +94,7 @@
     });
   }
 
-  function onConfirmCart() {
+  async function onConfirmCart() {
     const picks = [el.cart1Driver.value, el.cart1Passenger.value, el.cart2Driver.value, el.cart2Passenger.value].filter(Boolean);
     const unique = new Set(picks);
     if (unique.size !== picks.length) return MA.setStatus('Each cart position must have a unique player.', 'warn');
@@ -95,7 +105,11 @@
     if (el.cart2Driver.value) state.cartAssignments[el.cart2Driver.value] = '3';
     if (el.cart2Passenger.value) state.cartAssignments[el.cart2Passenger.value] = '4';
 
-    showScorerStep();
+    if (state.autoScorerGhin) {
+      await finalizeScorerContext(state.autoScorerGhin);
+    } else {
+      showScorerStep();
+    }
   }
 
   function showScorerStep() {
@@ -105,19 +119,24 @@
     el.scorerCard.classList.remove('isHidden');
   }
 
+  async function finalizeScorerContext(ghin) {
+    try {
+      MA.setStatus('Preparing scoring...', 'info');
+      await MA.postJson(apiUrls.setScorerContext, { 
+        ghin: ghin,
+        carts: state.cartAssignments 
+      });
+      window.location.href = apiUrls.scoreEntry;
+    } catch (e) { MA.setStatus('Failed to set context.', 'error'); }
+  }
+
   function renderScorers(players) {
     el.scorerChips.innerHTML = '';
     players.forEach(p => {
       const btn = document.createElement('button');
       btn.className = 'maChoiceChip';
       btn.textContent = p.dbPlayers_Name;
-      btn.onclick = async () => {
-        await MA.postJson(apiUrls.setScorerContext, { 
-          ghin: p.dbPlayers_PlayerGHIN,
-          carts: state.cartAssignments 
-        });
-        window.location.href = apiUrls.scoreEntry;
-      };
+      btn.onclick = () => finalizeScorerContext(p.dbPlayers_PlayerGHIN);
       el.scorerChips.appendChild(btn);
     });
   }
