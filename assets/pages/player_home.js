@@ -509,7 +509,7 @@
 
     // First-pass routing/actions (non-destructive). Can be wired to final routes later.
     if (action === 'scorehome') {
-      const scoreId = rowText(g, ['scoreId', 'playerKey', 'dbPlayers_PlayerKey']);
+      const scoreId = rowText(g, ['yourPlayerKey', 'scoreId', 'playerKey', 'dbPlayers_PlayerKey']);
       return routerGo("scorehome", { scoreId: scoreId });
     }
     if (action === 'viewGame') {
