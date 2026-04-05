@@ -65,8 +65,11 @@ function ensureOverlay() {
       }
       const label = String(item.label || "");
       const dangerClass = item.danger ? "danger" : "";
+      const isDisabled = item.disabled === true || item.enabled === false;
+      const disabledClass = isDisabled ? "disabled" : "";
+      const disabledAttr = isDisabled ? "disabled" : "";
       // Store index to retrieve action callback later
-      return `<button class="actionMenu_item ${dangerClass}" type="button" data-idx="${idx}">${escapeHtml(label)}</button>`;
+      return `<button class="actionMenu_item ${dangerClass} ${disabledClass}" type="button" data-idx="${idx}" ${disabledAttr}>${escapeHtml(label)}</button>`;
     }).join("");
 
     // Build Full HTML
@@ -104,6 +107,9 @@ function ensureOverlay() {
         const idx = parseInt(btn.getAttribute("data-idx"), 10);
         const item = items[idx];
         
+        // Ignore clicks on disabled items
+        if (item && (item.disabled === true || item.enabled === false)) return;
+
         // Close menu immediately on selection
         MA.ui.closeActionsMenu();
 
