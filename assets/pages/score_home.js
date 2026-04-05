@@ -55,11 +55,18 @@
 
       state.players = res.payload.players || [];
       state.game = res.payload.game || {};
-      state.portal = res.payload.portal || "";
+      state.portal = res.payload.portal || initData.portal || "";
 
       // Detect auto-selection path (Player or Admin portal)
       const sessionGhin = initData.sessionGhin || "";
-      if (sessionGhin && (state.portal === "PLAYER PORTAL" || state.portal === "ADMIN PORTAL")) {
+      if (sessionGhin && state.portal === "PLAYER PORTAL") {
+        // Verify player is part of this specific group to prevent accidental data entry
+        const isMember = state.players.some(p => String(p.dbPlayers_PlayerGHIN) === sessionGhin);
+        if (isMember) {
+          state.autoScorerGhin = sessionGhin;
+        }
+      } else if (sessionGhin && state.portal === "ADMIN PORTAL") {
+        // Admins always skip selection; if not in group, they score as authorized proxy
         state.autoScorerGhin = sessionGhin;
       }
 
