@@ -152,38 +152,43 @@
     const { enrollmentStatus, registrationStatus } = inferStatuses(g);
     const isRegistered = enrollmentStatus === 'Registered';
     const regClosedish = ['Closed','Locked','Full'].includes(registrationStatus);
+    const scoreId = rowText(g, ['yourPlayerKey', 'scoreId', 'playerKey', 'dbPlayers_PlayerKey']);
+    const postedId = rowText(g, ['ghinPostId']);
 
-    const registerLabel = isRegistered ? 'Change Tee Set' : 'Register for Game';
-    const items = [
-      { label: registerLabel, action: 'register', enabled: true },
+    // 1. Pre-calculate dynamic labels and states
+    const regLabel = isRegistered ? 'Change your Tee Set' : 'Register for this Game';
+    const scoreLabel = scoreId ? 'Open Scoring Portal' : 'Scoring not yet Activated';
+    const postLabel = postedId ? 'Score Already Posted to GHIN' : 'Post Score to GHIN';
+
+    // 2. Define the menu structure declaratively
+    const menu = [
+      // Participation Group
+      { label: regLabel, action: 'register', enabled: true },
+      isRegistered ? { label: 'Unregister', action: 'unregister', enabled: !regClosedish } : null,
+
+      { separator: true }, { separator: true },
+      { separator: true }, { separator: true },
+
+      // Information Group
+      { label: 'Add Player or Guest', action: 'viewRoster', enabled: true },
+      { label: 'Review Game Players', action: 'viewGame', enabled: true },
+
+      { separator: true }, { separator: true },
+      { separator: true }, { separator: true },
+
+      // Scoring Group
+      { label: scoreLabel, action: 'scorehome', enabled: !!scoreId },
+      isRegistered ? { label: postLabel, action: 'ghinPost', enabled: !postedId } : null,
+
+      { separator: true }, { separator: true },
+      { separator: true }, { separator: true },
+
+      // Utility Group
+      { label: 'Add Game to your Calendar', action: 'calendar', enabled: true }
     ];
 
-    if (isRegistered) {
-      items.push({ label:  'Unregister', action: 'unregister', enabled: !regClosedish });
-    }
-
-    if (isRegistered) {
-      const posted = rowText(g, ['ghinPostId']);
-      if (posted) items.push({ label: 'Score AlreadyPosted to GHIN', disabled: true });
-      else items.push({ label: 'Post Score to GHIN', action: 'ghinPost', enabled: true });
-    }
-
-    const canOpenScoringPortal = !!rowText(g, ['yourPlayerKey', 'scoreId', 'playerKey', 'dbPlayers_PlayerKey']);
-
-    items.push(
-      { separator: true },
-      { separator: true },
-      { label: 'Add Player or Guest', action: 'viewRoster', enabled: true },
-      { label: 'Review Game', action: 'viewGame', enabled: true },
-      { separator: true },
-      { separator: true },
-      { label: canOpenScoringPortal ? 'Open Scoring Portal' : 'Scoring not Activated by Admin', 
-        action: 'scorehome', enabled: canOpenScoringPortal },
-      { separator: true },
-      { separator: true },
-      { label: 'Add Game to Calendar', action: 'calendar', enabled: true },
-    );
-    return items;
+    // 3. Remove null entries (conditional items) and return
+    return menu.filter(Boolean);
   }
 
   function renderCards(){
@@ -353,11 +358,14 @@
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     const items = [
       { label: "My Upcoming Games", action: () => applyQuickPreset("MYSCHEDULE") },
-      { label: "Games from Favorite Admins", action: () => applyQuickPreset("FAVORITES") },
-      { label: "All Available Games", action: () => applyQuickPreset("OPEN") },
       { label: "My Past Games Played", action: () => applyQuickPreset("HISTORY") },
       { separator: true },
-      { label: "Advanced Filters…", action: () => { if (typeof openFiltersFn === "function") openFiltersFn(); } }
+      { separator: true },
+      { label: "Games from my Favorite Admins", action: () => applyQuickPreset("FAVORITES") },
+      { label: "All Available Games", action: () => applyQuickPreset("OPEN") },
+      { separator: true },
+      { separator: true },
+      { label: "Advanced List Filters…", action: () => { if (typeof openFiltersFn === "function") openFiltersFn(); } }
     ];
     MA.ui.openActionsMenu("Actions", items);
   }
