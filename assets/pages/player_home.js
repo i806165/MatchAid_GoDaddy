@@ -164,16 +164,22 @@
 
     if (isRegistered) {
       const posted = rowText(g, ['ghinPostId']);
-      if (posted) items.push({ label: 'Score Posted to GHIN', disabled: true });
-      else items.push({ label: 'Post to GHIN', action: 'ghinPost', enabled: true });
+      if (posted) items.push({ label: 'Score AlreadyPosted to GHIN', disabled: true });
+      else items.push({ label: 'Post Score to GHIN', action: 'ghinPost', enabled: true });
     }
 
+    const canOpenScoringPortal = !!rowText(g, ['yourPlayerKey', 'scoreId', 'playerKey', 'dbPlayers_PlayerKey']);
+
     items.push(
+      { separator: true },
       { separator: true },
       { label: 'Add Player or Guest', action: 'viewRoster', enabled: true },
       { label: 'Review Game', action: 'viewGame', enabled: true },
       { separator: true },
-      { label: 'Open Scoring Portal', action: 'scorehome', enabled: true },
+      { separator: true },
+      { label: canOpenScoringPortal ? 'Open Scoring Portal' : 'Scoring not Activated by Admin', 
+        action: 'scorehome', enabled: canOpenScoringPortal },
+      { separator: true },
       { separator: true },
       { label: 'Add Game to Calendar', action: 'calendar', enabled: true },
     );
@@ -246,15 +252,15 @@
       const teeCnt = Number(g.dbGames_TeeTimeCnt ?? g.teeTimeCnt ?? 0);
       const totalSlots = teeCnt > 0 ? teeCnt * 4 : 0;
       const countStr = totalSlots > 0 ? `${playerCount}/${totalSlots}` : `${playerCount}`;
-
-      const line2 = [playTime, holes, countStr].filter(Boolean).join(" • ");
+      
+      const rangePart = (Number(playerCount) > 0 && hiStats) ? (isRegistered ? `Range: ${hiStats}` : `HI: ${hiStats}`) : '';
+      const line2 = [playTime, holes, countStr, rangePart].filter(Boolean).join(" • ");
 
       let line3Html = '';
       if (isRegistered) {
         const personalParts = [];
         if (yourTee) personalParts.push(`TeeTime: ${formatTimeAmPm(yourTee)}`);
         if (yourTeeName) personalParts.push(`Tee: ${yourTeeName}`);
-        if (Number(playerCount) > 0 && hiStats) personalParts.push(`Range: ${hiStats}`);
 
         const personalInfo = personalParts.join(" • ");
         line3Html = `<span class="maPill maPill--success"><span class="maPillValue">Registered</span></span>`;
@@ -262,7 +268,6 @@
       } else {
         const discoveryParts = [];
         if (privacy) discoveryParts.push(privacy);
-        if (Number(playerCount) > 0 && hiStats) discoveryParts.push(`HI: ${hiStats}`);
 
         const discoveryInfo = discoveryParts.join(" • ");
         const regClass = registrationStatus === 'Open' ? 'maPill--success' : 'maPill--warn';
