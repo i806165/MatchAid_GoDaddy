@@ -442,15 +442,16 @@
         inp.oninput = () => {
           state.favNameFilter = safe(inp.value);
           if (clr) clr.classList.toggle("isHidden", !state.favNameFilter);
-          renderControls();
           renderBody();
         };
       }
       if (clr) clr.onclick = () => {
         state.favNameFilter = "";
-        if (inp) inp.value = "";
+        if (inp) {
+          inp.value = "";
+          inp.focus();
+        }
         clr.classList.add("isHidden");
-        renderControls();
         renderBody();
       };
 
