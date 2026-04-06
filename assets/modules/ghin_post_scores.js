@@ -15,6 +15,13 @@
 
   function esc(s) { return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
+  function formatDate(s) {
+    if (!s) return "";
+    const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return s;
+    return `${m[2]}/${m[3]}/${m[1].slice(-2)}`;
+  }
+
   function ensureOverlay() {
     if (_overlay) return;
     _overlay = document.createElement("div");
@@ -95,6 +102,11 @@
   function renderModal(payload, blockerMessage) {
     const game = payload?.game || {};
     const p = payload?.scorecards?.rows?.[0]?.players?.[0];
+
+    const playDate = formatDate(game.dbGames_PlayDate);
+    const gameTitle = game.dbGames_Title || "Post Scores";
+    const modalSubtitle = playDate ? `${gameTitle} • ${playDate}` : gameTitle;
+
     const holes = payload?.meta?.holes === 'B9' ? Array.from({length:9},(_,i)=>i+10) : Array.from({length:payload?.meta?.holes === 'F9' ? 9 : 18},(_,i)=>i+1);
     
     // Extract summary scores from the payload totals
@@ -121,7 +133,7 @@
         <header class="maModal__hdr">
           <div class="maModal__titles">
             <div class="maModal__title">Confirm GHIN Posting</div>
-            <div class="maModal__subtitle">${esc(game.dbGames_Title || "Post Scores")}</div>
+            <div class="maModal__subtitle">${esc(modalSubtitle)}</div>
           </div>
           <button id="btnGhinClose" class="iconBtn btnPrimary" type="button" aria-label="Close">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -129,7 +141,7 @@
         </header>
         <div class="maModal__controls">
           <div class="maHelpText" style="margin-bottom:12px; font-weight:700;">
-            ${esc(game.dbGames_CourseName)} • ${esc(p?.tee || "No Tee Set")}
+            ${esc(game.dbGames_CourseName)} • Tee: ${esc(p?.tee || "No Tee Set")}
           </div>
           <div style="display:flex; justify-content:space-between; margin-bottom:16px; padding:10px; background:rgba(0,0,0,0.04); border-radius:8px;">
             <div class="maPillKV"><span class="maPillLabel">OUT</span><span class="maPillValue">${esc(scoreOut)}</span></div>
