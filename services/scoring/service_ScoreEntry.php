@@ -67,6 +67,7 @@ final class ServiceScoreEntry
     public static function buildLaunchPayload(array $gameRow, array $groupPlayers, int $holeNumber, string $playerKey = ''): array
     {
         $players = [];
+        $groupPlayers = self::sortLaunchPlayers($gameRow, $groupPlayers);
         $launchedPlayer = $groupPlayers[0] ?? [];
         $ggid = (string)($launchedPlayer['dbPlayers_GGID'] ?? $gameRow['dbGames_GGID'] ?? '');
 
@@ -242,11 +243,13 @@ final class ServiceScoreEntry
             return;
         }
 
-        // 2. Determine evaluation partitions (Group vs Side)
+        // 2. Determine evaluation partitions by PairingID
         $partitions = [];
         foreach ($players as $idx => $wrapper) {
-            $side = ($competition === 'PairPair') ? (string)($wrapper['playerRow']['dbPlayers_FlightPos'] ?? 'A') : 'GROUP';
-            $partitions[$side][] = [
+            $pairingId = trim((string)($wrapper['playerRow']['dbPlayers_PairingID'] ?? ''));
+            if ($pairingId === '') $pairingId = '000';
+
+            $partitions[$pairingId][] = [
                 'idx' => $idx,
                 'raw' => $wrapper['scoreEntryRow']['rawScore'] ?? null,
                 'net' => $wrapper['scoreEntryRow']['netScore'] ?? null,
@@ -800,4 +803,50 @@ final class ServiceScoreEntry
         }
         return $row;
     }
+
+    private static function sortLaunchPlayers(array $gameRow, array $players): array
+  {
+      $competition = trim((string)($gameRow['dbGames_Competition'] ?? 'PairField'));
+
+      usort($players, function ($a, $b) use ($competition) {
+          $pairA = trim((string)($a['dbPlayers_PairingID'] ?? ''));
+          $pairB = trim((string)($b['dbPlayers_PairingID'] ?? ''));
+          $pairPosA = (int)($a['dbPlayers_PairingPos'] ?? 999);
+          $pairPosB = (int)($b['dbPlayers_PairingPos'] ?? 999);
+
+          if ($competition === 'PairPair') {
+              $flightA = trim((string)($a['dbPlayers_FlightID'] ?? ''));
+              $flightB = trim((string)($b['dbPlayers_FlightID'] ?? ''));
+              if ($flightA !== $flightB) {
+                  return strnatcmp($flightA, $flightB);
+              }
+
+              $fPosA = trim((string)($a['dbPlayers_FlightPos'] ?? ''));
+              $fPosB = trim((string)($b['dbPlayers_FlightPos'] ?? ''));
+              if ($fPosA !== $fPosB) {
+                  return strcmp($fPosA, $fPosB);
+              }
+          }
+
+          if ($pairA !== $pairB) {
+              return strnatcmp($pairA, $pairB);
+          }
+
+          if ($pairPosA !== $pairPosB) {
+              return $pairPosA <=> $pairPosB;
+          }
+
+          $lastA = trim((string)($a['dbPlayers_LName'] ?? ''));
+          $lastB = trim((string)($b['dbPlayers_LName'] ?? ''));
+          if ($lastA !== $lastB) {
+              return strcmp($lastA, $lastB);
+          }
+
+          $nameA = trim((string)($a['dbPlayers_Name'] ?? ''));
+          $nameB = trim((string)($b['dbPlayers_Name'] ?? ''));
+          return strcmp($nameA, $nameB);
+      });
+
+      return $players;
+  }
 }

@@ -367,9 +367,9 @@
 
     const partitions = {};
     payload.players.forEach((wrapper, idx) => {
-      const side = (competition === 'PairPair') ? (wrapper.playerRow?.dbPlayers_FlightPos || 'A') : 'GROUP';
-      if (!partitions[side]) partitions[side] = [];
-      partitions[side].push({
+      const pairingId = String(wrapper.playerRow?.dbPlayers_PairingID || '').trim() || '000';
+      if (!partitions[pairingId]) partitions[pairingId] = [];
+      partitions[pairingId].push({
         idx,
         raw: wrapper.scoreEntryRow.rawScore,
         net: wrapper.scoreEntryRow.netScore,
@@ -424,8 +424,19 @@ function renderRows() {
 
   el.rows.innerHTML = '';
 
-  (payload.players || []).forEach((wrapper) => {
+  let prevPairingId = '';
+
+  (payload.players || []).forEach((wrapper, idx) => {
     const row = wrapper.scoreEntryRow || {};
+    const pairingId = String(row.pairingId || wrapper.playerRow?.dbPlayers_PairingID || '').trim();
+
+    if (idx > 0 && pairingId && pairingId !== prevPairingId) {
+      const divider = document.createElement('div');
+      divider.className = 'scorePairingDivider';
+      divider.setAttribute('aria-hidden', 'true');
+      el.rows.appendChild(divider);
+    }
+
     const article = document.createElement('article');
     article.className = 'scorePlayerRow';
     article.dataset.playerId = row.playerId || '';
