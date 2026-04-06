@@ -271,7 +271,7 @@
     header.className = "maModal__hdr";
     header.innerHTML = `
       <div class="maModal__title">Auto-Pair</div>
-      <button class="iconBtn btnPrimary" type="button" aria-label="Close">
+      <button class="iconBtn btnSecondary closeBtn" type="button" aria-label="Close">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
       </button>
     `;
@@ -322,8 +322,8 @@
       <button class="btn btnSecondary" id="apBtnCancel" type="button">Cancel</button>
       <div class="maModal__ftrActions">
         <button class="btn" id="apBtnRetry" type="button" style="display:none;">Retry</button>
-        <button class="btn btnPrimary" id="apBtnRun" type="button">Run</button>
-        <button class="btn btnPrimary" id="apBtnApply" type="button" style="display:none;">Apply</button>
+        <button class="btn btnSecondary" id="apBtnRun" type="button">Run</button>
+        <button class="btn btnSecondary" id="apBtnApply" type="button" style="display:none;">Apply</button>
       </div>
     `;
 
