@@ -51,19 +51,45 @@
       if (typeof MA.setStatus === 'function') MA.setStatus("Preparing score review...", "info");
       const payload = await fetchReviewData();
       
-      // Perform internal defensive checks on the fetched data
-      let blocker = "";
-      const p = payload.scorecards?.rows?.[0]?.players?.[0];
-      const userGhin = window.__MA_INIT__?.user?.ghin || window.__INIT__?.user?.ghin;
-
-      if (!userGhin) blocker = "GHIN identity not found. Please log in.";
-      else if (p?.dbPlayers_GHINPostID) blocker = "This round has already been posted to GHIN.";
-      else if (!p) blocker = "Score summary data is incomplete.";
-
+      const blocker = getPostingBlocker(payload);
       renderModal(payload, blocker);
     } catch (e) {
       renderModal(null, e.message || "Unable to load score summary.");
     }
+  }
+
+  function getPostingBlocker(payload) {
+    const p = payload?.scorecards?.rows?.[0]?.players?.[0];
+    const userGhin = window.__MA_INIT__?.user?.ghin || window.__INIT__?.user?.ghin;
+
+    // 1. Identity & Data Checks
+    if (!userGhin) return "GHIN identity not found. Please log in.";
+    if (!p) return "Score summary data is incomplete.";
+    if (p.dbPlayers_GHINPostID) return "This round has already been posted to GHIN.";
+
+    // 2. Determine Hole Scope (F9, B9, or 18)
+    const holeScope = payload?.meta?.holes || 'All 18';
+    const holes = holeScope === 'B9' 
+      ? Array.from({length:9},(_,i)=>i+10) 
+      : Array.from({length:holeScope === 'F9' ? 9 : 18},(_,i)=>i+1);
+
+    // 3. Minimum Played Holes Guard (USGA: Need 9 for a valid side)
+    const playedHoles = holes.filter(h => {
+      const val = p.holes?.['h' + h]?.display?.gross;
+      return val && val !== '—' && !isNaN(parseFloat(val)) && parseFloat(val) > 0;
+    });
+
+    if (playedHoles.length < 9) {
+      return "A minimum of 9 holes with scores are required to post.";
+    }
+
+    // 4. Total Score Sanity Check
+    const scoreTot = parseFloat(p?.totals?.gross?.['9c']);
+    if (isNaN(scoreTot) || scoreTot <= 0) {
+      return "Total score must be greater than zero to post.";
+    }
+
+    return "";
   }
 
   function renderModal(payload, blockerMessage) {
@@ -111,10 +137,9 @@
             <div class="maPillKV"><span class="maPillLabel">TOTAL</span><span class="maPillValue" style="color:var(--brandColor3);">${esc(scoreTot)}</span></div>
           </div>
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-            <button id="btnGhinCancel" class="btn btnSecondary" type="button">Cancel</button>
-            <button id="btnGhinConfirm" class="btn btnPrimary" type="button"
-              ${isBlocked ? 'disabled' : ''}
-              style="background:${isBlocked ? 'var(--mutedText)' : 'var(--success)'}; color:#fff; border-color:transparent;">
+            <button id="btnGhinCancel" class="btn btnPrimary" type="button">Cancel</button>
+            <button id="btnGhinConfirm" class="btn btnSecondary" type="button"
+              ${isBlocked ? 'disabled' : ''}>
               Post to GHIN
             </button>
           </div>
