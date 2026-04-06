@@ -351,17 +351,20 @@
   }
 
   .scorePlayerBadge{
-    min-height: 90px;
+    min-height: 80px;
     padding: 8px 16px 6px 16px;
     border-radius: 26px;
+    grid-template-rows: auto auto;
   }
 
   .scorePlayerBadgeLast{
     font-size: 19px;
+    line-height: 1.1;
   }
 
   .scorePlayerBadgeFirst{
     font-size: 14px;
+    margin-top: 1px;
   }
 
   .scorePlayerBadgeStatus__label{
