@@ -575,11 +575,39 @@ final class ServiceScoreCard {
       $teeSetIdsUsed
     );
 
+    $pairingSet = [];
+    $flightSet = [];
+
+    foreach ($players as $p) {
+      $pairingId = trim((string)($p["dbPlayers_PairingID"] ?? ""));
+      if ($pairingId !== "" && $pairingId !== "000") {
+        $pairingSet[$pairingId] = true;
+      }
+
+      $flightId = trim((string)($p["dbPlayers_FlightID"] ?? ""));
+      if ($flightId !== "") {
+        $flightSet[$flightId] = true;
+      }
+    }
+
+    $pairingIDs = array_keys($pairingSet);
+    $flightIDs = array_keys($flightSet);
+
+    usort($pairingIDs, fn($a, $b) => strnatcmp((string)$a, (string)$b));
+    usort($flightIDs, fn($a, $b) => strnatcmp((string)$a, (string)$b));
+
     return [
       "groupId" => (string)$groupId,
       "grouping" => $mode,
+
+      // legacy singular fields retained for compatibility
       "pairingID" => (string)($first["dbPlayers_PairingID"] ?? ""),
       "flightID" => (string)($first["dbPlayers_FlightID"] ?? ""),
+
+      // new plural fields for accurate footer rendering
+      "pairingIDs" => $pairingIDs,
+      "flightIDs" => $flightIDs,
+
       "teeTime" => (string)($first["dbPlayers_TeeTime"] ?? ""),
       "startHole" => (string)($first["dbPlayers_StartHole"] ?? ""),
       "courseInfo" => $courseRows,

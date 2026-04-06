@@ -296,7 +296,24 @@ function renderGroup(group) {
 
   function renderFooter(group) {
     const gh = group.gameHeader || {};
-    const left = [gh.GGID ? `Game ${gh.GGID}` : "", group.flightID ? `Match ${group.flightID}` : "", group.pairingID ? `Pairing ${group.pairingID}` : ""].filter(Boolean).join(" • ");
+    const isPairPair = String(gh.dbGames_Competition || "").trim() === "PairPair";
+
+    const pairingIDs = Array.isArray(group.pairingIDs)
+      ? group.pairingIDs.filter(Boolean)
+      : (group.pairingID ? [group.pairingID] : []);
+
+    const flightIDs = Array.isArray(group.flightIDs)
+      ? group.flightIDs.filter(Boolean)
+      : (group.flightID ? [group.flightID] : []);
+
+    const leftParts = [];
+
+    if (gh.GGID) leftParts.push(`Game ${gh.GGID}`);
+    if (isPairPair && flightIDs.length) leftParts.push(`Match ${flightIDs.join(", ")}`);
+    if (pairingIDs.length) leftParts.push(`Pairings ${pairingIDs.join(", ")}`);
+
+    const left = leftParts.join(" • ");
+
     return `<div class="scFooter"><div class="scFooterRow"><div class="scFooterBox"><div class="scFooterLine"></div><div class="scFooterLabel">SCORER</div></div><div class="scFooterBox"><div class="scFooterLine"></div><div class="scFooterLabel">ATTEST</div></div></div><div class="scFooterMeta"><div class="scFooterLeft">${esc(left)}</div><div class="scFooterRight">© ${new Date().getFullYear()} MatchAid</div></div></div>`;
   }
 
