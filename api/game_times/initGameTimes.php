@@ -149,6 +149,7 @@ function gt_buildGroups(array $players, array $game): array {
     $teeTime = "";
     $startHole = "";
     $suffix = "";
+    $playerKey = "";
     $teamA = [];
     $teamB = [];
     $names = [];
@@ -167,6 +168,7 @@ function gt_buildGroups(array $players, array $game): array {
       if ($teeTime === "" && trim(strval($r["dbPlayers_TeeTime"] ?? "")) !== "") $teeTime = trim(strval($r["dbPlayers_TeeTime"] ?? ""));
       if ($startHole === "" && trim(strval($r["dbPlayers_StartHole"] ?? "")) !== "") $startHole = trim(strval($r["dbPlayers_StartHole"] ?? ""));
       if ($suffix === "" && trim(strval($r["dbPlayers_StartHoleSuffix"] ?? "")) !== "") $suffix = trim(strval($r["dbPlayers_StartHoleSuffix"] ?? ""));
+      if ($playerKey === "" && trim(strval($r["dbPlayers_PlayerKey"] ?? "")) !== "") $playerKey = trim(strval($r["dbPlayers_PlayerKey"] ?? ""));
       
       $ln = trim(strval($r["dbPlayers_LName"] ?? $r["dbPlayers_Name"] ?? ""));
       if ($ln !== "") $names[] = $ln;
@@ -194,6 +196,7 @@ function gt_buildGroups(array $players, array $game): array {
       "pairingIds" => array_values(array_keys($pairingIdsSet)),
       "size" => count($rows),
       "teeTime" => $teeTime,
+      "playerKey" => $playerKey,
       "startHole" => $startHole,
       "startHoleSuffix" => (strtolower(strval($game["dbGames_TOMethod"] ?? "")) === "shotgun") ? $suffix : "",
       "playerLastNames" => $names,

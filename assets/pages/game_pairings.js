@@ -197,17 +197,18 @@
   function getContainerSchedule(scope) {
     // returns {teeTime,startHole,startHoleSuffix} by scanning players within container
     // scope: { type: 'pairing', id } OR { type: 'flight', id }
-    const out = { teeTime: "", startHole: "", startHoleSuffix: "" };
+    const out = { teeTime: "", startHole: "", startHoleSuffix: "", playerKey: "" };
     if (!scope || !scope.type || !scope.id) return out;
     const list = (scope.type === "pairing")
       ? state.players.filter(p => String(p.pairingId) === String(scope.id))
       : state.players.filter(p => String(p.flightId) === String(scope.id));
 
-    const pick = list.find(p => (p.teeTime || p.startHole || p.startHoleSuffix));
+    const pick = list.find(p => (p.teeTime || p.startHole || p.startHoleSuffix || p.playerKey));
     if (!pick) return out;
     out.teeTime = String(pick.teeTime || "");
     out.startHole = String(pick.startHole || "");
     out.startHoleSuffix = String(pick.startHoleSuffix || "");
+    out.playerKey = String(pick.playerKey || "");
     return out;
   }
 
@@ -1245,6 +1246,7 @@
         p.teeTime = String(sched.teeTime || "");
         p.startHole = String(sched.startHole || "");
         p.startHoleSuffix = String(sched.startHoleSuffix || "");
+        p.playerKey = String(sched.playerKey || "");
       } else {
         // unmatched
         p.flightId = "";
@@ -1253,16 +1255,15 @@
         p.teeTime = String(p.teeTime || "");
         p.startHole = String(p.startHole || "");
         p.startHoleSuffix = String(p.startHoleSuffix || "");
+        p.playerKey = String(p.playerKey || "");
       }
-      // playerKey blank until matched (server will enforce)
-      p.playerKey = "";
     } else {
       // PairField: inherit target pairing schedule + playerKey scope pairing
       const sched = getContainerSchedule({ type: "pairing", id: pid });
       p.teeTime = String(sched.teeTime || "");
       p.startHole = String(sched.startHole || "");
       p.startHoleSuffix = String(sched.startHoleSuffix || "");
-      // playerKey will be inherited/created on save
+      p.playerKey = String(sched.playerKey || "");
     }
     markDirty(ghin);
     });
@@ -1388,6 +1389,7 @@
         p.teeTime = String(sched.teeTime || "");
         p.startHole = String(sched.startHole || "");
         p.startHoleSuffix = String(sched.startHoleSuffix || "");
+        p.playerKey = String(sched.playerKey || "");
         markDirty(p.playerGHIN);
       });
     };
@@ -1476,6 +1478,7 @@
           teeTime: String(p.teeTime || ""),
           startHole: String(p.startHole || ""),
           startHoleSuffix: String(p.startHoleSuffix || ""),
+          playerKey: String(p.playerKey || ""),
         };
       })
       .filter(Boolean);

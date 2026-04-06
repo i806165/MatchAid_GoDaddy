@@ -28,15 +28,6 @@ function ma_normFlightPos($v): string {
   return ($s === 'A' || $s === 'B') ? $s : '';
 }
 
-function ma_randPlayerKey(int $len = 6): string {
-  $alphabet = str_split('ABCDEFGHJKLMNPQRSTUVWXYZ123456789'); // no I, O, 0
-  $out = '';
-  for ($i = 0; $i < $len; $i++) {
-    $out .= $alphabet[random_int(0, count($alphabet) - 1)];
-  }
-  return $out;
-}
-
 try {
   $uc = ServiceUserContext::getUserContext();
   if (!$uc || empty($uc['ok'])) {
@@ -96,6 +87,7 @@ try {
     $teeTime    = trim(strval($a['teeTime'] ?? ($row['dbPlayers_TeeTime'] ?? '')));
     $startHole  = trim(strval($a['startHole'] ?? ($row['dbPlayers_StartHole'] ?? '')));
     $startHoleS = trim(strval($a['startHoleSuffix'] ?? ($row['dbPlayers_StartHoleSuffix'] ?? '')));
+    $playerKey  = trim(strval($a['playerKey'] ?? ($row['dbPlayers_PlayerKey'] ?? '')));
 
     // Canonical normalization rules
     if ($pairingId === '000') {
@@ -105,7 +97,7 @@ try {
       $teeTime = '';
       $startHole = '';
       $startHoleS = '';
-      $row['dbPlayers_PlayerKey'] = '';
+      $playerKey = '';
     } else {
       if ($isPairPair) {
         // PairPair: schedule & PlayerKey are flight-scoped; unmatched pairings are unscheduled.
@@ -114,7 +106,7 @@ try {
           $teeTime = '';
           $startHole = '';
           $startHoleS = '';
-          $row['dbPlayers_PlayerKey'] = '';
+          $playerKey = '';
         }
       } else {
         // PairField: flight is ignored.
@@ -130,6 +122,7 @@ try {
     $row['dbPlayers_TeeTime'] = $teeTime;
     $row['dbPlayers_StartHole'] = $startHole;
     $row['dbPlayers_StartHoleSuffix'] = $startHoleS;
+    $row['dbPlayers_PlayerKey'] = $playerKey;
 
     ServiceDbPlayers::upsertGamePlayer((string)$ggid, $playerGHIN, $row);
     $updated++;
@@ -166,28 +159,22 @@ try {
     if ($fid !== '' && $k !== '' && !isset($flightKey[$fid])) $flightKey[$fid] = $k;
   }
 
-  // Ensure keys exist for any non-empty container
+  // Enforce schedule and key inheritance (passive persistence)
   if ($isPairPair) {
     foreach ($rows2 as &$r) {
       $fid = trim(strval($r['dbPlayers_FlightID'] ?? ''));
-      $pid = ma_pad3($r['dbPlayers_PairingID'] ?? '000');
-      if ($pid === '000' || $fid === '') {
-        $r['dbPlayers_PlayerKey'] = '';
-      } else {
-        if (!isset($flightKey[$fid])) $flightKey[$fid] = ma_randPlayerKey();
-        $r['dbPlayers_PlayerKey'] = $flightKey[$fid];
-      }
-
       // Flight-scoped schedule (unmatched => blank)
       if ($fid === '') {
         $r['dbPlayers_TeeTime'] = '';
         $r['dbPlayers_StartHole'] = '';
         $r['dbPlayers_StartHoleSuffix'] = '';
+        $r['dbPlayers_PlayerKey'] = '';
       } else {
         $sched = $flightSched[$fid] ?? ['', '', ''];
         $r['dbPlayers_TeeTime'] = $sched[0];
         $r['dbPlayers_StartHole'] = $sched[1];
         $r['dbPlayers_StartHoleSuffix'] = $sched[2];
+        $r['dbPlayers_PlayerKey'] = $flightKey[$fid] ?? $r['dbPlayers_PlayerKey'];
       }
     }
     unset($r);
@@ -195,18 +182,16 @@ try {
     foreach ($rows2 as &$r) {
       $pid = ma_pad3($r['dbPlayers_PairingID'] ?? '000');
       if ($pid === '000') {
-        $r['dbPlayers_PlayerKey'] = '';
         $r['dbPlayers_TeeTime'] = '';
         $r['dbPlayers_StartHole'] = '';
         $r['dbPlayers_StartHoleSuffix'] = '';
+        $r['dbPlayers_PlayerKey'] = '';
       } else {
-        if (!isset($pairingKey[$pid])) $pairingKey[$pid] = ma_randPlayerKey();
-        $r['dbPlayers_PlayerKey'] = $pairingKey[$pid];
-
         $sched = $pairingSched[$pid] ?? ['', '', ''];
         $r['dbPlayers_TeeTime'] = $sched[0];
         $r['dbPlayers_StartHole'] = $sched[1];
         $r['dbPlayers_StartHoleSuffix'] = $sched[2];
+        $r['dbPlayers_PlayerKey'] = $pairingKey[$pid] ?? $r['dbPlayers_PlayerKey'];
       }
       // Flight fields ignored in PairField
       $r['dbPlayers_FlightID'] = '';

@@ -24,14 +24,16 @@ try {
     $sqlPairing = "UPDATE db_Players 
             SET dbPlayers_TeeTime = :teeTime, 
                 dbPlayers_StartHole = :startHole, 
-                dbPlayers_StartHoleSuffix = :suffix 
+                dbPlayers_StartHoleSuffix = :suffix,
+                dbPlayers_PlayerKey = :playerKey
             WHERE dbPlayers_GGID = :ggid AND dbPlayers_PairingID = :pairingId";
     $stmtPairing = $pdo->prepare($sqlPairing);
 
     $sqlGhin = "UPDATE db_Players 
             SET dbPlayers_TeeTime = :teeTime, 
                 dbPlayers_StartHole = :startHole, 
-                dbPlayers_StartHoleSuffix = :suffix 
+                dbPlayers_StartHoleSuffix = :suffix,
+                dbPlayers_PlayerKey = :playerKey
             WHERE dbPlayers_GGID = :ggid AND dbPlayers_PlayerGHIN = :ghin";
     $stmtGhin = $pdo->prepare($sqlGhin);
 
@@ -42,6 +44,7 @@ try {
             ":teeTime" => (string)($a["teeTime"] ?? ""),
             ":startHole" => (string)($a["startHole"] ?? ""),
             ":suffix" => (string)($a["startHoleSuffix"] ?? ""),
+            ":playerKey" => (string)($a["playerKey"] ?? ""),
             ":ggid" => $ggid
         ];
 

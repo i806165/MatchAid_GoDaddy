@@ -42,6 +42,15 @@
     else if (msg) console.log("[STATUS]", level || "", msg);
   }
 
+  function randPlayerKey(len = 6) {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ123456789'; // No I, O, 0
+    let out = '';
+    for (let i = 0; i < len; i++) {
+      out += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+    }
+    return out;
+  }
+
   function esc(s) {
     return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
@@ -75,6 +84,7 @@
         teeTime: String(g.teeTime || ""),
         startHole: String(g.startHole || ""),
         startHoleSuffix: String(g.startHoleSuffix || ""),
+        playerKey: String(g.playerKey || ""),
       });
     }
   }
@@ -85,7 +95,8 @@
     return (
       String(g.teeTime || "") !== String(o.teeTime || "") ||
       String(g.startHole || "") !== String(o.startHole || "") ||
-      String(g.startHoleSuffix || "") !== String(o.startHoleSuffix || "")
+      String(g.startHoleSuffix || "") !== String(o.startHoleSuffix || "") ||
+      String(g.playerKey || "") !== String(o.playerKey || "")
     );
   }
 
@@ -180,6 +191,37 @@
     }
   }
 
+  /**
+   * Sync Pass: Ensures all groups sharing a physical slot share the same PlayerKey.
+   * Generates a new key only if the slot is entirely empty.
+   */
+  function syncSlotKeys() {
+    const slots = new Map();
+    
+    // Pass 1: Identify existing keys per slot
+    state.groups.forEach(g => {
+      if (!g.teeTime || !g.startHole) return;
+      const slotId = `${g.teeTime}|${g.startHole}|${g.startHoleSuffix || ""}`;
+      if (!slots.has(slotId)) slots.set(slotId, g.playerKey || "");
+      else if (!slots.get(slotId) && g.playerKey) slots.set(slotId, g.playerKey);
+    });
+
+    // Pass 2: Propagate or Generate
+    state.groups.forEach(g => {
+      if (!g.teeTime || !g.startHole) {
+        g.playerKey = "";
+        return;
+      }
+      const slotId = `${g.teeTime}|${g.startHole}|${g.startHoleSuffix || ""}`;
+      let key = slots.get(slotId);
+      if (!key) {
+        key = randPlayerKey();
+        slots.set(slotId, key);
+      }
+      g.playerKey = key;
+    });
+  }
+
   // ---- Assignments ----
   function assignTime(groupId, time) {
     const g = state.groups.find((x) => String(x.id) === String(groupId));
@@ -193,6 +235,7 @@
       g.startHoleSuffix = ok ? desired : (suggestSuffix(g.teeTime, g.startHole, groupId) || defaultSuffix());
     }
 
+    syncSlotKeys();
     state.groups = sortForDisplay(state.groups);
     render();
   }
@@ -220,6 +263,7 @@
       // No suffix needed for TeeTimes
     }
 
+    syncSlotKeys();
     state.groups = sortForDisplay(state.groups);
     render();
   }
@@ -238,6 +282,7 @@
       g.startHoleSuffix = s;
     }
 
+    syncSlotKeys();
     state.groups = sortForDisplay(state.groups);
     render();
   }
@@ -250,6 +295,7 @@
         pairingIds: Array.isArray(g.pairingIds) ? g.pairingIds : [],
         teeTime: g.teeTime || null,
         startHole: g.startHole || null,
+        playerKey: g.playerKey || null,
         startHoleSuffix: isShotgun() ? (normSuffix(g.startHoleSuffix) || defaultSuffix()) : "",
       });
     }
@@ -262,81 +308,100 @@
 
     const dirtyCount = recalcDirtyCount();
     applyChrome(); // Update Save button state
+    
+    // Collate slots for rendering
+    const collated = [];
+    const slotMap = new Map();
 
-    el.cards.innerHTML = state.groups.map(renderGroupCard).join("");
+    state.groups.forEach(g => {
+      const slotId = g.teeTime && g.startHole 
+        ? `${g.teeTime}|${g.startHole}|${g.startHoleSuffix || ""}` 
+        : `unscheduled|${g.id}`;
+      
+      if (!slotMap.has(slotId)) {
+        const slotObj = {
+          id: slotId,
+          teeTime: g.teeTime,
+          startHole: g.startHole,
+          startHoleSuffix: g.startHoleSuffix,
+          playerKey: g.playerKey,
+          isDirty: false,
+          groups: []
+        };
+        slotMap.set(slotId, slotObj);
+        collated.push(slotObj);
+      }
+      const s = slotMap.get(slotId);
+      s.groups.push(g);
+      if (isDirty(g)) s.isDirty = true;
+    });
+
+    el.cards.innerHTML = collated.map(renderSlotCard).join("");
 
     // Wire per-card actions
-    state.groups.forEach((g) => {
-      const gid = String(g.id);
-      const timeBtn = document.querySelector(`[data-gt-action="time"][data-gt-id="${CSS.escape(gid)}"]`);
-      if (timeBtn) timeBtn.addEventListener("click", () => openTimePicker(gid));
+    collated.forEach((s) => {
+      const sid = s.id;
+      const timeBtn = el.cards.querySelector(`[data-gt-action="time"][data-gt-sid="${CSS.escape(sid)}"]`);
+      if (timeBtn) timeBtn.addEventListener("click", () => openTimePicker(s.groups[0].id));
 
-      const holeBtn = document.querySelector(`[data-gt-action="hole"][data-gt-id="${CSS.escape(gid)}"]`);
-      if (holeBtn) holeBtn.addEventListener("click", () => openHolePicker(gid));
+      const holeBtn = el.cards.querySelector(`[data-gt-action="hole"][data-gt-sid="${CSS.escape(sid)}"]`);
+      if (holeBtn) holeBtn.addEventListener("click", () => openHolePicker(s.groups[0].id));
 
-      const suffixBtn = document.querySelector(`[data-gt-action="suffix"][data-gt-id="${CSS.escape(gid)}"]`);
-      if (suffixBtn) suffixBtn.addEventListener("click", () => openSuffixPicker(gid));
+      const suffixBtn = el.cards.querySelector(`[data-gt-action="suffix"][data-gt-sid="${CSS.escape(sid)}"]`);
+      if (suffixBtn) suffixBtn.addEventListener("click", () => openSuffixPicker(s.groups[0].id));
     });
 
     if (dirtyCount > 0) setStatus(`${dirtyCount} unsaved change(s).`, "warn");
     else setStatus("READY", "");
   }
 
-  function renderGroupCard(g) {
-    const dirty = isDirty(g);
-    const cardClass = dirty ? "maCard is-dirty" : "maCard";
+  function renderSlotCard(s) {
+    const cardClass = s.isDirty ? "maCard is-dirty" : "maCard";
+    const totalPlayers = s.groups.reduce((sum, g) => sum + (g.size || 0), 0);
 
-    const title = esc(g.displayTitle || "");
-    const size = Number(g.size || 0) || 0;
-
-    let bodyContent = "";
-    // Only use Team layout if we actually have team data (A or B)
-    const hasTeams = g.isFlightGroup && (
-      (Array.isArray(g.teamA) && g.teamA.length > 0) || 
-      (Array.isArray(g.teamB) && g.teamB.length > 0)
-    );
-    
-    if (hasTeams) {
-       // Match Play: Split rows
-       const namesA = (Array.isArray(g.teamA) && g.teamA.length) ? g.teamA.join(" · ") : "";
-       const namesB = (Array.isArray(g.teamB) && g.teamB.length) ? g.teamB.join(" · ") : "";
-       bodyContent = `
-         <div style="margin-bottom:4px; font-size:13px;">
-           <span style="font-weight:600; color:var(--ink);">Team A:</span> 
-           <span style="color:var(--mutedText);">${esc(namesA)}</span>
-         </div>
-         <div style="font-size:13px;">
-           <span style="font-weight:600; color:var(--ink);">Team B:</span> 
-           <span style="color:var(--mutedText);">${esc(namesB)}</span>
-         </div>`;
-    } else {
-       // Stroke Play OR Match with undefined positions: Single list
-       const names = Array.isArray(g.playerLastNames) ? esc(g.playerLastNames.join(" · ")) : "";
-       bodyContent = `<div style="font-size:13px; color:var(--ink);">${names}</div>`;
-    }
-
-    const timeText = g.teeTime ? esc(g.teeTime) : "Set Time";
-    const holeText = g.startHole ? `Hole ${esc(g.startHole)}` : "Hole";
-
+    const timeText = s.teeTime ? esc(s.teeTime) : "Set Time";
+    const holeText = s.startHole ? `Hole ${esc(s.startHole)}` : "Hole";
     const showSuffix = isShotgun();
-    const suffixText = g.startHoleSuffix ? esc(g.startHoleSuffix) : defaultSuffix();
+    const suffixText = s.startHoleSuffix ? esc(s.startHoleSuffix) : defaultSuffix();
+    const keyText = s.playerKey ? `<span class="maPill" style="font-size:10px; padding:2px 6px;">Key: ${esc(s.playerKey)}</span>` : "";
+
+    const groupsHtml = s.groups.map(g => {
+      const hasTeams = g.isFlightGroup && ((g.teamA?.length) || (g.teamB?.length));
+      if (hasTeams) {
+        const namesA = (g.teamA || []).join(" · ");
+        const namesB = (g.teamB || []).join(" · ");
+        return `
+          <div style="margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:4px;">
+            <div style="font-size:11px; font-weight:700; color:var(--mutedText); margin-bottom:2px;">${esc(g.displayTitle)}</div>
+            <div style="font-size:13px;"><span style="font-weight:600;">A:</span> ${esc(namesA)}</div>
+            <div style="font-size:13px;"><span style="font-weight:600;">B:</span> ${esc(namesB)}</div>
+          </div>`;
+      }
+      return `
+        <div style="margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:4px;">
+          <div style="font-size:11px; font-weight:700; color:var(--mutedText); margin-bottom:2px;">${esc(g.displayTitle)}</div>
+          <div style="font-size:13px;">${esc((g.playerLastNames || []).join(" · "))}</div>
+        </div>`;
+    }).join("");
 
     return `
       <section class="${cardClass}">
         <header class="maCard__hdr">
           <div class="maCard__titleRow">
-            <div class="maCard__title">${title} <span style="font-weight:400; opacity:0.7; margin-left:8px; font-size:0.9em;">${size} players</span></div>
+            <div class="maCard__title" style="display:flex; align-items:center; gap:8px;">
+              ${timeText} • ${holeText}${showSuffix ? suffixText : ""}
+              ${keyText}
+            </div>
           </div>
           <div class="maCard__actions">
-             <button type="button" class="btn btnLink" data-gt-action="time" data-gt-id="${esc(g.id)}">${timeText}</button>
-             <button type="button" class="btn btnLink" data-gt-action="hole" data-gt-id="${esc(g.id)}">${holeText}</button>
-             ${showSuffix ? `<button type="button" class="btn btnLink" data-gt-action="suffix" data-gt-id="${esc(g.id)}">Slot ${suffixText}</button>` : ""}
+             <button type="button" class="btn btnLink" data-gt-action="time" data-gt-sid="${esc(s.id)}">Time</button>
+             <button type="button" class="btn btnLink" data-gt-action="hole" data-gt-sid="${esc(s.id)}">Hole</button>
+             ${showSuffix ? `<button type="button" class="btn btnLink" data-gt-action="suffix" data-gt-sid="${esc(s.id)}">Slot</button>` : ""}
           </div>
         </header>
         <div class="maCard__body">
-           <div class="maCard__sub">
-             ${bodyContent}
-           </div>
+           ${groupsHtml}
+           <div style="font-size:11px; color:var(--mutedText); text-align:right;">${totalPlayers} players total</div>
         </div>
       </section>
     `;
