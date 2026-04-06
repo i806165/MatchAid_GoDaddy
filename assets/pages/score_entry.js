@@ -473,7 +473,12 @@ function renderRows() {
     const isManualDeclare = ['DeclarePlayer', 'DeclareManual'].includes(scoringSystem);
     const isAutoDeclare = !isManualDeclare;
     const isDeclared = !!row.declared;
-    const strokeSuperscript = row.strokeSuperscript || '';
+
+    // Handle + Handicaps: If allocation is negative, prefix with '+'
+    let strokeDisplay = '';
+    const alloc = Number(row.strokeAllocation || 0);
+    if (alloc > 0) strokeDisplay = String(alloc);
+    else if (alloc < 0) strokeDisplay = '+' + Math.abs(alloc);
 
     const parNum = Number(row.par || 0);
     const scoreNum = Number(row.rawScore || 0);
@@ -499,7 +504,7 @@ function renderRows() {
           </div>
             <div class="scorePlayerBadgeStatus">
               <span class="scorePlayerBadgeStatus__label">${labelPrefix} ${netDisplay}</span>
-              <span class="scorePlayerBadgeStatus__strokes">${strokeSuperscript}</span>
+              <span class="scorePlayerBadgeStatus__strokes">${strokeDisplay}</span>
             </div>
         </${badgeTag}>
 
