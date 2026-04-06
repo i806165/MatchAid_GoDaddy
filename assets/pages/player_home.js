@@ -50,6 +50,13 @@
   };
   state.uiFilters = cloneFilters(state.filters);
 
+  const FILTER_LABELS = {
+    MYSCHEDULE: 'My Upcoming Games',
+    HISTORY: 'My Past Games Played',
+    FAVORITES: 'Games from my Favorite Admins',
+    OPEN: 'All Available Games',
+    CUSTOM: 'Filtered Results' // For when quickPreset is empty, implying advanced filters
+  };
   // ---- Date Helpers (Admin parity) ----
   function parseYmd(ymd) {
     if (!ymd) return null;
@@ -91,8 +98,13 @@
   }
 
   function applyChrome(){
+    const currentFilterLabel = FILTER_LABELS[state.filters.quickPreset] || FILTER_LABELS.CUSTOM;
+    const gamesCount = state.games.length;
+    const line2Subtitle = (gamesCount === 0 && currentFilterLabel === FILTER_LABELS.CUSTOM) 
+                          ? "No Games Found" : `${currentFilterLabel} (${gamesCount})`;
+
     if (chrome && typeof chrome.setHeaderLines === 'function') {
-      chrome.setHeaderLines(['PLAYER PORTAL', 'Games List', ""]);
+      chrome.setHeaderLines(['PLAYER PORTAL', line2Subtitle, ""]);
     }
     if (chrome && typeof chrome.setActions === 'function') {
       chrome.setActions({
@@ -167,20 +179,17 @@
       isRegistered ? { label: 'Unregister', action: 'unregister', enabled: !regClosedish } : null,
 
       { separator: true }, { separator: true },
-      { separator: true }, { separator: true },
 
       // Information Group
       { label: 'Add Player or Guest', action: 'viewRoster', enabled: true },
       { label: 'Review Game Players', action: 'viewGame', enabled: true },
 
       { separator: true }, { separator: true },
-      { separator: true }, { separator: true },
 
       // Scoring Group
       { label: scoreLabel, action: 'scorehome', enabled: !!scoreId },
       isRegistered ? { label: postLabel, action: 'ghinPost', enabled: !postedId } : null,
 
-      { separator: true }, { separator: true },
       { separator: true }, { separator: true },
 
       // Utility Group
@@ -487,6 +496,7 @@
         state.filters = normalizeFilters(p.filters);
         state.uiFilters = cloneFilters(state.filters);
       }
+      applyChrome(); // Update header with new filter context
       renderCards();
       setStatus(`Ready • ${state.games.length} games`, 'success');
     } catch (err) {
