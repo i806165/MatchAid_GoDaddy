@@ -270,8 +270,11 @@
     const header = document.createElement("div");
     header.className = "maModal__hdr";
     header.innerHTML = `
-      <div class="maModal__title">Auto-Pair</div>
-      <button class="iconBtn btnSecondary closeBtn" type="button" aria-label="Close">
+      <div class="maModal__titles">
+        <div class="maModal__title">Auto-Pair</div>
+        <div class="maModal__subtitle">${unpairedPlayers.length} Unpaired Players</div>
+      </div>
+      <button type="button" class="iconBtn btnSecondary" id="apBtnClose" aria-label="Close">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
       </button>
     `;
@@ -282,7 +285,7 @@
     controls.innerHTML = `
       <div class="maFieldRow" style="margin-top:0;">
         <div class="maField">
-          <label class="maLabel">Tee Times</label>
+          <label class="maLabel">No. of Groups</label>
           <input type="number" id="apTeeTimeCount" class="maTextInput" min="1" max="99" value="${defaults.teeTimeCount}">
         </div>
         <div class="maField">
@@ -343,7 +346,7 @@
     const elMsg = controls.querySelector("#apMsg");
     const elPreview = body.querySelector("#apPreviewList");
 
-    const btnClose = header.querySelector(".closeBtn");
+        const btnClose = header.querySelector("#apBtnClose");
     const btnCancel = footer.querySelector("#apBtnCancel");
     const btnRun = footer.querySelector("#apBtnRun");
     const btnRetry = footer.querySelector("#apBtnRetry");
