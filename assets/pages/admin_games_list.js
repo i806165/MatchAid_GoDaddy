@@ -695,15 +695,20 @@ function applyPreset(presetKey) {
         <button class="actionMenu_item" type="button" data-menuclick="editGame">Edit Game</button>
         <button class="actionMenu_item" type="button" data-menuclick="settings">Adjust Settings</button>
         <div class="actionMenu_divider"></div>
+        <div class="actionMenu_divider"></div>
         <button class="actionMenu_item" type="button" data-menuclick="roster">Select Players</button>
         <button class="actionMenu_item" type="button" data-menuclick="pairings">Pair Players</button>
         <button class="actionMenu_item" type="button" data-menuclick="teetimes">Assign TeeTimes</button>
         <button class="actionMenu_item" type="button" data-menuclick="summary">View Game Summary</button>
-        <button class="actionMenu_item" type="button" data-menuclick="scorecard">Display Scorecard</button>
         <div class="actionMenu_divider"></div>
-        <button class="actionMenu_item" type="button" data-menuclick="calendar">Add to Calendar</button>
         <div class="actionMenu_divider"></div>
-        <button class="actionMenu_item danger" type="button" data-menuclick="deleteGame">Delete Game</button>
+        <button class="actionMenu_item" type="button" data-menuclick="scorecard">Pre-Game Scorecards</button>
+        <div class="actionMenu_divider"></div>
+        <div class="actionMenu_divider"></div>
+        <button class="actionMenu_item" type="button" data-menuclick="calendar">Add Game to Calendar</button>
+        <div class="actionMenu_divider"></div>
+        <div class="actionMenu_divider"></div>
+        <button class="actionMenu_item danger" type="button" data-menuclick="deleteGame">Delete the Game</button>
       </div>
     `;
 
