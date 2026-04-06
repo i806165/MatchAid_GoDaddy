@@ -132,7 +132,25 @@
     if (el.metaHC) el.metaHC.textContent = hc || "—";
   }
 
-  function normalizeRosterForDisplay(records) {
+  function normalizeRosterForPlayerDisplay(records) {
+    const copy = Array.isArray(records) ? records.slice() : [];
+    copy.sort((a, b) => {
+      const lnA = safeString(a.dbPlayers_LName).trim();
+      const lnB = safeString(b.dbPlayers_LName).trim();
+      if (lnA !== lnB) return lnA.localeCompare(lnB);
+
+      const nmA = safeString(a.dbPlayers_Name).trim();
+      const nmB = safeString(b.dbPlayers_Name).trim();
+      if (nmA !== nmB) return nmA.localeCompare(nmB);
+
+      const ghinA = safeString(a.dbPlayers_PlayerGHIN).trim();
+      const ghinB = safeString(b.dbPlayers_PlayerGHIN).trim();
+      return ghinA.localeCompare(ghinB);
+    });
+    return copy;
+  }
+
+  function normalizeRosterForGroupDisplay(records) {
     const copy = Array.isArray(records) ? records.slice() : [];
     copy.sort((a, b) => {
       const teeA = safeString(a.dbPlayers_TeeTime).trim();
@@ -243,7 +261,9 @@
   }
 
   function renderRoster() {
-    const sorted = normalizeRosterForDisplay(state.roster || []);
+    const sorted = (state.scope === "byPlayer")
+      ? normalizeRosterForPlayerDisplay(state.roster || [])
+      : normalizeRosterForGroupDisplay(state.roster || []);
     if (el.emptyHint) el.emptyHint.style.display = sorted.length ? "none" : "block";
 
     // Add class to table for CSS-based column visibility
@@ -484,7 +504,9 @@
 
   // ---- actions ----
   function buildCsvText() {
-    const rows = normalizeRosterForDisplay(state.roster || []);
+    const rows = (state.scope === "byPlayer")
+      ? normalizeRosterForPlayerDisplay(state.roster || [])
+      : normalizeRosterForGroupDisplay(state.roster || []);
     const header = ["Name","Tee","HI","CH","PH","SO","Time","Start","Match","Team","Pair","Pos","ScoreID"];
     const lines = [header.join(",")];
 
@@ -540,7 +562,9 @@
   }
 
   function buildHtmlSummary() {
-    const rows = normalizeRosterForDisplay(state.roster || []);
+    const rows = (state.scope === "byPlayer")
+      ? normalizeRosterForPlayerDisplay(state.roster || [])
+      : normalizeRosterForGroupDisplay(state.roster || []);
     const g = state.game || {};
     const isPairPair = g.dbGames_Competition === 'PairPair';
     
