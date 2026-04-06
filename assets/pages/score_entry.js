@@ -473,6 +473,7 @@ function renderRows() {
     const isManualDeclare = ['DeclarePlayer', 'DeclareManual'].includes(scoringSystem);
     const isAutoDeclare = !isManualDeclare;
     const isDeclared = !!row.declared;
+    const strokeSuperscript = row.strokeSuperscript || '';
 
     const parNum = Number(row.par || 0);
     const scoreNum = Number(row.rawScore || 0);
@@ -496,7 +497,10 @@ function renderRows() {
             <div class="scorePlayerBadgeLast">${lastName}</div>
             ${firstName && firstName !== lastName ? `<div class="scorePlayerBadgeFirst">${firstName}</div>` : ''}
           </div>
-          <div class="scorePlayerBadgeStatus">${labelPrefix} ${netDisplay}</div>
+            <div class="scorePlayerBadgeStatus">
+              <span class="scorePlayerBadgeStatus__label">${labelPrefix} ${netDisplay}</span>
+              <span class="scorePlayerBadgeStatus__strokes">${strokeSuperscript}</span>
+            </div>
         </${badgeTag}>
 
         <div class="scoreScoreBox">
