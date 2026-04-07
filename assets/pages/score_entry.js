@@ -536,6 +536,7 @@ function renderRows() {
 
     bindRowEvents(article, wrapper, { isManualDeclare, isAutoDeclare });
     el.rows.appendChild(article);
+    prevPairingId = pairingId;
   });
 }
 
