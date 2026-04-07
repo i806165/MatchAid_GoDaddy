@@ -324,7 +324,7 @@
       </div>
 
       <div class="scGroupCard__body">
-        <div class="scGroup scDenseA"><table class="scTable" role="table" aria-label="scorecard">${renderHeaderRow(cardState)}<tbody>${buildCourseRows(row.courseInfo, cardState)}${renderPlayerRows(row.players, cardState)}${renderTotalRows(row.columnTotals, cardState)}</tbody></table></div>
+        <div class="scGroup scDenseA"><table class="scTable" role="table" aria-label="scorecard">${renderHeaderRow(cardState)}<tbody>${buildCourseRows(row.courseInfo, cardState)}${renderPlayerRows(row.players, cardState)}${state.mode === 'player' ? '' : renderTotalRows(row.columnTotals, cardState)}</tbody></table></div>
       </div>
     </section>`;
   }
