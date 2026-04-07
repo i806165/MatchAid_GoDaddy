@@ -270,7 +270,12 @@ function renderPlayerRows(players, cardState){
     const furled = cardState.furledSegments?.[getSegmentForHole(holeNumber)];
     if (isTotal) {
       const cell = player?.['h'+holeNumber];
-      const val = (cell && typeof cell === 'object') ? (cell.display?.[state.valueMode] ?? '-') : (cell ?? '-');
+
+      let totalMode = state.valueMode;
+      if (totalMode === 'gross') totalMode = 'grossDiff';
+      if (totalMode === 'net') totalMode = 'netDiff';
+
+      const val = (cell && typeof cell === 'object') ? (cell.display?.[totalMode] ?? '-') : (cell ?? '-');
       return `<td class="${furled ? 'is-furled' : ''}"><div class="scCell scCell--total"><span class="scCellVal">${esc(val)}</span></div></td>`;
     }
     const cell = player?.holes?.['h'+holeNumber] || {};
