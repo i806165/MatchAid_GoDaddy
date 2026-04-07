@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>MatchAid • Golf Game Management</title>
-  <meta name="description" content="MatchAid helps golf groups run games smoothly — from admin setup to player participation." />
+  <meta name="description" content="MatchAid helps golf games run smoothly — from game inception to score management." />
   <meta name="theme-color" content="#07432A" />
 
   <!-- Fonts -->
@@ -36,7 +36,7 @@
       <section class="hero" aria-label="Welcome">
         <h1 class="hero__title">Run better golf games — with less friction.</h1>
         <p class="hero__subtitle">
-          Make your golf games easier to manage, easier for players to participate making the experience enjoyable for all.
+          Make your golf games easier to manage, easier for players to participate, while making the experience enjoyable for all.
         </p>
       </section>
 
@@ -112,10 +112,6 @@
     <footer class="ftr">
       <div class="ftr__inner">
         <p class="fineprint">© <?= date("Y") ?> MatchAid • All rights reserved</p>
-        <p class="fineprint">
-          Need admin access? Go to
-          <a class="link" href="<?= htmlspecialchars($adminPortalHref) ?>">Administrator Portal</a>
-        </p>
       </div>
     </footer>
   </div>
