@@ -268,20 +268,39 @@
       const parts = String(p.playerName || '').split(/\s+/);
       return parts[parts.length - 1] || '';
     }).filter(Boolean).join(' • ');
-    
-    const title = row.pairingID ? `Pairing ${row.pairingID}` : (row.flightID ? `Match ${row.flightID}` : `Group ${row.groupId}`);
-    return `${title}: ${names}`;
+
+    const playerKey = row.gameHeader?.playerKey || row.groupId || '';
+    const pairingIDs = Array.isArray(row.pairingIDs) ? row.pairingIDs.filter(Boolean) : [];
+    const flightIDs = Array.isArray(row.flightIDs) ? row.flightIDs.filter(Boolean) : [];
+    const isPairPair = String(row.gameHeader?.dbGames_Competition || '').trim() === 'PairPair';
+
+    const parts = [];
+    if (playerKey) parts.push(`ScoreCard ${playerKey}`);
+    if (isPairPair && flightIDs.length) parts.push(`Match ${flightIDs.join(', ')}`);
+    if (pairingIDs.length) parts.push(`Pairings ${pairingIDs.join(', ')}`);
+
+    return `${parts.join(' • ')}: ${names}`;
   }
 
   function renderCard(row){
     const gid = row.groupId || row.pairingID || row.flightID || 'row';
     const cardState = ensureCardState(gid);
 
-    const title = state.mode === 'player'
-      ? ((row.players && row.players[0]?.playerName) || 'Player Scorecard')
-      : (row.pairingID ? `Pairing ${row.pairingID}` : (row.flightID ? `Match ${row.flightID}` : `Group ${row.groupId}`));
-    
-    const headerText = [title, row.teeTime].filter(Boolean).join(' • ');
+    const playerKey = row.gameHeader?.playerKey || row.groupId || '';
+    const pairingIDs = Array.isArray(row.pairingIDs) ? row.pairingIDs.filter(Boolean) : [];
+    const flightIDs = Array.isArray(row.flightIDs) ? row.flightIDs.filter(Boolean) : [];
+    const isPairPair = String(row.gameHeader?.dbGames_Competition || '').trim() === 'PairPair';
+
+    const titleParts = [];
+    if (state.mode === 'player') {
+      titleParts.push((row.players && row.players[0]?.playerName) || 'Player Scorecard');
+    } else {
+      if (playerKey) titleParts.push(`ScoreCard ${playerKey}`);
+      if (isPairPair && flightIDs.length) titleParts.push(`Match ${flightIDs.join(', ')}`);
+      if (pairingIDs.length) titleParts.push(`Pairings ${pairingIDs.join(', ')}`);
+    }
+
+    const headerText = [...titleParts, row.teeTime].filter(Boolean).join(' • ');
     const summaryTitle = getCardSummaryTitle(row);
 
     const iconMinus = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;

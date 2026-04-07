@@ -35,7 +35,10 @@ final class ServiceScoreCard {
 
     $rows = [];
     foreach ($groupIds as $id) {
-      $playersInGroup = self::sortPlayersForScorecard($groupsMap[$id] ?? []);
+      $playersInGroup = array_map(fn($p) => array_merge($p, [
+        "dbGames_Competition" => (string)($gameRow["dbGames_Competition"] ?? "")
+      ]), $groupsMap[$id] ?? []);
+      $playersInGroup = self::sortPlayersForScorecard($playersInGroup);
       $rows[] = self::buildGroupRowPayload($gameRow, $playersInGroup, $id, $groupingMode);
     }
 
@@ -61,7 +64,10 @@ final class ServiceScoreCard {
 
     $rows = [];
     foreach ($groupIds as $id) {
-      $playersInGroup = self::sortPlayersForScorecard($groupsMap[$id] ?? []);
+      $playersInGroup = array_map(fn($p) => array_merge($p, [
+        "dbGames_Competition" => (string)($gameRow["dbGames_Competition"] ?? "")
+      ]), $groupsMap[$id] ?? []);
+      $playersInGroup = self::sortPlayersForScorecard($playersInGroup);
       $rows[] = self::buildScoredGroupRowPayload($gameRow, $playersInGroup, (string)$id, $groupingMode, null);
     }
 
@@ -87,7 +93,10 @@ final class ServiceScoreCard {
     $groupsMap = self::buildGroupsMap($players, $groupingMode);
     $selected = self::findSelectedPlayer($players, $selectedPlayerId);
     $realGroupId = $selected ? self::normStr($selected["dbPlayers_PlayerKey"] ?? "", "000") : $selectedPlayerId;
-    $playersInGroup = self::sortPlayersForScorecard($groupsMap[$realGroupId] ?? []);
+    $playersInGroup = array_map(fn($p) => array_merge($p, [
+      "dbGames_Competition" => (string)($gameRow["dbGames_Competition"] ?? "")
+    ]), $groupsMap[$id] ?? []);
+    $playersInGroup = self::sortPlayersForScorecard($playersInGroup);
 
     return [
       "mode" => "group",
@@ -177,18 +186,34 @@ final class ServiceScoreCard {
 
   public static function sortPlayersForScorecard(array $players): array {
     usort($players, function($a, $b) {
-      $aFlight = self::normStr($a["dbPlayers_FlightID"] ?? "", "ZZZ");
-      $bFlight = self::normStr($b["dbPlayers_FlightID"] ?? "", "ZZZ");
-      if ($aFlight !== $bFlight) return strcmp($aFlight, $bFlight);
+      $competition = trim((string)($a["dbGames_Competition"] ?? $b["dbGames_Competition"] ?? ""));
+
+      $aPair = self::normStr($a["dbPlayers_PairingID"] ?? "", "ZZZ");
+      $bPair = self::normStr($b["dbPlayers_PairingID"] ?? "", "ZZZ");
 
       $aPairPos = self::normInt($a["dbPlayers_PairingPos"] ?? null, 999);
       $bPairPos = self::normInt($b["dbPlayers_PairingPos"] ?? null, 999);
+
+      if ($competition === "PairPair") {
+        $aFlight = self::normStr($a["dbPlayers_FlightID"] ?? "", "ZZZ");
+        $bFlight = self::normStr($b["dbPlayers_FlightID"] ?? "", "ZZZ");
+        if ($aFlight !== $bFlight) return strcmp($aFlight, $bFlight);
+
+        $aFlightPos = self::normStr($a["dbPlayers_FlightPos"] ?? "", "Z");
+        $bFlightPos = self::normStr($b["dbPlayers_FlightPos"] ?? "", "Z");
+        if ($aFlightPos !== $bFlightPos) return strcmp($aFlightPos, $bFlightPos);
+      }
+
+      if ($aPair !== $bPair) return strcmp($aPair, $bPair);
       if ($aPairPos !== $bPairPos) return $aPairPos <=> $bPairPos;
 
-      return strcmp(
-        self::normStr($a["dbPlayers_LName"] ?? ""),
-        self::normStr($b["dbPlayers_LName"] ?? "")
-      );
+      $aLast = self::normStr($a["dbPlayers_LName"] ?? "", "");
+      $bLast = self::normStr($b["dbPlayers_LName"] ?? "", "");
+      if ($aLast !== $bLast) return strcmp($aLast, $bLast);
+
+      $aName = self::normStr($a["dbPlayers_Name"] ?? "", "");
+      $bName = self::normStr($b["dbPlayers_Name"] ?? "", "");
+      return strcmp($aName, $bName);
     });
     return $players;
   }
@@ -968,25 +993,29 @@ final class ServiceScoreCard {
     $totals = [];
     $competition = trim((string)($gameRow["dbGames_Competition"] ?? "PairField"));
 
-    if ($competition === "PairPair") {
-      $sides = [];
-      foreach ($players as $p) {
-        $side = self::normStr($p["dbPlayers_FlightPos"] ?? "A", "A");
-        $sides[$side][] = $p;
+    $pairings = [];
+    foreach ($players as $p) {
+      $pairingId = self::normStr($p["dbPlayers_PairingID"] ?? "", "000");
+      $pairings[$pairingId][] = $p;
+    }
+    ksort($pairings);
+
+    foreach ($pairings as $pairingId => $pairPlayers) {
+      $label = "PAIR " . $pairingId . " TOTAL";
+
+      if ($competition === "PairPair") {
+        $flightPos = self::normStr($pairPlayers[0]["dbPlayers_FlightPos"] ?? "", "");
+        if ($flightPos !== "") {
+          $label = "TEAM " . $flightPos . " · PAIR " . $pairingId . " TOTAL";
+        }
       }
-      ksort($sides);
-      foreach ($sides as $label => $sidePlayers) {
-        $totals[] = [
-          "label" => "TEAM " . $label . " TOTAL",
-          "cells" => self::calculateTeamTotals($gameRow, $holes, $sidePlayers)
-        ];
-      }
-    } else {
+
       $totals[] = [
-        "label" => "GROUP TOTAL",
-        "cells" => self::calculateTeamTotals($gameRow, $holes, $players)
+        "label" => $label,
+        "cells" => self::calculateTeamTotals($gameRow, $holes, $pairPlayers)
       ];
     }
+
     return $totals;
   }
 
