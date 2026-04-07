@@ -28,13 +28,6 @@
             <div class="brandText__tag">Golf game management • Admin + Player experience</div>
           </div>
         </div>
-
-        <div class="hdr__right">
-          <div class="pill" title="Environment status">
-            <span class="dot" aria-hidden="true"></span>
-            <span>Home</span>
-          </div>
-        </div>
       </div>
     </header>
 
@@ -43,8 +36,7 @@
       <section class="hero" aria-label="Welcome">
         <h1 class="hero__title">Run better golf games — with less friction.</h1>
         <p class="hero__subtitle">
-          MatchAid supports administrators and players with a clean workflow: games, roster, pairings, tee times, and scoring —
-          all aligned to your club’s process.
+          Make your golf games easier to manage, easier for players to participate making the experience enjoyable for all.
         </p>
       </section>
 
@@ -52,7 +44,7 @@
         <!-- Left: CTAs -->
         <div class="card">
           <div class="card__hdr">
-            <h2 class="card__title">Choose your portal</h2>
+            <h2 class="card__title">Choose your role</h2>
           </div>
           <div class="card__body">
             <p class="copy">
@@ -64,54 +56,54 @@
               <a class="btn btn--primary"
                  href="<?= htmlspecialchars($playerPortalHref) ?>">
                 <span aria-hidden="true">🏌️</span>
-                <span>Player Portal</span>
+                <span>Enter as Game Player</span>
               </a>
 
               <!-- Admin Portal -->
               <a class="btn btn--primary"
                  href="<?= htmlspecialchars($adminPortalHref) ?>">
                 <span aria-hidden="true">🛠️</span>
-                <span>Administrator Portal</span>
+                <span>Enter as Game Admin</span>
               </a>
             </div>
 
             <p class="copy" style="margin-top: 0.2rem;">
-              <span style="color: rgba(205,178,120,0.92); font-weight: 600;">Admin tip:</span>
+              <span style="color: rgba(205,178,120,0.92); font-weight: 600;">Tip:</span>
               Bookmark your Portal for quick access during game day.
             </p>
           </div>
         </div>
 
         <!-- Right: What’s inside -->
-        <aside class="card" aria-label="What MatchAid provides">
+        <aside class="card" aria-label="The MatchAid value proposition">
           <div class="card__hdr">
-            <h2 class="card__title">What MatchAid provides</h2>
+            <h2 class="card__title">The MatchAid value proposition</h2>
           </div>
-          <div class="card__body">
-            <ul class="miniList">
-              <li class="miniItem">
-                <div class="miniIcon" aria-hidden="true">G</div>
-                <div class="miniText">
-                  <strong>Game workflows</strong>
-                  <span>Create and manage games with consistent options and rules.</span>
-                </div>
-              </li>
-              <li class="miniItem">
-                <div class="miniIcon" aria-hidden="true">R</div>
-                <div class="miniText">
-                  <strong>Roster building</strong>
-                  <span>Add players quickly (favorites, GHIN search, non-rated).</span>
-                </div>
-              </li>
-              <li class="miniItem">
-                <div class="miniIcon" aria-hidden="true">P</div>
-                <div class="miniText">
-                  <strong>Pairings + tee times</strong>
-                  <span>Assign pairings and starts with clean, readable screens.</span>
-                </div>
-              </li>
-            </ul>
-          </div>
+            <div class="card__body">
+                <ul class="miniList">
+                    <li class="miniItem">
+                    <div class="miniIcon" aria-hidden="true">A</div>
+                    <div class="miniText">
+                        <strong>Built for game administrators</strong>
+                        <span>Organize golf games and engage players from inception to scoring.</span>
+                    </div>
+                    </li>
+                    <li class="miniItem">
+                    <div class="miniIcon" aria-hidden="true">P</div>
+                    <div class="miniText">
+                        <strong>Friendly to players</strong>
+                        <span>Explore available games, and enroll earlier with better visibility.</span>
+                    </div>
+                    </li>
+                    <li class="miniItem">
+                    <div class="miniIcon" aria-hidden="true">C</div>
+                    <div class="miniText">
+                        <strong>Helpful to club professional staff</strong>
+                        <span>Optimize member participation and improve tee-time utilization.</span>
+                    </div>
+                    </li>
+                </ul>
+            </div>
         </aside>
       </section>
     </main>
