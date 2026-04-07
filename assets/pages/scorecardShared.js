@@ -212,15 +212,59 @@
 
   function totalForPlayer(player, key){ return player?.totals?.[state.valueMode]?.[key] ?? ''; }
 
-  function renderPlayerRows(players, cardState){
-    return (players || []).map((p)=>{
-      const main = `<tr><td class="scName" data-action="toggle-all-segments"><div class="scPLine1">${esc(p.playerName)} <span class="scPHC">${esc(p.playerHC ? '('+p.playerHC+')' : '')}</span></div><div class="scPLine2">${esc(p.tee || '')}</div></td>${renderUnifiedRow(cardState, p, { isPlayer: true, isPlayerRow: true })}</tr>`;
-      const detail = `<tr class="scDetailRow ${cardState.teamExpanded ? '' : 'is-hidden'}"><td class="scName" data-action="toggle-all-segments">Stroke Marks</td>
-        ${renderUnifiedRow(cardState, p, { isStroke: true })}
-      </tr>`;
-      return main + detail;
-    }).join('');
+  function groupPlayersByPairing(players){
+  const groups = [];
+  let currentPairingId = null;
+  let currentPlayers = [];
+
+  (players || []).forEach((p) => {
+    const pairingId = String(p.dbPlayers_PairingID || p.pairingID || '').trim() || '000';
+
+    if (currentPairingId === null) {
+      currentPairingId = pairingId;
+    }
+
+    if (pairingId !== currentPairingId) {
+      groups.push({ pairingId: currentPairingId, players: currentPlayers });
+      currentPairingId = pairingId;
+      currentPlayers = [];
+    }
+
+    currentPlayers.push(p);
+  });
+
+  if (currentPlayers.length) {
+    groups.push({ pairingId: currentPairingId, players: currentPlayers });
   }
+
+  return groups;
+}
+
+function totalsForPairing(totals, pairingId){
+  const needle = `PAIR ${String(pairingId).trim()}`;
+  return (totals || []).filter(row => String(row.label || '').includes(needle));
+}
+
+function renderPairingBlock(pairingId, players, totals, cardState){
+  const playerHtml = renderPlayerRows(players, cardState);
+  if (state.mode === 'player') return playerHtml;
+
+  const pairingTotals = totalsForPairing(totals, pairingId);
+  const totalsHtml = renderTotalRows(pairingTotals, cardState);
+
+  return playerHtml + totalsHtml;
+}
+
+
+function renderPlayerRows(players, cardState){
+  return (players || []).map((p)=>{
+    const main = `<tr><td class="scName" data-action="toggle-all-segments"><div class="scPLine1">${esc(p.playerName)} <span class="scPHC">${esc(p.playerHC ? '('+p.playerHC+')' : '')}</span></div><div class="scPLine2">${esc(p.tee || '')}</div></td>${renderUnifiedRow(cardState, p, { isPlayer: true, isPlayerRow: true })}</tr>`;
+    const detail = `<tr class="scDetailRow ${cardState.teamExpanded ? '' : 'is-hidden'}"><td class="scName" data-action="toggle-all-segments">Stroke Marks</td>
+      ${renderUnifiedRow(cardState, p, { isStroke: true })}
+    </tr>`;
+    return main + detail;
+  }).join('');
+}
 
   function renderPlayerCell(player, holeNumber, isTotal = false, cardState = {}){
     const furled = cardState.furledSegments?.[getSegmentForHole(holeNumber)];
@@ -256,6 +300,13 @@
         <td class="scName" data-action="toggle-all-segments">${esc(label)}</td>
         ${renderUnifiedRow(cardState, row.cells, { isTotal: true })}
       </tr>`;
+    }).join('');
+  }
+
+  function renderPlayerAndTotalRowsByPairing(row, cardState){
+    const groups = groupPlayersByPairing(row.players || []);
+    return groups.map(group => {
+      return renderPairingBlock(group.pairingId, group.players, row.columnTotals || [], cardState);
     }).join('');
   }
 
@@ -324,7 +375,7 @@
       </div>
 
       <div class="scGroupCard__body">
-        <div class="scGroup scDenseA"><table class="scTable" role="table" aria-label="scorecard">${renderHeaderRow(cardState)}<tbody>${buildCourseRows(row.courseInfo, cardState)}${renderPlayerRows(row.players, cardState)}${state.mode === 'player' ? '' : renderTotalRows(row.columnTotals, cardState)}</tbody></table></div>
+      <div class="scGroup scDenseA"><table class="scTable" role="table" aria-label="scorecard">${renderHeaderRow(cardState)}<tbody>${buildCourseRows(row.courseInfo, cardState)}${renderPlayerAndTotalRowsByPairing(row, cardState)}</tbody></table></div>
       </div>
     </section>`;
   }
