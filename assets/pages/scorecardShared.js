@@ -163,7 +163,14 @@
         val = totalForPlayer(rowData, key);
       } else {
         const cell = rowData[key] ?? rowData.cells?.[key];
-        val = (cell && typeof cell === 'object') ? (cell.display?.[state.valueMode] ?? '-') : (cell ?? '-');
+
+        let summaryMode = state.valueMode;
+        if (options.isTotal) {
+          if (summaryMode === 'gross') summaryMode = 'grossDiff';
+          if (summaryMode === 'net') summaryMode = 'netDiff';
+        }
+
+        val = (cell && typeof cell === 'object') ? (cell.display?.[summaryMode] ?? '-') : (cell ?? '-');
       }
     }
     const tag = options.isHeader ? 'th' : 'td';
