@@ -174,7 +174,7 @@ try {
         $r['dbPlayers_TeeTime'] = $sched[0];
         $r['dbPlayers_StartHole'] = $sched[1];
         $r['dbPlayers_StartHoleSuffix'] = $sched[2];
-        $r['dbPlayers_PlayerKey'] = $flightKey[$fid] ?? $r['dbPlayers_PlayerKey'];
+        $r['dbPlayers_PlayerKey'] = $flightKey[$fid] ?? '';
       }
     }
     unset($r);
@@ -191,7 +191,7 @@ try {
         $r['dbPlayers_TeeTime'] = $sched[0];
         $r['dbPlayers_StartHole'] = $sched[1];
         $r['dbPlayers_StartHoleSuffix'] = $sched[2];
-        $r['dbPlayers_PlayerKey'] = $pairingKey[$pid] ?? $r['dbPlayers_PlayerKey'];
+        $r['dbPlayers_PlayerKey'] = $pairingKey[$pid] ?? '';
       }
       // Flight fields ignored in PairField
       $r['dbPlayers_FlightID'] = '';
