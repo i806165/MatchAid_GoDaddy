@@ -25,7 +25,7 @@
           <div class="logoMark" aria-hidden="true">M</div>
           <div class="brandText">
             <div class="brandText__name">MatchAid</div>
-            <div class="brandText__tag">Golf game management • Admin + Player experience</div>
+            <div class="brandText__tag">Golf game management</div>
           </div>
         </div>
       </div>
