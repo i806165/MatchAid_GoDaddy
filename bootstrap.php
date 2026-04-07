@@ -27,6 +27,7 @@ define('MA_ROUTE_LOGIN', '/app/login/login.php');
 define('MA_ROUTE_HOME',  '/');
 define('MA_ROUTE_API_ADMIN_GAMES', '/api/admin_games');
 define('MA_ROUTE_ADMIN_GAMES',     '/app/admin_games/gameslist.php');
+define('MA_ROUTE_PLAYER_HOME',    '/app/player_home/playerhome.php');
 define('MA_ROUTE_API_SESSION',     '/api/session');
 define('MA_ROUTE_API_ROUTER',      '/api/session/pageRouter.php');
 define('MA_ROUTE_API_GHIN',          '/api/GHIN');
