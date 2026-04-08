@@ -62,6 +62,42 @@
     return out;
   }
 
+    function parseTimeToMinutes(timeText) {
+    const raw = String(timeText || "").trim();
+    const m = raw.match(/^(\d{1,2}):(\d{2})\s*([AP]M)$/i);
+    if (!m) return null;
+
+    let hour = parseInt(m[1], 10);
+    const minute = parseInt(m[2], 10);
+    const meridiem = m[3].toUpperCase();
+
+    if (hour === 12) hour = 0;
+    if (meridiem === "PM") hour += 12;
+
+    return hour * 60 + minute;
+  }
+
+  function formatMinutesToTime(totalMinutes) {
+    if (!Number.isFinite(totalMinutes)) return "";
+
+    let mins = totalMinutes % (24 * 60);
+    if (mins < 0) mins += 24 * 60;
+
+    let hour24 = Math.floor(mins / 60);
+    const minute = mins % 60;
+    const meridiem = hour24 >= 12 ? "PM" : "AM";
+
+    let hour12 = hour24 % 12;
+    if (hour12 === 0) hour12 = 12;
+
+    return `${String(hour12).padStart(2, "0")}:${String(minute).padStart(2, "0")} ${meridiem}`;
+  }
+
+  function getDefaultStartTime() {
+    const playTime = String(init.game?.dbGames_PlayTime || "").trim();
+    return playTime || "08:00 AM";
+  }
+
   function toggleMobileTray() {
     const isOpen = el.panelsWrap.classList.toggle("is-tray-open");
     if (el.btnTrayOpen) el.btnTrayOpen.textContent = isOpen ? "Show Slots" : "Add Pairs";
@@ -80,20 +116,23 @@
     const selectedIds = Array.from(state.selectedBlockIds);
     const blocks = selectedIds.map(id => getBlockPlayers(id));
     
-    let currentSlotId = state.targetSlotId || getNextAvailableSlot();
+        let currentSlotId = state.targetSlotId || getNextAvailableSlot();
 
     blocks.forEach(block => {
       const blockCount = block.length;
-      const slotPlayers = getPlayersInSlot(currentSlotId);
-      const currentCount = slotPlayers.length;
 
-      // Overflow Logic
-      if (currentCount + blockCount > 4) {
-        if (state.editMode && !isShotgun()) {
+      if (!state.editMode) {
+        let slotPlayers = getPlayersInSlot(currentSlotId);
+        while (slotPlayers.length + blockCount > 4) {
+          currentSlotId = getNextAvailableSlot(currentSlotId);
+          slotPlayers = getPlayersInSlot(currentSlotId);
+        }
+      } else {
+        const slotPlayers = getPlayersInSlot(currentSlotId);
+        if (slotPlayers.length + blockCount > 4) {
           if (MA.setStatus) MA.setStatus("Tee Time slot is full (max 4).", "warn");
           return;
         }
-        currentSlotId = getNextAvailableSlot(currentSlotId);
       }
 
       const slotMeta = parseSlotId(currentSlotId);
@@ -107,8 +146,9 @@
         markDirty(p.playerGHIN);
       });
 
-      // For FIFO, if we filled this slot or moved to next, keep the chain going
-      if (!state.editMode) currentSlotId = getNextAvailableSlot(currentSlotId);
+      if (!state.editMode) {
+        currentSlotId = getNextAvailableSlot(currentSlotId);
+      }
     });
 
     state.selectedBlockIds.clear();
@@ -120,18 +160,54 @@
 
   function getNextAvailableSlot(afterSlotId) {
     if (!afterSlotId) {
-      // Return current highest or default
-      return isShotgun() ? "08:00 AM|1|A" : "08:00 AM|1|";
+      if (isShotgun()) {
+        return "08:00 AM|1|A";
+      }
+
+      const assignedSlotIds = Array.from(new Set(
+        state.players
+          .filter(p => p.playerKey && p.teeTime)
+          .map(p => `${p.teeTime}|${p.startHole || "1"}|${p.startHoleSuffix || ""}`)
+      ));
+
+      if (!assignedSlotIds.length) {
+        return `${getDefaultStartTime()}|1|`;
+      }
+
+      assignedSlotIds.sort((a, b) => {
+        const ma = parseSlotId(a);
+        const mb = parseSlotId(b);
+        const ta = parseTimeToMinutes(ma.time);
+        const tb = parseTimeToMinutes(mb.time);
+
+        if (ta !== tb) return (ta ?? 0) - (tb ?? 0);
+        return parseInt(ma.hole || "1", 10) - parseInt(mb.hole || "1", 10);
+      });
+
+      const highestSlotId = assignedSlotIds[assignedSlotIds.length - 1];
+      const highestPlayers = getPlayersInSlot(highestSlotId);
+
+      if (highestPlayers.length < 4) {
+        return highestSlotId;
+      }
+
+      return getNextAvailableSlot(highestSlotId);
     }
+
     const meta = parseSlotId(afterSlotId);
+
     if (isShotgun()) {
-      const nextSuffix = String.fromCharCode(meta.suffix.charCodeAt(0) + 1);
+      const nextSuffix = String.fromCharCode((meta.suffix || "A").charCodeAt(0) + 1);
       if (nextSuffix <= "D") return `${meta.time}|${meta.hole}|${nextSuffix}`;
-      return `${meta.time}|${parseInt(meta.hole) + 1}|A`;
-    } else {
-      // Tee Time increment
-      return "Next Time|1|"; // Placeholder for interval math
+      return `${meta.time}|${parseInt(meta.hole, 10) + 1}|A`;
     }
+
+    const startMinutes = parseTimeToMinutes(meta.time);
+    const intervalMinutes = parseInt(state.interval, 10) || 9;
+    const nextMinutes = (startMinutes ?? parseTimeToMinutes(getDefaultStartTime()) ?? 480) + intervalMinutes;
+    const nextTime = formatMinutesToTime(nextMinutes);
+
+    return `${nextTime}|1|`;
   }
 
   function parseSlotId(sid) {
@@ -200,8 +276,11 @@
     });
 
     const sortedSlots = Object.values(slots).sort((a, b) => {
-      if (a.meta.time !== b.meta.time) return a.meta.time.localeCompare(b.meta.time);
-      return parseInt(a.meta.hole) - parseInt(b.meta.hole);
+      const ta = parseTimeToMinutes(a.meta.time);
+      const tb = parseTimeToMinutes(b.meta.time);
+
+      if (ta !== tb) return (ta ?? 0) - (tb ?? 0);
+      return parseInt(a.meta.hole || "1", 10) - parseInt(b.meta.hole || "1", 10);
     });
 
     if (!sortedSlots.length) {
@@ -395,15 +474,12 @@
       if (!a) return;
       const action = a.dataset.action;
 
-      if (action === "selectBlock") {
+     if (action === "selectBlock") {
         const id = a.dataset.id;
         if (state.selectedBlockIds.has(id)) state.selectedBlockIds.delete(id);
         else state.selectedBlockIds.add(id);
-        renderTray();
-        const canAssign = state.selectedBlockIds.size > 0;
-        el.btnAssign.disabled = !canAssign;
-        el.btnDrawerAssign.disabled = !canAssign;
-      }
+        render();
+        }
 
       if (action === "toggle-collapse") {
         const card = a.closest(".gpGroupCard");
