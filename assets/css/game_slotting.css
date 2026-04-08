@@ -126,6 +126,10 @@
 .gpGroupCard.is-collapsed .gpGroupCard__body { display: none; }
 .gpGroupCard.is-collapsed .gpGroupCard__hdr--collapsed { display: flex; }
 
+.gpMobileAddBtn {
+  display: none;
+}
+
 /* Card Rows */
 .gpCardRow {
   display: flex;
@@ -233,19 +237,22 @@
 }
 
 /* Tray Master Clear */
-.maPage--slotting .maPanel__controls {
+.maPage--slotting .gsTrayPanel .maPanel__controls {
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 8px;
 }
 
-.maPage--slotting .maPanel__controls .gpMasterCheck {
+.maPage--slotting .gsTrayPanel .maPanel__controls .gpMasterCheck {
   flex: 0 0 auto;
   margin-right: 0;
 }
 
-.maPage--slotting .maPanel__controls .gpInputClearWrap {
+.maPage--slotting .gsTrayPanel .maPanel__controls .gpInputClearWrap {
   flex: 1 1 auto;
+  width: auto;
   min-width: 0;
 }
 

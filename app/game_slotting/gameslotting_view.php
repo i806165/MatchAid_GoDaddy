@@ -82,7 +82,7 @@
             </button>
             <div class="gpPanelHdr__title">SLOTTED GROUPS</div>
             <div class="gpPanelHdr__actions">
-              <button class="btn btnSecondary gpMobileAddBtn" id="gsBtnTrayOpen" type="button">Add to Slot</button>
+              <button class="btn btnSecondary gpMobileAddBtn" id="gsBtnTrayOpen" type="button">Add Slot</button>
             </div>
           </div>
         </header>
