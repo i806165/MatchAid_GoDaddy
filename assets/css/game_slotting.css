@@ -1,13 +1,244 @@
-/* /assets/css/game_slotting.css */
+/*
+   /assets/css/game_slotting.css
+   Game Slotting page
+   Policy: reuse ma_shared.css classes; mirror game_pairings visual language.
+   No ID selectors except for specific overrides.
+*/
+
 .maPage--slotting {
   overflow: hidden;
 }
 
-/* Reuse mirroring logic from game_pairings */
-.gsTrayPanel {
+/* Panels */
+.gsTrayPanel, .maPanel--primary {
   height: 100%;
   min-height: 0;
 }
+
+/* Panel Header Treatment */
+.maPage--slotting .maPanel__hdr {
+  background: var(--brandSecondary);
+  color: var(--brandSecondaryText);
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.gpPanelHdr {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  position: relative;
+}
+
+.gpPanelHdr__title {
+  font-size: 14px;
+  font-weight: 950;
+  letter-spacing: .2px;
+  color: var(--brandSecondaryText);
+  flex: 1;
+  text-align: center;
+}
+
+.gpPanelHdr__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  position: absolute;
+  right: 10px;
+}
+
+.gpPanelHdr__left {
+  display: flex;
+  position: absolute;
+  left: 10px;
+}
+
+.gpCount {
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.9);
+}
+
+/* Tray Footer & Hints */
+.gpFooter {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.gpFooter__left {
+  min-width: 0;
+  flex: 1;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--mutedText);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gpHint {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--mutedText);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Group Cards */
+.gpGroupCard {
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--cardRadius);
+  background: #fff;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.gpGroupCard__hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--borderSubtle);
+  background: rgba(7,67,42,.05);
+}
+
+.gpGroupCard__title {
+  font-size: 13px;
+  font-weight: 950;
+  color: var(--ink);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Expand/Collapse Rules */
+.gpGroupCard .gpGroupCard__hdr--collapsed { display: none; }
+.gpGroupCard.is-collapsed .gpGroupCard__hdr--expanded,
+.gpGroupCard.is-collapsed .gpGroupCard__body { display: none; }
+.gpGroupCard.is-collapsed .gpGroupCard__hdr--collapsed { display: flex; }
+
+/* Card Rows */
+.gpCardRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--borderSubtle);
+}
+.gpCardRow.is-selected {
+  background: rgba(11,95,255,.08);
+}
+.gpCardRow:last-child { border-bottom: none; }
+
+.gpCardRow__info {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.gpCardRow__info.is-expanded {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  cursor: default;
+}
+
+/* Assign Button: White bg, Green outline/text (Parity with Pairings) */
+#gsBtnAssign,
+#gsBtnDrawerAssign {
+  background: #ffffff;
+  color: var(--brandSecondary);
+  border: 1px solid var(--brandSecondary);
+  font-weight: 800;
+  border-radius: 999px;
+}
+#gsBtnAssign:hover,
+#gsBtnDrawerAssign:hover {
+  background: #f0fdf4;
+}
+
+/* Tray Row Selection */
+.maListRow.is-selected {
+  background: rgba(11,95,255,.08);
+}
+
+.gpRowCheck {
+  width: var(--btnHeight);
+  height: var(--btnHeight);
+  border-radius: var(--radiusSq);
+  border: 1px solid var(--borderSubtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex: 0 0 auto;
+  margin-right: 10px;
+  background: #fff;
+}
+.gpRowCheck.is-selected {
+  background: var(--brandAccent);
+  border-color: var(--brandAccent);
+}
+
+.gpMasterCheck {
+  width: var(--btnHeight); height: var(--btnHeight);
+  border-radius: var(--radiusSq);
+  border: 1px solid var(--borderSubtle);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  cursor: pointer;
+  margin-right: 8px;
+  flex: 0 0 auto;
+  background: #fff;
+}
+.gpMasterCheck.has-selection {
+  background: var(--brandAccent);
+  border-color: var(--brandAccent);
+}
+.gpMasterCheck svg {
+  fill: currentColor;
+  width: 14px; height: 14px;
+}
+
+/* Tray Item Layout */
+.gpUnpairedItem {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 6px;
+  width: 100%;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.gpUnpairedItem__primary { font-weight: 700; color: var(--ink); white-space: nowrap; }
+.gpUnpairedItem__secondary { font-weight: 400; color: var(--mutedText); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+@media (max-width: 600px) {
+  .gpUnpairedItem { flex-direction: column; align-items: flex-start; gap: 2px; }
+}
+
+/* Tray Search */
+.gpInputClearWrap { position: relative; display: flex; align-items: center; width: 100%; }
+.gpInputClearWrap .maTextInput { padding-right: 30px; }
+.gpInputClearWrap .clearBtn {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  width: 24px; height: 24px; border: none; background: transparent;
+  color: var(--mutedText); font-size: 20px; line-height: 1; cursor: pointer;
+  border-radius: 50%;
+}
+.gpInputClearWrap .clearBtn.isHidden { display: none; }
 
 /* Mobile Drawer Logic */
 @media (max-width: 900px) {
@@ -16,6 +247,10 @@
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
+
+    border-left: none;
+    border-bottom: none;
+    margin-bottom: 0;
   }
 
   #gsTabPanels.is-tray-open .gsTrayPanel {
@@ -26,9 +261,12 @@
   #gsTabPanels.is-tray-open .maPanel--primary {
     display: none;
   }
+
+  .gpMobileAddBtn { display: inline-flex; }
+  .gpPanelHdr__left { display: flex; }
 }
 
-/* Card states */
+/* Slotting Specifics */
 .gpGroupCard.is-target {
   border: 2px solid var(--brandAccent);
   box-shadow: 0 0 8px rgba(11, 95, 255, 0.2);

@@ -35,11 +35,27 @@
     busy: false
   };
 
+  // ---- Icons ----
+  const ICONS = {
+    minus: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
+    plus: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
+    check: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
+    unpair: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h2a5 5 0 0 1 0 10h-2m-6 0H7A5 5 0 0 1 7 7h2"></path><line x1="8" y1="12" x2="16" y2="12"></line><line x1="2" y1="2" x2="22" y2="22"></line></svg>`,
+    edit: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>`,
+    del: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`
+  };
+
   // ---- Helpers ----
   function isPairPair() { return state.competition === "PairPair"; }
   function isShotgun() { return state.toMethod === "Shotgun"; }
   function setBusy(on) { state.busy = !!on; }
   
+  function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    }[c]));
+  }
+
   function randPlayerKey(len = 6) {
     const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ123456789';
     let out = '';
@@ -49,7 +65,7 @@
 
   function toggleMobileTray() {
     const isOpen = el.panelsWrap.classList.toggle("is-tray-open");
-    if (el.btnTrayOpen) el.btnTrayOpen.textContent = isOpen ? "Show Slots" : "Add to Slot";
+    if (el.btnTrayOpen) el.btnTrayOpen.textContent = isOpen ? "Show Slots" : "Add Pairs";
   }
 
   function markDirty(ghin) {
@@ -165,7 +181,7 @@
       return `
         <div class="maListRow ${sel ? "is-selected" : ""}" data-action="selectBlock" data-id="${id}">
           <div class="gpRowCheck ${sel ? "is-selected" : ""}">
-            ${sel ? `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>` : ""}
+            ${sel ? ICONS.check : ""}
           </div>
           <div class="gpUnpairedItem">
             <div class="gpUnpairedItem__primary">${isPairPair() ? "Match" : "Group"} ${id}</div>
@@ -212,9 +228,9 @@
         return `
           <div class="gpCardRow">
             <button type="button" class="iconBtn btnPrimary gpCardRow__del" data-action="unslotBlock" data-id="${bid}" title="Remove">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              ${ICONS.del}
             </button>
-            <div class="gpCardRow__info">${isPairPair() ? "Match" : "Pair"} ${bid}: ${names}</div>
+            <div class="gpCardRow__info" data-action="toggle-truncate" title="${esc(names)}">${isPairPair() ? "Match" : "Pair"} ${bid}: ${names}</div>
           </div>`;
       }).join("");
 
@@ -222,21 +238,21 @@
         <div class="gpGroupCard ${isTarget ? "is-target" : ""} ${state.allCollapsed ? "is-collapsed" : ""}" data-sid="${sid}">
           <div class="gpGroupCard__hdr gpGroupCard__hdr--expanded">
             <button class="iconBtn btnSecondary" type="button" data-action="toggle-collapse">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              ${ICONS.minus}
             </button>
             <div class="gpGroupCard__title">${title} • <small>${slot.key}</small></div>
             <div class="gpCardActions">
               <button class="iconBtn btnSecondary" type="button" data-action="unslotCard" data-sid="${sid}" title="UnSlot">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h2a5 5 0 0 1 0 10h-2m-6 0H7A5 5 0 0 1 7 7h2"></path><line x1="8" y1="12" x2="16" y2="12"></line><line x1="2" y1="2" x2="22" y2="22"></line></svg>
+                ${ICONS.unpair}
               </button>
               <button class="iconBtn btnSecondary" type="button" data-action="editSlot" data-sid="${sid}" title="Edit">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                ${ICONS.edit}
               </button>
             </div>
           </div>
           <div class="gpGroupCard__hdr gpGroupCard__hdr--collapsed">
              <button class="iconBtn btnSecondary" type="button" data-action="toggle-collapse">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              ${ICONS.plus}
             </button>
             <div class="gpGroupCard__title">${title} (${slot.players.length} players)</div>
           </div>
@@ -248,10 +264,40 @@
   function render() {
     renderTray();
     renderCanvas();
+    setHints();
     
     const canAssign = state.selectedBlockIds.size > 0;
     el.btnAssign.disabled = !canAssign;
     el.btnDrawerAssign.disabled = !canAssign;
+
+    // Update Master Check visual state
+    if (el.trayMasterCheck) {
+      if (state.selectedBlockIds.size > 0) {
+        el.trayMasterCheck.classList.add("has-selection");
+        el.trayMasterCheck.innerHTML = ICONS.minus;
+      } else {
+        el.trayMasterCheck.classList.remove("has-selection");
+        el.trayMasterCheck.innerHTML = "";
+      }
+    }
+
+    // Update Toggle All Icon
+    if (el.btnToggleAll) {
+      el.btnToggleAll.innerHTML = state.allCollapsed ? ICONS.plus : ICONS.minus;
+      el.btnToggleAll.title = state.allCollapsed ? "Expand All" : "Collapse All";
+    }
+  }
+
+  function setHints() {
+    const hintEl = document.getElementById("gsTrayHint");
+    if (!hintEl) return;
+    if (state.editMode) {
+      hintEl.textContent = `EDIT MODE: Targetting slot ${parseSlotId(state.targetSlotId).hole}. Select pairings to add.`;
+    } else if (state.selectedBlockIds.size > 0) {
+      hintEl.textContent = `Selected ${state.selectedBlockIds.size}. Tap Assign >> to slot.`;
+    } else {
+      hintEl.textContent = "Select blocks from tray to slot onto course.";
+    }
   }
 
   // ---- Actions ----
@@ -365,6 +411,13 @@
       if (action === "toggle-collapse") {
         const card = a.closest(".gpGroupCard");
         card.classList.toggle("is-collapsed");
+      }
+
+      if (action === "toggle-truncate") {
+        // Only toggle if the text is actually overflowing
+        if (a.scrollWidth > a.clientWidth) {
+          a.classList.toggle("is-expanded");
+        }
       }
 
       if (action === "editSlot") {

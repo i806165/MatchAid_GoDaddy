@@ -98,14 +98,21 @@
   <?php require MA_INCLUDES . "/chromeFooter.php"; ?>
 
   <!-- Removal Confirmation Dialog -->
-  <dialog id="gsConfirmDialog" class="maModal" style="max-width:320px;">
-    <div class="maModal__body" style="padding:20px; text-align:center;">
-      <p id="gsConfirmMsg">Remove this pairing from the slot?</p>
-      <div class="maModal__ftrActions" style="margin-top:20px; justify-content:center;">
-        <button class="btn btnSecondary" value="cancel" type="button">Cancel</button>
-        <button class="btn btnPrimary" value="confirm" type="button">Remove</button>
+  <dialog id="gsConfirmDialog" class="maModalOverlay">
+    <section class="maModal" style="max-width:320px;">
+      <header class="maModal__hdr">
+        <div class="maModal__title">Confirm Removal</div>
+      </header>
+      <div class="maModal__body" style="text-align:center;">
+        <p id="gsConfirmMsg" class="text--body">Remove this pairing from the slot?</p>
       </div>
-    </div>
+      <footer class="maModal__ftr">
+        <div class="maModal__ftrActions" style="justify-content:center;">
+          <button class="btn btnSecondary" value="cancel" type="button">Cancel</button>
+          <button class="btn btnPrimary" value="confirm" type="button">Remove</button>
+        </div>
+      </footer>
+    </section>
   </dialog>
 
   <script src="/assets/js/ma_shared.js"></script>
