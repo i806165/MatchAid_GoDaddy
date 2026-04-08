@@ -2,7 +2,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <?php require MA_INCLUDES . "/head.php"; ?>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MatchAid • Game Slotting</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/assets/css/ma_shared.css">
   <link rel="stylesheet" href="/assets/css/game_slotting.css">
   <script>
     window.MA = window.MA || {};
@@ -100,6 +108,8 @@
     </div>
   </dialog>
 
+  <script src="/assets/js/ma_shared.js"></script>
+  <script src="/assets/modules/actions_menu.js"></script>
   <script src="/assets/pages/game_slotting.js"></script>
 </body>
 </html>
