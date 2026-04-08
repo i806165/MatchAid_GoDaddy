@@ -54,7 +54,8 @@ $ROUTES = [
     "settings"    => "/app/game_settings/gamesettings.php",
     "roster"   => "/app/game_players/gameplayers.php",
     "pairings" => "/app/game_pairings/gamepairings.php",
-    "teetimes" => "/app/game_times/gametimes.php",
+    //"teetimes" => "/app/game_times/gametimes.php",
+    "teetimes" => "/app/game_times/gameslotting.php",
     "summary"  => "/app/game_summary/gamesummary.php",
     
     "scorecard"   => "/app/game_scorecards/scorecards.php",
