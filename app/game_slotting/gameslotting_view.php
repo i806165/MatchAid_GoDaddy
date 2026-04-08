@@ -41,9 +41,10 @@
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
             </div>
-            <div class="gpPanelHdr__title">UNCARDED</div>
+            <div class="gpPanelHdr__title">UN-SLOTTED GROUPS</div>
             <div class="gpPanelHdr__actions">
               <div class="gpCount" id="gsTrayCount">0</div>
+              <button class="btn btnSecondary" id="gsBtnAssign" type="button">Assign &gt;&gt;</button>
               <div class="gpMasterCheck" id="gsTrayMasterCheck"></div>
             </div>
           </div>
@@ -66,8 +67,7 @@
               <div class="gpHint" id="gsTrayHint">Select blocks to slot.</div>
             </div>
             <div class="gpFooter__right">
-              <button class="btn btnSecondary gpMobileAddBtn" id="gsBtnDrawerAssign" type="button">Assign</button>
-              <button class="btn btnSecondary" id="gsBtnAssign" type="button">Assign &gt;&gt;</button>
+              <!-- Actions moved to header -->
             </div>
           </div>
         </footer>
@@ -80,7 +80,7 @@
             <button class="iconBtn btnSecondary gpGlobalToggleBtn" id="gsBtnToggleAll" type="button" title="Collapse All">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             </button>
-            <div class="gpPanelHdr__title">COURSE SLOTS</div>
+            <div class="gpPanelHdr__title">SLOTTED GROUPS</div>
             <div class="gpPanelHdr__actions">
               <button class="btn btnSecondary gpMobileAddBtn" id="gsBtnTrayOpen" type="button">Add to Slot</button>
             </div>

@@ -14,7 +14,6 @@
     traySearchClear: document.getElementById("gsTraySearchClear"),
     trayMasterCheck: document.getElementById("gsTrayMasterCheck"),
     btnAssign: document.getElementById("gsBtnAssign"),
-    btnDrawerAssign: document.getElementById("gsBtnDrawerAssign"),
     btnTrayOpen: document.getElementById("gsBtnTrayOpen"),
     btnToggleAll: document.getElementById("gsBtnToggleAll"),
     panelsWrap: document.getElementById("gsTabPanels"),
@@ -268,7 +267,6 @@
     
     const canAssign = state.selectedBlockIds.size > 0;
     el.btnAssign.disabled = !canAssign;
-    el.btnDrawerAssign.disabled = !canAssign;
 
     // Update Master Check visual state
     if (el.trayMasterCheck) {
@@ -363,7 +361,6 @@
   // ---- Event Wiring ----
   function wireEvents() {
     el.btnAssign.onclick = assignSelection;
-    el.btnDrawerAssign.onclick = assignSelection;
     el.btnTrayOpen.onclick = toggleMobileTray;
     
     el.mobileCloseBtns.forEach(btn => {

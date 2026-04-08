@@ -48,8 +48,9 @@
   right: 10px;
 }
 
+/* Mobile Close Button (Left) - Hidden on desktop */
 .gpPanelHdr__left {
-  display: flex;
+  display: none;
   position: absolute;
   left: 10px;
 }
@@ -156,16 +157,18 @@
 }
 
 /* Assign Button: White bg, Green outline/text (Parity with Pairings) */
-#gsBtnAssign,
-#gsBtnDrawerAssign {
+#gsBtnAssign {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11px;
   background: #ffffff;
   color: var(--brandSecondary);
   border: 1px solid var(--brandSecondary);
-  font-weight: 800;
+  font-weight: 900;
   border-radius: 999px;
+  margin-right: 4px;
 }
-#gsBtnAssign:hover,
-#gsBtnDrawerAssign:hover {
+#gsBtnAssign:hover {
   background: #f0fdf4;
 }
 
