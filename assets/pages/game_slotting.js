@@ -176,15 +176,7 @@
         return `${getDefaultStartTime()}|1|`;
       }
 
-      assignedSlotIds.sort((a, b) => {
-        const ma = parseSlotId(a);
-        const mb = parseSlotId(b);
-        const ta = parseTimeToMinutes(ma.time);
-        const tb = parseTimeToMinutes(mb.time);
-
-        if (ta !== tb) return (ta ?? 0) - (tb ?? 0);
-        return parseInt(ma.hole || "1", 10) - parseInt(mb.hole || "1", 10);
-      });
+      assignedSlotIds.sort((a, b) => compareSlotMeta(parseSlotId(a), parseSlotId(b)));
 
       const highestSlotId = assignedSlotIds[assignedSlotIds.length - 1];
       const highestPlayers = getPlayersInSlot(highestSlotId);
@@ -230,7 +222,7 @@
     return state.players.filter(p => (isPairPair() ? p.flightId : p.pairingId) === blockId);
   }
 
-    function slotSuffixRank(suffix) {
+  function slotSuffixRank(suffix) {
     const s = String(suffix || "").trim().toUpperCase();
     if (!s) return 0;
     return s.charCodeAt(0) - 64; // A=1, B=2, ...
