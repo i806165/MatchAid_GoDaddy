@@ -120,6 +120,18 @@
   text-overflow: ellipsis;
 }
 
+.gpCardActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gpCardActions .iconBtn[disabled] {
+  opacity: 0.45;
+  cursor: default;
+  pointer-events: none;
+}
+
 /* Expand/Collapse Rules */
 .gpGroupCard .gpGroupCard__hdr--collapsed { display: none; }
 .gpGroupCard.is-collapsed .gpGroupCard__hdr--expanded,

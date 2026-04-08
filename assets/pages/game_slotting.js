@@ -41,7 +41,9 @@
     check: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`,
     unpair: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h2a5 5 0 0 1 0 10h-2m-6 0H7A5 5 0 0 1 7 7h2"></path><line x1="8" y1="12" x2="16" y2="12"></line><line x1="2" y1="2" x2="22" y2="22"></line></svg>`,
     edit: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>`,
-    del: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`
+    del: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
+    up: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>`,
+    down: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`
   };
 
   // ---- Helpers ----
@@ -100,7 +102,7 @@
 
   function toggleMobileTray() {
     const isOpen = el.panelsWrap.classList.toggle("is-tray-open");
-    if (el.btnTrayOpen) el.btnTrayOpen.textContent = isOpen ? "Show Slots" : "Add Pairs";
+    if (el.btnTrayOpen) el.btnTrayOpen.textContent = isOpen ? "Show Slots" : "Add Slot";
   }
 
   function markDirty(ghin) {
@@ -228,6 +230,221 @@
     return state.players.filter(p => (isPairPair() ? p.flightId : p.pairingId) === blockId);
   }
 
+    function slotSuffixRank(suffix) {
+    const s = String(suffix || "").trim().toUpperCase();
+    if (!s) return 0;
+    return s.charCodeAt(0) - 64; // A=1, B=2, ...
+  }
+
+  function compareSlotMeta(a, b) {
+    if (isShotgun()) {
+      const holeA = parseInt(a.hole || "0", 10);
+      const holeB = parseInt(b.hole || "0", 10);
+      if (holeA !== holeB) return holeA - holeB;
+      return slotSuffixRank(a.suffix) - slotSuffixRank(b.suffix);
+    }
+
+    const ta = parseTimeToMinutes(a.time);
+    const tb = parseTimeToMinutes(b.time);
+    if (ta !== tb) return (ta ?? 0) - (tb ?? 0);
+
+    const holeA = parseInt(a.hole || "0", 10);
+    const holeB = parseInt(b.hole || "0", 10);
+    if (holeA !== holeB) return holeA - holeB;
+
+    return slotSuffixRank(a.suffix) - slotSuffixRank(b.suffix);
+  }
+
+  function getOccupiedSlots() {
+    const slots = {};
+    state.players.filter(p => p.playerKey).forEach(p => {
+      const sid = `${p.teeTime}|${p.startHole}|${p.startHoleSuffix}`;
+      if (!slots[sid]) {
+        slots[sid] = {
+          sid,
+          meta: parseSlotId(sid),
+          players: []
+        };
+      }
+      slots[sid].players.push(p);
+    });
+
+    return Object.values(slots).sort((a, b) => compareSlotMeta(a.meta, b.meta));
+  }
+
+  function getCardPlayersBySid(sid) {
+    return state.players.filter(p => `${p.teeTime}|${p.startHole}|${p.startHoleSuffix}` === sid);
+  }
+
+  function getShotgunOpenTarget(currentMeta, direction) {
+    const currentHole = parseInt(currentMeta.hole || "0", 10);
+    const currentSuffixRank = slotSuffixRank(currentMeta.suffix || "A");
+    const suffixes = ["A", "B", "C", "D"];
+
+    if (direction === "up") {
+      for (let rank = currentSuffixRank - 1; rank >= 1; rank--) {
+        const suffix = suffixes[rank - 1];
+        const sid = `${currentMeta.time}|${currentHole}|${suffix}`;
+        if (getPlayersInSlot(sid).length === 0) return sid;
+      }
+
+      for (let hole = currentHole - 1; hole >= 1; hole--) {
+        for (const suffix of suffixes) {
+          const sid = `${currentMeta.time}|${hole}|${suffix}`;
+          if (getPlayersInSlot(sid).length === 0) return sid;
+        }
+      }
+      return null;
+    }
+
+    for (let rank = currentSuffixRank + 1; rank <= suffixes.length; rank++) {
+      const suffix = suffixes[rank - 1];
+      const sid = `${currentMeta.time}|${currentHole}|${suffix}`;
+      if (getPlayersInSlot(sid).length === 0) return sid;
+    }
+
+    for (let hole = currentHole + 1; hole <= 18; hole++) {
+      for (const suffix of suffixes) {
+        const sid = `${currentMeta.time}|${hole}|${suffix}`;
+        if (getPlayersInSlot(sid).length === 0) return sid;
+      }
+    }
+
+    return null;
+  }
+
+  function getTeeTimeOpenTarget(currentMeta, direction) {
+    const currentMinutes = parseTimeToMinutes(currentMeta.time);
+    const intervalMinutes = parseInt(state.interval, 10) || 9;
+    if (!Number.isFinite(currentMinutes)) return null;
+
+    let probe = currentMinutes + (direction === "up" ? -intervalMinutes : intervalMinutes);
+
+    while (probe >= 0 && probe < (24 * 60)) {
+      const sid = `${formatMinutesToTime(probe)}|1|`;
+      if (getPlayersInSlot(sid).length === 0) return sid;
+      probe += (direction === "up" ? -intervalMinutes : intervalMinutes);
+    }
+
+    return null;
+  }
+
+  function findPromoteTarget(sid, direction) {
+    const occupied = getOccupiedSlots();
+    const idx = occupied.findIndex(x => x.sid === sid);
+    if (idx === -1) return null;
+
+    const current = occupied[idx];
+    const currentMeta = current.meta;
+
+    const openSid = isShotgun()
+      ? getShotgunOpenTarget(currentMeta, direction)
+      : getTeeTimeOpenTarget(currentMeta, direction);
+
+    if (openSid) {
+      return { mode: "move", sid: openSid };
+    }
+
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= occupied.length) return null;
+
+    return { mode: "swap", sid: occupied[swapIdx].sid };
+  }
+
+  function moveCardToOpenSlot(sourceSid, targetSid) {
+    const sourcePlayers = getCardPlayersBySid(sourceSid);
+    if (!sourcePlayers.length) return;
+
+    const targetMeta = parseSlotId(targetSid);
+
+    sourcePlayers.forEach(p => {
+      p.teeTime = targetMeta.time;
+      p.startHole = targetMeta.hole;
+      p.startHoleSuffix = targetMeta.suffix;
+      markDirty(p.playerGHIN);
+    });
+
+    state.editMode = false;
+    state.targetSlotId = "";
+  }
+
+  function swapCardSlotFields(sourceSid, targetSid) {
+    const sourcePlayers = getCardPlayersBySid(sourceSid);
+    const targetPlayers = getCardPlayersBySid(targetSid);
+    if (!sourcePlayers.length || !targetPlayers.length) return;
+
+    const sourceMeta = parseSlotId(sourceSid);
+    const targetMeta = parseSlotId(targetSid);
+
+    if (isShotgun()) {
+      sourcePlayers.forEach(p => {
+        p.startHole = targetMeta.hole;
+        p.startHoleSuffix = targetMeta.suffix;
+        markDirty(p.playerGHIN);
+      });
+
+      targetPlayers.forEach(p => {
+        p.startHole = sourceMeta.hole;
+        p.startHoleSuffix = sourceMeta.suffix;
+        markDirty(p.playerGHIN);
+      });
+    } else {
+      sourcePlayers.forEach(p => {
+        p.teeTime = targetMeta.time;
+        markDirty(p.playerGHIN);
+      });
+
+      targetPlayers.forEach(p => {
+        p.teeTime = sourceMeta.time;
+        markDirty(p.playerGHIN);
+      });
+    }
+
+    state.editMode = false;
+    state.targetSlotId = "";
+  }
+
+  function promoteSlot(sid, direction) {
+    const target = findPromoteTarget(sid, direction);
+    if (!target) {
+      if (MA.setStatus) MA.setStatus(`No ${direction === "up" ? "earlier" : "later"} slot available.`, "info");
+      return;
+    }
+
+    if (target.mode === "move") {
+      moveCardToOpenSlot(sid, target.sid);
+      if (MA.setStatus) {
+        const meta = parseSlotId(target.sid);
+        MA.setStatus(
+          isShotgun()
+            ? `Moved group to Hole ${meta.hole}${meta.suffix}.`
+            : `Moved group to ${meta.time}.`,
+          "success"
+        );
+      }
+    } else {
+      swapCardSlotFields(sid, target.sid);
+      if (MA.setStatus) {
+        MA.setStatus(
+          isShotgun()
+            ? `Swapped start positions with ${direction === "up" ? "previous" : "next"} group.`
+            : `Swapped tee times with ${direction === "up" ? "previous" : "next"} group.`,
+          "success"
+        );
+      }
+    }
+
+    render();
+  }
+
+  function canPromoteUp(sid) {
+    return !!findPromoteTarget(sid, "up");
+  }
+
+  function canPromoteDown(sid) {
+    return !!findPromoteTarget(sid, "down");
+  }
+
   // ---- Rendering: Tray ----
   function renderTray() {
     const q = el.traySearch.value.toLowerCase();
@@ -275,13 +492,7 @@
       slots[sid].players.push(p);
     });
 
-    const sortedSlots = Object.values(slots).sort((a, b) => {
-      const ta = parseTimeToMinutes(a.meta.time);
-      const tb = parseTimeToMinutes(b.meta.time);
-
-      if (ta !== tb) return (ta ?? 0) - (tb ?? 0);
-      return parseInt(a.meta.hole || "1", 10) - parseInt(b.meta.hole || "1", 10);
-    });
+    const sortedSlots = Object.values(slots).sort((a, b) => compareSlotMeta(a.meta, b.meta));
 
     if (!sortedSlots.length) {
       el.canvas.innerHTML = `<div class="maEmpty">No slots assigned yet. Select from the tray to begin.</div>`;
@@ -319,7 +530,13 @@
               ${ICONS.minus}
             </button>
             <div class="gpGroupCard__title">${title} • <small>${slot.key}</small></div>
-            <div class="gpCardActions">
+             <div class="gpCardActions">
+              <button class="iconBtn btnSecondary" type="button" data-action="promoteUp" data-sid="${sid}" title="Move Up" ${canPromoteUp(sid) ? "" : "disabled"}>
+                ${ICONS.up}
+              </button>
+              <button class="iconBtn btnSecondary" type="button" data-action="promoteDown" data-sid="${sid}" title="Move Down" ${canPromoteDown(sid) ? "" : "disabled"}>
+                ${ICONS.down}
+              </button>
               <button class="iconBtn btnSecondary" type="button" data-action="unslotCard" data-sid="${sid}" title="UnSlot">
                 ${ICONS.unpair}
               </button>
@@ -504,6 +721,14 @@
           if (window.matchMedia("(max-width: 900px)").matches) toggleMobileTray();
         }
         render();
+      }
+
+      if (action === "promoteUp") {
+        promoteSlot(a.dataset.sid, "up");
+      }
+
+      if (action === "promoteDown") {
+        promoteSlot(a.dataset.sid, "down");
       }
 
       if (action === "unslotBlock") {
