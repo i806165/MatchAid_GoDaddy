@@ -1,0 +1,35 @@
+/* /assets/css/game_slotting.css */
+.maPage--slotting {
+  overflow: hidden;
+}
+
+/* Reuse mirroring logic from game_pairings */
+.gsTrayPanel {
+  height: 100%;
+  min-height: 0;
+}
+
+/* Mobile Drawer Logic */
+@media (max-width: 900px) {
+  .gsTrayPanel {
+    display: none;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  #gsTabPanels.is-tray-open .gsTrayPanel {
+    display: flex;
+    flex-direction: column;
+  }
+
+  #gsTabPanels.is-tray-open .maPanel--primary {
+    display: none;
+  }
+}
+
+/* Card states */
+.gpGroupCard.is-target {
+  border: 2px solid var(--brandAccent);
+  box-shadow: 0 0 8px rgba(11, 95, 255, 0.2);
+}
