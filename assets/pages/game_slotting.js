@@ -228,6 +228,25 @@
     return s.charCodeAt(0) - 64; // A=1, B=2, ...
   }
 
+    function minutesFromHMMA(s) {
+    const t = String(s || "").trim().split(/\s+/);
+    if (t.length !== 2) return Number.POSITIVE_INFINITY;
+
+    const [hm, apRaw] = t;
+    const ap = apRaw.toUpperCase();
+    const parts = hm.split(":");
+    if (parts.length !== 2) return Number.POSITIVE_INFINITY;
+
+    let h = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return Number.POSITIVE_INFINITY;
+    if (ap === "PM" && h !== 12) h += 12;
+    if (ap === "AM" && h === 12) h = 0;
+
+    return h * 60 + m;
+  }
+
   function compareSlotMeta(a, b) {
     if (isShotgun()) {
       const holeA = parseInt(a.hole || "0", 10);
@@ -245,6 +264,36 @@
     if (holeA !== holeB) return holeA - holeB;
 
     return slotSuffixRank(a.suffix) - slotSuffixRank(b.suffix);
+  }
+
+    function sortSlotsForDisplay(list) {
+    const arr = list.slice();
+
+    arr.sort((a, b) => {
+      if (isShotgun()) {
+        const ha = parseInt(String(a.meta?.hole || "999"), 10);
+        const hb = parseInt(String(b.meta?.hole || "999"), 10);
+        if (ha !== hb) return ha - hb;
+
+        const sa = slotSuffixRank(a.meta?.suffix);
+        const sb = slotSuffixRank(b.meta?.suffix);
+        if (sa !== sb) return sa - sb;
+
+        return String(a.key || "").localeCompare(String(b.key || ""));
+      }
+
+      const ta = minutesFromHMMA(a.meta?.time);
+      const tb = minutesFromHMMA(b.meta?.time);
+      if (ta !== tb) return ta - tb;
+
+      const ha = parseInt(String(a.meta?.hole || "999"), 10);
+      const hb = parseInt(String(b.meta?.hole || "999"), 10);
+      if (ha !== hb) return ha - hb;
+
+      return String(a.key || "").localeCompare(String(b.key || ""));
+    });
+
+    return arr;
   }
 
   function getOccupiedSlots() {
@@ -484,7 +533,7 @@
       slots[sid].players.push(p);
     });
 
-    const sortedSlots = Object.values(slots).sort((a, b) => compareSlotMeta(a.meta, b.meta));
+    const sortedSlots = sortSlotsForDisplay(Object.values(slots));
 
     if (!sortedSlots.length) {
       el.canvas.innerHTML = `<div class="maEmpty">No slots assigned yet. Select from the tray to begin.</div>`;
