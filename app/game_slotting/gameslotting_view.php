@@ -4,10 +4,22 @@
 <head>
   <?php require MA_INCLUDES . "/head.php"; ?>
   <link rel="stylesheet" href="/assets/css/game_slotting.css">
-  <script>window.__MA_INIT__ = <?php echo json_encode($init); ?>;</script>
+  <script>
+    window.MA = window.MA || {};
+    window.MA.paths = <?php echo json_encode($paths, JSON_UNESCAPED_SLASHES); ?>;
+    window.__INIT__ = <?php echo json_encode($init, JSON_UNESCAPED_SLASHES); ?>;
+    window.__MA_INIT__ = window.__INIT__;
+    
+    window.MA.routes = {
+      router: window.MA.paths.routerApi,
+      login: <?php echo json_encode(MA_ROUTE_LOGIN); ?>,
+      apiGHIN: window.MA.paths.apiGHIN,
+      apiSave: window.MA.paths.apiSave
+    };
+  </script>
 </head>
 <body class="maPage--slotting">
-  <?php require MA_INCLUDES . "/chrome_header.php"; ?>
+  <?php require MA_INCLUDES . "/chromeHeader.php"; ?>
 
   <main class="maPage maPage--multi">
     <div class="maPanels maPanels--2" id="gsTabPanels">
@@ -75,7 +87,7 @@
     </div>
   </main>
 
-  <?php require MA_INCLUDE . "/chrome_footer.php"; ?>
+  <?php require MA_INCLUDES . "/chromeFooter.php"; ?>
 
   <!-- Removal Confirmation Dialog -->
   <dialog id="gsConfirmDialog" class="maModal" style="max-width:320px;">
