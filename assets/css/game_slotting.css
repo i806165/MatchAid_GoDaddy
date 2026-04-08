@@ -232,6 +232,23 @@
   .gpUnpairedItem { flex-direction: column; align-items: flex-start; gap: 2px; }
 }
 
+/* Tray Master Clear */
+.maPage--slotting .maPanel__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.maPage--slotting .maPanel__controls .gpMasterCheck {
+  flex: 0 0 auto;
+  margin-right: 0;
+}
+
+.maPage--slotting .maPanel__controls .gpInputClearWrap {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 /* Tray Search */
 .gpInputClearWrap { position: relative; display: flex; align-items: center; width: 100%; }
 .gpInputClearWrap .maTextInput { padding-right: 30px; }

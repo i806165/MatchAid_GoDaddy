@@ -45,12 +45,12 @@
             <div class="gpPanelHdr__actions">
               <div class="gpCount" id="gsTrayCount">0</div>
               <button class="btn btnSecondary" id="gsBtnAssign" type="button">Assign &gt;&gt;</button>
-              <div class="gpMasterCheck" id="gsTrayMasterCheck"></div>
             </div>
           </div>
         </header>
 
         <div class="maPanel__controls">
+          <div class="gpMasterCheck" id="gsTrayMasterCheck"></div>
           <div class="gpInputClearWrap">
             <input type="text" id="gsTraySearch" class="maTextInput" placeholder="Search pairings...">
             <button id="gsTraySearchClear" class="clearBtn isHidden" type="button">×</button>
