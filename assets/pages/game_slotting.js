@@ -164,7 +164,10 @@
       });
 
       if (!state.editMode) {
-        currentSlotId = getNextAvailableSlot(currentSlotId);
+        const updatedSlotPlayers = getPlayersInSlot(currentSlotId);
+        if (updatedSlotPlayers.length >= 4) {
+          currentSlotId = getNextAvailableSlot(currentSlotId);
+        }
       }
     });
 
