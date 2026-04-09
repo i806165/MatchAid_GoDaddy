@@ -240,6 +240,61 @@
     return state.players.filter(p => (isPairPair() ? p.flightId : p.pairingId) === blockId);
   }
 
+  function getCardPlayersByKey(playerKey) {
+  return state.players.filter(p => String(p.playerKey || "") === String(playerKey || ""));
+}
+
+function getDisplayedCards() {
+  const cards = {};
+
+  state.players
+    .filter(p => String(p.playerKey || "").trim() !== "")
+    .forEach(p => {
+      const key = String(p.playerKey || "").trim();
+      if (!cards[key]) {
+        cards[key] = {
+          key,
+          players: [],
+          meta: {
+            time: p.teeTime || "",
+            hole: p.startHole || "",
+            suffix: p.startHoleSuffix || ""
+          }
+        };
+      }
+      cards[key].players.push(p);
+    });
+
+  return Object.values(cards).sort((a, b) => compareSlotMeta(a.meta, b.meta));
+}
+
+function findDisplayedCardByKey(cards, playerKey) {
+  return cards.find(c => String(c.key || "") === String(playerKey || "")) || null;
+}
+
+function findDisplayedCardBySlot(cards, attrs, excludingKey) {
+  return cards.find(c =>
+    String(c.key || "") !== String(excludingKey || "") &&
+    String(c.meta.time || "") === String(attrs.time || "") &&
+    String(c.meta.hole || "") === String(attrs.hole || "") &&
+    String(c.meta.suffix || "") === String(attrs.suffix || "")
+  ) || null;
+}
+
+function applySlotAttrsToCard(playerKey, attrs) {
+  const players = getCardPlayersByKey(playerKey);
+  if (!players.length) return;
+
+  players.forEach(p => {
+    p.teeTime = String(attrs.time || "");
+    p.teeTimeMinutes = parseTimeToMinutes(p.teeTime);
+    p.startHole = String(attrs.hole || "");
+    p.startHoleNumber = parseInt(String(attrs.hole || "0"), 10) || 0;
+    p.startHoleSuffix = String(attrs.suffix || "").toUpperCase();
+    markDirty(p.playerGHIN);
+  });
+}
+
   function slotSuffixRank(suffix) {
     const s = String(suffix || "").trim().toUpperCase();
     if (!s) return 0;
@@ -271,188 +326,208 @@
     return slotSuffixRank(a.suffix) - slotSuffixRank(b.suffix);
   }
 
-  function getCardPlayersBySid(sid) {
-    return state.players.filter(p => `${p.teeTime}|${p.startHole}|${p.startHoleSuffix}` === sid);
-  }
-
-  function getDisplayedSlots() {
-  const slots = {};
-
-  state.players.filter(p => p.playerKey).forEach(p => {
-    const sid = `${p.teeTime}|${p.startHole}|${p.startHoleSuffix}`;
-    if (!slots[sid]) {
-      slots[sid] = {
-        sid,
-        meta: parseSlotId(sid),
-        key: p.playerKey,
-        players: []
-      };
-    }
-    slots[sid].players.push(p);
-  });
-
-  return Object.values(slots).sort((a, b) => compareSlotMeta(a.meta, b.meta));
+  function makeSlotAttrs(time, hole, suffix) {
+  return {
+    time: String(time || ""),
+    hole: String(hole || ""),
+    suffix: String(suffix || "").toUpperCase()
+  };
 }
 
-  function getShotgunOpenTarget(currentMeta, direction) {
-    const currentHole = parseInt(currentMeta.hole || "0", 10);
-    const currentSuffixRank = slotSuffixRank(currentMeta.suffix || "A");
-    const suffixes = ["A", "B", "C", "D"];
+function earliestOpenSuffixOnHole(cards, time, hole, excludingKey) {
+  const suffixes = ["A", "B", "C", "D"];
+  for (const suffix of suffixes) {
+    const attrs = makeSlotAttrs(time, hole, suffix);
+    if (!findDisplayedCardBySlot(cards, attrs, excludingKey)) return attrs;
+  }
+  return null;
+}
 
-    if (direction === "up") {
-      for (let rank = currentSuffixRank - 1; rank >= 1; rank--) {
-        const suffix = suffixes[rank - 1];
-        const sid = `${currentMeta.time}|${currentHole}|${suffix}`;
-        if (getPlayersInSlot(sid).length === 0) return sid;
-      }
+function nextOpenSuffixOnHole(cards, time, hole, currentSuffix, excludingKey) {
+  const suffixes = ["A", "B", "C", "D"];
+  const startIdx = Math.max(0, suffixes.indexOf(String(currentSuffix || "").toUpperCase()));
+  for (let i = startIdx + 1; i < suffixes.length; i++) {
+    const attrs = makeSlotAttrs(time, hole, suffixes[i]);
+    if (!findDisplayedCardBySlot(cards, attrs, excludingKey)) return attrs;
+  }
+  return null;
+}
 
-      for (let hole = currentHole - 1; hole >= 1; hole--) {
-        for (const suffix of suffixes) {
-          const sid = `${currentMeta.time}|${hole}|${suffix}`;
-          if (getPlayersInSlot(sid).length === 0) return sid;
-        }
-      }
-      return null;
-    }
+function deriveTeeTarget(card, direction) {
+  const currentMinutes = parseTimeToMinutes(card.meta.time);
+  const intervalMinutes = parseInt(state.interval, 10) || 9;
+  if (!Number.isFinite(currentMinutes)) return null;
 
-    for (let rank = currentSuffixRank + 1; rank <= suffixes.length; rank++) {
-      const suffix = suffixes[rank - 1];
-      const sid = `${currentMeta.time}|${currentHole}|${suffix}`;
-      if (getPlayersInSlot(sid).length === 0) return sid;
-    }
+  const nextMinutes = currentMinutes + (direction === "up" ? -intervalMinutes : intervalMinutes);
+  if (nextMinutes < 0 || nextMinutes >= 24 * 60) return null;
 
-    for (let hole = currentHole + 1; hole <= 18; hole++) {
-      for (const suffix of suffixes) {
-        const sid = `${currentMeta.time}|${hole}|${suffix}`;
-        if (getPlayersInSlot(sid).length === 0) return sid;
-      }
-    }
+  return makeSlotAttrs(
+    formatMinutesToTime(nextMinutes),
+    card.meta.hole || "1",
+    ""
+  );
+}
 
-    return null;
+function deriveShotgunUpTarget(card, cards) {
+  const hole = parseInt(card.meta.hole || "0", 10);
+  const suffix = String(card.meta.suffix || "").toUpperCase();
+
+  // If already on B/C/D, move to previous suffix on same hole.
+  if (suffix && suffix !== "A") {
+    const prevSuffix = String.fromCharCode(suffix.charCodeAt(0) - 1);
+    return makeSlotAttrs(card.meta.time, hole, prevSuffix);
   }
 
-  function findPromoteTarget(sid, direction) {
-    if (!isShotgun()) {
-      const displayed = getDisplayedSlots();
-      const idx = displayed.findIndex(x => x.sid === sid);
-      if (idx === -1) return null;
+  // If on A, move to previous hole, first open suffix.
+  if (hole <= 1) return null;
 
-      const targetIdx = direction === "up" ? idx - 1 : idx + 1;
-      if (targetIdx < 0 || targetIdx >= displayed.length) return null;
+  const openAttrs = earliestOpenSuffixOnHole(cards, card.meta.time, hole - 1, card.key);
+  if (openAttrs) return openAttrs;
 
-      return { mode: "swap", sid: displayed[targetIdx].sid };
-    }
+  // If no open suffix on previous hole, target the primary slot on that hole for a swap.
+  return makeSlotAttrs(card.meta.time, hole - 1, "A");
+}
 
-    const displayed = getDisplayedSlots();
-    const idx = displayed.findIndex(x => x.sid === sid);
-    if (idx === -1) return null;
+function deriveShotgunDownTarget(card) {
+  const hole = parseInt(card.meta.hole || "0", 10);
+  if (hole >= 18) return null;
 
-    const currentMeta = displayed[idx].meta;
+  // Down always targets the next hole primary slot first.
+  return makeSlotAttrs(card.meta.time, hole + 1, "A");
+}
 
-    const openSid = getShotgunOpenTarget(currentMeta, direction);
-    if (openSid) {
-      return { mode: "move", sid: openSid };
-    }
+function moveCardByKey(playerKey, targetAttrs) {
+  applySlotAttrsToCard(playerKey, targetAttrs);
+  state.editMode = false;
+  state.targetSlotId = "";
+}
 
-    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= displayed.length) return null;
+function swapCardsByKey(sourceKey, targetKey, sourceAttrs, targetAttrs) {
+  applySlotAttrsToCard(sourceKey, targetAttrs);
+  applySlotAttrsToCard(targetKey, sourceAttrs);
+  state.editMode = false;
+  state.targetSlotId = "";
+}
 
-    return { mode: "swap", sid: displayed[swapIdx].sid };
+function displaceCardOnHole(cards, displacedKey, occupiedAttrs) {
+  const openAttrs = nextOpenSuffixOnHole(cards, occupiedAttrs.time, occupiedAttrs.hole, occupiedAttrs.suffix, displacedKey);
+  if (!openAttrs) return false;
+  applySlotAttrsToCard(displacedKey, openAttrs);
+  return true;
+}
+
+function promoteTeeTime(playerKey, direction) {
+  const cards = getDisplayedCards();
+  const source = findDisplayedCardByKey(cards, playerKey);
+  if (!source) return;
+
+  const sourceAttrs = makeSlotAttrs(source.meta.time, source.meta.hole, "");
+  const targetAttrs = deriveTeeTarget(source, direction);
+  if (!targetAttrs) {
+    if (MA.setStatus) MA.setStatus(`No ${direction === "up" ? "earlier" : "later"} slot available.`, "info");
+    return;
   }
 
-  function moveCardToOpenSlot(sourceSid, targetSid) {
-    const sourcePlayers = getCardPlayersBySid(sourceSid);
-    if (!sourcePlayers.length) return;
+  const affected = findDisplayedCardBySlot(cards, targetAttrs, source.key);
 
-    const targetMeta = parseSlotId(targetSid);
-
-    sourcePlayers.forEach(p => {
-      p.teeTime = targetMeta.time;
-      p.startHole = targetMeta.hole;
-      p.startHoleSuffix = targetMeta.suffix;
-      markDirty(p.playerGHIN);
-    });
-
-    state.editMode = false;
-    state.targetSlotId = "";
+  if (!affected) {
+    moveCardByKey(source.key, targetAttrs);
+    if (MA.setStatus) MA.setStatus(`Moved group to ${targetAttrs.time}.`, "success");
+  } else {
+    const affectedAttrs = makeSlotAttrs(affected.meta.time, affected.meta.hole, "");
+    swapCardsByKey(source.key, affected.key, sourceAttrs, affectedAttrs);
+    if (MA.setStatus) MA.setStatus(`Swapped tee times with ${direction === "up" ? "previous" : "next"} group.`, "success");
   }
 
-  function swapCardSlotFields(sourceSid, targetSid) {
-    const sourcePlayers = getCardPlayersBySid(sourceSid);
-    const targetPlayers = getCardPlayersBySid(targetSid);
-    if (!sourcePlayers.length || !targetPlayers.length) return;
+  render();
+}
 
-    const sourceMeta = parseSlotId(sourceSid);
-    const targetMeta = parseSlotId(targetSid);
+function promoteShotgunUp(playerKey) {
+  const cards = getDisplayedCards();
+  const source = findDisplayedCardByKey(cards, playerKey);
+  if (!source) return;
 
-    if (isShotgun()) {
-      sourcePlayers.forEach(p => {
-        p.startHole = targetMeta.hole;
-        p.startHoleSuffix = targetMeta.suffix;
-        markDirty(p.playerGHIN);
-      });
-
-      targetPlayers.forEach(p => {
-        p.startHole = sourceMeta.hole;
-        p.startHoleSuffix = sourceMeta.suffix;
-        markDirty(p.playerGHIN);
-      });
-    } else {
-      sourcePlayers.forEach(p => {
-        p.teeTime = targetMeta.time;
-        markDirty(p.playerGHIN);
-      });
-
-      targetPlayers.forEach(p => {
-        p.teeTime = sourceMeta.time;
-        markDirty(p.playerGHIN);
-      });
-    }
-
-    state.editMode = false;
-    state.targetSlotId = "";
+  const sourceAttrs = makeSlotAttrs(source.meta.time, source.meta.hole, source.meta.suffix);
+  const targetAttrs = deriveShotgunUpTarget(source, cards);
+  if (!targetAttrs) {
+    if (MA.setStatus) MA.setStatus("No earlier slot available.", "info");
+    return;
   }
 
-  function promoteSlot(sid, direction) {
-    const target = findPromoteTarget(sid, direction);
-    if (!target) {
-      if (MA.setStatus) MA.setStatus(`No ${direction === "up" ? "earlier" : "later"} slot available.`, "info");
-      return;
-    }
+  const affected = findDisplayedCardBySlot(cards, targetAttrs, source.key);
 
-    if (target.mode === "move") {
-      moveCardToOpenSlot(sid, target.sid);
-      if (MA.setStatus) {
-        const meta = parseSlotId(target.sid);
-        MA.setStatus(
-          isShotgun()
-            ? `Moved group to Hole ${meta.hole}${meta.suffix}.`
-            : `Moved group to ${meta.time}.`,
-          "success"
-        );
-      }
-    } else {
-      swapCardSlotFields(sid, target.sid);
-      if (MA.setStatus) {
-        MA.setStatus(
-          isShotgun()
-            ? `Swapped start positions with ${direction === "up" ? "previous" : "next"} group.`
-            : `Swapped tee times with ${direction === "up" ? "previous" : "next"} group.`,
-          "success"
-        );
-      }
-    }
+  if (!affected) {
+    moveCardByKey(source.key, targetAttrs);
+    if (MA.setStatus) MA.setStatus(`Moved group to Hole ${targetAttrs.hole}${targetAttrs.suffix}.`, "success");
+  } else {
+    const affectedAttrs = makeSlotAttrs(affected.meta.time, affected.meta.hole, affected.meta.suffix);
+    swapCardsByKey(source.key, affected.key, sourceAttrs, affectedAttrs);
+    if (MA.setStatus) MA.setStatus("Swapped start positions with previous group.", "success");
+  }
 
+  render();
+}
+
+function promoteShotgunDown(playerKey) {
+  const cards = getDisplayedCards();
+  const source = findDisplayedCardByKey(cards, playerKey);
+  if (!source) return;
+
+  const sourceAttrs = makeSlotAttrs(source.meta.time, source.meta.hole, source.meta.suffix);
+  const targetAttrs = deriveShotgunDownTarget(source);
+  if (!targetAttrs) {
+    if (MA.setStatus) MA.setStatus("No later slot available.", "info");
+    return;
+  }
+
+  const affected = findDisplayedCardBySlot(cards, targetAttrs, source.key);
+
+  if (!affected) {
+    moveCardByKey(source.key, targetAttrs);
+    if (MA.setStatus) MA.setStatus(`Moved group to Hole ${targetAttrs.hole}${targetAttrs.suffix}.`, "success");
     render();
+    return;
   }
 
-  function canPromoteUp(sid) {
-    return !!findPromoteTarget(sid, "up");
+  // Downward shotgun rule: moving card takes target slot; displaced card moves to next open suffix on same hole.
+  const displaced = displaceCardOnHole(cards, affected.key, targetAttrs);
+  if (!displaced) {
+    if (MA.setStatus) MA.setStatus("No open suffix available to displace the affected group.", "warn");
+    return;
   }
 
-  function canPromoteDown(sid) {
-    return !!findPromoteTarget(sid, "down");
+  moveCardByKey(source.key, targetAttrs);
+  if (MA.setStatus) MA.setStatus(`Moved group to Hole ${targetAttrs.hole}${targetAttrs.suffix}.`, "success");
+  render();
+}
+
+function promoteCard(playerKey, direction) {
+  if (isShotgun()) {
+    if (direction === "up") promoteShotgunUp(playerKey);
+    else promoteShotgunDown(playerKey);
+    return;
   }
+
+  promoteTeeTime(playerKey, direction);
+}
+
+function canPromoteUp(playerKey) {
+  const cards = getDisplayedCards();
+  const source = findDisplayedCardByKey(cards, playerKey);
+  if (!source) return false;
+
+  if (isShotgun()) return !!deriveShotgunUpTarget(source, cards);
+  return !!deriveTeeTarget(source, "up");
+}
+
+function canPromoteDown(playerKey) {
+  const cards = getDisplayedCards();
+  const source = findDisplayedCardByKey(cards, playerKey);
+  if (!source) return false;
+
+  if (isShotgun()) return !!deriveShotgunDownTarget(source);
+  return !!deriveTeeTarget(source, "down");
+}
 
   // ---- Rendering: Tray ----
   function renderTray() {
@@ -494,21 +569,21 @@
 
   // ---- Rendering: Canvas ----
     function renderCanvas() {
-      const sortedSlots = getDisplayedSlots();
+      const cards = getDisplayedCards();
 
-    if (!sortedSlots.length) {
-      el.canvas.innerHTML = `<div class="maEmpty">No slots assigned yet. Select from the tray to begin.</div>`;
-      return;
-    }
+      if (!cards.length) {
+        el.canvas.innerHTML = `<div class="maEmpty">No slots assigned yet. Select from the tray to begin.</div>`;
+        return;
+      }
 
-    el.canvas.innerHTML = sortedSlots.map(slot => {
-      const sid = `${slot.meta.time}|${slot.meta.hole}|${slot.meta.suffix}`;
-      const isTarget = state.targetSlotId === sid;
-      const title = `${slot.meta.time} • Hole ${slot.meta.hole}${slot.meta.suffix}`;
+      el.canvas.innerHTML = cards.map(card => {
+        const sid = `${card.meta.time}|${card.meta.hole}|${card.meta.suffix}`;
+        const isTarget = state.targetSlotId === sid;
+        const title = `${card.meta.time} • Hole ${card.meta.hole}${card.meta.suffix}`;
       
       // Group players inside the card by PairingID/FlightID for removal logic
       const blockGroups = {};
-      slot.players.forEach(p => {
+      card.players.forEach(p => {
         const bid = isPairPair() ? p.flightId : p.pairingId;
         if (!blockGroups[bid]) blockGroups[bid] = [];
         blockGroups[bid].push(p);
@@ -526,17 +601,17 @@
       }).join("");
 
       return `
-        <div class="gpGroupCard ${isTarget ? "is-target" : ""} ${state.allCollapsed ? "is-collapsed" : ""}" data-sid="${sid}">
+        <div class="gpGroupCard ${isTarget ? "is-target" : ""} ${state.allCollapsed ? "is-collapsed" : ""}" data-playerkey="${esc(card.key)}">
           <div class="gpGroupCard__hdr gpGroupCard__hdr--expanded">
             <button class="iconBtn btnSecondary" type="button" data-action="toggle-collapse">
               ${ICONS.minus}
             </button>
-            <div class="gpGroupCard__title">${title} • <small>${slot.key}</small></div>
+            <div class="gpGroupCard__title">${title} • <small>${card.key}</small></div>
              <div class="gpCardActions">
-              <button class="iconBtn btnSecondary" type="button" data-action="promoteUp" data-sid="${sid}" title="Move Up" ${canPromoteUp(sid) ? "" : "disabled"}>
+              <button class="iconBtn btnSecondary" type="button" data-action="promoteUp" data-playerkey="${esc(card.key)}" title="Move Up" ${canPromoteUp(card.key) ? "" : "disabled"}>
                 ${ICONS.up}
               </button>
-              <button class="iconBtn btnSecondary" type="button" data-action="promoteDown" data-sid="${sid}" title="Move Down" ${canPromoteDown(sid) ? "" : "disabled"}>
+              <button class="iconBtn btnSecondary" type="button" data-action="promoteDown" data-playerkey="${esc(card.key)}" title="Move Down" ${canPromoteDown(card.key) ? "" : "disabled"}>
                 ${ICONS.down}
               </button>
               <button class="iconBtn btnSecondary" type="button" data-action="unslotCard" data-sid="${sid}" title="UnSlot">
@@ -551,7 +626,7 @@
              <button class="iconBtn btnSecondary" type="button" data-action="toggle-collapse">
               ${ICONS.plus}
             </button>
-            <div class="gpGroupCard__title">${title} (${slot.players.length} players)</div>
+            <div class="gpGroupCard__title">${title} (${card.players.length} players)</div>
           </div>
           <div class="gpGroupCard__body">${body}</div>
         </div>`;
@@ -636,7 +711,9 @@
     const block = getBlockPlayers(blockId);
     block.forEach(p => {
       p.teeTime = "";
+      p.teeTimeMinutes = null;
       p.startHole = "";
+      p.startHoleNumber = 0;
       p.startHoleSuffix = "";
       p.playerKey = "";
       markDirty(p.playerGHIN);
@@ -648,7 +725,9 @@
     const players = getPlayersInSlot(sid);
     players.forEach(p => {
       p.teeTime = "";
+      p.teeTimeMinutes = null;
       p.startHole = "";
+      p.startHoleNumber = 0;
       p.startHoleSuffix = "";
       p.playerKey = "";
       markDirty(p.playerGHIN);
@@ -726,11 +805,11 @@
       }
 
       if (action === "promoteUp") {
-        promoteSlot(a.dataset.sid, "up");
+        promoteCard(a.dataset.playerkey, "up");
       }
 
       if (action === "promoteDown") {
-        promoteSlot(a.dataset.sid, "down");
+        promoteCard(a.dataset.playerkey, "down");
       }
 
       if (action === "unslotBlock") {
