@@ -230,13 +230,14 @@
     
     // Calculate initial valid mix
     const mixes = AutoPairEngine.calculateValidMixes(total, minTeeTimes);
-    const mix = mixes[0] || { fours: 0, threes: 0, twos: Math.ceil(total / 2) };
+    const mix = mixes[0] || { fours: 0, threes: 0, twos: Math.ceil(total / 2), singles: 0 };
 
     const defaults = {
       teeTimeCount: minTeeTimes,
       foursomes: mix.fours,
       threesomes: mix.threes,
       twosomes: mix.twos,
+      singles: mix.singles || 0,
       bucketCount: Math.min(4, Math.max(1, total)),
       outcome: "balanced"
     };
@@ -377,7 +378,7 @@
 
       mixes.forEach((m, idx) => {
         const opt = document.createElement("option");
-        opt.value = JSON.stringify({ fours: m.fours, threes: m.threes, twos: m.twos });
+                opt.value = JSON.stringify({ fours: m.fours, threes: m.threes, twos: m.twos, singles: m.singles || 0 });
         opt.textContent = m.verboseDisplay;
         if (idx === 0) opt.selected = true;
         elMix.appendChild(opt);
@@ -408,6 +409,7 @@
         foursomes: mix.fours || 0,
         threesomes: mix.threes || 0,
         twosomes: mix.twos || 0,
+        singles: mix.singles || 0,
         bucketCount: parseInt(elBuckets.value, 10),
         outcome: elOutcome.value
       };
@@ -507,28 +509,62 @@
     calculateValidMixes(totalGolfers, totalTeeTimes) {
       if (!(totalGolfers > 0 && totalTeeTimes > 0)) return [];
       const results = [];
+
       for (let fours = Math.floor(totalGolfers / 4); fours >= 0; fours--) {
-        const leftAfter4 = totalGolfers - fours * 4;
+        const leftAfter4 = totalGolfers - (fours * 4);
+
         for (let threes = Math.floor(leftAfter4 / 3); threes >= 0; threes--) {
-          const left = leftAfter4 - threes * 3;
-          if (left % 2 !== 0) continue;
-          const twos = left / 2;
-          const totalGroups = fours + threes + twos;
-          if (totalGroups > totalTeeTimes) continue;
-          results.push({ fours, threes, twos });
+          const leftAfter3 = leftAfter4 - (threes * 3);
+
+          for (let twos = Math.floor(leftAfter3 / 2); twos >= 0; twos--) {
+            const leftAfter2 = leftAfter3 - (twos * 2);
+
+            // whatever remains becomes singles
+            const singles = leftAfter2;
+            if (singles < 0) continue;
+
+            const totalGroups = fours + threes + twos + singles;
+            if (totalGroups > totalTeeTimes) continue;
+
+            results.push({ fours, threes, twos, singles });
+          }
         }
       }
+
       results.sort((a, b) => {
-        const aKinds = (a.fours > 0 ? 1 : 0) + (a.threes > 0 ? 1 : 0) + (a.twos > 0 ? 1 : 0);
-        const bKinds = (b.fours > 0 ? 1 : 0) + (b.threes > 0 ? 1 : 0) + (b.twos > 0 ? 1 : 0);
+        const aSinglesOnly = a.singles > 0 && a.fours === 0 && a.threes === 0 && a.twos === 0;
+        const bSinglesOnly = b.singles > 0 && b.fours === 0 && b.threes === 0 && b.twos === 0;
+        if (aSinglesOnly !== bSinglesOnly) return aSinglesOnly ? 1 : -1;
+
+        const aHasSingles = a.singles > 0;
+        const bHasSingles = b.singles > 0;
+        if (aHasSingles !== bHasSingles) return aHasSingles ? 1 : -1;
+
+        const aKinds =
+          (a.fours > 0 ? 1 : 0) +
+          (a.threes > 0 ? 1 : 0) +
+          (a.twos > 0 ? 1 : 0) +
+          (a.singles > 0 ? 1 : 0);
+
+        const bKinds =
+          (b.fours > 0 ? 1 : 0) +
+          (b.threes > 0 ? 1 : 0) +
+          (b.twos > 0 ? 1 : 0) +
+          (b.singles > 0 ? 1 : 0);
+
         if (aKinds !== bKinds) return aKinds - bKinds;
         if (a.fours !== b.fours) return b.fours - a.fours;
         if (a.threes !== b.threes) return b.threes - a.threes;
-        return a.twos - b.twos;
+        if (a.twos !== b.twos) return b.twos - a.twos;
+        return a.singles - b.singles;
       });
+
       return results.map(m => ({
-        fours: m.fours, threes: m.threes, twos: m.twos,
-        verboseDisplay: this._mixVerbose(m.fours, m.threes, m.twos)
+        fours: m.fours,
+        threes: m.threes,
+        twos: m.twos,
+        singles: m.singles,
+        verboseDisplay: this._mixVerbose(m.fours, m.threes, m.twos, m.singles)
       }));
     },
     validateConfig(cfg, unpairedPlayers) {
@@ -536,8 +572,9 @@
       const fours = Number(cfg.foursomes || 0);
       const threes = Number(cfg.threesomes || 0);
       const twos = Number(cfg.twosomes || 0);
-      const seats = fours * 4 + threes * 3 + twos * 2;
-      const groups = fours + threes + twos;
+      const singles = Number(cfg.singles || 0);
+      const seats = fours * 4 + threes * 3 + twos * 2 + singles;
+      const groups = fours + threes + twos + singles;
 
       if (!total) return { ok: false, message: "No unpaired players." };
       if (seats !== total) return { ok: false, message: `Mix seats (${seats}) must equal unpaired players (${total}).` };
@@ -566,9 +603,11 @@
       const f = Number(cfg.foursomes || 0);
       const t3 = Number(cfg.threesomes || 0);
       const t2 = Number(cfg.twosomes || 0);
+      const s1 = Number(cfg.singles || 0);
       for (let i = 0; i < f; i++) out.push(4);
       for (let i = 0; i < t3; i++) out.push(3);
       for (let i = 0; i < t2; i++) out.push(2);
+      for (let i = 0; i < s1; i++) out.push(1);
       const seats = out.reduce((s, x) => s + x, 0);
       if (seats <= availablePlayers) return out;
       let remaining = availablePlayers;
@@ -689,11 +728,12 @@
       // players already sorted asc by PH, so this is just InOrder
       return this._draftInOrder(players, sizes);
     },
-    _mixVerbose(f, t3, t2) {
+    _mixVerbose(f, t3, t2, s1) {
       const p = [];
       if (f > 0) p.push(`foursomes (${f})`);
       if (t3 > 0) p.push(`threesomes (${t3})`);
       if (t2 > 0) p.push(`twosomes (${t2})`);
+      if (s1 > 0) p.push(`singles (${s1})`);
       return p.length ? p.join(", ") : "—";
     }
   };
