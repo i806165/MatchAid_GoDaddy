@@ -65,7 +65,7 @@
 
 .scoreHoleNavInner{
   display: grid;
-  grid-template-columns: 108px 84px 108px;
+  grid-template-columns: 108px 126px 108px;
   justify-content: center;
   gap: 10px;
   align-items: center;
@@ -77,9 +77,9 @@
 }
 
 .scoreHoleSelect{
-  width: 84px;
-  min-width: 84px;
-  max-width: 84px;
+  width: 126px;
+  min-width: 126px;
+  max-width: 126px;
   min-height: 46px;
   height: 46px;
   padding-left: 12px;
