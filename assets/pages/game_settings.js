@@ -41,6 +41,7 @@
     Scramble:   { label: "Scramble",   basis: "Strokes", methods: ["NET", "ADJ GROSS"], competition: ["PairPair", "PairField"] },
     Shamble:    { label: "Shamble",    basis: "Strokes", methods: ["NET", "ADJ GROSS"], competition: ["PairPair", "PairField"] },
     AltShot:    { label: "Alt-Shot",   basis: "Strokes", methods: ["NET", "ADJ GROSS"], competition: ["PairPair", "PairField"] },
+    Chapman:    { label: "Chapman",    basis: "Strokes", methods: ["NET", "ADJ GROSS"], competition: ["PairPair", "PairField"] },
   };
 
   const competitionConfig = {
@@ -52,7 +53,7 @@
     { label: "Use All Scores",        value: "AllScores" },
     { label: "Use N Best Ball(s)",         value: "BestBall" },
     { label: "Use N Scores-Set per Hole", value: "DeclareHole" },
-    { label: "Use N Scores-Set per Group (33/44)", value: "DeclarePlayer" },
+    //{ label: "Use N Scores-Set per Group (33/44)", value: "DeclarePlayer" },
     { label: "Declare Scores at your Discretion", value: "DeclareManual" },
   ];
 
@@ -110,7 +111,20 @@
       { label: "3", value: "3" },
       { label: "4", value: "4" }, // "Use All Scores"
     ];
+    if (["Scramble", "Shamble", "AltShot", "Chapman"].includes(fmt)) {
+      return base.filter(o => o.value === "1");
+    }
     if (fmt === "MatchPlay") return base.filter(o => o.value === "1" || o.value === "2");
+    return base;
+  }
+
+  function scoringSystemOptionsForFormat(fmt) {
+    const base = scoringSystemOptions.slice();
+
+    if (["Scramble", "Shamble", "AltShot", "Chapman"].includes(fmt)) {
+      return base.filter(o => o.value === "BestBall");
+    }
+
     return base;
   }
 
@@ -549,7 +563,7 @@
     // Static selects
     setSelectOptions(el.toMethod, toMethodOptions);
     setSelectOptions(el.scoringBasis, scoringBasisOptions);
-    setSelectOptions(el.scoringSystem, scoringSystemOptions);
+    setSelectOptions(el.scoringSystem, scoringSystemOptionsForFormat("StrokePlay"));
     setSelectOptions(el.hcMethod, hcMethodOptions);
     setSelectOptions(el.allowance, allowanceOptions);
     setSelectOptions(el.strokeDistribution, strokeDistOptions);
@@ -726,6 +740,17 @@
       const valid = cfg.methods.map(m => String(m));
       if (desiredMethod && valid.includes(desiredMethod)) el.scoringMethod.value = desiredMethod;
       else if (!valid.includes(String(el.scoringMethod.value))) el.scoringMethod.value = cfg.methods[0] || "NET";
+    }
+
+    // Scoring System constrained by format (preserve stored value when valid)
+    if (el.scoringSystem) {
+      const desiredSystem = String(el.scoringSystem.value ?? g.dbGames_ScoringSystem ?? "").trim();
+      const systemOpts = scoringSystemOptionsForFormat(fmt);
+      setSelectOptions(el.scoringSystem, systemOpts);
+
+      const valid = systemOpts.map(o => String(o.value));
+      if (desiredSystem && valid.includes(desiredSystem)) el.scoringSystem.value = desiredSystem;
+      else if (!valid.includes(String(el.scoringSystem.value))) el.scoringSystem.value = valid[0] || "BestBall";
     }
 
     // Competition constrained (PRESERVE STORED VALUE)

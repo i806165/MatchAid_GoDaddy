@@ -414,6 +414,81 @@
     renderRows();
   }
 
+    function isTeamScoreFormat() {
+    const fmt = String(state.payload?.gameRow?.dbGames_GameFormat || '').trim();
+    return ["Scramble", "Shamble", "AltShot", "Chapman"].includes(fmt);
+  }
+
+  function getPairingRows(pairingId) {
+    const pid = String(pairingId || '').trim();
+    return (state.payload?.players || []).filter((wrapper) => {
+      const row = wrapper.scoreEntryRow || {};
+      const playerRow = wrapper.playerRow || {};
+      const wPid = String(row.pairingId || playerRow.dbPlayers_PairingID || '').trim();
+      return wPid === pid;
+    });
+  }
+
+  function getPairingPos(wrapper) {
+    const row = wrapper?.scoreEntryRow || {};
+    const playerRow = wrapper?.playerRow || {};
+    const pos = Number(row.pairingPos || playerRow.dbPlayers_PairingPos || 999);
+    return Number.isFinite(pos) ? pos : 999;
+  }
+
+  function getStrokeAllocation(wrapper) {
+    const val = Number(wrapper?.scoreEntryRow?.strokeAllocation || 0);
+    return Number.isFinite(val) ? val : 0;
+  }
+
+  function isPrimaryTeamScoringRow(wrapper) {
+    if (!isTeamScoreFormat()) return true;
+
+    const row = wrapper?.scoreEntryRow || {};
+    const playerRow = wrapper?.playerRow || {};
+    const pairingId = String(row.pairingId || playerRow.dbPlayers_PairingID || '').trim();
+    if (!pairingId) return true;
+
+    const teammates = getPairingRows(pairingId).slice();
+    if (!teammates.length) return true;
+
+    const scoringMethod = String(state.payload?.gameRow?.dbGames_ScoringMethod || '').trim().toUpperCase();
+
+    teammates.sort((a, b) => {
+      if (scoringMethod === 'NET') {
+        const allocDiff = getStrokeAllocation(b) - getStrokeAllocation(a); // highest first
+        if (allocDiff !== 0) return allocDiff;
+      }
+
+      const posDiff = getPairingPos(a) - getPairingPos(b); // lowest pairing pos first
+      if (posDiff !== 0) return posDiff;
+
+      const aName = String(a?.scoreEntryRow?.playerName || a?.playerRow?.dbPlayers_Name || '');
+      const bName = String(b?.scoreEntryRow?.playerName || b?.playerRow?.dbPlayers_Name || '');
+      return aName.localeCompare(bName);
+    });
+
+    return teammates[0] === wrapper;
+  }
+
+  function syncTeamScoreAcrossPairing(sourceWrapper, rawScore, declared) {
+    if (!isTeamScoreFormat()) return;
+
+    const row = sourceWrapper?.scoreEntryRow || {};
+    const playerRow = sourceWrapper?.playerRow || {};
+    const pairingId = String(row.pairingId || playerRow.dbPlayers_PairingID || '').trim();
+    if (!pairingId) return;
+
+    getPairingRows(pairingId).forEach((wrapper) => {
+      wrapper.scoreEntryRow.rawScore = rawScore;
+      wrapper.scoreEntryRow.netScore = (typeof rawScore === 'number')
+        ? rawScore - Number(wrapper.scoreEntryRow.strokeAllocation || 0)
+        : null;
+      wrapper.scoreEntryRow.declared = declared;
+      updateWorkingScoresJson(wrapper, rawScore, declared);
+    });
+  }
+
   // ==========================================================================
   // 8. Collector Row Rendering
   // ==========================================================================
@@ -473,6 +548,8 @@ function renderRows() {
     const isManualDeclare = ['DeclarePlayer', 'DeclareManual'].includes(scoringSystem);
     const isAutoDeclare = !isManualDeclare;
     const isDeclared = !!row.declared;
+    const isPrimaryTeamRow = isPrimaryTeamScoringRow(wrapper);
+    const isTeamLockedRow = isTeamScoreFormat() && !isPrimaryTeamRow;
 
     // Handle + Handicaps: If allocation is negative, prefix with '+'
     let strokeDisplay = '';
@@ -510,14 +587,15 @@ function renderRows() {
 
         <div class="scoreScoreBox">
           <div class="scoreRawControls">
-            <button type="button" class="btn scoreAdjustBtn" data-dir="-1">−</button>
+            <button type="button" class="btn scoreAdjustBtn" data-dir="-1" ${isTeamLockedRow ? 'disabled' : ''}>−</button>
             <input
               type="number"
               class="maTextInput scoreRawInput ${shape ? 'scCell--' + shape : ''}"
               min="1"
               max="15"
-              value="${row.rawScore ?? ''}">
-            <button type="button" class="btn scoreAdjustBtn" data-dir="1">+</button>
+              value="${row.rawScore ?? ''}"
+              ${isTeamLockedRow ? 'disabled' : ''}>
+            <button type="button" class="btn scoreAdjustBtn" data-dir="1" ${isTeamLockedRow ? 'disabled' : ''}>+</button>
           </div>
         </div>
       </div>
@@ -531,10 +609,11 @@ function renderRows() {
           <span class="scoreMetaToken">Par ${par}</span>
           <span class="scoreMetaSep">•</span>
           <span class="scoreMetaToken">HCP ${holeHcp}</span>
+          ${isTeamLockedRow ? '<span class="scoreMetaSep">•</span><span class="scoreMetaToken">Team score entered on primary row</span>' : ''}
         </div>
       </div>`;
 
-    bindRowEvents(article, wrapper, { isManualDeclare, isAutoDeclare });
+    bindRowEvents(article, wrapper, { isManualDeclare, isAutoDeclare, isTeamLockedRow });
     el.rows.appendChild(article);
     prevPairingId = pairingId;
   });
@@ -546,6 +625,10 @@ function renderRows() {
   const playerId = wrapper.scoreEntryRow?.playerId;
   const strokeAllocation = Number(wrapper.scoreEntryRow?.strokeAllocation || 0);
   const isManualDeclare = !!options.isManualDeclare;
+  const isTeamLockedRow = !!options.isTeamLockedRow;
+  if (isTeamLockedRow) {
+    return;
+  }
 
   article.querySelectorAll('.scoreAdjustBtn').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -589,16 +672,20 @@ function markDirty(playerId, rawScore, declared) {
   const wrapper = state.payload.players.find((p) => (p.scoreEntryRow?.playerId || '') === playerId);
   if (!wrapper) return;
 
-    // Guard: If no score is entered, force declared to false
-    const effectiveDeclared = (rawScore === null || rawScore === '' || Number.isNaN(Number(rawScore))) ? false : declared;
+  // Guard: If no score is entered, force declared to false
+  const effectiveDeclared = (rawScore === null || rawScore === '' || Number.isNaN(Number(rawScore))) ? false : declared;
 
-  wrapper.scoreEntryRow.rawScore = rawScore;
-  wrapper.scoreEntryRow.netScore = (typeof rawScore === 'number')
-    ? rawScore - Number(wrapper.scoreEntryRow.strokeAllocation || 0)
-    : null;
+  if (isTeamScoreFormat()) {
+    syncTeamScoreAcrossPairing(wrapper, rawScore, effectiveDeclared);
+  } else {
+    wrapper.scoreEntryRow.rawScore = rawScore;
+    wrapper.scoreEntryRow.netScore = (typeof rawScore === 'number')
+      ? rawScore - Number(wrapper.scoreEntryRow.strokeAllocation || 0)
+      : null;
     wrapper.scoreEntryRow.declared = effectiveDeclared;
 
     updateWorkingScoresJson(wrapper, rawScore, effectiveDeclared);
+  }
 
   const scoringSystem = state.payload?.gameRow?.dbGames_ScoringSystem;
   if (!['DeclareManual', 'DeclarePlayer'].includes(scoringSystem)) {
