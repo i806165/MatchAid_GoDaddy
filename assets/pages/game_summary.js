@@ -39,6 +39,8 @@
     rosterTbody: document.getElementById("rosterTableBody"),
     mobileList: document.getElementById("mobileList"),
     emptyHint: document.getElementById("gsEmptyHint"),
+    cardTitle: document.getElementById("gsCardTitle"),
+    scoreIdHeader: document.getElementById("gsScoreIdHeader"),
 
   };
 
@@ -62,6 +64,19 @@
       return (Math.round(n) === n) ? String(n) : n.toFixed(1);
     }
     return s;
+  }
+
+  function formatTimeAmPm(str) {
+    const s = safeString(str).trim();
+    if (!s || s === "—" || s.includes("AM") || s.includes("PM")) return s || "—";
+    const parts = s.split(':');
+    if (parts.length < 2) return s;
+    let h = parseInt(parts[0], 10);
+    const m = parts[1];
+    if (isNaN(h)) return s;
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${String(h).padStart(2, '0')}:${m} ${ampm}`;
   }
 
   function formatDate(s) {
@@ -295,17 +310,26 @@
   }
 
   function buildPairingHeader(group) {
+    const players = group.players || [];
+    let sHI = 0, sCH = 0, sPH = 0, cHI = 0, cCH = 0, cPH = 0;
+    players.forEach(p => {
+      const hi = parseFloat(p.dbPlayers_HI); if (!isNaN(hi)) { sHI += hi; cHI++; }
+      const ch = parseFloat(p.dbPlayers_CH); if (!isNaN(ch)) { sCH += ch; cCH++; }
+      const ph = parseFloat(p.dbPlayers_PH); if (!isNaN(ph)) { sPH += ph; cPH++; }
+    });
+    const avgHI = cHI ? (sHI / cHI).toFixed(1) : "0.0";
+    const avgCH = cCH ? (sCH / cCH).toFixed(1) : "0.0";
+    const avgPH = cPH ? (sPH / cPH).toFixed(1) : "0.0";
+    const stats = `Avg HI: ${avgHI} · CH: ${avgCH} · PH: ${avgPH}`;
+
     if (isPairPairCompetition()) {
-      return `<strong>Match ${esc(group.flightId)} · Team ${esc(group.flightPos)} · Pair ${esc(group.pairingId)}</strong>`;
+      return `<strong>Match ${esc(group.flightId)} · Team ${esc(group.flightPos)} · Pair ${esc(group.pairingId)}</strong> <span class="gsHdrMeta">· ${stats}</span>`;
     }
-    return `<strong>Pairing ${esc(group.pairingId)}</strong>`;
+    return `<strong>Pairing ${esc(group.pairingId)}</strong> <span class="gsHdrMeta">· ${stats}</span>`;
   }
 
   function buildPlayingGroupHeader(group) {
-    if (isPairPairCompetition()) {
-      return `<strong>Playing Group ${esc(group.playerKey)}</strong> <span class="gsHdrMeta">· Match ${esc(group.flightId)} · Team ${esc(group.flightPos)} · Pair ${esc(group.pairingId)}</span>`;
-    }
-    return `<strong>Playing Group ${esc(group.playerKey)}</strong> <span class="gsHdrMeta">· Pairing ${esc(group.pairingId)}</span>`;
+    return `<strong>Playing Group ${esc(group.playerKey)}</strong>`;
   }
 
   // ---- rendering ----
@@ -379,6 +403,8 @@
 
     if (el.emptyHint) el.emptyHint.style.display = sorted.length ? "none" : "block";
 
+    if (el.scoreIdHeader) el.scoreIdHeader.textContent = "GroupID";
+
     const isPairPair = isPairPairCompetition();
     if (el.rosterTbody) {
       const table = el.rosterTbody.closest("table");
@@ -389,10 +415,13 @@
     }
 
     if (state.scope === "byPlayer") {
+      if (el.cardTitle) el.cardTitle.textContent = "Players by Name";
       renderRosterByPlayer(sorted);
     } else if (state.scope === "byPairing") {
+      if (el.cardTitle) el.cardTitle.textContent = "Players organized Competitively";
       renderRosterByPairing(sorted);
     } else {
+      if (el.cardTitle) el.cardTitle.textContent = "Players organized by Tee Assignments";
       renderRosterByPlayingGroup(sorted);
     }
   }
@@ -406,7 +435,7 @@
         const ch = numberOrDash(p.dbPlayers_CH);
         const ph = numberOrDash(p.dbPlayers_PH);
         const so = numberOrDash(p.dbPlayers_SO);
-        const time = valueOrDash(p.dbPlayers_TeeTime);
+        const time = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
         const start = valueOrDash(getFormattedStartHole(p));
         const flight = valueOrDash(p.dbPlayers_FlightID);
         const fPos = valueOrDash(p.dbPlayers_FlightPos);
@@ -440,7 +469,7 @@
         const ph = numberOrDash(p.dbPlayers_PH);
         const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
 
-        const time = valueOrDash(p.dbPlayers_TeeTime);
+        const time = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
         const start = valueOrDash(getFormattedStartHole(p));
         const tee = valueOrDash(p.dbPlayers_TeeSetName);
 
@@ -502,7 +531,7 @@
         const ch = numberOrDash(p.dbPlayers_CH);
         const ph = numberOrDash(p.dbPlayers_PH);
         const so = numberOrDash(p.dbPlayers_SO);
-        const time = valueOrDash(p.dbPlayers_TeeTime);
+        const time = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
         const start = valueOrDash(getFormattedStartHole(p));
         const match = valueOrDash(p.dbPlayers_FlightID);
         const team = valueOrDash(p.dbPlayers_FlightPos);
@@ -541,7 +570,7 @@
           const name = valueOrDash(p.dbPlayers_Name);
           const ph = numberOrDash(p.dbPlayers_PH);
           const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
-          const time = valueOrDash(p.dbPlayers_TeeTime);
+          const time = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
           const start = valueOrDash(getFormattedStartHole(p));
           const tee = valueOrDash(p.dbPlayers_TeeSetName);
           const ch = numberOrDash(p.dbPlayers_CH);
@@ -603,7 +632,7 @@
         const ch = numberOrDash(p.dbPlayers_CH);
         const ph = numberOrDash(p.dbPlayers_PH);
         const so = numberOrDash(p.dbPlayers_SO);
-        const time = valueOrDash(p.dbPlayers_TeeTime);
+        const time = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
         const start = valueOrDash(getFormattedStartHole(p));
         const match = valueOrDash(p.dbPlayers_FlightID);
         const team = valueOrDash(p.dbPlayers_FlightPos);
@@ -642,7 +671,7 @@
           const name = valueOrDash(p.dbPlayers_Name);
           const ph = numberOrDash(p.dbPlayers_PH);
           const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
-          const time = valueOrDash(p.dbPlayers_TeeTime);
+          const time = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
           const start = valueOrDash(getFormattedStartHole(p));
           const tee = valueOrDash(p.dbPlayers_TeeSetName);
           const ch = numberOrDash(p.dbPlayers_CH);
@@ -724,7 +753,7 @@
     ? normalizeRosterForPairingDisplay(state.roster || [])
     : normalizeRosterForPlayingGroupDisplay(state.roster || []);
 
-    const header = ["Name","Tee","HI","CH","PH","SO","Time","Start","Match","Team","Pair","Pos","ScoreID"];
+    const header = ["Name","Tee","HI","CH","PH","SO","Time","Start","Match","Team","Pair","Pos","GroupID"];
     const lines = [header.join(",")];
 
     rows.forEach(p => {
@@ -737,7 +766,7 @@
         `"` + safeString(p.dbPlayers_CH).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_PH).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_SO).replace(/"/g, '""') + `"`,
-        `"` + safeString(p.dbPlayers_TeeTime).replace(/"/g, '""') + `"`,
+        `"` + formatTimeAmPm(safeString(p.dbPlayers_TeeTime)).replace(/"/g, '""') + `"`,
         `"` + safeString(getFormattedStartHole(p)).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_FlightID).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_FlightPos).replace(/"/g, '""') + `"`,
@@ -794,7 +823,7 @@
         <thead style="background-color: #f2f2f2;">
           <tr>
             <th>Name</th><th>Tee</th><th>HI</th><th>CH</th><th>PH</th><th>SO</th>
-            <th>Time</th><th>Start</th><th>Match</th><th>Team</th><th>Pair</th><th>Pos</th><th>ScoreID</th>
+            <th>Time</th><th>Start</th><th>Match</th><th>Team</th><th>Pair</th><th>Pos</th><th>GroupID</th>
           </tr>
         </thead>
         <tbody>`;
@@ -808,7 +837,7 @@
         <td align="center">${esc(p.dbPlayers_CH)}</td>
         <td align="center">${esc(p.dbPlayers_PH)}</td>
         <td align="center">${esc(p.dbPlayers_SO)}</td>
-        <td align="center">${esc(p.dbPlayers_TeeTime)}</td>
+        <td align="center">${esc(formatTimeAmPm(p.dbPlayers_TeeTime))}</td>
         <td align="center">${esc(startHole)}</td>
         <td align="center">${esc(p.dbPlayers_FlightID)}</td>
         <td align="center">${esc(p.dbPlayers_FlightPos)}</td>
