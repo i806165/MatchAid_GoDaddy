@@ -907,6 +907,17 @@ function canPromoteDown(playerKey) {
     state.players = normalizePlayers(init.players || []);
     applyChrome();
     wireEvents();
+
+    // Move Assign button to the controls area and apply standard classes
+    const trayPanel = el.trayList.closest('.maPanel');
+    if (trayPanel) {
+      const controlsArea = trayPanel.querySelector('.maPanel__controls');
+      if (controlsArea && el.btnAssign) {
+        controlsArea.appendChild(el.btnAssign);
+        el.btnAssign.classList.add('btn', 'btnSecondary');
+      }
+    }
+
     render();
   }
 

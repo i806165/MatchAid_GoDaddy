@@ -35,7 +35,6 @@ Logger::info("GAMESUMMARY_CTX_DEBUG", [
 ]);
 
 if (!$gc || empty($gc["game"])) {
-  // If game context is missing, route back to Admin Games List (safe default)
   header("Location: " . MA_ROUTE_LOGIN);
   exit;
 }
@@ -44,13 +43,11 @@ try {
   require_once MA_API . "/game_summary/initGameSummary.php";
   $initPayload = buildGameSummaryInit($ctx, $gc);
   if (empty($initPayload["ok"])) {
-    // Hard failure: treat as context error
     header("Location: " . MA_ROUTE_LOGIN);
     exit;
   }
 
-  // Add portal context for JS-driven UI changes
-  $initPayload['portal'] = $_SESSION['SessionPortal'] ?? 'ADMIN PORTAL';
+  $initPayload["portal"] = $_SESSION["SessionPortal"] ?? "ADMIN PORTAL";
 } catch (Throwable $e) {
   Logger::error("GAMESUMMARY_INIT_FAIL", ["err" => $e->getMessage()]);
   header("Location: " . MA_ROUTE_LOGIN);
@@ -88,51 +85,7 @@ $maChromeLogoUrl = null;
 
   <?php include __DIR__ . "/../../includes/chromeHeader.php"; ?>
 
-  <!-- CONTROLS BAND (peer to body standard) -->
-  <div class="maControlArea" id="gsControls" aria-label="Game Summary Controls">
-
-    <!-- Collapsible: Game Configuration -->
-    <button type="button"
-            class="gsCfgToggle"
-            id="gsCfgToggle"
-            aria-expanded="false">
-      <span class="gsCfgTitle">Game Settings</span>
-      <span class="gsCfgChevron" aria-hidden="true">▾</span>
-    </button>
-
-    <div class="gsCfgPanel" id="gsCfgPanel" hidden>
-      <div class="gsConfigGrid" id="configGrid"></div>
-    </div>
-
-    <!-- Scope + Meta pills row -->
-    <div class="gsControlsRow">
-      <div class="maSeg gsScopeSeg" role="tablist" aria-label="Roster Scope">
-        <button type="button" class="maSegBtn is-active" id="scopeByPlayer" aria-selected="true">By Player</button>
-        <button type="button" class="maSegBtn" id="scopeByGroup" aria-selected="false">By Group</button>
-      </div>
-
-      <div class="maPills gsMetaPills" aria-label="Game quick stats">
-        <div class="maPill maPillKV" role="group" aria-label="Players">
-          <div class="maPillLabel">Players</div>
-          <div class="maPillValue maListRow__col--muted" id="gsMetaPlayers">—</div>
-        </div>
-
-        <div class="maPill maPillKV" role="group" aria-label="Holes">
-          <div class="maPillLabel">Holes</div>
-          <div class="maPillValue maListRow__col--muted" id="gsMetaHoles">—</div>
-        </div>
-
-        <div class="maPill maPillKV" role="group" aria-label="HC Method">
-          <div class="maPillLabel">HC</div>
-          <div class="maPillValue maListRow__col--muted" id="gsMetaHC">—</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <main class="maPage" role="main">
-    <?php include __DIR__ . "/gamesummary_view.php"; ?>
-  </main>
+  <?php include __DIR__ . "/gamesummary_view.php"; ?>
 
   <?php include __DIR__ . "/../../includes/chromeFooter.php"; ?>
 
@@ -141,7 +94,6 @@ $maChromeLogoUrl = null;
   window.MA.paths = <?= json_encode($paths, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
   window.__INIT__ = <?= json_encode($initPayload, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
-  // Canonical aliases/pattern
   window.__MA_INIT__ = window.__INIT__;
   window.MA.routes = {
     router: window.MA.paths.routerApi,

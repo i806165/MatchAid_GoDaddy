@@ -219,20 +219,6 @@
   cursor: default;
 }
 
-/* Assign Button: White bg, Green outline/text */
-#gpBtnAssignToPairing,
-#gpBtnAssignToFlight {
-  background: #ffffff;
-  color: var(--brandSecondary);
-  border: 1px solid var(--brandSecondary);
-  font-weight: 800;
-  border-radius: 999px;
-}
-#gpBtnAssignToPairing:hover,
-#gpBtnAssignToFlight:hover {
-  background: #f0fdf4;
-}
-
 /* Selected row styling (tray) */
 .maListRow.is-selected{
   background: rgba(11,95,255,.08);
@@ -308,6 +294,15 @@
   border-radius: 50%;
 }
 .gpInputClearWrap .clearBtn.isHidden { display: none; }
+
+/* Tray controls layout - aligns with slotting standards */
+.maPage--pairings .gpTrayPanel .maPanel__controls {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+}
 
 /* Unpaired List Item Layout */
 .gpUnpairedItem {

@@ -1780,6 +1780,20 @@
 
     applyChrome();
     wireEvents();
+
+    // Move Assign buttons to the controls area and apply standard classes
+    const pairTray = el.unpairedList.closest('.maPanel');
+    if (pairTray && el.btnAssignToPairing) {
+      pairTray.querySelector('.maPanel__controls').appendChild(el.btnAssignToPairing);
+      el.btnAssignToPairing.classList.add('btn', 'btnSecondary');
+    }
+
+    const matchTray = el.unmatchedList.closest('.maPanel');
+    if (matchTray && el.btnAssignToFlight) {
+      matchTray.querySelector('.maPanel__controls').appendChild(el.btnAssignToFlight);
+      el.btnAssignToFlight.classList.add('btn', 'btnSecondary');
+    }
+
     setActiveTab("pair");
     clearDirty();
     setStatus("Ready", "info");
