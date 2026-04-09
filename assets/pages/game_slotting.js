@@ -115,6 +115,20 @@
     return playTime || "08:00 AM";
   }
 
+  function getAllowedHoleRange() {
+    const raw = String(init.game?.dbGames_Holes || "").trim().toLowerCase();
+
+    if (raw === "F9") {
+      return { min: 1, max: 9 };
+    }
+
+    if (raw === "B9") {
+      return { min: 10, max: 18 };
+    }
+
+    return { min: 1, max: 18 };
+  }
+
   function toggleMobileTray() {
     const isOpen = el.panelsWrap.classList.toggle("is-tray-open");
     if (el.btnTrayOpen) el.btnTrayOpen.textContent = isOpen ? "Show Slots" : "Add Slot";
@@ -371,6 +385,7 @@ function deriveTeeTarget(card, direction) {
 function deriveShotgunUpTarget(card, cards) {
   const hole = parseInt(card.meta.hole || "0", 10);
   const suffix = String(card.meta.suffix || "").toUpperCase();
+  const range = getAllowedHoleRange();
 
   // If already on B/C/D, move to previous suffix on same hole.
   if (suffix && suffix !== "A") {
@@ -378,21 +393,31 @@ function deriveShotgunUpTarget(card, cards) {
     return makeSlotAttrs(card.meta.time, hole, prevSuffix);
   }
 
-  // If on A, move to previous hole, first open suffix.
-  if (hole <= 1) return null;
+  // If on A, respect the configured lower boundary.
+  if (hole <= range.min) return null;
 
-  const openAttrs = earliestOpenSuffixOnHole(cards, card.meta.time, hole - 1, card.key);
+  const targetHole = hole - 1;
+
+  const openAttrs = earliestOpenSuffixOnHole(cards, card.meta.time, targetHole, card.key);
   if (openAttrs) return openAttrs;
 
   // If no open suffix on previous hole, target the primary slot on that hole for a swap.
-  return makeSlotAttrs(card.meta.time, hole - 1, "A");
+  return makeSlotAttrs(card.meta.time, targetHole, "A");
 }
 
 function deriveShotgunDownTarget(card) {
   const hole = parseInt(card.meta.hole || "0", 10);
-  if (hole >= 18) return null;
+  const suffix = String(card.meta.suffix || "").toUpperCase();
+  const range = getAllowedHoleRange();
 
-  // Down always targets the next hole primary slot first.
+  // Within the configured upper boundary hole, continue through suffixes until D.
+  if (hole >= range.max) {
+    if (!suffix || suffix === "D") return null;
+    const nextSuffix = String.fromCharCode(suffix.charCodeAt(0) + 1);
+    return makeSlotAttrs(card.meta.time, range.max, nextSuffix);
+  }
+
+  // Otherwise Down targets the next hole primary slot.
   return makeSlotAttrs(card.meta.time, hole + 1, "A");
 }
 
