@@ -38,15 +38,15 @@
   /* Chrome (Header/Footer) */
   --chromePad: 10px;
   --chromeGap: 10px;
-  --chromeHdrBg: #EFE6D6;
+  --chromeHdrBg: #18422F;
   --chromeHdrBtnBg: #FFFFFF;
   --chromeHdrBtnText: var(--brandPrimary);
-  --chromeHdrBtnBorder: rgba(0,0,0,.12);
+  --chromeHdrBtnBorder: rgba(0,0,0,.22);
   --chromeBg: var(--surfaceChrome);
   --chromeBorder: var(--borderSubtle);
   --chromeShadow: var(--shadowSubtle);
-  --chromeTitleText: #1F1F1C;
-  --chromeSubtitleText: #4E4A43;
+  --chromeTitleText: #FFFFFF;
+  --chromeSubtitleText: rgba(255,255,255,.82);
   --chromeTitleSize: 18px;
   --chromeSubtitleSize: 12px;
   --chromeBtnFontSize: 13px;
@@ -731,7 +731,6 @@ body {
   min-width: 72px;
   padding: 0 10px;
   border-radius: var(--radiusMd);
-  border: 1px solid var(--chromeBorder);
   background: var(--chromeHdrBtnBg);
   color: var(--chromeHdrBtnText);
   border: 1px solid var(--chromeHdrBtnBorder);
