@@ -38,7 +38,7 @@
   /* Chrome (Header/Footer) */
   --chromePad: 10px;
   --chromeGap: 10px;
-  --chromeHdrBg: #EEF5F0;
+  --chromeHdrBg: #EFE6D6;
   --chromeHdrBtnBg: #FFFFFF;
   --chromeHdrBtnText: var(--brandPrimary);
   --chromeHdrBtnBorder: rgba(0,0,0,.12);
