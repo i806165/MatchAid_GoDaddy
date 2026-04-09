@@ -8,8 +8,8 @@
    1) Card header override (green header, white title)
    ========================================================================== */
 .maCard__hdr{
-  background: var(--brandPrimary);
-  color: var(--brandPrimaryText);
+  color: var(--brandSecondaryText);
+  background: var(--brandSecondary);
   border-bottom-color: color-mix(in srgb, var(--brandPrimary) 70%, black);
 }
 
