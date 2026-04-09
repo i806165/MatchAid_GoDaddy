@@ -68,13 +68,19 @@
   function getPostingBlocker(payload) {
     const p = payload?.scorecards?.rows?.[0]?.players?.[0];
     const userGhin = window.__MA_INIT__?.user?.ghin || window.__INIT__?.user?.ghin;
+    const gameFormat = String(payload?.game?.dbGames_GameFormat || '').trim();
 
     // 1. Identity & Data Checks
     if (!userGhin) return "GHIN identity not found. Please log in.";
     if (!p) return "Score summary data is incomplete.";
     if (p.dbPlayers_GHINPostID) return "This round has already been posted to GHIN.";
 
-    // 2. Determine Hole Scope (F9, B9, or 18)
+    // 2. Format Guard
+    if (["Scramble", "Shamble", "AltShot", "Chapman"].includes(gameFormat)) {
+      return "GHIN posting is not available for Scramble, Shamble, Alt Shot, or Chapman formats.";
+    }
+
+    // 3. Determine Hole Scope (F9, B9, or 18)
     const holeScope = payload?.meta?.holes || 'All 18';
     const holes = holeScope === 'B9' 
       ? Array.from({length:9},(_,i)=>i+10) 
