@@ -217,43 +217,65 @@
   }
 
   function normalizeRosterForPlayingGroupDisplay(records) {
-    const copy = Array.isArray(records) ? records.slice() : [];
-    const pairPair = isPairPairCompetition();
+  const copy = Array.isArray(records) ? records.slice() : [];
+  const pairPair = isPairPairCompetition();
+  const isShotgun = String(state.game?.dbGames_TOMethod || "").trim() === "Shotgun";
 
-    copy.sort((a, b) => {
-      const groupA = pairingSortValue(a.dbPlayers_PlayerKey) || "—";
-      const groupB = pairingSortValue(b.dbPlayers_PlayerKey) || "—";
-      if (groupA !== groupB) return groupA.localeCompare(groupB, undefined, { numeric: true });
-
-      if (pairPair) {
-        const flightA = pairingSortValue(a.dbPlayers_FlightID) || "—";
-        const flightB = pairingSortValue(b.dbPlayers_FlightID) || "—";
-        if (flightA !== flightB) return flightA.localeCompare(flightB, undefined, { numeric: true });
-
-        const teamA = pairingSortValue(a.dbPlayers_FlightPos) || "—";
-        const teamB = pairingSortValue(b.dbPlayers_FlightPos) || "—";
-        if (teamA !== teamB) return numericOrTextCompare(teamA, teamB);
-      }
-
-      const pairA = pairingSortValue(a.dbPlayers_PairingID) || "—";
-      const pairB = pairingSortValue(b.dbPlayers_PairingID) || "—";
-      if (pairA !== pairB) return pairA.localeCompare(pairB, undefined, { numeric: true });
-
-      const posA = pairingSortValue(a.dbPlayers_PairingPos) || "999";
-      const posB = pairingSortValue(b.dbPlayers_PairingPos) || "999";
-      if (posA !== posB) return numericOrTextCompare(posA, posB);
-
-      const lnA = pairingSortValue(a.dbPlayers_LName);
-      const lnB = pairingSortValue(b.dbPlayers_LName);
-      if (lnA !== lnB) return lnA.localeCompare(lnB);
-
-      const nmA = pairingSortValue(a.dbPlayers_Name);
-      const nmB = pairingSortValue(b.dbPlayers_Name);
-      return nmA.localeCompare(nmB);
-    });
-
-    return copy;
+  function holeSortValue(v) {
+    const n = Number(String(v ?? "").trim());
+    return Number.isFinite(n) ? n : 999;
   }
+
+  function suffixSortValue(v) {
+    const s = String(v ?? "").trim().toUpperCase();
+    if (!s) return "ZZZ";
+    return s;
+  }
+
+  copy.sort((a, b) => {
+    if (isShotgun) {
+      const holeA = holeSortValue(a.dbPlayers_StartHole);
+      const holeB = holeSortValue(b.dbPlayers_StartHole);
+      if (holeA !== holeB) return holeA - holeB;
+
+      const suffixA = suffixSortValue(a.dbPlayers_StartHoleSuffix);
+      const suffixB = suffixSortValue(b.dbPlayers_StartHoleSuffix);
+      if (suffixA !== suffixB) return suffixA.localeCompare(suffixB);
+    }
+
+    const groupA = pairingSortValue(a.dbPlayers_PlayerKey) || "—";
+    const groupB = pairingSortValue(b.dbPlayers_PlayerKey) || "—";
+    if (groupA !== groupB) return groupA.localeCompare(groupB, undefined, { numeric: true });
+
+    if (pairPair) {
+      const flightA = pairingSortValue(a.dbPlayers_FlightID) || "—";
+      const flightB = pairingSortValue(b.dbPlayers_FlightID) || "—";
+      if (flightA !== flightB) return flightA.localeCompare(flightB, undefined, { numeric: true });
+
+      const teamA = pairingSortValue(a.dbPlayers_FlightPos) || "—";
+      const teamB = pairingSortValue(b.dbPlayers_FlightPos) || "—";
+      if (teamA !== teamB) return numericOrTextCompare(teamA, teamB);
+    }
+
+    const pairA = pairingSortValue(a.dbPlayers_PairingID) || "—";
+    const pairB = pairingSortValue(b.dbPlayers_PairingID) || "—";
+    if (pairA !== pairB) return pairA.localeCompare(pairB, undefined, { numeric: true });
+
+    const posA = pairingSortValue(a.dbPlayers_PairingPos) || "999";
+    const posB = pairingSortValue(b.dbPlayers_PairingPos) || "999";
+    if (posA !== posB) return numericOrTextCompare(posA, posB);
+
+    const lnA = pairingSortValue(a.dbPlayers_LName);
+    const lnB = pairingSortValue(b.dbPlayers_LName);
+    if (lnA !== lnB) return lnA.localeCompare(lnB);
+
+    const nmA = pairingSortValue(a.dbPlayers_Name);
+    const nmB = pairingSortValue(b.dbPlayers_Name);
+    return nmA.localeCompare(nmB);
+  });
+
+  return copy;
+}
 
   function groupRosterForPairing(sortedRoster) {
     const pairPair = isPairPairCompetition();
