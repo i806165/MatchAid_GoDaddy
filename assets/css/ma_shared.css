@@ -45,9 +45,9 @@
   --chromeBg: var(--surfaceChrome);
   --chromeBorder: var(--borderSubtle);
   --chromeShadow: var(--shadowSubtle);
-  --chromeTitleText: var(--brandPrimary);
+  --chromeTitleText: #1F1F1C;
+  --chromeSubtitleText: #4E4A43;
   --chromeTitleSize: 18px;
-  --chromeSubtitleText: var(--brandSecondary);
   --chromeSubtitleSize: 12px;
   --chromeBtnFontSize: 13px;
 
