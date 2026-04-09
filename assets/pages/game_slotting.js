@@ -871,7 +871,7 @@ function canPromoteDown(playerKey) {
   function applyChrome() {
     if (chrome.setHeaderLines) {
       chrome.setHeaderLines([
-        "Game Slotting",
+        "Tee Assignments",
         init.game?.dbGames_Title || "Slotting Board",
         init.game?.dbGames_CourseName || ""
       ]);
