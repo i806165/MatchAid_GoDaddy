@@ -53,7 +53,7 @@
     <!-- ROSTER -->
     <section class="maCard" aria-label="Roster">
       <header class="maCard__hdr">
-        <div class="maCard__title">ROSTER</div>
+        <div class="maCard__title" id="gsCardTitle">ROSTER</div>
         <div class="maCard__actions"></div>
       </header>
 
@@ -74,7 +74,7 @@
                 <th class="gsCenter col-flightpos">Team</th>
                 <th class="gsCenter">Pair</th>
                 <th class="gsCenter">Pos</th>
-                <th class="gsCenter gsMono">ScoreID</th>
+                <th class="gsCenter gsMono" id="gsScoreIdHeader">GroupID</th>
               </tr>
             </thead>
             <tbody id="rosterTableBody"></tbody>
