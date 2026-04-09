@@ -64,19 +64,34 @@
     return out;
   }
 
-    function parseTimeToMinutes(timeText) {
+  function parseTimeToMinutes(timeText) {
     const raw = String(timeText || "").trim();
-    const m = raw.match(/^(\d{1,2}):(\d{2})\s*([AP]M)$/i);
-    if (!m) return null;
+    if (!raw) return null;
 
-    let hour = parseInt(m[1], 10);
-    const minute = parseInt(m[2], 10);
-    const meridiem = m[3].toUpperCase();
+    // 12-hour with optional seconds and optional space before AM/PM
+    let m = raw.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*([AP]M)\b/i);
+    if (m) {
+      let hour = parseInt(m[1], 10);
+      const minute = parseInt(m[2], 10);
+      const meridiem = m[3].toUpperCase();
 
-    if (hour === 12) hour = 0;
-    if (meridiem === "PM") hour += 12;
+      if (hour === 12) hour = 0;
+      if (meridiem === "PM") hour += 12;
 
-    return hour * 60 + minute;
+      return hour * 60 + minute;
+    }
+
+    // 24-hour with optional seconds
+    m = raw.match(/(?:^|\s)(\d{1,2}):(\d{2})(?::\d{2})?(?:$|\s)/);
+    if (m) {
+      const hour = parseInt(m[1], 10);
+      const minute = parseInt(m[2], 10);
+      if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+        return hour * 60 + minute;
+      }
+    }
+
+    return null;
   }
 
   function formatMinutesToTime(totalMinutes) {
@@ -228,25 +243,6 @@
     return s.charCodeAt(0) - 64; // A=1, B=2, ...
   }
 
-    function minutesFromHMMA(s) {
-    const t = String(s || "").trim().split(/\s+/);
-    if (t.length !== 2) return Number.POSITIVE_INFINITY;
-
-    const [hm, apRaw] = t;
-    const ap = apRaw.toUpperCase();
-    const parts = hm.split(":");
-    if (parts.length !== 2) return Number.POSITIVE_INFINITY;
-
-    let h = parseInt(parts[0], 10);
-    const m = parseInt(parts[1], 10);
-
-    if (!Number.isFinite(h) || !Number.isFinite(m)) return Number.POSITIVE_INFINITY;
-    if (ap === "PM" && h !== 12) h += 12;
-    if (ap === "AM" && h === 12) h = 0;
-
-    return h * 60 + m;
-  }
-
   function compareSlotMeta(a, b) {
     if (isShotgun()) {
       const holeA = parseInt(a.hole || "0", 10);
@@ -257,7 +253,13 @@
 
     const ta = parseTimeToMinutes(a.time);
     const tb = parseTimeToMinutes(b.time);
-    if (ta !== tb) return (ta ?? 0) - (tb ?? 0);
+
+    if (ta != null && tb != null && ta !== tb) return ta - tb;
+    if (ta != null && tb == null) return -1;
+    if (ta == null && tb != null) return 1;
+
+    const rawTimeCompare = String(a.time || "").localeCompare(String(b.time || ""));
+    if (rawTimeCompare !== 0) return rawTimeCompare;
 
     const holeA = parseInt(a.hole || "0", 10);
     const holeB = parseInt(b.hole || "0", 10);
@@ -266,56 +268,28 @@
     return slotSuffixRank(a.suffix) - slotSuffixRank(b.suffix);
   }
 
-    function sortSlotsForDisplay(list) {
-    const arr = list.slice();
-
-    arr.sort((a, b) => {
-      if (isShotgun()) {
-        const ha = parseInt(String(a.meta?.hole || "999"), 10);
-        const hb = parseInt(String(b.meta?.hole || "999"), 10);
-        if (ha !== hb) return ha - hb;
-
-        const sa = slotSuffixRank(a.meta?.suffix);
-        const sb = slotSuffixRank(b.meta?.suffix);
-        if (sa !== sb) return sa - sb;
-
-        return String(a.key || "").localeCompare(String(b.key || ""));
-      }
-
-      const ta = minutesFromHMMA(a.meta?.time);
-      const tb = minutesFromHMMA(b.meta?.time);
-      if (ta !== tb) return ta - tb;
-
-      const ha = parseInt(String(a.meta?.hole || "999"), 10);
-      const hb = parseInt(String(b.meta?.hole || "999"), 10);
-      if (ha !== hb) return ha - hb;
-
-      return String(a.key || "").localeCompare(String(b.key || ""));
-    });
-
-    return arr;
-  }
-
-  function getOccupiedSlots() {
-    const slots = {};
-    state.players.filter(p => p.playerKey).forEach(p => {
-      const sid = `${p.teeTime}|${p.startHole}|${p.startHoleSuffix}`;
-      if (!slots[sid]) {
-        slots[sid] = {
-          sid,
-          meta: parseSlotId(sid),
-          players: []
-        };
-      }
-      slots[sid].players.push(p);
-    });
-
-    return Object.values(slots).sort((a, b) => compareSlotMeta(a.meta, b.meta));
-  }
-
   function getCardPlayersBySid(sid) {
     return state.players.filter(p => `${p.teeTime}|${p.startHole}|${p.startHoleSuffix}` === sid);
   }
+
+  function getDisplayedSlots() {
+  const slots = {};
+
+  state.players.filter(p => p.playerKey).forEach(p => {
+    const sid = `${p.teeTime}|${p.startHole}|${p.startHoleSuffix}`;
+    if (!slots[sid]) {
+      slots[sid] = {
+        sid,
+        meta: parseSlotId(sid),
+        key: p.playerKey,
+        players: []
+      };
+    }
+    slots[sid].players.push(p);
+  });
+
+  return Object.values(slots).sort((a, b) => compareSlotMeta(a.meta, b.meta));
+}
 
   function getShotgunOpenTarget(currentMeta, direction) {
     const currentHole = parseInt(currentMeta.hole || "0", 10);
@@ -354,42 +328,33 @@
     return null;
   }
 
-  function getTeeTimeOpenTarget(currentMeta, direction) {
-    const currentMinutes = parseTimeToMinutes(currentMeta.time);
-    const intervalMinutes = parseInt(state.interval, 10) || 9;
-    if (!Number.isFinite(currentMinutes)) return null;
+  function findPromoteTarget(sid, direction) {
+    if (!isShotgun()) {
+      const displayed = getDisplayedSlots();
+      const idx = displayed.findIndex(x => x.sid === sid);
+      if (idx === -1) return null;
 
-    let probe = currentMinutes + (direction === "up" ? -intervalMinutes : intervalMinutes);
+      const targetIdx = direction === "up" ? idx - 1 : idx + 1;
+      if (targetIdx < 0 || targetIdx >= displayed.length) return null;
 
-    while (probe >= 0 && probe < (24 * 60)) {
-      const sid = `${formatMinutesToTime(probe)}|1|`;
-      if (getPlayersInSlot(sid).length === 0) return sid;
-      probe += (direction === "up" ? -intervalMinutes : intervalMinutes);
+      return { mode: "swap", sid: displayed[targetIdx].sid };
     }
 
-    return null;
-  }
-
-  function findPromoteTarget(sid, direction) {
-    const occupied = getOccupiedSlots();
-    const idx = occupied.findIndex(x => x.sid === sid);
+    const displayed = getDisplayedSlots();
+    const idx = displayed.findIndex(x => x.sid === sid);
     if (idx === -1) return null;
 
-    const current = occupied[idx];
-    const currentMeta = current.meta;
+    const currentMeta = displayed[idx].meta;
 
-    const openSid = isShotgun()
-      ? getShotgunOpenTarget(currentMeta, direction)
-      : getTeeTimeOpenTarget(currentMeta, direction);
-
+    const openSid = getShotgunOpenTarget(currentMeta, direction);
     if (openSid) {
       return { mode: "move", sid: openSid };
     }
 
     const swapIdx = direction === "up" ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= occupied.length) return null;
+    if (swapIdx < 0 || swapIdx >= displayed.length) return null;
 
-    return { mode: "swap", sid: occupied[swapIdx].sid };
+    return { mode: "swap", sid: displayed[swapIdx].sid };
   }
 
   function moveCardToOpenSlot(sourceSid, targetSid) {
@@ -525,15 +490,8 @@
   }
 
   // ---- Rendering: Canvas ----
-  function renderCanvas() {
-    const slots = {};
-    state.players.filter(p => p.playerKey).forEach(p => {
-      const sid = `${p.teeTime}|${p.startHole}|${p.startHoleSuffix}`;
-      if (!slots[sid]) slots[sid] = { meta: parseSlotId(sid), key: p.playerKey, players: [] };
-      slots[sid].players.push(p);
-    });
-
-    const sortedSlots = sortSlotsForDisplay(Object.values(slots));
+    function renderCanvas() {
+      const sortedSlots = getDisplayedSlots();
 
     if (!sortedSlots.length) {
       el.canvas.innerHTML = `<div class="maEmpty">No slots assigned yet. Select from the tray to begin.</div>`;
@@ -783,17 +741,24 @@
   }
 
   function normalizePlayers(rows) {
-    return rows.map(r => ({
-      playerGHIN: String(r.dbPlayers_PlayerGHIN || ""),
-      name: String(r.dbPlayers_Name || ""),
-      pairingId: String(r.dbPlayers_PairingID || "000"),
-      flightId: String(r.dbPlayers_FlightID || ""),
-      teeTime: String(r.dbPlayers_TeeTime || ""),
-      startHole: String(r.dbPlayers_StartHole || ""),
-      startHoleSuffix: String(r.dbPlayers_StartHoleSuffix || ""),
-      playerKey: String(r.dbPlayers_PlayerKey || ""),
-      size: 1
-    }));
+    return rows.map(r => {
+      const rawTeeTime = String(r.dbPlayers_TeeTime || "").trim();
+      const teeTimeMinutes = parseTimeToMinutes(rawTeeTime);
+
+      return {
+        playerGHIN: String(r.dbPlayers_PlayerGHIN || ""),
+        name: String(r.dbPlayers_Name || ""),
+        pairingId: String(r.dbPlayers_PairingID || "000"),
+        flightId: String(r.dbPlayers_FlightID || ""),
+        teeTime: teeTimeMinutes != null ? formatMinutesToTime(teeTimeMinutes) : rawTeeTime,
+        teeTimeMinutes: teeTimeMinutes,
+        startHole: String(r.dbPlayers_StartHole || "").trim(),
+        startHoleNumber: parseInt(String(r.dbPlayers_StartHole || "").trim() || "0", 10) || 0,
+        startHoleSuffix: String(r.dbPlayers_StartHoleSuffix || "").trim().toUpperCase(),
+        playerKey: String(r.dbPlayers_PlayerKey || ""),
+        size: 1
+      };
+    });
   }
 
   function applyChrome() {
