@@ -299,9 +299,20 @@
 .maPage--pairings .gpTrayPanel .maPanel__controls {
   display: flex;
   flex-direction: row;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+/* Ensure search doesn't hog the line when wrapped */
+.maPage--pairings .gpTrayPanel .maPanel__controls .gpInputClearWrap {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+}
+
+.maPage--pairings .gpTrayPanel .maPanel__controls .gpMasterCheck {
+  margin-right: 0;
 }
 
 /* Unpaired List Item Layout */
@@ -339,8 +350,9 @@
 /* Sort Control in Tray */
 .gpSortControl {
   display: flex;
-  width: 100%;
-  margin-top: 8px;
+  order: -1;
+  flex: 1 0 100%;
+  margin-top: 0;
   border: 1px solid var(--borderSubtle);
   border-radius: 4px;
   overflow: hidden;
