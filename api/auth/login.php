@@ -42,7 +42,7 @@ $userId = trim((string)($in["userId"] ?? ""));
 $pass   = (string)($in["password"] ?? "");
 
 if ($userId === "" || $pass === "") {
-  respond(200, ["ok" => false, "message" => "Please enter Email/GHIN and Password."]);
+  respond(400, ["ok" => false, "message" => "Please enter Email/GHIN and Password."]); // Use 400 Bad Request
   exit;
 }
 
@@ -52,5 +52,10 @@ try {
 } catch (Throwable $e) {
   // Catch any unexpected exceptions from the service layer
   error_log("[login.php] UNEXPECTED_ERROR: " . $e->getMessage() . " Trace: " . $e->getTraceAsString());
-  respond(500, ["ok" => false, "message" => "An unexpected server error occurred during login."]);
+  respond(500, ["ok" => false, "message" => "An unexpected server error occurred during login."]); // 500 Internal Server Error
+}
+
+// If ServiceLogin::processLogin returns ok:false, it's an authentication failure
+if (!$result['ok']) {
+  respond(401, $result); // Use 401 Unauthorized for login failures
 }
