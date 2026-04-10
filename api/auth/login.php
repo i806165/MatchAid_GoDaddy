@@ -1,8 +1,8 @@
-
-text/x-generic login.php ( PHP script, ASCII text, with CRLF line terminators )
 <?php
-// /public_html/api/auth/login.php
+
 declare(strict_types=1);
+
+// /public_html/api/auth/login.php
 
 ini_set('display_errors', '0');
 ini_set('display_startup_errors', '0');
