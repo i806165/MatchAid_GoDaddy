@@ -44,6 +44,8 @@ define('MA_ROUTE_API_SCORE_ENTRY', '/api/score_entry');
 define('MA_ROUTE_API_SCORE_HOME', '/api/score_home');
 define('MA_ROUTE_SCORE_ENTRY', '/app/score_entry/scoreentry.php');
 define('MA_ROUTE_SCORE_SKINS', '/app/score_skins/scoreskins.php');
+define('MA_ROUTE_API_SCORE_SUMMARY', '/api/score_summary');
+define('MA_ROUTE_SCORE_SUMMARY', '/app/score_summary/scoresummary.php');
 
 // Global testing flag: Set to true to bypass game-day score entry gating
 define('MA_TESTING_MODE', true);

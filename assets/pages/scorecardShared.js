@@ -81,7 +81,7 @@
                       : (portal === "PLAYER PORTAL" ? "player" : "home");
 
       chrome.setBottomNav({
-        visible: [homeRoute, 'scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoreskins'],
+        visible: [homeRoute, 'scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoresummary', 'scoreskins'],
         active: activeNav,
         onNavigate: (id) => MA.routerGo?.(id)
       });

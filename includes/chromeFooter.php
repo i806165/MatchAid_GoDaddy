@@ -198,5 +198,25 @@
       </span>
       <span class="maNavLabel">Skins</span>
     </button>
+    
+    <button type="button" class="maNavBtn" data-nav="scoresummary" aria-label="Leaders">
+      <span class="maNavIcon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true">
+          <!-- base -->
+          <rect x="4" y="18.5" width="16" height="1.5" rx=".75"></rect>
+
+          <!-- left podium -->
+          <rect x="5.2" y="11.5" width="3.6" height="6.4" rx=".6"></rect>
+
+          <!-- center podium (leader) -->
+          <rect x="10.2" y="8.0" width="3.6" height="9.9" rx=".6"></rect>
+
+          <!-- right podium -->
+          <rect x="15.2" y="13.3" width="3.6" height="4.6" rx=".6"></rect>
+        </svg>
+      </span>
+      <span class="maNavLabel">Leaders</span>
+    </button>
+
   </nav>
 </footer>

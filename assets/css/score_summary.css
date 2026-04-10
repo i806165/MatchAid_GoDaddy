@@ -1,0 +1,130 @@
+/* /assets/css/score_summary.css
+ * Thin, tokenized page CSS. Leans on ma_shared.css.
+ */
+
+.ssHint {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--mutedText);
+}
+
+.ssHost {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cardsGap);
+  min-width: 0;
+}
+
+.ssDesktopBoard {
+  display: block;
+}
+
+.ssTable {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: var(--cardBg);
+}
+
+.ssTable th,
+.ssTable td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--borderSubtle);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  color: var(--ink);
+  vertical-align: middle;
+}
+
+.ssTable th {
+  background: color-mix(in srgb, var(--cardBg) 96%, black);
+  color: var(--mutedText);
+}
+
+.ssTable th:first-child,
+.ssTable td:first-child,
+.ssTable--pairpair th:nth-child(4),
+.ssTable--pairpair td:nth-child(4) {
+  text-align: left;
+}
+
+.ssCellStrong {
+  font-weight: 900;
+}
+
+.ssMobileCards {
+  display: none;
+  flex-direction: column;
+  gap: var(--cardsGap);
+}
+
+.ssMiniCard__body {
+  display: grid;
+  gap: 8px;
+}
+
+.ssMiniCard__body--pairpair {
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.ssMiniMetric {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--radiusMd);
+  background: #fff;
+}
+
+.ssMiniMetric__label {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--mutedText);
+}
+
+.ssMiniMetric__value {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.ssThruPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--pillBg);
+  color: var(--pillText);
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.ssSideBlock {
+  display: grid;
+  gap: 8px;
+}
+
+.ssSideBlock__title {
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--mutedText);
+  text-transform: uppercase;
+  letter-spacing: .2px;
+}
+
+@media (max-width: 760px) {
+  .ssDesktopBoard {
+    display: none;
+  }
+
+  .ssMobileCards {
+    display: flex;
+  }
+}

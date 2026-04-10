@@ -66,6 +66,7 @@ $ROUTES = [
     "scorecardGroup" => "/app/scorecardShared/scorecardGroup.php",
     "scorecardGame" => "/app/scorecardShared/scorecardGame.php",
     "scoreskins" => "/app/score_skins/scoreskins.php",
+    "scoresummary" => "/app/score_summary/scoresummary.php",
 
     "player"    => "/app/player_home/playerhome.php",
     "import"   => "/app/game_import/gameimport.php",
