@@ -4,8 +4,8 @@ text/x-generic login.php ( PHP script, ASCII text, with CRLF line terminators )
 // /public_html/api/auth/login.php
 declare(strict_types=1);
 
-ini_set('display_errors', '1');
-ini_set('display_startup_errors', '1');
+ini_set('display_errors', '0');
+ini_set('display_startup_errors', '0');
 error_reporting(E_ALL);
 
 $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
