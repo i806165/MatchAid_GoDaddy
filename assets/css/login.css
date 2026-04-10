@@ -40,6 +40,10 @@
   gap: 12px;
 }
 
+.maLoginCard__body > .maField{
+  flex: 0 0 auto;
+}
+
 .maLoginInputShell{
   display: flex;
   align-items: center;
@@ -86,6 +90,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+  margin-top: 2px;
 }
 
 .maLoginActions .btn{
