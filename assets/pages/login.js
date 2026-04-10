@@ -35,24 +35,23 @@
   };
 
   // ---- Helpers ----
-  function setBusy(on) {
-    state.busy = !!on;
-    if (el.busyBadge) el.busyBadge.classList.toggle("hidden", !state.busy);
-    if (el.btnLogin) el.btnLogin.disabled = state.busy;
-    if (el.btnCancel) el.btnCancel.disabled = state.busy;
-    if (el.inputUserId) el.inputUserId.disabled = state.busy;
-    if (el.inputPassword) el.inputPassword.disabled = state.busy;
-    if (el.btnPwdToggle) el.btnPwdToggle.disabled = state.busy;
-  }
+function setBusy(on) {
+  state.busy = !!on;
+  if (el.busyBadge) el.busyBadge.style.display = state.busy ? "inline-flex" : "none";
+  if (el.btnLogin) el.btnLogin.disabled = state.busy;
+  if (el.btnCancel) el.btnCancel.disabled = state.busy;
+  if (el.inputUserId) el.inputUserId.disabled = state.busy;
+  if (el.inputPassword) el.inputPassword.disabled = state.busy;
+  if (el.btnPwdToggle) el.btnPwdToggle.disabled = state.busy;
+}
 
-  function showError(msg) {
-    if (el.loginErrorMsg) {
-      el.loginErrorMsg.textContent = msg || "";
-      el.loginErrorMsg.style.display = msg ? "block" : "none";
-    }
-    // Also log to console for debugging, as chrome footer is not present
-    if (msg) console.error("[LOGIN_ERROR]", msg);
+function showError(msg) {
+  if (el.loginErrorMsg) {
+    el.loginErrorMsg.textContent = msg || "";
+    el.loginErrorMsg.style.display = msg ? "inline-flex" : "none";
   }
+  if (msg) console.error("[LOGIN_ERROR]", msg);
+}
 
   function validate() {
     const rawUserId = String(el.inputUserId?.value || "").trim();
@@ -148,8 +147,8 @@
         const willShow = (input.type === "password");
         input.type = willShow ? "text" : "password";
 
-        if (el.icoEye) el.icoEye.classList.toggle("hidden", !willShow);
-        if (el.icoEyeOff) el.icoEyeOff.classList.toggle("hidden", willShow);
+if (el.icoEye) el.icoEye.style.display = willShow ? "none" : "inline";
+if (el.icoEyeOff) el.icoEyeOff.style.display = willShow ? "inline" : "none";
 
         const label = willShow ? "Hide password" : "Show password";
         el.btnPwdToggle.setAttribute("aria-label", label);
