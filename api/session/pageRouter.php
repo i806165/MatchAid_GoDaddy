@@ -47,7 +47,7 @@ $scoreId = trim((string)($in["scoreId"] ?? ""));
 $ROUTES = [
     // General
     "home"  => "/",
-    "login" => "/app/login.php",
+    "login" => "/app/login/login.php",
 
     "admin"    => "/app/admin_games/gameslist.php",
     "edit"     => "/app/game_maintenance/gamemaint.php",   // expects mode=add|edit (if your router appends it)

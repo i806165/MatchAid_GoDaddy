@@ -52,8 +52,20 @@ try {
 include __DIR__ . "/../../includes/chromeHeader.php";
 
 // Determine return and cancel actions
-$returnAction = trim((string)($_GET["returnAction"] ?? "home"));
+$portalLabel = strtoupper(trim((string)($_SESSION["SessionPortal"] ?? "")));
+
+$returnAction = trim((string)($_GET["returnAction"] ?? ""));
 $cancelAction = trim((string)($_GET["cancelAction"] ?? "home"));
+
+if ($returnAction === "") {
+    if ($portalLabel === "ADMIN PORTAL") {
+        $returnAction = "admin";
+    } elseif ($portalLabel === "PLAYER PORTAL") {
+        $returnAction = "player";
+    } else {
+        $returnAction = "home";
+    }
+}
 
 // Validate action keys to prevent open-redirect behavior
 if (!isset($ROUTES[$returnAction])) $returnAction = "home";

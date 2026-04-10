@@ -1,8 +1,6 @@
-
-text/x-generic logout.php ( PHP script, ASCII text, with CRLF line terminators )
 <?php
 declare(strict_types=1);
-
+// /public_html/api/auth/logout.php
 session_start();
 header("Content-Type: application/json");
 
@@ -14,3 +12,4 @@ if (ini_get("session.use_cookies")) {
 session_destroy();
 
 echo json_encode(["ok" => true]);
+exit;

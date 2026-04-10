@@ -64,45 +64,73 @@ function showError(msg) {
   }
 
   // ---- Actions ----
-  async function doLogin() {
-    if (state.busy) return;
+async function doLogin() {
+  if (state.busy) return;
 
-    showError(""); // Clear previous errors
+  showError("");
 
-    const v = validate();
-    if (!v.ok) {
-      showError(v.msg);
-      return;
+  const v = validate();
+  if (!v.ok) {
+    showError(v.msg);
+    return;
+  }
+
+  setBusy(true);
+  showError("");
+
+  try {
+    if (!postJson || !paths.apiLogin) {
+      throw new Error("Login API path or postJson utility missing.");
     }
 
-    setBusy(true);
-    showError("");
+    const out = await postJson(paths.apiLogin, { userId: v.userId, password: v.password });
+
+    if (out && out.ok) {
+      showError("");
+      if (routerGo) {
+        await routerGo(state.returnAction);
+      } else {
+        window.location.assign(out?.nextUrl || "/");
+      }
+    } else {
+      const msg = (out && out.message) ? String(out.message) : "Invalid credentials";
+      showError(msg);
+
+      try {
+        if (postJson && paths.apiLogout) {
+          await postJson(paths.apiLogout, {});
+        }
+      } catch (_) {
+        // ignore logout failure
+      }
+
+      if (routerGo) {
+        await routerGo("home");
+      } else {
+        window.location.assign("/");
+      }
+    }
+  } catch (err) {
+    console.error("Login failed:", err);
+    showError("Network error or unexpected server response. Please try again.");
 
     try {
-      if (!postJson || !paths.apiLogin) {
-        throw new Error("Login API path or postJson utility missing.");
+      if (postJson && paths.apiLogout) {
+        await postJson(paths.apiLogout, {});
       }
-
-      const out = await postJson(paths.apiLogin, { userId: v.userId, password: v.password });
-
-      if (out && out.ok) {
-        showError("");
-        if (routerGo) {
-          routerGo(state.returnAction);
-        } else {
-          window.location.assign(out?.nextUrl || "/");
-        }
-      } else {
-        const msg = (out && out.message) ? String(out.message) : "Invalid credentials";
-        showError(msg);
-      }
-    } catch (err) {
-      console.error("Login failed:", err);
-      showError("Network error or unexpected server response. Please try again.");
-    } finally {
-      setBusy(false);
+    } catch (_) {
+      // ignore logout failure
     }
+
+    if (routerGo) {
+      await routerGo("home");
+    } else {
+      window.location.assign("/");
+    }
+  } finally {
+    setBusy(false);
   }
+}
 
   async function doCancel() {
     if (state.busy) return;
