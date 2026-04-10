@@ -1,0 +1,30 @@
+/* /assets/css/login.css
+ * Login page specific styles.
+ * Leverages ma_shared.css for core components.
+ */
+
+/* Center the login card on the page */
+.maPage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spaceMd); /* Use shared spacing variable */
+}
+
+.maLoginCard {
+    max-width: 400px; /* Adjust as needed for login form width */
+    width: 100%;
+    margin: auto; /* Center horizontally */
+}
+
+/* Adjustments for the form grid within the card */
+.maFormGrid {
+    display: grid;
+    grid-template-columns: 1fr; /* Stack labels and inputs on small screens */
+    gap: var(--spaceMd);
+    margin-top: var(--spaceMd);
+}
+
+@media (min-width: 520px) { /* Adjust breakpoint as needed */
+    /* You can add a 2-column layout for larger screens if desired */
+}

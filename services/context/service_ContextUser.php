@@ -45,8 +45,7 @@ final class ServiceUserContext {
     public static function storeGHINUser(string $ghinId,
         string $name,
         $profileJson,
-        string $adminToken,
-        ?string $userToken): bool {
+        string $adminToken, ?string $userToken): bool {
         $ghinId =trim($ghinId);
         if ($ghinId ==="") return false;
 
