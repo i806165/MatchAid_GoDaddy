@@ -164,12 +164,11 @@
 
   // ---- Chrome Integration ----
   function applyChrome() {
-    // Only set header lines, no actions or bottom nav as per requirements
-    if (chrome && typeof chrome.setHeaderLines === "function") {
-      // The titles are set in login.php and passed to chromeHeader.php
-      // No need to set them again here unless dynamic changes are required.
-      // For now, ensure the brand is visible if it's hidden by default.
-      if (chrome.showBrand) chrome.showBrand(true);
+    if (chrome.setHeaderLines) {
+      chrome.setHeaderLines([
+        init.title || "MatchAid Login",
+        init.subtitle || "Sign in to continue"
+      ]);
     }
   }
 

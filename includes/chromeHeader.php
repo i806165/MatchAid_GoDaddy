@@ -6,7 +6,7 @@
   <div class="maChrome__hdrRow">
 
     <div id="chromeBrandSlot" class="maChrome__brand" aria-label="MatchAid Brand">
-      <img src="/assets/images/MatchAidLogoSquare.jpeg" alt="MatchAid" style="display:none;" />
+      <img src="/assets/images/MatchAidLogoSquare.jpeg" alt="MatchAid" />
     </div>
 
     <!-- Left page action -->

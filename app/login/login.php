@@ -64,6 +64,8 @@ $initPayload = [
     "ok"           => true,
     "returnAction" => $returnAction,
     "cancelAction" => $cancelAction,
+    "title"        => $maChromeTitle,
+    "subtitle"     => $maChromeSubtitle
 ];
 
 // Provide path constants to JS (no hard-coded paths in JS)
