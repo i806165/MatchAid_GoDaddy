@@ -48,11 +48,15 @@ if ($userId === "" || $pass === "") {
 
 try {
   $result = ServiceLogin::processLogin($userId, $pass, $config);
-  respond(200, $result);
+
+  if (!empty($result["ok"])) {
+    respond(200, $result);
+  }
+
+  respond(401, $result);
 } catch (Throwable $e) {
-  // Catch any unexpected exceptions from the service layer
   error_log("[login.php] UNEXPECTED_ERROR: " . $e->getMessage() . " Trace: " . $e->getTraceAsString());
-  respond(500, ["ok" => false, "message" => "An unexpected server error occurred during login."]); // 500 Internal Server Error
+  respond(500, ["ok" => false, "message" => "An unexpected server error occurred during login."]);
 }
 
 // If ServiceLogin::processLogin returns ok:false, it's an authentication failure

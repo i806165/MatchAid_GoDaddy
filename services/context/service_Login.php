@@ -71,12 +71,11 @@ final class ServiceLogin
             session_regenerate_id(true);
             $errInd = "300";
             $_SESSION["SessionGHINLogonID"] = $ghinId;
-            $_SESSION["SessionUSERToken"]   = $userToken;
-            $_SESSION["SessionGHINToken"]   = $adminToken;
+            $_SESSION["SessionUserToken"]   = $userToken;
+            $_SESSION["SessionAdminToken"]  = $adminToken;
             $_SESSION["SessionLoginTime"]   = gmdate("c");
             $_SESSION["SessionUserName"]    = $userName;
             $_SESSION["SessionClubID"]      = $clubId;
-
             ServiceUserContext::storeGHINUser(
                 $ghinId,
                 $userName,
@@ -110,12 +109,12 @@ final class ServiceLogin
             // The user explicitly requested no pre-filling of userid/password.
 
             // Determine next URL (default to home)
-            $nextUrl = "/"; // Default home route
+            //$nextUrl = "/"; // Default home route
             // You might want to add logic here to determine a specific landing page
             // based on user role or a 'returnAction' parameter if passed to this service.
             // For now, it defaults to the root.
 
-            return ["ok" => true, "nextUrl" => $nextUrl];
+            return ["ok" => true];
 
         } catch (Throwable $e) {
             Logger::error("LOGIN_PROCESS_FAIL", [

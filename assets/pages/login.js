@@ -58,11 +58,7 @@
     const rawUserId = String(el.inputUserId?.value || "").trim();
     const password = String(el.inputPassword?.value || "").trim();
 
-    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawUserId);
-    const isNumericId = /^\d+$/.test(rawUserId);
-
-    if (!rawUserId) return { ok: false, msg: "Please enter a valid Email or User-ID." };
-    if (!isEmail && !isNumericId) return { ok: false, msg: "Please enter a valid Email or User-ID." };
+    if (!rawUserId) return { ok: false, msg: "Please enter Email or User-ID." };
     if (!password) return { ok: false, msg: "Please enter a Password." };
 
     return { ok: true, userId: rawUserId, password };
@@ -81,7 +77,7 @@
     }
 
     setBusy(true);
-    showError("Signing in…"); // Use error area for info during busy state
+    showError("");
 
     try {
       if (!postJson || !paths.apiLogin) {
@@ -91,11 +87,11 @@
       const out = await postJson(paths.apiLogin, { userId: v.userId, password: v.password });
 
       if (out && out.ok) {
-        showError(""); // Clear busy message
+        showError("");
         if (routerGo) {
-          routerGo(state.returnAction, { redirectUrl: out.nextUrl });
+          routerGo(state.returnAction);
         } else {
-          window.location.assign(out.nextUrl || "/");
+          window.location.assign(out?.nextUrl || "/");
         }
       } else {
         const msg = (out && out.message) ? String(out.message) : "Invalid credentials";
