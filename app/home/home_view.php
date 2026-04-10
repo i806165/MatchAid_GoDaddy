@@ -33,7 +33,7 @@
           <?php if (!empty($isLoggedIn)): ?>
             <button
               type="button"
-              class="acctBtn acctBtn--loggedIn"
+              class="iconBtn acctBtn acctBtn--loggedIn"
               id="acctBtn"
               aria-label="Account"
               title="Account"
@@ -43,7 +43,7 @@
             </button>
           <?php else: ?>
             <a
-              class="acctBtn acctBtn--loggedOut"
+              class="iconBtn acctBtn acctBtn--loggedOut"
               href="<?= htmlspecialchars($loginHref) ?>"
               aria-label="Sign In"
               title="Sign In"
