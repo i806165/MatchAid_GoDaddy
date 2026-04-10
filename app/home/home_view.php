@@ -36,7 +36,7 @@
       <section class="hero" aria-label="Welcome">
         <h1 class="hero__title">Run better golf games — with less friction.</h1>
         <p class="hero__subtitle">
-          Make your golf games easier to manage, easier for players to participate, while making the experience enjoyable for all.
+          Make your golf games easier to manage, easier for players to participate, and an experience for all to enjoy.
         </p>
       </section>
 

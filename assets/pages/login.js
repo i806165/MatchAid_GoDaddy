@@ -21,7 +21,6 @@
     cancelAction: init.cancelAction || "home",
   };
 
-  // ---- DOM Elements ----
   const el = {
     inputUserId: document.getElementById("inputUserId"),
     inputPassword: document.getElementById("inputPassword"),
@@ -34,24 +33,23 @@
     loginErrorMsg: document.getElementById("loginErrorMsg"),
   };
 
-  // ---- Helpers ----
-function setBusy(on) {
-  state.busy = !!on;
-  if (el.busyBadge) el.busyBadge.style.display = state.busy ? "inline-flex" : "none";
-  if (el.btnLogin) el.btnLogin.disabled = state.busy;
-  if (el.btnCancel) el.btnCancel.disabled = state.busy;
-  if (el.inputUserId) el.inputUserId.disabled = state.busy;
-  if (el.inputPassword) el.inputPassword.disabled = state.busy;
-  if (el.btnPwdToggle) el.btnPwdToggle.disabled = state.busy;
-}
-
-function showError(msg) {
-  if (el.loginErrorMsg) {
-    el.loginErrorMsg.textContent = msg || "";
-    el.loginErrorMsg.style.display = msg ? "inline-flex" : "none";
+  function setBusy(on) {
+    state.busy = !!on;
+    if (el.busyBadge) el.busyBadge.style.display = state.busy ? "inline-flex" : "none";
+    if (el.btnLogin) el.btnLogin.disabled = state.busy;
+    if (el.btnCancel) el.btnCancel.disabled = state.busy;
+    if (el.inputUserId) el.inputUserId.disabled = state.busy;
+    if (el.inputPassword) el.inputPassword.disabled = state.busy;
+    if (el.btnPwdToggle) el.btnPwdToggle.disabled = state.busy;
   }
-  if (msg) console.error("[LOGIN_ERROR]", msg);
-}
+
+  function showError(msg) {
+    if (el.loginErrorMsg) {
+      el.loginErrorMsg.textContent = msg || "";
+      el.loginErrorMsg.style.display = msg ? "inline-flex" : "none";
+    }
+    if (msg) console.error("[LOGIN_ERROR]", msg);
+  }
 
   function validate() {
     const rawUserId = String(el.inputUserId?.value || "").trim();
@@ -63,106 +61,91 @@ function showError(msg) {
     return { ok: true, userId: rawUserId, password };
   }
 
-  // ---- Actions ----
-async function doLogin() {
-  if (state.busy) return;
+  async function doLogin() {
+    if (state.busy) return;
 
-  showError("");
+    showError("");
 
-  const v = validate();
-  if (!v.ok) {
-    showError(v.msg);
-    return;
-  }
-
-  setBusy(true);
-  showError("");
-
-  try {
-    if (!postJson || !paths.apiLogin) {
-      throw new Error("Login API path or postJson utility missing.");
+    const v = validate();
+    if (!v.ok) {
+      showError(v.msg);
+      return;
     }
 
-    const out = await postJson(paths.apiLogin, { userId: v.userId, password: v.password });
+    setBusy(true);
+    showError("");
 
-    if (out && out.ok) {
-      showError("");
-      if (routerGo) {
-        await routerGo(state.returnAction);
-      } else {
-        window.location.assign(out?.nextUrl || "/");
+    try {
+      if (!postJson || !paths.apiLogin) {
+        throw new Error("Login API path or postJson utility missing.");
       }
-    } else {
+
+      const out = await postJson(paths.apiLogin, { userId: v.userId, password: v.password });
+
+      if (out && out.ok) {
+        showError("");
+        if (routerGo) {
+          await routerGo(state.returnAction);
+        } else {
+          window.location.assign(out?.nextUrl || "/");
+        }
+        return;
+      }
+
       const msg = (out && out.message) ? String(out.message) : "Invalid credentials";
       showError(msg);
 
-      try {
-        if (postJson && paths.apiLogout) {
-          await postJson(paths.apiLogout, {});
-        }
-      } catch (_) {
-        // ignore logout failure
+      if (el.inputPassword) {
+        el.inputPassword.focus();
+        el.inputPassword.select();
       }
+    } catch (err) {
+      console.error("Login failed:", err);
+      showError("Network error or unexpected server response. Please try again.");
 
-      if (routerGo) {
-        await routerGo("home");
-      } else {
-        window.location.assign("/");
+      if (el.inputPassword) {
+        el.inputPassword.focus();
       }
+    } finally {
+      setBusy(false);
     }
-  } catch (err) {
-    console.error("Login failed:", err);
-    showError("Network error or unexpected server response. Please try again.");
-
-    try {
-      if (postJson && paths.apiLogout) {
-        await postJson(paths.apiLogout, {});
-      }
-    } catch (_) {
-      // ignore logout failure
-    }
-
-    if (routerGo) {
-      await routerGo("home");
-    } else {
-      window.location.assign("/");
-    }
-  } finally {
-    setBusy(false);
   }
-}
 
   async function doCancel() {
     if (state.busy) return;
 
-    // Attempt to clear server session if a logout endpoint is defined
     try {
       if (postJson && paths.apiLogout) {
         await postJson(paths.apiLogout, {});
       }
     } catch (_) {
-      // Ignore logout errors, proceed with navigation
+      // Ignore logout errors and continue navigation
     }
 
     if (routerGo) {
       routerGo(state.cancelAction);
     } else {
-      window.location.assign("/"); // Fallback to home
+      window.location.assign("/");
     }
   }
 
-  // ---- Event Wiring ----
+  function onEnterSubmit(e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      doLogin();
+    }
+  }
+
   function wireEvents() {
     if (el.btnCancel) el.btnCancel.addEventListener("click", doCancel);
     if (el.btnLogin) el.btnLogin.addEventListener("click", doLogin);
 
+    if (el.inputUserId) {
+      el.inputUserId.addEventListener("keydown", onEnterSubmit);
+    }
+
     if (el.inputPassword) {
-      el.inputPassword.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault(); // Prevent form submission if it's implicitly a form
-          doLogin();
-        }
-      });
+      el.inputPassword.addEventListener("keydown", onEnterSubmit);
     }
 
     if (el.btnPwdToggle) {
@@ -175,8 +158,8 @@ async function doLogin() {
         const willShow = (input.type === "password");
         input.type = willShow ? "text" : "password";
 
-if (el.icoEye) el.icoEye.style.display = willShow ? "none" : "inline";
-if (el.icoEyeOff) el.icoEyeOff.style.display = willShow ? "inline" : "none";
+        if (el.icoEye) el.icoEye.style.display = willShow ? "none" : "inline";
+        if (el.icoEyeOff) el.icoEyeOff.style.display = willShow ? "inline" : "none";
 
         const label = willShow ? "Hide password" : "Show password";
         el.btnPwdToggle.setAttribute("aria-label", label);
@@ -185,7 +168,6 @@ if (el.icoEyeOff) el.icoEyeOff.style.display = willShow ? "inline" : "none";
     }
   }
 
-  // ---- Chrome Integration ----
   function applyChrome() {
     if (chrome.setHeaderLines) {
       chrome.setHeaderLines([
@@ -195,12 +177,10 @@ if (el.icoEyeOff) el.icoEyeOff.style.display = willShow ? "inline" : "none";
     }
   }
 
-  // ---- Initialization ----
   function initialize() {
     applyChrome();
     wireEvents();
 
-    // Focus on the user ID field on load
     if (el.inputUserId) el.inputUserId.focus();
   }
 

@@ -1,30 +1,103 @@
 /* /assets/css/login.css
  * Login page specific styles.
- * Leverages ma_shared.css for core components.
+ * Intentionally thin and tokenized; relies on ma_shared.css.
  */
 
-/* Center the login card on the page */
-.maPage {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--spaceMd); /* Use shared spacing variable */
+.maLoginPage{
+  padding-top: 18px;
 }
 
-.maLoginCard {
-    max-width: 400px; /* Adjust as needed for login form width */
-    width: 100%;
-    margin: auto; /* Center horizontally */
+.maLoginShell{
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
 }
 
-/* Adjustments for the form grid within the card */
-.maFormGrid {
-    display: grid;
-    grid-template-columns: 1fr; /* Stack labels and inputs on small screens */
-    gap: var(--spaceMd);
-    margin-top: var(--spaceMd);
+.maLoginIntro{
+  margin: 0 0 10px 2px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--mutedText);
 }
 
-@media (min-width: 520px) { /* Adjust breakpoint as needed */
-    /* You can add a 2-column layout for larger screens if desired */
+.maLoginCard{
+  width: 100%;
+}
+
+.maLoginCard__hdr{
+  background: var(--brandSecondary);
+  color: var(--brandSecondaryText);
+  border-bottom: 1px solid rgba(255,255,255,.18);
+}
+
+.maLoginCard__hdr .maCard__title{
+  color: var(--brandSecondaryText);
+}
+
+.maLoginCard__body{
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.maLoginInputShell{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--btnHeight);
+  padding: 0 4px 0 0;
+  border: 1px solid var(--controlBorder);
+  border-radius: var(--controlRadius);
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.maLoginInputShell:focus-within{
+  border-color: var(--brandSecondary);
+  box-shadow: 0 0 0 3px rgba(0,0,0,.06);
+}
+
+.maLoginPasswordInput{
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  padding-right: 0;
+}
+
+.maLoginPasswordInput:focus{
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.maLoginPwdToggle{
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: var(--radiusSq);
+}
+
+.maLoginError{
+  min-height: 34px;
+  justify-content: flex-start;
+  white-space: normal;
+}
+
+.maLoginActions{
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.maLoginActions .btn{
+  min-width: 88px;
+}
+
+@media (max-width: 600px){
+  .maLoginPage{
+    padding-top: 12px;
+  }
+
+  .maLoginShell{
+    max-width: none;
+  }
 }
