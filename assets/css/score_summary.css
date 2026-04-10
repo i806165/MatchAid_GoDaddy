@@ -119,6 +119,27 @@
   letter-spacing: .2px;
 }
 
+.ssMatchCell,
+.ssMatchCardTitle {
+  white-space: normal;
+}
+
+.ssMatchCell__top,
+.ssMatchCell__bottom {
+  display: block;
+  line-height: 1.2;
+}
+
+.ssMatchCell__top {
+  font-weight: 900;
+}
+
+.ssMatchCell__bottom {
+  margin-top: 2px;
+  color: var(--mutedText);
+  font-weight: 800;
+}
+
 @media (max-width: 760px) {
   .ssDesktopBoard {
     display: none;

@@ -146,7 +146,10 @@
                 <td>${esc(row.left.scoreCount)}</td>
                 <td>${esc(row.left.grossDiffDisplay)}</td>
                 <td>${esc(row.left.netDiffDisplay)}</td>
-                <td class="ssCellStrong">${esc(row.matchLabel)}</td>
+                <td class="ssCellStrong ssMatchCell">
+                <div class="ssMatchCell__top">${esc(row.matchLabelTop || '')}</div>
+                <div class="ssMatchCell__bottom">${esc(row.matchLabelBottom || '')}</div>
+                </td>
                 <td>${esc(row.right.scoreCount)}</td>
                 <td>${esc(row.right.grossDiffDisplay)}</td>
                 <td>${esc(row.right.netDiffDisplay)}</td>
@@ -165,7 +168,10 @@
         ${dataRows.map((row) => `
           <section class="maCard ssMiniCard" aria-label="${esc(row.matchLabel)}">
             <div class="maCard__hdr">
-              <div class="maCard__title">${esc(row.matchLabel)}</div>
+                <div class="maCard__title ssMatchCardTitle">
+                <div class="ssMatchCell__top">${esc(row.matchLabelTop || '')}</div>
+                <div class="ssMatchCell__bottom">${esc(row.matchLabelBottom || '')}</div>
+                </div>
               <div class="ssThruPill">Thru ${esc(formatThru(row.thru))}</div>
             </div>
             <div class="maCard__body ssMiniCard__body ssMiniCard__body--pairpair">

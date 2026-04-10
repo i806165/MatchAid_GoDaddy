@@ -52,7 +52,7 @@ final class ServiceScoreSummary
 
                 $out[] = [
                     'pairingId' => (string)$pairingId,
-                    'pairingLabel' => 'Pairing ' . (string)$pairingId,
+                    'pairingLabel' => self::buildPairFieldLabel($pairPlayers),
                     'scoreCount' => self::countDeclaredScores($pairPlayers),
                     'grossDiffValue' => $gross['value'],
                     'grossDiffDisplay' => $gross['display'],
@@ -130,6 +130,8 @@ final class ServiceScoreSummary
             $out[] = [
                 'flightId' => $flightId,
                 'matchLabel' => $pairingLabel,
+                'matchLabelTop' => self::buildPairFieldLabel($leftPlayers),
+                'matchLabelBottom' => self::buildPairFieldLabel($rightPlayers),
                 'left' => [
                     'flightPos' => (string)$leftKey,
                     'pairingId' => (string)$leftPairingId,
@@ -177,6 +179,24 @@ final class ServiceScoreSummary
 
         return $out;
     }
+
+private static function buildPairFieldLabel(array $players): string
+{
+    $parts = [];
+
+    foreach ($players as $player) {
+        $last = trim((string)($player['dbPlayers_LName'] ?? ''));
+        $fullName = trim((string)($player['dbPlayers_Name'] ?? ''));
+
+        if ($last !== '') {
+            $parts[] = $last;
+        } elseif ($fullName !== '') {
+            $parts[] = $fullName;
+        }
+    }
+
+    return implode(' • ', $parts);
+}
 
     private static function orderedPairingIds(array $row, array $playersByPairing): array
     {
