@@ -28,6 +28,33 @@
             <div class="brandText__tag">Golf game management</div>
           </div>
         </div>
+
+        <div class="hdr__right">
+          <?php if (!empty($isLoggedIn)): ?>
+            <button
+              type="button"
+              class="acctBtn acctBtn--loggedIn"
+              id="acctBtn"
+              aria-label="Account"
+              title="Account"
+              data-logged-in="1"
+            >
+              <span class="acctBtn__initial" aria-hidden="true"><?= htmlspecialchars($userInitial) ?></span>
+            </button>
+          <?php else: ?>
+            <a
+              class="acctBtn acctBtn--loggedOut"
+              href="<?= htmlspecialchars($loginHref) ?>"
+              aria-label="Sign In"
+              title="Sign In"
+            >
+              <svg class="acctBtn__icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="currentColor" d="M12 12c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5Zm0 2c-4.42 0-8 3.13-8 7h2c0-2.76 2.69-5 6-5s6 2.24 6 5h2c0-3.87-3.58-7-8-7Zm0-10c1.65 0 3 1.35 3 3s-1.35 3-3 3-3-1.35-3-3 1.35-3 3-3Z"/>
+                <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="1.8"/>
+              </svg>
+            </a>
+          <?php endif; ?>
+        </div>
       </div>
     </header>
 
@@ -43,13 +70,10 @@
       <section class="grid" aria-label="Portals">
         <!-- Left: CTAs -->
         <div class="card">
-          <div class="card__hdr">
-            <h2 class="card__title">Choose your role</h2>
+          <div class="card__hdr card__hdr--compact">
+            <h2 class="card__title">Select where you’d like to go.</h2>
           </div>
           <div class="card__body">
-            <p class="copy">
-              Select where you’d like to go.
-            </p>
 
             <div class="ctaRow" role="group" aria-label="Portal navigation">
               <!-- Player Portal -->
@@ -75,11 +99,11 @@
         </div>
 
         <!-- Right: What’s inside -->
-        <aside class="card" aria-label="The MatchAid value proposition">
-          <div class="card__hdr">
-            <h2 class="card__title">The MatchAid value proposition</h2>
-          </div>
-            <div class="card__body">
+          <aside class="card" aria-label="The MatchAid value proposition">
+            <div class="card__hdr card__hdr--compact">
+              <h2 class="card__title">The MatchAid value proposition</h2>
+            </div>
+              <div class="card__body">
                 <ul class="miniList">
                     <li class="miniItem">
                     <div class="miniIcon" aria-hidden="true">A</div>
@@ -115,5 +139,68 @@
       </div>
     </footer>
   </div>
+<?php if (!empty($isLoggedIn)): ?>
+  <div class="acctModal" id="acctModal" hidden>
+    <div class="acctModal__backdrop" id="acctModalBackdrop"></div>
+    <div class="acctModal__panel" role="dialog" aria-modal="true" aria-labelledby="acctModalTitle">
+      <div class="acctModal__title" id="acctModalTitle">Log out of MatchAid?</div>
+      <div class="acctModal__actions">
+        <button type="button" class="btn btn--ghost" id="acctCancelBtn">Cancel</button>
+        <button type="button" class="btn btn--primary" id="acctLogoutBtn">Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function () {
+    const acctBtn = document.getElementById('acctBtn');
+    const acctModal = document.getElementById('acctModal');
+    const acctModalBackdrop = document.getElementById('acctModalBackdrop');
+    const acctCancelBtn = document.getElementById('acctCancelBtn');
+    const acctLogoutBtn = document.getElementById('acctLogoutBtn');
+
+    if (!acctBtn || !acctModal || !acctLogoutBtn) return;
+
+    function openModal() {
+      acctModal.hidden = false;
+      document.body.classList.add('acctModalOpen');
+    }
+
+    function closeModal() {
+      acctModal.hidden = true;
+      document.body.classList.remove('acctModalOpen');
+    }
+
+    acctBtn.addEventListener('click', openModal);
+    if (acctCancelBtn) acctCancelBtn.addEventListener('click', closeModal);
+    if (acctModalBackdrop) acctModalBackdrop.addEventListener('click', closeModal);
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !acctModal.hidden) {
+        closeModal();
+      }
+    });
+
+    acctLogoutBtn.addEventListener('click', async function () {
+      try {
+        const res = await fetch('/api/auth/logout.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: '{}'
+        });
+        const out = await res.json().catch(() => ({}));
+        if (out && out.ok) {
+          window.location.assign('/');
+          return;
+        }
+      } catch (err) {
+        console.error('Logout failed', err);
+      }
+      window.location.assign('/');
+    });
+  })();
+  </script>
+<?php endif; ?>
+
 </body>
 </html>

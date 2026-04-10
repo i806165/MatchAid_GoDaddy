@@ -114,6 +114,50 @@ a { color: inherit; text-decoration: none; }
   gap: var(--gapSm);
   flex: 0 0 auto;
 }
+.acctBtn {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.92);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
+  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+}
+
+.acctBtn:hover {
+  transform: translateY(-1px);
+  background: rgba(255,255,255,0.09);
+  border-color: rgba(255,255,255,0.22);
+}
+
+.acctBtn:active {
+  transform: translateY(0);
+}
+
+.acctBtn__icon {
+  width: 1.35rem;
+  height: 1.35rem;
+  display: block;
+}
+
+.acctBtn__initial {
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, rgba(63,118,82,0.98), rgba(63,118,82,0.80));
+  color: rgba(255,255,255,0.96);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+}
 .pill {
   display: inline-flex;
   align-items: center;
@@ -200,6 +244,10 @@ a { color: inherit; text-decoration: none; }
   padding: var(--padLg);
   border-bottom: 1px solid rgba(255,255,255,0.10);
   background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+}
+.card__hdr--compact {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
 }
 .card__title {
   margin: 0;
@@ -343,4 +391,57 @@ a { color: inherit; text-decoration: none; }
   padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0,0,0,0);
   white-space: nowrap; border: 0;
+}
+.acctModal[hidden] {
+  display: none;
+}
+
+.acctModal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.acctModal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(6px);
+}
+
+.acctModal__panel {
+  position: absolute;
+  top: 5rem;
+  right: 1.25rem;
+  width: min(20rem, calc(100vw - 2rem));
+  border-radius: var(--radiusLg);
+  border: 1px solid var(--border);
+  background: rgba(11,21,17,0.96);
+  box-shadow: var(--shadow);
+  padding: 1rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.acctModal__title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.acctModal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.acctModalOpen {
+  overflow: hidden;
+}
+
+@media (max-width: 40rem) {
+  .acctModal__panel {
+    top: 4.5rem;
+    right: 0.75rem;
+  }
 }
