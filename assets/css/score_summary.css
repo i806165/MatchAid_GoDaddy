@@ -1,7 +1,7 @@
 /* /assets/css/score_summary.css
  * Thin, tokenized page CSS.
  * Reuses browser-control and scoring-page patterns from scorecardShared.css
- * while keeping score-summary-specific table/card styling here.
+ * while keeping score-summary-specific styling here.
  */
 
 /* Carry over scorecard browser-shell patterns */
@@ -41,21 +41,6 @@
   border-color: var(--brandPrimary);
 }
 
-.scPageSummary {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 12px;
-  font-weight: 700;
-  color: rgba(0,0,0,.7);
-}
-
-.ssHint {
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--mutedText);
-}
-
 .ssHost {
   display: flex;
   flex-direction: column;
@@ -63,6 +48,7 @@
   min-width: 0;
 }
 
+/* PairField desktop table */
 .ssDesktopBoard {
   display: block;
 }
@@ -101,6 +87,12 @@
   font-weight: 900;
 }
 
+.ssTable td.is-leading {
+  background: color-mix(in srgb, var(--success) 14%, white);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success) 38%, white);
+}
+
+/* PairField mobile cards */
 .ssMobileCards {
   display: none;
   flex-direction: column;
@@ -110,11 +102,6 @@
 .ssMiniCard__body {
   display: grid;
   gap: 8px;
-}
-
-.ssMiniCard__body--pairpair {
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
 }
 
 .ssMiniMetric {
@@ -140,6 +127,28 @@
   color: var(--ink);
 }
 
+/* Shared matchup text */
+.ssMatchCell,
+.ssMatchCardTitle {
+  white-space: normal;
+}
+
+.ssMatchCell__top,
+.ssMatchCell__bottom {
+  display: block;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.ssMatchCell__top {
+  font-weight: 700;
+}
+
+.ssMatchCell__bottom {
+  margin-top: 2px;
+  font-weight: 700;
+}
+
 .ssThruPill {
   display: inline-flex;
   align-items: center;
@@ -154,80 +163,106 @@
   white-space: nowrap;
 }
 
-.ssSideBlock {
+/* PairPair approved unified card/grid layout */
+.ssPairPairGrid {
   display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.ssMatchCard {
+  overflow: hidden;
+}
+
+.ssMatchCard__hdr {
+  padding: 10px 12px;
   gap: 8px;
+  align-items: flex-start;
 }
 
-.ssSideBlock__title {
-  font-size: 11px;
-  font-weight: 900;
-  color: var(--mutedText);
-  text-transform: uppercase;
-  letter-spacing: .2px;
+.ssMatchCard__body {
+  padding: 8px;
 }
 
-.ssMatchCell,
-.ssMatchCardTitle {
+.ssThruPill--stacked {
+  min-width: 68px;
+  min-height: auto;
+  padding: 6px 10px;
+  border-radius: 16px;
+  flex-direction: column;
+  line-height: 1.05;
+  gap: 2px;
   white-space: normal;
 }
 
-.ssMatchCell__top,
-.ssMatchCell__bottom {
-  display: block;
-  line-height: 1.2;
+.ssSideGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
 }
 
-.ssMatchCell__top {
-  font-weight: 900;
+.ssSideBox {
+  border: 1px solid var(--borderSubtle);
+  border-radius: 16px;
+  background: #fff;
+  padding: 8px 10px;
 }
 
-.ssMatchCell__bottom {
-  margin-top: 2px;
-  color: var(--mutedText);
-  font-weight: 800;
-}
-
-.ssTable td.is-leading {
-  background: color-mix(in srgb, var(--success) 14%, white);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success) 38%, white);
-}
-
-.ssSideBlock.is-leading {
-  padding: 8px;
-  border-radius: var(--radiusMd);
+.ssSideBox.is-leading {
   background: color-mix(in srgb, var(--success) 10%, white);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success) 34%, white);
 }
-.ssGameKpi {
-  display: grid;
-  gap: 2px;
-  justify-items: center;
-}
 
-.ssGameKpi__row {
-  display: inline-flex;
+.ssSideBox__meta {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  line-height: 1.1;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1;
+  margin-bottom: 8px;
 }
 
-.ssGameKpi__label {
-  font-size: 10px;
-  font-weight: 900;
-  color: var(--mutedText);
-  min-width: 10px;
-  text-align: center;
-}
-
-.ssGameKpi__value {
-  font-size: 12px;
-  font-weight: 900;
+.ssSideBox__side,
+.ssSideBox__scores,
+.ssSideBox__label,
+.ssSideBox__value {
   color: var(--ink);
 }
 
-.ssMiniMetric--game {
-  align-items: start;
+.ssSideBox__side,
+.ssSideBox__scores {
+  font-weight: 700;
+}
+
+.ssSideBox__side {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.ssSideBox__values {
+  display: grid;
+  gap: 6px;
+  font-size: 16px;
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+.ssSideBox__values > div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.ssSideBox__label {
+  display: inline-block;
+  min-width: 58px;
+  font-weight: 700;
+}
+
+.ssSideBox__value {
+  font-weight: 700;
 }
 
 @media (max-width: 820px) {
@@ -243,5 +278,12 @@
 
   .ssMobileCards {
     display: flex;
+  }
+}
+
+@media (min-width: 761px) {
+  .ssPairPairGrid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
   }
 }

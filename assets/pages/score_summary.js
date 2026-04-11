@@ -53,6 +53,33 @@
     return n > 0 ? String(n) : '—';
   }
 
+    function headerContextText() {
+    const format = String(game.dbGames_GameFormat || '').trim();
+    const method = String(game.dbGames_ScoringMethod || '').trim();
+    const basis = String(payload.meta?.scoringBasis || game.dbGames_ScoringBasis || '').trim();
+
+    return [format, method, basis].filter(Boolean).join(' ');
+  }
+
+  function pairPairTopName(row) {
+    const leftPos = String(row?.left?.flightPos || 'A').trim();
+    return `${leftPos} ${String(row?.matchLabelTop || '').trim()}`.trim();
+  }
+
+  function pairPairBottomName(row) {
+    const rightPos = String(row?.right?.flightPos || 'B').trim();
+    return `${rightPos} ${String(row?.matchLabelBottom || '').trim()}`.trim();
+  }
+
+  function pairPairSegmentLines(row, side) {
+    const seg = row?.[side]?.gameSegments || {};
+    return {
+      front: seg?.front?.display ?? '0',
+      back: seg?.back?.display ?? '0',
+      overall: seg?.total?.display ?? '0'
+    };
+  }
+
     function currentMetricLabel() {
     const basis = String(payload.meta?.scoringBasis || game.dbGames_ScoringBasis || 'Strokes');
 
@@ -104,10 +131,15 @@ function renderSegmentedGameKpi(segments) {
 }
 
   function applyChrome() {
-    const subtitle = init.header?.subtitle || [game.dbGames_CourseName, formatDate(game.dbGames_PlayDate)].filter(Boolean).join(' • ');
+    const courseName = [game.dbGames_CourseName, formatDate(game.dbGames_PlayDate)].filter(Boolean).join(' • ');
+    const headerLine3 = headerContextText();
 
     if (chrome.setHeaderLines) {
-      chrome.setHeaderLines(['Score Summary', init.header?.title || 'Standings', subtitle]);
+      chrome.setHeaderLines([
+        'Score Summary',
+        courseName,
+        headerLine3 || 'Standings'
+      ]);
     }
 
     if (chrome.setActions) {
@@ -135,9 +167,9 @@ function renderSegmentedGameKpi(segments) {
     if (!dom.controls) return;
 
     const modes = [
-    ['game', 'Game'],
-    ['gross', 'Gross'],
-    ['net', 'Net']
+      ['game', 'Game'],
+      ['gross', 'Gross'],
+      ['net', 'Net']
     ];
 
     dom.controls.innerHTML = `
@@ -146,10 +178,6 @@ function renderSegmentedGameKpi(segments) {
           ${modes.map(([key, label]) =>
             `<button class="scCtlBtn ${state.valueMode === key ? 'is-active' : ''}" type="button" data-mode="${key}">${label}</button>`
           ).join('')}
-        </div>
-        <div class="scPageSummary">
-          <span>${esc(init.header?.title || 'Score Summary')}</span>
-          <span>${esc(game.dbGames_GameFormat || '')} ${esc(game.dbGames_ScoringMethod || '')}</span>
         </div>
       </div>
     `;
@@ -215,119 +243,95 @@ function renderSegmentedGameKpi(segments) {
     `;
   }
 
-  function renderPairPairTable(dataRows) {
+    function renderPairPairCards(dataRows) {
     return `
-      <div class="ssDesktopBoard">
-        <table class="ssTable ssTable--pairpair" role="table" aria-label="PairPair standings">
-          <thead>
-            <tr>
-              <th>#Scores</th>
-              <th>${currentMetricLabel()}</th>
-              <th>Pairing</th>
-              <th>#Scores</th>
-              <th>${currentMetricLabel()}</th>
-              <th>Thru</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${dataRows.map((row) => `
-            <tr>
-            <td>${esc(row.left.scoreCount)}</td>
-            <td class="${pairPairLeaderClass(row, 'left')}">
-                ${isSegmentedGameKpi() ? renderSegmentedGameKpi(row.left.gameSegments) : esc(currentMetricValue(row, 'left'))}
-            </td>
-            <td class="ssCellStrong ssMatchCell">
-                <div class="ssMatchCell__top">${esc(row.matchLabelTop || '')}</div>
-                <div class="ssMatchCell__bottom">${esc(row.matchLabelBottom || '')}</div>
-            </td>
-            <td>${esc(row.right.scoreCount)}</td>
-            <td class="${pairPairLeaderClass(row, 'right')}">
-                ${isSegmentedGameKpi() ? renderSegmentedGameKpi(row.right.gameSegments) : esc(currentMetricValue(row, 'right'))}
-            </td>
-            <td>${esc(formatThru(row.thru))}</td>
-            </tr>
-            `).join('')}
-          </tbody>
-        </table>
+      <div class="ssPairPairGrid">
+        ${dataRows.map((row) => {
+          const leftSeg = pairPairSegmentLines(row, 'left');
+          const rightSeg = pairPairSegmentLines(row, 'right');
+
+          return `
+            <article class="maCard ssMatchCard" aria-label="${esc(row.matchLabel || 'Matchup')}">
+              <div class="maCard__hdr ssMatchCard__hdr">
+                <div class="maCard__title ssMatchCardTitle">
+                  <div class="ssMatchCell__top">${esc(pairPairTopName(row))}</div>
+                  <div class="ssMatchCell__bottom">${esc(pairPairBottomName(row))}</div>
+                </div>
+                <div class="ssThruPill ssThruPill--stacked">
+                  <span>Thru</span>
+                  <span>${esc(formatThru(row.thru))}</span>
+                </div>
+              </div>
+
+              <div class="maCard__body ssMatchCard__body">
+                <div class="ssSideGrid">
+                  <div class="ssSideBox ${pairPairLeaderClass(row, 'left')}">
+                    <div class="ssSideBox__meta">
+                      <span class="ssSideBox__side">${esc(String(row?.left?.flightPos || 'A'))}</span>
+                      <span class="ssSideBox__scores">${esc(row?.left?.scoreCount ?? '0')} Scores</span>
+                    </div>
+
+                    <div class="ssSideBox__values">
+                      ${state.valueMode === 'game'
+                        ? `
+                          <div><span class="ssSideBox__label">Front:</span> <span class="ssSideBox__value">${esc(leftSeg.front)}</span></div>
+                          <div><span class="ssSideBox__label">Back:</span> <span class="ssSideBox__value">${esc(leftSeg.back)}</span></div>
+                          <div><span class="ssSideBox__label">Overall:</span> <span class="ssSideBox__value">${esc(leftSeg.overall)}</span></div>
+                        `
+                        : `
+                          <div><span class="ssSideBox__label">${esc(currentMetricLabel())}</span> <span class="ssSideBox__value">${esc(currentMetricValue(row, 'left'))}</span></div>
+                        `
+                      }
+                    </div>
+                  </div>
+
+                  <div class="ssSideBox ${pairPairLeaderClass(row, 'right')}">
+                    <div class="ssSideBox__meta">
+                      <span class="ssSideBox__side">${esc(String(row?.right?.flightPos || 'B'))}</span>
+                      <span class="ssSideBox__scores">${esc(row?.right?.scoreCount ?? '0')} Scores</span>
+                    </div>
+
+                    <div class="ssSideBox__values">
+                      ${state.valueMode === 'game'
+                        ? `
+                          <div><span class="ssSideBox__label">Front:</span> <span class="ssSideBox__value">${esc(rightSeg.front)}</span></div>
+                          <div><span class="ssSideBox__label">Back:</span> <span class="ssSideBox__value">${esc(rightSeg.back)}</span></div>
+                          <div><span class="ssSideBox__label">Overall:</span> <span class="ssSideBox__value">${esc(rightSeg.overall)}</span></div>
+                        `
+                        : `
+                          <div><span class="ssSideBox__label">${esc(currentMetricLabel())}</span> <span class="ssSideBox__value">${esc(currentMetricValue(row, 'right'))}</span></div>
+                        `
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </article>
+          `;
+        }).join('')}
       </div>
     `;
   }
 
-function renderPairPairCards(dataRows) {
-  return `
-    <div class="ssMobileCards">
-      ${dataRows.map((row) => `
-        <section class="maCard ssMiniCard" aria-label="${esc(row.matchLabel || 'Matchup')}">
-          <div class="maCard__hdr">
-            <div class="maCard__title ssMatchCardTitle">
-              <div class="ssMatchCell__top">${esc(row.matchLabelTop || '')}</div>
-              <div class="ssMatchCell__bottom">${esc(row.matchLabelBottom || '')}</div>
-            </div>
-            <div class="ssThruPill">Thru ${esc(formatThru(row.thru))}</div>
-          </div>
+    function renderBody() {
+        if (!dom.host) return;
 
-          <div class="maCard__body ssMiniCard__body ssMiniCard__body--pairpair">
-            <div class="ssSideBlock ${pairPairLeaderClass(row, 'left')}">
-              <div class="ssSideBlock__title">Side ${esc(row.left.flightPos || 'A')}</div>
-              <div class="ssMiniMetric">
-                <span class="ssMiniMetric__label">#Scores</span>
-                <span class="ssMiniMetric__value">${esc(row.left.scoreCount)}</span>
-              </div>
-              ${isSegmentedGameKpi()
-                ? `<div class="ssMiniMetric ssMiniMetric--game">
-                    <span class="ssMiniMetric__label">${currentMetricLabel()}</span>
-                    ${renderSegmentedGameKpi(row.left.gameSegments)}
-                  </div>`
-                : `<div class="ssMiniMetric">
-                    <span class="ssMiniMetric__label">${currentMetricLabel()}</span>
-                    <span class="ssMiniMetric__value">${esc(currentMetricValue(row, 'left'))}</span>
-                  </div>`
-              }
-            </div>
+        const dataRows = rows();
+        if (!dataRows.length) {
+        if (dom.empty) dom.empty.style.display = 'block';
+        dom.host.innerHTML = '';
+        return;
+        }
 
-            <div class="ssSideBlock ${pairPairLeaderClass(row, 'right')}">
-              <div class="ssSideBlock__title">Side ${esc(row.right.flightPos || 'B')}</div>
-              <div class="ssMiniMetric">
-                <span class="ssMiniMetric__label">#Scores</span>
-                <span class="ssMiniMetric__value">${esc(row.right.scoreCount)}</span>
-              </div>
-              ${isSegmentedGameKpi()
-                ? `<div class="ssMiniMetric ssMiniMetric--game">
-                    <span class="ssMiniMetric__label">${currentMetricLabel()}</span>
-                    ${renderSegmentedGameKpi(row.right.gameSegments)}
-                  </div>`
-                : `<div class="ssMiniMetric">
-                    <span class="ssMiniMetric__label">${currentMetricLabel()}</span>
-                    <span class="ssMiniMetric__value">${esc(currentMetricValue(row, 'right'))}</span>
-                  </div>`
-              }
-            </div>
-          </div>
-        </section>
-      `).join('')}
-    </div>
-  `;
-}
+        if (dom.empty) dom.empty.style.display = 'none';
 
-  function renderBody() {
-    if (!dom.host) return;
+        if (String(payload.competition || 'PairField') === 'PairPair') {
+        dom.host.innerHTML = renderPairPairCards(dataRows);
+        return;
+        }
 
-    const dataRows = rows();
-    if (!dataRows.length) {
-      if (dom.empty) dom.empty.style.display = 'block';
-      dom.host.innerHTML = '';
-      return;
+        dom.host.innerHTML = renderPairFieldTable(dataRows) + renderPairFieldCards(dataRows);
     }
-
-    if (dom.empty) dom.empty.style.display = 'none';
-
-    if (String(payload.competition || 'PairField') === 'PairPair') {
-      dom.host.innerHTML = renderPairPairTable(dataRows) + renderPairPairCards(dataRows);
-      return;
-    }
-
-    dom.host.innerHTML = renderPairFieldTable(dataRows) + renderPairFieldCards(dataRows);
-  }
 
     function pairPairLeaderClass(row, side) {
     const leftVal = state.valueMode === 'game'
