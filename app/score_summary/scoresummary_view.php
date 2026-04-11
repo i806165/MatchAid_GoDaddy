@@ -6,7 +6,7 @@
     <header class="maCard__hdr">
       <div class="maCard__title">SCORE SUMMARY</div>
       <div class="maCard__actions">
-        <span class="maHint" id="ssHint">Toggle gross or net standings below.</span>
+<span class="maHint" id="ssHint">Toggle game, gross, or net standings below.</span>
       </div>
     </header>
     <div class="maCard__body">
