@@ -184,6 +184,12 @@
   align-items: flex-start;
 }
 
+.ssMatchCard__hdr .ssMatchCardTitle,
+.ssMatchCard__hdr .ssMatchCell__top,
+.ssMatchCard__hdr .ssMatchCell__bottom {
+ color: var(--brandSecondaryText);
+}
+
 .ssMatchCard__body {
   padding: 8px;
 }
@@ -197,6 +203,9 @@
   line-height: 1.05;
   gap: 2px;
   white-space: normal;
+}
+.ssMatchCard__hdr .ssThruPill {
+  background: #fff;
 }
 
 .ssSideGrid {
