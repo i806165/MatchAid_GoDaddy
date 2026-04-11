@@ -177,6 +177,8 @@
 }
 
 .ssMatchCard__hdr {
+  background: var(--brandSecondary);
+  color: var(--brandSecondaryText);
   padding: 10px 12px;
   gap: 8px;
   align-items: flex-start;
