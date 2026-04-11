@@ -108,7 +108,6 @@
     }
     if (chrome && typeof chrome.setActions === 'function') {
       chrome.setActions({
-        left: { show: true, label: 'Home', onClick: () => routerGo ? routerGo('home') : (window.location.assign('/')) },
         right: { show: true, label: 'Actions', onClick: () => openActionsMenu(openFiltersModal) }
       });
     }
