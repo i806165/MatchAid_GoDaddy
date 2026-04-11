@@ -541,6 +541,9 @@
     if (action === 'scorecard') {
       return routerGo("scorecard", {});
     }
+    if (action === 'scoresummary') {
+      return routerGo("scoresummary", {});
+    }
     if (action === 'ghinPost') {
       return MA.ghinPostScores.open({ 
         ggid: ggid, 
