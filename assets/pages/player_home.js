@@ -188,7 +188,7 @@
 
       // Scoring Group
       { label: scoreLabel, action: 'scorehome', enabled: !!scoreId },
-      { label: summaryLabel, action: 'scoresummary', enabled: !!scoreId },
+      scoreId ? { label: 'Leaderboard', action: 'scoresummary', enabled: true } : null,
       isRegistered ? { label: postLabel, action: 'ghinPost', enabled: !postedId } : null,
 
       { separator: true }, { separator: true },
