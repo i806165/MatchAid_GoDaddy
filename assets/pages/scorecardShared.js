@@ -35,6 +35,18 @@
   }
   function activeRows(){ return Array.isArray(payload.rows) ? payload.rows : []; }
 
+  function isMobileLandscapeLike(){
+    const isLandscape = window.matchMedia('(orientation: landscape)').matches;
+    const isTouchLike =
+      window.matchMedia('(pointer: coarse)').matches ||
+      navigator.maxTouchPoints > 0;
+    return isLandscape && isTouchLike;
+  }
+
+  function applyLandscapeChromeMode(){
+    document.body.classList.toggle('scChromeHiddenMode', isMobileLandscapeLike());
+  }
+
   function getSegmentForHole(h){
     const seg = String(game.dbGames_Segments || '9');
     if(seg === 'None') return 'tot';
@@ -435,7 +447,17 @@ function renderPlayerRows(players, cardState){
     bindCardActions();
   }
 
-  function initialize(){ applyChrome(); renderControls(); renderBody(); }
+  function initialize(){
+    applyChrome();
+    applyLandscapeChromeMode();
+    renderControls();
+    renderBody();
+
+    window.addEventListener('resize', applyLandscapeChromeMode);
+    window.addEventListener('orientationchange', applyLandscapeChromeMode);
+  }
+
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialize);
   else initialize();
+  
 })();
