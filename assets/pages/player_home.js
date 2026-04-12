@@ -273,7 +273,7 @@
       let line3Html = '';
       if (isRegistered) {
         const personalParts = [];
-        if (yourTee) personalParts.push(`TeeTime: ${formatTimeAmPm(yourTee)}`);
+        if (yourTee) personalParts.push(`TeeTime: ${yourTee}`);
         if (yourTeeName) personalParts.push(`Tee: ${yourTeeName}`);
 
         const personalInfo = personalParts.join(" • ");
