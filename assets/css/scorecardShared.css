@@ -38,3 +38,21 @@
   .scGroupCard__hdr{ flex-direction:column; }
   .scBrowserControls{ align-items:flex-start; }
 }
+@media (max-width: 932px) and (orientation: landscape) {
+  .maChrome__hdr,
+  .maChrome__ftr {
+    display: none !important;
+  }
+
+  .maPage {
+    padding: 0 !important;
+  }
+
+  .scHost--browser {
+    gap: 6px;
+  }
+
+  .scBrowserControls {
+    padding: 6px 8px 0 8px;
+  }
+}
