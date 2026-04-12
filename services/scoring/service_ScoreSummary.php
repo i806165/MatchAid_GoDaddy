@@ -54,6 +54,7 @@ final class ServiceScoreSummary
                 $gross = self::metricFromTotalRow($totalRow, 'grossDiff');
                 $net = self::metricFromTotalRow($totalRow, 'netDiff');
                 $points = self::metricFromTotalRow($totalRow, 'points');
+                $shapeStats = self::buildPairFieldShapeStats($pairPlayers);
 
                 $out[] = [
                     'pairingId' => (string)$pairingId,
@@ -66,30 +67,118 @@ final class ServiceScoreSummary
                     'pointsValue' => $points['value'],
                     'pointsDisplay' => $points['display'],
                     'thru' => self::deriveThru($pairPlayers, $gameRow),
+
+                    // New stat buckets for PairField leaderboard cards
+                    'countedGrossStats' => $shapeStats['countedGrossStats'],
+                    'countedNetStats' => $shapeStats['countedNetStats'],
+                    'notCountedGrossStats' => $shapeStats['notCountedGrossStats'],
+                    'notCountedNetStats' => $shapeStats['notCountedNetStats'],
                 ];
             }
         }
 
         $basis = strtolower((string)($meta['scoringBasis'] ?? 'Strokes'));
+
         usort($out, function (array $a, array $b) use ($basis): int {
-            if ($basis === 'points') {
-                $cmp = ($b['pointsValue'] <=> $a['pointsValue']); // higher points wins
-                if ($cmp !== 0) return $cmp;
-            } else {
-                $cmp = ($a['netDiffValue'] <=> $b['netDiffValue']); // lower to-par wins
-                if ($cmp !== 0) return $cmp;
-
-                $cmp = ($a['grossDiffValue'] <=> $b['grossDiffValue']);
-                if ($cmp !== 0) return $cmp;
-            }
-
-            $cmp = ($b['thru'] <=> $a['thru']);
-            if ($cmp !== 0) return $cmp;
-
-            return strnatcmp((string)$a['pairingId'], (string)$b['pairingId']);
+            return self::comparePairFieldRows($a, $b, $basis);
         });
 
+        if ($out) {
+            $leaderSeed = $out[0];
+            foreach ($out as $idx => &$row) {
+                $row['rank'] = $idx + 1;
+                $row['isLeader'] = self::comparePairFieldRows($row, $leaderSeed, $basis) === 0;
+            }
+            unset($row);
+        }
+
         return $out;
+    }
+
+    private static function comparePairFieldRows(array $a, array $b, string $basis): int
+    {
+        if ($basis === 'points') {
+            $cmp = ($b['pointsValue'] <=> $a['pointsValue']); // higher points wins
+            if ($cmp !== 0) return $cmp;
+        } else {
+            $cmp = ($a['netDiffValue'] <=> $b['netDiffValue']); // lower to-par wins
+            if ($cmp !== 0) return $cmp;
+
+            $cmp = ($a['grossDiffValue'] <=> $b['grossDiffValue']);
+            if ($cmp !== 0) return $cmp;
+        }
+
+        $cmp = ($b['thru'] <=> $a['thru']);
+        if ($cmp !== 0) return $cmp;
+
+        return strnatcmp((string)$a['pairingId'], (string)$b['pairingId']);
+    }
+
+    private static function buildPairFieldShapeStats(array $pairPlayers): array
+    {
+        $countedGross = self::emptyShapeStats();
+        $countedNet = self::emptyShapeStats();
+        $notCountedGross = self::emptyShapeStats();
+        $notCountedNet = self::emptyShapeStats();
+
+        foreach ($pairPlayers as $player) {
+            $holes = is_array($player['holes'] ?? null) ? $player['holes'] : [];
+
+            foreach ($holes as $cell) {
+                if (!is_array($cell)) {
+                    continue;
+                }
+
+                $declared = !empty($cell['declared']);
+                $grossShape = trim((string)($cell['shapes']['gross'] ?? ''));
+                $netShape = trim((string)($cell['shapes']['net'] ?? ''));
+
+                if ($declared) {
+                    self::bumpShapeStat($countedGross, $grossShape);
+                    self::bumpShapeStat($countedNet, $netShape);
+                } else {
+                    self::bumpShapeStat($notCountedGross, $grossShape);
+                    self::bumpShapeStat($notCountedNet, $netShape);
+                }
+            }
+        }
+
+        return [
+            'countedGrossStats' => $countedGross,
+            'countedNetStats' => $countedNet,
+            'notCountedGrossStats' => $notCountedGross,
+            'notCountedNetStats' => $notCountedNet,
+        ];
+    }
+
+    private static function emptyShapeStats(): array
+    {
+        return [
+            'eaglePlus' => 0,
+            'birdie' => 0,
+            'par' => 0,
+            'bogey' => 0,
+            'bogeyPlus' => 0,
+        ];
+    }
+
+    private static function bumpShapeStat(array &$stats, string $shape): void
+    {
+        if ($shape === '') return;
+
+        $key = match (strtolower($shape)) {
+            'eagle' => 'eaglePlus',
+            'eagleplus' => 'eaglePlus',
+            'birdie' => 'birdie',
+            'par' => 'par',
+            'bogey' => 'bogey',
+            'bogeyplus' => 'bogeyPlus',
+            default => null,
+        };
+
+        if ($key !== null) {
+            $stats[$key] = intval($stats[$key] ?? 0) + 1;
+        }
     }
 
     private static function buildPairPairRows(array $scorecardRows, array $gameRow, array $meta): array
@@ -133,7 +222,6 @@ final class ServiceScoreSummary
                 : ('Pairings ' . trim((string)$leftPairingId) . ' / ' . trim((string)$rightPairingId));
 
             $leftSort = self::pairPairSortSeed($leftPlayers);
-            $rightSort = self::pairPairSortSeed($rightPlayers);
 
             $out[] = [
                 'flightId' => $flightId,
@@ -195,141 +283,140 @@ final class ServiceScoreSummary
     }
 
     private static function buildPairPairGameKpi(array $leftPlayers, array $rightPlayers, array $gameRow, string $scoringBasis): array
-{
-    $basis = trim($scoringBasis);
-    if (!in_array($basis, ['Holes', 'Skins'], true)) {
+    {
+        $basis = trim($scoringBasis);
+        if (!in_array($basis, ['Holes', 'Skins'], true)) {
+            return [
+                'left' => self::emptyGameSegments(),
+                'right' => self::emptyGameSegments(),
+            ];
+        }
+
+        $metricMode = (trim((string)($gameRow['dbGames_ScoringMethod'] ?? 'NET')) === 'ADJ GROSS')
+            ? 'gross'
+            : 'net';
+
+        $left = self::emptyGameSegments();
+        $right = self::emptyGameSegments();
+
+        $carry = 0;
+        $holes = self::holesForGame($gameRow);
+
+        foreach ($holes as $holeNumber) {
+            $segmentKey = ($holeNumber <= 9) ? 'front' : 'back';
+
+            $leftScore = self::countedSideScoreForHole($leftPlayers, $holeNumber, $metricMode);
+            $rightScore = self::countedSideScoreForHole($rightPlayers, $holeNumber, $metricMode);
+
+            if ($leftScore === null || $rightScore === null) {
+                continue;
+            }
+
+            if ($basis === 'Holes') {
+                if ($leftScore < $rightScore) {
+                    self::bumpGameSegment($left, $segmentKey, 1);
+                    self::bumpGameSegment($right, $segmentKey, -1);
+                } elseif ($rightScore < $leftScore) {
+                    self::bumpGameSegment($left, $segmentKey, -1);
+                    self::bumpGameSegment($right, $segmentKey, 1);
+                }
+                continue;
+            }
+
+            // Skins
+            $carry++;
+
+            if ($leftScore < $rightScore) {
+                self::bumpGameSegment($left, $segmentKey, $carry);
+                self::bumpGameSegment($right, $segmentKey, -$carry);
+                $carry = 0;
+            } elseif ($rightScore < $leftScore) {
+                self::bumpGameSegment($left, $segmentKey, -$carry);
+                self::bumpGameSegment($right, $segmentKey, $carry);
+                $carry = 0;
+            }
+        }
+
+        self::finalizeGameSegments($left);
+        self::finalizeGameSegments($right);
+
         return [
-            'left' => self::emptyGameSegments(),
-            'right' => self::emptyGameSegments(),
+            'left' => $left,
+            'right' => $right,
         ];
     }
 
-    $metricMode = (trim((string)($gameRow['dbGames_ScoringMethod'] ?? 'NET')) === 'ADJ GROSS')
-        ? 'gross'
-        : 'net';
+    private static function countedSideScoreForHole(array $players, int $holeNumber, string $metricMode): ?float
+    {
+        $sum = 0.0;
+        $count = 0;
+        $holeKey = 'h' . $holeNumber;
 
-    $left = self::emptyGameSegments();
-    $right = self::emptyGameSegments();
-
-    $carry = 0;
-    $holes = self::holesForGame($gameRow);
-
-    foreach ($holes as $holeNumber) {
-        $segmentKey = ($holeNumber <= 9) ? 'front' : 'back';
-
-        $leftScore = self::countedSideScoreForHole($leftPlayers, $holeNumber, $metricMode);
-        $rightScore = self::countedSideScoreForHole($rightPlayers, $holeNumber, $metricMode);
-
-        if ($leftScore === null || $rightScore === null) {
-            continue;
-        }
-
-        if ($basis === 'Holes') {
-            if ($leftScore < $rightScore) {
-                self::bumpGameSegment($left, $segmentKey, 1);
-                self::bumpGameSegment($right, $segmentKey, -1);
-            } elseif ($rightScore < $leftScore) {
-                self::bumpGameSegment($left, $segmentKey, -1);
-                self::bumpGameSegment($right, $segmentKey, 1);
+        foreach ($players as $player) {
+            $cell = $player['holes'][$holeKey] ?? null;
+            if (!is_array($cell) || empty($cell['declared'])) {
+                continue;
             }
-            continue;
+
+            $value = $cell[$metricMode] ?? null;
+            if ($value === null || !is_numeric($value)) {
+                continue;
+            }
+
+            $sum += (float)$value;
+            $count++;
         }
 
-        // Skins
-        $carry++;
-
-        if ($leftScore < $rightScore) {
-            self::bumpGameSegment($left, $segmentKey, $carry);
-            self::bumpGameSegment($right, $segmentKey, -$carry);
-            $carry = 0;
-        } elseif ($rightScore < $leftScore) {
-            self::bumpGameSegment($left, $segmentKey, -$carry);
-            self::bumpGameSegment($right, $segmentKey, $carry);
-            $carry = 0;
-        }
-        // ties carry over
+        return $count > 0 ? $sum : null;
     }
 
-    self::finalizeGameSegments($left);
-    self::finalizeGameSegments($right);
-
-    return [
-        'left' => $left,
-        'right' => $right,
-    ];
-}
-
-private static function countedSideScoreForHole(array $players, int $holeNumber, string $metricMode): ?float
-{
-    $sum = 0.0;
-    $count = 0;
-    $holeKey = 'h' . $holeNumber;
-
-    foreach ($players as $player) {
-        $cell = $player['holes'][$holeKey] ?? null;
-        if (!is_array($cell) || empty($cell['declared'])) {
-            continue;
-        }
-
-        $value = $cell[$metricMode] ?? null;
-        if ($value === null || !is_numeric($value)) {
-            continue;
-        }
-
-        $sum += (float)$value;
-        $count++;
+    private static function emptyGameSegments(): array
+    {
+        return [
+            'front' => ['value' => 0, 'display' => '0'],
+            'back'  => ['value' => 0, 'display' => '0'],
+            'total' => ['value' => 0, 'display' => '0'],
+        ];
     }
 
-    return $count > 0 ? $sum : null;
-}
-
-private static function emptyGameSegments(): array
-{
-    return [
-        'front' => ['value' => 0, 'display' => '0'],
-        'back'  => ['value' => 0, 'display' => '0'],
-        'total' => ['value' => 0, 'display' => '0'],
-    ];
-}
-
-private static function bumpGameSegment(array &$segments, string $segmentKey, int $delta): void
-{
-    $segments[$segmentKey]['value'] += $delta;
-    $segments['total']['value'] += $delta;
-}
-
-private static function finalizeGameSegments(array &$segments): void
-{
-    foreach (['front', 'back', 'total'] as $key) {
-        $segments[$key]['display'] = self::formatGameDiff($segments[$key]['value']);
+    private static function bumpGameSegment(array &$segments, string $segmentKey, int $delta): void
+    {
+        $segments[$segmentKey]['value'] += $delta;
+        $segments['total']['value'] += $delta;
     }
-}
 
-private static function formatGameDiff(int|float $value): string
-{
-    $n = (float)$value;
-    if ($n > 0) return '+' . (string)(int)$n;
-    if ($n < 0) return (string)(int)$n;
-    return '0';
-}
-
-private static function buildPairFieldLabel(array $players): string
-{
-    $parts = [];
-
-    foreach ($players as $player) {
-        $last = trim((string)($player['dbPlayers_LName'] ?? ''));
-        $fullName = trim((string)($player['dbPlayers_Name'] ?? ''));
-
-        if ($last !== '') {
-            $parts[] = $last;
-        } elseif ($fullName !== '') {
-            $parts[] = $fullName;
+    private static function finalizeGameSegments(array &$segments): void
+    {
+        foreach (['front', 'back', 'total'] as $key) {
+            $segments[$key]['display'] = self::formatGameDiff($segments[$key]['value']);
         }
     }
 
-    return implode(' • ', $parts);
-}
+    private static function formatGameDiff(int|float $value): string
+    {
+        $n = (float)$value;
+        if ($n > 0) return '+' . (string)(int)$n;
+        if ($n < 0) return (string)(int)$n;
+        return '0';
+    }
+
+    private static function buildPairFieldLabel(array $players): string
+    {
+        $parts = [];
+
+        foreach ($players as $player) {
+            $last = trim((string)($player['dbPlayers_LName'] ?? ''));
+            $fullName = trim((string)($player['dbPlayers_Name'] ?? ''));
+
+            if ($last !== '') {
+                $parts[] = $last;
+            } elseif ($fullName !== '') {
+                $parts[] = $fullName;
+            }
+        }
+
+        return implode(' • ', $parts);
+    }
 
     private static function orderedPairingIds(array $row, array $playersByPairing): array
     {

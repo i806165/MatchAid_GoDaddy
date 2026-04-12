@@ -8,6 +8,14 @@
   const payload = init.summary || {};
   const game = init.game || {};
 
+  const SCORE_SHAPE_ORDER = [
+    ['eaglePlus', 'Eagle+'],
+    ['birdie', 'Birdie'],
+    ['par', 'Par'],
+    ['bogey', 'Bogey'],
+    ['bogeyPlus', 'Bogey+']
+  ];
+
   const state = {
     valueMode: String(payload.meta?.defaultValueMode || 'net')
   };
@@ -30,8 +38,8 @@
 
   function formatDate(s) {
     if (!s) return '';
-    let d = String(s).match(/^\d{4}-\d{2}-\d{2}$/)
-      ? new Date(...s.split('-').map((n, i) => i === 1 ? n - 1 : n))
+    const d = String(s).match(/^\d{4}-\d{2}-\d{2}$/)
+      ? new Date(...s.split('-').map((n, i) => i === 1 ? Number(n) - 1 : Number(n)))
       : new Date(s);
 
     if (isNaN(d.getTime())) return String(s);
@@ -53,12 +61,61 @@
     return n > 0 ? String(n) : '—';
   }
 
-    function headerContextText() {
+  function scoringBasis() {
+    return String(payload.meta?.scoringBasis || game.dbGames_ScoringBasis || 'Strokes').trim();
+  }
+
+  function scoringSystem() {
+    return String(game.dbGames_ScoringSystem || '').trim();
+  }
+
+  function scoringMethod() {
+    return String(game.dbGames_ScoringMethod || '').trim().toUpperCase();
+  }
+
+  function bestBallCount() {
+    const n = Number(
+      game.dbGames_BestBallCnt ??
+      game.dbGames_BestBall ??
+      game.dbGames_BestBallCount ??
+      0
+    );
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }
+
+  function headerContextText() {
     const format = String(game.dbGames_GameFormat || '').trim();
     const method = String(game.dbGames_ScoringMethod || '').trim();
-    const basis = String(payload.meta?.scoringBasis || game.dbGames_ScoringBasis || '').trim();
-
+    const basis = scoringBasis();
     return [format, method, basis].filter(Boolean).join(' ');
+  }
+
+  function supportsDistinctGameMode() {
+    const basis = scoringBasis();
+    return basis === 'Holes' || basis === 'Skins';
+  }
+
+  function normalizeValueMode() {
+    if (supportsDistinctGameMode()) return;
+
+    if (state.valueMode === 'game') {
+      state.valueMode = scoringMethod() === 'ADJ GROSS' ? 'gross' : 'net';
+    }
+  }
+
+  function availableModes() {
+    if (supportsDistinctGameMode()) {
+      return [
+        ['game', 'Game'],
+        ['gross', 'Gross'],
+        ['net', 'Net']
+      ];
+    }
+
+    return [
+      ['gross', 'Gross'],
+      ['net', 'Net']
+    ];
   }
 
   function pairPairTopName(row) {
@@ -80,55 +137,59 @@
     };
   }
 
-    function currentMetricLabel() {
-    const basis = String(payload.meta?.scoringBasis || game.dbGames_ScoringBasis || 'Strokes');
+  function currentMetricLabel() {
+    const basis = scoringBasis();
 
     if (state.valueMode === 'game') {
-        if (basis === 'Holes') return 'Holes';
-        if (basis === 'Skins') return 'Skins';
-        return 'Game';
+      if (basis === 'Holes') return 'Holes';
+      if (basis === 'Skins') return 'Skins';
+      return 'Game';
     }
 
-    return state.valueMode === 'gross' ? 'Gross +/-' : 'Net +/-';
+    return state.valueMode === 'gross' ? '+/- Gross' : '+/- Net';
+  }
+
+  function currentMetricValue(row, side) {
+    if (side) {
+      if (state.valueMode === 'game') {
+        return row?.[side]?.gameDisplay ?? '—';
+      }
+      return state.valueMode === 'gross'
+        ? (row?.[side]?.grossDiffDisplay ?? '—')
+        : (row?.[side]?.netDiffDisplay ?? '—');
     }
 
-function currentMetricValue(row, side) {
-  if (side) {
     if (state.valueMode === 'game') {
-      return row?.[side]?.gameDisplay ?? '—';
+      return row?.gameDisplay ?? '—';
     }
+
     return state.valueMode === 'gross'
-      ? (row?.[side]?.grossDiffDisplay ?? '—')
-      : (row?.[side]?.netDiffDisplay ?? '—');
+      ? (row?.grossDiffDisplay ?? '—')
+      : (row?.netDiffDisplay ?? '—');
   }
 
-  if (state.valueMode === 'game') {
-    return row?.gameDisplay ?? '—';
+  function pairPairLeaderClass(row, side) {
+    const leftVal = state.valueMode === 'game'
+      ? Number(row?.left?.gameValue ?? 0)
+      : state.valueMode === 'gross'
+        ? Number(row?.left?.grossDiffValue ?? 0)
+        : Number(row?.left?.netDiffValue ?? 0);
+
+    const rightVal = state.valueMode === 'game'
+      ? Number(row?.right?.gameValue ?? 0)
+      : state.valueMode === 'gross'
+        ? Number(row?.right?.grossDiffValue ?? 0)
+        : Number(row?.right?.netDiffValue ?? 0);
+
+    if (leftVal === rightVal) return '';
+    if (side === 'left') return leftVal > rightVal ? 'is-leading' : '';
+    if (side === 'right') return rightVal > leftVal ? 'is-leading' : '';
+    return '';
   }
 
-  return state.valueMode === 'gross'
-    ? (row?.grossDiffDisplay ?? '—')
-    : (row?.netDiffDisplay ?? '—');
-}
-
-function isSegmentedGameKpi() {
-  const basis = String(payload.meta?.scoringBasis || game.dbGames_ScoringBasis || 'Strokes');
-  return state.valueMode === 'game' && (basis === 'Holes' || basis === 'Skins');
-}
-
-function renderSegmentedGameKpi(segments) {
-  const front = segments?.front?.display ?? '0';
-  const back = segments?.back?.display ?? '0';
-  const total = segments?.total?.display ?? '0';
-
-  return `
-    <div class="ssGameKpi">
-      <div class="ssGameKpi__row"><span class="ssGameKpi__label">F</span><span class="ssGameKpi__value">${esc(front)}</span></div>
-      <div class="ssGameKpi__row"><span class="ssGameKpi__label">B</span><span class="ssGameKpi__value">${esc(back)}</span></div>
-      <div class="ssGameKpi__row"><span class="ssGameKpi__label">T</span><span class="ssGameKpi__value">${esc(total)}</span></div>
-    </div>
-  `;
-}
+  function pairFieldLeaderClass(row) {
+    return row?.isLeader ? 'is-leading' : '';
+  }
 
   function applyChrome() {
     const courseName = [game.dbGames_CourseName, formatDate(game.dbGames_PlayDate)].filter(Boolean).join(' • ');
@@ -166,11 +227,8 @@ function renderSegmentedGameKpi(segments) {
   function renderControls() {
     if (!dom.controls) return;
 
-    const modes = [
-      ['game', 'Game'],
-      ['gross', 'Gross'],
-      ['net', 'Net']
-    ];
+    normalizeValueMode();
+    const modes = availableModes();
 
     dom.controls.innerHTML = `
       <div class="scBrowserControls">
@@ -191,59 +249,114 @@ function renderSegmentedGameKpi(segments) {
     });
   }
 
-  function renderPairFieldTable(dataRows) {
-    return `
-      <div class="ssDesktopBoard">
-        <table class="ssTable" role="table" aria-label="PairField standings">
-          <thead>
-            <tr>
-              <th>Pairing</th>
-              <th>#Scores</th>
-              <th>${currentMetricLabel()}</th>
-              <th>Thru</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${dataRows.map((row) => `
-              <tr>
-                <td class="ssCellStrong">${esc(row.pairingLabel)}</td>
-                <td>${esc(row.scoreCount)}</td>
-                <td>${esc(currentMetricValue(row))}</td>
-                <td>${esc(formatThru(row.thru))}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
+  function includedSectionLabel() {
+    const system = scoringSystem();
+
+    if (system === 'AllScores') return 'Count All Scores';
+    if (system === 'BestBall') {
+      const n = bestBallCount();
+      if (n > 0) return `${n} Best Ball${n === 1 ? '' : 's'}`;
+      return 'Best Ball Scores';
+    }
+    if (system === 'DeclareHole') return 'Use N Scores';
+    if (system === 'DeclareManual') return 'Declared Scores';
+
+    return 'Counted Scores';
   }
 
-  function renderPairFieldCards(dataRows) {
+  function excludedSectionLabel() {
+    const system = scoringSystem();
+
+    if (system === 'AllScores') return '';
+    if (system === 'BestBall') return 'Other Scores';
+    if (system === 'DeclareHole') return 'Not Counted';
+    if (system === 'DeclareManual') return 'Not Declared';
+
+    return 'Not Counted';
+  }
+
+  function fieldStatsModeKey() {
+    return state.valueMode === 'gross' ? 'Gross' : 'Net';
+  }
+
+  function extractPairFieldStats(row, bucket) {
+    const modeKey = fieldStatsModeKey();
+    const key = `${bucket}${modeKey}Stats`;
+    const stats = row?.[key];
+
+    return {
+      eaglePlus: stats?.eaglePlus ?? 0,
+      birdie: stats?.birdie ?? 0,
+      par: stats?.par ?? 0,
+      bogey: stats?.bogey ?? 0,
+      bogeyPlus: stats?.bogeyPlus ?? 0,
+    };
+  }
+
+  function renderPairFieldStatGrid(stats, toneClass) {
     return `
-      <div class="ssMobileCards">
-        ${dataRows.map((row) => `
-          <section class="maCard ssMiniCard" aria-label="${esc(row.pairingLabel)}">
-            <div class="maCard__hdr">
-              <div class="maCard__title">${esc(row.pairingLabel)}</div>
-              <div class="ssThruPill">Thru ${esc(formatThru(row.thru))}</div>
-            </div>
-            <div class="maCard__body ssMiniCard__body">
-              <div class="ssMiniMetric">
-                <span class="ssMiniMetric__label">#Scores</span>
-                <span class="ssMiniMetric__value">${esc(row.scoreCount)}</span>
-              </div>
-              <div class="ssMiniMetric">
-                <span class="ssMiniMetric__label">${currentMetricLabel()}</span>
-                <span class="ssMiniMetric__value">${esc(currentMetricValue(row))}</span>
-              </div>
-            </div>
-          </section>
+      <div class="ssFieldStatGrid">
+        ${SCORE_SHAPE_ORDER.map(([key, label]) => `
+          <div class="ssFieldStatCell ${toneClass}">
+            <div class="ssFieldStatCell__label">${esc(label)}</div>
+            <div class="ssFieldStatCell__value">${esc(stats[key])}</div>
+          </div>
         `).join('')}
       </div>
     `;
   }
 
-    function renderPairPairCards(dataRows) {
+  function renderPairFieldCards(dataRows) {
+    const includeLabel = includedSectionLabel();
+    const excludeLabel = excludedSectionLabel();
+    const showExcluded = Boolean(excludeLabel);
+
+    return `
+      <div class="ssPairFieldGrid">
+        ${dataRows.map((row) => {
+          const counted = extractPairFieldStats(row, 'counted');
+          const excluded = extractPairFieldStats(row, 'notCounted');
+
+          return `
+            <article class="maCard ssMatchCard ssFieldCard ${pairFieldLeaderClass(row)}" aria-label="${esc(row.pairingLabel || 'Pairing')}">
+              <div class="maCard__hdr ssMatchCard__hdr">
+                <div class="maCard__title ssMatchCardTitle">
+                  <div class="ssMatchCell__top">${esc(row.pairingLabel || '')}</div>
+                </div>
+                <div class="ssThruPill ssThruPill--stacked">
+                  <span>Thru</span>
+                  <span>${esc(formatThru(row.thru))}</span>
+                </div>
+              </div>
+
+              <div class="maCard__body ssFieldCard__body">
+                <div class="ssFieldSummaryBox">
+                  <div class="ssFieldSummaryTop">
+                    <div class="ssFieldMetric">#Scores <span class="ssFieldMetricValue">${esc(row.scoreCount ?? '—')}</span></div>
+                    <div class="ssFieldMetric">${esc(currentMetricLabel())} <span class="ssFieldMetricValue">${esc(currentMetricValue(row))}</span></div>
+                  </div>
+
+                  <div class="ssFieldSection">
+                    <div class="ssFieldSection__title">${esc(includeLabel)}</div>
+                    ${renderPairFieldStatGrid(counted, 'ssFieldStatCell--muted')}
+                  </div>
+
+                  ${showExcluded ? `
+                    <div class="ssFieldSection ssFieldSection--split">
+                      <div class="ssFieldSection__title">${esc(excludeLabel)}</div>
+                      ${renderPairFieldStatGrid(excluded, 'ssFieldStatCell--plain')}
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+            </article>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  function renderPairPairCards(dataRows) {
     return `
       <div class="ssPairPairGrid">
         ${dataRows.map((row) => {
@@ -313,46 +426,28 @@ function renderSegmentedGameKpi(segments) {
     `;
   }
 
-    function renderBody() {
-        if (!dom.host) return;
+  function renderBody() {
+    if (!dom.host) return;
 
-        const dataRows = rows();
-        if (!dataRows.length) {
-        if (dom.empty) dom.empty.style.display = 'block';
-        dom.host.innerHTML = '';
-        return;
-        }
-
-        if (dom.empty) dom.empty.style.display = 'none';
-
-        if (String(payload.competition || 'PairField') === 'PairPair') {
-        dom.host.innerHTML = renderPairPairCards(dataRows);
-        return;
-        }
-
-        dom.host.innerHTML = renderPairFieldTable(dataRows) + renderPairFieldCards(dataRows);
+    const dataRows = rows();
+    if (!dataRows.length) {
+      if (dom.empty) dom.empty.style.display = 'block';
+      dom.host.innerHTML = '';
+      return;
     }
 
-    function pairPairLeaderClass(row, side) {
-    const leftVal = state.valueMode === 'game'
-        ? Number(row?.left?.gameValue ?? 0)
-        : state.valueMode === 'gross'
-        ? Number(row?.left?.grossDiffValue ?? 0)
-        : Number(row?.left?.netDiffValue ?? 0);
+    if (dom.empty) dom.empty.style.display = 'none';
 
-    const rightVal = state.valueMode === 'game'
-        ? Number(row?.right?.gameValue ?? 0)
-        : state.valueMode === 'gross'
-        ? Number(row?.right?.grossDiffValue ?? 0)
-        : Number(row?.right?.netDiffValue ?? 0);
-
-    if (leftVal === rightVal) return '';
-    if (side === 'left') return leftVal > rightVal ? 'is-leading' : '';
-    if (side === 'right') return rightVal > leftVal ? 'is-leading' : '';
-    return '';
+    if (String(payload.competition || 'PairField') === 'PairPair') {
+      dom.host.innerHTML = renderPairPairCards(dataRows);
+      return;
     }
+
+    dom.host.innerHTML = renderPairFieldCards(dataRows);
+  }
 
   function initialize() {
+    normalizeValueMode();
     applyChrome();
     renderControls();
     renderBody();
