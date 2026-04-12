@@ -17,6 +17,8 @@
   --brandPrimaryText: #ffffff;
   --brandPrimaryTextMuted: rgba(255,255,255,.78);
   --brandSecondaryText: #ffffff;
+  --datebadgeTopBg: #d2a63f;
+  --datebadgeTopText: #111111;
   --danger: #c62828;
   --warn: #f6d365;
   --success: #0aa45c;
@@ -398,8 +400,8 @@ body {
 }
 
 .maDateBadge__top{
-  background: #4f7ea8;
-  color: #ffffff;
+  background: var(--datebadgeTopBg);
+  color: var(--datebadgeTopText);
   font-size: 12px;
   font-weight: 900;
   letter-spacing: .3px;
