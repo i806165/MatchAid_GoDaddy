@@ -379,6 +379,50 @@ body {
   box-shadow: 0 0 0 3px rgba(0,0,0,.06);
 }
 
+/* ==========================================================================
+   Date Badge (shared)
+   ========================================================================== */
+.maDateBadge{
+  width: 62px;
+  flex: 0 0 auto;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--radiusLg);
+  overflow: hidden;
+  background: var(--cardBg);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+.maDateBadge__top{
+  background: #4f7ea8;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .3px;
+  text-align: center;
+  padding: 6px 0 5px;
+}
+
+.maDateBadge__mid{
+  color: var(--ink);
+  font-size: 22px;
+  font-weight: 950;
+  text-align: center;
+  padding: 8px 0 2px;
+}
+
+.maDateBadge__bot{
+  color: rgba(17,17,17,.72);
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+  padding: 0 0 8px;
+}
+
 /* Calendar */
 .maCalWrap{
   display: none; /* opened by JS with .open */

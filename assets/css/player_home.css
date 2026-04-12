@@ -88,14 +88,6 @@
 .maPillValue{ font-weight: 800; }
 
 
-.maDateBadge{
-  width:62px; flex:0 0 auto; border:1px solid var(--borderSubtle); border-radius: var(--radiusLg);
-  overflow:hidden; background:var(--cardBg); display:flex; flex-direction:column; line-height:1;
-}
-.maDateBadge__top{ background:var(--brandSecondary); color:#fff; font-size:12px; font-weight:900; text-align:center; padding:6px 0 5px; }
-.maDateBadge__mid{ color:var(--ink); font-size:22px; font-weight:950; text-align:center; padding:8px 0 2px; }
-.maDateBadge__bot{ color:var(--mutedText); font-size:12px; font-weight:900; text-align:center; padding:0 0 8px; }
-
 /* Fix for MANAGE button layout (text link style) */
 .maGameCard__manageBtn.maCard__actionBtn {
   width: auto;
