@@ -106,6 +106,7 @@
   background: var(--cardBg);
   overflow: hidden;
 }
+
 .scorePairingDivider{
   height: 0;
   width: 100%;
@@ -116,9 +117,9 @@
 }
 
 .scorePlayerRow{
-  padding: 14px 14px 12px 14px;
+  padding: 12px 12px 10px 8px;
   display: grid;
-  gap: 10px;
+  gap: 8px;
   background: var(--cardBg);
   border-top: 1px solid var(--cardBorder);
 }
@@ -137,10 +138,10 @@
 .scorePlayerBadge{
   width: 100%;
   min-width: 0;
-  min-height: 100px;
-  border-radius: 28px;
+  min-height: 90px;
+  border-radius: 20px;
   border: 2px solid color-mix(in srgb, var(--brandPrimary) 24%, var(--cardBorder));
-  padding: 10px 18px 8px 18px;
+  padding: 8px 14px 6px 14px;
   display: grid;
   grid-template-rows: 1fr auto;
   align-items: start;
@@ -166,11 +167,8 @@
 
 .scorePlayerBadge.is-declared{
   background: var(--brandSecondary);
-  color: var(--brandPrimaryText);   
+  color: var(--brandPrimaryText);
   border-color: var(--ink) 24%;
-  /* background: #8fd16f; */
-  /* color: #ffffff; */
-  /*border-color: color-mix(in srgb, #8fd16f 55%, var(--brandPrimary)); */
 }
 
 .scorePlayerBadge.is-undeclared{
@@ -184,31 +182,31 @@
 }
 
 .scorePlayerBadgeLast{
-  line-height: 1.0;
-  font-size: 22px;
-  font-weight: 900;
-  letter-spacing: .2px;
+  line-height: 1.02;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .scorePlayerBadgeFirst{
-  margin-top: 3px;
+  margin-top: 2px;
   line-height: 1.0;
-  font-size: 15px;
-  font-weight: 900;
+  font-size: 14px;
+  font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .scorePlayerBadgeStatus{
-  margin-top: 0;
+  margin-top: 6px;
   line-height: 1.05;
   font-weight: 900;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: baseline;
   width: 100%;
 }
@@ -218,15 +216,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.scorePlayerBadgeStatus__strokes{
-  font-size: 22px;
-  font-weight: 900;
-  letter-spacing: .2px;
-  line-height: 1;
-  color: inherit;
-  flex-shrink: 0;
 }
 
 .scoreScoreBox{
@@ -284,25 +273,42 @@
 .scoreRawInput.scCell--bogeyplus {
   border: 3px solid #000 !important;
   border-radius: 8px !important;
-  /* Double square effect using inset shadows */
   box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 6px #000 !important;
 }
 
-
 .scorePlayerMetaRow{
   display: grid;
-  justify-content: start;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
 }
 
 .scorePlayerDetail{
   min-width: 0;
-  line-height: 1.15;
+  line-height: 1.1;
   color: var(--mutedText);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 800;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.scorePlayerSO{
+  min-width: 30px;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 2px solid var(--mutedText);
+  color: var(--ink);
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .scoreMetaToken{
@@ -348,8 +354,8 @@
   }
 
   .scorePlayerRow{
-    padding: 14px 12px 12px 12px;
-    gap: 10px;
+    padding: 12px 10px 10px 6px;
+    gap: 8px;
   }
 
   .scorePlayerMain{
@@ -359,15 +365,15 @@
   }
 
   .scorePlayerBadge{
-    min-height: 80px;
-    padding: 8px 16px 6px 16px;
-    border-radius: 26px;
+    min-height: 74px;
+    padding: 7px 14px 5px 14px;
+    border-radius: 18px;
     grid-template-rows: auto auto;
   }
 
   .scorePlayerBadgeLast{
-    font-size: 19px;
-    line-height: 1.1;
+    font-size: 18px;
+    line-height: 1.05;
   }
 
   .scorePlayerBadgeFirst{
@@ -375,12 +381,12 @@
     margin-top: 1px;
   }
 
-  .scorePlayerBadgeStatus__label{
-    font-size: 14px;
+  .scorePlayerBadgeStatus{
+    margin-top: 6px;
   }
 
-  .scorePlayerBadgeStatus__strokes{
-    font-size: 19px;
+  .scorePlayerBadgeStatus__label{
+    font-size: 14px;
   }
 
   .scoreRawControls{
@@ -410,9 +416,14 @@
   .scoreRawInput.scCell--birdie { border-width: 2px !important; }
   .scoreRawInput.scCell--eagle { border-width: 6px !important; }
   .scoreRawInput.scCell--bogey { border-width: 2px !important; }
-  .scoreRawInput.scCell--bogeyplus { 
+  .scoreRawInput.scCell--bogeyplus {
     border-width: 2px !important;
     box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 4px #000 !important;
+  }
+
+  .scorePlayerMetaRow{
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
   }
 
   .scorePlayerDetail{
@@ -420,6 +431,13 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .scorePlayerSO{
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    font-size: 14px;
   }
 }
 

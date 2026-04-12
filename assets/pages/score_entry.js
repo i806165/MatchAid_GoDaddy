@@ -581,7 +581,6 @@ function renderRows() {
           </div>
             <div class="scorePlayerBadgeStatus">
               <span class="scorePlayerBadgeStatus__label">${labelPrefix} ${netDisplay}</span>
-              <span class="scorePlayerBadgeStatus__strokes">${strokeDisplay}</span>
             </div>
         </${badgeTag}>
 
@@ -611,6 +610,7 @@ function renderRows() {
           <span class="scoreMetaToken">HCP ${holeHcp}</span>
           ${isTeamLockedRow ? '<span class="scoreMetaSep">•</span><span class="scoreMetaToken">Team score entered on primary row</span>' : ''}
         </div>
+        <div class="scorePlayerSO ${strokeDisplay ? '' : 'isHidden'}">${escapeHtml(strokeDisplay)}</div>
       </div>`;
 
     bindRowEvents(article, wrapper, { isManualDeclare, isAutoDeclare, isTeamLockedRow });
