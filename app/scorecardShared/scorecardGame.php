@@ -23,7 +23,14 @@ try {
 
 } catch (Throwable $e) {
   error_log('[MA][ERROR][SCORECARD_GAME_INIT] ' . $e->getMessage());
-  die('Game Scorecard Init Error: ' . $e->getMessage());
+
+  $routerUrl = MA_ROUTE_API_ROUTER . '?' . http_build_query([
+    'action' => 'home',
+    'redirect' => '1',
+  ]);
+
+  header("Location: " . $routerUrl);
+  exit;
 }
 
 renderScorecardSharedPage($initPayload, 'Game Scorecards');

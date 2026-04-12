@@ -30,8 +30,15 @@ try {
   $initPayload['portal'] = $_SESSION["SessionPortal"] ?? "";
 
 } catch (Throwable $e) {
-  error_log('[MA][ERROR][SCORECARD_GROUP_INIT] ' . $e->getMessage());
-  die('Group Scorecard Init Error: ' . $e->getMessage());
+  error_log('[MA][ERROR][SCORECARD_GAME_INIT] ' . $e->getMessage());
+
+  $routerUrl = MA_ROUTE_API_ROUTER . '?' . http_build_query([
+    'action' => 'home',
+    'redirect' => '1',
+  ]);
+
+  header("Location: " . $routerUrl);
+  exit;
 }
 
 renderScorecardSharedPage($initPayload, 'Group Scorecard');
