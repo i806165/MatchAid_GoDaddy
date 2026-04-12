@@ -592,6 +592,7 @@ body {
 .maChrome__ftr{
   background: var(--chromeBg);
   border-top: 1px solid var(--chromeBorder);
+  padding-bottom: 8px;
 }
 
 /* Status line */
