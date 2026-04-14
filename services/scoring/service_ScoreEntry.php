@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/service_ScoreCard.php';
 require_once MA_SVC_DB . '/service_dbPlayers.php';
+require_once __DIR__ . '/service_ScoreRotation.php';
 
 /**
  * ServiceScoreEntry
@@ -85,9 +86,6 @@ final class ServiceScoreEntry
             ];
         }
 
-        // Resolve declarations based on rules before returning to UI
-        self::resolveDeclaredScores($gameRow, $players, $holeNumber);
-
         $isAllowedToday = self::isScoreEntryAllowedToday($gameRow);
         $requiresCart = trim((string)($gameRow['dbGames_RotationMethod'] ?? '')) === 'COD';
         $canSave = MA_TESTING_MODE || $isAllowedToday;
@@ -107,6 +105,169 @@ final class ServiceScoreEntry
                 'ggid' => $ggid,
             ]
         ];
+    }
+
+        public static function applyActiveContextToLaunchPlayers(array $launchPlayers, array $activeContextPlayers): array
+    {
+        if (!$launchPlayers) {
+            return [];
+        }
+
+        if (!$activeContextPlayers) {
+            foreach ($launchPlayers as &$wrapper) {
+                $wrapper = self::stampDefaultEffectiveFields($wrapper);
+            }
+            unset($wrapper);
+            return array_values($launchPlayers);
+        }
+
+        $byGHIN = [];
+        foreach ($launchPlayers as $wrapper) {
+            $playerRow = is_array($wrapper['playerRow'] ?? null) ? $wrapper['playerRow'] : [];
+            $ghin = trim((string)($playerRow['dbPlayers_PlayerGHIN'] ?? ''));
+            if ($ghin !== '') {
+                $byGHIN[$ghin] = $wrapper;
+            }
+        }
+
+        $merged = [];
+        foreach ($activeContextPlayers as $activeRow) {
+            $ghin = trim((string)($activeRow['dbPlayers_PlayerGHIN'] ?? ''));
+            if ($ghin === '' || !isset($byGHIN[$ghin])) {
+                continue;
+            }
+
+            $merged[] = self::mergeActiveContextIntoWrapper($byGHIN[$ghin], $activeRow);
+        }
+
+        // Fallback safety: if something failed to map, retain original wrappers
+        if (!$merged || count($merged) !== count($launchPlayers)) {
+            foreach ($launchPlayers as &$wrapper) {
+                $wrapper = self::stampDefaultEffectiveFields($wrapper);
+            }
+            unset($wrapper);
+            return array_values($launchPlayers);
+        }
+
+        return $merged;
+    }
+
+    private static function mergeActiveContextIntoWrapper(array $wrapper, array $activeRow): array
+    {
+        $playerRow = is_array($wrapper['playerRow'] ?? null) ? $wrapper['playerRow'] : [];
+        $scoreEntryRow = is_array($wrapper['scoreEntryRow'] ?? null) ? $wrapper['scoreEntryRow'] : [];
+
+        $baselinePlayerKey = trim((string)($activeRow['baselinePlayerKey'] ?? $playerRow['dbPlayers_PlayerKey'] ?? ''));
+        $baselineFlightID = trim((string)($activeRow['baselineFlightID'] ?? $playerRow['dbPlayers_FlightID'] ?? ''));
+        $baselinePairingID = trim((string)($activeRow['baselinePairingID'] ?? $playerRow['dbPlayers_PairingID'] ?? ''));
+        $virtualPlayerKey = trim((string)($activeRow['virtualPlayerKey'] ?? $baselinePlayerKey));
+        $virtualFlightID = trim((string)($activeRow['virtualFlightID'] ?? $baselineFlightID));
+        $virtualPairingID = trim((string)($activeRow['virtualPairingID'] ?? $baselinePairingID));
+        $effectivePlayerKey = trim((string)($activeRow['effectivePlayerKey'] ?? $virtualPlayerKey));
+        $effectiveFlightID = trim((string)($activeRow['effectiveFlightID'] ?? $virtualFlightID));
+        $effectivePairingID = trim((string)($activeRow['effectivePairingID'] ?? $virtualPairingID));
+        $virtualFlightPos = trim((string)($activeRow['virtualFlightPos'] ?? $playerRow['dbPlayers_FlightPos'] ?? ''));
+
+        // Keep original persisted row intact for DB identity, but mirror active context fields onto it
+        $playerRow['baselinePlayerKey'] = $baselinePlayerKey;
+        $playerRow['baselineFlightID'] = $baselineFlightID;
+        $playerRow['baselinePairingID'] = $baselinePairingID;
+        $playerRow['virtualPlayerKey'] = $virtualPlayerKey;
+        $playerRow['virtualFlightID'] = $virtualFlightID;
+        $playerRow['virtualPairingID'] = $virtualPairingID;
+        $playerRow['effectivePlayerKey'] = $effectivePlayerKey;
+        $playerRow['effectiveFlightID'] = $effectiveFlightID;
+        $playerRow['effectivePairingID'] = $effectivePairingID;
+        $playerRow['virtualFlightPos'] = $virtualFlightPos;
+
+        $scoreEntryRow['baselinePlayerKey'] = $baselinePlayerKey;
+        $scoreEntryRow['baselineFlightID'] = $baselineFlightID;
+        $scoreEntryRow['baselinePairingID'] = $baselinePairingID;
+        $scoreEntryRow['virtualPlayerKey'] = $virtualPlayerKey;
+        $scoreEntryRow['virtualFlightID'] = $virtualFlightID;
+        $scoreEntryRow['virtualPairingID'] = $virtualPairingID;
+        $scoreEntryRow['effectivePlayerKey'] = $effectivePlayerKey;
+        $scoreEntryRow['effectiveFlightID'] = $effectiveFlightID;
+        $scoreEntryRow['effectivePairingID'] = $effectivePairingID;
+        $scoreEntryRow['virtualFlightPos'] = $virtualFlightPos;
+        $scoreEntryRow['spinNumber'] = intval($activeRow['spinNumber'] ?? 1);
+        $scoreEntryRow['spinKey'] = (string)($activeRow['spinKey'] ?? 'S1');
+        $scoreEntryRow['spinLabel'] = (string)($activeRow['spinLabel'] ?? 'Round');
+        $scoreEntryRow['spinStartHole'] = intval($activeRow['spinStartHole'] ?? 1);
+        $scoreEntryRow['spinEndHole'] = intval($activeRow['spinEndHole'] ?? 18);
+        $scoreEntryRow['visibleHoles'] = is_array($activeRow['visibleHoles'] ?? null) ? $activeRow['visibleHoles'] : [];
+
+        $wrapper['playerRow'] = $playerRow;
+        $wrapper['scoreEntryRow'] = $scoreEntryRow;
+
+        return $wrapper;
+    }
+
+    private static function stampDefaultEffectiveFields(array $wrapper): array
+    {
+        $playerRow = is_array($wrapper['playerRow'] ?? null) ? $wrapper['playerRow'] : [];
+        $scoreEntryRow = is_array($wrapper['scoreEntryRow'] ?? null) ? $wrapper['scoreEntryRow'] : [];
+
+        $baselinePlayerKey = trim((string)($playerRow['dbPlayers_PlayerKey'] ?? ''));
+        $baselineFlightID = trim((string)($playerRow['dbPlayers_FlightID'] ?? ''));
+        $baselinePairingID = trim((string)($playerRow['dbPlayers_PairingID'] ?? ''));
+
+        $playerRow['baselinePlayerKey'] = $baselinePlayerKey;
+        $playerRow['baselineFlightID'] = $baselineFlightID;
+        $playerRow['baselinePairingID'] = $baselinePairingID;
+        $playerRow['virtualPlayerKey'] = $baselinePlayerKey;
+        $playerRow['virtualFlightID'] = $baselineFlightID;
+        $playerRow['virtualPairingID'] = $baselinePairingID;
+        $playerRow['effectivePlayerKey'] = $baselinePlayerKey;
+        $playerRow['effectiveFlightID'] = $baselineFlightID;
+        $playerRow['effectivePairingID'] = $baselinePairingID;
+        $playerRow['virtualFlightPos'] = (string)($playerRow['dbPlayers_FlightPos'] ?? '');
+
+        $scoreEntryRow['baselinePlayerKey'] = $baselinePlayerKey;
+        $scoreEntryRow['baselineFlightID'] = $baselineFlightID;
+        $scoreEntryRow['baselinePairingID'] = $baselinePairingID;
+        $scoreEntryRow['virtualPlayerKey'] = $baselinePlayerKey;
+        $scoreEntryRow['virtualFlightID'] = $baselineFlightID;
+        $scoreEntryRow['virtualPairingID'] = $baselinePairingID;
+        $scoreEntryRow['effectivePlayerKey'] = $baselinePlayerKey;
+        $scoreEntryRow['effectiveFlightID'] = $baselineFlightID;
+        $scoreEntryRow['effectivePairingID'] = $baselinePairingID;
+        $scoreEntryRow['virtualFlightPos'] = (string)($playerRow['dbPlayers_FlightPos'] ?? '');
+        $scoreEntryRow['spinNumber'] = 1;
+        $scoreEntryRow['spinKey'] = 'S1';
+        $scoreEntryRow['spinLabel'] = 'Round';
+        $scoreEntryRow['spinStartHole'] = 1;
+        $scoreEntryRow['spinEndHole'] = 18;
+        $scoreEntryRow['visibleHoles'] = [];
+
+        $wrapper['playerRow'] = $playerRow;
+        $wrapper['scoreEntryRow'] = $scoreEntryRow;
+
+        return $wrapper;
+    }
+
+    private static function getEffectivePairingIdFromWrapper(array $wrapper): string
+    {
+        $scoreEntryRow = is_array($wrapper['scoreEntryRow'] ?? null) ? $wrapper['scoreEntryRow'] : [];
+        $playerRow = is_array($wrapper['playerRow'] ?? null) ? $wrapper['playerRow'] : [];
+
+        $pairingId = trim((string)($scoreEntryRow['effectivePairingID'] ?? ''));
+        if ($pairingId !== '') {
+            return $pairingId;
+        }
+
+        $pairingId = trim((string)($playerRow['effectivePairingID'] ?? ''));
+        if ($pairingId !== '') {
+            return $pairingId;
+        }
+
+        $pairingId = trim((string)($playerRow['dbPlayers_PairingID'] ?? ''));
+        return $pairingId !== '' ? $pairingId : '000';
+    }
+
+    public static function getSeatOverrides(): array
+    {
+        return [];
     }
 
     public static function saveScoresForGroup(array $request): array
@@ -235,48 +396,49 @@ final class ServiceScoreEntry
     public static function resolveDeclaredScores(array $gameRow, array &$players, int $holeNumber): void
     {
         $scoringSystem = (string)($gameRow['dbGames_ScoringSystem'] ?? 'BestBall');
-        $competition = (string)($gameRow['dbGames_Competition'] ?? 'PairField');
         $scoringMethod = (string)($gameRow['dbGames_ScoringMethod'] ?? 'NET');
 
-        // 1. Manual modes exit early
+        // Manual modes exit early
         if (in_array($scoringSystem, ['DeclareManual', 'DeclarePlayer'], true)) {
             return;
         }
 
-        // 2. Determine evaluation partitions by PairingID
+        // Partition by effective pairing identity
         $partitions = [];
         foreach ($players as $idx => $wrapper) {
-            $pairingId = trim((string)($wrapper['playerRow']['dbPlayers_PairingID'] ?? ''));
-            if ($pairingId === '') $pairingId = '000';
+            $pairingId = self::getEffectivePairingIdFromWrapper($wrapper);
+            $scoreEntryRow = is_array($wrapper['scoreEntryRow'] ?? null) ? $wrapper['scoreEntryRow'] : [];
+            $playerRow = is_array($wrapper['playerRow'] ?? null) ? $wrapper['playerRow'] : [];
 
             $partitions[$pairingId][] = [
                 'idx' => $idx,
-                'raw' => $wrapper['scoreEntryRow']['rawScore'] ?? null,
-                'net' => $wrapper['scoreEntryRow']['netScore'] ?? null,
-                'pos' => (int)($wrapper['playerRow']['dbPlayers_PairingPos'] ?? 99)
+                'raw' => $scoreEntryRow['rawScore'] ?? null,
+                'net' => $scoreEntryRow['netScore'] ?? null,
+                'pos' => (int)($scoreEntryRow['pairingPos'] ?? $playerRow['dbPlayers_PairingPos'] ?? 99),
             ];
         }
 
-        // 3. Resolve each partition
-        foreach ($partitions as $side => $rows) {
-            // Filter to only rows with valid scores
-            $validRows = array_filter($rows, fn($r) => is_numeric($r['raw']));
+        foreach ($partitions as $pairingId => $rows) {
+            $validRows = array_values(array_filter($rows, static fn($r) => is_numeric($r['raw'])));
 
-            // Determine N (number of scores to declare)
             $n = 1;
             if ($scoringSystem === 'AllScores') {
                 $n = count($validRows);
             } elseif ($scoringSystem === 'DeclareHole') {
                 $holeDecls = $gameRow['dbGames_HoleDeclaration'] ?? [];
-                if (is_string($holeDecls)) $holeDecls = json_decode($holeDecls, true) ?: [];
-                $foundHole = array_values(array_filter($holeDecls, fn($h) => (int)($h['hole'] ?? 0) === $holeNumber));
+                if (is_string($holeDecls)) {
+                    $holeDecls = json_decode($holeDecls, true) ?: [];
+                }
+                $foundHole = array_values(array_filter(
+                    $holeDecls,
+                    static fn($h) => (int)($h['hole'] ?? 0) === $holeNumber
+                ));
                 $n = (int)($foundHole[0]['count'] ?? 1);
             } elseif ($scoringSystem === 'BestBall') {
                 $n = (int)($gameRow['dbGames_BestBall'] ?? 1);
             }
 
-            // Sort by: Metric -> then Gross -> then Position
-            usort($validRows, function($a, $b) use ($scoringMethod) {
+            usort($validRows, static function ($a, $b) use ($scoringMethod) {
                 $metricA = ($scoringMethod === 'ADJ GROSS') ? $a['raw'] : $a['net'];
                 $metricB = ($scoringMethod === 'ADJ GROSS') ? $b['raw'] : $b['net'];
 
@@ -287,15 +449,13 @@ final class ServiceScoreEntry
 
             $declaredIndices = array_column(array_slice($validRows, 0, $n), 'idx');
 
-            // Apply updates to the original players array
             foreach ($rows as $row) {
                 $pIdx = $row['idx'];
                 $isDeclared = in_array($pIdx, $declaredIndices, true);
-                
+
                 $players[$pIdx]['scoreEntryRow']['declared'] = $isDeclared;
                 $players[$pIdx]['scoreEntryRow']['declaredSource'] = 'system';
 
-                // Re-sync the hydrated JSON object
                 self::syncHoleDetailDeclaration($players[$pIdx], $holeNumber, $isDeclared);
             }
         }
@@ -356,10 +516,7 @@ final class ServiceScoreEntry
 
         $summary = $scoresJson['Scores'][0];
         $courseMap = ServiceScoreCard::getCourseInfoMap($gameRow, $playerRow);
-        $teeDetails = $playerRow['dbPlayers_TeeSetDetails'] ?? [];
-        $teeHoles = is_array($teeDetails) ? ($teeDetails['Holes'] ?? []) : [];
-        $effectiveHC = self::calculateEffectiveHandicap($gameRow, $playerRow);
-        $strokeMap = ServiceScoreCard::buildStrokeAllocationMap($gameRow, $effectiveHC, $teeHoles);
+        $strokeMap = self::buildScoreEntryStrokeAllocationMap($gameRow, $playerRow);
 
         $courseInfo = $courseMap[$holeNumber] ?? [];
         $par = self::numOrNull($courseInfo['par'] ?? null);
@@ -417,10 +574,8 @@ final class ServiceScoreEntry
         $summary = $scoresJson['Scores'][0];
 
         $courseMap = ServiceScoreCard::getCourseInfoMap($gameRow, $playerRow);
-        $teeDetails = $playerRow['dbPlayers_TeeSetDetails'] ?? [];
-        $teeHoles = is_array($teeDetails) ? ($teeDetails['Holes'] ?? []) : [];
         $effectiveHC = self::calculateEffectiveHandicap($gameRow, $playerRow);
-        $strokeMap = ServiceScoreCard::buildStrokeAllocationMap($gameRow, $effectiveHC, $teeHoles);
+        $strokeMap = self::buildScoreEntryStrokeAllocationMap($gameRow, $playerRow);
 
         $courseInfo = $courseMap[$holeNumber] ?? [];
         $par = self::numOrNull($courseInfo['par'] ?? null);
@@ -500,6 +655,19 @@ final class ServiceScoreEntry
     {
         // Delegate to centralized logic in ServiceScoreCard
         return ServiceScoreCard::calculateEffectiveHandicap($gameRow, $playerRow);
+    }
+
+    private static function buildScoreEntryStrokeAllocationMap(array $gameRow, array $playerRow): array
+    {
+        $teeDetails = $playerRow['dbPlayers_TeeSetDetails'] ?? [];
+        $teeHoles = is_array($teeDetails) ? ($teeDetails['Holes'] ?? $teeDetails['holes'] ?? []) : [];
+        $effectiveHC = self::calculateEffectiveHandicap($gameRow, $playerRow);
+
+        return ServiceScoreRotation::buildSpinAwareStrokeAllocationMap(
+            $gameRow,
+            $effectiveHC,
+            $teeHoles
+        );
     }
 
     public static function recalculateScoreSummary(array $gameRow, array $playerRow, array $summary): array
@@ -720,8 +888,11 @@ final class ServiceScoreEntry
         }
 
         $pairingPos = (string)($submittedPlayerRow['dbPlayers_PairingPos'] ?? $currentDbPlayer['dbPlayers_PairingPos'] ?? '');
-        if (!in_array($pairingPos, ['1', '2', '3', '4'], true)) {
+        if (!in_array($pairingPos, ['1', '2'], true)) {
             $pairingPos = (string)($currentDbPlayer['dbPlayers_PairingPos'] ?? '');
+        }
+        if (!in_array($pairingPos, ['1', '2'], true)) {
+            $pairingPos = '1';
         }
 
         return [

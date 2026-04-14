@@ -6,6 +6,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 require_once __DIR__ . '/../../bootstrap.php';
 require_once MA_SERVICES . '/scoring/service_ScoreEntry.php';
+require_once MA_SERVICES . '/scoring/service_ScoreRotation.php';
 require_once MA_SERVICES . '/context/service_ContextGame.php';
 require_once MA_SVC_DB . '/service_dbPlayers.php';
 
@@ -29,23 +30,24 @@ try {
         respond(400, ['ok' => false, 'message' => 'ScoreCard ID is required.']);
     }
 
-    // Step 1: pull all players in the scoring pod by shared ScoreCard ID
+    // Step 1: Pull baseline scoring pod by shared ScoreCard ID
     $groupPlayers = ServiceDbPlayers::getPlayersByPlayerKey($playerKey);
     if (!$groupPlayers || count($groupPlayers) === 0) {
         respond(404, ['ok' => false, 'message' => 'ScoreCard ID not found.']);
     }
 
-    // Step 2: use first player row as launch anchor
+    // Step 2: Use first player row as launch anchor
     $launchedPlayer = $groupPlayers[0];
     $ggid = (int)($launchedPlayer['dbPlayers_GGID'] ?? 0);
     if ($ggid <= 0) {
         respond(404, ['ok' => false, 'message' => 'Game not found for ScoreCard ID.']);
     }
 
-    // Step 3: hydrate session GGID so existing game context service can be reused
+    // Step 3: Hydrate session GGID so existing game context service can be reused
     ServiceContextGame::setGameContext($ggid);
     ServiceScoreEntry::setScoringPodGGID($ggid);
     ServiceScoreEntry::setScorecardKey($playerKey);
+
     $gc = ServiceContextGame::getGameContext();
     $gameRow = $gc['game'] ?? null;
 
@@ -53,18 +55,42 @@ try {
         respond(404, ['ok' => false, 'message' => 'Game context not found.']);
     }
 
-    //$payload = ServiceScoreEntry::buildLaunchPayload($gameRow, $groupPlayers, $holeNumber);
-    //$payload['launchContext'] = [
-    //    'playerKey' => $playerKey,
-    //    'groupLoadRule' => 'PlayerKey',
-    //    'launchedPlayerId' => (string)($launchedPlayer['_id'] ?? ''),
-    //    'ggid' => (string)$ggid,
-    //];
-       // Delegate payload building to service
-    $payload = ServiceScoreEntry::buildLaunchPayload($gameRow, $groupPlayers, $holeNumber, $playerKey);
+    // Step 4: Build the baseline payload exactly as score entry expects today
+    $baselinePayload = ServiceScoreEntry::buildLaunchPayload($gameRow, $groupPlayers, $holeNumber, $playerKey);
 
+    // Step 5: Normalize baseline into virtual contexts (pass-through for non-spin games)
+    $seatOverrides = method_exists('ServiceScoreEntry', 'getSeatOverrides')
+        ? ServiceScoreEntry::getSeatOverrides()
+        : [];
 
-    respond(200, ['ok' => true, 'payload' => $payload]);
+    $rotationContext = ServiceScoreRotation::buildNormalizedContexts(
+        $gameRow,
+        $groupPlayers,
+        $holeNumber,
+        $seatOverrides
+    );
+
+    // Step 6a: Rewrite payload.players to the active normalized working array
+    $baselinePayload['players'] = ServiceScoreEntry::applyActiveContextToLaunchPlayers(
+        $baselinePayload['players'] ?? [],
+        $rotationContext['activeContext']['players'] ?? []
+    );
+    // Step 6b: Resolve declarations only after active context has been merged
+    ServiceScoreEntry::resolveDeclaredScores(
+        $gameRow,
+        $baselinePayload['players'],
+        $holeNumber
+    );
+
+    // Step 7: Attach normalized rotation context to the hydration payload
+    $baselinePayload['rotation'] = $rotationContext;
+    $baselinePayload['isRotationAware'] = !empty($rotationContext['isRotationAware']);
+    $baselinePayload['virtualContexts'] = $rotationContext['virtualContexts'] ?? [];
+    $baselinePayload['activeContext'] = $rotationContext['activeContext'] ?? null;
+    $baselinePayload['baselineContext'] = $rotationContext['baseline'] ?? null;
+
+    respond(200, ['ok' => true, 'payload' => $baselinePayload]);
+
 } catch (Throwable $e) {
     respond(500, ['ok' => false, 'message' => $e->getMessage()]);
 }

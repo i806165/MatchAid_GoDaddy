@@ -104,7 +104,7 @@
 
       state.payload = json.payload;
       state.scorerGHIN = json.payload.scorerGHIN || '';
-      (state.payload.players || []).forEach((wrapper) => {
+      activePlayers().forEach((wrapper) => {
         if (!wrapper.originalScoresJson) {
           wrapper.originalScoresJson = deepClone(wrapper.scoresJson || null);
         }
@@ -150,139 +150,6 @@
   }
 
   // ==========================================================================
-  // 5. Cart Workflow
-  // ==========================================================================
-
-  function getCartPlayers() {
-    return (state.payload?.players || []).map((wrapper) => {
-      const pr = wrapper.playerRow || {};
-      const sr = wrapper.scoreEntryRow || {};
-      return {
-        wrapper,
-        ghin: String(pr.dbPlayers_PlayerGHIN || sr.playerGHIN || ''),
-        name: String(pr.dbPlayers_Name || sr.playerName || ''),
-        pairingPos: String(pr.dbPlayers_PairingPos || sr.pairingPos || '')
-      };
-    }).filter((p) => p.ghin && p.name);
-  }
-
-  function configureCartCard() {
-    const players = getCartPlayers();
-    const isCOD = String(state.payload?.gameRow?.dbGames_RotationMethod || '') === 'COD';
-
-    const labels = isCOD
-      ? ['Cart 1 Driver', 'Cart 1 Passenger', 'Cart 2 Driver', 'Cart 2 Passenger']
-      : ['Player 1', 'Player 2', 'Player 3', 'Player 4'];
-
-    if (el.cart1DriverLabel) el.cart1DriverLabel.textContent = labels[0];
-    if (el.cart1PassengerLabel) el.cart1PassengerLabel.textContent = labels[1];
-    if (el.cart2DriverLabel) el.cart2DriverLabel.textContent = labels[2];
-    if (el.cart2PassengerLabel) el.cart2PassengerLabel.textContent = labels[3];
-
-    const options = [{ label: '', value: '' }].concat(
-      players.map((p) => ({ label: p.name, value: p.ghin }))
-    );
-
-    [el.cart1Driver, el.cart1Passenger, el.cart2Driver, el.cart2Passenger].forEach((select) => {
-      if (!select) return;
-      select.innerHTML = '';
-      options.forEach((opt) => {
-        const node = document.createElement('option');
-        node.value = opt.value;
-        node.textContent = opt.label;
-        select.appendChild(node);
-      });
-      select.value = '';
-    });
-
-    players.forEach((p) => {
-      switch (p.pairingPos) {
-        case '1': if (el.cart1Driver) el.cart1Driver.value = p.ghin; break;
-        case '2': if (el.cart1Passenger) el.cart1Passenger.value = p.ghin; break;
-        case '3': if (el.cart2Driver) el.cart2Driver.value = p.ghin; break;
-        case '4': if (el.cart2Passenger) el.cart2Passenger.value = p.ghin; break;
-      }
-    });
-  }
-
-  function confirmCartConfiguration() {
-    const assignments = [
-      { select: el.cart1Driver, pos: '1' },
-      { select: el.cart1Passenger, pos: '2' },
-      { select: el.cart2Driver, pos: '3' },
-      { select: el.cart2Passenger, pos: '4' }
-    ];
-
-    const selected = [];
-    const seen = new Set();
-
-    for (const item of assignments) {
-      const ghin = String(item.select?.value || '');
-      if (!ghin) continue;
-      if (seen.has(ghin)) {
-        setPageStatus('Each cart position must have a unique player.', 'warn');
-        return;
-      }
-      seen.add(ghin);
-      selected.push({ ghin, pos: item.pos });
-    }
-
-    (state.payload?.players || []).forEach((wrapper) => {
-      const pr = wrapper.playerRow || {};
-      const sr = wrapper.scoreEntryRow || {};
-      const ghin = String(pr.dbPlayers_PlayerGHIN || sr.playerGHIN || '');
-      const match = selected.find((x) => x.ghin === ghin);
-      const pos = match ? match.pos : '';
-
-      if (pr) pr.dbPlayers_PairingPos = pos;
-      if (sr) sr.pairingPos = pos;
-    });
-
-    showKeeperSelection();
-  }
-
-  // ==========================================================================
-  // 6. Scorekeeper Workflow
-  // ==========================================================================
-
-  function showKeeperSelection() {
-    el.cartCard.classList.add('isHidden');
-    el.keeperCard.classList.remove('isHidden');
-  }
-
-  function renderKeeperChips() {
-    const payload = state.payload;
-    el.keeperChips.innerHTML = '';
-
-    (payload.players || []).forEach((p) => {
-      const row = p.scoreEntryRow || {};
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'maChoiceChip';
-      btn.textContent = row.playerName || '';
-
-      btn.addEventListener('click', async () => {
-        state.scorerGHIN = row.playerGHIN || '';
-
-        // Persist Scorer Context to Session
-        await fetch(apiUrls.setScorerContext, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ghin: state.scorerGHIN })
-        });
-
-        // Transition to Scoring: Hide Setup (Context + Keeper), Show Work
-        el.contextCard.classList.add('isHidden'); // Pane-1b
-        el.keeperCard.classList.add('isHidden');  // Pane-4
-        el.cartCard.classList.add('isHidden');    // Ensure hidden
-        el.work.classList.remove('isHidden');
-      });
-
-      el.keeperChips.appendChild(btn);
-    });
-  }
-
-  // ==========================================================================
   // 7. Hole Navigation
   // ==========================================================================
 
@@ -317,8 +184,7 @@
         state.dirty = false;
       }
 
-      const firstP = state.payload?.players?.[0];
-      const pKey = firstP?.playerRow?.dbPlayers_PlayerKey;
+      const pKey = getBaselinePlayerKey();
 
       if (pKey) {
         const res = await fetch(apiUrls.launch, {
@@ -329,7 +195,7 @@
         const json = await res.json();
         if (json.ok && json.payload) {
           state.payload = json.payload;
-          (state.payload.players || []).forEach((wrapper) => {
+          activePlayers().forEach((wrapper) => {
             if (!wrapper.originalScoresJson) {
               wrapper.originalScoresJson = deepClone(wrapper.scoresJson || null);
             }
@@ -366,14 +232,14 @@
     if (['DeclareManual', 'DeclarePlayer'].includes(scoringSystem)) return;
 
     const partitions = {};
-    payload.players.forEach((wrapper, idx) => {
-      const pairingId = String(wrapper.playerRow?.dbPlayers_PairingID || '').trim() || '000';
+    activePlayers().forEach((wrapper, idx) => {
+      const pairingId = getEffectivePairingId(wrapper);
       if (!partitions[pairingId]) partitions[pairingId] = [];
       partitions[pairingId].push({
         idx,
         raw: wrapper.scoreEntryRow.rawScore,
         net: wrapper.scoreEntryRow.netScore,
-        pos: parseInt(wrapper.playerRow?.dbPlayers_PairingPos || '99', 10)
+        pos: parseInt(wrapper.scoreEntryRow?.pairingPos || '99', 10)
       });
     });
 
@@ -419,15 +285,12 @@
     return ["Scramble", "Shamble", "AltShot", "Chapman"].includes(fmt);
   }
 
-  function getPairingRows(pairingId) {
-    const pid = String(pairingId || '').trim();
-    return (state.payload?.players || []).filter((wrapper) => {
-      const row = wrapper.scoreEntryRow || {};
-      const playerRow = wrapper.playerRow || {};
-      const wPid = String(row.pairingId || playerRow.dbPlayers_PairingID || '').trim();
-      return wPid === pid;
-    });
-  }
+function getPairingRows(pairingId) {
+  const pid = String(pairingId || '').trim();
+  return activePlayers().filter((wrapper) => {
+    return getEffectivePairingId(wrapper) === pid;
+  });
+}
 
   function getPairingPos(wrapper) {
     const row = wrapper?.scoreEntryRow || {};
@@ -446,7 +309,7 @@
 
     const row = wrapper?.scoreEntryRow || {};
     const playerRow = wrapper?.playerRow || {};
-    const pairingId = String(row.pairingId || playerRow.dbPlayers_PairingID || '').trim();
+    const pairingId = getEffectivePairingId(wrapper);
     if (!pairingId) return true;
 
     const teammates = getPairingRows(pairingId).slice();
@@ -476,7 +339,7 @@
 
     const row = sourceWrapper?.scoreEntryRow || {};
     const playerRow = sourceWrapper?.playerRow || {};
-    const pairingId = String(row.pairingId || playerRow.dbPlayers_PairingID || '').trim();
+    const pairingId = getEffectivePairingId(sourceWrapper);
     if (!pairingId) return;
 
     getPairingRows(pairingId).forEach((wrapper) => {
@@ -501,9 +364,9 @@ function renderRows() {
 
   let prevPairingId = '';
 
-  (payload.players || []).forEach((wrapper, idx) => {
-    const row = wrapper.scoreEntryRow || {};
-    const pairingId = String(row.pairingId || wrapper.playerRow?.dbPlayers_PairingID || '').trim();
+    activePlayers().forEach((wrapper, idx) => {
+      const row = wrapper.scoreEntryRow || {};
+      const pairingId = getEffectivePairingId(wrapper);
 
     if (idx > 0 && pairingId && pairingId !== prevPairingId) {
       const divider = document.createElement('div');
@@ -669,7 +532,7 @@ function renderRows() {
 function markDirty(playerId, rawScore, declared) {
   state.dirty = true;
 
-  const wrapper = state.payload.players.find((p) => (p.scoreEntryRow?.playerId || '') === playerId);
+  const wrapper = activePlayers().find((p) => (p.scoreEntryRow?.playerId || '') === playerId);
   if (!wrapper) return;
 
   // Guard: If no score is entered, force declared to false
@@ -785,14 +648,15 @@ function markDirty(playerId, rawScore, declared) {
 
   function patchReturnedScores(saveResult) {
     const updates = Array.isArray(saveResult?.players) ? saveResult.players : [];
-    if (!state.payload || !Array.isArray(state.payload.players)) return;
+    const players = activePlayers();
+    if (!state.payload || !Array.isArray(players)) return;
 
     updates.forEach((updated) => {
       const ggid = String(updated.dbPlayers_GGID || '');
       const ghin = String(updated.dbPlayers_PlayerGHIN || '');
       const scoresJson = updated.dbPlayers_Scores || null;
 
-      const wrapper = state.payload.players.find((p) => {
+      const wrapper = players.find((p) => {
         const pr = p.playerRow || {};
         return String(pr.dbPlayers_GGID || '') === ggid
           && String(pr.dbPlayers_PlayerGHIN || '') === ghin;
@@ -864,14 +728,6 @@ function markDirty(playerId, rawScore, declared) {
     state.dirty = false;
 
     toggleLaunchPanel(true);
-    el.contextCard?.classList.add('isHidden');
-    if (el.contextCard) el.contextCard.style.cursor = 'default';
-    el.cartCard?.classList.add('isHidden');
-    el.keeperCard?.classList.add('isHidden');
-    el.work?.classList.add('isHidden');
-
-    if (el.keeperChips) el.keeperChips.innerHTML = '';
-    if (el.keeperWelcome) el.keeperWelcome.textContent = '';
     if (el.rows) el.rows.innerHTML = '';
     if (el.holeSelect) el.holeSelect.innerHTML = '';
 
@@ -982,6 +838,21 @@ function markDirty(playerId, rawScore, declared) {
     if (diff >= 2) return 'bogeyplus';
     return '';
   }
+
+  function activePlayers() {
+  return Array.isArray(state.payload?.players) ? state.payload.players : [];
+}
+
+function getEffectivePairingId(wrapper) {
+  const row = wrapper?.scoreEntryRow || {};
+  const pairingId = String(row.effectivePairingID || '').trim();
+  return pairingId || '000';
+}
+
+function getBaselinePlayerKey() {
+  return String(state.payload?.launchContext?.playerKey || '').trim();
+}
+  
 
   init();
   applyChrome();
