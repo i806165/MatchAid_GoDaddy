@@ -47,24 +47,50 @@
     document.body.classList.toggle('scChromeHiddenMode', isMobileLandscapeLike());
   }
 
-  function getSegmentForHole(h){
+  function getSegmentForHole(h, row){
     const seg = String(game.dbGames_Segments || '9');
-    if(seg === 'None') return 'tot';
+    if (seg === 'None') return 'tot';
+
     const size = parseInt(seg, 10);
-    return 's' + Math.ceil(h / size);
+    const visibleHoles = Array.isArray(row?.visibleHoles) && row.visibleHoles.length
+      ? row.visibleHoles.map(Number).filter(Number.isFinite).sort((a, b) => a - b)
+      : null;
+
+    if (!visibleHoles) {
+      return 's' + Math.ceil(h / size);
+    }
+
+    const idx = visibleHoles.indexOf(Number(h));
+    if (idx < 0) return 's1';
+
+    return 's' + (Math.floor(idx / size) + 1);
   }
 
-  function getSegmentConfig(){
+  function getSegmentConfig(row){
     const segStr = String(game.dbGames_Segments || '9');
     const holesStr = String(game.dbGames_Holes || 'All 18');
     const size = (segStr === 'None') ? 18 : parseInt(segStr, 10);
     const prefix = (size === 18) ? '9' : String(size);
-    
-    let start = 1, end = 18;
-    if (holesStr === 'F9') end = 9;
-    if (holesStr === 'B9') start = 10;
 
-    return { size, prefix, hasTot: (size === 9 && holesStr === 'All 18'), start, end };
+    let fallbackStart = 1;
+    let fallbackEnd = 18;
+    if (holesStr === 'F9') fallbackEnd = 9;
+    if (holesStr === 'B9') fallbackStart = 10;
+
+    let holes = Array.isArray(row?.visibleHoles) && row.visibleHoles.length
+      ? row.visibleHoles.map(Number).filter(Number.isFinite).sort((a, b) => a - b)
+      : [];
+
+    if (!holes.length) {
+      holes = [];
+      for (let h = fallbackStart; h <= fallbackEnd; h++) holes.push(h);
+    }
+
+    const start = holes[0];
+    const end = holes[holes.length - 1];
+    const hasTot = (size === 9 && holes.length > 9);
+
+    return { size, prefix, hasTot, start, end, holes };
   }
 
   function applyChrome(){
@@ -191,38 +217,48 @@
   }
 
   function renderUnifiedRow(cardState, rowData, options = {}) {
-    const seg = getSegmentConfig();
+    const rowContext = options.row || rowData || {};
+    const seg = getSegmentConfig(rowContext);
     let html = '';
 
-    for (let h = seg.start; h <= seg.end; h++) {
-      const sId = getSegmentForHole(h);
+    seg.holes.forEach((h, idx) => {
+      const sId = getSegmentForHole(h, rowContext);
       const furled = cardState.furledSegments[sId];
 
-      if (options.isHeader) html += `<th class="${furled ? 'is-furled' : ''}">${h}</th>`;
-      else if (options.isCourse) html += `<td class="${furled ? 'is-furled' : ''}">${esc(rowData['h'+h] ?? '')}</td>`;
-      else if (options.isPlayer) html += renderPlayerCell(rowData, h, false, cardState);
-      else if (options.isTotal) html += renderPlayerCell(rowData, h, true, cardState);
-      else if (options.isStroke) html += `<td class="${furled ? 'is-furled' : ''}">${esc(String(rowData.holes?.['h'+h]?.strokeMarks || ''))}</td>`;
+      if (options.isHeader) {
+        html += `<th class="${furled ? 'is-furled' : ''}" data-segment="${sId}">${h}</th>`;
+      } else if (options.isCourse) {
+        html += `<td class="${furled ? 'is-furled' : ''}">${esc(rowData['h'+h] ?? '')}</td>`;
+      } else if (options.isPlayer) {
+        html += renderPlayerCell(rowData, h, false, cardState, rowContext);
+      } else if (options.isTotal) {
+        html += renderPlayerCell(rowData, h, true, cardState, rowContext);
+      } else if (options.isStroke) {
+        html += `<td class="${furled ? 'is-furled' : ''}">${esc(String(rowData.holes?.['h'+h]?.strokeMarks || ''))}</td>`;
+      }
 
-      // If at segment boundary or end of range, insert summary anchor
-      const isSegEnd = (h % seg.size === 0);
-      const isRangeEnd = (h === seg.end);
+      const isSegEnd = (((idx + 1) % seg.size) === 0);
+      const isRangeEnd = (idx === seg.holes.length - 1);
 
       if (isSegEnd || isRangeEnd) {
-        const segIndex = Math.ceil(h / seg.size);
+        const segIndex = Math.floor(idx / seg.size) + 1;
         let key = (seg.size === 18 ? '9' : String(seg.size)) + String.fromCharCode(96 + segIndex);
         if (seg.size === 18 && isRangeEnd) key = '9c';
         html += renderSummaryCell(cardState, rowData, key, sId, options);
       }
+    });
+
+    if (seg.hasTot) {
+      html += renderSummaryCell(cardState, rowData, '9c', 'tot', options);
     }
-    if (seg.hasTot) html += renderSummaryCell(cardState, rowData, '9c', 'tot', options);
+
     return html;
   }
 
-  function buildCourseRows(courseRows, cardState){
+  function buildCourseRows(courseRows, cardState, row){
     return (courseRows || []).map((r)=>{
       return `<tr><td class="scName" data-action="toggle-all-segments">${esc(r.label)}${r.tee && !['Par','HCP'].includes(r.label) ? ' — ' + esc(r.tee) : ''}</td>
-        ${renderUnifiedRow(cardState, r, { isCourse: true })}
+        ${renderUnifiedRow(cardState, r, { isCourse: true, row })}
       </tr>`;
     }).join('');
   }
@@ -264,29 +300,29 @@ function totalsForPairing(totals, pairingId){
   return (totals || []).filter(row => String(row.label || '').includes(needle));
 }
 
-function renderPairingBlock(pairingId, players, totals, cardState){
-  const playerHtml = renderPlayerRows(players, cardState);
+function renderPairingBlock(pairingId, players, totals, cardState, row){
+  const playerHtml = renderPlayerRows(players, cardState, row);
   if (state.mode === 'player') return playerHtml;
 
   const pairingTotals = totalsForPairing(totals, pairingId);
-  const totalsHtml = renderTotalRows(pairingTotals, cardState);
+  const totalsHtml = renderTotalRows(pairingTotals, cardState, row);
 
   return playerHtml + totalsHtml;
 }
 
 
-function renderPlayerRows(players, cardState){
+function renderPlayerRows(players, cardState, row){
   return (players || []).map((p)=>{
-    const main = `<tr><td class="scName" data-action="toggle-all-segments"><div class="scPLine1">${esc(p.playerName)} <span class="scPHC">${esc(p.playerHC ? '('+p.playerHC+')' : '')}</span></div><div class="scPLine2">${esc(p.tee || '')}</div></td>${renderUnifiedRow(cardState, p, { isPlayer: true, isPlayerRow: true })}</tr>`;
+    const main = `<tr><td class="scName" data-action="toggle-all-segments"><div class="scPLine1">${esc(p.playerName)} <span class="scPHC">${esc(p.playerHC ? '('+p.playerHC+')' : '')}</span></div><div class="scPLine2">${esc(p.tee || '')}</div></td>${renderUnifiedRow(cardState, p, { isPlayer: true, isPlayerRow: true, row })}</tr>`;
     const detail = `<tr class="scDetailRow ${cardState.teamExpanded ? '' : 'is-hidden'}"><td class="scName" data-action="toggle-all-segments">Stroke Marks</td>
-      ${renderUnifiedRow(cardState, p, { isStroke: true })}
+      ${renderUnifiedRow(cardState, p, { isStroke: true, row })}
     </tr>`;
     return main + detail;
   }).join('');
 }
 
-  function renderPlayerCell(player, holeNumber, isTotal = false, cardState = {}){
-    const furled = cardState.furledSegments?.[getSegmentForHole(holeNumber)];
+  function renderPlayerCell(player, holeNumber, isTotal = false, cardState = {}, rowContext = null){
+    const furled = cardState.furledSegments?.[getSegmentForHole(holeNumber, rowContext)];
     if (isTotal) {
       const cell = player?.['h'+holeNumber];
 
@@ -300,7 +336,7 @@ function renderPlayerRows(players, cardState){
     const cell = player?.holes?.['h'+holeNumber] || {};
     const classes = ['scCell'];
     if (cell.declared) classes.push('scCell--declared');
-    
+
     let sm = state.valueMode;
     if (sm === 'grossDiff') sm = 'gross';
     if (sm === 'netDiff') sm = 'net';
@@ -310,8 +346,8 @@ function renderPlayerRows(players, cardState){
     return `<td class="${furled ? 'is-furled' : ''}"><div class="${classes.join(' ')}"><span class="scCellVal">${esc(valueForCell(cell))}</span>${cell.strokeMarks ? `<span class="scCellMarks">${esc(String(cell.strokeMarks))}</span>` : ''}</div></td>`;
   }
 
-  function renderTotalRows(totals, cardState){
-    const kpiLabel = 
+  function renderTotalRows(totals, cardState, parentRow){
+    const kpiLabel =
         state.valueMode === 'gross' ? 'GROSS' :
         state.valueMode === 'net'   ? 'NET' :
         state.valueMode === 'grossDiff' ? 'GROSS +/-' :
@@ -322,7 +358,7 @@ function renderPlayerRows(players, cardState){
       const label = `${row.label} ${kpiLabel}`.trim();
       return `<tr class="scTotalRow">
         <td class="scName" data-action="toggle-all-segments">${esc(label)}</td>
-        ${renderUnifiedRow(cardState, row.cells, { isTotal: true })}
+        ${renderUnifiedRow(cardState, row.cells, { isTotal: true, row: parentRow })}
       </tr>`;
     }).join('');
   }
@@ -330,12 +366,12 @@ function renderPlayerRows(players, cardState){
   function renderPlayerAndTotalRowsByPairing(row, cardState){
     const groups = groupPlayersByPairing(row.players || []);
     return groups.map(group => {
-      return renderPairingBlock(group.pairingId, group.players, row.columnTotals || [], cardState);
+      return renderPairingBlock(group.pairingId, group.players, row.columnTotals || [], cardState, row);
     }).join('');
   }
 
-  function renderHeaderRow(cardState){
-    return `<thead><tr><th class="scName" data-action="toggle-all-segments">HOLE</th>${renderUnifiedRow(cardState, {}, { isHeader: true })}</tr></thead>`;
+  function renderHeaderRow(cardState, row){
+    return `<thead><tr><th class="scName" data-action="toggle-all-segments">HOLE</th>${renderUnifiedRow(cardState, {}, { isHeader: true, row })}</tr></thead>`;
   }
 
   function getCardSummaryTitle(row){
@@ -399,7 +435,7 @@ function renderPlayerRows(players, cardState){
       </div>
 
       <div class="scGroupCard__body">
-      <div class="scGroup scDenseA"><table class="scTable" role="table" aria-label="scorecard">${renderHeaderRow(cardState)}<tbody>${buildCourseRows(row.courseInfo, cardState)}${renderPlayerAndTotalRowsByPairing(row, cardState)}</tbody></table></div>
+      <div class="scGroup scDenseA"><table class="scTable" role="table" aria-label="scorecard">${renderHeaderRow(cardState, row)}<tbody>${buildCourseRows(row.courseInfo, cardState, row)}${renderPlayerAndTotalRowsByPairing(row, cardState)}</tbody></table></div>
       </div>
     </section>`;
   }
@@ -424,11 +460,12 @@ function renderPlayerRows(players, cardState){
       // Master Accordion Toggle
       card.querySelectorAll('[data-action="toggle-all-segments"]').forEach(el => {
         el.addEventListener('click', () => {
-          const cfg = getSegmentConfig();
-          const startSeg = Math.ceil(cfg.start / cfg.size);
-          const numSegs = Math.ceil((cfg.end - cfg.start + 1) / cfg.size);
-          const segs = []; for(let i=0; i<numSegs; i++) segs.push('s' + (startSeg + i));
-          
+          const row = activeRows().find(r => String(r.groupId || r.pairingID || r.flightID || 'row') === String(gid)) || null;
+          const cfg = getSegmentConfig(row);
+          const numSegs = Math.ceil(cfg.holes.length / cfg.size);
+          const segs = [];
+          for (let i = 0; i < numSegs; i++) segs.push('s' + (i + 1));
+
           const anyOn = segs.some(id => s.furledSegments[id]);
           segs.forEach(id => s.furledSegments[id] = !anyOn);
           renderBody();
