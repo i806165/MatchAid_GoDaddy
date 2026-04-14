@@ -80,45 +80,51 @@ final class ServiceScoreRotation
         return $competition === 'PairPair' && in_array($rotation, ['COD', '1324', '1423'], true);
     }
 
-    public static function buildEffectiveBaselinePlayers(array $players, array $seatOverrides = []): array
-    {
-        $normalizedOverrides = self::normalizeSeatOverrides($seatOverrides);
-        $effective = [];
+public static function buildEffectiveBaselinePlayers(array $players, array $seatOverrides = []): array
+{
+    $normalizedOverrides = self::normalizeSeatOverrides($seatOverrides);
+    $effective = [];
 
-        foreach ($players as $player) {
-            if (!is_array($player)) {
-                continue;
-            }
-
-            $row = $player;
-            $ghin = trim((string)($row['dbPlayers_PlayerGHIN'] ?? ''));
-            if ($ghin !== '' && isset($normalizedOverrides[$ghin])) {
-                $row['dbPlayers_PairingPos'] = (string)$normalizedOverrides[$ghin];
-            }
-            $effective[] = $row;
+    foreach ($players as $player) {
+        if (!is_array($player)) {
+            continue;
         }
 
-        usort($effective, static function (array $a, array $b): int {
-            $posA = self::normInt($a['dbPlayers_PairingPos'] ?? null, 999);
-            $posB = self::normInt($b['dbPlayers_PairingPos'] ?? null, 999);
-            if ($posA !== $posB) {
-                return $posA <=> $posB;
-            }
-
-            $lastA = self::normStr($a['dbPlayers_LName'] ?? '');
-            $lastB = self::normStr($b['dbPlayers_LName'] ?? '');
-            if ($lastA !== $lastB) {
-                return strcmp($lastA, $lastB);
-            }
-
-            return strcmp(
-                self::normStr($a['dbPlayers_Name'] ?? ''),
-                self::normStr($b['dbPlayers_Name'] ?? '')
-            );
-        });
-
-        return $effective;
+        $row = $player;
+        $ghin = trim((string)($row['dbPlayers_PlayerGHIN'] ?? ''));
+        if ($ghin !== '' && isset($normalizedOverrides[$ghin])) {
+            $row['dbPlayers_PairingPos'] = (string)$normalizedOverrides[$ghin];
+        }
+        $effective[] = $row;
     }
+
+    usort($effective, static function (array $a, array $b): int {
+        $pairA = self::normStr($a['dbPlayers_PairingID'] ?? '', 'ZZZ');
+        $pairB = self::normStr($b['dbPlayers_PairingID'] ?? '', 'ZZZ');
+        if ($pairA !== $pairB) {
+            return strnatcmp($pairA, $pairB);
+        }
+
+        $posA = self::normInt($a['dbPlayers_PairingPos'] ?? null, 999);
+        $posB = self::normInt($b['dbPlayers_PairingPos'] ?? null, 999);
+        if ($posA !== $posB) {
+            return $posA <=> $posB;
+        }
+
+        $lastA = self::normStr($a['dbPlayers_LName'] ?? '');
+        $lastB = self::normStr($b['dbPlayers_LName'] ?? '');
+        if ($lastA !== $lastB) {
+            return strcmp($lastA, $lastB);
+        }
+
+        return strcmp(
+            self::normStr($a['dbPlayers_Name'] ?? ''),
+            self::normStr($b['dbPlayers_Name'] ?? '')
+        );
+    });
+
+    return $effective;
+}
 
     public static function buildSpinDefinitions(array $gameRow): array
     {
@@ -351,78 +357,85 @@ final class ServiceScoreRotation
         ];
     }
 
-    private static function buildRotatedContexts(array $gameRow, array $baseline): array
-    {
-        $spinDefinitions = self::buildSpinDefinitions($gameRow);
-        $contexts = [];
+private static function buildRotatedContexts(array $gameRow, array $baseline): array
+{
+    $spinDefinitions = self::buildSpinDefinitions($gameRow);
+    $contexts = [];
 
-        foreach ($spinDefinitions as $spinIndex => $spin) {
-            $teams = self::deriveSpinTeams($gameRow, $spinIndex + 1);
-            $virtualPlayerKey = self::buildVirtualPlayerKey($baseline['playerKey'], $spin['spinSuffix']);
-            $virtualFlightId = self::buildVirtualFlightId($baseline['flightID'], $spin['spinSuffix']);
-            $virtualPairingIds = self::buildVirtualPairingIds($baseline['pairingIDs'], $spin['spinSuffix']);
+    foreach ($spinDefinitions as $spinIndex => $spin) {
+        $teams = self::deriveSpinTeams($gameRow, $spinIndex + 1);
+        $virtualPlayerKey = self::buildVirtualPlayerKey($baseline['playerKey'], $spin['spinSuffix']);
+        $virtualFlightId = self::buildVirtualFlightId($baseline['flightID'], $spin['spinSuffix']);
+        $virtualPairingIds = self::buildVirtualPairingIds($baseline['pairingIDs'], $spin['spinSuffix']);
 
-            $players = [];
-            foreach ($baseline['players'] as $player) {
-                $pos = self::normInt($player['dbPlayers_PairingPos'] ?? null, 0);
-                $side = self::sideForPosition($teams, $pos);
-                $virtualPairingId = ($side === 'A')
-                    ? ($virtualPairingIds[0] ?? ($baseline['pairingIDs'][0] . $spin['spinSuffix']))
-                    : ($virtualPairingIds[1] ?? ($baseline['pairingIDs'][1] . $spin['spinSuffix']));
+        $players = [];
+        foreach ($baseline['players'] as $player) {
+            $seat = self::logicalSeatForPlayer($baseline['pairingIDs'], $player);
+            $side = self::sideForSeat($teams, $seat);
 
-                $row = $player;
-                $row['baselinePlayerKey'] = $baseline['playerKey'];
-                $row['baselineFlightID'] = $baseline['flightID'];
-                $row['baselinePairingID'] = self::normStr($player['dbPlayers_PairingID'] ?? '', '000');
-                $row['virtualPlayerKey'] = $virtualPlayerKey;
-                $row['virtualFlightID'] = $virtualFlightId;
-                $row['virtualPairingID'] = $virtualPairingId;
-                $row['virtualFlightPos'] = $side;
-                $row['effectivePlayerKey'] = $virtualPlayerKey;
-                $row['effectiveFlightID'] = $virtualFlightId;
-                $row['effectivePairingID'] = $virtualPairingId;
-                $row['spinNumber'] = $spin['spinNumber'];
-                $row['spinKey'] = $spin['spinKey'];
-                $row['spinLabel'] = $spin['spinLabel'];
-                $row['spinStartHole'] = $spin['spinStartHole'];
-                $row['spinEndHole'] = $spin['spinEndHole'];
-                $row['visibleHoles'] = $spin['visibleHoles'];
-                $players[] = $row;
-            }
+            $virtualPairingId = ($side === 'A')
+                ? ($virtualPairingIds[0] ?? ($baseline['pairingIDs'][0] . $spin['spinSuffix']))
+                : ($virtualPairingIds[1] ?? ($baseline['pairingIDs'][1] . $spin['spinSuffix']));
 
-            usort($players, static function (array $a, array $b): int {
-                $pairA = self::normStr($a['effectivePairingID'] ?? '', 'ZZZ');
-                $pairB = self::normStr($b['effectivePairingID'] ?? '', 'ZZZ');
-                if ($pairA !== $pairB) {
-                    return strcmp($pairA, $pairB);
-                }
-
-                $posA = self::normInt($a['dbPlayers_PairingPos'] ?? null, 999);
-                $posB = self::normInt($b['dbPlayers_PairingPos'] ?? null, 999);
-                if ($posA !== $posB) {
-                    return $posA <=> $posB;
-                }
-
-                return strcmp(
-                    self::normStr($a['dbPlayers_Name'] ?? ''),
-                    self::normStr($b['dbPlayers_Name'] ?? '')
-                );
-            });
-
-            $contexts[] = array_merge($spin, [
-                'baselinePlayerKey' => $baseline['playerKey'],
-                'baselineFlightID' => $baseline['flightID'],
-                'baselinePairingIDs' => $baseline['pairingIDs'],
-                'virtualPlayerKey' => $virtualPlayerKey,
-                'virtualFlightID' => $virtualFlightId,
-                'virtualPairingIDs' => $virtualPairingIds,
-                'teamMap' => $teams,
-                'players' => $players,
-            ]);
+            $row = $player;
+            $row['baselinePlayerKey'] = $baseline['playerKey'];
+            $row['baselineFlightID'] = $baseline['flightID'];
+            $row['baselinePairingID'] = self::normStr($player['dbPlayers_PairingID'] ?? '', '000');
+            $row['virtualPlayerKey'] = $virtualPlayerKey;
+            $row['virtualFlightID'] = $virtualFlightId;
+            $row['virtualPairingID'] = $virtualPairingId;
+            $row['virtualFlightPos'] = $side;
+            $row['effectivePlayerKey'] = $virtualPlayerKey;
+            $row['effectiveFlightID'] = $virtualFlightId;
+            $row['effectivePairingID'] = $virtualPairingId;
+            $row['spinNumber'] = $spin['spinNumber'];
+            $row['spinKey'] = $spin['spinKey'];
+            $row['spinLabel'] = $spin['spinLabel'];
+            $row['spinStartHole'] = $spin['spinStartHole'];
+            $row['spinEndHole'] = $spin['spinEndHole'];
+            $row['visibleHoles'] = $spin['visibleHoles'];
+            $players[] = $row;
         }
 
-        return $contexts;
+        usort($players, static function (array $a, array $b): int {
+            $pairA = self::normStr($a['effectivePairingID'] ?? '', 'ZZZ');
+            $pairB = self::normStr($b['effectivePairingID'] ?? '', 'ZZZ');
+            if ($pairA !== $pairB) {
+                return strcmp($pairA, $pairB);
+            }
+
+            $basePairA = self::normStr($a['baselinePairingID'] ?? '', 'ZZZ');
+            $basePairB = self::normStr($b['baselinePairingID'] ?? '', 'ZZZ');
+            if ($basePairA !== $basePairB) {
+                return strnatcmp($basePairA, $basePairB);
+            }
+
+            $posA = self::normInt($a['dbPlayers_PairingPos'] ?? null, 999);
+            $posB = self::normInt($b['dbPlayers_PairingPos'] ?? null, 999);
+            if ($posA !== $posB) {
+                return $posA <=> $posB;
+            }
+
+            return strcmp(
+                self::normStr($a['dbPlayers_Name'] ?? ''),
+                self::normStr($b['dbPlayers_Name'] ?? '')
+            );
+        });
+
+        $contexts[] = array_merge($spin, [
+            'baselinePlayerKey' => $baseline['playerKey'],
+            'baselineFlightID' => $baseline['flightID'],
+            'baselinePairingIDs' => $baseline['pairingIDs'],
+            'virtualPlayerKey' => $virtualPlayerKey,
+            'virtualFlightID' => $virtualFlightId,
+            'virtualPairingIDs' => $virtualPairingIds,
+            'teamMap' => $teams,
+            'players' => $players,
+        ]);
     }
+
+    return $contexts;
+}
 
     private static function findActiveContext(array $contexts, int $holeNumber): ?array
     {
@@ -443,43 +456,70 @@ final class ServiceScoreRotation
         return min($raw, max(1, $visibleHoleCount));
     }
 
-    private static function deriveSpinTeams(array $gameRow, int $spinNumber): array
-    {
-        $rotation = strtoupper(trim((string)($gameRow['dbGames_RotationMethod'] ?? 'NONE')));
-        $index = max(0, $spinNumber - 1);
+private static function deriveSpinTeams(array $gameRow, int $spinNumber): array
+{
+    $rotation = strtoupper(trim((string)($gameRow['dbGames_RotationMethod'] ?? 'NONE')));
+    $index = max(0, $spinNumber - 1);
 
-        $sequences = match ($rotation) {
-            'COD' => [
-                ['A' => [1, 2], 'B' => [3, 4]],
-                ['A' => [1, 4], 'B' => [2, 3]],
-                ['A' => [1, 3], 'B' => [2, 4]],
-            ],
-            '1324' => [
-                ['A' => [1, 2], 'B' => [3, 4]],
-                ['A' => [1, 3], 'B' => [2, 4]],
-            ],
-            '1423' => [
-                ['A' => [1, 2], 'B' => [3, 4]],
-                ['A' => [1, 4], 'B' => [2, 3]],
-            ],
-            default => [
-                ['A' => [1, 2], 'B' => [3, 4]],
-            ],
+    $sequences = match ($rotation) {
+        'COD' => [
+            ['A' => ['A1', 'A2'], 'B' => ['B1', 'B2']],
+            ['A' => ['A1', 'B2'], 'B' => ['A2', 'B1']],
+            ['A' => ['A1', 'B1'], 'B' => ['A2', 'B2']],
+        ],
+        '1324' => [
+            ['A' => ['A1', 'A2'], 'B' => ['B1', 'B2']],
+            ['A' => ['A1', 'B1'], 'B' => ['A2', 'B2']],
+        ],
+        '1423' => [
+            ['A' => ['A1', 'A2'], 'B' => ['B1', 'B2']],
+            ['A' => ['A1', 'B2'], 'B' => ['A2', 'B1']],
+        ],
+        default => [
+            ['A' => ['A1', 'A2'], 'B' => ['B1', 'B2']],
+        ],
+    };
+
+    return $sequences[$index % count($sequences)];
+}
+
+private static function logicalSeatForPlayer(array $baselinePairingIds, array $player): string
+{
+    $pairingId = self::normStr($player['dbPlayers_PairingID'] ?? '', '');
+    $pairingPos = self::normInt($player['dbPlayers_PairingPos'] ?? null, 0);
+
+    $firstPairingId = $baselinePairingIds[0] ?? '';
+    $secondPairingId = $baselinePairingIds[1] ?? '';
+
+    if ($pairingId === $firstPairingId) {
+        return match ($pairingPos) {
+            1 => 'A1',
+            2 => 'A2',
+            default => 'X',
         };
-
-        return $sequences[$index % count($sequences)];
     }
 
-    private static function sideForPosition(array $teams, int $pairingPos): string
-    {
-        if (in_array($pairingPos, $teams['A'] ?? [], true)) {
-            return 'A';
-        }
-        if (in_array($pairingPos, $teams['B'] ?? [], true)) {
-            return 'B';
-        }
-        return 'X';
+    if ($pairingId === $secondPairingId) {
+        return match ($pairingPos) {
+            1 => 'B1',
+            2 => 'B2',
+            default => 'X',
+        };
     }
+
+    return 'X';
+}
+
+private static function sideForSeat(array $teams, string $seat): string
+{
+    if (in_array($seat, $teams['A'] ?? [], true)) {
+        return 'A';
+    }
+    if (in_array($seat, $teams['B'] ?? [], true)) {
+        return 'B';
+    }
+    return 'X';
+}
 
     private static function baselinePairingIds(array $players): array
     {
