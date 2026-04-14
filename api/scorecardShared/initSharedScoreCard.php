@@ -1,6 +1,6 @@
 <?php
-// /public_html/api/game_scorecard/initScoreCard.php
 declare(strict_types=1);
+// /public_html/api/scorecardShared/initSharedScoreCard.php
 
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
@@ -8,13 +8,9 @@ require_once MA_SERVICES . "/scoring/service_ScoreCard.php";
 require_once MA_SVC_DB . "/service_dbGames.php";
 require_once MA_SVC_DB . "/service_dbPlayers.php";
 
-/**
- * hydrateBlankScoreCardContext
- * Shared baseline hydration for blank / pre-round scorecards.
- */
-function hydrateBlankScoreCardContext(string $ggid): array {
+function hydrateSharedScoreCardContext(string $ggid): array {
   $ggid = trim($ggid);
-  if ($ggid === "") {
+  if ($ggid === '') {
     return ["ok" => false, "error" => "missing_ggid", "game" => [], "players" => []];
   }
 
@@ -55,12 +51,8 @@ function hydrateBlankScoreCardContext(string $ggid): array {
   ];
 }
 
-/**
- * initBlankScoreCard
- * Canonical initializer for blank / pre-round scorecards.
- */
-function initBlankScoreCard(string $ggid, array $ctx = []): array {
-  $hydrated = hydrateBlankScoreCardContext($ggid);
+function initSharedScoreCard(string $ggid, string $mode = "game", string $scope = ""): array {
+  $hydrated = hydrateSharedScoreCardContext($ggid);
   if (empty($hydrated["ok"])) {
     return [
       "ok" => false,
@@ -70,12 +62,29 @@ function initBlankScoreCard(string $ggid, array $ctx = []): array {
 
   $game = $hydrated["game"];
   $players = $hydrated["players"];
+  $mode = strtolower(trim($mode));
+  $scope = trim($scope);
 
-  $scorecards = ServiceScoreCard::buildBlankScorecardPayload($game, $players);
+  switch ($mode) {
+    case "player":
+      $scorecards = ServiceScoreCard::buildPlayerScorecardPayload($game, $players, $scope);
+      break;
+
+    case "group":
+      $scorecards = ServiceScoreCard::buildGroupScorecardPayload($game, $players, $scope);
+      break;
+
+    case "game":
+    default:
+      $scorecards = ServiceScoreCard::buildGameScorecardsPayload($game, $players);
+      $mode = "game";
+      break;
+  }
 
   return [
     "ok" => true,
-    "mode" => "blank",
+    "mode" => $mode,
+    "scope" => $scope,
     "game" => $game,
     "players" => $players,
     "scorecards" => $scorecards,
@@ -87,23 +96,20 @@ function initBlankScoreCard(string $ggid, array $ctx = []): array {
   ];
 }
 
-// Backward-compatible alias
-function initScoreCard(string $ggid, array $ctx = []): array {
-  return initBlankScoreCard($ggid, $ctx);
-}
-
-// If invoked directly as endpoint, emit JSON
-if (php_sapi_name() !== "cli" && basename($_SERVER["SCRIPT_NAME"] ?? "") === "initScoreCard.php") {
+if (php_sapi_name() !== "cli" && basename($_SERVER["SCRIPT_NAME"] ?? "") === "initSharedScoreCard.php") {
   if (session_status() !== PHP_SESSION_ACTIVE) session_start();
   header("Content-Type: application/json; charset=utf-8");
 
   try {
     $ggid = (string)($_GET["ggid"] ?? ($_SESSION["SessionStoredGGID"] ?? ""));
-    $out = initBlankScoreCard($ggid, []);
+    $mode = strtolower(trim((string)($_GET["mode"] ?? "game")));
+    $scope = (string)($_GET["scope"] ?? "");
+
+    $out = initSharedScoreCard($ggid, $mode, $scope);
     echo json_encode($out, JSON_UNESCAPED_SLASHES);
 
   } catch (Throwable $e) {
-    Logger::error("BLANK_SCORECARDS_INIT_API_FAIL", [
+    Logger::error("SHARED_SCORECARDS_INIT_API_FAIL", [
       "err" => $e->getMessage(),
       "trace" => $e->getTraceAsString(),
     ]);

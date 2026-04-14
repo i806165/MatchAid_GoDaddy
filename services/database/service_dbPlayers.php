@@ -131,4 +131,25 @@ final class ServiceDbPlayers
     $st = $pdo->prepare($sql);
     return $st->execute([":ggid" => trim($ggid), ":ghin" => trim($playerGHIN)]);
   }
+
+  public static function getScorecardPlayersByGGID(string $ggid): array
+{
+  $ggid = trim($ggid);
+  if ($ggid === "") return [];
+
+  $pdo = Db::pdo();
+  $sql = "SELECT *
+          FROM db_Players
+          WHERE dbPlayers_GGID = :ggid
+          ORDER BY dbPlayers_PairingID ASC,
+                   dbPlayers_PairingPos ASC,
+                   dbPlayers_FlightID ASC,
+                   dbPlayers_FlightPos ASC,
+                   dbPlayers_LName ASC,
+                   dbPlayers_Name ASC,
+                   dbPlayers_PlayerGHIN ASC";
+  $st = $pdo->prepare($sql);
+  $st->execute([":ggid" => $ggid]);
+  return $st->fetchAll() ?: [];
+}
 }

@@ -2,6 +2,8 @@
 declare(strict_types=1);
 // /public_html/services/scoring/service_ScoreCard.php
 
+require_once __DIR__ . '/service_ScoreRotation.php';
+
 /**
  * ServiceScoreCard
  * Pure scorecard builder logic (no echo/header/exit).
@@ -52,60 +54,42 @@ final class ServiceScoreCard {
   /**
    * Build all scored group cards for in-play/post-play game view.
    */
-  public static function buildGameScorecardsPayload(array $gameRow, array $players): array {
+public static function buildGameScorecardsPayload(array $gameRow, array $players): array {
     if (!$gameRow) {
-      throw new RuntimeException("buildGameScorecardsPayload: missing gameRow");
+        throw new RuntimeException("buildGameScorecardsPayload: missing gameRow");
     }
     $players = is_array($players) ? $players : [];
 
-    $groupingMode = self::determineGroupingModeFromGame($gameRow);
-    $groupsMap = self::buildGroupsMap($players, $groupingMode);
-    $groupIds = self::buildGroupIds($groupsMap);
-
-    $rows = [];
-    foreach ($groupIds as $id) {
-      $playersInGroup = array_map(fn($p) => array_merge($p, [
-        "dbGames_Competition" => (string)($gameRow["dbGames_Competition"] ?? "")
-      ]), $groupsMap[$id] ?? []);
-      $playersInGroup = self::sortPlayersForScorecard($playersInGroup);
-      $rows[] = self::buildScoredGroupRowPayload($gameRow, $playersInGroup, (string)$id, $groupingMode, null);
-    }
+    $rows = self::buildNormalizedScoredRows($gameRow, $players, 'game', '');
 
     return [
-      "mode" => "game",
-      "competition" => trim((string)($gameRow["dbGames_Competition"] ?? "PairField")),
-      "grouping" => $groupingMode,
-      "rows" => $rows,
-      "meta" => self::buildScorecardMeta($gameRow, $players),
+        "mode" => "game",
+        "competition" => trim((string)($gameRow["dbGames_Competition"] ?? "PairField")),
+        "grouping" => self::determineGroupingModeFromGame($gameRow),
+        "rows" => $rows,
+        "meta" => self::buildScorecardMeta($gameRow, $players),
     ];
-  }
+}
 
   /**
    * Build one scored group card.
    */
-  public static function buildGroupScorecardPayload(array $gameRow, array $players, string $selectedPlayerId): array {
+public static function buildGroupScorecardPayload(array $gameRow, array $players, string $selectedPlayerId): array {
     if (!$gameRow) {
-      throw new RuntimeException("buildGroupScorecardPayload: missing gameRow");
+        throw new RuntimeException("buildGroupScorecardPayload: missing gameRow");
     }
     $players = is_array($players) ? $players : [];
 
-    $groupingMode = self::determineGroupingModeFromGame($gameRow);
-    $groupsMap = self::buildGroupsMap($players, $groupingMode);
-    $selected = self::findSelectedPlayer($players, $selectedPlayerId);
-    $realGroupId = $selected ? self::normStr($selected["dbPlayers_PlayerKey"] ?? "", "000") : $selectedPlayerId;
-    $playersInGroup = array_map(fn($p) => array_merge($p, [
-      "dbGames_Competition" => (string)($gameRow["dbGames_Competition"] ?? "")
-    ]), $groupsMap[$id] ?? []);
-    $playersInGroup = self::sortPlayersForScorecard($playersInGroup);
+    $rows = self::buildNormalizedScoredRows($gameRow, $players, 'group', $selectedPlayerId);
 
     return [
-      "mode" => "group",
-      "competition" => trim((string)($gameRow["dbGames_Competition"] ?? "PairField")),
-      "grouping" => $groupingMode,
-      "rows" => $playersInGroup ? [self::buildScoredGroupRowPayload($gameRow, $playersInGroup, $realGroupId, $groupingMode, null)] : [],
-      "meta" => self::buildScorecardMeta($gameRow, $players),
+        "mode" => "group",
+        "competition" => trim((string)($gameRow["dbGames_Competition"] ?? "PairField")),
+        "grouping" => self::determineGroupingModeFromGame($gameRow),
+        "rows" => $rows,
+        "meta" => self::buildScorecardMeta($gameRow, $players),
     ];
-  }
+}
 
   /**
    * Build one selected player's scorecard in the context of the player's group.
@@ -113,45 +97,31 @@ final class ServiceScoreCard {
    */
   public static function buildPlayerScorecardPayload(array $gameRow, array $players, string $selectedPlayerId): array {
     if (!$gameRow) {
-      throw new RuntimeException("buildPlayerScorecardPayload: missing gameRow");
+        throw new RuntimeException("buildPlayerScorecardPayload: missing gameRow");
     }
     $players = is_array($players) ? $players : [];
     $selectedPlayerId = trim((string)$selectedPlayerId);
 
-    $groupingMode = self::determineGroupingModeFromGame($gameRow);
-    $selected = self::findSelectedPlayer($players, $selectedPlayerId);
-
-    if (!$selected) {
-      return [
-        "mode" => "player",
-        "competition" => trim((string)($gameRow["dbGames_Competition"] ?? "PairField")),
-        "grouping" => $groupingMode,
-        "rows" => [],
-        "meta" => self::buildScorecardMeta($gameRow, $players),
-      ];
+    if ($selectedPlayerId === '') {
+        return [
+            "mode" => "player",
+            "competition" => trim((string)($gameRow["dbGames_Competition"] ?? "PairField")),
+            "grouping" => self::determineGroupingModeFromGame($gameRow),
+            "rows" => [],
+            "meta" => self::buildScorecardMeta($gameRow, $players),
+        ];
     }
 
-    $groupId = self::normStr($selected["dbPlayers_PlayerKey"] ?? "", "000");
-
-    $groupsMap = self::buildGroupsMap($players, $groupingMode);
-    $groupPlayers = self::sortPlayersForScorecard($groupsMap[$groupId] ?? []);
+    $rows = self::buildNormalizedScoredRows($gameRow, $players, 'player', $selectedPlayerId);
 
     return [
-      "mode" => "player",
-      "competition" => trim((string)($gameRow["dbGames_Competition"] ?? "PairField")),
-      "grouping" => $groupingMode,
-      "rows" => [
-        self::buildScoredGroupRowPayload(
-          $gameRow,
-          $groupPlayers,
-          $groupId,
-          $groupingMode,
-          self::playerIdentity($selected)
-        )
-      ],
-      "meta" => self::buildScorecardMeta($gameRow, $players),
+        "mode" => "player",
+        "competition" => trim((string)($gameRow["dbGames_Competition"] ?? "PairField")),
+        "grouping" => self::determineGroupingModeFromGame($gameRow),
+        "rows" => $rows,
+        "meta" => self::buildScorecardMeta($gameRow, $players),
     ];
-  }
+}
 
   /**
    * Preserve this helper if other callers still use it.
@@ -1066,6 +1036,175 @@ final class ServiceScoreCard {
 
     return $rowCells;
   }
+
+  private static function buildNormalizedScoredRows(array $gameRow, array $players, string $mode, string $scope): array
+{
+    $rotation = ServiceScoreRotation::buildNormalizedContexts($gameRow, $players, 1, []);
+    $contexts = is_array($rotation['virtualContexts'] ?? null) ? $rotation['virtualContexts'] : [];
+
+    if (!$contexts) {
+        return [];
+    }
+
+    $rows = [];
+    foreach ($contexts as $context) {
+        $rows = array_merge($rows, self::buildNormalizedScoredRowsForContext($gameRow, $players, $context, $mode, $scope));
+    }
+
+    return $rows;
+}
+
+private static function buildNormalizedScoredRowsForContext(
+    array $gameRow,
+    array $baselinePlayers,
+    array $context,
+    string $mode,
+    string $scope
+): array {
+    $contextPlayers = is_array($context['players'] ?? null) ? $context['players'] : [];
+    if (!$contextPlayers) {
+        return [];
+    }
+
+    $groupingMode = self::determineGroupingModeFromGame($gameRow);
+    $groupId = (string)($context['virtualPlayerKey'] ?? $context['baselinePlayerKey'] ?? '000');
+    $selectedIdentity = null;
+
+    if ($mode === 'player') {
+        $selected = self::findSelectedPlayer($baselinePlayers, $scope);
+        if (!$selected) {
+            return [];
+        }
+        $selectedIdentity = self::playerIdentity($selected);
+        $contextPlayers = self::filterSelectedPlayer($contextPlayers, $selectedIdentity);
+        if (!$contextPlayers) {
+            return [];
+        }
+    } elseif ($mode === 'group') {
+        $selected = self::findSelectedPlayer($baselinePlayers, $scope);
+        if (!$selected) {
+            return [];
+        }
+
+        $baselineGroupKey = self::normStr($selected["dbPlayers_PlayerKey"] ?? "", "000");
+        $contextBaselineKey = self::normStr($context['baselinePlayerKey'] ?? '', '000');
+        if ($baselineGroupKey !== '' && $contextBaselineKey !== '' && $baselineGroupKey !== $contextBaselineKey) {
+            return [];
+        }
+    }
+
+    $row = self::buildScoredGroupRowPayload(
+        $gameRow,
+        self::sortPlayersForScorecard($contextPlayers),
+        $groupId,
+        $groupingMode,
+        $selectedIdentity
+    );
+
+    return [self::stampNormalizedScoredRow($row, $context, $gameRow)];
+}
+
+private static function stampNormalizedScoredRow(array $row, array $context, array $gameRow): array
+{
+    $baselinePairingIDs = array_values(array_filter(array_map('strval', $context['baselinePairingIDs'] ?? [])));
+    $virtualPairingIDs = array_values(array_filter(array_map('strval', $context['virtualPairingIDs'] ?? [])));
+    $virtualFlightID = (string)($context['virtualFlightID'] ?? $context['baselineFlightID'] ?? '');
+    $baselineFlightID = (string)($context['baselineFlightID'] ?? '');
+
+    $row['rowId'] = (string)($context['virtualPlayerKey'] ?? $context['baselinePlayerKey'] ?? $row['groupId'] ?? '000');
+    $row['groupId'] = $row['rowId'];
+
+    $row['mode'] = (string)($row['mode'] ?? 'game');
+    $row['competition'] = trim((string)($gameRow['dbGames_Competition'] ?? 'PairField'));
+    $row['grouping'] = self::determineGroupingModeFromGame($gameRow);
+
+    $row['baselinePlayerKey'] = (string)($context['baselinePlayerKey'] ?? '');
+    $row['baselineFlightID'] = $baselineFlightID;
+    $row['baselinePairingIDs'] = $baselinePairingIDs;
+
+    $row['virtualPlayerKey'] = (string)($context['virtualPlayerKey'] ?? $row['baselinePlayerKey']);
+    $row['virtualFlightID'] = $virtualFlightID;
+    $row['virtualPairingIDs'] = $virtualPairingIDs ?: $baselinePairingIDs;
+    $row['isRotationAware'] = !empty($context['virtualPairingIDs']);
+
+    $row['spinNumber'] = intval($context['spinNumber'] ?? 1);
+    $row['spinLabel'] = (string)($context['spinLabel'] ?? 'Round');
+    $row['spinStartHole'] = intval($context['spinStartHole'] ?? 1);
+    $row['spinEndHole'] = intval($context['spinEndHole'] ?? 18);
+    $row['visibleHoles'] = is_array($context['visibleHoles'] ?? null) ? $context['visibleHoles'] : range(1, 18);
+
+    $row['pairingIDs'] = $row['virtualPairingIDs'];
+    $row['flightIDs'] = $virtualFlightID !== '' ? [$virtualFlightID] : ($baselineFlightID !== '' ? [$baselineFlightID] : []);
+
+    $row['players'] = self::stampNormalizedPlayers($row['players'] ?? [], $context);
+    $row['columnTotals'] = self::stampNormalizedTotalRows($row['columnTotals'] ?? [], $context);
+
+    if (is_array($row['gameHeader'] ?? null)) {
+        $row['gameHeader']['playerKey'] = $row['virtualPlayerKey'];
+        $row['gameHeader']['spinNumber'] = $row['spinNumber'];
+        $row['gameHeader']['spinLabel'] = $row['spinLabel'];
+        $row['gameHeader']['spinStartHole'] = $row['spinStartHole'];
+        $row['gameHeader']['spinEndHole'] = $row['spinEndHole'];
+        $row['gameHeader']['visibleHoles'] = $row['visibleHoles'];
+    }
+
+    return $row;
+}
+
+private static function stampNormalizedPlayers(array $rowPlayers, array $context): array
+{
+    $contextPlayers = is_array($context['players'] ?? null) ? $context['players'] : [];
+    if (!$rowPlayers || !$contextPlayers) {
+        return $rowPlayers;
+    }
+
+    $byGHIN = [];
+    foreach ($contextPlayers as $p) {
+        $ghin = self::normStr($p['dbPlayers_PlayerGHIN'] ?? '', '');
+        if ($ghin !== '') {
+            $byGHIN[$ghin] = $p;
+        }
+    }
+
+    foreach ($rowPlayers as &$p) {
+        $ghin = self::normStr($p['playerGHIN'] ?? $p['dbPlayers_PlayerGHIN'] ?? '', '');
+        if ($ghin === '' || !isset($byGHIN[$ghin])) {
+            continue;
+        }
+
+        $ctx = $byGHIN[$ghin];
+        $p['baselinePlayerKey'] = (string)($ctx['baselinePlayerKey'] ?? '');
+        $p['baselineFlightID'] = (string)($ctx['baselineFlightID'] ?? '');
+        $p['baselinePairingID'] = (string)($ctx['baselinePairingID'] ?? '');
+        $p['effectivePlayerKey'] = (string)($ctx['effectivePlayerKey'] ?? '');
+        $p['effectiveFlightID'] = (string)($ctx['effectiveFlightID'] ?? '');
+        $p['effectivePairingID'] = (string)($ctx['effectivePairingID'] ?? '');
+        $p['virtualFlightPos'] = (string)($ctx['virtualFlightPos'] ?? '');
+    }
+    unset($p);
+
+    return $rowPlayers;
+}
+
+private static function stampNormalizedTotalRows(array $totalRows, array $context): array
+{
+    $virtualPairingIDs = array_values(array_filter(array_map('strval', $context['virtualPairingIDs'] ?? [])));
+    if (!$totalRows || !$virtualPairingIDs) {
+        return $totalRows;
+    }
+
+    $mapped = [];
+    foreach ($totalRows as $idx => $row) {
+        $mapped[$idx] = $row;
+        if (!is_array($row)) {
+            continue;
+        }
+
+        $mapped[$idx]['pairingID'] = $virtualPairingIDs[$idx] ?? ($row['pairingID'] ?? '');
+    }
+
+    return $mapped;
+}
   // ==========================================================================
   // 8. Generic Utility Helpers
   // ==========================================================================
