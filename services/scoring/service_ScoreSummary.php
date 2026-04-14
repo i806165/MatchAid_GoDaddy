@@ -62,6 +62,34 @@ final class ServiceScoreSummary
         return self::holesForGame($gameRow);
     }
 
+    private static function summaryMetricCellKey(array $ctx, array $gameRow): string
+    {
+        $segStr = trim((string)($gameRow['dbGames_Segments'] ?? '9'));
+        $size = ($segStr === 'None') ? 18 : max(1, intval($segStr));
+
+        $scopedHoles = self::scopedHolesForRow($ctx, $gameRow);
+        $fullHoles = self::holesForGame($gameRow);
+
+        if (!$scopedHoles || $scopedHoles === $fullHoles) {
+            return '9c';
+        }
+
+        if ($size >= 18) {
+            return '9c';
+        }
+
+        $prefix = (string)$size;
+        $firstHole = $scopedHoles[0];
+        $startIndex = array_search($firstHole, $fullHoles, true);
+        if ($startIndex === false) {
+            return '9c';
+        }
+
+        $segmentIndex = intdiv((int)$startIndex, $size) + 1;
+        $suffix = chr(96 + $segmentIndex); // a, b, c, ...
+        return $prefix . $suffix;
+    }
+
     private static function buildPairFieldRows(array $scorecardRows, array $gameRow, array $meta): array
     {
         $out = [];
@@ -69,6 +97,7 @@ final class ServiceScoreSummary
         foreach ($scorecardRows as $row) {
             $ctx = self::extractRowContext($row);
             $scopedHoles = self::scopedHolesForRow($ctx, $gameRow);
+            $metricKey = self::summaryMetricCellKey($ctx, $gameRow);
 
             $playersByPairing = self::groupPlayersByPairing($row['players'] ?? []);
             $pairingIds = self::orderedPairingIds($row, $playersByPairing);
@@ -81,9 +110,9 @@ final class ServiceScoreSummary
 
                 $totalRow = self::findTotalRowForPairing($row['columnTotals'] ?? [], $pairingId);
 
-                $gross = self::metricFromTotalRow($totalRow, 'grossDiff');
-                $net = self::metricFromTotalRow($totalRow, 'netDiff');
-                $points = self::metricFromTotalRow($totalRow, 'points');
+                $gross = self::metricFromTotalRow($totalRow, 'grossDiff', $metricKey);
+                $net = self::metricFromTotalRow($totalRow, 'netDiff', $metricKey);
+                $points = self::metricFromTotalRow($totalRow, 'points', $metricKey);
                 $shapeStats = self::buildPairFieldShapeStats($pairPlayers);
 
                 $out[] = [
@@ -231,6 +260,7 @@ final class ServiceScoreSummary
 
             $ctx = self::extractRowContext($row);
             $scopedHoles = self::scopedHolesForRow($ctx, $gameRow);
+            $metricKey = self::summaryMetricCellKey($ctx, $gameRow);
 
             $sides = self::groupPlayersByFlightPos($players);
             if (!$sides) continue;
@@ -250,11 +280,11 @@ final class ServiceScoreSummary
             $leftTotal = self::findTotalRowForPairingAndFlightPos($row['columnTotals'] ?? [], $leftPairingId, $leftKey);
             $rightTotal = self::findTotalRowForPairingAndFlightPos($row['columnTotals'] ?? [], $rightPairingId, $rightKey);
 
-            $leftGross = self::metricFromTotalRow($leftTotal, 'grossDiff');
-            $leftNet = self::metricFromTotalRow($leftTotal, 'netDiff');
+            $leftGross = self::metricFromTotalRow($leftTotal, 'grossDiff', $metricKey);
+            $leftNet = self::metricFromTotalRow($leftTotal, 'netDiff', $metricKey);
 
-            $rightGross = self::metricFromTotalRow($rightTotal, 'grossDiff');
-            $rightNet = self::metricFromTotalRow($rightTotal, 'netDiff');
+            $rightGross = self::metricFromTotalRow($rightTotal, 'grossDiff', $metricKey);
+            $rightNet = self::metricFromTotalRow($rightTotal, 'netDiff', $metricKey);
 
             $scoringBasis = trim((string)($meta['scoringBasis'] ?? $gameRow['dbGames_ScoringBasis'] ?? 'Strokes'));
             $gameKpi = self::buildPairPairGameKpi($leftPlayers, $rightPlayers, $gameRow, $scoringBasis, $scopedHoles);
@@ -559,9 +589,9 @@ final class ServiceScoreSummary
         return self::findTotalRowForPairing($totals, $pairingId);
     }
 
-    private static function metricFromTotalRow(?array $totalRow, string $mode): array
+    private static function metricFromTotalRow(?array $totalRow, string $mode, string $cellKey = '9c'): array
     {
-        $cell = is_array($totalRow['cells']['9c'] ?? null) ? $totalRow['cells']['9c'] : null;
+        $cell = is_array($totalRow['cells'][$cellKey] ?? null) ? $totalRow['cells'][$cellKey] : null;
         $display = '';
         $value = 0.0;
 
