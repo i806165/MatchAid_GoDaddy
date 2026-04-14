@@ -10,20 +10,37 @@ $input = ma_json_in();
 $ghin = trim((string)($input['ghin'] ?? ''));
 $carts = $input['carts'] ?? null;
 
-if ($ghin !== "") {
-    ServiceScoreEntry::setScorerContext($ghin);
+if ($ghin === '') {
+    ma_respond(400, ['ok' => false, 'message' => 'GHIN required']);
+}
 
-    // If cart assignments are provided, persist them to the pod
-    if (is_array($carts)) {
-        $ggid = ServiceScoreEntry::getScoringPodGGID();
-        if ($ggid) {
-            foreach ($carts as $pGhin => $pos) {
-                ServiceDbPlayers::updateGamePlayerFields($ggid, (string)$pGhin, ['dbPlayers_PairingPos' => (string)$pos]);
+ServiceScoreEntry::setScorerContext($ghin);
+
+// If cart assignments are provided, persist pairing id + pairing pos to the pod
+if (is_array($carts)) {
+    $ggid = ServiceScoreEntry::getScoringPodGGID();
+    if ($ggid) {
+        foreach ($carts as $playerGHIN => $assignment) {
+            if (!is_array($assignment)) {
+                continue;
+            }
+
+            $pairingId = trim((string)($assignment['pairingId'] ?? ''));
+            $pairingPos = trim((string)($assignment['pairingPos'] ?? ''));
+
+            $fields = [];
+            if ($pairingId !== '') {
+                $fields['dbPlayers_PairingID'] = $pairingId;
+            }
+            if (in_array($pairingPos, ['1', '2'], true)) {
+                $fields['dbPlayers_PairingPos'] = $pairingPos;
+            }
+
+            if ($fields) {
+                ServiceDbPlayers::updateGamePlayerFields($ggid, (string)$playerGHIN, $fields);
             }
         }
     }
-
-    ma_respond(200, ['ok' => true]);
 }
 
-ma_respond(400, ['ok' => false, 'message' => 'GHIN required']);
+ma_respond(200, ['ok' => true]);
