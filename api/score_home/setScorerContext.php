@@ -37,7 +37,7 @@ if (is_array($carts)) {
             }
 
             if ($fields) {
-                ServiceDbPlayers::updateGamePlayerFields($ggid, (string)$playerGHIN, $fields);
+            ServiceDbPlayers::updateGamePlayerFields((string)$ggid, (string)$playerGHIN, $fields);    
             }
         }
     }
