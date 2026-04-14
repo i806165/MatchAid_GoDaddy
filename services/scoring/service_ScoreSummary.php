@@ -35,11 +35,27 @@ final class ServiceScoreSummary
         ];
     }
 
+    private static function extractRowContext(array $row): array
+    {
+        return [
+            'spinNumber' => intval($row['spinNumber'] ?? 1),
+            'spinLabel' => (string)($row['spinLabel'] ?? 'Round'),
+            'spinStartHole' => intval($row['spinStartHole'] ?? 1),
+            'spinEndHole' => intval($row['spinEndHole'] ?? 18),
+            'visibleHoles' => is_array($row['visibleHoles'] ?? null) ? array_values($row['visibleHoles']) : [],
+            'virtualFlightId' => (string)($row['virtualFlightID'] ?? ''),
+            'virtualPairingIds' => is_array($row['virtualPairingIDs'] ?? null) ? array_values($row['virtualPairingIDs']) : [],
+            'isRotationAware' => !empty($row['isRotationAware']),
+        ];
+    }
+
     private static function buildPairFieldRows(array $scorecardRows, array $gameRow, array $meta): array
     {
         $out = [];
 
         foreach ($scorecardRows as $row) {
+            $ctx = self::extractRowContext($row);
+
             $playersByPairing = self::groupPlayersByPairing($row['players'] ?? []);
             $pairingIds = self::orderedPairingIds($row, $playersByPairing);
 
@@ -73,6 +89,16 @@ final class ServiceScoreSummary
                     'countedNetStats' => $shapeStats['countedNetStats'],
                     'notCountedGrossStats' => $shapeStats['notCountedGrossStats'],
                     'notCountedNetStats' => $shapeStats['notCountedNetStats'],
+
+                    // Normalized scored-row metadata
+                    'spinNumber' => $ctx['spinNumber'],
+                    'spinLabel' => $ctx['spinLabel'],
+                    'spinStartHole' => $ctx['spinStartHole'],
+                    'spinEndHole' => $ctx['spinEndHole'],
+                    'visibleHoles' => $ctx['visibleHoles'],
+                    'virtualFlightId' => $ctx['virtualFlightId'],
+                    'virtualPairingIds' => $ctx['virtualPairingIds'],
+                    'isRotationAware' => $ctx['isRotationAware'],
                 ];
             }
         }
@@ -189,6 +215,8 @@ final class ServiceScoreSummary
             $players = is_array($row['players'] ?? null) ? $row['players'] : [];
             if (!$players) continue;
 
+            $ctx = self::extractRowContext($row);
+
             $sides = self::groupPlayersByFlightPos($players);
             if (!$sides) continue;
 
@@ -216,10 +244,14 @@ final class ServiceScoreSummary
             $scoringBasis = trim((string)($meta['scoringBasis'] ?? $gameRow['dbGames_ScoringBasis'] ?? 'Strokes'));
             $gameKpi = self::buildPairPairGameKpi($leftPlayers, $rightPlayers, $gameRow, $scoringBasis);
 
-            $flightId = (string)($row['flightIDs'][0] ?? $row['flightID'] ?? '');
+            $flightId = (string)($row['flightIDs'][0] ?? $row['flightID'] ?? $ctx['virtualFlightId'] ?? '');
+            $spinPrefix = ($ctx['spinLabel'] ?? 'Round') !== 'Round'
+                ? trim((string)$ctx['spinLabel']) . ' • '
+                : '';
+
             $pairingLabel = $flightId !== ''
-                ? 'Match ' . $flightId
-                : ('Pairings ' . trim((string)$leftPairingId) . ' / ' . trim((string)$rightPairingId));
+                ? ($spinPrefix . 'Match ' . $flightId)
+                : ($spinPrefix . 'Pairings ' . trim((string)$leftPairingId) . ' / ' . trim((string)$rightPairingId));
 
             $leftSort = self::pairPairSortSeed($leftPlayers);
 
@@ -228,6 +260,16 @@ final class ServiceScoreSummary
                 'matchLabel' => $pairingLabel,
                 'matchLabelTop' => self::buildPairFieldLabel($leftPlayers),
                 'matchLabelBottom' => self::buildPairFieldLabel($rightPlayers),
+
+                'spinNumber' => $ctx['spinNumber'],
+                'spinLabel' => $ctx['spinLabel'],
+                'spinStartHole' => $ctx['spinStartHole'],
+                'spinEndHole' => $ctx['spinEndHole'],
+                'visibleHoles' => $ctx['visibleHoles'],
+                'virtualFlightId' => $ctx['virtualFlightId'],
+                'virtualPairingIds' => $ctx['virtualPairingIds'],
+                'isRotationAware' => $ctx['isRotationAware'],
+
                 'left' => [
                     'flightPos' => (string)$leftKey,
                     'pairingId' => (string)$leftPairingId,
@@ -262,6 +304,7 @@ final class ServiceScoreSummary
                     'pairingId' => $leftSort['pairingId'],
                     'pairingPos' => $leftSort['pairingPos'],
                     'lName' => $leftSort['lName'],
+                    'spinNumber' => $ctx['spinNumber'],
                 ],
             ];
         }
@@ -271,6 +314,10 @@ final class ServiceScoreSummary
                 $cmp = strnatcmp((string)$a['_sort'][$key], (string)$b['_sort'][$key]);
                 if ($cmp !== 0) return $cmp;
             }
+
+            $cmp = (($a['_sort']['spinNumber'] ?? 1) <=> ($b['_sort']['spinNumber'] ?? 1));
+            if ($cmp !== 0) return $cmp;
+
             return strnatcmp((string)($a['matchLabel'] ?? ''), (string)($b['matchLabel'] ?? ''));
         });
 

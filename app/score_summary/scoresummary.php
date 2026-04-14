@@ -7,7 +7,8 @@ if (session_status() !== PHP_SESSION_ACTIVE) session_start();
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
-require_once MA_SERVICES . "/scoring/service_ScoreSummary.php";
+require_once MA_SVC_DB . "/service_dbGames.php";
+require_once MA_API . "/score_summary/initScoreSummary.php";
 
 Logger::info("SCORESUMMARY_ENTRY", [
   "uri" => $_SERVER["REQUEST_URI"] ?? "",
@@ -16,51 +17,32 @@ Logger::info("SCORESUMMARY_ENTRY", [
 ]);
 
 try {
-  $gc = ServiceContextGame::getGameContext();
-  $game = $gc["game"] ?? null;
-  $ggid = $gc["ggid"] ?? null;
+    $gc = ServiceContextGame::getGameContext();
+    $game = $gc["game"] ?? null;
+    $ggid = $gc["ggid"] ?? null;
 
-  if (!$game || !$ggid) {
-    throw new RuntimeException("Missing game context.");
-  }
-
-  // Load player rows and hydrate JSON fields (same controller pattern as scoreskins.php)
-  $stmtP = Db::pdo()->prepare("
-    SELECT *
-      FROM db_Players
-     WHERE dbPlayers_GGID = :ggid
-     ORDER BY dbPlayers_PairingID, dbPlayers_PairingPos, dbPlayers_FlightID, dbPlayers_FlightPos
-  ");
-  $stmtP->execute([":ggid" => (string)$ggid]);
-  $players = $stmtP->fetchAll(PDO::FETCH_ASSOC) ?: [];
-
-  foreach ($players as &$p) {
-    if (isset($p["dbPlayers_TeeSetDetails"]) && is_string($p["dbPlayers_TeeSetDetails"])) {
-      $p["dbPlayers_TeeSetDetails"] = json_decode($p["dbPlayers_TeeSetDetails"], true);
+    if (!$game || !$ggid) {
+      throw new RuntimeException("Missing game context.");
     }
-    if (isset($p["dbPlayers_Scores"]) && is_string($p["dbPlayers_Scores"])) {
-      $p["dbPlayers_Scores"] = json_decode($p["dbPlayers_Scores"], true);
+
+    $gameRow = ServiceDbGames::getGameByGGID((int)$ggid) ?? $game;
+    if (!$gameRow) {
+      throw new RuntimeException("Game not found.");
     }
-  }
-  unset($p);
 
-  $payload = ServiceScoreSummary::buildScoreSummaryPayload($game, $players);
+    $gc["game"] = $gameRow;
+    $gc["ggid"] = (string)$ggid;
 
-  $initPayload = [
-    "ok" => true,
-    "ggid" => $ggid,
-    "portal" => $_SESSION["SessionPortal"] ?? "",
-    "game" => $game,
-    "summary" => $payload,
-    "header" => [
-      "title" => "Score Summary",
-      "subtitle" => $game["dbGames_CourseName"] ?? ""
-    ]
-  ];
-} catch (Throwable $e) {
-  Logger::error("SCORESUMMARY_INIT_FAIL", ["err" => $e->getMessage()]);
-  header("Location: /app/admin_games/gameslist.php");
-  exit;
+    $initPayload = buildScoreSummaryInit([], $gc);
+    if (empty($initPayload["ok"])) {
+      throw new RuntimeException((string)($initPayload["message"] ?? "Unable to initialize score summary."));
+    }
+
+    $initPayload["ggid"] = (string)$ggid;
+  } catch (Throwable $e) {
+    Logger::error("SCORESUMMARY_INIT_FAIL", ["err" => $e->getMessage()]);
+    header("Location: /app/admin_games/gameslist.php");
+    exit;
 }
 
 $maChromeTitle = "Score Summary";

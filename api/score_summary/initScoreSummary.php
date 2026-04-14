@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../bootstrap.php';
 require_once MA_SERVICES . '/scoring/service_ScoreSummary.php';
+require_once MA_SVC_DB . '/service_dbGames.php';
 require_once MA_SVC_DB . '/service_dbPlayers.php';
 
 function buildScoreSummaryInit(array $ctx, array $gc): array
@@ -45,17 +46,44 @@ function buildScoreSummaryInit(array $ctx, array $gc): array
 function loadScoreSummaryPlayers(array $gc, string $ggid): array
 {
     if (is_array($gc['players'] ?? null) && !empty($gc['players'])) {
-        return $gc['players'];
+        return hydrateScoreSummaryPlayerRows($gc['players']);
     }
 
-    foreach (['getPlayersByGGID', 'getPlayersByGameGGID'] as $method) {
-        if (method_exists('ServiceDbPlayers', $method)) {
-            $rows = ServiceDbPlayers::{$method}($ggid);
-            if (is_array($rows) && !empty($rows)) {
-                return $rows;
-            }
+    if (method_exists('ServiceDbPlayers', 'getScorecardPlayersByGGID')) {
+        $rows = ServiceDbPlayers::getScorecardPlayersByGGID($ggid);
+        if (is_array($rows) && !empty($rows)) {
+            return hydrateScoreSummaryPlayerRows($rows);
+        }
+    }
+
+    if (method_exists('ServiceDbPlayers', 'getGamePlayers')) {
+        $rows = ServiceDbPlayers::getGamePlayers($ggid);
+        if (is_array($rows) && !empty($rows)) {
+            return hydrateScoreSummaryPlayerRows($rows);
         }
     }
 
     return [];
+}
+
+function hydrateScoreSummaryPlayerRows(array $players): array
+{
+    foreach ($players as &$p) {
+        if (isset($p['dbPlayers_TeeSetDetails']) && is_string($p['dbPlayers_TeeSetDetails']) && trim($p['dbPlayers_TeeSetDetails']) !== '') {
+            $decoded = json_decode($p['dbPlayers_TeeSetDetails'], true);
+            if (is_array($decoded)) {
+                $p['dbPlayers_TeeSetDetails'] = $decoded;
+            }
+        }
+
+        if (isset($p['dbPlayers_Scores']) && is_string($p['dbPlayers_Scores']) && trim($p['dbPlayers_Scores']) !== '') {
+            $decoded = json_decode($p['dbPlayers_Scores'], true);
+            if (is_array($decoded)) {
+                $p['dbPlayers_Scores'] = $decoded;
+            }
+        }
+    }
+    unset($p);
+
+    return $players;
 }

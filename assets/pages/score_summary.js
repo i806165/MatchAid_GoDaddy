@@ -128,6 +128,16 @@
     return `${rightPos} ${String(row?.matchLabelBottom || '').trim()}`.trim();
   }
 
+  function pairPairSpinText(row) {
+    const label = String(row?.spinLabel || '').trim();
+    const start = Number(row?.spinStartHole || 0);
+    const end = Number(row?.spinEndHole || 0);
+
+    if (!label || label === 'Round') return '';
+    if (start > 0 && end > 0) return `${label} • Holes ${start}-${end}`;
+    return label;
+  }
+
   function pairPairSegmentLines(row, side) {
     const seg = row?.[side]?.gameSegments || {};
     return {
@@ -369,6 +379,7 @@
                 <div class="maCard__title ssMatchCardTitle">
                   <div class="ssMatchCell__top">${esc(pairPairTopName(row))}</div>
                   <div class="ssMatchCell__bottom">${esc(pairPairBottomName(row))}</div>
+                  ${pairPairSpinText(row) ? `<div class="ssMatchCell__sub">${esc(pairPairSpinText(row))}</div>` : ''}
                 </div>
                 <div class="ssThruPill ssThruPill--stacked">
                   <span>Thru</span>
