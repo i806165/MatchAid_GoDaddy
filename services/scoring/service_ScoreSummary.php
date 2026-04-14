@@ -49,12 +49,26 @@ final class ServiceScoreSummary
         ];
     }
 
+    private static function scopedHolesForRow(array $ctx, array $gameRow): array
+    {
+        $holes = is_array($ctx['visibleHoles'] ?? null) ? array_values($ctx['visibleHoles']) : [];
+        $holes = array_values(array_filter(array_map('intval', $holes), fn($n) => $n > 0));
+
+        if ($holes) {
+            sort($holes, SORT_NUMERIC);
+            return $holes;
+        }
+
+        return self::holesForGame($gameRow);
+    }
+
     private static function buildPairFieldRows(array $scorecardRows, array $gameRow, array $meta): array
     {
         $out = [];
 
         foreach ($scorecardRows as $row) {
             $ctx = self::extractRowContext($row);
+            $scopedHoles = self::scopedHolesForRow($ctx, $gameRow);
 
             $playersByPairing = self::groupPlayersByPairing($row['players'] ?? []);
             $pairingIds = self::orderedPairingIds($row, $playersByPairing);
@@ -75,7 +89,7 @@ final class ServiceScoreSummary
                 $out[] = [
                     'pairingId' => (string)$pairingId,
                     'pairingLabel' => self::buildPairFieldLabel($pairPlayers),
-                    'scoreCount' => self::countDeclaredScores($pairPlayers),
+                    'scoreCount' => self::countDeclaredScores($pairPlayers, $scopedHoles),
                     'grossDiffValue' => $gross['value'],
                     'grossDiffDisplay' => $gross['display'],
                     'netDiffValue' => $net['value'],
@@ -216,6 +230,7 @@ final class ServiceScoreSummary
             if (!$players) continue;
 
             $ctx = self::extractRowContext($row);
+            $scopedHoles = self::scopedHolesForRow($ctx, $gameRow);
 
             $sides = self::groupPlayersByFlightPos($players);
             if (!$sides) continue;
@@ -242,7 +257,7 @@ final class ServiceScoreSummary
             $rightNet = self::metricFromTotalRow($rightTotal, 'netDiff');
 
             $scoringBasis = trim((string)($meta['scoringBasis'] ?? $gameRow['dbGames_ScoringBasis'] ?? 'Strokes'));
-            $gameKpi = self::buildPairPairGameKpi($leftPlayers, $rightPlayers, $gameRow, $scoringBasis);
+            $gameKpi = self::buildPairPairGameKpi($leftPlayers, $rightPlayers, $gameRow, $scoringBasis, $scopedHoles);
 
             $flightId = (string)($row['flightIDs'][0] ?? $row['flightID'] ?? $ctx['virtualFlightId'] ?? '');
             $spinPrefix = ($ctx['spinLabel'] ?? 'Round') !== 'Round'
@@ -273,7 +288,7 @@ final class ServiceScoreSummary
                 'left' => [
                     'flightPos' => (string)$leftKey,
                     'pairingId' => (string)$leftPairingId,
-                    'scoreCount' => self::countDeclaredScores($leftPlayers),
+                    'scoreCount' => self::countDeclaredScores($leftPlayers, $scopedHoles),
                     'grossDiffValue' => $leftGross['value'],
                     'grossDiffDisplay' => $leftGross['display'],
                     'netDiffValue' => $leftNet['value'],
@@ -285,7 +300,7 @@ final class ServiceScoreSummary
                 'right' => [
                     'flightPos' => (string)$rightKey,
                     'pairingId' => (string)$rightPairingId,
-                    'scoreCount' => self::countDeclaredScores($rightPlayers),
+                    'scoreCount' => self::countDeclaredScores($rightPlayers, $scopedHoles),
                     'grossDiffValue' => $rightGross['value'],
                     'grossDiffDisplay' => $rightGross['display'],
                     'netDiffValue' => $rightNet['value'],
@@ -295,8 +310,8 @@ final class ServiceScoreSummary
                     'gameSegments' => $gameKpi['right'],
                 ],
                 'thru' => max(
-                    self::deriveThru($leftPlayers, $gameRow),
-                    self::deriveThru($rightPlayers, $gameRow)
+                    self::deriveThru($leftPlayers, $scopedHoles),
+                    self::deriveThru($rightPlayers, $scopedHoles)
                 ),
                 '_sort' => [
                     'flightId' => $leftSort['flightId'],
@@ -329,7 +344,7 @@ final class ServiceScoreSummary
         return $out;
     }
 
-    private static function buildPairPairGameKpi(array $leftPlayers, array $rightPlayers, array $gameRow, string $scoringBasis): array
+    private static function buildPairPairGameKpi(array $leftPlayers, array $rightPlayers, array $gameRow, string $scoringBasis, array $scopedHoles): array
     {
         $basis = trim($scoringBasis);
         if (!in_array($basis, ['Holes', 'Skins'], true)) {
@@ -347,7 +362,7 @@ final class ServiceScoreSummary
         $right = self::emptyGameSegments();
 
         $carry = 0;
-        $holes = self::holesForGame($gameRow);
+        $holes = $scopedHoles ?: self::holesForGame($gameRow);
 
         foreach ($holes as $holeNumber) {
             $segmentKey = ($holeNumber <= 9) ? 'front' : 'back';
@@ -573,28 +588,31 @@ final class ServiceScoreSummary
         return is_numeric($display) ? (float)$display : 0.0;
     }
 
-    private static function countDeclaredScores(array $players): int
+    private static function countDeclaredScores(array $players, array $scopedHoles): int
     {
         $count = 0;
+        $holeKeys = array_map(fn($n) => 'h' . intval($n), $scopedHoles);
+
         foreach ($players as $player) {
             $holes = is_array($player['holes'] ?? null) ? $player['holes'] : [];
-            foreach ($holes as $hole) {
-                if (!empty($hole['declared'])) {
+            foreach ($holeKeys as $holeKey) {
+                $cell = $holes[$holeKey] ?? null;
+                if (is_array($cell) && !empty($cell['declared'])) {
                     $count++;
                 }
             }
         }
+
         return $count;
     }
 
-    private static function deriveThru(array $players, array $gameRow): int
+    private static function deriveThru(array $players, array $scopedHoles): int
     {
-        $holesToCheck = self::holesForGame($gameRow);
         $max = 0;
 
         foreach ($players as $player) {
             $holes = is_array($player['holes'] ?? null) ? $player['holes'] : [];
-            foreach ($holesToCheck as $holeNumber) {
+            foreach ($scopedHoles as $holeNumber) {
                 $cell = $holes['h' . $holeNumber] ?? null;
                 if (is_array($cell) && ($cell['gross'] ?? null) !== null) {
                     $max = max($max, $holeNumber);
