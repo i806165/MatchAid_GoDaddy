@@ -35,13 +35,12 @@
   }
   function activeRows(){ return Array.isArray(payload.rows) ? payload.rows : []; }
 
-  function isMobileLandscapeLike(){
-    const isLandscape = window.matchMedia('(orientation: landscape)').matches;
-    const isTouchLike =
-      window.matchMedia('(pointer: coarse)').matches ||
-      navigator.maxTouchPoints > 0;
-    return isLandscape && isTouchLike;
-  }
+function isMobileLandscapeLike(){
+  const isLandscape = window.matchMedia('(orientation: landscape)').matches;
+  const isCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+  const isMobileWidth = window.innerWidth <= 1024;
+  return isLandscape && isCoarsePointer && isMobileWidth;
+}
 
   function applyLandscapeChromeMode(){
     document.body.classList.toggle('scChromeHiddenMode', isMobileLandscapeLike());
