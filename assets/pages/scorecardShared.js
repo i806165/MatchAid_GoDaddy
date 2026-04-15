@@ -178,7 +178,7 @@ function isMobileLandscapeLike(){
   function toggleAllCards(){
     state.globalExpanded = !state.globalExpanded;
     activeRows().forEach(row => {
-      const s = ensureCardState(row.groupId || row.pairingID || row.flightID || 'row');
+      const s = ensureCardState(row.groupId || row.rowId || row.virtualPlayerKey || row.pairingID || row.flightID || 'row');;
       s.expanded = state.globalExpanded;
     });
     renderBody();
@@ -266,13 +266,18 @@ function isMobileLandscapeLike(){
 
   function totalForPlayer(player, key){ return player?.totals?.[state.valueMode]?.[key] ?? ''; }
 
-  function groupPlayersByPairing(players){
+function groupPlayersByPairing(players){
   const groups = [];
   let currentPairingId = null;
   let currentPlayers = [];
 
   (players || []).forEach((p) => {
-    const pairingId = String(p.dbPlayers_PairingID || p.pairingID || '').trim() || '000';
+    const pairingId = String(
+      p.pairingID ||
+      p.effectivePairingID ||
+      p.dbPlayers_PairingID ||
+      ''
+    ).trim() || '000';
 
     if (currentPairingId === null) {
       currentPairingId = pairingId;
@@ -295,8 +300,14 @@ function isMobileLandscapeLike(){
 }
 
 function totalsForPairing(totals, pairingId){
-  const needle = `PAIR ${String(pairingId).trim()}`;
-  return (totals || []).filter(row => String(row.label || '').includes(needle));
+  const wanted = String(pairingId).trim();
+  return (totals || []).filter(row => {
+    const rowPairingId = String(row?.pairingID || '').trim();
+    if (rowPairingId) return rowPairingId === wanted;
+
+    const needle = `PAIR ${wanted}`;
+    return String(row?.label || '').includes(needle);
+  });
 }
 
 function renderPairingBlock(pairingId, players, totals, cardState, row){
@@ -392,8 +403,18 @@ function renderPlayerRows(players, cardState, row){
     return `${parts.join(' • ')}: ${names}`;
   }
 
+  function getSpinText(row){
+    const label = String(row?.spinLabel || '').trim();
+    const start = Number(row?.spinStartHole || 0);
+    const end = Number(row?.spinEndHole || 0);
+
+    if (!label || label === 'Round') return '';
+    if (start > 0 && end > 0) return `${label} • Holes ${start}-${end}`;
+    return label;
+  }
+
   function renderCard(row){
-    const gid = row.groupId || row.pairingID || row.flightID || 'row';
+    const gid = row.groupId || row.rowId || row.virtualPlayerKey || row.pairingID || row.flightID || 'row';
     const cardState = ensureCardState(gid);
 
     const playerKey = row.gameHeader?.playerKey || row.groupId || '';
@@ -410,9 +431,10 @@ function renderPlayerRows(players, cardState, row){
       if (pairingIDs.length) titleParts.push(`Pairings ${pairingIDs.join(', ')}`);
     }
 
-    const headerText = [...titleParts, row.teeTime].filter(Boolean).join(' • ');
-    const summaryTitle = getCardSummaryTitle(row);
-
+    const spinText = getSpinText(row);
+    const headerText = [...titleParts, spinText, row.teeTime].filter(Boolean).join(' • ');
+    const summaryTitle = [getCardSummaryTitle(row), spinText].filter(Boolean).join(' • ');
+    
     const iconMinus = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
     const iconPlus = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
 
@@ -459,8 +481,7 @@ function renderPlayerRows(players, cardState, row){
       // Master Accordion Toggle
       card.querySelectorAll('[data-action="toggle-all-segments"]').forEach(el => {
         el.addEventListener('click', () => {
-          const row = activeRows().find(r => String(r.groupId || r.pairingID || r.flightID || 'row') === String(gid)) || null;
-          const cfg = getSegmentConfig(row);
+         const row = activeRows().find(r => String(r.groupId || r.rowId || r.virtualPlayerKey || r.pairingID || r.flightID || 'row') === String(gid)) || null;          const cfg = getSegmentConfig(row);
           const numSegs = Math.ceil(cfg.holes.length / cfg.size);
           const segs = [];
           for (let i = 0; i < numSegs; i++) segs.push('s' + (i + 1));

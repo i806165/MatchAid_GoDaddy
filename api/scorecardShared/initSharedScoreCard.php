@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/scoring/service_ScoreCard.php";
+require_once MA_SERVICES . "/scoring/service_ScoreCardRotation.php";
 require_once MA_SVC_DB . "/service_dbGames.php";
 require_once MA_SVC_DB . "/service_dbPlayers.php";
 
@@ -67,19 +68,27 @@ function initSharedScoreCard(string $ggid, string $mode = "game", string $scope 
 
   switch ($mode) {
     case "player":
-      $scorecards = ServiceScoreCard::buildPlayerScorecardPayload($game, $players, $scope);
+      $baselineScorecards = ServiceScoreCard::buildPlayerScorecardPayload($game, $players, $scope);
       break;
 
     case "group":
-      $scorecards = ServiceScoreCard::buildGroupScorecardPayload($game, $players, $scope);
+      $baselineScorecards = ServiceScoreCard::buildGroupScorecardPayload($game, $players, $scope);
       break;
 
     case "game":
     default:
-      $scorecards = ServiceScoreCard::buildGameScorecardsPayload($game, $players);
+      $baselineScorecards = ServiceScoreCard::buildGameScorecardsPayload($game, $players);
       $mode = "game";
       break;
   }
+
+  $scorecards = ServiceScoreCardRotation::buildScorecardPayload(
+    $game,
+    $baselineScorecards,
+    $players,
+    $mode,
+    $scope
+  );
 
   return [
     "ok" => true,
