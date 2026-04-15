@@ -2,17 +2,16 @@
 declare(strict_types=1);
 // /public_html/services/scoring/service_ScoreSummary.php
 
-require_once __DIR__ . '/service_ScoreCard.php';
+require_once __DIR__ . '/service_ScoreCardRotation.php';
 
 final class ServiceScoreSummary
 {
-    public static function buildScoreSummaryPayload(array $gameRow, array $players): array
+    public static function buildScoreSummaryPayload(array $gameRow, array $scorecards): array
     {
         if (!$gameRow) {
             throw new RuntimeException('buildScoreSummaryPayload: missing gameRow');
         }
 
-        $scorecards = ServiceScoreCard::buildGameScorecardsPayload($gameRow, $players);
         $competition = trim((string)($scorecards['competition'] ?? $gameRow['dbGames_Competition'] ?? 'PairField'));
         $meta = is_array($scorecards['meta'] ?? null) ? $scorecards['meta'] : [];
 
@@ -125,7 +124,7 @@ final class ServiceScoreSummary
                     'netDiffDisplay' => $net['display'],
                     'pointsValue' => $points['value'],
                     'pointsDisplay' => $points['display'],
-                    'thru' => self::deriveThru($pairPlayers, $gameRow),
+                    'thru' => self::deriveThru($pairPlayers, $scopedHoles),
 
                     // New stat buckets for PairField leaderboard cards
                     'countedGrossStats' => $shapeStats['countedGrossStats'],
@@ -538,7 +537,12 @@ final class ServiceScoreSummary
     {
         $out = [];
         foreach ($players as $player) {
-            $pairingId = trim((string)($player['dbPlayers_PairingID'] ?? '000'));
+            $pairingId = trim((string)(
+                $player['pairingID']
+                ?? $player['effectivePairingID']
+                ?? $player['dbPlayers_PairingID']
+                ?? '000'
+            ));
             if ($pairingId === '') $pairingId = '000';
             $out[$pairingId][] = $player;
         }
@@ -549,7 +553,12 @@ final class ServiceScoreSummary
     {
         $out = [];
         foreach ($players as $player) {
-            $flightPos = trim((string)($player['dbPlayers_FlightPos'] ?? ''));
+            $flightPos = trim((string)(
+                $player['flightPos']
+                ?? $player['virtualFlightPos']
+                ?? $player['dbPlayers_FlightPos']
+                ?? ''
+            ));
             if ($flightPos === '') continue;
             $out[$flightPos][] = $player;
         }
@@ -559,25 +568,52 @@ final class ServiceScoreSummary
     private static function firstPairingId(array $players): string
     {
         $first = $players[0] ?? [];
-        return trim((string)($first['dbPlayers_PairingID'] ?? ''));
+        return trim((string)(
+            $first['pairingID']
+            ?? $first['effectivePairingID']
+            ?? $first['dbPlayers_PairingID']
+            ?? ''
+        ));
     }
 
     private static function findTotalRowForPairing(array $totals, string $pairingId): ?array
     {
-        $needle = 'PAIR ' . trim((string)$pairingId);
+        $wanted = trim((string)$pairingId);
+
+        foreach ($totals as $row) {
+            $rowPairingId = trim((string)($row['pairingID'] ?? ''));
+            if ($rowPairingId !== '' && $rowPairingId === $wanted) {
+                return $row;
+            }
+        }
+
+        $needle = 'PAIR ' . $wanted;
         foreach ($totals as $row) {
             $label = strtoupper(trim((string)($row['label'] ?? '')));
             if (str_contains($label, strtoupper($needle))) {
                 return $row;
             }
         }
+
         return null;
     }
 
     private static function findTotalRowForPairingAndFlightPos(array $totals, string $pairingId, ?string $flightPos): ?array
     {
-        $pairNeedle = 'PAIR ' . trim((string)$pairingId);
-        $teamNeedle = 'TEAM ' . trim((string)$flightPos);
+        $wantedPairingId = trim((string)$pairingId);
+        $wantedFlightPos = trim((string)$flightPos);
+
+        foreach ($totals as $row) {
+            $rowPairingId = trim((string)($row['pairingID'] ?? ''));
+            $rowFlightPos = trim((string)($row['flightPos'] ?? ''));
+
+            if ($rowPairingId === $wantedPairingId && $rowFlightPos === $wantedFlightPos) {
+                return $row;
+            }
+        }
+
+        $pairNeedle = 'PAIR ' . $wantedPairingId;
+        $teamNeedle = 'TEAM ' . $wantedFlightPos;
 
         foreach ($totals as $row) {
             $label = strtoupper(trim((string)($row['label'] ?? '')));
@@ -665,9 +701,24 @@ final class ServiceScoreSummary
     {
         $first = $players[0] ?? [];
         return [
-            'flightId' => trim((string)($first['dbPlayers_FlightID'] ?? '')),
-            'flightPos' => trim((string)($first['dbPlayers_FlightPos'] ?? '')),
-            'pairingId' => trim((string)($first['dbPlayers_PairingID'] ?? '')),
+            'flightId' => trim((string)(
+                $first['flightID']
+                ?? $first['effectiveFlightID']
+                ?? $first['dbPlayers_FlightID']
+                ?? ''
+            )),
+            'flightPos' => trim((string)(
+                $first['flightPos']
+                ?? $first['virtualFlightPos']
+                ?? $first['dbPlayers_FlightPos']
+                ?? ''
+            )),
+            'pairingId' => trim((string)(
+                $first['pairingID']
+                ?? $first['effectivePairingID']
+                ?? $first['dbPlayers_PairingID']
+                ?? ''
+            )),
             'pairingPos' => trim((string)($first['dbPlayers_PairingPos'] ?? '')),
             'lName' => trim((string)($first['dbPlayers_LName'] ?? '')),
         ];

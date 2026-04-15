@@ -3,6 +3,8 @@ declare(strict_types=1);
 // /public_html/api/score_summary/initScoreSummary.php
 
 require_once __DIR__ . '/../../bootstrap.php';
+require_once MA_SERVICES . '/scoring/service_ScoreCard.php';
+require_once MA_SERVICES . '/scoring/service_ScoreCardRotation.php';
 require_once MA_SERVICES . '/scoring/service_ScoreSummary.php';
 require_once MA_SVC_DB . '/service_dbGames.php';
 require_once MA_SVC_DB . '/service_dbPlayers.php';
@@ -24,7 +26,16 @@ function buildScoreSummaryInit(array $ctx, array $gc): array
         return ['ok' => false, 'message' => 'No players found for this game.'];
     }
 
-    $summary = ServiceScoreSummary::buildScoreSummaryPayload($gameRow, $players);
+    $baselineScorecards = ServiceScoreCard::buildGameScorecardsPayload($gameRow, $players);
+    $normalizedScorecards = ServiceScoreCardRotation::buildScorecardPayload(
+        $gameRow,
+        $baselineScorecards,
+        $players,
+        'game',
+        ''
+    );
+
+    $summary = ServiceScoreSummary::buildScoreSummaryPayload($gameRow, $normalizedScorecards);
 
     $course = trim((string)($gameRow['dbGames_CourseName'] ?? ''));
     $playDate = trim((string)($gameRow['dbGames_PlayDate'] ?? ''));
