@@ -478,7 +478,7 @@
     if (!adminKey) return;
     try {
       setStatus('Updating favorites…','info');
-const res = await postJson(`${apiAdminBase}/toggleFavoriteAdmin.php`, ...)
+      const res = await postJson(`${apiBase}/toggleFavoriteAdmin.php`, { adminKey, adminName: admin.name || '' });
       if (!res || res.ok === false) throw new Error(res?.message || res?.error || 'Favorite update failed');
       const target = state.admins.find(a => String(a.key||a.adminKey||'') === adminKey);
       if (target) target.isFavorite = !target.isFavorite;
