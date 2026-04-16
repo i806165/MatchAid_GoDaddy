@@ -224,6 +224,8 @@ public static function buildUserSettingsPayload(string $ghinId): array {
 
     $ghinFName = trim((string)($g0["first_name"] ?? $g0["firstName"] ?? ""));
     $ghinLName = trim((string)($g0["last_name"] ?? $g0["lastName"] ?? ""));
+    $ghinEmail = trim((string)($g0["email"] ?? $g0["email_address"] ?? ""));
+    $ghinPhone = self::normalizePhone((string)($g0["phone_number"] ?? $g0["phone"] ?? $g0["mobile_phone"] ?? ""));
     $ghinName  = trim((string)($row["dbUser_Name"] ?? ""));
 
     return [
@@ -231,8 +233,8 @@ public static function buildUserSettingsPayload(string $ghinId): array {
         "fields" => [
             "dbUser_FName" => trim((string)($row["dbUser_FName"] ?? "")) ?: $ghinFName,
             "dbUser_LName" => trim((string)($row["dbUser_LName"] ?? "")) ?: $ghinLName,
-            "dbUser_EMail" => trim((string)($row["dbUser_EMail"] ?? "")),
-            "dbUser_MobilePhone" => trim((string)($row["dbUser_MobilePhone"] ?? "")),
+            "dbUser_EMail" => trim((string)($row["dbUser_EMail"] ?? "")) ?: $ghinEmail,
+            "dbUser_MobilePhone" => trim((string)($row["dbUser_MobilePhone"] ?? "")) ?: $ghinPhone,
             "dbUser_MobileCarrier" => trim((string)($row["dbUser_MobileCarrier"] ?? "")),
         ],
         "sourceProfile" => [

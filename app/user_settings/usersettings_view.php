@@ -10,7 +10,7 @@
 
     <div class="maCard__body">
       <div class="usNote" id="usNote">
-        These settings are used by MatchAid and do not change your GHIN profile.
+        These settings are used by your game administrator to contact you.
       </div>
 
       <div class="maFieldRow">
