@@ -294,7 +294,9 @@ a { color: inherit; text-decoration: none; }
 .btn--primary {
   background: linear-gradient(180deg, rgba(63,118,82,0.92), rgba(63,118,82,0.74));
   border-color: rgba(255,255,255,0.18);
+  color: var(--brandPrimaryText);
 }
+
 .btn--primary:hover { background: linear-gradient(180deg, rgba(63,118,82,0.98), rgba(63,118,82,0.80)); }
 
 .btn--ghost {
