@@ -115,7 +115,6 @@ function buildGameSummaryInit(array $ctx, array $gc): array {
       $p["contactSmsEmail"] = $contactSmsEmail;
   }
   unset($p);
-}
 
   return [
     "ok" => true,
