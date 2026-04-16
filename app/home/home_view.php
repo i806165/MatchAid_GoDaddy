@@ -13,6 +13,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- Styles -->
+  <link rel="stylesheet" href="/assets/css/ma_shared.css">
   <link rel="stylesheet" href="/assets/css/home.css" />
 </head>
 
