@@ -21,6 +21,14 @@ declare(strict_types=1);
     </section>
   </section>
 
+  <div id="scoreBusyOverlay" class="maModalOverlay">
+    <section class="maModal" style="max-width: 240px;">
+      <div class="maModal__body" style="text-align: center; padding: 30px 20px;">
+        <div id="scoreBusyMessage" style="font-weight: 800; font-size: 16px;">Saving...</div>
+      </div>
+    </section>
+  </div>
+
   <dialog id="scoreDirtyDialog" class="scoreDirtyDialog">
     <form method="dialog" class="scoreDirtyDialogForm">
       <h3>Unsaved score changes</h3>
