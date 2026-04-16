@@ -9,6 +9,11 @@ require_once MA_API_LIB . '/Logger.php';
 require_once MA_SERVICES . '/workflows/hydratePlayerGamesList.php';
 
 $_SESSION["SessionPortal"] = "PLAYER PORTAL";
+// Direct-link GGID capture (one-time player-home override)
+$directLinkGgidFromUrl = trim((string)($_GET['ggid'] ?? ''));
+if ($directLinkGgidFromUrl !== '' && ctype_digit($directLinkGgidFromUrl) && (int)$directLinkGgidFromUrl > 0) {
+  $_SESSION['PP_DIRECTLINK_GGID'] = $directLinkGgidFromUrl;
+}
 
 $context = ServiceUserContext::getUserContext();
 if (!$context || empty($context['ok'])) {
@@ -69,13 +74,32 @@ $userClubId = strval($_SESSION['SessionClubID'] ?? '');
 
 $g = $context['profile']['profileJson']['golfers'][0];
 
+// One-time direct-link session override
+$directLinkGGID = trim((string)($_SESSION['PP_DIRECTLINK_GGID'] ?? ''));
+if ($directLinkGGID !== '' && (!ctype_digit($directLinkGGID) || (int)$directLinkGGID <= 0)) {
+  $directLinkGGID = '';
+  unset($_SESSION['PP_DIRECTLINK_GGID']);
+}
+
 // Hydrate list using the same canonical GHIN
-$hydrated = hydratePlayerGamesList((string)$g['ghin'], $defaultFilters, $userClubId);
+$hydrated = hydratePlayerGamesList(
+  (string)$g['ghin'],
+  $defaultFilters,
+  $userClubId,
+  ['directLinkGGID' => $directLinkGGID]
+);
+
+// Consume the one-time direct-link after hydration
+if ($directLinkGGID !== '') {
+  unset($_SESSION['PP_DIRECTLINK_GGID']);
+}
 
 // Build init payload ONCE (do not overwrite later)
 $initPayload = [
   'ok' => true,
   'portal' => $_SESSION["SessionPortal"],
+  'directLinkGGID' => $directLinkGGID,
+  'directLinkMode' => ($directLinkGGID !== ''),
   ...$hydrated,
   'user' => [
     'ghin'       => (string)$g['ghin'],

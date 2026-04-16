@@ -46,6 +46,8 @@
     admins: Array.isArray(init.admins) ? init.admins : [],
     games: Array.isArray(init.games?.vm) ? init.games.vm : (Array.isArray(init.games) ? init.games : []),
     rawGames: Array.isArray(init.games?.raw) ? init.games.raw : [],
+    directLinkGGID: String(init.directLinkGGID || ''),
+    directLinkMode: !!init.directLinkMode,
     busy: false,
   };
   state.uiFilters = cloneFilters(state.filters);
@@ -98,7 +100,9 @@
   }
 
   function applyChrome(){
-    const currentFilterLabel = FILTER_LABELS[state.filters.quickPreset] || FILTER_LABELS.CUSTOM;
+    const currentFilterLabel = state.directLinkMode
+      ? 'Linked Game'
+      : (FILTER_LABELS[state.filters.quickPreset] || FILTER_LABELS.CUSTOM);
     const gamesCount = state.games.length;
     const line2Subtitle = (gamesCount === 0 && currentFilterLabel === FILTER_LABELS.CUSTOM) 
                           ? "No Games Found" : `${currentFilterLabel} (${gamesCount})`;
@@ -485,13 +489,23 @@
     try {
       state.busy = true;
       setStatus('Loading games…','info');
-      const res = await postJson(`${apiBase}/initPlayerGames.php`, { filters: state.filters });
+      const res = await postJson(`${apiBase}/initPlayerGames.php`, {
+        filters: state.filters,
+        directLinkGGID: state.directLinkGGID
+      });
       if (!res || res.ok === false) throw new Error(res?.message || res?.error || 'Load failed');
       const p = res.payload || {};
       state.header = p.header || state.header;
       state.admins = Array.isArray(p.admins) ? p.admins : state.admins;
       state.games = Array.isArray(p.games?.vm) ? p.games.vm : (Array.isArray(p.games) ? p.games : []);
       state.rawGames = Array.isArray(p.games?.raw) ? p.games.raw : [];
+      if (typeof p.directLinkGGID !== 'undefined') {
+        state.directLinkGGID = String(p.directLinkGGID || '');
+      }
+      if (typeof p.directLinkMode !== 'undefined') {
+        state.directLinkMode = !!p.directLinkMode;
+      }
+      
       if (p.filters) {
         state.filters = normalizeFilters(p.filters);
         state.uiFilters = cloneFilters(state.filters);

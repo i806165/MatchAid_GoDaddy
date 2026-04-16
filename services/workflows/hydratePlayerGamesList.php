@@ -10,7 +10,188 @@ require_once MA_API_LIB . '/Logger.php';
  * hydratePlayerGamesList
  * Shared workflow to fetch games for the Player Portal.
  */
-function hydratePlayerGamesList(string $userGHIN, array $filters, string $userClubId = ''): array {
+function playerGamesFetchBaseGames(
+  PDO $pdo,
+  string $dateFrom,
+  string $dateTo,
+  array $selectedAdminKeys,
+  bool $directLinkMode,
+  string $directLinkGGID
+): array {
+  if ($directLinkMode) {
+    $st = $pdo->prepare("
+      SELECT *
+      FROM db_Games g
+      WHERE CAST(g.dbGames_GGID AS CHAR) = :ggid
+      LIMIT 1
+    ");
+    $st->execute([':ggid' => $directLinkGGID]);
+    $row = $st->fetch(PDO::FETCH_ASSOC);
+    return $row ? [$row] : [];
+  }
+
+  $params = [':df' => $dateFrom, ':dt' => $dateTo];
+  $where = ["(:df = '' OR g.dbGames_PlayDate >= :df)", "(:dt = '' OR g.dbGames_PlayDate <= :dt)"];
+
+  if (!empty($selectedAdminKeys)) {
+    $inParts = [];
+    foreach ($selectedAdminKeys as $i => $k) {
+      $ph = ':a' . $i;
+      $inParts[] = $ph;
+      $params[$ph] = $k;
+    }
+    $where[] = 'CAST(g.dbGames_AdminGHIN AS CHAR) IN (' . implode(',', $inParts) . ')';
+  }
+
+  $sqlGames = "
+    SELECT *
+    FROM db_Games g
+    WHERE " . implode(' AND ', $where) . "
+    ORDER BY g.dbGames_PlayDate ASC, g.dbGames_PlayTime ASC
+    LIMIT 1000
+  ";
+
+  $st = $pdo->prepare($sqlGames);
+  $st->execute($params);
+  return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+}
+
+function playerGamesIsVisible(
+  array $g,
+  string $userGHIN,
+  string $userClubId,
+  array $myGGIDs,
+  array $buddyAdmins,
+  array $favSet,
+  string $quickPreset,
+  bool $directLinkMode
+): array {
+  $ggid = trim((string)($g['dbGames_GGID'] ?? ''));
+  $admin = trim((string)($g['dbGames_AdminGHIN'] ?? ''));
+
+  $privacy = trim((string)($g['dbGames_Privacy'] ?? 'Club'));
+  if ($privacy === '') $privacy = 'Club';
+
+  // Legacy compatibility: "Players" is retired; treat it as "Club"
+  if ($privacy === 'Players') $privacy = 'Club';
+
+  $gameClubId = trim((string)(
+    $g['dbGames_AdminClubID'] ??
+    $g['dbGames_ClubID'] ??
+    $g['dbGames_ClubId'] ??
+    ''
+  ));
+
+  $isAdminSelf  = ($admin !== '' && $admin === $userGHIN);
+  $isEnrolled   = ($ggid !== '' && !empty($myGGIDs[$ggid]));
+  $isBuddyAdmin = ($admin !== '' && !empty($buddyAdmins[$admin]));
+  $isSameClub   = ($gameClubId !== '' && $userClubId !== '' && $gameClubId === $userClubId);
+
+  $allowByAdmin = $isAdminSelf;
+  $allowByEnrollment = $isEnrolled;
+  $allowByClubPrivacy = false;
+
+  if ($isSameClub) {
+    if ($privacy === 'Club') {
+      $allowByClubPrivacy = true;
+    } elseif ($privacy === 'Buddies') {
+      $allowByClubPrivacy = $isBuddyAdmin;
+    } elseif ($privacy === 'Only Me') {
+      $allowByClubPrivacy = false;
+    } else {
+      $allowByClubPrivacy = false;
+    }
+  }
+
+  if ($directLinkMode) {
+    $visible = true;
+  } else {
+    $visible = ($allowByAdmin || $allowByEnrollment || $allowByClubPrivacy);
+
+    if ($quickPreset === 'MYSCHEDULE' || $quickPreset === 'HISTORY') {
+      $visible = ($allowByAdmin || $allowByEnrollment);
+    } elseif ($quickPreset === 'FAVORITES') {
+      $isFavAdmin = isset($favSet[$admin]);
+      $visible = ($allowByAdmin || $allowByEnrollment || ($allowByClubPrivacy && $isFavAdmin));
+    }
+  }
+
+  return [
+    'visible' => $visible,
+    'privacy' => $privacy,
+    'isAdminSelf' => $isAdminSelf,
+    'isEnrolled' => $isEnrolled,
+    'isBuddyAdmin' => $isBuddyAdmin,
+    'isSameClub' => $isSameClub,
+  ];
+}
+
+function playerGamesBuildVmRow(
+  array $g,
+  array $visibility,
+  array $myPlayerData,
+  array $statsByGGID,
+  string $todayYmd
+): array {
+  $ggid = trim((string)($g['dbGames_GGID'] ?? ''));
+  $playDate = substr((string)($g['dbGames_PlayDate'] ?? ''), 0, 10);
+  $isCurrent = ($playDate !== '' && $playDate >= $todayYmd);
+
+  $daysUntil = null;
+  if ($playDate !== '') {
+    try {
+      $daysUntil = (int)((new DateTimeImmutable('today'))->diff(new DateTimeImmutable($playDate))->format('%r%a'));
+    } catch (Throwable $e) {
+      $daysUntil = null;
+    }
+  }
+
+  $stats = $statsByGGID[$ggid] ?? null;
+  $playerCount = (int)($stats['cnt'] ?? 0);
+
+  $teeTimeCnt = (int)($g['dbGames_TeeTimeCnt'] ?? 0);
+  $slotCount = max(0, $teeTimeCnt * 4);
+
+  $registrationStatus = 'Open';
+  if (!$isCurrent) $registrationStatus = 'Closed';
+  elseif ($daysUntil !== null && $daysUntil < 3) $registrationStatus = 'Locked';
+  elseif ($slotCount > 0 && $playerCount >= $slotCount) $registrationStatus = 'Full';
+
+  $playerHIStats = 'No Data';
+  if ($stats && $stats['min_hi'] !== null && $stats['avg_hi'] !== null && $stats['max_hi'] !== null) {
+    $playerHIStats =
+      number_format((float)$stats['min_hi'], 1) . ' / ' .
+      number_format((float)$stats['avg_hi'], 1) . ' / ' .
+      number_format((float)$stats['max_hi'], 1);
+  }
+
+  return [
+    'ggid' => $ggid,
+    'title' => (string)($g['dbGames_Title'] ?? 'Game'),
+    'playDate' => $playDate,
+    'playTimeText' => substr((string)($g['dbGames_PlayTime'] ?? ''), 0, 5),
+    'courseName' => (string)($g['dbGames_CourseName'] ?? ''),
+    'courseId' => (string)($g['dbGames_CourseID'] ?? ''),
+    'facilityName' => (string)($g['dbGames_FacilityName'] ?? ''),
+    'adminName' => (string)($g['dbGames_AdminName'] ?? ''),
+    'privacy' => (string)$visibility['privacy'],
+    'playerCount' => $playerCount,
+    'playerHIStats' => $playerHIStats,
+    'yourTeeTime' => (string)($myPlayerData[$ggid]['dbPlayers_TeeTime'] ?? ''),
+    'yourTeeSetId' => (string)($myPlayerData[$ggid]['dbPlayers_TeeSetID'] ?? ''),
+    'yourTeeSetName' => (string)($myPlayerData[$ggid]['dbPlayers_TeeSetName'] ?? ''),
+    'scoreId' => (string)($myPlayerData[$ggid]['dbPlayers_PlayerKey'] ?? ''),
+    'ghinPostId' => (string)($myPlayerData[$ggid]['dbPlayers_GHINPostID'] ?? ''),
+    'isRegistered' => !empty($visibility['isEnrolled']),
+    'enrollmentStatus' => !empty($visibility['isEnrolled']) ? 'Registered' : 'Not Registered',
+    'registrationStatus' => $registrationStatus,
+    'holes' => (string)($g['dbGames_Holes'] ?? ''),
+    'teeTimeCnt' => $teeTimeCnt,
+  ];
+}
+
+
+function hydratePlayerGamesList(string $userGHIN, array $filters, string $userClubId = '', array $options = []): array {
   $today = new DateTimeImmutable('today');
   $defFrom = $today->format('Y-m-d');
   $defTo = $today->modify('+30 days')->format('Y-m-d');
@@ -20,24 +201,30 @@ function hydratePlayerGamesList(string $userGHIN, array $filters, string $userCl
   $selectedAdminKeys = array_values(array_unique(array_filter(array_map('strval', (array)($filters['selectedAdminKeys'] ?? [])))));
   $quickPreset = trim((string)($filters['quickPreset'] ?? ''));
 
+  $directLinkGGID = trim((string)($options['directLinkGGID'] ?? ''));
+  $directLinkMode = ($directLinkGGID !== '' && ctype_digit($directLinkGGID) && (int)$directLinkGGID > 0);
+
   $pdo = Db::pdo();
 
   // 1) Admin list candidates
-  $sqlAdmins = "
-    SELECT DISTINCT
-      CAST(dbGames_AdminGHIN AS CHAR) AS adminKey,
-      COALESCE(NULLIF(dbGames_AdminName,''), CONCAT('Admin ', dbGames_AdminGHIN)) AS adminName
-    FROM db_Games
-    WHERE (:df = '' OR dbGames_PlayDate >= :df)
-      AND (:dt = '' OR dbGames_PlayDate <= :dt)
-      AND dbGames_AdminGHIN IS NOT NULL
-      AND dbGames_AdminGHIN <> ''
-    ORDER BY adminName ASC
-    LIMIT 500
-  ";
-  $stA = $pdo->prepare($sqlAdmins);
-  $stA->execute([':df' => $dateFrom, ':dt' => $dateTo]);
-  $adminsRows = $stA->fetchAll(PDO::FETCH_ASSOC) ?: [];
+  $adminsRows = [];
+  if (!$directLinkMode) {
+    $sqlAdmins = "
+      SELECT DISTINCT
+        CAST(dbGames_AdminGHIN AS CHAR) AS adminKey,
+        COALESCE(NULLIF(dbGames_AdminName,''), CONCAT('Admin ', dbGames_AdminGHIN)) AS adminName
+      FROM db_Games
+      WHERE (:df = '' OR dbGames_PlayDate >= :df)
+        AND (:dt = '' OR dbGames_PlayDate <= :dt)
+        AND dbGames_AdminGHIN IS NOT NULL
+        AND dbGames_AdminGHIN <> ''
+      ORDER BY adminName ASC
+      LIMIT 500
+    ";
+    $stA = $pdo->prepare($sqlAdmins);
+    $stA->execute([':df' => $dateFrom, ':dt' => $dateTo]);
+    $adminsRows = $stA->fetchAll(PDO::FETCH_ASSOC) ?: [];
+  }
 
   // Favorites
   $favSet = [];
@@ -63,29 +250,14 @@ function hydratePlayerGamesList(string $userGHIN, array $filters, string $userCl
   }, $adminsRows);
 
   // 2) Base games query
-  $params = [':df' => $dateFrom, ':dt' => $dateTo];
-  $where = ["(:df = '' OR g.dbGames_PlayDate >= :df)", "(:dt = '' OR g.dbGames_PlayDate <= :dt)"];
-  if (!empty($selectedAdminKeys)) {
-    $inParts = [];
-    foreach ($selectedAdminKeys as $i => $k) {
-      $ph = ':a' . $i;
-      $inParts[] = $ph;
-      $params[$ph] = $k;
-    }
-    $where[] = 'CAST(g.dbGames_AdminGHIN AS CHAR) IN (' . implode(',', $inParts) . ')';
-  }
-
-  $sqlGames = "
-    SELECT *
-    FROM db_Games g
-    WHERE " . implode(' AND ', $where) . "
-    ORDER BY g.dbGames_PlayDate ASC, g.dbGames_PlayTime ASC
-    LIMIT 1000
-  ";
-
-  $stG = $pdo->prepare($sqlGames);
-  $stG->execute($params);
-  $gamesRaw = $stG->fetchAll(PDO::FETCH_ASSOC) ?: [];
+  $gamesRaw = playerGamesFetchBaseGames(
+    $pdo,
+    $dateFrom,
+    $dateTo,
+    $selectedAdminKeys,
+    $directLinkMode,
+    $directLinkGGID
+  );
 
   // 3) Player enrollment set
   $myGGIDs = [];
@@ -141,127 +313,38 @@ function hydratePlayerGamesList(string $userGHIN, array $filters, string $userCl
   $rawVisible = [];
 
   foreach ($gamesRaw as $g) {
-    $ggid = trim((string)($g['dbGames_GGID'] ?? ''));
-    $admin = trim((string)($g['dbGames_AdminGHIN'] ?? ''));
+    $visibility = playerGamesIsVisible(
+      $g,
+      $userGHIN,
+      $userClubId,
+      $myGGIDs,
+      $buddyAdmins,
+      $favSet,
+      $quickPreset,
+      $directLinkMode
+    );
 
-    $privacy = trim((string)($g['dbGames_Privacy'] ?? 'Club'));
-    if ($privacy === '') $privacy = 'Club';
+    if (!$visibility['visible']) continue;
 
-    // Legacy compatibility: "Players" is retired; treat it as "Club"
-    if ($privacy === 'Players') $privacy = 'Club';
-
-    // Canonical game club field (fallback chain for compatibility)
-    $gameClubId = trim((string)(
-      $g['dbGames_AdminClubID'] ??
-      $g['dbGames_ClubID'] ??
-      $g['dbGames_ClubId'] ??
-      ''
-    ));
-
-    // Core relation flags
-    $isAdminSelf  = ($admin !== '' && $admin === $userGHIN);
-    $isEnrolled   = ($ggid !== '' && !empty($myGGIDs[$ggid])); // enrollment overrides privacy
-    $isBuddyAdmin = ($admin !== '' && !empty($buddyAdmins[$admin]));
-    $isSameClub   = ($gameClubId !== '' && $userClubId !== '' && $gameClubId === $userClubId);
-
-    // Visibility decision (security gate)
-    $allowByAdmin = $isAdminSelf;
-    $allowByEnrollment = $isEnrolled;
-    $allowByClubPrivacy = false;
-
-    if ($isSameClub) {
-      if ($privacy === 'Club') {
-        $allowByClubPrivacy = true;
-      } elseif ($privacy === 'Buddies') {
-        $allowByClubPrivacy = $isBuddyAdmin;
-      } elseif ($privacy === 'Only Me') {
-        $allowByClubPrivacy = false;
-      } else {
-        // Safe default for unknown privacy values
-        $allowByClubPrivacy = false;
-      }
-    }
-
-    $visible = ($allowByAdmin || $allowByEnrollment || $allowByClubPrivacy);
-
-    // Refine visibility based on the specific intent of the quick preset
-    if ($quickPreset === 'MYSCHEDULE' || $quickPreset === 'HISTORY') {
-        // Strict commitment only: Admin or Registered
-        $visible = ($allowByAdmin || $allowByEnrollment);
-    } elseif ($quickPreset === 'FAVORITES') {
-        // Show if involved OR if it's an authorized club game from a favorited admin
-        $isFavAdmin = isset($favSet[$admin]);
-        $visible = ($allowByAdmin || $allowByEnrollment || ($allowByClubPrivacy && $isFavAdmin));
-    }
-
-    if (!$visible) continue;
-
-    $playDate = substr((string)($g['dbGames_PlayDate'] ?? ''), 0, 10);
-    $isCurrent = ($playDate !== '' && $playDate >= $todayYmd);
-
-    $daysUntil = null;
-    if ($playDate !== '') {
-      try {
-        $daysUntil = (int)((new DateTimeImmutable('today'))->diff(new DateTimeImmutable($playDate))->format('%r%a'));
-      } catch (Throwable $e) {
-        $daysUntil = null;
-      }
-    }
-
-    $stats = $statsByGGID[$ggid] ?? null;
-    $playerCount = (int)($stats['cnt'] ?? 0);
-
-    $teeTimeCnt = (int)($g['dbGames_TeeTimeCnt'] ?? 0);
-    $slotCount = max(0, $teeTimeCnt * 4);
-
-    $registrationStatus = 'Open';
-    if (!$isCurrent) $registrationStatus = 'Closed';
-    elseif ($daysUntil !== null && $daysUntil < 3) $registrationStatus = 'Locked';
-    elseif ($slotCount > 0 && $playerCount >= $slotCount) $registrationStatus = 'Full';
-
-    $playerHIStats = 'No Data';
-    if ($stats && $stats['min_hi'] !== null && $stats['avg_hi'] !== null && $stats['max_hi'] !== null) {
-      $playerHIStats =
-        number_format((float)$stats['min_hi'], 1) . ' / ' .
-        number_format((float)$stats['avg_hi'], 1) . ' / ' .
-        number_format((float)$stats['max_hi'], 1);
-    }
-
-    $vm[] = [
-      'ggid' => $ggid,
-      'title' => (string)($g['dbGames_Title'] ?? 'Game'),
-      'playDate' => $playDate,
-      'playTimeText' => substr((string)($g['dbGames_PlayTime'] ?? ''), 0, 5),
-      'courseName' => (string)($g['dbGames_CourseName'] ?? ''),
-      'courseId' => (string)($g['dbGames_CourseID'] ?? ''),
-      'facilityName' => (string)($g['dbGames_FacilityName'] ?? ''),
-      'adminName' => (string)($g['dbGames_AdminName'] ?? ''),
-      'privacy' => $privacy,
-      'playerCount' => $playerCount,
-      'playerHIStats' => $playerHIStats,
-      'yourTeeTime' => (string)($myPlayerData[$ggid]['dbPlayers_TeeTime'] ?? ''),
-      'yourTeeSetId' => (string)($myPlayerData[$ggid]['dbPlayers_TeeSetID'] ?? ''),
-      'yourTeeSetName' => (string)($myPlayerData[$ggid]['dbPlayers_TeeSetName'] ?? ''),
-      'scoreId' => (string)($myPlayerData[$ggid]['dbPlayers_PlayerKey'] ?? ''),
-      'ghinPostId' => (string)($myPlayerData[$ggid]['dbPlayers_GHINPostID'] ?? ''),
-
-      // FIX: use $isEnrolled (was undefined $isRegistered)
-      'isRegistered' => $isEnrolled,
-      'enrollmentStatus' => $isEnrolled ? 'Registered' : 'Not Registered',
-
-      'registrationStatus' => $registrationStatus,
-      'holes' => (string)($g['dbGames_Holes'] ?? ''),
-      'teeTimeCnt' => $teeTimeCnt,
-    ];
+    $vm[] = playerGamesBuildVmRow(
+      $g,
+      $visibility,
+      $myPlayerData,
+      $statsByGGID,
+      $todayYmd
+    );
 
     $rawVisible[] = $g;
+    
   }
 
-  $subtitle = 'Games • ' . count($vm);
+  $subtitle = $directLinkMode ? 'Linked Game • ' . count($vm) : 'Games • ' . count($vm);
   return [
     'header' => [ 'title' => 'PLAYER PORTAL', 'subtitle' => $subtitle ],
     'filters' => [ 'dateFrom' => $dateFrom, 'dateTo' => $dateTo, 'selectedAdminKeys' => $selectedAdminKeys, 'quickPreset' => $quickPreset ],
     'admins' => $admins,
     'games' => [ 'vm' => $vm, 'raw' => $rawVisible ],
+    'directLinkGGID' => $directLinkGGID,
+    'directLinkMode' => $directLinkMode,
   ];
 }

@@ -13,9 +13,14 @@ require_once MA_SERVICES . '/workflows/hydratePlayerGamesList.php';
 header('Content-Type: application/json; charset=utf-8');
 
 try {
-  $body = json_decode(file_get_contents('php://input'), true) ?: [];
-  $payload = is_array($body['payload'] ?? null) ? $body['payload'] : $body;
-  $inFilters = is_array($payload['filters'] ?? null) ? $payload['filters'] : $payload;
+$body = json_decode(file_get_contents('php://input'), true) ?: [];
+$payload = is_array($body['payload'] ?? null) ? $body['payload'] : $body;
+$inFilters = is_array($payload['filters'] ?? null) ? $payload['filters'] : $payload;
+
+$directLinkGGID = trim((string)($payload['directLinkGGID'] ?? ''));
+if ($directLinkGGID !== '' && (!ctype_digit($directLinkGGID) || (int)$directLinkGGID <= 0)) {
+  $directLinkGGID = '';
+}
 
   $ctx = ServiceUserContext::getUserContext();
   if (!$ctx || empty($ctx['ok'])) {
@@ -32,9 +37,14 @@ try {
   $_SESSION['PP_FILTER_ADMINS'] = json_encode($inFilters['selectedAdminKeys'] ?? []);
   $_SESSION['PP_FILTER_PRESET'] = trim((string)($inFilters['quickPreset'] ?? ''));
 
-  // Delegate to shared workflow (club visibility uses session club id)
-  $userClubId = strval($_SESSION['SessionClubID'] ?? '');
-  $payload = hydratePlayerGamesList($userGHIN, $inFilters, $userClubId);
+// Delegate to shared workflow (club visibility uses session club id)
+$userClubId = strval($_SESSION['SessionClubID'] ?? '');
+$payload = hydratePlayerGamesList(
+  $userGHIN,
+  $inFilters,
+  $userClubId,
+  ['directLinkGGID' => $directLinkGGID]
+);
 
   echo json_encode([
     'ok' => true,
