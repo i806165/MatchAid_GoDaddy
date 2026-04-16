@@ -28,7 +28,6 @@
     payload: null,
     currentHole: boot.currentHole || 1,
     scorerGHIN: '',
-    busy: false,
     dirty: false,
   };
 
@@ -59,8 +58,6 @@
     nextHoleBtn: document.getElementById('scoreNextHoleBtn'),
     rows: document.getElementById('scoreRowsContainer'),
     dirtyDialog: document.getElementById('scoreDirtyDialog'),
-    busyOverlay: document.getElementById('scoreBusyOverlay'),
-    busyMessage: document.getElementById('scoreBusyMessage'),
     ctx: {
       teeTime: document.getElementById('ctxTeeTime'),
       flightId: document.getElementById('ctxFlightId'),
@@ -85,7 +82,6 @@
       return;
     }
 
-    setBusy(true, 'Loading...');
     try {
       const res = await fetch(apiUrls.launch, {
         method: 'POST',
@@ -93,12 +89,16 @@
         body: JSON.stringify({ playerKey, holeNumber: state.currentHole })
       });
 
-      if (!res.ok) {
-        throw new Error(`Server error (${res.status}) while loading.`);
+      const text = await res.text();
+      let json;
+      try {
+        json = JSON.parse(text);
+      } catch (err) {
+        console.error('Non-JSON response from launch endpoint:', text);
+        throw new Error('Launch endpoint did not return JSON.');
       }
 
-      const json = await res.json();
-      if (!json.ok) {
+      if (!res.ok || !json.ok) {
         throw new Error(json.message || 'Unable to launch score entry.');
       }
 
@@ -119,8 +119,6 @@
       applyChrome();
     } catch (err) {
       setPageStatus(err.message || 'Launch failed.', 'error');
-    } finally {
-      setBusy(false);
     }
   }
 
@@ -129,14 +127,6 @@
     renderRows();
     
     el.work.classList.remove('isHidden');
-  }
-
-  function setBusy(on, message = 'Saving...') {
-    state.busy = !!on;
-    if (el.busyOverlay) {
-      el.busyOverlay.classList.toggle('is-open', state.busy);
-      if (el.busyMessage) el.busyMessage.textContent = message;
-    }
   }
 
   // ==========================================================================
@@ -164,7 +154,6 @@
   // ==========================================================================
 
   async function moveHole(direction) {
-    if (state.busy) return;
     const holes = Array.from(el.holeSelect.options).map((o) => Number(o.value));
     const idx = holes.indexOf(state.currentHole);
     if (idx < 0) return;
@@ -177,19 +166,18 @@
   }
 
   async function transitionHole(nextHole) {
-    if (nextHole === state.currentHole || state.busy) return;
+    if (nextHole === state.currentHole) return;
 
-    setBusy(true, 'Changing Holes...');
     try {
       if (state.dirty) {
         const saveResult = await saveScoresSilently(nextHole);
         if (!saveResult.ok) {
-          el.holeSelect.value = String(state.currentHole);
           if (saveResult.conflict) {
             resetToLaunch(saveResult.message || 'Another scorer is already updating this scorecard.');
             return;
           }
           setPageStatus(saveResult.message || 'Unable to save scores.', 'error');
+          el.holeSelect.value = String(state.currentHole);
           return;
         }
         patchReturnedScores(saveResult);
@@ -204,16 +192,15 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ playerKey: pKey, holeNumber: nextHole })
         });
-        if (!res.ok) throw new Error(`Server error (${res.status}) while changing holes.`);
         const json = await res.json();
-        if (!json.ok) throw new Error(json.message || 'Unable to load data for the new hole.');
-
-        state.payload = json.payload;
-        activePlayers().forEach((wrapper) => {
-          if (!wrapper.originalScoresJson) {
-            wrapper.originalScoresJson = deepClone(wrapper.scoresJson || null);
-          }
-        });
+        if (json.ok && json.payload) {
+          state.payload = json.payload;
+          activePlayers().forEach((wrapper) => {
+            if (!wrapper.originalScoresJson) {
+              wrapper.originalScoresJson = deepClone(wrapper.scoresJson || null);
+            }
+          });
+        }
       }
 
       // Persist hole to session
@@ -222,12 +209,10 @@
       state.currentHole = nextHole;
       renderHoleOptions();
       renderRows();
-      setPageStatus(`Moved to Hole ${nextHole}.`, 'success');
+      setPageStatus(`Moved to Hole ${nextHole}.`, 'info');
     } catch (err) {
       setPageStatus(err.message || 'Unable to change holes.', 'error');
       el.holeSelect.value = String(state.currentHole);
-    } finally {
-      setBusy(false);
     }
   }
 
@@ -685,7 +670,7 @@ function markDirty(playerId, rawScore, declared) {
   }
 
   async function saveScoresSilently(nextHole) {
-    if (!state.payload || !state.dirty) return { ok: true };
+    if (!state.payload) return { ok: true };
 
     if (!state.scorerGHIN) {
       return {
@@ -695,26 +680,22 @@ function markDirty(playerId, rawScore, declared) {
       };
     }
 
+    const res = await fetch(apiUrls.saveScores, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(buildSaveRequest(nextHole))
+    });
+
+    const text = await res.text();
+    let json;
     try {
-      const res = await fetch(apiUrls.saveScores, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(buildSaveRequest(nextHole))
-      });
-
-      if (!res.ok) {
-        if (res.status === 409) {
-          const json = await res.json();
-          return Object.assign({ conflict: true }, json);
-        }
-        throw new Error(`Server error (${res.status}) while saving.`);
-      }
-
-      const json = await res.json();
-      return json;
+      json = JSON.parse(text);
     } catch (err) {
-      return { ok: false, conflict: false, message: err.message };
+      console.error('Non-JSON response from saveScores endpoint:', text);
+      throw new Error('saveScores endpoint did not return JSON.');
     }
+
+    return json;
   }
 
   function openActionsMenu() {
@@ -740,10 +721,18 @@ function markDirty(playerId, rawScore, declared) {
   // 11. Chrome and Status Helpers
   // ==========================================================================
 
-  async function resetToLaunch(message) {
-    setPageStatus(message || 'Reloading due to sync issue...', 'warn');
+  function resetToLaunch(message) {
+    state.payload = null;
+    state.currentHole = 1;
+    state.scorerGHIN = '';
     state.dirty = false;
-    await launch();
+
+    toggleLaunchPanel(true);
+    if (el.rows) el.rows.innerHTML = '';
+    if (el.holeSelect) el.holeSelect.innerHTML = '';
+
+    applyChrome();
+    setPageStatus(message || 'Returned to launch.', 'warn');
   }
 
   function setPageStatus(message, level){
@@ -770,17 +759,12 @@ function markDirty(playerId, rawScore, declared) {
 
     if (chrome && typeof chrome.setActions === 'function') {
       chrome.setActions({
-        left: { show: !!state.payload && !state.busy, label: 'Actions', onClick: openActionsMenu },
+        left: { show: !!state.payload, label: 'Actions', onClick: openActionsMenu },
         right: { show: false }
       });
     }
 
     if (chrome && typeof chrome.setBottomNav === 'function') {
-      if (state.busy) {
-        chrome.setBottomNav({ visible: [], disabled: [], active: '' });
-        return;
-      }
-
       const portal = state.payload?.portal || boot.portal || boot.payload?.portal || "";
       const homeRoute = (portal === "ADMIN PORTAL") ? "admin" 
                       : (portal === "PLAYER PORTAL" ? "player" : "home");
@@ -789,8 +773,6 @@ function markDirty(playerId, rawScore, declared) {
         visible: [homeRoute, 'scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoresummary', 'scoreskins'],
         active: 'scoreentry',
         onNavigate: (id) => {
-          if (state.busy) return;
-
           if (!state.dirty) {
             if (typeof MA.routerGo === 'function') MA.routerGo(id);
             return;
@@ -807,7 +789,6 @@ function markDirty(playerId, rawScore, declared) {
 
             if (choice === 'save') {
               try {
-                setBusy(true, 'Saving Scores...');
                 const saveResult = await saveScoresSilently(state.currentHole);
                 if (!saveResult.ok) {
                   if (saveResult.conflict) {
@@ -823,8 +804,6 @@ function markDirty(playerId, rawScore, declared) {
                 if (typeof MA.routerGo === 'function') MA.routerGo(id);
               } catch (err) {
                 setPageStatus(err.message || 'Unable to save before leaving.', 'error');
-              } finally {
-                setBusy(false);
               }
             }
           });
