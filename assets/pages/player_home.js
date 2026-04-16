@@ -14,6 +14,7 @@
   const chrome = MA.chrome || {};
 
   const apiBase = routes.apiPlayerGames || '/api/player_home';
+  const apiAdminBase = (MA.paths && MA.paths.apiAdminGames) || routes.apiAdminGames || '/api/admin_games';
   const routerGo = typeof MA.routerGo === 'function' ? MA.routerGo : null;
 
   const el = {
@@ -163,12 +164,41 @@
     };
   }
 
+  function getGameAdminMeta(g){
+    const adminKey = rowText(g, ['adminGHIN','dbGames_AdminGHIN']).trim();
+    const adminName = rowText(g, ['adminName','dbGames_AdminName']).trim();
+    const adminLName = rowText(g, ['adminLName','dbGames_AdminLName']).trim();
+    const facilityId = rowText(g, ['facilityId','dbGames_FacilityID']).trim();
+    const facilityName = rowText(g, ['facilityName','dbGames_FacilityName']).trim();
+    const adminAssocId = rowText(g, ['adminAssocId','dbGames_AssocID']).trim();
+    const adminAssocName = rowText(g, ['adminAssocName','dbGames_AssocName']).trim();
+
+    const adminRow = (state.admins || []).find(a =>
+      String(a.key || a.adminKey || '').trim() === adminKey
+    );
+
+    return {
+      adminKey,
+      adminName,
+      adminLName,
+      facilityId,
+      facilityName,
+      adminAssocId,
+      adminAssocName,
+      isFavorite: !!(adminRow && adminRow.isFavorite)
+    };
+  }
+
   function actionItemsForGame(g){
     const { enrollmentStatus, registrationStatus } = inferStatuses(g);
     const isRegistered = enrollmentStatus === 'Registered';
     const regClosedish = ['Closed','Locked','Full'].includes(registrationStatus);
     const scoreId = rowText(g, ['yourPlayerKey', 'scoreId', 'playerKey', 'dbPlayers_PlayerKey']);
     const postedId = rowText(g, ['ghinPostId']);
+    const adminMeta = getGameAdminMeta(g);
+    const favoriteAdminLabel = adminMeta.adminKey
+      ? (adminMeta.isFavorite ? 'Remove Admin from Favorites' : 'Add Admin to Favorites')
+      : 'Admin Favorite Unavailable';
 
     // 1. Pre-calculate dynamic labels and states
     const regLabel = isRegistered ? 'Change your Tee Set' : 'Register for this Game';
@@ -197,6 +227,9 @@
       { separator: true }, { separator: true },
 
       // Utility Group
+      { label: 'Add Game to your Calendar', action: 'calendar', enabled: true },
+      { separator: true }, { separator: true },
+      { label: favoriteAdminLabel, action: 'toggleFavoriteAdmin', enabled: !!adminMeta.adminKey },
       { label: 'Add Game to your Calendar', action: 'calendar', enabled: true }
     ];
 
@@ -445,7 +478,7 @@
     if (!adminKey) return;
     try {
       setStatus('Updating favorites…','info');
-      const res = await postJson(`${apiBase}/toggleFavoriteAdmin.php`, { adminKey, adminName: admin.name || '' });
+const res = await postJson(`${apiAdminBase}/toggleFavoriteAdmin.php`, ...)
       if (!res || res.ok === false) throw new Error(res?.message || res?.error || 'Favorite update failed');
       const target = state.admins.find(a => String(a.key||a.adminKey||'') === adminKey);
       if (target) target.isFavorite = !target.isFavorite;
@@ -650,6 +683,18 @@
 
       return;
     }
+
+    if (action === 'toggleFavoriteAdmin') {
+      const adminMeta = getGameAdminMeta(g);
+      if (!adminMeta.adminKey) {
+        setStatus('Admin favorite unavailable for this game.','error');
+        return;
+      }
+      await toggleFavoriteAdmin(adminMeta);
+      await reloadGames();
+      return;
+    }
+
     if (action === 'calendar') {
       downloadIcsForGame(g);
       return;
