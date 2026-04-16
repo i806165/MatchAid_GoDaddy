@@ -99,35 +99,35 @@
         </div>
 
         <!-- Right: What’s inside -->
-          <aside class="card" aria-label="The MatchAid value proposition">
-            <div class="card__hdr card__hdr--compact">
-              <h2 class="card__title">The MatchAid value proposition</h2>
-            </div>
-              <div class="card__body">
-                <ul class="miniList">
-                    <li class="miniItem">
-                    <div class="miniIcon" aria-hidden="true">A</div>
-                    <div class="miniText">
-                        <strong>Built for game administrators</strong>
-                        <span>Organize golf games and engage players from inception to scoring.</span>
-                    </div>
-                    </li>
-                    <li class="miniItem">
-                    <div class="miniIcon" aria-hidden="true">P</div>
-                    <div class="miniText">
-                        <strong>Friendly to players</strong>
-                        <span>Explore available games, and enroll earlier with better visibility.</span>
-                    </div>
-                    </li>
-                    <li class="miniItem">
-                    <div class="miniIcon" aria-hidden="true">C</div>
-                    <div class="miniText">
-                        <strong>Helpful to club professional staff</strong>
-                        <span>Optimize member participation and improve tee-time utilization.</span>
-                    </div>
-                    </li>
-                </ul>
-            </div>
+        <aside class="card" aria-label="The MatchAid value proposition">
+          <div class="card__hdr card__hdr--compact">
+            <h2 class="card__title">The MatchAid value proposition</h2>
+          </div>
+          <div class="card__body">
+            <ul class="miniList">
+              <li class="miniItem">
+                <div class="miniIcon" aria-hidden="true">A</div>
+                <div class="miniText">
+                  <strong>Built for game administrators</strong>
+                  <span>Organize golf games and engage players from inception to scoring.</span>
+                </div>
+              </li>
+              <li class="miniItem">
+                <div class="miniIcon" aria-hidden="true">P</div>
+                <div class="miniText">
+                  <strong>Friendly to players</strong>
+                  <span>Explore available games, and enroll earlier with better visibility.</span>
+                </div>
+              </li>
+              <li class="miniItem">
+                <div class="miniIcon" aria-hidden="true">C</div>
+                <div class="miniText">
+                  <strong>Helpful to club professional staff</strong>
+                  <span>Optimize member participation and improve tee-time utilization.</span>
+                </div>
+              </li>
+            </ul>
+          </div>
         </aside>
       </section>
     </main>
@@ -139,49 +139,15 @@
       </div>
     </footer>
   </div>
-<?php if (!empty($isLoggedIn)): ?>
-  <div class="acctModal" id="acctModal" hidden>
-    <div class="acctModal__backdrop" id="acctModalBackdrop"></div>
-    <div class="acctModal__panel" role="dialog" aria-modal="true" aria-labelledby="acctModalTitle">
-      <div class="acctModal__title" id="acctModalTitle">Log out of MatchAid?</div>
-      <div class="acctModal__actions">
-        <button type="button" class="btn btn--ghost" id="acctCancelBtn">Cancel</button>
-        <button type="button" class="btn btn--primary" id="acctLogoutBtn">Log Out</button>
-      </div>
-    </div>
-  </div>
 
+<?php if (!empty($isLoggedIn)): ?>
+  <script src="/assets/modules/actions_menu.js?v=1"></script>
   <script>
   (function () {
     const acctBtn = document.getElementById('acctBtn');
-    const acctModal = document.getElementById('acctModal');
-    const acctModalBackdrop = document.getElementById('acctModalBackdrop');
-    const acctCancelBtn = document.getElementById('acctCancelBtn');
-    const acctLogoutBtn = document.getElementById('acctLogoutBtn');
+    if (!acctBtn || !window.MA || !MA.ui || typeof MA.ui.openActionsMenu !== 'function') return;
 
-    if (!acctBtn || !acctModal || !acctLogoutBtn) return;
-
-    function openModal() {
-      acctModal.hidden = false;
-      document.body.classList.add('acctModalOpen');
-    }
-
-    function closeModal() {
-      acctModal.hidden = true;
-      document.body.classList.remove('acctModalOpen');
-    }
-
-    acctBtn.addEventListener('click', openModal);
-    if (acctCancelBtn) acctCancelBtn.addEventListener('click', closeModal);
-    if (acctModalBackdrop) acctModalBackdrop.addEventListener('click', closeModal);
-
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && !acctModal.hidden) {
-        closeModal();
-      }
-    });
-
-    acctLogoutBtn.addEventListener('click', async function () {
+    async function doLogout() {
       try {
         const res = await fetch('/api/auth/logout.php', {
           method: 'POST',
@@ -197,6 +163,23 @@
         console.error('Logout failed', err);
       }
       window.location.assign('/');
+    }
+
+    acctBtn.addEventListener('click', function () {
+      MA.ui.openActionsMenu('Account', [
+        {
+          label: 'User Settings',
+          action: function () {
+            window.location.assign('/app/user_settings/usersettings.php');
+          }
+        },
+        { separator: true },
+        {
+          label: 'Log Out',
+          action: doLogout,
+          danger: true
+        }
+      ]);
     });
   })();
   </script>

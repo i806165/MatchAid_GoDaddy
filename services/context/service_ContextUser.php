@@ -206,4 +206,125 @@ public static function retrieveGHINUser(string $ghinId): ?array {
         $decoded =json_decode($trim, true);
         return (json_last_error()===JSON_ERROR_NONE) ? $decoded : $val;
     }
+
+    public const USER_SETTINGS_CARRIERS = [
+    "AT&T"    => "@txt.att.net",
+    "Verizon" => "@vtext.com",
+    "T-Mobile"=> "@tmomail.net",
+];
+
+public static function buildUserSettingsPayload(string $ghinId): array {
+    $row = self::retrieveGHINUser($ghinId);
+    if (!$row) {
+        throw new RuntimeException("User record not found.");
+    }
+
+    $profile = self::decodeJsonIfNeeded($row["dbUser_Profile"] ?? null);
+    $g0 = self::extractPrimaryGolfer($profile);
+
+    $ghinFName = trim((string)($g0["first_name"] ?? $g0["firstName"] ?? ""));
+    $ghinLName = trim((string)($g0["last_name"] ?? $g0["lastName"] ?? ""));
+    $ghinName  = trim((string)($row["dbUser_Name"] ?? ""));
+
+    return [
+        "ghin" => (string)($row["dbUser_GHIN"] ?? $ghinId),
+        "fields" => [
+            "dbUser_FName" => trim((string)($row["dbUser_FName"] ?? "")) ?: $ghinFName,
+            "dbUser_LName" => trim((string)($row["dbUser_LName"] ?? "")) ?: $ghinLName,
+            "dbUser_EMail" => trim((string)($row["dbUser_EMail"] ?? "")),
+            "dbUser_MobilePhone" => trim((string)($row["dbUser_MobilePhone"] ?? "")),
+            "dbUser_MobileCarrier" => trim((string)($row["dbUser_MobileCarrier"] ?? "")),
+        ],
+        "sourceProfile" => [
+            "ghinName" => $ghinName,
+            "ghinFName" => $ghinFName,
+            "ghinLName" => $ghinLName,
+        ],
+        "carrierOptions" => array_map(
+            static fn(string $gateway, string $name): array => [
+                "value" => $name,
+                "label" => $name,
+                "gateway" => $gateway,
+            ],
+            self::USER_SETTINGS_CARRIERS,
+            array_keys(self::USER_SETTINGS_CARRIERS)
+        ),
+    ];
+}
+
+public static function saveUserSettings(string $ghinId, array $patch): array {
+    $ghinId = trim($ghinId);
+    if ($ghinId === "") {
+        throw new RuntimeException("Missing GHIN.");
+    }
+
+    $existing = self::retrieveGHINUser($ghinId);
+    if (!$existing) {
+        throw new RuntimeException("User record not found.");
+    }
+
+    $fName = trim((string)($patch["dbUser_FName"] ?? ""));
+    $lName = trim((string)($patch["dbUser_LName"] ?? ""));
+    $email = trim((string)($patch["dbUser_EMail"] ?? ""));
+    $phone = self::normalizePhone((string)($patch["dbUser_MobilePhone"] ?? ""));
+    $carrier = trim((string)($patch["dbUser_MobileCarrier"] ?? ""));
+
+    if ($fName === "") throw new RuntimeException("First name is required.");
+    if ($lName === "") throw new RuntimeException("Last name is required.");
+
+    if ($email !== "" && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        throw new RuntimeException("Email address is invalid.");
+    }
+
+    if ($phone !== "" && strlen($phone) !== 10) {
+        throw new RuntimeException("Mobile phone must contain 10 digits.");
+    }
+
+    if ($phone !== "" && $carrier === "") {
+        throw new RuntimeException("Select a mobile carrier.");
+    }
+
+    if ($carrier !== "" && !array_key_exists($carrier, self::USER_SETTINGS_CARRIERS)) {
+        throw new RuntimeException("Invalid mobile carrier.");
+    }
+
+    $pdo = Db::pdo();
+    $sql = "UPDATE db_Users
+            SET dbUser_FName = :fname,
+                dbUser_LName = :lname,
+                dbUser_EMail = :email,
+                dbUser_MobilePhone = :phone,
+                dbUser_MobileCarrier = :carrier
+            WHERE dbUser_GHIN = :ghin
+            LIMIT 1";
+    $st = $pdo->prepare($sql);
+    $st->execute([
+        ":ghin" => $ghinId,
+        ":fname" => $fName,
+        ":lname" => $lName,
+        ":email" => $email,
+        ":phone" => $phone,
+        ":carrier" => $carrier,
+    ]);
+
+    return self::buildUserSettingsPayload($ghinId);
+}
+
+private static function extractPrimaryGolfer($profile): array {
+    if (!is_array($profile)) return [];
+
+    if (isset($profile["profileJson"]["golfers"][0]) && is_array($profile["profileJson"]["golfers"][0])) {
+        return $profile["profileJson"]["golfers"][0];
+    }
+
+    if (isset($profile["golfers"][0]) && is_array($profile["golfers"][0])) {
+        return $profile["golfers"][0];
+    }
+
+    return $profile;
+}
+
+private static function normalizePhone(string $raw): string {
+    return preg_replace('/\D+/', '', trim($raw)) ?? "";
+}
 }

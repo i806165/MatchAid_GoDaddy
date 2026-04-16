@@ -1,0 +1,17 @@
+/* /assets/css/user_settings.css */
+
+.usNote {
+  margin-bottom: 14px;
+  font-size: 0.95rem;
+  color: var(--mutedText);
+}
+
+.usHint {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: var(--mutedText);
+}
+
+#usMobileCarrier {
+  appearance: auto;
+}
