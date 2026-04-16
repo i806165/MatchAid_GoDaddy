@@ -11,12 +11,6 @@ require_once MA_SERVICES . '/context/service_ContextUser.php';
 require_once MA_SERVICES . '/workflows/hydrateAdminGamesList.php';
 require_once MA_API_LIB . '/Logger.php';
 
-Logger::info("GAMESLIST_ENTRY", [
-  "uri" => $_SERVER["REQUEST_URI"] ?? "",
-  "ghin" => $_SESSION["SessionGHINLogonID"] ?? "",
-  "loginTime" => $_SESSION["SessionLoginTime"] ?? "",
-]);
-
 $config = ma_config();
 
 // Portal context (required convention)
