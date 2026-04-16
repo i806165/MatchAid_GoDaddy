@@ -53,6 +53,22 @@ define('MA_TESTING_MODE', true);
 ini_set("log_errors", "1");
 ini_set("error_log", MA_ROOT . "/logs/matchaid.log");
 
+$secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+
+if (session_status() !== PHP_SESSION_ACTIVE) {
+  ini_set('session.gc_maxlifetime', '21600'); // 6 hours
+
+  session_set_cookie_params([
+    'lifetime' => 0,
+    'path'     => '/',
+    'secure'   => $secure,
+    'httponly' => true,
+    'samesite' => 'Lax',
+  ]);
+
+  session_start();
+}
+
 
 // Load config once (your config is /public_html/api/config.php)
 $MA_CONFIG = require MA_API . '/config.php';

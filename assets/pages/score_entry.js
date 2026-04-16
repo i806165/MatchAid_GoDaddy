@@ -72,6 +72,43 @@
     }
   };
 
+    function ensureSavingOverlay() {
+    if (document.getElementById('scoreBusyOverlay')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'scoreBusyOverlay';
+    overlay.className = 'maModalOverlay';
+
+    const modal = document.createElement('section');
+    modal.className = 'maModal';
+    modal.style.maxWidth = '320px';
+
+    modal.innerHTML = `
+      <header class="maModal__hdr">
+        <div class="maModal__titles">
+          <div class="maModal__title">Please wait</div>
+          <div class="maModal__subtitle" id="scoreBusyMessage">Saving...</div>
+        </div>
+      </header>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+  }
+
+  function showSavingOverlay(message) {
+    ensureSavingOverlay();
+    const overlay = document.getElementById('scoreBusyOverlay');
+    const msg = document.getElementById('scoreBusyMessage');
+    if (msg) msg.textContent = message || 'Saving...';
+    if (overlay) overlay.classList.add('is-open');
+  }
+
+  function hideSavingOverlay() {
+    const overlay = document.getElementById('scoreBusyOverlay');
+    if (overlay) overlay.classList.remove('is-open');
+  }
+
   // ==========================================================================
   // 3. Launch Flow
   // ==========================================================================
@@ -169,6 +206,8 @@
     if (nextHole === state.currentHole) return;
 
     try {
+      showSavingOverlay(`Saving Hole ${state.currentHole} scores...`);
+
       if (state.dirty) {
         const saveResult = await saveScoresSilently(nextHole);
         if (!saveResult.ok) {
@@ -203,7 +242,6 @@
         }
       }
 
-      // Persist hole to session
       await MA.postJson(apiUrls.setHole, { hole: nextHole });
 
       state.currentHole = nextHole;
@@ -213,6 +251,8 @@
     } catch (err) {
       setPageStatus(err.message || 'Unable to change holes.', 'error');
       el.holeSelect.value = String(state.currentHole);
+    } finally {
+      hideSavingOverlay();
     }
   }
 

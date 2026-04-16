@@ -2,10 +2,6 @@
 // /public_html/app/admin_games/gameslist.php
 declare(strict_types=1);
 
-if (session_status() !== PHP_SESSION_ACTIVE) {
-  session_start();
-}
-
 require_once __DIR__ . '/../../bootstrap.php';
 require_once MA_SERVICES . '/context/service_ContextUser.php';
 require_once MA_SERVICES . '/workflows/hydrateAdminGamesList.php';
