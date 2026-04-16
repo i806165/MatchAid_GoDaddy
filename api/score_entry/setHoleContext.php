@@ -5,6 +5,6 @@ require_once __DIR__ . "/../../bootstrap.php";
 $input = ma_json_in();
 $hole = (int)($input['hole'] ?? 1);
 
-//if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+
 $_SESSION['SessionCurrentHole'] = $hole;
 ma_respond(200, ['ok' => true]);

@@ -2,6 +2,7 @@
 declare(strict_types=1);
 // /public_html/services/scoring/service_ScoreEntry.php
 
+require_once __DIR__ . "/../../bootstrap.php";
 require_once __DIR__ . '/service_ScoreCard.php';
 require_once MA_SVC_DB . '/service_dbPlayers.php';
 require_once __DIR__ . '/service_ScoreRotation.php';
@@ -26,37 +27,30 @@ final class ServiceScoreEntry
     // ==========================================================================
 
     public static function setScorerContext(string $ghin): void {
-        if (session_status() !== PHP_SESSION_ACTIVE) session_start();
         $_SESSION['SessionScorerGHIN'] = trim($ghin);
     }
 
     public static function setScorecardKey(string $key): void {
-        if (session_status() !== PHP_SESSION_ACTIVE) session_start();
         $_SESSION['SessionScorecardKey'] = strtoupper(trim($key));
     }
 
     public static function getScorecardKey(): ?string {
-        if (session_status() !== PHP_SESSION_ACTIVE) session_start();
         return $_SESSION['SessionScorecardKey'] ?? null;
     }
 
     public static function setScoringPodGGID(int $ggid): void {
-        if (session_status() !== PHP_SESSION_ACTIVE) session_start();
         $_SESSION['ScoringPodGGID'] = $ggid;
     }
 
     public static function getScoringPodGGID(): ?int {
-        if (session_status() !== PHP_SESSION_ACTIVE) session_start();
         return isset($_SESSION['ScoringPodGGID']) ? (int)$_SESSION['ScoringPodGGID'] : null;
     }
 
     public static function clearScoringSession(): void {
-        if (session_status() !== PHP_SESSION_ACTIVE) session_start();
         unset($_SESSION['SessionScorerGHIN'], $_SESSION['SessionScorecardKey'], $_SESSION['SessionCurrentHole'], $_SESSION['ScoringPodGGID']);
     }
 
     public static function getEffectivePlayerGHIN(): ?string {
-        if (session_status() !== PHP_SESSION_ACTIVE) session_start();
         $ghin = $_SESSION['SessionScorerGHIN'] ?? $_SESSION['SessionGHINLogonID'] ?? null;
         return ($ghin !== null && trim((string)$ghin) !== "") ? trim((string)$ghin) : null;
     }

@@ -106,7 +106,7 @@ function initSharedScoreCard(string $ggid, string $mode = "game", string $scope 
 }
 
 if (php_sapi_name() !== "cli" && basename($_SERVER["SCRIPT_NAME"] ?? "") === "initSharedScoreCard.php") {
-  if (session_status() !== PHP_SESSION_ACTIVE) session_start();
+  
   header("Content-Type: application/json; charset=utf-8");
 
   try {

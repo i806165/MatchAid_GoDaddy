@@ -2,8 +2,6 @@
 declare(strict_types=1);
 // /public_html/app/score_home/scorehome.php
 
-if (session_status() !== PHP_SESSION_ACTIVE) session_start();
-
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_SERVICES . "/scoring/service_ScoreEntry.php";

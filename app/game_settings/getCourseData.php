@@ -2,8 +2,6 @@
 // /public_html/api/GHIN/getCourseData.php
 declare(strict_types=1);
 
-if (session_status() !== PHP_SESSION_ACTIVE) session_start();
-
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_SERVICES . "/GHIN/GHIN_API_Courses.php";
 require_once MA_API_LIB . "/Logger.php";

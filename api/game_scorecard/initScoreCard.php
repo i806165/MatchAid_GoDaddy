@@ -94,7 +94,6 @@ function initScoreCard(string $ggid, array $ctx = []): array {
 
 // If invoked directly as endpoint, emit JSON
 if (php_sapi_name() !== "cli" && basename($_SERVER["SCRIPT_NAME"] ?? "") === "initScoreCard.php") {
-  if (session_status() !== PHP_SESSION_ACTIVE) session_start();
   header("Content-Type: application/json; charset=utf-8");
 
   try {
