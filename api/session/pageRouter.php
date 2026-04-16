@@ -72,6 +72,7 @@ $ROUTES = [
     "import"   => "/app/game_import/gameimport.php",
 
     "favorites"   => "/app/favorite_players/favoriteplayers.php",
+    "usersettings"   => "/app/user_settings/usersettings.php",
 ];
 
 
