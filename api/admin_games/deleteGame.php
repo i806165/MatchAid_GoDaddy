@@ -4,7 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../bootstrap.php';
 require_once MA_SVC_DB . '/service_dbGames.php';
 
-session_start();
+
 ma_api_require_auth();
 
 $input = ma_json_in();

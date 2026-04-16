@@ -5,8 +5,6 @@ declare(strict_types=1);
 // Pass-B: Calculate Playing Handicap (PH) and Shots Off (SO) for all players.
 // Requires grouping context (Pairings/Flights).
 
-if (session_status() !== PHP_SESSION_ACTIVE) session_start();
-
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_SERVICES . "/workflows/WorkFlow_Handicaps.php";

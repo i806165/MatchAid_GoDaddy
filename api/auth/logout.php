@@ -1,7 +1,9 @@
 <?php
 declare(strict_types=1);
 // /public_html/api/auth/logout.php
-session_start();
+
+require_once __DIR__ . "/../../bootstrap.php";
+////session_start;
 header("Content-Type: application/json");
 
 $_SESSION = [];

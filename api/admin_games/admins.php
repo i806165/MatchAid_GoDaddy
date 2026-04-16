@@ -2,7 +2,7 @@
 // /public_html/api/admin_games/admins.php
 declare(strict_types=1);
 
-session_start();
+
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Db.php";
 require_once MA_SERVICES . "/database/service_dbFavAdmins.php";

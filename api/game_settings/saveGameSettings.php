@@ -6,8 +6,6 @@ require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_SERVICES . "/database/service_dbGames.php";
 require_once MA_API_LIB . "/Logger.php";
 
-if (session_status() !== PHP_SESSION_ACTIVE) session_start();
-
 // 1) Auth check
 $auth = ma_api_require_auth();
 

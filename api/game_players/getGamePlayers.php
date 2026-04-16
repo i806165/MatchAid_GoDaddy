@@ -3,7 +3,7 @@ declare(strict_types=1);
 // /api/game_players/getGamePlayers.php
 
 require_once __DIR__ . "/../../bootstrap.php";
-session_start();
+
 header("Content-Type: application/json; charset=utf-8");
 
 require_once MA_API_LIB . "/Logger.php";

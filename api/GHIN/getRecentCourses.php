@@ -3,8 +3,6 @@ declare(strict_types=1);
 
 // /public_html/api/GHIN/getRecentCourses.php
 
-if (session_status() !== PHP_SESSION_ACTIVE) session_start();
-
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_SERVICES . "/GHIN/GHIN_API_Users.php";
 

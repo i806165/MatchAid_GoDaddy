@@ -5,7 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_SERVICES . "/workflows/hydrateAdminGamesList.php";
 
-session_start();
+
 
 // FAST session guard (no DB hit)
 $userGHIN = trim((string)($_SESSION["SessionGHINLogonID"] ?? ""));

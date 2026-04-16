@@ -5,7 +5,6 @@ declare(strict_types=1);
 require_once __DIR__ . '/bootstrap.php';
 require_once MA_SERVICES . '/context/service_ContextUser.php';
 
-session_start();
 
 // Handle portal selection logic
 if (isset($_GET['portal'])) {
