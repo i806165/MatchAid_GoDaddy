@@ -378,7 +378,10 @@
       { label: "All Available Games", action: () => applyQuickPreset("OPEN") },
       { separator: true },
       { separator: true },
-      { label: "Advanced List Filters…", action: () => { if (typeof openFiltersFn === "function") openFiltersFn(); } }
+      { label: "Advanced List Filters…", action: () => { if (typeof openFiltersFn === "function") openFiltersFn(); } },
+      { separator: true },
+      { separator: true },
+      { label: "User Settings", action: "usersettings" }
     ];
     MA.ui.openActionsMenu("Actions", items);
   }
