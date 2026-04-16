@@ -12,12 +12,6 @@ require_once MA_SERVICES . '/context/service_ContextUser.php';
 require_once MA_API_LIB . '/Logger.php';
 require_once MA_SERVICES . '/workflows/hydratePlayerGamesList.php';
 
-Logger::info('PLAYERGAMES_ENTRY', [
-  'uri' => $_SERVER['REQUEST_URI'] ?? '',
-  'ghin' => $_SESSION['SessionGHINLogonID'] ?? '',
-  'loginTime' => $_SESSION['SessionLoginTime'] ?? '',
-]);
-
 $_SESSION["SessionPortal"] = "PLAYER PORTAL";
 
 $context = ServiceUserContext::getUserContext();
