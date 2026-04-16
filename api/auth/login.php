@@ -1,5 +1,4 @@
 <?php
-
 declare(strict_types=1);
 
 // /public_html/api/auth/login.php
@@ -8,22 +7,11 @@ ini_set('display_errors', '0');
 ini_set('display_startup_errors', '0');
 error_reporting(E_ALL);
 
-$secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
-session_set_cookie_params([
-  'lifetime' => 0,
-  'path'     => '/',
-  'secure'   => $secure,
-  'httponly' => true,
-  'samesite' => 'Lax',
-]);
-
-session_start();
+require_once __DIR__ . "/../../bootstrap.php";
 header("Content-Type: application/json");
 
-require_once __DIR__ . "/../../bootstrap.php";
 $config = ma_config();
 require_once MA_SERVICES . "/context/service_Login.php"; // New service
-
 
 function json_in(): array {
   $raw = file_get_contents("php://input");
