@@ -32,21 +32,30 @@
         </div>
       </div>
 
-      <div class="maFieldRow">
+        <div class="maFieldRow">
         <div class="maField">
-          <label class="maLabel" for="usMobilePhone">Mobile Phone</label>
-          <input id="usMobilePhone" class="maTextInput" type="tel" maxlength="14" autocomplete="tel" placeholder="555-555-5555" />
+            <label class="maLabel" for="usMobilePhone">Mobile Phone</label>
+            <input id="usMobilePhone" class="maTextInput" type="tel" maxlength="14" autocomplete="tel" placeholder="555-555-5555" />
         </div>
 
         <div class="maField">
-          <label class="maLabel" for="usMobileCarrier">Mobile Carrier</label>
-          <select id="usMobileCarrier" class="maTextInput">
+            <label class="maLabel" for="usMobileCarrier">Mobile Carrier</label>
+            <select id="usMobileCarrier" class="maTextInput">
             <option value="">Select carrier</option>
-          </select>
+            </select>
         </div>
-      </div>
+        </div>
 
-      <div class="usHint" id="usSmsHint"></div>
+        <div class="maFieldRow">
+        <div class="maField">
+            <label class="maLabel" for="usContactMethod">Preferred Communications Method</label>
+            <select id="usContactMethod" class="maTextInput">
+            <option value="">Select method</option>
+            </select>
+        </div>
+        </div>
+
+        <div class="usHint" id="usSmsHint"></div>
     </div>
   </section>
 

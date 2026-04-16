@@ -228,30 +228,45 @@ public static function buildUserSettingsPayload(string $ghinId): array {
     $ghinPhone = self::normalizePhone((string)($g0["phone_number"] ?? $g0["phone"] ?? $g0["mobile_phone"] ?? ""));
     $ghinName  = trim((string)($row["dbUser_Name"] ?? ""));
 
-    return [
-        "ghin" => (string)($row["dbUser_GHIN"] ?? $ghinId),
-        "fields" => [
-            "dbUser_FName" => trim((string)($row["dbUser_FName"] ?? "")) ?: $ghinFName,
-            "dbUser_LName" => trim((string)($row["dbUser_LName"] ?? "")) ?: $ghinLName,
-            "dbUser_EMail" => trim((string)($row["dbUser_EMail"] ?? "")) ?: $ghinEmail,
-            "dbUser_MobilePhone" => trim((string)($row["dbUser_MobilePhone"] ?? "")) ?: $ghinPhone,
-            "dbUser_MobileCarrier" => trim((string)($row["dbUser_MobileCarrier"] ?? "")),
+$effectiveEmail = trim((string)($row["dbUser_EMail"] ?? "")) ?: $ghinEmail;
+$effectivePhone = trim((string)($row["dbUser_MobilePhone"] ?? "")) ?: $ghinPhone;
+$effectiveCarrier = trim((string)($row["dbUser_MobileCarrier"] ?? ""));
+$storedMethod = trim((string)($row["dbUser_ContactMethod"] ?? ""));
+
+$effectiveMethod = $storedMethod;
+if ($effectiveMethod === "") {
+    $effectiveMethod = ($effectivePhone !== "" && $effectiveCarrier !== "") ? "SMS" : "Email";
+}
+
+return [
+    "ghin" => (string)($row["dbUser_GHIN"] ?? $ghinId),
+    "fields" => [
+        "dbUser_FName" => trim((string)($row["dbUser_FName"] ?? "")) ?: $ghinFName,
+        "dbUser_LName" => trim((string)($row["dbUser_LName"] ?? "")) ?: $ghinLName,
+        "dbUser_EMail" => $effectiveEmail,
+        "dbUser_MobilePhone" => $effectivePhone,
+        "dbUser_MobileCarrier" => $effectiveCarrier,
+        "dbUser_ContactMethod" => $effectiveMethod,
+    ],
+    "sourceProfile" => [
+        "ghinName" => $ghinName,
+        "ghinFName" => $ghinFName,
+        "ghinLName" => $ghinLName,
+    ],
+    "carrierOptions" => array_map(
+        static fn(string $gateway, string $name): array => [
+            "value" => $name,
+            "label" => $name,
+            "gateway" => $gateway,
         ],
-        "sourceProfile" => [
-            "ghinName" => $ghinName,
-            "ghinFName" => $ghinFName,
-            "ghinLName" => $ghinLName,
-        ],
-        "carrierOptions" => array_map(
-            static fn(string $gateway, string $name): array => [
-                "value" => $name,
-                "label" => $name,
-                "gateway" => $gateway,
-            ],
-            self::USER_SETTINGS_CARRIERS,
-            array_keys(self::USER_SETTINGS_CARRIERS)
-        ),
-    ];
+        self::USER_SETTINGS_CARRIERS,
+        array_keys(self::USER_SETTINGS_CARRIERS)
+    ),
+    "contactMethodOptions" => [
+        [ "value" => "Email", "label" => "Email" ],
+        [ "value" => "SMS",   "label" => "SMS" ],
+    ],
+];
 }
 
 public static function saveUserSettings(string $ghinId, array $patch): array {
@@ -270,6 +285,7 @@ public static function saveUserSettings(string $ghinId, array $patch): array {
     $email = trim((string)($patch["dbUser_EMail"] ?? ""));
     $phone = self::normalizePhone((string)($patch["dbUser_MobilePhone"] ?? ""));
     $carrier = trim((string)($patch["dbUser_MobileCarrier"] ?? ""));
+    $contactMethod = trim((string)($patch["dbUser_ContactMethod"] ?? ""));
 
     if ($fName === "") throw new RuntimeException("First name is required.");
     if ($lName === "") throw new RuntimeException("Last name is required.");
@@ -290,13 +306,31 @@ public static function saveUserSettings(string $ghinId, array $patch): array {
         throw new RuntimeException("Invalid mobile carrier.");
     }
 
+    if ($contactMethod !== "Email" && $contactMethod !== "SMS") {
+        throw new RuntimeException("Select a preferred contact method.");
+    }
+
+    if ($contactMethod === "Email" && $email === "") {
+        throw new RuntimeException("Email is required when contact method is Email.");
+    }
+
+    if ($contactMethod === "SMS") {
+        if ($phone === "") {
+            throw new RuntimeException("Mobile phone is required when contact method is SMS.");
+        }
+        if ($carrier === "") {
+            throw new RuntimeException("Mobile carrier is required when contact method is SMS.");
+        }
+    }
+
     $pdo = Db::pdo();
     $sql = "UPDATE db_Users
             SET dbUser_FName = :fname,
                 dbUser_LName = :lname,
                 dbUser_EMail = :email,
                 dbUser_MobilePhone = :phone,
-                dbUser_MobileCarrier = :carrier
+                dbUser_MobileCarrier = :carrier,
+                dbUser_ContactMethod = :contactMethod
             WHERE dbUser_GHIN = :ghin
             LIMIT 1";
     $st = $pdo->prepare($sql);
@@ -307,6 +341,7 @@ public static function saveUserSettings(string $ghinId, array $patch): array {
         ":email" => $email,
         ":phone" => $phone,
         ":carrier" => $carrier,
+        ":contactMethod" => $contactMethod,
     ]);
 
     return self::buildUserSettingsPayload($ghinId);

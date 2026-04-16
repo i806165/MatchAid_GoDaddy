@@ -25,27 +25,30 @@
         el.textContent = msg || "";
       };
 
-  const el = {
+    const el = {
     fName: document.getElementById("usFName"),
     lName: document.getElementById("usLName"),
     email: document.getElementById("usEMail"),
     mobilePhone: document.getElementById("usMobilePhone"),
     mobileCarrier: document.getElementById("usMobileCarrier"),
+    contactMethod: document.getElementById("usContactMethod"),
     smsHint: document.getElementById("usSmsHint"),
-  };
+    };
 
   const state = {
-    fields: {
-      dbUser_FName: "",
-      dbUser_LName: "",
-      dbUser_EMail: "",
-      dbUser_MobilePhone: "",
-      dbUser_MobileCarrier: "",
-    },
-    carrierOptions: [],
-    sourceProfile: {},
-    busy: false,
-    dirty: false,
+        fields: {
+        dbUser_FName: "",
+        dbUser_LName: "",
+        dbUser_EMail: "",
+        dbUser_MobilePhone: "",
+        dbUser_MobileCarrier: "",
+        dbUser_ContactMethod: "",
+        },
+        carrierOptions: [],
+        contactMethodOptions: [],
+        sourceProfile: {},
+        busy: false,
+        dirty: false,
   };
 
   function applyChrome() {
@@ -127,6 +130,17 @@
     });
   }
 
+  function populateContactMethodOptions() {
+    const opts = Array.isArray(state.contactMethodOptions) ? state.contactMethodOptions : [];
+    el.contactMethod.innerHTML = `<option value="">Select method</option>`;
+    opts.forEach(opt => {
+        const o = document.createElement("option");
+        o.value = String(opt.value || "");
+        o.textContent = String(opt.label || opt.value || "");
+        el.contactMethod.appendChild(o);
+    });
+    }
+
   function renderSmsHint() {
     const carrier = String(el.mobileCarrier.value || "");
     const phone = normalizePhoneForStore(el.mobilePhone.value);
@@ -138,29 +152,35 @@
     }
   }
 
-  function render() {
-    el.fName.value = state.fields.dbUser_FName || "";
-    el.lName.value = state.fields.dbUser_LName || "";
-    el.email.value = state.fields.dbUser_EMail || "";
-    el.mobilePhone.value = formatPhoneForInput(state.fields.dbUser_MobilePhone || "");
-    populateCarrierOptions();
-    el.mobileCarrier.value = state.fields.dbUser_MobileCarrier || "";
-    renderSmsHint();
-  }
+    function render() {
+        el.fName.value = state.fields.dbUser_FName || "";
+        el.lName.value = state.fields.dbUser_LName || "";
+        el.email.value = state.fields.dbUser_EMail || "";
+        el.mobilePhone.value = formatPhoneForInput(state.fields.dbUser_MobilePhone || "");
+
+        populateCarrierOptions();
+        el.mobileCarrier.value = state.fields.dbUser_MobileCarrier || "";
+
+        populateContactMethodOptions();
+        el.contactMethod.value = state.fields.dbUser_ContactMethod || "";
+
+        renderSmsHint();
+    }
 
   function wireInputs() {
     const markDirty = () => {
-      state.fields.dbUser_FName = String(el.fName.value || "").trim();
-      state.fields.dbUser_LName = String(el.lName.value || "").trim();
-      state.fields.dbUser_EMail = String(el.email.value || "").trim();
-      state.fields.dbUser_MobilePhone = normalizePhoneForStore(el.mobilePhone.value || "");
-      state.fields.dbUser_MobileCarrier = String(el.mobileCarrier.value || "").trim();
-      renderSmsHint();
-      setDirty(true);
+        state.fields.dbUser_FName = String(el.fName.value || "").trim();
+        state.fields.dbUser_LName = String(el.lName.value || "").trim();
+        state.fields.dbUser_EMail = String(el.email.value || "").trim();
+        state.fields.dbUser_MobilePhone = normalizePhoneForStore(el.mobilePhone.value || "");
+        state.fields.dbUser_MobileCarrier = String(el.mobileCarrier.value || "").trim();
+        state.fields.dbUser_ContactMethod = String(el.contactMethod.value || "").trim();
+        renderSmsHint();
+        setDirty(true);
     };
 
-    [el.fName, el.lName, el.email, el.mobilePhone, el.mobileCarrier].forEach(node => {
-      if (!node) return;
+    [el.fName, el.lName, el.email, el.mobilePhone, el.mobileCarrier, el.contactMethod].forEach(node => { 
+        if (!node) return;
       node.addEventListener("input", markDirty);
       node.addEventListener("change", markDirty);
     });
@@ -180,9 +200,10 @@
       if (!res || !res.ok) throw new Error(res?.message || "Could not load user settings.");
 
       const payload = res.payload || {};
-      state.fields = Object.assign({}, state.fields, payload.fields || {});
-      state.carrierOptions = Array.isArray(payload.carrierOptions) ? payload.carrierOptions : [];
-      state.sourceProfile = payload.sourceProfile || {};
+        state.fields = Object.assign({}, state.fields, payload.fields || {});
+        state.carrierOptions = Array.isArray(payload.carrierOptions) ? payload.carrierOptions : [];
+        state.contactMethodOptions = Array.isArray(payload.contactMethodOptions) ? payload.contactMethodOptions : [];
+        state.sourceProfile = payload.sourceProfile || {};
 
       render();
       setDirty(false);
@@ -195,15 +216,16 @@
     }
   }
 
-  function buildPatchFromUI() {
-    return {
-      dbUser_FName: String(el.fName.value || "").trim(),
-      dbUser_LName: String(el.lName.value || "").trim(),
-      dbUser_EMail: String(el.email.value || "").trim(),
-      dbUser_MobilePhone: normalizePhoneForStore(el.mobilePhone.value || ""),
-      dbUser_MobileCarrier: String(el.mobileCarrier.value || "").trim(),
-    };
-  }
+    function buildPatchFromUI() {
+        return {
+            dbUser_FName: String(el.fName.value || "").trim(),
+            dbUser_LName: String(el.lName.value || "").trim(),
+            dbUser_EMail: String(el.email.value || "").trim(),
+            dbUser_MobilePhone: normalizePhoneForStore(el.mobilePhone.value || ""),
+            dbUser_MobileCarrier: String(el.mobileCarrier.value || "").trim(),
+            dbUser_ContactMethod: String(el.contactMethod.value || "").trim(),
+        };
+    }
 
   async function doSave() {
     if (state.busy) return;
@@ -212,8 +234,19 @@
 
     if (!patch.dbUser_FName) return setStatus("First name is required.", "error");
     if (!patch.dbUser_LName) return setStatus("Last name is required.", "error");
+    if (!patch.dbUser_ContactMethod) return setStatus("Select a preferred contact method.", "error");
+
     if (patch.dbUser_MobilePhone && !patch.dbUser_MobileCarrier) {
-      return setStatus("Select a mobile carrier.", "error");
+    return setStatus("Select a mobile carrier.", "error");
+    }
+
+    if (patch.dbUser_ContactMethod === "Email" && !patch.dbUser_EMail) {
+    return setStatus("Email is required when contact method is Email.", "error");
+    }
+
+    if (patch.dbUser_ContactMethod === "SMS") {
+    if (!patch.dbUser_MobilePhone) return setStatus("Mobile phone is required when contact method is SMS.", "error");
+    if (!patch.dbUser_MobileCarrier) return setStatus("Mobile carrier is required when contact method is SMS.", "error");
     }
 
     setBusy(true);
@@ -222,8 +255,9 @@
       if (!res || !res.ok) throw new Error(res?.message || "Save failed.");
 
       const payload = res.payload || {};
-      state.fields = Object.assign({}, state.fields, payload.fields || {});
-      state.carrierOptions = Array.isArray(payload.carrierOptions) ? payload.carrierOptions : state.carrierOptions;
+        state.fields = Object.assign({}, state.fields, payload.fields || {});
+        state.carrierOptions = Array.isArray(payload.carrierOptions) ? payload.carrierOptions : state.carrierOptions;
+        state.contactMethodOptions = Array.isArray(payload.contactMethodOptions) ? payload.contactMethodOptions : state.contactMethodOptions;
       render();
       setDirty(false);
       setStatus("User settings saved.", "success");
