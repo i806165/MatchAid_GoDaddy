@@ -276,6 +276,15 @@
       description += (description ? "\n\n" : "") + commentsPlain;
     }
 
+    const directGameLink = gameId
+      ? `https://www.matchaid.org/game/${gameId}`
+      : "";
+
+    if (directGameLink) {
+      description += (description ? "\n\n" : "") +
+        `To view or register for the game, please click ${directGameLink}`;
+    }
+
     const calendarObject = {
       id: `game-${gameId}`,
       title: hostedTitle,
