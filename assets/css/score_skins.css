@@ -64,3 +64,63 @@
   font-size: 0.9em;
   font-weight: 600;
 }
+/* Multi-card layout */
+.scCardsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.scSplitCard {
+  min-width: 0;
+}
+
+.scSplitCard .maCard__hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.scSplitCard .maCard__title {
+  font-weight: 800;
+}
+
+.scCardNote {
+  color: var(--ink);
+  font-size: 12px;
+  text-align: right;
+}
+
+.scSplitCard .maCard__body {
+  padding: 0;
+}
+
+.scTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.scHoleLabel {
+  display: inline-block;
+}
+
+.scName .scPHC {
+  float: right;
+}
+
+@media (max-width: 768px) {
+  .scCardsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .scSplitCard .maCard__hdr {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .scCardNote {
+    text-align: left;
+  }
+}
