@@ -1000,7 +1000,18 @@
     }
   }
 
-    function buildShortMessageBody() {
+  function shortDow(dateStr) {
+    const s = String(dateStr || "").trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return "";
+
+    const [y, m, d] = s.split("-").map(Number);
+    const dt = new Date(y, m - 1, d);
+    if (isNaN(dt.getTime())) return "";
+
+    return dt.toLocaleDateString("en-US", { weekday: "short" }).slice(0, 2);
+  }
+
+  function buildShortMessageBody() {
     const g = state.game || {};
     const title = safeString(g.dbGames_Title || "Game").trim();
     const date = safeString(g.dbGames_PlayDate || "").trim();
@@ -1013,7 +1024,10 @@
       mmdd = `${parts[1]}/${parts[2]}`;
     }
 
-    return `MatchAid: ${title} ${mmdd} ${time}. View game: https://www.matchaid.org/game/${ggid}`;
+    const dow = shortDow(date);
+    const dateText = [dow, mmdd].filter(Boolean).join(" ");
+
+    return `${title} on ${dateText} at ${time}. View or Register at www.matchaid.org/game/${ggid}`;
   }
 
   function emailShortMessage() {
@@ -1046,7 +1060,7 @@
     if (MA.email && MA.email.compose) {
       MA.email.compose({
         bcc: recipients,
-        subject: "MatchAid",
+        subject: "Game Notice",
         body: body,
         bodyIsHtml: false
       });
