@@ -1000,6 +1000,62 @@
     }
   }
 
+    function buildShortMessageBody() {
+    const g = state.game || {};
+    const title = safeString(g.dbGames_Title || "Game").trim();
+    const date = safeString(g.dbGames_PlayDate || "").trim();
+    const time = formatTimeAmPm(safeString(g.dbGames_PlayTime || "").trim());
+    const ggid = safeString(g.dbGames_GGID || g.dbGames_GGIDnum || "").trim();
+
+    let mmdd = date;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      const parts = date.split("-");
+      mmdd = `${parts[1]}/${parts[2]}`;
+    }
+
+    return `MatchAid: ${title} ${mmdd} ${time}. View game: https://www.matchaid.org/game/${ggid}`;
+  }
+
+  function emailShortMessage() {
+    const recipients = (state.roster || []).reduce((out, p) => {
+      const method = safeString(p.contactMethod).trim();
+      const smsEmail = safeString(p.contactSmsEmail).trim();
+      const email = safeString(p.contactEmail).trim();
+      const name = safeString(p.dbPlayers_Name).trim();
+
+      if (method === "SMS" && smsEmail) {
+        out.push({ name, email: smsEmail });
+      } else if (method === "Email" && email) {
+        out.push({ name, email: email });
+      }
+
+      return out;
+    }, []);
+
+    if (!recipients.length) {
+      setStatus("No players have a valid preferred contact destination.", "warn");
+      return;
+    }
+
+    const body = buildShortMessageBody();
+    if (body.length > 160) {
+      setStatus("Short message exceeds 160 characters.", "error");
+      return;
+    }
+
+    if (MA.email && MA.email.compose) {
+      MA.email.compose({
+        bcc: recipients,
+        subject: "MatchAid",
+        body: body,
+        bodyIsHtml: false
+      });
+      setStatus("Short message ready.", "success");
+    } else {
+      setStatus("Email module not loaded.", "error");
+    }
+  }
+
   function downloadIcsForGame() {
     const g = state.game || {};
     if (MA.calendar && MA.calendar.addCalendarEventFromGame) {
@@ -1073,10 +1129,14 @@
       { label: "Print Scorecards", action: printScorecards },
       { label: "Add Game to Calendar", action: downloadIcsForGame },
       { separator: true }, 
+      { separator: true }, 
+      { label: "Compose Email to Players", action: emailSummary },
+      { label: "Compose Short Message to Players", action: emailShortMessage },
+      { separator: true }, 
+      { separator: true }, 
       { label: "Export to .csv file", action: downloadCsv },
       { label: "Copy csv to clipboard", action: copySummaryToClipboard },
       { label: "Copy text to clipboard", action: copyRichTextToClipboard },
-      { label: "Compose Email to Players", action: emailSummary }
     ];
     MA.ui.openActionsMenu("Actions", items);
   }
