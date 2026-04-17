@@ -131,6 +131,7 @@ function be_getPlayersGlobal(string $lastName, ?string $firstName, ?string $stat
 
     $last = trim($lastName);
     $first = trim((string)($firstName ?? ""));
+    $state = trim((string)($state ?? ""));
     $club = trim((string)($clubName ?? ""));
 
     if ($last === "") {
@@ -152,18 +153,36 @@ function be_getPlayersGlobal(string $lastName, ?string $firstName, ?string $stat
         $url .= "&first_name=" . rawurlencode($first);
     }
 
-    if ($state !== null && $state !== "") {
+    if ($state !== "") {
         $url .= "&state=" . rawurlencode($state);
     }
-    if ($club !== "") {
-        $url .= "&club_name=" . rawurlencode($club);
-    }
 
-    return HttpClient::getJson($url, [
+    $jsonData = HttpClient::getJson($url, [
         "accept: application/json",
         "Content-Type: application/json",
         "Authorization: Bearer " . $myToken,
     ]);
+
+    $golfers = $jsonData["golfers"] ?? [];
+    if (!is_array($golfers)) {
+        $golfers = [];
+    }
+    // If there is a club filter, apply it to the GHIN payload and return filtered results.
+    if ($club !== "") {
+        $clubNeedle = mb_strtolower($club);
+
+        $golfers = array_values(array_filter($golfers, static function ($g) use ($clubNeedle) {
+            if (!is_array($g)) return false;
+
+            $clubRaw = trim((string)($g["club_name"] ?? ""));
+            if ($clubRaw === "") return false;
+
+            return strpos(mb_strtolower($clubRaw), $clubNeedle) !== false;
+        }));
+    }
+
+    $jsonData["golfers"] = $golfers;
+    return $jsonData;
 }
 
 /**
