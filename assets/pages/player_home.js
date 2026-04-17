@@ -164,30 +164,36 @@
     };
   }
 
-  function getGameAdminMeta(g){
-    const adminKey = rowText(g, ['adminGHIN','dbGames_AdminGHIN']).trim();
-    const adminName = rowText(g, ['adminName','dbGames_AdminName']).trim();
-    const adminLName = rowText(g, ['adminLName','dbGames_AdminLName']).trim();
-    const facilityId = rowText(g, ['facilityId','dbGames_FacilityID']).trim();
-    const facilityName = rowText(g, ['facilityName','dbGames_FacilityName']).trim();
-    const adminAssocId = rowText(g, ['adminAssocId','dbGames_AssocID']).trim();
-    const adminAssocName = rowText(g, ['adminAssocName','dbGames_AssocName']).trim();
+function getGameAdminMeta(g){
+  const ggid = String(g?.ggid || g?.dbGames_GGID || '').trim();
 
-    const adminRow = (state.admins || []).find(a =>
-      String(a.key || a.adminKey || '').trim() === adminKey
-    );
+  const rawGame = (state.rawGames || []).find(r =>
+    String(r?.dbGames_GGID || r?.ggid || '').trim() === ggid
+  ) || null;
 
-    return {
-      adminKey,
-      adminName,
-      adminLName,
-      facilityId,
-      facilityName,
-      adminAssocId,
-      adminAssocName,
-      isFavorite: !!(adminRow && adminRow.isFavorite)
-    };
-  }
+  const adminKey = String(rawGame?.dbGames_AdminGHIN || '').trim();
+  const adminName = String(rawGame?.dbGames_AdminName || g?.adminName || g?.dbGames_AdminName || '').trim();
+  const adminLName = String(rawGame?.dbGames_AdminLName || '').trim();
+  const facilityId = String(rawGame?.dbGames_FacilityID || '').trim();
+  const facilityName = String(rawGame?.dbGames_FacilityName || g?.facilityName || g?.dbGames_FacilityName || '').trim();
+  const adminAssocId = String(rawGame?.dbGames_AssocID || '').trim();
+  const adminAssocName = String(rawGame?.dbGames_AssocName || '').trim();
+
+  const adminRow = (state.admins || []).find(a =>
+    String(a.key || a.adminKey || '').trim() === adminKey
+  );
+
+  return {
+    adminKey,
+    adminName,
+    adminLName,
+    facilityId,
+    facilityName,
+    adminAssocId,
+    adminAssocName,
+    isFavorite: !!(adminRow && adminRow.isFavorite)
+  };
+}
 
   function actionItemsForGame(g){
     const { enrollmentStatus, registrationStatus } = inferStatuses(g);
