@@ -205,6 +205,7 @@ function getGameAdminMeta(g){
     const favoriteAdminLabel = adminMeta.adminKey
       ? (adminMeta.isFavorite ? 'Remove Admin from Favorites' : 'Add Admin to Favorites')
       : 'Admin Favorite Unavailable';
+    const favoriteAdminDanger = !!adminMeta.isFavorite;
 
     // 1. Pre-calculate dynamic labels and states
     const regLabel = isRegistered ? 'Change your Tee Set' : 'Register for this Game';
@@ -235,8 +236,7 @@ function getGameAdminMeta(g){
       // Utility Group
       { label: 'Add Game to your Calendar', action: 'calendar', enabled: true },
       { separator: true }, { separator: true },
-      { label: favoriteAdminLabel, action: 'toggleFavoriteAdmin', enabled: !!adminMeta.adminKey },
-      { label: 'Add Game to your Calendar', action: 'calendar', enabled: true }
+      { label: favoriteAdminLabel, action: 'toggleFavoriteAdmin', enabled: !!adminMeta.adminKey, danger: favoriteAdminDanger }
     ];
 
     // 3. Remove null entries (conditional items) and return
@@ -392,11 +392,12 @@ function getGameAdminMeta(g){
     
     const items = (actionItemsForGame(game) || []).map(it => {
       if (it.separator) return { separator: true };
-      return {
-        label: it.label,
-        action: () => onGameAction(game, it.action),
-        disabled: it.enabled === false
-      };
+        return {
+          label: it.label,
+          action: () => onGameAction(game, it.action),
+          disabled: it.enabled === false,
+          danger: it.danger === true
+        };
     });
     
     const title = rowText(game, ['title','dbGames_Title']) || 'Game Actions';
