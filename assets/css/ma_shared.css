@@ -37,7 +37,7 @@
   --spaceSm: 6px;
   --spaceMd: 10px;
   
-  /* Chrome (Header/Footer) */
+  /* Chrome Shape (Header/Footer) */
   --chromePad: 10px;
   --chromeGap: 10px;
   --chromeHdrBg: #18422F;
@@ -51,14 +51,12 @@
   --chromeSubtitleText: rgba(255,255,255,.82);
   --chromeTitleSize: 18px;
   --chromeSubtitleSize: 12px;
-  --chromeBtnFontSize: 13px;
-
-  --ControlAreaBg: color-mix(in srgb, var(--panelBg) 88%, black);
-  --ControlAreaBorder: rgba(0,0,0,0.18);
-
-  /* Status / Messaging */
-  --chromeStatusHeight: 28px;
+  --chromeBtnFontSize: 18px;
+  --chromeStatusHeight: 24px;
+  --chromeStatusPadY: 2px;
   --chromeStatusFontSize: 13px;
+
+  /* Chrome status messages */
   --statusInfoBg: #ffffff;
   --statusInfoText: #1f2a37;
   --statusSuccessBg: var(--success);
@@ -67,6 +65,10 @@
   --statusWarnText: #111111;
   --statusDangerBg: var(--danger);
   --statusDangerText:  #ffffff;
+
+   /* Page Control Area */
+  --ControlAreaBg: color-mix(in srgb, var(--panelBg) 88%, black);
+  --ControlAreaBorder: rgba(0,0,0,0.18);
 
   /* Tab bar */
   --tabBarHeight: 56px;
@@ -644,13 +646,13 @@ body {
 /* Status line */
 .maChrome__status{
   font-family: var(--fontFamilyBase);
-  min-height: var(--chromeStatusHeight, 28px);
+  min-height: var(--chromeStatusHeight, 24px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--spaceSm) var(--spaceMd);
+  padding: var(--chromeStatusPadY, 2px) var(--spaceMd);
   font-size: var(--chromeStatusFontSize);
-  line-height: 1.2;
+  line-height: 1.15;
   text-align: center;
   border-bottom: 1px solid var(--chromeBorder);
   user-select: none;

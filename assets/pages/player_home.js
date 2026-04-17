@@ -215,19 +215,19 @@ function getGameAdminMeta(g){
     const menu = [
       // Participation Group
       { label: regLabel, action: 'register', enabled: true },
-      isRegistered ? { label: 'Unregister', action: 'unregister', enabled: !regClosedish } : null,
+      isRegistered ? { label: 'Unregister yourself', action: 'unregister', enabled: !regClosedish } : null,
 
       { separator: true }, { separator: true },
 
       // Information Group
-      { label: 'Add Player or Guest', action: 'viewRoster', enabled: true },
+      { label: 'Add a Player or Guest', action: 'viewRoster', enabled: true },
       { label: 'Review Game Players', action: 'viewGame', enabled: true },
 
       { separator: true }, { separator: true },
 
       // Scoring Group
       { label: scoreLabel, action: 'scorehome', enabled: !!scoreId },
-      scoreId ? { label: 'Leaderboard', action: 'scoresummary', enabled: true } : null,
+      scoreId ? { label: 'Scoring Leaderboard', action: 'scoresummary', enabled: true } : null,
       isRegistered ? { label: postLabel, action: 'ghinPost', enabled: !postedId } : null,
 
       { separator: true }, { separator: true },
