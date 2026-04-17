@@ -37,6 +37,7 @@
     ghinState: "",
     ghinLast: "",
     ghinFirst: "",
+    ghinClub: "",
     ghinRows: [],
     ghinTruncated: false,
     ghinStatus: "",
@@ -375,20 +376,25 @@
         <div class="maField gpFieldState"><div class="maInputWrap gpInputClearWrap"><input id="gpGhinState" class="maTextInput" maxlength="2" placeholder="State" value="${esc(state.ghinState)}"></div></div>
         <div class="maField gpFieldLast"><div class="maInputWrap gpInputClearWrap"><input id="gpGhinLast" class="maTextInput" placeholder="Last name or GHIN#" value="${esc(state.ghinLast)}"><button id="gpGhinLastClear" class="clearBtn ${state.ghinLast ? "" : "isHidden"}" type="button" aria-label="Clear last name">×</button></div></div>
         <div class="maField gpFieldFirst"><div class="maInputWrap gpInputClearWrap"><input id="gpGhinFirst" class="maTextInput" placeholder="First name (optional)" value="${esc(state.ghinFirst)}"><button id="gpGhinFirstClear" class="clearBtn ${state.ghinFirst ? "" : "isHidden"}" type="button" aria-label="Clear first name">×</button></div></div>
+        <div class="maField gpFieldClub"><div class="maInputWrap gpInputClearWrap"><input id="gpGhinClub" class="maTextInput" placeholder="Club name (optional)" value="${esc(state.ghinClub)}"><button id="gpGhinClubClear" class="clearBtn ${state.ghinClub ? "" : "isHidden"}" type="button" aria-label="Clear club name">×</button></div></div>
         <div class="maField gpFieldBtn"><button id="gpBtnSearchGhin" class="btn btnPrimary" type="button">Search</button></div>
       </div>`;
       const inpState = document.getElementById("gpGhinState");
       const inpLast = document.getElementById("gpGhinLast");
       const inpFirst = document.getElementById("gpGhinFirst");
+      const inpClub = document.getElementById("gpGhinClub");
       const clrLast = document.getElementById("gpGhinLastClear");
       const clrFirst = document.getElementById("gpGhinFirstClear");
+      const clrClub = document.getElementById("gpGhinClubClear");
       const doSearch = ()=>searchGHINTab();
       if (inpState) inpState.oninput = ()=>{ state.ghinState = normalizeState(inpState.value); inpState.value = state.ghinState; };
       if (inpLast) inpLast.oninput = ()=>{ state.ghinLast = safe(inpLast.value); if (clrLast) clrLast.classList.toggle("isHidden", !state.ghinLast); };
       if (inpFirst) inpFirst.oninput = ()=>{ state.ghinFirst = safe(inpFirst.value); if (clrFirst) clrFirst.classList.toggle("isHidden", !state.ghinFirst); };
+      if (inpClub) inpClub.oninput = ()=>{ state.ghinClub = safe(inpClub.value); if (clrClub) clrClub.classList.toggle("isHidden", !state.ghinClub); };
       if (clrLast) clrLast.onclick = ()=>{ state.ghinLast=""; if (inpLast) inpLast.value=""; clrLast.classList.add("isHidden"); inpLast && inpLast.focus(); };
       if (clrFirst) clrFirst.onclick = ()=>{ state.ghinFirst=""; if (inpFirst) inpFirst.value=""; clrFirst.classList.add("isHidden"); inpFirst && inpFirst.focus(); };
-      [inpState, inpLast, inpFirst].forEach((n)=>{ if (!n) return; n.onkeydown = (e)=>{ if (e.key === "Enter") doSearch(); }; });
+      if (clrClub) clrClub.onclick = ()=>{ state.ghinClub=""; if (inpClub) inpClub.value=""; clrClub.classList.add("isHidden"); inpClub && inpClub.focus(); };
+      [inpState, inpLast, inpFirst, inpClub].forEach((n)=>{ if (!n) return; n.onkeydown = (e)=>{ if (e.key === "Enter") doSearch(); }; });
       document.getElementById("gpBtnSearchGhin").onclick = doSearch;
       return;
     }
@@ -887,6 +893,7 @@
     state.ghinStatus = "";
     const lastOrId = safe(state.ghinLast).trim();
     const first = safe(state.ghinFirst).trim();
+    const club = safe(state.ghinClub).trim();
     const stateCode = normalizeState(state.ghinState);
     state.ghinState = stateCode;
     if (!lastOrId) {
@@ -901,8 +908,9 @@
     renderBody();
     const payload = (mode === "id")
       ? { mode, ghin: lastOrId }
-      : { mode, state: stateCode, lastName: lastOrId, firstName: first };
+      : { mode, state: stateCode, lastName: lastOrId, firstName: first, clubName: club };
     const res = await MA.postJson(MA.paths.ghinPlayerSearch, payload);
+    
     if (!res?.ok) {
       state.ghinRows = [];
       state.ghinTruncated = false;

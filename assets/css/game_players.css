@@ -37,6 +37,7 @@
 .gpFieldState{ max-width: 90px; }
 .gpFieldFirst{ min-width: 170px; }
 .gpFieldLast{ min-width: 170px; }
+.gpFieldClub{ min-width: 220px; }
 .gpFieldHi{ max-width: 72px; }
 .gpFieldGender{ max-width: 70px; }
 .gpFieldBtn{ flex: 0 0 auto; }

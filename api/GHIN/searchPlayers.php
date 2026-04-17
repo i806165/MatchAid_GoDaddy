@@ -93,6 +93,7 @@ try {
     $state = strtoupper(trim((string)($in["state"] ?? "")));
     $last  = trim((string)($in["lastName"] ?? ""));
     $first = trim((string)($in["firstName"] ?? ""));
+    $clubName = trim((string)($in["clubName"] ?? ""));
 
     // Keep aligned with overlay truncation policy
     $recCnt = 90;
@@ -106,7 +107,13 @@ try {
 
     // Unified search using global endpoint (api2.ghin.com)
     // This endpoint supports optional state filtering
-    $rawGlobal = be_getPlayersGlobal($last, ($first !== "" ? $first : null), ($state !== "" ? $state : null), $token);
+    $rawGlobal = be_getPlayersGlobal(
+      $last,
+      ($first !== "" ? $first : null),
+      ($state !== "" ? $state : null),
+      ($clubName !== "" ? $clubName : null),
+      $token
+    );
     $golfers = $rawGlobal["golfers"] ?? [];
     if (!is_array($golfers)) $golfers = [];
 

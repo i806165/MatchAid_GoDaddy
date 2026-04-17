@@ -122,7 +122,7 @@ function be_getPlayersByName(
  * Global search (no state required) using api2.ghin.com endpoint.
  * Returns raw payload (structure differs from standard search).
  */
-function be_getPlayersGlobal(string $lastName, ?string $firstName, ?string $state, string $token): array
+function be_getPlayersGlobal(string $lastName, ?string $firstName, ?string $state, ?string $clubName, string $token): array
 {
     $myToken = trim($token);
     if ($myToken === "") {
@@ -131,6 +131,7 @@ function be_getPlayersGlobal(string $lastName, ?string $firstName, ?string $stat
 
     $last = trim($lastName);
     $first = trim((string)($firstName ?? ""));
+    $club = trim((string)($clubName ?? ""));
 
     if ($last === "") {
         return [];
@@ -153,6 +154,9 @@ function be_getPlayersGlobal(string $lastName, ?string $firstName, ?string $stat
 
     if ($state !== null && $state !== "") {
         $url .= "&state=" . rawurlencode($state);
+    }
+    if ($club !== "") {
+        $url .= "&club_name=" . rawurlencode($club);
     }
 
     return HttpClient::getJson($url, [
