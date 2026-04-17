@@ -22,13 +22,6 @@ if ($returnTo === "" || strpos($returnTo, "/") !== 0) {
   $returnTo = "/app/admin_games/gameslist.php";
 }
 
-Logger::info("GAMEPLAYERS_ENTRY", [
-  "uri" => $_SERVER["REQUEST_URI"] ?? "",
-  "ghin" => $_SESSION["SessionGHINLogonID"] ?? "",
-  "ggid" => $_SESSION["SessionStoredGGID"] ?? "",
-  "loginTime" => $_SESSION["SessionLoginTime"] ?? "",
-]);
-
 $uc = ServiceUserContext::getUserContext();
 if (!$uc || empty($uc["ok"])) {
   header("Location: " . MA_ROUTE_LOGIN);
@@ -102,53 +95,37 @@ $maChromeLogoUrl = null;
   <link rel="stylesheet" href="/assets/css/game_players.css?v=1">
 </head>
 <body>
-<?php include __DIR__ . "/../../includes/chromeHeader.php"; ?>
+  <?php include __DIR__ . "/../../includes/chromeHeader.php"; ?>
 
-<div class="maControlArea gpControlsBand" id="gpControlsBand">
-  <div class="gpShell">
-    <div id="gpTabStrip" class="gpTabs" role="tablist" aria-label="Player registration tabs"></div>
-    <div id="gpTabControls" class="gpTabControls"></div>
-  </div>
-</div>
-
-<main class="maPage" role="main">
-  <div class="gpShell gpShell--body">
-    <div id="gpBody" class="maPanel__body" style="padding:0;"></div>
-  </div>
-</main>
-
-<div id="maTeeOverlay" class="maModalOverlay" aria-hidden="true">
-  <div class="maModal" role="dialog" aria-modal="true">
-    <header class="maModal__hdr">
-      <div class="maModal__titles"><div class="maModal__title">Select Tee</div><div id="maTeeSubTitle" class="maModal__subtitle"></div></div>
-      <button id="maTeeCancel" class="iconBtn btnPrimary" type="button" aria-label="Close">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-      </button>
-    </header>
-    <div class="maModal__body">
-      <div id="maTeeRows" class="maCards"></div>
+  <div class="maControlArea gpControlsBand" id="gpControlsBand" role="region" aria-label="Game players controls">
+    <div class="gpShell">
+      <div id="gpTabStrip" class="gpTabs" role="tablist" aria-label="Player registration tabs"></div>
+      <div id="gpTabControls" class="gpTabControls"></div>
     </div>
   </div>
-</div>
 
-<?php include __DIR__ . "/../../includes/chromeFooter.php"; ?>
+  <main class="maPage" role="main">
+    <?php include __DIR__ . "/gameplayers_view.php"; ?>
+  </main>
 
-<script>
-window.MA = window.MA || {};
-window.MA.paths = <?= json_encode($paths, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-window.__INIT__ = <?= json_encode($initPayload, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-window.__MA_INIT__ = window.__INIT__;
-window.MA.routes = {
-  router: window.MA.paths.routerApi,
-  login: <?= json_encode(MA_ROUTE_LOGIN) ?>,
-  apiGHIN: window.MA.paths.apiGHIN,
-  apiGamePlayers: window.MA.paths.apiGamePlayers
-};
-</script>
-<script src="/assets/js/ma_shared.js"></script>
-<script src="/assets/modules/ghin_player_search.js"></script>
-<script src="/assets/modules/actions_menu.js?v=1"></script>
-<script src="/assets/modules/teesetSelection.js?v=1"></script>
-<script src="/assets/pages/game_players.js"></script>
+  <?php include __DIR__ . "/../../includes/chromeFooter.php"; ?>
+
+  <script>
+    window.MA = window.MA || {};
+    window.MA.paths = <?= json_encode($paths, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    window.__INIT__ = <?= json_encode($initPayload, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    window.__MA_INIT__ = window.__INIT__;
+    window.MA.routes = {
+      router: window.MA.paths.routerApi,
+      login: <?= json_encode(MA_ROUTE_LOGIN) ?>,
+      apiGHIN: window.MA.paths.apiGHIN,
+      apiGamePlayers: window.MA.paths.apiGamePlayers
+    };
+  </script>
+  <script src="/assets/js/ma_shared.js"></script>
+  <script src="/assets/modules/ghin_player_search.js"></script>
+  <script src="/assets/modules/actions_menu.js?v=1"></script>
+  <script src="/assets/modules/teesetSelection.js?v=1"></script>
+  <script src="/assets/pages/game_players.js"></script>
 </body>
 </html>
