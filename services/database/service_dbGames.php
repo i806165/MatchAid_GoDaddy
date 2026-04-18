@@ -374,6 +374,7 @@ public static function queryGames(array $args): array {
       "dbGames_Title",
       "dbGames_PlayDate",
       "dbGames_PlayTime",
+      "dbGames_TOMethod",
       "dbGames_TeeTimeCnt",
       "dbGames_TeeTimeInterval",
       "dbGames_Holes",

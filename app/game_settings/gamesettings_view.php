@@ -22,7 +22,7 @@
             </div>
             <div class="maField">
               <label class="maLabel" for="gsTOMethod">Teeing Method</label>
-              <select id="gsTOMethod" class="maTextInput"></select>
+              <select id="gsTOMethod" class="maTextInput" disabled></select>
             </div>
             <div class="maField">
               <label class="maLabel" for="gsScoringBasis">Scoring Basis</label>

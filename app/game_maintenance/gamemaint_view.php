@@ -1,5 +1,5 @@
 <?php
-// /public_html/app/game_maintenance/gamemaintview.php
+// /public_html/app/game_maintenance/gamemaint_view.php
 ?>
   <div class="maCards" id="gmCards">
 
@@ -66,7 +66,15 @@
         </div>
 
         <div class="maFieldRow">
-          <div class="maField">
+          <div class="maField" style="flex:0 0 180px;">
+            <label class="maLabel" for="gmTOMethod">Tee Off Method</label>
+            <select id="gmTOMethod" class="maTextInput">
+              <option value="TeeTimes">Tee Times</option>
+              <option value="ShotGun">ShotGun</option>
+            </select>
+          </div>
+
+          <div class="maField" style="flex:0 0 160px;">
             <label class="maLabel" for="gmTeeCount">Tee Time Count</label>
             <div class="gmStepper">
               <button type="button" class="btn btnTertiary gmStepBtn" data-step="-1" data-target="gmTeeCount" aria-label="Decrement">−</button>
@@ -75,7 +83,7 @@
             </div>
           </div>
 
-          <div class="maField">
+          <div class="maField" style="flex:0 0 220px;">
             <label class="maLabel" for="gmTeeInterval">Tee Time Interval (minutes)</label>
             <div class="gmStepper">
               <button type="button" class="btn btnTertiary gmStepBtn" data-step="-1" data-target="gmTeeInterval" aria-label="Decrement">−</button>

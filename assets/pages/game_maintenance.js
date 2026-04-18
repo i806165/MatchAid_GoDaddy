@@ -43,6 +43,7 @@
   const el = {
     title: document.getElementById("gmTitle"),
     ggid: document.getElementById("gmGGID"),
+    tomethod: document.getElementById("gmTOMethod"),
     playDate: document.getElementById("gmPlayDate"),
     hour: document.getElementById("gmPlayHour"),
     minute: document.getElementById("gmPlayMin"),
@@ -373,6 +374,7 @@ function applyChrome() {
       else el.ggid.textContent = val;
     }
 
+    if (el.tomethod) el.tomethod.value = String(g.dbGames_TOMethod || "TeeTimes");
     el.playDate.value = (g.playDateISO || g.dbGames_PlayDate || "") || "";
     setTimeFromDb(g.dbGames_PlayTime || g.playTimeText || "");
     el.teeCount.value = String(g.dbGames_TeeTimeCnt ?? 3);
@@ -406,6 +408,7 @@ function applyChrome() {
   function wireInputs() {
     bindFieldChange(el.title, () => { state.game.dbGames_Title = String(el.title.value || "").trim(); });
     bindFieldChange(el.playDate, () => { state.game.dbGames_PlayDate = String(el.playDate.value || "").trim(); state.game.dbGames_PlayDateISO = state.game.dbGames_PlayDate; });
+    bindFieldChange(el.tomethod, () => { state.game.dbGames_TOMethod = String(el.tomethod.value || "TeeTimes"); });
 
     // time selects
     [el.hour, el.minute, el.ampm].forEach(sel => {
@@ -644,6 +647,7 @@ function buildPatchFromUI() {
     dbGames_Title: String(el.title.value || "").trim(),
     dbGames_PlayDate: playDate,
     dbGames_PlayTime: getTimeHHMM() + ":00",
+    dbGames_TOMethod: String(el.tomethod?.value || "TeeTimes"),
 
     // stored as text in your schema; keep as strings
     dbGames_TeeTimeCnt: String(el.teeCount.value || ""),

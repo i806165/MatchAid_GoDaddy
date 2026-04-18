@@ -722,6 +722,9 @@
       el.scoringBasis.value = cfg.basis;
       setDisabled(el.scoringBasis, true);
     }
+    if (el.toMethod) {
+      setDisabled(el.toMethod, true);
+    }   
 
     // Segments options derived from holes (preserve stored value if possible)
     if (el.segments) {
