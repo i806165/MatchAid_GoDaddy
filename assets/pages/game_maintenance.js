@@ -174,6 +174,43 @@
     syncActionDisabled();
   }
 
+  function ensureSavingOverlay() {
+    if (document.getElementById('gmBusyOverlay')) return;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'gmBusyOverlay';
+    overlay.className = 'maModalOverlay';
+
+    const modal = document.createElement('section');
+    modal.className = 'maModal';
+    modal.style.maxWidth = '320px';
+
+    modal.innerHTML = `
+      <header class="maModal__hdr">
+        <div class="maModal__titles">
+          <div class="maModal__title">Please wait</div>
+          <div class="maModal__subtitle" id="gmBusyMessage">Saving...</div>
+        </div>
+      </header>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+  }
+
+  function showSavingOverlay(message) {
+    ensureSavingOverlay();
+    const overlay = document.getElementById('gmBusyOverlay');
+    const msg = document.getElementById('gmBusyMessage');
+    if (msg) msg.textContent = message || 'Saving...';
+    if (overlay) overlay.classList.add('is-open');
+  }
+
+  function hideSavingOverlay() {
+    const overlay = document.getElementById('gmBusyOverlay');
+    if (overlay) overlay.classList.remove('is-open');
+  }
+
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     MA.ui.openActionsMenu("Actions", [
@@ -641,16 +678,17 @@ function buildPatchFromUI() {
     if (patch.dbGames_HCEffectivity === "Date" && !patch.dbGames_HCEffectivityDate) return setStatus("Select a handicap effectivity date.", "error");
 
     setBusy(true);
+    showSavingOverlay("Saving...");
     try {
       const res = await apiGM("saveGame.php", { mode: state.mode, patch });
       if (!res || !res.ok) throw new Error(res?.message || "Save failed.");
-      const payload = res.payload || {};
-      state.game = payload.game || state.game;
-      state.ggid = payload.ggid || state.ggid;
+
+      state.game = res.game || state.game;
+      state.ggid = res.ggid || state.ggid;
+      if (res.mode) state.mode = res.mode;
 
       // If we were in Add, we are now editing the created game
-      if (state.mode === "add") {
-        state.mode = "edit";
+      if (state.mode === "edit") {
         if (window.history && window.history.replaceState) {
           const url = new URL(window.location.href);
           url.searchParams.set("mode", "edit");
@@ -660,18 +698,13 @@ function buildPatchFromUI() {
 
       render();
       setDirty(false);
-
-      if (payload.hcRefresh && payload.hcRefresh.ok === false) {
-        setStatus(`Saved. Handicap refresh warning: ${payload.hcRefresh.message || "check logs"}`, "warn");
-      } else {
-        setStatus("Game saved.", "success");
-      }
-
+      setStatus("Game saved.", "success");
       applyChrome();
     } catch (e) {
       console.error(e);
       setStatus(String(e.message || e), "error");
     } finally {
+      hideSavingOverlay();
       setBusy(false);
     }
   }
