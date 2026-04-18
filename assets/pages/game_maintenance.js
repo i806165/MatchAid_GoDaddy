@@ -285,7 +285,7 @@ function applyChrome() {
     // shared chrome.setActions may not implement disabled; enforce via DOM
     const rightBtn = document.getElementById("chromeBtnRight");
     if (rightBtn) {
-      const disabled = !!state.busy || !state.dirty;
+      const disabled = !!state.busy;
       rightBtn.disabled = disabled;
       rightBtn.classList.toggle("is-disabled", disabled);
     }
@@ -408,8 +408,13 @@ function applyChrome() {
   function wireInputs() {
     bindFieldChange(el.title, () => { state.game.dbGames_Title = String(el.title.value || "").trim(); });
     bindFieldChange(el.playDate, () => { state.game.dbGames_PlayDate = String(el.playDate.value || "").trim(); state.game.dbGames_PlayDateISO = state.game.dbGames_PlayDate; });
-    bindFieldChange(el.tomethod, () => { state.game.dbGames_TOMethod = String(el.tomethod.value || "TeeTimes"); });
-
+    if (el.tomethod) {
+      el.tomethod.addEventListener("change", () => {
+        console.log("[GM] TO method changed:", el.tomethod.value);
+        state.game.dbGames_TOMethod = String(el.tomethod.value || "TeeTimes");
+        setDirty(true);
+      });
+    }
     // time selects
     [el.hour, el.minute, el.ampm].forEach(sel => {
       sel.addEventListener("change", () => {
