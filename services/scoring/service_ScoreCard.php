@@ -95,7 +95,7 @@ final class ServiceScoreCard {
     $realGroupId = $selected ? self::normStr($selected["dbPlayers_PlayerKey"] ?? "", "000") : $selectedPlayerId;
     $playersInGroup = array_map(fn($p) => array_merge($p, [
       "dbGames_Competition" => (string)($gameRow["dbGames_Competition"] ?? "")
-    ]), $groupsMap[$id] ?? []);
+    ]), $groupsMap[$realGroupId] ?? []);
     $playersInGroup = self::sortPlayersForScorecard($playersInGroup);
 
     return [
@@ -150,6 +150,50 @@ final class ServiceScoreCard {
         )
       ],
       "meta" => self::buildScorecardMeta($gameRow, $players),
+    ];
+  }
+
+    /**
+   * Build the canonical scored scorecard init payload from already-hydrated
+   * game + player rows.
+   *
+   * Notes:
+   * - Acquisition/hydration stays upstream.
+   * - This method only selects the correct scored scorecard builder and
+   *   returns the outward init payload shape.
+   */
+  public static function buildScoredScoreCardPayload(array $game, array $players, string $mode = "game", string $scope = ""): array {
+    $mode = strtolower(trim($mode));
+    $scope = trim($scope);
+
+    switch ($mode) {
+      case "player":
+        $scorecards = self::buildPlayerScorecardPayload($game, $players, $scope);
+        break;
+
+      case "group":
+        $scorecards = self::buildGroupScorecardPayload($game, $players, $scope);
+        break;
+
+      case "game":
+      default:
+        $scorecards = self::buildGameScorecardsPayload($game, $players);
+        $mode = "game";
+        break;
+    }
+
+    return [
+      "ok" => true,
+      "mode" => $mode,
+      "scope" => $scope,
+      "game" => $game,
+      "players" => $players,
+      "scorecards" => $scorecards,
+      "meta" => [
+        "playerCount" => count($players),
+        "holes" => (string)($game["dbGames_Holes"] ?? "All 18"),
+        "hcMethod" => (string)($game["dbGames_HCMethod"] ?? "CH"),
+      ],
     ];
   }
 

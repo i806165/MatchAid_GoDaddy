@@ -92,6 +92,27 @@ function initScoreCard(string $ggid, array $ctx = []): array {
   return initBlankScoreCard($ggid, $ctx);
 }
 
+/**
+ * initScoredScoreCard
+ * Canonical initializer for scored player / group / game scorecards.
+ */
+function initScoredScoreCard(string $ggid, string $mode = "game", string $scope = ""): array {
+  $hydrated = hydrateBlankScoreCardContext($ggid);
+  if (empty($hydrated["ok"])) {
+    return [
+      "ok" => false,
+      "error" => (string)($hydrated["error"] ?? "init_failed"),
+    ];
+  }
+
+  return ServiceScoreCard::buildScoredScoreCardPayload(
+    $hydrated["game"],
+    $hydrated["players"],
+    $mode,
+    $scope
+  );
+}
+
 // If invoked directly as endpoint, emit JSON
 if (php_sapi_name() !== "cli" && basename($_SERVER["SCRIPT_NAME"] ?? "") === "initScoreCard.php") {
   header("Content-Type: application/json; charset=utf-8");

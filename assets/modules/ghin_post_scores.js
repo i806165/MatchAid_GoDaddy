@@ -149,11 +149,11 @@
           <div class="maHelpText" style="margin-bottom:12px; font-weight:700;">
             ${esc(game.dbGames_CourseName)} • Tee: ${esc(p?.tee || "No Tee Set")}
           </div>
-          <div style="display:flex; justify-content:space-between; margin-bottom:16px; padding:10px; background:rgba(0,0,0,0.04); border-radius:8px;">
-            <div class="maPillKV"><span class="maPillLabel">OUT</span><span class="maPillValue">${esc(scoreOut)}</span></div>
-            <div class="maPillKV"><span class="maPillLabel">IN</span><span class="maPillValue">${esc(scoreIn)}</span></div>
-            <div class="maPillKV"><span class="maPillLabel">TOTAL</span><span class="maPillValue" style="color:var(--brandColor3);">${esc(scoreTot)}</span></div>
-          </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:16px; padding:10px; background:rgba(0,0,0,0.04); border-radius:8px;">
+              <div class="maPillKV"><span class="maLabelLg">OUT</span><span class="maValueLg">${esc(scoreOut)}</span></div>
+              <div class="maPillKV"><span class="maLabelLg">IN</span><span class="maValueLg">${esc(scoreIn)}</span></div>
+              <div class="maPillKV"><span class="maLabelLg">TOTAL</span><span class="maValueLg">${esc(scoreTot)}</span></div>
+            </div>
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
             <button id="btnGhinCancel" class="btn btnPrimary" type="button">Cancel</button>
             <button id="btnGhinConfirm" class="btn btnSecondary" type="button"
