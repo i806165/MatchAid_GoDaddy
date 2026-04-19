@@ -93,6 +93,45 @@
   text-align:center;
 }
 
+.gmLogisticsRow{
+  display:grid;
+  grid-template-columns: 180px 160px 220px;
+  gap: 12px;
+  align-items:start;
+}
+
+.gmLogisticsField{
+  min-width: 0;
+}
+
+.gmLogisticsField .maLabel{
+  display:block;
+  margin-bottom: 6px;
+  white-space: nowrap;
+}
+
+.gmLogisticsField--count .gmStepper,
+.gmLogisticsField--interval .gmStepper{
+  width: 100%;
+}
+
+.gmLogisticsField--interval.is-hidden{
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media (max-width: 760px){
+  .gmLogisticsRow{
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .gmLogisticsField--interval.is-hidden{
+    display: none;
+    visibility: hidden;
+  }
+}
+
 .gmHint{
   margin-top: 10px;
   font-size: 12px;

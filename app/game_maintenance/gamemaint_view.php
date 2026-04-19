@@ -65,8 +65,8 @@
           </div>
         </div>
 
-        <div class="maFieldRow">
-          <div class="maField" style="flex:0 0 180px;">
+        <div class="gmLogisticsRow">
+          <div class="maField gmLogisticsField gmLogisticsField--method">
             <label class="maLabel" for="gmTOMethod">Tee Off Method</label>
             <select id="gmTOMethod" class="maTextInput">
               <option value="TeeTimes">Tee Times</option>
@@ -74,8 +74,8 @@
             </select>
           </div>
 
-          <div class="maField" style="flex:0 0 160px;">
-            <label class="maLabel" for="gmTeeCount">Tee Time Count</label>
+          <div class="maField gmLogisticsField gmLogisticsField--count">
+            <label class="maLabel" for="gmTeeCount" id="gmCountLabel">Tee Time Count</label>
             <div class="gmStepper">
               <button type="button" class="btn btnTertiary gmStepBtn" data-step="-1" data-target="gmTeeCount" aria-label="Decrement">−</button>
               <input id="gmTeeCount" class="maTextInput gmStepInput" type="number" min="1" max="50" step="1" />
@@ -83,8 +83,8 @@
             </div>
           </div>
 
-          <div class="maField" style="flex:0 0 220px;">
-            <label class="maLabel" for="gmTeeInterval">Tee Time Interval (minutes)</label>
+          <div class="maField gmLogisticsField gmLogisticsField--interval" id="gmIntervalField">
+            <label class="maLabel" for="gmTeeInterval" id="gmIntervalLabel">Tee Time Interval (minutes)</label>
             <div class="gmStepper">
               <button type="button" class="btn btnTertiary gmStepBtn" data-step="-1" data-target="gmTeeInterval" aria-label="Decrement">−</button>
               <input id="gmTeeInterval" class="maTextInput gmStepInput" type="number" min="1" max="60" step="1" />

@@ -58,6 +58,8 @@
 
     teeCount: document.getElementById("gmTeeCount"),
     teeInterval: document.getElementById("gmTeeInterval"),
+    countLabel: document.getElementById("gmCountLabel"),
+    intervalField: document.getElementById("gmIntervalField"),
     teeHint: document.getElementById("gmTeePreviewHint"),
 
     hcEffRow: document.getElementById("gmHcEffRow"),
@@ -347,6 +349,12 @@ function applyChrome() {
   }
 
   function renderTeeHint() {
+    const method = String(el.tomethod?.value || state.game?.dbGames_TOMethod || "TeeTimes");
+    if (method === "ShotGun") {
+      el.teeHint.textContent = "";
+      return;
+    }
+    
     const hhmm = getTimeHHMM();
     const list = buildTeeTimeList(hhmm, el.teeCount.value, el.teeInterval.value);
     if (!list.length) {
@@ -354,6 +362,19 @@ function applyChrome() {
       return;
     }
     el.teeHint.textContent = `Preview: ${list.slice(0, 6).join(", ")}${list.length > 6 ? "…" : ""}`;
+  }
+
+  function syncTOMethodUi() {
+    const method = String(el.tomethod?.value || state.game?.dbGames_TOMethod || "TeeTimes");
+    const isShotgun = (method === "ShotGun");
+
+    if (el.countLabel) {
+      el.countLabel.textContent = isShotgun ? "Slot Count" : "Tee Time Count";
+    }
+
+    if (el.intervalField) {
+      el.intervalField.classList.toggle("is-hidden", isShotgun);
+    }
   }
 
   function renderHcHint() {
@@ -393,7 +414,8 @@ function applyChrome() {
 
     // Effectivity date input only for Date
     el.hcDate.disabled = (readChoice(el.hcEffRow) !== "Date");
-
+    
+    syncTOMethodUi();
     renderCourseSummary();
     renderTeeHint();
     renderHcHint();
@@ -410,8 +432,8 @@ function applyChrome() {
     bindFieldChange(el.playDate, () => { state.game.dbGames_PlayDate = String(el.playDate.value || "").trim(); state.game.dbGames_PlayDateISO = state.game.dbGames_PlayDate; });
     if (el.tomethod) {
       el.tomethod.addEventListener("change", () => {
-        console.log("[GM] TO method changed:", el.tomethod.value);
         state.game.dbGames_TOMethod = String(el.tomethod.value || "TeeTimes");
+        syncTOMethodUi();
         setDirty(true);
       });
     }
