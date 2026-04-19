@@ -57,6 +57,47 @@
   flex: 1 1 0;
 }
 
+.gmDateTimeRow{
+  display:grid;
+  grid-template-columns: 170px minmax(260px, 1fr);
+  gap: 16px;
+  align-items:end;
+}
+
+.gmDateField{
+  min-width: 0;
+}
+
+.gmPlayTimeField{
+  min-width: 0;
+}
+
+.gmTimeRow{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(72px, 1fr));
+  gap: 8px;
+  align-items:center;
+}
+
+.gmTimeSel{
+  min-width: 0;
+  text-align: center;
+  text-align-last: center;
+}
+
+@media (max-width: 860px){
+  .gmDateTimeRow{
+    grid-template-columns: 150px minmax(220px, 1fr);
+  }
+}
+
+@media (max-width: 640px){
+  .gmDateTimeRow{
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
 .gmChoiceRow{
   display:flex;
   gap: 8px;
@@ -95,9 +136,9 @@
 
 .gmLogisticsRow{
   display:grid;
-  grid-template-columns: 180px 160px 220px;
-  gap: 12px;
-  align-items:start;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+  align-items:end;
 }
 
 .gmLogisticsField{
@@ -120,7 +161,34 @@
   pointer-events: none;
 }
 
-@media (max-width: 760px){
+.gmLogisticsField--count .gmStepper,
+.gmLogisticsField--interval .gmStepper{
+  display:grid;
+  grid-template-columns: 40px 1fr 40px;
+  overflow:hidden;
+}
+
+.gmLogisticsField--count .gmStepInput,
+.gmLogisticsField--interval .gmStepInput{
+  border-left: 1px solid var(--controlBorder);
+  border-right: 1px solid var(--controlBorder);
+  border-top: 0;
+  border-bottom: 0;
+  border-radius: 0;
+}
+
+@media (max-width: 860px){
+  .gmLogisticsRow{
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .gmLogisticsField--method{
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px){
   .gmLogisticsRow{
     grid-template-columns: 1fr;
     gap: 10px;

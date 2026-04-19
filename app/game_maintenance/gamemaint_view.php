@@ -46,13 +46,13 @@
 
       <div class="maCard__body">
 
-        <div class="maFieldRow">
-          <div class="maField">
+        <div class="gmDateTimeRow">
+          <div class="maField gmDateField">
             <label class="maLabel" for="gmPlayDate">Play Date</label>
             <input id="gmPlayDate" class="maTextInput" type="date" />
           </div>
 
-          <div class="maField">
+          <div class="maField gmPlayTimeField">
             <label class="maLabel">Play Time</label>
             <div class="gmTimeRow">
               <select id="gmPlayHour" class="maTextInput gmTimeSel" aria-label="Hour"></select>
@@ -84,7 +84,7 @@
           </div>
 
           <div class="maField gmLogisticsField gmLogisticsField--interval" id="gmIntervalField">
-            <label class="maLabel" for="gmTeeInterval" id="gmIntervalLabel">Tee Time Interval (minutes)</label>
+            <label class="maLabel" for="gmTeeInterval" id="gmIntervalLabel">Tee Time Interval</label>
             <div class="gmStepper">
               <button type="button" class="btn btnTertiary gmStepBtn" data-step="-1" data-target="gmTeeInterval" aria-label="Decrement">−</button>
               <input id="gmTeeInterval" class="maTextInput gmStepInput" type="number" min="1" max="60" step="1" />

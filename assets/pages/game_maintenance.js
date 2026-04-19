@@ -434,6 +434,7 @@ function applyChrome() {
       el.tomethod.addEventListener("change", () => {
         state.game.dbGames_TOMethod = String(el.tomethod.value || "TeeTimes");
         syncTOMethodUi();
+        renderTeeHint();
         setDirty(true);
       });
     }
