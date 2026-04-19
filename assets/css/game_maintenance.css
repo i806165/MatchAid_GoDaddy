@@ -3,16 +3,24 @@
    Shared tokens/layout live in /assets/css/ma_shared.css.
 */
 
+/* ==========================================================================
+   Card chrome
+   ========================================================================== */
+
 .maCard__hdr{
   color: var(--brandSecondaryText);
   background: var(--brandSecondary);
 }
 
+/* ==========================================================================
+   Game card / course summary
+   ========================================================================== */
+
 .gmCourseRow{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
@@ -22,7 +30,7 @@
 }
 
 .gmCourseSummary{
-  display:flex;
+  display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 4px;
@@ -48,35 +56,27 @@
   line-height: 1.2;
 }
 
-.gmTimeRow{
-  display:flex;
-  gap: 8px;
-  align-items:center;
-}
-.gmTimeSel{
-  flex: 1 1 0;
-}
+/* ==========================================================================
+   Logistics — Play Date / Play Time row
+   ========================================================================== */
 
 .gmDateTimeRow{
-  display:grid;
+  display: grid;
   grid-template-columns: 170px minmax(260px, 1fr);
   gap: 16px;
-  align-items:end;
+  align-items: end;
 }
 
-.gmDateField{
-  min-width: 0;
-}
-
+.gmDateField,
 .gmPlayTimeField{
   min-width: 0;
 }
 
 .gmTimeRow{
-  display:grid;
+  display: grid;
   grid-template-columns: repeat(3, minmax(72px, 1fr));
   gap: 8px;
-  align-items:center;
+  align-items: center;
 }
 
 .gmTimeSel{
@@ -85,24 +85,101 @@
   text-align-last: center;
 }
 
-@media (max-width: 860px){
-  .gmDateTimeRow{
-    grid-template-columns: 150px minmax(220px, 1fr);
-  }
+/* ==========================================================================
+   Logistics — Tee Off / Count / Interval row
+   ========================================================================== */
+
+.gmLogisticsRow{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: end;
 }
 
-@media (max-width: 640px){
-  .gmDateTimeRow{
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
+.gmLogisticsField{
+  min-width: 0;
 }
+
+.gmLogisticsField .maLabel{
+  display: block;
+  margin-bottom: 6px;
+  white-space: nowrap;
+}
+
+.gmLogisticsField--interval.is-hidden{
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   Integrated stepper controls
+   ========================================================================== */
+
+.gmStepper{
+  display: grid;
+  grid-template-columns: 40px 1fr 40px;
+  align-items: stretch;
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--controlBorder);
+  border-radius: var(--controlRadius);
+  background: #fff;
+  overflow: hidden;
+}
+
+.gmStepBtn{
+  min-width: 0;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: #fafaf8;
+  color: var(--ink);
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gmStepBtn:first-child{
+  border-right: 1px solid var(--controlBorder);
+}
+
+.gmStepBtn:last-child{
+  border-left: 1px solid var(--controlBorder);
+}
+
+.gmStepInput{
+  min-width: 0;
+  min-height: 44px;
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+  box-shadow: none;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+  padding: 0;
+  appearance: textfield;
+}
+
+.gmStepInput::-webkit-outer-spin-button,
+.gmStepInput::-webkit-inner-spin-button{
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* ==========================================================================
+   Choice pills / segmented selections
+   ========================================================================== */
 
 .gmChoiceRow{
-  display:flex;
+  display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
+
 .gmChoiceBtn{
   border: 1px solid var(--controlBorder);
   background: #fff;
@@ -115,69 +192,98 @@
   font-weight: 900;
   cursor: pointer;
 }
+
 .gmChoiceBtn.is-on{
   background: var(--segmentSelectedBg);
   color: var(--segmentSelectedText, var(--ink));
   border-color: transparent;
 }
 
-.gmStepper{
-  display:flex;
-  gap: 8px;
-  align-items:center;
-}
-.gmStepBtn{
-  min-width: 40px;
-  padding: 0;
-}
-.gmStepInput{
-  text-align:center;
+/* ==========================================================================
+   Hints / helper text
+   ========================================================================== */
+
+.gmHint{
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--mutedText);
 }
 
-.gmLogisticsRow{
-  display:grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 16px;
-  align-items:end;
+/* ==========================================================================
+   Course picker modal
+   ========================================================================== */
+
+.gmCourseSearchControls{
+  margin-top: 10px;
 }
 
-.gmLogisticsField{
-  min-width: 0;
-}
-
-.gmLogisticsField .maLabel{
-  display:block;
-  margin-bottom: 6px;
-  white-space: nowrap;
-}
-
-.gmLogisticsField--count .gmStepper,
-.gmLogisticsField--interval .gmStepper{
+.gmCourseSearchRow{
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
   width: 100%;
 }
 
-.gmLogisticsField--interval.is-hidden{
-  visibility: hidden;
-  pointer-events: none;
+.gmCourseSearchRow > *:first-child{
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
-.gmLogisticsField--count .gmStepper,
-.gmLogisticsField--interval .gmStepper{
-  display:grid;
-  grid-template-columns: 40px 1fr 40px;
-  overflow:hidden;
+.gmStateField{
+  flex: 0 0 60px;
 }
 
-.gmLogisticsField--count .gmStepInput,
-.gmLogisticsField--interval .gmStepInput{
-  border-left: 1px solid var(--controlBorder);
-  border-right: 1px solid var(--controlBorder);
-  border-top: 0;
-  border-bottom: 0;
-  border-radius: 0;
+.gmSearchBtnWrap{
+  flex: 0 0 auto;
 }
+
+.gmListHdr{
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--mutedText);
+  border-bottom: 1px solid var(--borderSubtle);
+  background: var(--panelHdrBg);
+}
+
+.gmColFac{
+  flex: 1 1 40%;
+  min-width: 0;
+}
+
+.gmColCourse{
+  flex: 1 1 40%;
+  min-width: 0;
+}
+
+.gmColCity{
+  flex: 0 0 20%;
+  min-width: 72px;
+  text-align: right;
+}
+
+.gmEmpty{
+  padding: 18px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--mutedText);
+}
+
+/* ==========================================================================
+   Responsive layout
+   ========================================================================== */
 
 @media (max-width: 860px){
+  .gmDateTimeRow{
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
   .gmLogisticsRow{
     grid-template-columns: 1fr 1fr;
     gap: 12px;
@@ -200,88 +306,43 @@
   }
 }
 
-.gmHint{
-  margin-top: 10px;
-  font-size: 12px;
-  font-weight: 800;
-  color: var(--mutedText);
-}
-
-.gmCourseSearchControls{
-  margin-top: 10px;
-}
-.gmCourseSearchRow{
-  display:flex;
-  gap: 12px;
-  align-items:flex-end;
-  flex-wrap: wrap;
-  width: 100%;
-}
-.gmCourseSearchRow > *:first-child {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-.gmStateField{ flex: 0 0 60px; }
-.gmSearchBtnWrap{ flex: 0 0 auto; }
-
-.gmListHdr{
-  display:flex;
-  gap: 10px;
-  padding: 10px 12px;
-  font-size: 12px;
-  font-weight: 900;
-  color: var(--mutedText);
-  border-bottom: 1px solid var(--borderSubtle);
-  background: var(--panelHdrBg);
-}
-.gmColFac{ flex: 1 1 40%; min-width: 0; }
-.gmColCourse{ flex: 1 1 40%; min-width: 0; }
-.gmColCity{ flex: 0 0 20%; min-width: 72px; text-align:right; }
-
-.gmEmpty{
-  padding: 18px;
-  text-align:center;
-  font-size: 13px;
-  font-weight: 900;
-  color: var(--mutedText);
-}
 /* ==========================================================================
-   Desktop-only canvas + centered page width (Game Maintenance)
-   Canvas style #1 (locked): soft branded wash + subtle depth
+   Desktop-only canvas + centered page width
    ========================================================================== */
-@media (min-width: 980px){
 
-  /* 1) Desktop backdrop ("outside the canvas") */
+@media (min-width: 980px){
   body{
     background:
-      radial-gradient(1200px circle at 18% 8%,
+      radial-gradient(
+        1200px circle at 18% 8%,
         color-mix(in srgb, var(--brandPrimary) 16%, transparent),
-        transparent 58%),
-      radial-gradient(900px circle at 82% 0%,
+        transparent 58%
+      ),
+      radial-gradient(
+        900px circle at 82% 0%,
         color-mix(in srgb, var(--brandSecondary) 16%, transparent),
-        transparent 60%),
-      linear-gradient(180deg,
+        transparent 60%
+      ),
+      linear-gradient(
+        180deg,
         color-mix(in srgb, var(--surfaceApp) 96%, black),
-        var(--surfaceApp));
+        var(--surfaceApp)
+      );
     background-attachment: fixed;
   }
 
-  /* 2) Center the page content column */
   .maPage{
     display: flex;
     justify-content: center;
   }
 
-  /* 3) "Canvas" surface behind the cards */
   .maPage > .maCards{
     width: min(980px, 100%);
     margin: 0 auto;
-
     background: rgba(255,255,255,.72);
     border: 1px solid rgba(0,0,0,.06);
     border-radius: 18px;
     padding: 14px;
-
     box-shadow: 0 10px 30px rgba(0,0,0,.08);
   }
 }
