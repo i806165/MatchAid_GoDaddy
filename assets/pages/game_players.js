@@ -1194,6 +1194,14 @@
       const g = state.game || {};
       const gameId = String(g.dbGames_GGID || g.dbGames_GGIDnum || g.ggid || "").trim();
 
+      console.log("[TEE FLOW] launch", {
+        ghin: safe(state.pendingPlayer.ghin || ""),
+        name: `${safe(state.pendingPlayer.first_name || "")} ${safe(state.pendingPlayer.last_name || "")}`.trim(),
+        selectedTeeSetId: safe(state.pendingPlayer.selectedTeeSetId || ""),
+        recentTeeSetId: safe(state.pendingPlayer.recentTeeSetId || ""),
+        playerObject: state.pendingPlayer
+      });
+
       MA.TeeSetSelection.open({
         gameId,
         player: state.pendingPlayer,
