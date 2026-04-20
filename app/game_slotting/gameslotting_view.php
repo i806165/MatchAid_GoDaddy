@@ -1,122 +1,116 @@
-<!-- /app/game_slotting/gameslotting_view.php -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MatchAid • Game Slotting</title>
+<?php
+// /public_html/app/game_slotting/gameslotting_view.php
+?>
+  <div class="maPanels maPanels--2" id="gsTabPanels">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
-
-  <link rel="stylesheet" href="/assets/css/ma_shared.css">
-  <link rel="stylesheet" href="/assets/css/game_slotting.css">
-  <script>
-    window.MA = window.MA || {};
-    window.MA.paths = <?php echo json_encode($paths, JSON_UNESCAPED_SLASHES); ?>;
-    window.__INIT__ = <?php echo json_encode($init, JSON_UNESCAPED_SLASHES); ?>;
-    window.__MA_INIT__ = window.__INIT__;
-    
-    window.MA.routes = {
-      router: window.MA.paths.routerApi,
-      login: <?php echo json_encode(MA_ROUTE_LOGIN); ?>,
-      apiGHIN: window.MA.paths.apiGHIN,
-      apiSave: window.MA.paths.apiSave
-    };
-  </script>
-</head>
-<body class="maPage--slotting">
-  <?php require MA_INCLUDES . "/chromeHeader.php"; ?>
-
-  <main class="maPage maPage--multi">
-    <div class="maPanels maPanels--2" id="gsTabPanels">
-      
-      <!-- PANEL: THE TRAY (Uncarded Blocks) -->
-      <section class="maPanel gsTrayPanel" id="gsTrayPanel">
-        <header class="maPanel__hdr">
-          <div class="gpPanelHdr">
-            <div class="gpPanelHdr__left gpMobileCloseBtn">
-              <button class="iconBtn btnSecondary" type="button" aria-label="Close Tray">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-              </button>
-            </div>
-            <div class="gpPanelHdr__title">UNASSIGNED GROUPS</div>
-            <div class="gpPanelHdr__actions">
-              <div class="gpCount" id="gsTrayCount">0</div>
-              <button class="btn btnSecondary" id="gsBtnAssign" type="button">Assign &gt;&gt;</button>
-            </div>
-          </div>
-        </header>
-
-        <div class="maPanel__controls">
-          <div class="gpMasterCheck" id="gsTrayMasterCheck"></div>
-          <div class="gpInputClearWrap">
-            <input type="text" id="gsTraySearch" class="maTextInput" placeholder="Search pairings...">
-            <button id="gsTraySearchClear" class="clearBtn isHidden" type="button">×</button>
-          </div>
-        </div>
-
-        <div class="maPanel__body" id="gsTrayList">
-          <!-- Competitive Blocks Rendered Here -->
-        </div>
-
-        <footer class="maPanel__ftr">
-          <div class="gpFooter">
-            <div class="gpFooter__left">
-              <div class="gpHint" id="gsTrayHint">Select blocks to assign.</div>
-            </div>
-            <div class="gpFooter__right">
-              <!-- Actions moved to header -->
-            </div>
-          </div>
-        </footer>
-      </section>
-
-      <!-- PANEL: THE CANVAS (Physical Slots) -->
-      <section class="maPanel maPanel--primary" id="gsCanvasPanel">
-        <header class="maPanel__hdr">
-          <div class="gpPanelHdr">
-            <button class="iconBtn btnSecondary gpGlobalToggleBtn" id="gsBtnToggleAll" type="button" title="Collapse All">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+    <!-- PANEL: THE TRAY (Unassigned Blocks) -->
+    <section class="maPanel gsTrayPanel" id="gsTrayPanel">
+      <header class="maPanel__hdr">
+        <div class="gpPanelHdr">
+          <div class="gpPanelHdr__left gpMobileCloseBtn">
+            <button class="iconBtn btnSecondary" type="button" aria-label="Close Tray">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
             </button>
-            <div class="gpPanelHdr__title">ASSIGNED GROUPS</div>
-            <div class="gpPanelHdr__actions">
-              <button class="btn btnSecondary gpMobileAddBtn" id="gsBtnTrayOpen" type="button">Add Slot</button>
-            </div>
           </div>
-        </header>
-
-        <div class="maPanel__body maCards" id="gsCanvas">
-          <!-- Slot Cards Rendered Here -->
+          <div class="gpPanelHdr__title">UNASSIGNED GROUPS</div>
+          <div class="gpPanelHdr__actions">
+            <div class="gpCount" id="gsTrayCount">0</div>
+            <button class="btn btnSecondary" id="gsBtnAssign" type="button">Assign &gt;&gt;</button>
+          </div>
         </div>
-      </section>
-
-    </div>
-  </main>
-
-  <?php require MA_INCLUDES . "/chromeFooter.php"; ?>
-
-  <!-- Removal Confirmation Dialog -->
-  <dialog id="gsConfirmDialog" class="maModalOverlay">
-    <section class="maModal" style="max-width:320px;">
-      <header class="maModal__hdr">
-        <div class="maModal__title">Confirm Removal</div>
       </header>
-      <div class="maModal__body" style="text-align:center;">
-        <p id="gsConfirmMsg" class="text--body">Remove this pairing from the slot?</p>
+
+      <div class="maPanel__controls">
+        <div class="gpMasterCheck" id="gsTrayMasterCheck"></div>
+        <div class="gpInputClearWrap">
+          <input type="text" id="gsTraySearch" class="maTextInput" placeholder="Search pairings...">
+          <button id="gsTraySearchClear" class="clearBtn isHidden" type="button">×</button>
+        </div>
       </div>
+
+      <div class="maPanel__body" id="gsTrayList">
+        <!-- Competitive Blocks Rendered Here -->
+      </div>
+
+      <footer class="maPanel__ftr">
+        <div class="gpFooter">
+          <div class="gpFooter__left">
+            <div class="gpHint" id="gsTrayHint">Select blocks to assign.</div>
+          </div>
+          <div class="gpFooter__right">
+            <!-- Actions moved to header -->
+          </div>
+        </div>
+      </footer>
+    </section>
+
+    <!-- PANEL: THE CANVAS (Physical Slots) -->
+    <section class="maPanel maPanel--primary" id="gsCanvasPanel">
+      <header class="maPanel__hdr">
+        <div class="gpPanelHdr">
+          <button class="iconBtn btnSecondary gpGlobalToggleBtn" id="gsBtnToggleAll" type="button" title="Collapse All">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+          <div class="gpPanelHdr__title">ASSIGNED GROUPS</div>
+          <div class="gpPanelHdr__actions">
+            <button class="btn btnSecondary gpMobileAddBtn" id="gsBtnTrayOpen" type="button">Add Slot</button>
+          </div>
+        </div>
+      </header>
+
+      <div class="maPanel__body maCards" id="gsCanvas">
+        <!-- Slot Cards Rendered Here -->
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Auto Slot Modal -->
+  <dialog id="gsAutoSlotDialog" class="maModalOverlay">
+    <section class="maModal gsAutoSlotModal" style="max-width:480px;">
+      <header class="maModal__hdr">
+        <div class="maModal__titles">
+          <div class="maModal__title">Auto Slot</div>
+          <div class="maModal__subtitle" id="asSubtitle">0 Groups • 0 Golfers</div>
+        </div>
+        <button id="asBtnClose" class="closeBtn" type="button" aria-label="Close">×</button>
+      </header>
+
+      <div class="maModal__controls" id="asControls">
+        <div class="maFieldRow" style="margin-top:0;">
+          <div class="maField">
+            <label class="maLabel" for="asSortOrder">Sort Order</label>
+            <select id="asSortOrder" class="maTextInput">
+              <option value="pairingId">By Pairing ID</option>
+              <option value="lowFirst">Stacked — Low First</option>
+              <option value="highFirst">Stacked — High First</option>
+              <option value="balanced">Balanced / Interleaved</option>
+              <option value="random">Random</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="asModeFields"></div>
+        <div id="asMsg" class="gpHint" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="maModal__body" id="asBody" style="display:none;">
+        <div id="asPreviewSummary" class="asStackInfo" style="margin-bottom:10px;"></div>
+        <div id="asPreviewList" class="maListRows"></div>
+      </div>
+
       <footer class="maModal__ftr">
-        <div class="maModal__ftrActions" style="justify-content:center;">
-          <button class="btn btnSecondary" value="cancel" type="button">Cancel</button>
-          <button class="btn btnPrimary" value="confirm" type="button">Remove</button>
+        <button id="asBtnCancel" class="btn btnSecondary" type="button">Cancel</button>
+        <div class="maModal__ftrActions">
+          <button id="asBtnRetry" class="btn btnSecondary" type="button" style="display:none;">Retry</button>
+          <button id="asBtnRun" class="btn btnPrimary" type="button">Run</button>
+          <button id="asBtnApply" class="btn btnPrimary" type="button" style="display:none;">Apply</button>
         </div>
       </footer>
     </section>
   </dialog>
-
-  <script src="/assets/js/ma_shared.js"></script>
-  <script src="/assets/modules/actions_menu.js"></script>
-  <script src="/assets/pages/game_slotting.js"></script>
-</body>
-</html>

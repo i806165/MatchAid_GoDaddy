@@ -118,11 +118,11 @@
   function getAllowedHoleRange() {
     const raw = String(init.game?.dbGames_Holes || "").trim().toLowerCase();
 
-    if (raw === "F9") {
+    if (raw === "f9") {
       return { min: 1, max: 9 };
     }
 
-    if (raw === "B9") {
+    if (raw === "b9") {
       return { min: 10, max: 18 };
     }
 
@@ -139,6 +139,242 @@
     state.dirty.add(String(ghin));
     if (MA.setStatus) MA.setStatus("Unsaved changes.", "warn");
   }
+
+  function getBlockIdForPlayer(p) {
+  return isPairPair()
+    ? String(p.flightId || "").trim()
+    : String(p.pairingId || "").trim();
+}
+
+function normalizeBlockId(v) {
+  return String(v || "").trim();
+}
+
+function phValue(p) {
+  const v = p.ph ?? p.ch ?? p.hi ?? 999;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 999;
+}
+
+function average(nums) {
+  if (!nums.length) return 999;
+  return nums.reduce((s, v) => s + v, 0) / nums.length;
+}
+
+function getUnassignedGroups() {
+  const byBlock = {};
+
+  state.players.forEach((p) => {
+    const playerKey = String(p.playerKey || "").trim();
+    if (playerKey !== "") return;
+
+    const blockId = getBlockIdForPlayer(p);
+    if (!blockId) return;
+
+    if (!byBlock[blockId]) {
+      byBlock[blockId] = {
+        blockId,
+        pairingId: blockId,
+        players: []
+      };
+    }
+    byBlock[blockId].players.push(p);
+  });
+
+  return Object.values(byBlock).map((g) => ({
+    blockId: g.blockId,
+    pairingId: g.blockId,
+    players: g.players,
+    size: g.players.length,
+    avgHandicap: average(g.players.map(phValue))
+  }));
+}
+
+function getAutoSlotGroupLabel(group) {
+  const names = group.players
+    .map((p) => String(p.lName || p.name || "").trim())
+    .filter(Boolean);
+
+  return {
+    pairingId: group.blockId,
+    playerLastNames: names
+  };
+}
+
+function shuffleArray(items) {
+  const out = items.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+const AutoSlotEngine = {
+  validateConfig(cfg, groups) {
+    if (!groups.length) {
+      return { ok: false, message: "All pairings are already assigned." };
+    }
+
+    if (cfg.toMethod === "TeeTimes") {
+      if (parseTimeToMinutes(cfg.startTime) == null) {
+        return { ok: false, message: "Please enter a valid start time." };
+      }
+      if (!Number.isFinite(Number(cfg.intervalMinutes)) || Number(cfg.intervalMinutes) < 1) {
+        return { ok: false, message: "Please enter a valid interval." };
+      }
+      if (cfg.startHole === "split" && !(cfg.holesScope.min === 1 && cfg.holesScope.max === 18)) {
+        return { ok: false, message: "Split tee is only available for All 18 games." };
+      }
+      return { ok: true, message: "" };
+    }
+
+    const stacksNeeded = this.requiredStacks(groups, cfg.holesScope);
+    if ((cfg.stackedHoles || []).length < stacksNeeded) {
+      return {
+        ok: false,
+        message: `${groups.length} groups require ${stacksNeeded} stacked holes. Please check ${stacksNeeded} holes to stack.`
+      };
+    }
+
+    const startHole = parseInt(cfg.startHole, 10);
+    if (!Number.isFinite(startHole) || startHole < cfg.holesScope.min || startHole > cfg.holesScope.max) {
+      return { ok: false, message: "Please enter a valid shotgun starting hole." };
+    }
+
+    return { ok: true, message: "" };
+  },
+
+  getHoleSequence(cfg) {
+    const { min, max } = cfg.holesScope;
+    const start = parseInt(cfg.startHole, 10);
+    const total = max - min + 1;
+    const sequence = [];
+    for (let i = 0; i < total; i++) {
+      const hole = ((start - min + i) % total) + min;
+      sequence.push(hole);
+    }
+    return sequence;
+  },
+
+  requiredStacks(groups, holesScope) {
+    const holesCount = (holesScope.max - holesScope.min + 1);
+    return Math.max(0, groups.length - holesCount);
+  },
+
+  sortGroups(sortOrder, groups) {
+    const src = groups.slice();
+
+    if (sortOrder === "random") return shuffleArray(src);
+
+    if (sortOrder === "pairingId") {
+      return src.sort((a, b) => String(a.blockId).localeCompare(String(b.blockId), undefined, { numeric: true }));
+    }
+
+    if (sortOrder === "lowFirst") {
+      return src.sort((a, b) => a.avgHandicap - b.avgHandicap);
+    }
+
+    if (sortOrder === "highFirst") {
+      return src.sort((a, b) => b.avgHandicap - a.avgHandicap);
+    }
+
+    if (sortOrder === "balanced") {
+      const ranked = src.sort((a, b) => a.avgHandicap - b.avgHandicap);
+      const out = [];
+      let lo = 0;
+      let hi = ranked.length - 1;
+      while (lo <= hi) {
+        out.push(ranked[lo++]);
+        if (lo <= hi) out.push(ranked[hi--]);
+      }
+      return out;
+    }
+
+    return src;
+  },
+
+  buildSlots(cfg, neededCount) {
+    const slots = [];
+
+    if (cfg.toMethod === "TeeTimes") {
+      const startMinutes = parseTimeToMinutes(cfg.startTime);
+      const interval = Number(cfg.intervalMinutes) || 9;
+
+      for (let i = 0; i < neededCount; i++) {
+        const time = formatMinutesToTime(startMinutes + (i * interval));
+        let hole = "1";
+
+        if (cfg.startHole === "10") hole = "10";
+        if (cfg.startHole === "split") hole = (i % 2 === 0) ? "1" : "10";
+
+        slots.push({ time, hole, suffix: "" });
+      }
+
+      return slots;
+    }
+
+    const orderedHoles = this.getHoleSequence(cfg);
+    const stacked = new Set((cfg.stackedHoles || []).map((n) => parseInt(n, 10)));
+    const playTime = getDefaultStartTime();
+
+    orderedHoles.forEach((hole) => {
+      slots.push({ time: playTime, hole: String(hole), suffix: "" });
+      if (stacked.has(hole)) {
+        slots.push({ time: playTime, hole: String(hole), suffix: "B" });
+      }
+    });
+
+    return slots;
+  },
+
+  run(cfg, groups) {
+    const valid = this.validateConfig(cfg, groups);
+    if (!valid.ok) {
+      return { ok: false, slots: [], unassigned: groups.slice(), message: valid.message };
+    }
+
+    const sortedGroups = this.sortGroups(cfg.sortOrder, groups);
+    const slotsSeed = this.buildSlots(cfg, sortedGroups.length);
+
+    const slots = slotsSeed.map((s) => ({
+      time: s.time,
+      hole: s.hole,
+      suffix: s.suffix,
+      playerKey: randPlayerKey(),
+      golferCount: 0,
+      groups: []
+    }));
+
+    const unassigned = [];
+    let slotIndex = 0;
+    let currentCount = 0;
+
+    sortedGroups.forEach((group) => {
+      while (slotIndex < slots.length && currentCount + group.size > 4) {
+        slotIndex += 1;
+        currentCount = 0;
+      }
+
+      if (slotIndex >= slots.length) {
+        unassigned.push(group);
+        return;
+      }
+
+      const slot = slots[slotIndex];
+      slot.groups.push(getAutoSlotGroupLabel(group));
+      slot.golferCount += group.size;
+      currentCount += group.size;
+    });
+
+    return {
+      ok: true,
+      slots: slots.filter((s) => s.groups.length > 0),
+      unassigned,
+      message: ""
+    };
+  }
+};
 
   // ---- FIFO Assignment Engine ----
   function assignSelection() {
@@ -696,16 +932,301 @@ function canPromoteDown(playerKey) {
     }
   }
 
+  function renderAutoSlotModeFields(dialog, groups) {
+  const modeFields = dialog.querySelector("#asModeFields");
+  if (!modeFields) return;
+
+  const range = getAllowedHoleRange();
+  const isAll18 = range.min === 1 && range.max === 18;
+
+  if (!isShotgun()) {
+    modeFields.innerHTML = `
+      <div class="maFieldRow">
+        <div class="maField">
+          <label class="maLabel" for="asStartTime">Start Time</label>
+          <input id="asStartTime" class="maTextInput" type="text" value="${esc(getDefaultStartTime())}">
+        </div>
+        <div class="maField">
+          <label class="maLabel" for="asInterval">Interval (min)</label>
+          <input id="asInterval" class="maTextInput" type="number" min="1" step="1" value="${esc(state.interval || 9)}">
+        </div>
+      </div>
+
+      <div class="maFieldRow">
+        <div class="maField">
+          <label class="maLabel">Start Hole</label>
+          <div class="asStartHoleChips">
+            <button type="button" class="maChoiceChip is-selected" data-as-start-hole="1">Hole 1</button>
+            <button type="button" class="maChoiceChip" data-as-start-hole="10">Hole 10</button>
+            ${isAll18 ? `<button type="button" class="maChoiceChip" data-as-start-hole="split">Split</button>` : ``}
+          </div>
+          <input id="asStartHoleValue" type="hidden" value="1">
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const holeItems = [];
+  for (let h = range.min; h <= range.max; h++) {
+    holeItems.push(`
+      <label class="asStackGrid__item">
+        <input type="checkbox" value="${h}">
+        <span>${h}</span>
+      </label>
+    `);
+  }
+
+  const stacksNeeded = AutoSlotEngine.requiredStacks(groups, range);
+
+  modeFields.innerHTML = `
+    <div class="maFieldRow">
+      <div class="maField">
+        <label class="maLabel" for="asStartHole">Start Hole</label>
+        <input id="asStartHole" class="maTextInput" type="number" min="${range.min}" max="${range.max}" step="1" value="${range.min}">
+      </div>
+    </div>
+
+    <div class="maFieldRow">
+      <div class="maField">
+        <label class="maLabel">Stack these holes</label>
+        <div id="asStackGrid" class="asStackGrid">${holeItems.join("")}</div>
+        <div id="asStackInfo" class="asStackInfo">${groups.length} groups • ${range.max - range.min + 1} holes • ${stacksNeeded} stacks needed</div>
+      </div>
+    </div>
+  `;
+}
+
+function updateAutoSlotStartHoleChips(dialog) {
+  const selected = dialog.querySelector("#asStartHoleValue")?.value || "1";
+  dialog.querySelectorAll("[data-as-start-hole]").forEach((btn) => {
+    btn.classList.toggle("is-selected", btn.dataset.asStartHole === selected);
+  });
+}
+
+function updateAutoSlotStackInfo(dialog, groups) {
+  const info = dialog.querySelector("#asStackInfo");
+  if (!info) return;
+
+  const range = getAllowedHoleRange();
+  const selectedCount = dialog.querySelectorAll("#asStackGrid input:checked").length;
+  const needed = AutoSlotEngine.requiredStacks(groups, range);
+
+  info.classList.remove("asStackInfo--warn", "asStackInfo--ok");
+  info.textContent = `${groups.length} groups • ${range.max - range.min + 1} holes • ${needed} stacks needed`;
+
+  if (needed <= 0) return;
+  if (selectedCount < needed) {
+    info.classList.add("asStackInfo--warn");
+  } else {
+    info.classList.add("asStackInfo--ok");
+  }
+}
+
+function buildAutoSlotConfig(dialog) {
+  const range = getAllowedHoleRange();
+
+  if (!isShotgun()) {
+    return {
+      sortOrder: dialog.querySelector("#asSortOrder")?.value || "pairingId",
+      toMethod: "TeeTimes",
+      startTime: dialog.querySelector("#asStartTime")?.value || getDefaultStartTime(),
+      intervalMinutes: Number(dialog.querySelector("#asInterval")?.value || state.interval || 9),
+      startHole: dialog.querySelector("#asStartHoleValue")?.value || "1",
+      holesScope: range,
+      stackedHoles: []
+    };
+  }
+
+  return {
+    sortOrder: dialog.querySelector("#asSortOrder")?.value || "pairingId",
+    toMethod: "Shotgun",
+    startTime: getDefaultStartTime(),
+    intervalMinutes: Number(state.interval || 9),
+    startHole: dialog.querySelector("#asStartHole")?.value || String(range.min),
+    holesScope: range,
+    stackedHoles: Array.from(dialog.querySelectorAll("#asStackGrid input:checked")).map((cb) => Number(cb.value))
+  };
+}
+
+function renderAutoSlotPreview(dialog, result) {
+  const summary = dialog.querySelector("#asPreviewSummary");
+  const list = dialog.querySelector("#asPreviewList");
+
+  if (!summary || !list) return;
+
+  if (!result.unassigned.length) {
+    summary.textContent = `✓ ${result.slots.length} slots assigned.`;
+    summary.className = "asStackInfo asStackInfo--ok";
+  } else {
+    summary.textContent = `⚠ ${result.slots.length} slots assigned — ${result.unassigned.length} groups could not fit.`;
+    summary.className = "asStackInfo asStackInfo--warn";
+  }
+
+  list.innerHTML = result.slots.map((slot) => {
+    const slotLabel = isShotgun()
+      ? `Hole ${slot.hole}${slot.suffix}`
+      : slot.time;
+
+    const names = slot.groups
+      .map((g) => g.playerLastNames.join(", "))
+      .join(" • ");
+
+    return `
+      <div class="maListRow asPreviewRow">
+        <div class="asPreviewRow__slot">${esc(slotLabel)}</div>
+        <div class="asPreviewRow__count">${esc(slot.golferCount)}</div>
+        <div class="asPreviewRow__names">${esc(names)}</div>
+      </div>
+    `;
+  }).join("");
+}
+
+function applyAutoSlotGroups(slots) {
+  slots.forEach((slot) => {
+    slot.groups.forEach((group) => {
+      state.players
+        .filter((p) => normalizeBlockId(getBlockIdForPlayer(p)) === normalizeBlockId(group.pairingId))
+        .forEach((p) => {
+          p.teeTime = slot.time;
+          p.teeTimeMinutes = parseTimeToMinutes(slot.time);
+          p.startHole = String(slot.hole);
+          p.startHoleNumber = parseInt(slot.hole, 10) || 0;
+          p.startHoleSuffix = slot.suffix;
+          p.playerKey = slot.playerKey;
+          markDirty(p.playerGHIN);
+        });
+    });
+  });
+
+  render();
+  if (MA.setStatus) MA.setStatus(`Auto-slotted ${slots.length} slots. Review and Save when ready.`, "success");
+}
+
+function openAutoSlotModal() {
+  const dialog = document.getElementById("gsAutoSlotDialog");
+  if (!dialog) return;
+
+  const groups = getUnassignedGroups();
+  const golfers = groups.reduce((s, g) => s + g.size, 0);
+  const subtitle = dialog.querySelector("#asSubtitle");
+  const msg = dialog.querySelector("#asMsg");
+  const controls = dialog.querySelector("#asControls");
+  const body = dialog.querySelector("#asBody");
+  const btnRun = dialog.querySelector("#asBtnRun");
+  const btnRetry = dialog.querySelector("#asBtnRetry");
+  const btnApply = dialog.querySelector("#asBtnApply");
+  const btnClose = dialog.querySelector("#asBtnClose");
+  const btnCancel = dialog.querySelector("#asBtnCancel");
+
+  if (subtitle) subtitle.textContent = `${groups.length} Groups • ${golfers} Golfers`;
+  if (msg) msg.textContent = "";
+
+  renderAutoSlotModeFields(dialog, groups);
+  updateAutoSlotStartHoleChips(dialog);
+  updateAutoSlotStackInfo(dialog, groups);
+
+  controls.style.display = "block";
+  body.style.display = "none";
+  btnRun.style.display = "inline-flex";
+  btnRetry.style.display = "none";
+  btnApply.style.display = "none";
+
+  let lastResult = null;
+
+  function closeDialog() {
+    dialog.close();
+  }
+
+  dialog.onclick = (e) => {
+    if (e.target === dialog) closeDialog();
+  };
+
+  dialog.querySelectorAll("[data-as-start-hole]").forEach((btn) => {
+    btn.onclick = () => {
+      const hidden = dialog.querySelector("#asStartHoleValue");
+      if (hidden) hidden.value = btn.dataset.asStartHole || "1";
+      updateAutoSlotStartHoleChips(dialog);
+    };
+  });
+
+  dialog.querySelectorAll("#asStackGrid input").forEach((cb) => {
+    cb.onchange = () => updateAutoSlotStackInfo(dialog, groups);
+  });
+
+  btnRun.onclick = () => {
+    const cfg = buildAutoSlotConfig(dialog);
+    const result = AutoSlotEngine.run(cfg, groups);
+
+    if (!result.ok) {
+      if (msg) msg.textContent = result.message || "Unable to auto slot.";
+      return;
+    }
+
+    lastResult = result;
+    if (msg) msg.textContent = "";
+
+    renderAutoSlotPreview(dialog, result);
+
+    controls.style.display = "none";
+    body.style.display = "block";
+    btnRun.style.display = "none";
+    btnRetry.style.display = "inline-flex";
+    btnApply.style.display = "inline-flex";
+  };
+
+  btnRetry.onclick = () => {
+    body.style.display = "none";
+    controls.style.display = "block";
+    btnApply.style.display = "none";
+    btnRetry.style.display = "none";
+    btnRun.style.display = "inline-flex";
+  };
+
+  btnApply.onclick = () => {
+    if (!lastResult || !lastResult.ok) return;
+    applyAutoSlotGroups(lastResult.slots);
+    closeDialog();
+  };
+
+  btnClose.onclick = closeDialog;
+  btnCancel.onclick = closeDialog;
+
+  dialog.showModal();
+}
+
+function onResetChanges() {
+  if (state.dirty.size === 0) {
+    if (MA.setStatus) MA.setStatus("No unsaved changes to reset.", "info");
+    return;
+  }
+
+  if (confirm("Discard all unsaved changes and revert to last save?")) {
+    window.location.reload();
+  }
+}
+
+function openActionsMenu() {
+  if (!MA.ui || !MA.ui.openActionsMenu) return;
+
+  MA.ui.openActionsMenu("Actions", [
+    { label: "Auto Slot", action: () => openAutoSlotModal() },
+    { separator: true },
+    { label: "Game Settings", action: () => MA.routerGo("settings") },
+    { label: "Reset Changes", action: () => onResetChanges(), danger: true }
+  ]);
+}
+
   // ---- Actions ----
   async function doSave() {
     if (state.busy || state.dirty.size === 0) return;
     setBusy(true);
-    if (MA.setStatus) MA.setStatus("Saving slot assignments...", "info");
+    if (MA.setStatus) MA.setStatus("Saving slot assignments.", "info");
 
     const payload = {
       ggid: state.ggid,
-      assignments: Array.from(state.dirty).map(ghin => {
-        const p = state.players.find(x => x.playerGHIN === ghin);
+      assignments: Array.from(state.dirty).map((ghin) => {
+        const p = state.players.find((x) => x.playerGHIN === ghin);
         return {
           playerGHIN: p.playerGHIN,
           teeTime: p.teeTime,
@@ -717,16 +1238,16 @@ function canPromoteDown(playerKey) {
     };
 
     try {
-      const res = await MA.postJson("/api/game_pairings/savePairings.php", payload);
+      const res = await MA.postJson(MA.routes?.apiSave || "/api/game_pairings/savePairings.php", payload);
       if (res.ok) {
         state.dirty.clear();
         if (MA.setStatus) MA.setStatus("Saved successfully.", "success");
         render();
       } else {
-        throw new Error(res.message);
+        throw new Error(res.message || "Save failed.");
       }
     } catch (e) {
-      if (MA.setStatus) MA.setStatus(e.message, "error");
+      if (MA.setStatus) MA.setStatus(e.message || "Save failed.", "danger");
     } finally {
       setBusy(false);
     }
@@ -896,10 +1417,13 @@ function canPromoteDown(playerKey) {
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     MA.ui.openActionsMenu("Actions", [
-      { label: "AutoSlot (By Handicap)", action: () => console.log("AutoSlot Logic Deferred") },
+      { label: "Open Auto Slotting", action: () => openAutoSlotModal() },
+      { separator: true },
       { separator: true },
       { label: "Game Settings", action: () => MA.routerGo("settings") },
-      { label: "Reset Changes", action: () => window.location.reload(), danger: true }
+      { separator: true },
+      { separator: true },
+      { label: "Reset Changes", action: () => onResetChanges(), danger: true }
     ]);
   }
 

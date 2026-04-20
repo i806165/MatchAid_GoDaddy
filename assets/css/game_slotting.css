@@ -5,17 +5,24 @@
    No ID selectors except for specific overrides.
 */
 
+/* ==========================================================================
+   Page Shell / Panels
+   ========================================================================== */
+
 .maPage--slotting {
   overflow: hidden;
 }
 
-/* Panels */
-.gsTrayPanel, .maPanel--primary {
+.gsTrayPanel,
+.maPanel--primary {
   height: 100%;
   min-height: 0;
 }
 
-/* Panel Header Treatment */
+/* ==========================================================================
+   Panel Header Chrome
+   ========================================================================== */
+
 .maPage--slotting .maPanel__hdr {
   background: var(--brandSecondary);
   color: var(--brandSecondaryText);
@@ -32,12 +39,12 @@
 }
 
 .gpPanelHdr__title {
+  flex: 1;
+  text-align: center;
   font-size: 14px;
   font-weight: 950;
   letter-spacing: .2px;
   color: var(--brandSecondaryText);
-  flex: 1;
-  text-align: center;
 }
 
 .gpPanelHdr__actions {
@@ -48,7 +55,6 @@
   right: 10px;
 }
 
-/* Mobile Close Button (Left) - Hidden on desktop */
 .gpPanelHdr__left {
   display: none;
   position: absolute;
@@ -61,7 +67,14 @@
   color: rgba(255,255,255,0.9);
 }
 
-/* Tray Footer & Hints */
+.gpMobileAddBtn {
+  display: none;
+}
+
+/* ==========================================================================
+   Tray Footer / Hint
+   ========================================================================== */
+
 .gpFooter {
   display: flex;
   gap: 10px;
@@ -71,8 +84,8 @@
 }
 
 .gpFooter__left {
-  min-width: 0;
   flex: 1;
+  min-width: 0;
   font-size: 12px;
   font-weight: 800;
   color: var(--mutedText);
@@ -90,12 +103,15 @@
   text-overflow: ellipsis;
 }
 
-/* Group Cards */
+/* ==========================================================================
+   Assigned Slot Cards
+   ========================================================================== */
+
 .gpGroupCard {
+  overflow: hidden;
   border: 1px solid var(--borderSubtle);
   border-radius: var(--cardRadius);
   background: #fff;
-  overflow: hidden;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -110,11 +126,11 @@
 }
 
 .gpGroupCard__title {
+  flex: 1;
+  min-width: 0;
   font-size: 13px;
   font-weight: 950;
   color: var(--ink);
-  flex: 1;
-  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -132,17 +148,21 @@
   pointer-events: none;
 }
 
-/* Expand/Collapse Rules */
-.gpGroupCard .gpGroupCard__hdr--collapsed { display: none; }
-.gpGroupCard.is-collapsed .gpGroupCard__hdr--expanded,
-.gpGroupCard.is-collapsed .gpGroupCard__body { display: none; }
-.gpGroupCard.is-collapsed .gpGroupCard__hdr--collapsed { display: flex; }
-
-.gpMobileAddBtn {
+/* Expand / collapse */
+.gpGroupCard .gpGroupCard__hdr--collapsed {
   display: none;
 }
 
-/* Card Rows */
+.gpGroupCard.is-collapsed .gpGroupCard__hdr--expanded,
+.gpGroupCard.is-collapsed .gpGroupCard__body {
+  display: none;
+}
+
+.gpGroupCard.is-collapsed .gpGroupCard__hdr--collapsed {
+  display: flex;
+}
+
+/* Card row content */
 .gpCardRow {
   display: flex;
   align-items: center;
@@ -150,10 +170,10 @@
   padding: 6px 8px;
   border-bottom: 1px solid var(--borderSubtle);
 }
-.gpCardRow.is-selected {
-  background: rgba(11,95,255,.08);
+
+.gpCardRow:last-child {
+  border-bottom: none;
 }
-.gpCardRow:last-child { border-bottom: none; }
 
 .gpCardRow__info {
   flex: 1;
@@ -165,6 +185,7 @@
   text-overflow: ellipsis;
   cursor: pointer;
 }
+
 .gpCardRow__info.is-expanded {
   white-space: normal;
   overflow: visible;
@@ -172,8 +193,16 @@
   cursor: default;
 }
 
+/* Target slot state */
+.gpGroupCard.is-target {
+  border: 2px solid var(--brandAccent);
+  box-shadow: 0 0 8px rgba(11, 95, 255, 0.2);
+}
 
-/* Tray Row Selection */
+/* ==========================================================================
+   Tray Rows / Search / Master Check
+   ========================================================================== */
+
 .maListRow.is-selected {
   background: rgba(11,95,255,.08);
 }
@@ -181,42 +210,48 @@
 .gpRowCheck {
   width: var(--btnHeight);
   height: var(--btnHeight);
-  border-radius: var(--radiusSq);
-  border: 1px solid var(--borderSubtle);
+  flex: 0 0 auto;
+  margin-right: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  flex: 0 0 auto;
-  margin-right: 10px;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--radiusSq);
   background: #fff;
+  color: #fff;
 }
+
 .gpRowCheck.is-selected {
   background: var(--brandAccent);
   border-color: var(--brandAccent);
 }
 
 .gpMasterCheck {
-  width: var(--btnHeight); height: var(--btnHeight);
-  border-radius: var(--radiusSq);
+  width: var(--btnHeight);
+  height: var(--btnHeight);
+  flex: 0 0 auto;
+  margin-right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--borderSubtle);
-  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--radiusSq);
+  background: #fff;
   color: #fff;
   cursor: pointer;
-  margin-right: 8px;
-  flex: 0 0 auto;
-  background: #fff;
 }
+
 .gpMasterCheck.has-selection {
   background: var(--brandAccent);
   border-color: var(--brandAccent);
 }
+
 .gpMasterCheck svg {
+  width: 14px;
+  height: 14px;
   fill: currentColor;
-  width: 14px; height: 14px;
 }
 
-/* Tray Item Layout */
 .gpUnpairedItem {
   display: flex;
   flex-direction: row;
@@ -226,14 +261,21 @@
   font-size: 13px;
   line-height: 1.4;
 }
-.gpUnpairedItem__primary { font-weight: 700; color: var(--ink); white-space: nowrap; }
-.gpUnpairedItem__secondary { font-weight: 400; color: var(--mutedText); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-@media (max-width: 600px) {
-  .gpUnpairedItem { flex-direction: column; align-items: flex-start; gap: 2px; }
+.gpUnpairedItem__primary {
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
 }
 
-/* Tray Master Clear */
+.gpUnpairedItem__secondary {
+  font-weight: 400;
+  color: var(--mutedText);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .maPage--slotting .gsTrayPanel .maPanel__controls {
   display: flex;
   flex-direction: row;
@@ -253,25 +295,47 @@
   min-width: 0;
 }
 
-/* Tray Search */
-.gpInputClearWrap { position: relative; display: flex; align-items: center; width: 100%; }
-.gpInputClearWrap .maTextInput { padding-right: 30px; }
-.gpInputClearWrap .clearBtn {
-  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
-  width: 24px; height: 24px; border: none; background: transparent;
-  color: var(--mutedText); font-size: 20px; line-height: 1; cursor: pointer;
-  border-radius: 50%;
+.gpInputClearWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
 }
-.gpInputClearWrap .clearBtn.isHidden { display: none; }
 
-/* Mobile Drawer Logic */
+.gpInputClearWrap .maTextInput {
+  padding-right: 30px;
+}
+
+.gpInputClearWrap .clearBtn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--mutedText);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.gpInputClearWrap .clearBtn.isHidden {
+  display: none;
+}
+
+/* ==========================================================================
+   Responsive — Tray / Canvas
+   ========================================================================== */
+
 @media (max-width: 900px) {
   .gsTrayPanel {
     display: none;
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
-
     border-left: none;
     border-bottom: none;
     margin-bottom: 0;
@@ -286,12 +350,128 @@
     display: none;
   }
 
-  .gpMobileAddBtn { display: inline-flex; }
-  .gpPanelHdr__left { display: flex; }
+  .gpMobileAddBtn {
+    display: inline-flex;
+  }
+
+  .gpPanelHdr__left {
+    display: flex;
+  }
 }
 
-/* Slotting Specifics */
-.gpGroupCard.is-target {
-  border: 2px solid var(--brandAccent);
-  box-shadow: 0 0 8px rgba(11, 95, 255, 0.2);
+@media (max-width: 600px) {
+  .gpUnpairedItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+}
+
+/* ==========================================================================
+   Auto Slot Modal
+   ========================================================================== */
+
+.gsAutoSlotModal .maModal__controls {
+  display: block;
+}
+
+.gsAutoSlotModal .maModal__body {
+  max-height: 52dvh;
+  overflow: auto;
+}
+
+.asPreviewRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.asPreviewRow__slot {
+  flex: 0 0 88px;
+  font-weight: 900;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.asPreviewRow__count {
+  flex: 0 0 28px;
+  text-align: center;
+  font-weight: 900;
+  color: var(--mutedText);
+}
+
+.asPreviewRow__names {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.asStackGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.asStackGrid__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--radiusMd);
+  background: #fff;
+  cursor: pointer;
+  user-select: none;
+}
+
+.asStackGrid__item input {
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.asStackInfo {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--mutedText);
+  line-height: 1.35;
+}
+
+.asStackInfo--warn {
+  color: var(--danger);
+}
+
+.asStackInfo--ok {
+  color: var(--success);
+}
+
+.asStartHoleChips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+/* ==========================================================================
+   Responsive — Auto Slot Modal
+   ========================================================================== */
+
+@media (max-width: 520px) {
+  .asPreviewRow {
+    align-items: flex-start;
+  }
+
+  .asPreviewRow__slot {
+    flex-basis: 78px;
+  }
+
+  .asPreviewRow__count {
+    flex-basis: 24px;
+  }
+
+  .asStackGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
