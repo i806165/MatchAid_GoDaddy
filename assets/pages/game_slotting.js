@@ -1372,6 +1372,7 @@ function onResetChanges() {
       return {
         playerGHIN: String(r.dbPlayers_PlayerGHIN || ""),
         name: String(r.dbPlayers_Name || ""),
+        lName: String(r.dbPlayers_LName || ""),
         pairingId: String(r.dbPlayers_PairingID || "000"),
         flightId: String(r.dbPlayers_FlightID || ""),
         teeTime: teeTimeMinutes != null ? formatMinutesToTime(teeTimeMinutes) : rawTeeTime,
@@ -1380,6 +1381,9 @@ function onResetChanges() {
         startHoleNumber: parseInt(String(r.dbPlayers_StartHole || "").trim() || "0", 10) || 0,
         startHoleSuffix: String(r.dbPlayers_StartHoleSuffix || "").trim().toUpperCase(),
         playerKey: String(r.dbPlayers_PlayerKey || ""),
+        ph: Number(r.dbPlayers_PH ?? ""),
+        ch: Number(r.dbPlayers_CH ?? ""),
+        hi: Number(r.dbPlayers_HI ?? ""),
         size: 1
       };
     });
