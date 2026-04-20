@@ -1464,7 +1464,7 @@ function onResetChanges() {
       { label: "Game Settings", action: () => MA.routerGo("settings") },
       { separator: true },
       { separator: true },
-      { label: "Reset Changes", action: () => onResetChanges(), danger: true }
+      { label: "Reset Changes to Last Save", action: () => onResetChanges(), danger: true }
     ]);
   }
 
