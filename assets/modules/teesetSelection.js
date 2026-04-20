@@ -177,6 +177,7 @@
 
     const isSelected = currentId && rawId === currentId;
     const isRecommended = !!opts.recommended;
+    const isRecent = !!opts.recent;
     const checkIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
 
     return `
@@ -185,7 +186,8 @@
           <div class="maListRow__col">
             ${name}
             <span style="font-weight:400; color:var(--mutedText);">• CH ${ch}</span>
-            ${isRecommended ? `<span class="maPill" style="margin-left:8px;">Recommended</span>` : ``}
+            ${isRecent ? `<span class="maPill" style="margin-left:8px;">Recent</span>` : ``}
+            ${isRecommended ? `<span class="maPill" style="margin-left:8px;">Player Preference</span>` : ``}
             ${isSelected ? `<span class="maPill maPill--success" style="margin-left:8px;">Selected</span>` : ``}
           </div>
           <div class="maListRow__col maListRow__col--muted">${yards} yds • Slope ${slope} • CR ${rating}</div>
@@ -202,27 +204,49 @@
     }
 
     const currentId = String(_config.currentTeeSetId || _config.selectedTeeSetId || "").trim();
-    const recommendedTee = findRecommendedTee(_teeOptions, _preferredYards);
-    const recommendedId = recommendedTee ? String(recommendedTee.teeSetID || recommendedTee.value || "").trim() : "";
+    const recentId = String(_config.recentTeeSetId || "").trim();
 
-    const topHtml = recommendedTee
+    const recentTee = recentId
+      ? _teeOptions.find(t => String(t.teeSetID || t.value || "").trim() === recentId)
+      : null;
+
+    const recommendedTee = (_config.mode === "batch")
+      ? null
+      : findRecommendedTee(_teeOptions, _preferredYards);
+    const recommendedId = recommendedTee
+      ? String(recommendedTee.teeSetID || recommendedTee.value || "").trim()
+      : "";
+
+    const suggestedRows = [];
+
+    if (recentTee) {
+      suggestedRows.push(renderTeeRow(recentTee, currentId, { recent: true }));
+    }
+
+    if (recommendedTee && recommendedId !== recentId) {
+      suggestedRows.push(renderTeeRow(recommendedTee, currentId, { recommended: true }));
+    }
+
+    const suggestedHtml = suggestedRows.length
       ? `
         <div class="maCard" style="margin-bottom:12px;">
           <div class="maCard__hdr">
-            <div class="maCard__title">Recommended Tee</div>
+            <div class="maCard__title">Suggested</div>
           </div>
-          <div class="maCard__body" style="padding:0;">
-            ${renderTeeRow(recommendedTee, currentId, { recommended: true })}
+          <div class="maCard__body" style="padding:0; display:grid; gap:10px;">
+            ${suggestedRows.join("")}
           </div>
         </div>
-        <div class="maHelpText" style="margin:4px 0 10px 0;">All tee sets are shown below.</div>
       `
+      : "";
+
+    const helperHtml = suggestedRows.length
+      ? `<div class="maHelpText" style="margin:4px 0 10px 0;">All tee sets are shown below.</div>`
       : "";
 
     const fullListHtml = _teeOptions.map(t => renderTeeRow(t, currentId)).join("");
 
-    elRows.innerHTML = `${topHtml}${fullListHtml}`;
-
+    elRows.innerHTML = `${suggestedHtml}${helperHtml}${fullListHtml}`;
     elRows.querySelectorAll("[data-id]").forEach(row => {
       row.addEventListener("click", () => selectTee(row.dataset.id));
     });

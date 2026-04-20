@@ -88,8 +88,11 @@
     const hay = `${safe(f.name || f.playerName)} ${safe(f.lname || "")}`.toLowerCase();
     return hay.includes(needle);
   }
-    function getFavoriteLastTee(f){
+  function getFavoriteLastTee(f){
     return safe(f?.lastCourse?.teeSetName || "");
+  }
+  function getFavoriteLastTeeId(f){
+    return safe(f?.lastCourse?.teeSetId || "");
   }
 
   function getFilteredFavorites(){
@@ -859,7 +862,14 @@
     const parts = safe(row.name || "").split(" ");
     const first = parts.slice(0, -1).join(" ") || safe(row.name || "");
     const last = parts.slice(-1).join("");
-    await beginTeeFlow({ ghin, first_name:first, last_name:last, gender:safe(row.gender || "M"), hi:safe(row.hi || "0") });
+    await beginTeeFlow({
+      ghin,
+      first_name:first,
+      last_name:last,
+      gender:safe(row.gender || "M"),
+      hi:safe(row.hi || "0"),
+      recentTeeSetId: getFavoriteLastTeeId(row)
+    });
   }
 
   async function addSelf(){
@@ -1188,6 +1198,7 @@
         gameId,
         player: state.pendingPlayer,
         currentTeeSetId: safe(state.pendingPlayer.selectedTeeSetId || ""),
+        recentTeeSetId: safe(state.pendingPlayer.recentTeeSetId || ""),
         onSave: async (selectedTee) => {
           state.selectedTee = selectedTee || null;
           await commitPending();
