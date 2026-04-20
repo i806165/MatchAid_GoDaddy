@@ -1135,8 +1135,14 @@ function openAutoSlotModal() {
   let lastResult = null;
 
   function closeDialog() {
-    dialog.close();
+    dialog.classList.remove("is-open");
+    if (dialog.open) dialog.close();
   }
+
+  dialog.oncancel = (e) => {
+    e.preventDefault();
+    closeDialog();
+  };
 
   dialog.onclick = (e) => {
     if (e.target === dialog) closeDialog();
@@ -1192,7 +1198,8 @@ function openAutoSlotModal() {
   btnClose.onclick = closeDialog;
   btnCancel.onclick = closeDialog;
 
-  dialog.showModal();
+  dialog.classList.add("is-open");
+  if (!dialog.open) dialog.showModal();
 }
 
 function onResetChanges() {
@@ -1204,17 +1211,6 @@ function onResetChanges() {
   if (confirm("Discard all unsaved changes and revert to last save?")) {
     window.location.reload();
   }
-}
-
-function openActionsMenu() {
-  if (!MA.ui || !MA.ui.openActionsMenu) return;
-
-  MA.ui.openActionsMenu("Actions", [
-    { label: "Auto Slot", action: () => openAutoSlotModal() },
-    { separator: true },
-    { label: "Game Settings", action: () => MA.routerGo("settings") },
-    { label: "Reset Changes", action: () => onResetChanges(), danger: true }
-  ]);
 }
 
   // ---- Actions ----
