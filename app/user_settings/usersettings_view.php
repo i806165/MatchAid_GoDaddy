@@ -55,6 +55,15 @@
         </div>
         </div>
 
+        <div class="maFieldRow">
+          <div class="maField">
+            <label class="maLabel" for="usPreferenceYards">Preferred Playing Yardage (18 holes)</label>
+            <select id="usPreferenceYards" class="maTextInput">
+              <option value="">Select yardage</option>
+            </select>
+          </div>
+        </div>
+
         <div class="usHint" id="usSmsHint"></div>
     </div>
   </section>

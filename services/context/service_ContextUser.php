@@ -148,6 +148,9 @@ public static function getUserContext(): ?array {
     if ($assocName !== "") $_SESSION["SessionAdminAssocName"] = $assocName;
     if ($clubId !== "")    $_SESSION["SessionAdminClubID"]    = $clubId;
     if ($clubName !== "")  $_SESSION["SessionAdminClubName"]  = $clubName;
+    $prefYards = self::decodePreferenceYards($userRow["dbUser_PreferenceYards"] ?? null);
+    if ($prefYards !== null) $_SESSION["SessionPreferenceYards"] = $prefYards;
+    else unset($_SESSION["SessionPreferenceYards"]);
 
 
     return [
@@ -227,6 +230,7 @@ public static function buildUserSettingsPayload(string $ghinId): array {
     $ghinEmail = trim((string)($g0["email"] ?? $g0["email_address"] ?? ""));
     $ghinPhone = self::normalizePhone((string)($g0["phone_number"] ?? $g0["phone"] ?? $g0["mobile_phone"] ?? ""));
     $ghinName  = trim((string)($row["dbUser_Name"] ?? ""));
+    $storedPreferenceYards = self::decodePreferenceYards($row["dbUser_PreferenceYards"] ?? null);
 
 $effectiveEmail = trim((string)($row["dbUser_EMail"] ?? "")) ?: $ghinEmail;
 $effectivePhone = trim((string)($row["dbUser_MobilePhone"] ?? "")) ?: $ghinPhone;
@@ -247,6 +251,7 @@ return [
         "dbUser_MobilePhone" => $effectivePhone,
         "dbUser_MobileCarrier" => $effectiveCarrier,
         "dbUser_ContactMethod" => $effectiveMethod,
+        "dbUser_PreferenceYards" => $storedPreferenceYards,
     ],
     "sourceProfile" => [
         "ghinName" => $ghinName,
@@ -286,6 +291,8 @@ public static function saveUserSettings(string $ghinId, array $patch): array {
     $phone = self::normalizePhone((string)($patch["dbUser_MobilePhone"] ?? ""));
     $carrier = trim((string)($patch["dbUser_MobileCarrier"] ?? ""));
     $contactMethod = trim((string)($patch["dbUser_ContactMethod"] ?? ""));
+    $preferenceYardsPatch = $patch["dbUser_PreferenceYards"] ?? null;
+    $preferenceYards = null;
 
     if ($fName === "") throw new RuntimeException("First name is required.");
     if ($lName === "") throw new RuntimeException("Last name is required.");
@@ -323,6 +330,32 @@ public static function saveUserSettings(string $ghinId, array $patch): array {
         }
     }
 
+    if ($preferenceYardsPatch !== null && $preferenceYardsPatch !== "") {
+        if (!is_array($preferenceYardsPatch)) {
+            throw new RuntimeException("Preferred playing yardage range is invalid.");
+        }
+
+        $min = isset($preferenceYardsPatch["min"]) ? (int)$preferenceYardsPatch["min"] : 0;
+        $max = isset($preferenceYardsPatch["max"]) ? (int)$preferenceYardsPatch["max"] : 0;
+
+        if ($min <= 0 || $max <= 0) {
+            throw new RuntimeException("Preferred playing yardage range is invalid.");
+        }
+
+        if ($min < 3400 || $max > 7200) {
+            throw new RuntimeException("Preferred playing yardage range must be between 3400 and 7200.");
+        }
+
+        if ($min >= $max) {
+            throw new RuntimeException("Preferred playing yardage range is invalid.");
+        }
+
+        $preferenceYards = json_encode([
+            "min" => $min,
+            "max" => $max,
+        ], JSON_UNESCAPED_SLASHES);
+    }
+
     $pdo = Db::pdo();
     $sql = "UPDATE db_Users
             SET dbUser_FName = :fname,
@@ -330,7 +363,8 @@ public static function saveUserSettings(string $ghinId, array $patch): array {
                 dbUser_EMail = :email,
                 dbUser_MobilePhone = :phone,
                 dbUser_MobileCarrier = :carrier,
-                dbUser_ContactMethod = :contactMethod
+                dbUser_ContactMethod = :contactMethod,
+                dbUser_PreferenceYards = :preferenceYards
             WHERE dbUser_GHIN = :ghin
             LIMIT 1";
     $st = $pdo->prepare($sql);
@@ -342,9 +376,30 @@ public static function saveUserSettings(string $ghinId, array $patch): array {
         ":phone" => $phone,
         ":carrier" => $carrier,
         ":contactMethod" => $contactMethod,
+        ":preferenceYards" => $preferenceYards,
     ]);
 
     return self::buildUserSettingsPayload($ghinId);
+}
+
+private static function decodePreferenceYards($val): ?array {
+    if (!is_string($val)) return null;
+
+    $trim = trim($val);
+    if ($trim === "") return null;
+
+    $decoded = json_decode($trim, true);
+    if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) return null;
+
+    $min = isset($decoded["min"]) ? (int)$decoded["min"] : 0;
+    $max = isset($decoded["max"]) ? (int)$decoded["max"] : 0;
+
+    if ($min <= 0 || $max <= 0 || $min >= $max) return null;
+
+    return [
+        "min" => $min,
+        "max" => $max,
+    ];
 }
 
 private static function extractPrimaryGolfer($profile): array {

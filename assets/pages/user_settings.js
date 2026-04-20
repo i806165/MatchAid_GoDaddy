@@ -10,6 +10,15 @@
   const routes = MA.routes || {};
   const usApiBase = routes.apiUserSettings || MA.paths?.apiUserSettings || "/api/user_settings";
 
+  const PREFERENCE_YARDS_OPTIONS = [
+    { value: "0-4600",    min: 0,    max: 4600, label: "Less than 4,600" },
+    { value: "4200-5000", min: 4200, max: 5000, label: "4,200 to 5,000" },
+    { value: "5000-5600", min: 5000, max: 5600, label: "5,000 to 5,600" },
+    { value: "5600-6200", min: 5600, max: 6200, label: "5,600 to 6,200" },
+    { value: "6200-6700", min: 6200, max: 6700, label: "6,200 to 6,700" },
+    { value: "6700-9999", min: 6700, max: 9999, label: "More than 6,700" }
+  ];
+
   function apiCall(endpointFile, payloadObj) {
     const baseClean = String(usApiBase || "").replace(/\/$/, "");
     const fileClean = String(endpointFile || "").replace(/^\//, "");
@@ -32,6 +41,7 @@
     mobilePhone: document.getElementById("usMobilePhone"),
     mobileCarrier: document.getElementById("usMobileCarrier"),
     contactMethod: document.getElementById("usContactMethod"),
+    preferenceYards: document.getElementById("usPreferenceYards"),
     smsHint: document.getElementById("usSmsHint"),
     };
 
@@ -43,6 +53,7 @@
         dbUser_MobilePhone: "",
         dbUser_MobileCarrier: "",
         dbUser_ContactMethod: "",
+        dbUser_PreferenceYards: null,
         },
         carrierOptions: [],
         contactMethodOptions: [],
@@ -141,6 +152,39 @@
     });
     }
 
+  function populatePreferenceYardsOptions() {
+    const opts = Array.isArray(PREFERENCE_YARDS_OPTIONS) ? PREFERENCE_YARDS_OPTIONS : [];
+    el.preferenceYards.innerHTML = `<option value="">Select yardage</option>`;
+    opts.forEach(opt => {
+      const o = document.createElement("option");
+      o.value = String(opt.value || "");
+      o.textContent = String(opt.label || opt.value || "");
+      el.preferenceYards.appendChild(o);
+    });
+  }
+
+  function preferenceYardsValueFromObject(pref) {
+    if (!pref || typeof pref !== "object") return "";
+    const min = Number(pref.min || 0);
+    const max = Number(pref.max || 0);
+    if (!min || !max) return "";
+
+    const match = PREFERENCE_YARDS_OPTIONS.find(opt =>
+      Number(opt.min) === min && Number(opt.max) === max
+    );
+    return match ? String(match.value) : "";
+  }
+
+  function preferenceYardsObjectFromValue(value) {
+    const match = PREFERENCE_YARDS_OPTIONS.find(opt => String(opt.value) === String(value || ""));
+    if (!match) return null;
+
+    return {
+      min: Number(match.min),
+      max: Number(match.max),
+    };
+  }
+
   function renderSmsHint() {
     const carrier = String(el.mobileCarrier.value || "");
     const phone = normalizePhoneForStore(el.mobilePhone.value);
@@ -164,6 +208,9 @@
         populateContactMethodOptions();
         el.contactMethod.value = state.fields.dbUser_ContactMethod || "";
 
+        populatePreferenceYardsOptions();
+        el.preferenceYards.value = preferenceYardsValueFromObject(state.fields.dbUser_PreferenceYards);
+
         renderSmsHint();
     }
 
@@ -175,11 +222,12 @@
         state.fields.dbUser_MobilePhone = normalizePhoneForStore(el.mobilePhone.value || "");
         state.fields.dbUser_MobileCarrier = String(el.mobileCarrier.value || "").trim();
         state.fields.dbUser_ContactMethod = String(el.contactMethod.value || "").trim();
+        state.fields.dbUser_PreferenceYards = preferenceYardsObjectFromValue(el.preferenceYards.value);
         renderSmsHint();
         setDirty(true);
     };
 
-    [el.fName, el.lName, el.email, el.mobilePhone, el.mobileCarrier, el.contactMethod].forEach(node => { 
+    [el.fName, el.lName, el.email, el.mobilePhone, el.mobileCarrier, el.contactMethod, el.preferenceYards].forEach(node => { 
         if (!node) return;
       node.addEventListener("input", markDirty);
       node.addEventListener("change", markDirty);
@@ -224,6 +272,7 @@
             dbUser_MobilePhone: normalizePhoneForStore(el.mobilePhone.value || ""),
             dbUser_MobileCarrier: String(el.mobileCarrier.value || "").trim(),
             dbUser_ContactMethod: String(el.contactMethod.value || "").trim(),
+            dbUser_PreferenceYards: preferenceYardsObjectFromValue(el.preferenceYards.value),
         };
     }
 
