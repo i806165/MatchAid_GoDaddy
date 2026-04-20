@@ -119,8 +119,11 @@
   }
 
   function getDefaultStartTime() {
-    const playTime = String(init.game?.dbGames_PlayTime || "").trim();
-    return playTime || "08:00 AM";
+    const raw = String(init.game?.dbGames_PlayTime || "").trim();
+    if (!raw) return "08:00 AM";
+
+    const mins = parseTimeToMinutes(raw);
+    return mins != null ? formatMinutesToTime(mins) : raw;
   }
 
   function getAllowedHoleRange() {
