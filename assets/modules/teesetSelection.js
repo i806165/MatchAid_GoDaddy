@@ -187,7 +187,7 @@
             ${name}
             <span style="font-weight:400; color:var(--mutedText);">• CH ${ch}</span>
             ${isRecent ? `<span class="maPill" style="margin-left:8px;">Recent</span>` : ``}
-            ${isRecommended ? `<span class="maPill" style="margin-left:8px;">Player Preference</span>` : ``}
+            ${isRecommended ? `<span class="maPill" style="margin-left:8px;">Preferred Yardage</span>` : ``}
             ${isSelected ? `<span class="maPill maPill--success" style="margin-left:8px;">Selected</span>` : ``}
           </div>
           <div class="maListRow__col maListRow__col--muted">${yards} yds • Slope ${slope} • CR ${rating}</div>
