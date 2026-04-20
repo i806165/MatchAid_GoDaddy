@@ -7,6 +7,7 @@ header("Content-Type: application/json; charset=utf-8");
 
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
+require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/GHIN/GHIN_API_Handicaps.php";
 require_once MA_SERVICES . "/GHIN/GHIN_API_Players.php";
 
@@ -38,11 +39,15 @@ try {
   $effectiveHI = gp_effective_hi($ghin, $manualHi, $game, $token);
   $teeSets = be_buildTeeSetTags("Index", $effectiveHI, $gender, $game, $token);
 
+  $userRow = ServiceUserContext::retrieveGHINUser($ghin);
+  $preferredYards = gp_decode_preference_yards($userRow["dbUser_PreferenceYards"] ?? null);
+
   echo json_encode([
     "ok" => true,
     "payload" => [
       "hi" => $effectiveHI,
       "teeSets" => $teeSets,
+      "preferredYards" => $preferredYards,
     ]
   ]);
 } catch (Throwable $e) {
@@ -86,4 +91,25 @@ function gp_to_ymd($d): ?string
   $ts = strtotime((string)$d);
   if ($ts === false) return null;
   return date('Y-m-d', $ts);
+}
+
+function gp_decode_preference_yards($raw): ?array
+{
+  if (!is_string($raw)) return null;
+
+  $trim = trim($raw);
+  if ($trim === "") return null;
+
+  $decoded = json_decode($trim, true);
+  if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) return null;
+
+  $min = isset($decoded["min"]) ? (int)$decoded["min"] : 0;
+  $max = isset($decoded["max"]) ? (int)$decoded["max"] : 0;
+
+  if ($min < 0 || $max <= 0 || $min >= $max) return null;
+
+  return [
+    "min" => $min,
+    "max" => $max,
+  ];
 }
