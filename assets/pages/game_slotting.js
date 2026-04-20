@@ -48,7 +48,7 @@
 
   // ---- Helpers ----
   function isPairPair() { return state.competition === "PairPair"; }
-  function isShotgun() { return state.toMethod === "Shotgun"; }
+  function isShotgun() { return state.toMethod === "ShotGun"; }
   function setBusy(on) { state.busy = !!on; }
   
   function esc(s) {
