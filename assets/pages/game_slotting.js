@@ -34,6 +34,14 @@
     busy: false
   };
 
+  const AUTO_SLOT_SORT_OPTIONS = [
+    { value: "pairingId", label: "As Paired" },
+    { value: "lowFirst", label: "by Low HI" },
+    { value: "highFirst", label: "by High HC" },
+    { value: "balanced", label: "Balanced / Interleaved" },
+    { value: "random", label: "Randomly" }
+  ];
+
   // ---- Icons ----
   const ICONS = {
     minus: `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
@@ -1049,17 +1057,46 @@ function buildAutoSlotConfig(dialog) {
   };
 }
 
-function renderAutoSlotPreview(dialog, result) {
+function getAutoSlotSortLabel(sortOrder) {
+  switch (String(sortOrder || "")) {
+    case "lowFirst":
+      return "Low First";
+    case "highFirst":
+      return "High First";
+    case "balanced":
+      return "Balanced";
+    case "random":
+      return "Random";
+    case "pairingId":
+    default:
+      return "as Paired";
+  }
+}
+
+function renderAutoSlotSortOptions(dialog, selectedValue = "pairingId") {
+  const select = dialog.querySelector("#asSortOrder");
+  if (!select) return;
+
+  select.innerHTML = AUTO_SLOT_SORT_OPTIONS.map((opt) => `
+    <option value="${esc(opt.value)}" ${opt.value === selectedValue ? "selected" : ""}>
+      ${esc(opt.label)}
+    </option>
+  `).join("");
+}
+
+function renderAutoSlotPreview(dialog, result, cfg) {
   const summary = dialog.querySelector("#asPreviewSummary");
   const list = dialog.querySelector("#asPreviewList");
 
   if (!summary || !list) return;
 
+  const sortLabel = getAutoSlotSortLabel(cfg?.sortOrder);
+
   if (!result.unassigned.length) {
-    summary.textContent = `✓ ${result.slots.length} slots assigned.`;
+    summary.textContent = `✓ ${result.slots.length} slots assigned using ${sortLabel}.`;
     summary.className = "asStackInfo asStackInfo--ok";
   } else {
-    summary.textContent = `⚠ ${result.slots.length} slots assigned — ${result.unassigned.length} groups could not fit.`;
+    summary.textContent = `⚠ ${result.slots.length} slots assigned using ${sortLabel} — ${result.unassigned.length} groups could not fit.`;
     summary.className = "asStackInfo asStackInfo--warn";
   }
 
@@ -1122,6 +1159,7 @@ function openAutoSlotModal() {
   if (subtitle) subtitle.textContent = `${groups.length} Groups • ${golfers} Golfers`;
   if (msg) msg.textContent = "";
 
+  renderAutoSlotSortOptions(dialog, "pairingId");
   renderAutoSlotModeFields(dialog, groups);
   updateAutoSlotStartHoleChips(dialog);
   updateAutoSlotStackInfo(dialog, groups);
@@ -1172,7 +1210,7 @@ function openAutoSlotModal() {
     lastResult = result;
     if (msg) msg.textContent = "";
 
-    renderAutoSlotPreview(dialog, result);
+    renderAutoSlotPreview(dialog, result, cfg);
 
     controls.style.display = "none";
     body.style.display = "block";

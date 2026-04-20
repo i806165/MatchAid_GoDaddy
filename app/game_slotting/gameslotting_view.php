@@ -85,13 +85,7 @@
         <div class="maFieldRow" style="margin-top:0;">
           <div class="maField">
             <label class="maLabel" for="asSortOrder">Sort Order</label>
-            <select id="asSortOrder" class="maTextInput">
-              <option value="pairingId">By Pairing ID</option>
-              <option value="lowFirst">Stacked — Low First</option>
-              <option value="highFirst">Stacked — High First</option>
-              <option value="balanced">Balanced / Interleaved</option>
-              <option value="random">Random</option>
-            </select>
+            <select id="asSortOrder" class="maTextInput"></select>
           </div>
         </div>
 
