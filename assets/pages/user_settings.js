@@ -11,12 +11,15 @@
   const usApiBase = routes.apiUserSettings || MA.paths?.apiUserSettings || "/api/user_settings";
 
   const PREFERENCE_YARDS_OPTIONS = [
-    { value: "0-4600",    min: 0,    max: 4600, label: "Less than 4,600" },
-    { value: "4200-5000", min: 4200, max: 5000, label: "4,200 to 5,000" },
-    { value: "5000-5600", min: 5000, max: 5600, label: "5,000 to 5,600" },
-    { value: "5600-6200", min: 5600, max: 6200, label: "5,600 to 6,200" },
-    { value: "6200-6700", min: 6200, max: 6700, label: "6,200 to 6,700" },
-    { value: "6700-9999", min: 6700, max: 9999, label: "More than 6,700" }
+    { value: "0-4799",    min: 0,    max: 4799, label: "Under 4,800" },
+    { value: "4800-5099", min: 4800, max: 5099, label: "4,800-5,099" },
+    { value: "5100-5399", min: 5100, max: 5399, label: "5,100-5,399" },
+    { value: "5400-5699", min: 5400, max: 5699, label: "5,400-5,699" },
+    { value: "5700-5999", min: 5700, max: 5999, label: "5,700-5,999" },
+    { value: "6000-6299", min: 6000, max: 6299, label: "6,000-6,299" },
+    { value: "6300-6599", min: 6300, max: 6599, label: "6,300-6,599" },
+    { value: "6600-6899", min: 6600, max: 6899, label: "6,600-6,899" },
+    { value: "6900-9999", min: 6900, max: 9999, label: "Over 6,900" }
   ];
 
   function apiCall(endpointFile, payloadObj) {
