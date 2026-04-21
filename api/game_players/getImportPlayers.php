@@ -11,6 +11,7 @@ require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_SERVICES . "/database/service_dbGames.php";
 require_once MA_SERVICES . "/database/service_dbPlayers.php";
+require_once MA_SERVICES . "/GHIN/GHIN_API_Courses.php";
 
 try {
     $uc = ServiceUserContext::getUserContext();
@@ -51,6 +52,58 @@ try {
         exit;
     }
 
+// ── Destination course tee sets (for tee matching) ──────────────────────
+    $destCourseId  = trim((string)($destGame["dbGames_CourseID"] ?? ""));
+    $destTeeSets   = [];
+
+    if ($destCourseId !== "") {
+        try {
+            $adminToken    = trim((string)($_SESSION["SessionAdminToken"] ?? ""));
+            $coursePayload = be_getCourseTeeSets($destCourseId, $adminToken);
+            foreach ((array)($coursePayload["TeeSets"] ?? []) as $ts) {
+                if ((string)($ts["TeeSetStatus"] ?? "") !== "Active") continue;
+                $destTeeSets[] = [
+                    "teeSetID"   => (string)($ts["TeeSetRatingId"]   ?? ""),
+                    "teeSetName" => (string)($ts["TeeSetRatingName"] ?? ""),
+                    "gender"     => strtoupper(substr((string)($ts["Gender"] ?? ""), 0, 1)),
+                    "yards"      => (int)($ts["TotalYardage"] ?? 0),
+                ];
+            }
+        } catch (Throwable $ignored) {
+            // Non-fatal — fall through to yardage-only matching below
+        }
+    }
+
+    $sameCourse = (
+        $destCourseId !== "" &&
+        trim((string)($sourceGame["dbGames_CourseID"] ?? "")) === $destCourseId
+    );
+
+    // PHP handles Tier 1 only (same-course exact match).
+    // Tiers 2 (last_played) and 3 (preferred_yardage) require per-player
+    // DB and preference lookups — these are handled by getTeeSets.php
+    // resolve mode called from runExistingGameResolve() on the JS side.
+    // Rows returned with resolvedTeeSource = "" signal JS to run tiers 2 and 3.
+    $resolveTier1 = static function(
+        string $sourceTeeId,
+        string $sourceTeeText,
+        bool   $sameCourse,
+        array  $destTeeSets
+    ): array {
+        if ($sameCourse && $sourceTeeId !== "") {
+            foreach ($destTeeSets as $dt) {
+                if ($dt["teeSetID"] === $sourceTeeId) {
+                    $label = $dt["teeSetName"];
+                    if ($dt["yards"] > 0) $label .= " • " . number_format($dt["yards"]) . " yds";
+                    return [$dt["teeSetID"], $label, "same_course"];
+                }
+            }
+        }
+        // No Tier 1 match — return source values unchanged, empty source
+        // so JS knows to run Tiers 2 and 3 for this player.
+        return [$sourceTeeId, $sourceTeeText, ""];
+    };
+
     $sourcePlayers = ServiceDbPlayers::getGamePlayers($sourceGGID);
     $destPlayers   = ServiceDbPlayers::getGamePlayers($destGGID);
 
@@ -62,30 +115,37 @@ try {
 
     $rows = [];
     foreach ($sourcePlayers as $p) {
-        $ghin = trim((string)($p["dbPlayers_PlayerGHIN"] ?? ""));
-        $sourceTeeName = trim((string)($p["dbPlayers_TeeSetName"] ?? ""));
-        $sourceTeeDetailsRaw = (string)($p["dbPlayers_TeeSetDetails"] ?? "");
-        $sourceTeeDetails = json_decode($sourceTeeDetailsRaw, true);
-        $sourceYards = is_array($sourceTeeDetails) ? (int)($sourceTeeDetails["TotalYardage"] ?? 0) : 0;
+        $ghin          = trim((string)($p["dbPlayers_PlayerGHIN"] ?? ""));
+        $sourceTeeName = trim((string)($p["dbPlayers_TeeSetName"]  ?? ""));
+        $sourceTeeId   = (string)($p["dbPlayers_TeeSetID"] ?? "");
+        $gender        = strtoupper(substr((string)($p["dbPlayers_Gender"] ?? ""), 0, 1));
 
-        // phase-1 placeholder assignment
-        $assignedTeeText = $sourceTeeName;
-        if ($sourceYards > 0) {
-            $assignedTeeText = $sourceTeeName . " • " . number_format($sourceYards) . " yds";
-        }
+        $sourceTeeDetailsRaw = (string)($p["dbPlayers_TeeSetDetails"] ?? "");
+        $sourceTeeDetails    = json_decode($sourceTeeDetailsRaw, true);
+        $sourceYards         = is_array($sourceTeeDetails) ? (int)($sourceTeeDetails["TotalYardage"] ?? 0) : 0;
+
+        $sourceTeeText = $sourceYards > 0
+            ? ($sourceTeeName . " • " . number_format($sourceYards) . " yds")
+            : $sourceTeeName;
+
+        [$assignedTeeId, $assignedTeeText, $resolvedTeeSource] = $resolveTier1(
+            $sourceTeeId,
+            $sourceTeeText,
+            $sameCourse,
+            $destTeeSets
+        );
 
         $rows[] = [
-            "ghin" => $ghin,
-            "playerName" => trim((string)($p["dbPlayers_Name"] ?? "")),
-            "hi" => (string)($p["dbPlayers_HI"] ?? ""),
-            "gender" => (string)($p["dbPlayers_Gender"] ?? ""),
-            "sourceTeeId" => (string)($p["dbPlayers_TeeSetID"] ?? ""),
-            "sourceTeeText" => $sourceYards > 0
-                ? ($sourceTeeName . " • " . number_format($sourceYards) . " yds")
-                : $sourceTeeName,
-            "assignedTeeId" => (string)($p["dbPlayers_TeeSetID"] ?? ""),
-            "assignedTeeText" => $assignedTeeText,
-            "alreadyOnRoster" => isset($destGhinSet[$ghin]),
+            "ghin"              => $ghin,
+            "playerName"        => trim((string)($p["dbPlayers_Name"] ?? "")),
+            "hi"                => (string)($p["dbPlayers_HI"]     ?? ""),
+            "gender"            => (string)($p["dbPlayers_Gender"] ?? ""),
+            "sourceTeeId"       => $sourceTeeId,
+            "sourceTeeText"     => $sourceTeeText,
+            "assignedTeeId"     => $assignedTeeId,
+            "assignedTeeText"   => $assignedTeeText,
+            "resolvedTeeSource" => $resolvedTeeSource,
+            "alreadyOnRoster"   => isset($destGhinSet[$ghin]),
         ];
     }
 

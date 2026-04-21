@@ -289,23 +289,146 @@
 }
 .gpRow--import{
   display: grid;
-  grid-template-columns: 120px minmax(220px, 1.4fr) 48px 72px minmax(120px, 1fr) 110px;
+  /* Col:  GHIN      Player             HI     Src Tee  Assigned Tee      Status  */
+  grid-template-columns: 88px minmax(160px, 1.4fr) 44px 120px minmax(100px, 1fr) 100px;
   align-items: center;
-  column-gap: 12px;
+  column-gap: 10px;
 }
 
 .gpRow--import .maListRow__col{
   min-width: 0;
 }
 
+/* Left-aligned text columns */
 .gpRow--import .maListRow__col:nth-child(2),
+.gpRow--import .maListRow__col:nth-child(4),
 .gpRow--import .maListRow__col:nth-child(5),
 .gpRow--import .maListRow__col:nth-child(6){
   text-align: left;
 }
 
+/* No-wrap columns */
 .gpRow--import .maListRow__col:nth-child(1),
-.gpRow--import .maListRow__col:nth-child(3),
-.gpRow--import .maListRow__col:nth-child(4){
+.gpRow--import .maListRow__col:nth-child(3){
   white-space: nowrap;
+}
+
+/* ==========================================================================
+   Import — Tee Resolution (new classes for tee hierarchy feature)
+   ========================================================================== */
+
+/* Already-on-roster rows: visually de-emphasised */
+.gpRow--skip {
+  background: rgba(0,0,0,.025);
+}
+
+.gpRow--skip .maListRow__col {
+  color: var(--mutedText);
+}
+
+/* Resolution source pills — base override (smaller than standard maPill) */
+.gpTeeSourcePill {
+  font-size: 10px;
+  font-weight: 800;
+  min-height: 20px;
+  padding: 0 8px;
+  border-radius: 10px;
+  /* Override maPill min-height which is 34px — too tall for table rows */
+  line-height: 1.2;
+}
+
+/* Same course carry — green */
+.gpTeeSourcePill--same_course {
+  background: #EAF3DE;
+  color: #27500A;
+}
+
+/* Last played — blue */
+.gpTeeSourcePill--last_played {
+  background: #E6F1FB;
+  color: #0C447C;
+}
+
+/* Preferred yardage — purple */
+.gpTeeSourcePill--preferred_yardage {
+  background: #EEEDFE;
+  color: #3C3489;
+}
+
+/* Force assigned — amber */
+.gpTeeSourcePill--force_assigned {
+  background: #FAEEDA;
+  color: #633806;
+}
+
+/* Fallback — neutral */
+.gpTeeSourcePill--fallback {
+  background: rgba(0,0,0,.06);
+  color: var(--mutedText);
+}
+
+/* On roster — skipped */
+.gpTeeSourcePill--skip {
+  background: rgba(0,0,0,.06);
+  color: var(--mutedText);
+}
+
+/* Tee summary bar mode pills (controls strip) */
+.gpTeePill--force {
+  background: #FAEEDA;
+  color: #633806;
+  font-size: 11px;
+  font-weight: 800;
+  min-height: 22px;
+  padding: 0 10px;
+  border-radius: 11px;
+  line-height: 1.2;
+  display: inline-flex;
+  align-items: center;
+}
+
+.gpTeePill--fallback {
+  background: rgba(0,0,0,.06);
+  color: var(--mutedText);
+  font-size: 11px;
+  font-weight: 800;
+  min-height: 22px;
+  padding: 0 10px;
+  border-radius: 11px;
+  line-height: 1.2;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ==========================================================================
+   Import table — responsive breakpoints
+   ========================================================================== */
+
+/* Tablet: tighten columns, Source Tee still visible */
+@media (max-width: 760px) {
+  .gpRow--import {
+    grid-template-columns: 72px minmax(120px, 1fr) 40px 100px minmax(80px, 1fr) 88px;
+    column-gap: 8px;
+  }
+}
+
+/* Mobile: hide Source Tee column (col 4) — least critical,
+   Assigned Tee already tells the story.
+   Also tighten remaining columns for 375px screens. */
+@media (max-width: 480px) {
+  .gpRow--import {
+    grid-template-columns: 64px minmax(100px, 1fr) 36px minmax(80px, 1fr) 80px;
+    column-gap: 6px;
+  }
+
+  /* Hide Source Tee column (4th child) on both header and data rows */
+  .gpRow--import .maListRow__col:nth-child(4) {
+    display: none;
+  }
+
+  /* Re-map alignment for the shifted columns */
+  .gpRow--import .maListRow__col:nth-child(5),
+  .gpRow--import .maListRow__col:nth-child(6) {
+    text-align: left;
+  }
 }

@@ -40,6 +40,8 @@
     importSourceGameSummary: null,
     importExistingPreviewRows: [],
     importExistingPreviewCount: 0,
+    batchFallbackTee: null,      // tee selected in the picker for paths 2, 3, 4
+    batchForceAssign: false,     // when true hierarchy is skipped; fallback tee used for all
     ghinState: "",
     ghinLast: "",
     ghinFirst: "",
@@ -200,9 +202,13 @@
   }
 
   function canImportAllRows(){
-    return state.importRows.length > 0 &&
-      state.importRows.every(r => r.ok && !!safe(r.assignedTeeId));
-  }
+      // Already-on-roster rows are skipped during commit — they must not
+      // block the button. Only require that at least one actionable row
+      // exists and that all actionable rows are valid.
+      const actionable = state.importRows.filter(r => !r.alreadyOnRoster);
+      if (!actionable.length) return false;
+      return actionable.every(r => r.ok && !!safe(r.assignedTeeId));
+    }
 
   function hydrateImportTeeOptionsFromPayload(){
     const payload = state.courseTeePayload || {};
@@ -275,13 +281,15 @@
   }
 
   function resetImportStateForSourceMode(){
-    state.importMode = "entry";
-    state.importRows = [];
-    state.importSelectedTee = null;
-    state.importSelectedTeeId = "";
-    state.importText = "";
-    resetExistingGameImport();
-  }
+      state.importMode = "entry";
+      state.importRows = [];
+      state.importSelectedTee = null;
+      state.importSelectedTeeId = "";
+      state.importText = "";
+      state.batchFallbackTee = null;
+      state.batchForceAssign = false;
+      resetExistingGameImport();
+    }
 
   function formatImportSourceGameLabel(g){
     const playDate = formatDate(safe(g.playDate || g.dbGames_PlayDate || ""));
@@ -302,10 +310,34 @@
     state.importSourceGames = Array.isArray(res.payload?.games) ? res.payload.games : [];
   }
 
+// Opens the picker for path 4 (copy from game).
+  // Called both on initial game selection and when user taps "Change" in the summary bar.
+  function openBatchPickerForExisting(){
+    const g = state.game || {};
+    const gameId = String(g.dbGames_GGID || g.dbGames_GGIDnum || g.ggid || "").trim();
+    const proxyPlayer = { ghin: safe(state.context?.userGHIN || "0"), gender: "M", hi: "0" };
+
+    MA.TeeSetSelection.open({
+      mode: "batch-setup",
+      gameId,
+      player: proxyPlayer,
+      subtitle: "Select fallback tee for game import",
+      onSaveBatch: async ({ selectedTee, forceAssign }) => {
+        state.batchFallbackTee = selectedTee;
+        state.batchForceAssign = !!forceAssign;
+        await runExistingGameResolve();
+        render();
+      }
+    });
+  }
+
   async function loadExistingGamePreview(sourceGameId){
     state.importExistingPreviewRows = [];
     state.importExistingPreviewCount = 0;
     state.importSourceGameSummary = null;
+    state.importMode = "entry";
+    state.batchFallbackTee = null;
+    state.batchForceAssign = false;
 
     if (!safe(sourceGameId)) {
       render();
@@ -325,41 +357,130 @@
         return;
       }
 
-      state.importSourceGameSummary = res.payload?.sourceGame || null;
+      state.importSourceGameSummary  = res.payload?.sourceGame || null;
       state.importExistingPreviewRows = Array.isArray(res.payload?.rows) ? res.payload.rows : [];
       state.importExistingPreviewCount = num(res.payload?.playerCount || state.importExistingPreviewRows.length);
 
+      // Build importRows from preview — tee resolution runs after picker confirms.
       state.importRows = state.importExistingPreviewRows.map((r) => {
         const nm = splitName(r.playerName || "");
         return {
-          source: "existing_game",
-          raw: "",
-          ghin: safe(r.ghin || ""),
-          ok: !r.alreadyOnRoster && !!safe(r.assignedTeeId || ""),
-          status: r.alreadyOnRoster ? "Already in roster" : "OK",
-          error: r.alreadyOnRoster ? "Player is already in the roster" : "",
+          source:           "existing_game",
+          raw:              "",
+          ghin:             safe(r.ghin || ""),
+          ok:               !r.alreadyOnRoster && !!safe(r.assignedTeeId || ""),
+          status:           r.alreadyOnRoster ? "Already in roster" : "OK",
+          error:            r.alreadyOnRoster ? "Player is already in the roster" : "",
           player: {
-            ghin: safe(r.ghin || ""),
+            ghin:       safe(r.ghin || ""),
             first_name: safe(nm.first),
-            last_name: safe(nm.last),
-            name: safe(r.playerName || ""),
-            gender: safe(r.gender || ""),
-            hi: safe(r.hi || "")
+            last_name:  safe(nm.last),
+            name:       safe(r.playerName || ""),
+            gender:     safe(r.gender || ""),
+            hi:         safe(r.hi || "")
           },
-          sourceTeeId: safe(r.sourceTeeId || ""),
-          sourceTeeText: safe(r.sourceTeeText || ""),
-          assignedTeeId: safe(r.assignedTeeId || ""),
-          assignedTeeText: safe(r.assignedTeeText || ""),
-          alreadyOnRoster: !!r.alreadyOnRoster
+          sourceTeeId:       safe(r.sourceTeeId || ""),
+          sourceTeeText:     safe(r.sourceTeeText || ""),
+          assignedTeeId:     safe(r.assignedTeeId || ""),
+          assignedTeeText:   safe(r.assignedTeeText || ""),
+          resolvedTeeSource: safe(r.resolvedTeeSource || ""),
+          alreadyOnRoster:   !!r.alreadyOnRoster
         };
       });
 
-      state.importMode = "review";
-      MA.setStatus(`Loaded ${state.importExistingPreviewCount} players from selected game.`, "success");    
+      MA.setStatus(`Loaded ${state.importExistingPreviewCount} players. Select a fallback tee to continue.`, "info");
     } finally {
       state.importBusy = false;
       hideBusyModal();
-      render();
+    }
+
+    // Open picker immediately after loading — user must set fallback tee before
+    // the hierarchy runs and the preview table populates.
+    openBatchPickerForExisting();
+  }
+
+  // Runs tee resolution for existing-game rows using the hierarchy.
+  // Called after the picker confirms a fallback tee and toggle state.
+  async function runExistingGameResolve(){
+    if (state.importBusy) return;
+    state.importBusy = true;
+    showBusyModal("Resolving tee assignments...");
+
+    const apiPath  = (MA.paths?.apiGHIN || "/api/GHIN") + "/getTeeSets.php";
+
+    try {
+      const updatedRows = [];
+      let index = 0;
+
+      for (const row of state.importRows) {
+        index += 1;
+        updateBusyModal(`Resolving ${index} of ${state.importRows.length} players...`);
+
+        // Already-on-roster rows pass through unchanged.
+        if (row.alreadyOnRoster) {
+          updatedRows.push(row);
+          continue;
+        }
+
+        let resolvedTee       = state.batchFallbackTee;
+        let resolvedTeeSource = "fallback";
+
+        if (!state.batchForceAssign) {
+          // Tier 1 (same-course carry) is attempted first by passing the
+          // source tee ID to getTeeSets.php as sourceGameTeeSetId.
+          // Tiers 2 and 3 are handled server-side.
+          try {
+            const tres = await MA.postJson(apiPath, {
+              player:             row.player,
+              mode:               "resolve",
+              sourceGameTeeSetId: safe(row.sourceTeeId || "")
+            });
+            if (tres?.ok && tres.payload?.resolvedTeeId) {
+              const allTees = Array.isArray(tres.payload?.teeSets) ? tres.payload.teeSets : [];
+              const match = allTees.find(t =>
+                safe(t.teeSetID || t.value || "") === safe(tres.payload.resolvedTeeId)
+              );
+              if (match) {
+                resolvedTee       = match;
+                resolvedTeeSource = safe(tres.payload.resolvedTeeSource || "fallback");
+              }
+            }
+          } catch (e) {
+            console.warn("Tee resolve failed for", row.ghin, e);
+          }
+        } else {
+          resolvedTeeSource = "force_assigned";
+        }
+
+        updatedRows.push({
+          ...row,
+          assignedTeeId:     safe(resolvedTee?.teeSetID || resolvedTee?.value || ""),
+          assignedTeeText:   formatAssignedTeeText(resolvedTee),
+          resolvedTeeSource: resolvedTeeSource,
+          ok:                !!safe(resolvedTee?.teeSetID || resolvedTee?.value || "")
+        });
+      }
+
+      state.importRows  = updatedRows;
+      // Sync preview rows so the table re-renders with resolved tees.
+      state.importExistingPreviewRows = updatedRows.map(r => ({
+        ghin:              r.ghin,
+        playerName:        safe(r.player?.name || ""),
+        hi:                safe(r.player?.hi   || ""),
+        gender:            safe(r.player?.gender || ""),
+        sourceTeeId:       r.sourceTeeId,
+        sourceTeeText:     r.sourceTeeText,
+        assignedTeeId:     r.assignedTeeId,
+        assignedTeeText:   r.assignedTeeText,
+        resolvedTeeSource: r.resolvedTeeSource,
+        alreadyOnRoster:   r.alreadyOnRoster
+      }));
+
+      state.importMode = "review";
+      MA.setStatus(`Tee assignments resolved for ${updatedRows.filter(r => !r.alreadyOnRoster).length} players.`, "success");
+    } finally {
+      state.importBusy = false;
+      hideBusyModal();
     }
   }
 
@@ -652,9 +773,6 @@
         if (state.importMode === "entry") {
           el.controls.innerHTML += `
             <div class="maFieldRow gpImportRow">
-              <div class="maField gpFieldTeeImport">
-                <select id="gpImportTee" class="maTextInput">${teeOptionsHtml}</select>
-              </div>
               <div class="maField gpFieldBtn">
                 <div class="gpFavBtnRow">
                   <button id="gpBtnImportEvaluate" class="btn btnSecondary" type="button">Evaluate</button>
@@ -663,32 +781,31 @@
             </div>
             <div class="maFieldRow">
               <div class="maField">
-                <div class="maHelpText">Enter one player GHIN number per line.</div>
+                <div class="maHelpText">Enter one player GHIN number per line. A tee picker will open before evaluate runs.</div>
               </div>
             </div>
           `;
 
-          const sel = document.getElementById("gpImportTee");
-          if (sel) {
-            sel.value = teeValue;
-            sel.onchange = () => {
-              state.importSelectedTeeId = safe(sel.value);
-              state.importSelectedTee = getImportSelectedTee();
-            };
-          }
-
           const btnEval = document.getElementById("gpBtnImportEvaluate");
           if (btnEval) btnEval.onclick = evaluateImportRows;
         } else {
-          const selectedTee = getImportSelectedTee();
-          const teeDisplay = selectedTee
-            ? `${safe(selectedTee.teeSetName || selectedTee.label || selectedTee.name || "")}`
-            : "No tee selected";
+          const fallbackTee  = state.batchFallbackTee;
+          const teeName      = safe(fallbackTee?.teeSetName || fallbackTee?.name || "");
+          const teeYards     = safe(fallbackTee?.teeSetYards || fallbackTee?.yards || "");
+          const teeLabel     = [teeName, teeYards ? `${teeYards} yds` : ""].filter(Boolean).join(" • ");
+          const modeLabel    = state.batchForceAssign ? "Force assigned" : "Fallback only";
+          const modePillClass = state.batchForceAssign ? "gpTeePill--force" : "gpTeePill--fallback";
 
           el.controls.innerHTML += `
             <div class="maFieldRow gpImportRow">
-              <div class="maField">
-                <div class="maHelpText">Assigned Tee: ${esc(teeDisplay)}</div>
+              <div class="maField" style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+                background:rgba(7,67,42,.05); border:1px solid rgba(7,67,42,.14);
+                border-radius:var(--radiusMd); padding:8px 12px;">
+                <div style="font-size:12px; font-weight:800; color:var(--ink); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                  <span style="font-size:11px; font-weight:700; color:var(--mutedText);">Fallback tee:</span>
+                  ${esc(teeLabel)}
+                  <span class="maPill ${esc(modePillClass)}">${esc(modeLabel)}</span>
+                </div>
               </div>
               <div class="maField gpFieldBtn">
                 <div class="gpFavBtnRow">
@@ -708,33 +825,63 @@
       }
 
       if (isExisting) {
-        el.controls.innerHTML += `
-          <div class="maFieldRow gpImportRow">
-            <div class="maField" style="flex:1.4;">
-              <label class="maLabel" for="gpImportSourceGame">Select Source Game</label>
-              <select id="gpImportSourceGame" class="maTextInput">${sourceGamesHtml}</select>
-              <div class="maHelpText" style="margin-top:6px;">Only your games are shown in this list.</div>
-            </div>
-            <div class="maField" style="flex:.9;">
-              <div class="maHelpText" style="padding:12px; border:1px solid var(--cardBorder); border-radius:16px; background:var(--panelBg, #f8fafc);">
-                <strong>Tee assignment</strong><br/>
-                Same course uses the same tee when possible. Otherwise, players are assigned the closest yardage match.
+        // In review state: show tee summary bar instead of source game selector
+        if (state.importMode === "review" && state.batchFallbackTee) {
+          const teeName = safe(state.batchFallbackTee.teeSetName || state.batchFallbackTee.name || "");
+          const teeYards = safe(state.batchFallbackTee.teeSetYards || state.batchFallbackTee.yards || "");
+          const teeLabel = [teeName, teeYards ? `${teeYards} yds` : ""].filter(Boolean).join(" • ");
+          const modeLabel = state.batchForceAssign ? "Force assigned" : "Fallback only";
+          const modePillClass = state.batchForceAssign ? "gpTeePill--force" : "gpTeePill--fallback";
+
+          el.controls.innerHTML += `
+            <div class="maFieldRow gpImportRow">
+              <div class="maField" style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+                background:rgba(7,67,42,.05); border:1px solid rgba(7,67,42,.14);
+                border-radius:var(--radiusMd); padding:8px 12px;">
+                <div style="font-size:12px; font-weight:800; color:var(--ink); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                  <span style="font-size:11px; font-weight:700; color:var(--mutedText);">Fallback tee:</span>
+                  ${esc(teeLabel)}
+                  <span class="maPill ${esc(modePillClass)}">${esc(modeLabel)}</span>
+                </div>
+                <button id="gpBtnChangeFallbackTee" class="btn btnSecondary" type="button"
+                  style="height:28px; padding:0 10px; font-size:11px;">Change</button>
               </div>
             </div>
-          </div>
-        `;
+          `;
 
-        const selGame = document.getElementById("gpImportSourceGame");
-        if (selGame) {
-          selGame.value = safe(state.importSourceGameId);
-          selGame.onchange = async () => {
-            state.importSourceGameId = safe(selGame.value);
-            state.importExistingPreviewRows = [];
-            state.importExistingPreviewCount = 0;
-            state.importSourceGameSummary = null;
-            render();
-            await loadExistingGamePreview(state.importSourceGameId);
-          };
+          const btnChange = document.getElementById("gpBtnChangeFallbackTee");
+          if (btnChange) btnChange.onclick = () => openBatchPickerForExisting();
+
+        } else {
+          // Launch state: show source game selector
+          el.controls.innerHTML += `
+            <div class="maFieldRow gpImportRow">
+              <div class="maField" style="flex:1.4;">
+                <label class="maLabel" for="gpImportSourceGame">Select Source Game</label>
+                <select id="gpImportSourceGame" class="maTextInput">${sourceGamesHtml}</select>
+                <div class="maHelpText" style="margin-top:6px;">Only your games are shown in this list.</div>
+              </div>
+              <div class="maField" style="flex:.9;">
+                <div class="maHelpText" style="padding:12px; border:1px solid var(--cardBorder); border-radius:16px; background:var(--panelBg, #f8fafc);">
+                  <strong>Tee assignment</strong><br/>
+                  Same course uses the same tee when possible. Otherwise, players are assigned the closest yardage match.
+                </div>
+              </div>
+            </div>
+          `;
+
+          const selGame = document.getElementById("gpImportSourceGame");
+          if (selGame) {
+            selGame.value = safe(state.importSourceGameId);
+            selGame.onchange = async () => {
+              state.importSourceGameId = safe(selGame.value);
+              state.importExistingPreviewRows = [];
+              state.importExistingPreviewCount = 0;
+              state.importSourceGameSummary = null;
+              render();
+              await loadExistingGamePreview(state.importSourceGameId);
+            };
+          }
         }
       }
 
@@ -884,13 +1031,24 @@
 
         const rows = state.importRows.map((r) => {
           const p = r.player || buildEmptyImportPlayer();
-          return `<div class="maListRow gpRow gpRow--import">
+          const sourceLabels = {
+            same_course:       "Same course",
+            last_played:       "Last played",
+            preferred_yardage: "Pref. yardage",
+            force_assigned:    "Force assigned",
+            fallback:          "Fallback"
+          };
+          const isSkip    = !!r.alreadyOnRoster;
+          const statusText = isSkip
+            ? "On roster"
+            : (sourceLabels[r.resolvedTeeSource] || r.status || "");
+          return `<div class="maListRow gpRow gpRow--import${isSkip ? " gpRow--skip" : ""}">
             <div class="maListRow__col">${esc(r.ghin || r.raw)}</div>
             <div class="maListRow__col">${esc(p.name || "")}</div>
             <div class="maListRow__col maListRow__col--right">${esc(p.gender || "")}</div>
             <div class="maListRow__col maListRow__col--right">${esc(p.hi || "")}</div>
             <div class="maListRow__col">${esc(r.assignedTeeText || "")}</div>
-            <div class="maListRow__col">${esc(r.status)}</div>
+            <div class="maListRow__col"><span class="maPill gpTeeSourcePill gpTeeSourcePill--${esc(r.resolvedTeeSource || (isSkip ? "skip" : ""))}">${esc(statusText)}</span></div>
           </div>`;
         }).join("");
 
@@ -915,12 +1073,19 @@
           : "Choose a game to load its players.";
 
         const rows = (state.importExistingPreviewRows || []).map((r) => {
-          return `<div class="maListRow gpRow gpRow--import">
-            <div class="maListRow__col">${esc(r.ghin || "")}</div>
+          const isSkip = !!r.alreadyOnRoster;
+          const statusText = isSkip ? "On roster" : (r.resolvedTeeSource
+            ? { same_course: "Same course", last_played: "Last played",
+                preferred_yardage: "Pref. yardage", force_assigned: "Force assigned",
+                fallback: "Fallback" }[r.resolvedTeeSource] || r.resolvedTeeSource
+            : "");
+          return `<div class="maListRow gpRow gpRow--import${isSkip ? " gpRow--skip" : ""}">
+            <div class="maListRow__col maListRow__col--muted" style="font-size:11px;">${esc(r.ghin || "")}</div>
             <div class="maListRow__col">${esc(r.playerName || "")}</div>
             <div class="maListRow__col maListRow__col--right">${esc(r.hi || "")}</div>
-            <div class="maListRow__col">${esc(r.sourceTeeText || "")}</div>
-            <div class="maListRow__col">${esc(r.assignedTeeText || "")}</div>
+            <div class="maListRow__col maListRow__col--muted" style="font-size:11px;">${esc(r.sourceTeeText || "")}</div>
+            <div class="maListRow__col maListRow__col--muted" style="font-size:11px;">${esc(r.assignedTeeText || "")}</div>
+            <div class="maListRow__col"><span class="maPill gpTeeSourcePill gpTeeSourcePill--${esc(r.resolvedTeeSource || (isSkip ? "skip" : ""))}">${esc(statusText)}</span></div>
           </div>`;
         }).join("");
 
@@ -943,6 +1108,7 @@
               <div class="maListRow__col maListRow__col--right">HI</div>
               <div class="maListRow__col">Source Tee</div>
               <div class="maListRow__col">Assigned Tee</div>
+              <div class="maListRow__col">Status</div>
             </div>
             <div class="maListRows">${rows || `<div class="gpEmpty">No source game selected.</div>`}</div>
 
@@ -1202,14 +1368,8 @@
       hi: safe(row.hi)
     });
   }
-    async function evaluateImportRows(){
+async function evaluateImportRows(){
     if (state.importBusy) return;
-
-    const selectedTee = getImportSelectedTee();
-    if (!selectedTee) {
-      MA.setStatus("Select a tee before evaluating import rows.", "warn");
-      return;
-    }
 
     const lines = parseImportLines(state.importText);
     if (!lines.length) {
@@ -1217,8 +1377,36 @@
       return;
     }
 
+    // Picker opens once before evaluate begins.
+    // User selects fallback tee and sets force/fallback toggle.
+    const g = state.game || {};
+    const gameId = String(g.dbGames_GGID || g.dbGames_GGIDnum || g.ggid || "").trim();
+
+    // Use a generic proxy player — gender M is the safest default for
+    // loading a full tee list; all tees are shown regardless in batch-setup mode.
+    const proxyPlayer = { ghin: safe(state.context?.userGHIN || "0"), gender: "M", hi: "0" };
+
+    MA.TeeSetSelection.open({
+      mode: "batch-setup",
+      gameId,
+      player: proxyPlayer,
+      subtitle: `Select fallback tee for ${lines.length} players`,
+      onSaveBatch: async ({ selectedTee, forceAssign }) => {
+        state.batchFallbackTee = selectedTee;
+        state.batchForceAssign = !!forceAssign;
+        await runEvaluateImportRows(lines);
+      }
+    });
+  }
+
+  async function runEvaluateImportRows(lines){
+    if (state.importBusy) return;
     state.importBusy = true;
     showBusyModal("Evaluating GHIN list...");
+
+    const apiPath = (MA.paths?.apiGHIN || "/api/GHIN") + "/getTeeSets.php";
+    const g = state.game || {};
+    const courseId = safe(g.dbGames_CourseID || "");
 
     try {
       const enrolledSet = new Set((state.players || []).map((p) => safe(p.dbPlayers_PlayerGHIN)));
@@ -1254,6 +1442,7 @@
           row.ok = false;
           row.status = "Already in roster";
           row.error = "Player is already in the roster";
+          row.alreadyOnRoster = true;
           rows.push(row);
           continue;
         }
@@ -1270,26 +1459,57 @@
         }
 
         const nm = splitName(hit.name || "");
-        row.ok = true;
-        row.status = "OK";
-        row.error = "";
-        row.player = {
-          ghin: safe(hit.ghin || ghin),
+        const player = {
+          ghin:       safe(hit.ghin || ghin),
           first_name: safe(nm.first),
-          last_name: safe(nm.last),
-          name: safe(hit.name || ""),
-          gender: safe(hit.gender || ""),
-          hi: safe(hit.hi || "")
+          last_name:  safe(nm.last),
+          name:       safe(hit.name || ""),
+          gender:     safe(hit.gender || ""),
+          hi:         safe(hit.hi || "")
         };
-        row.assignedTeeId = safe(selectedTee?.teeSetID || selectedTee?.value || "");
-        row.assignedTeeText = formatAssignedTeeText(selectedTee);
-        row.alreadyOnRoster = false;
+
+        // Resolve tee via hierarchy unless force-assign is on.
+        let resolvedTee        = state.batchFallbackTee;
+        let resolvedTeeSource  = "fallback";
+
+        if (!state.batchForceAssign) {
+          try {
+            const tres = await MA.postJson(apiPath, {
+              player,
+              mode: "resolve",
+              sourceGameTeeSetId: ""
+            });
+            if (tres?.ok && tres.payload?.resolvedTeeId) {
+              const allTees = Array.isArray(tres.payload?.teeSets) ? tres.payload.teeSets : [];
+              const match = allTees.find(t =>
+                safe(t.teeSetID || t.value || "") === safe(tres.payload.resolvedTeeId)
+              );
+              if (match) {
+                resolvedTee       = match;
+                resolvedTeeSource = safe(tres.payload.resolvedTeeSource || "fallback");
+              }
+            }
+          } catch (e) {
+            console.warn("Tee resolve failed for", ghin, e);
+          }
+        } else {
+          resolvedTeeSource = "force_assigned";
+        }
+
+        row.ok               = true;
+        row.status           = "OK";
+        row.error            = "";
+        row.player           = player;
+        row.assignedTeeId    = safe(resolvedTee?.teeSetID || resolvedTee?.value || "");
+        row.assignedTeeText  = formatAssignedTeeText(resolvedTee);
+        row.resolvedTeeSource = resolvedTeeSource;
+        row.alreadyOnRoster  = false;
         rows.push(row);
       }
 
-      state.importRows = rows;
-      state.importSelectedTee = selectedTee;
-      state.importMode = "review";
+      state.importRows         = rows;
+      state.importSelectedTee  = state.batchFallbackTee;
+      state.importMode         = "review";
       render();
       if (canImportAllRows()) MA.setStatus(`Evaluated ${rows.length} rows. All rows valid.`, "success");
       else MA.setStatus(`Evaluated ${rows.length} rows. Fix errors before import.`, "warn");
@@ -1309,18 +1529,17 @@
   }
 
   async function beginExistingGameImport(){
-    if (state.importBusy) return;
-    if (!safe(state.importSourceGameId)) {
-      MA.setStatus("Select a source game first.", "warn");
-      return;
+      if (state.importBusy) return;
+      if (!safe(state.importSourceGameId)) {
+        MA.setStatus("Select a source game first.", "warn");
+        return;
+      }
+      if (!canImportAllRows()) {
+        MA.setStatus("No importable players found. All players may already be on the roster.", "warn");
+        return;
+      }
+      await commitImportBatch(state.importRows.slice());
     }
-    if (!canImportAllRows()) {
-      MA.setStatus("All source-game rows must have an assigned tee before import can proceed.", "warn");
-      return;
-    }
-
-    await commitImportBatch(state.importRows.slice());
-  }
 
   async function commitImportBatch(rows){
     if (!rows.length) return;
@@ -1342,7 +1561,15 @@
           continue;
         }
 
-        const selectedTee = getImportTeeById(row.assignedTeeId);
+        // For existing-game imports the assignedTeeId is the server-resolved
+        // tee ID and may not be present in importTeeOptions (dest course cache).
+        // Fall back to a passthrough object so upsertGamePlayers.php can still
+        // resolve it via its own tee lookup rather than hard-failing here.
+        const selectedTee = getImportTeeById(row.assignedTeeId) || (
+          safe(row.assignedTeeId)
+            ? { teeSetID: safe(row.assignedTeeId), value: safe(row.assignedTeeId) }
+            : null
+        );
         if (!selectedTee) {
           failed++;
           continue;
@@ -1378,7 +1605,7 @@
     }
   }
 
-  async function beginBatchTeeFlow(){
+async function beginBatchTeeFlow(){
     if (state.multiAddBusy) return;
 
     const enrolledSet = new Set((state.players || []).map((p) => safe(p.dbPlayers_PlayerGHIN)));
@@ -1412,21 +1639,28 @@
     const g = state.game || {};
     const gameId = String(g.dbGames_GGID || g.dbGames_GGIDnum || g.ggid || "").trim();
 
+    // Picker opens once — user selects fallback tee and sets force/fallback toggle.
+    // onSaveBatch now receives { selectedTee, forceAssign } from teesetSelection.js.
     MA.TeeSetSelection.open({
       mode: "batch",
       gameId,
       player: proxyPlayer,
       subtitle: `Apply one tee to ${selectedRows.length} selected players`,
-      onSaveBatch: async (selectedTee) => {
-        await commitBatchPending(selectedRows, selectedTee);
+      onSaveBatch: async ({ selectedTee, forceAssign }) => {
+        state.batchFallbackTee = selectedTee;
+        state.batchForceAssign = !!forceAssign;
+        await commitBatchPending(selectedRows);
       }
     });
   }
 
-  async function commitBatchPending(selectedRows, selectedTee){
-    if (!selectedRows.length || !selectedTee) return;
-      state.multiAddBusy = true;
-      showBusyModal(`Adding ${selectedRows.length} selected favorites...`);
+  async function commitBatchPending(selectedRows){
+    if (!selectedRows.length || !state.batchFallbackTee) return;
+    state.multiAddBusy = true;
+    showBusyModal(`Adding ${selectedRows.length} selected favorites...`);
+
+    const g = state.game || {};
+    const courseId = safe(g.dbGames_CourseID || "");
 
     let added = 0;
     let failed = 0;
@@ -1440,17 +1674,42 @@
         const fullName = safe(row.name || row.playerName || "");
         const parts = fullName.split(" ");
         const first = parts.slice(0, -1).join(" ") || fullName;
-        const last = parts.slice(-1).join("");
+        const last  = parts.slice(-1).join("");
 
         const player = {
-          ghin: safe(row.playerGHIN),
+          ghin:       safe(row.playerGHIN),
           first_name: first,
-          last_name: last,
-          gender: safe(row.gender || "M"),
-          hi: safe(row.hi || "0")
+          last_name:  last,
+          gender:     safe(row.gender || "M"),
+          hi:         safe(row.hi || "0")
         };
 
-        const res = await MA.postJson(MA.paths.gamePlayersUpsert, { player, selectedTee });
+        // Resolve tee via hierarchy unless force-assign is on.
+        let resolvedTee = state.batchFallbackTee;
+        if (!state.batchForceAssign) {
+          try {
+            const apiPath = (MA.paths?.apiGHIN || "/api/GHIN") + "/getTeeSets.php";
+            const tres = await MA.postJson(apiPath, {
+              player,
+              mode: "resolve",
+              sourceGameTeeSetId: ""
+            });
+            if (tres?.ok && tres.payload?.resolvedTeeId) {
+              // Find the full tee object from the returned list so
+              // upsertGamePlayers.php receives the same shape it always has.
+              const allTees = Array.isArray(tres.payload?.teeSets) ? tres.payload.teeSets : [];
+              const match = allTees.find(t =>
+                safe(t.teeSetID || t.value || "") === safe(tres.payload.resolvedTeeId)
+              );
+              if (match) resolvedTee = match;
+            }
+          } catch (e) {
+            // Non-fatal — fall through to batchFallbackTee
+            console.warn("Tee resolve failed for", player.ghin, e);
+          }
+        }
+
+        const res = await MA.postJson(MA.paths.gamePlayersUpsert, { player, selectedTee: resolvedTee });
         if (res?.ok) added++;
         else failed++;
       }

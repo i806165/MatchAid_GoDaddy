@@ -10,15 +10,18 @@
   const MA = global.MA || {};
   
   // Internal state
-  let _config = null; // { gameId, player, onSave, onSaveBatch, mode, subtitle }
+// Internal state
+  let _config = null; // { gameId, player, onSave, onSaveBatch, onSetup, mode, subtitle }
   let _teeOptions = [];
   let _selectedTee = null;
   let _preferredYards = null;
+  let _forceAssign = false;  // reset to false on every open()
 
   // DOM elements (lazy created)
   let elOverlay = null;
   let elTitle = null;
   let elSub = null;
+  let elControls = null;  // maModal__controls strip (pinned, non-scrolling)
   let elRows = null;
   let elCancel = null;
 
@@ -31,27 +34,29 @@
     div.className = "maModalOverlay";
     div.setAttribute("aria-hidden", "true");
     div.innerHTML = `
-      <div class="maModal" role="dialog" aria-modal="true">
-        <header class="maModal__hdr">
-          <div class="maModal__titles">
-            <div class="maModal__title">Select Tee</div>
-            <div class="maModal__subtitle" id="maTeeSelSub"></div>
+          <div class="maModal" role="dialog" aria-modal="true">
+            <header class="maModal__hdr">
+              <div class="maModal__titles">
+                <div class="maModal__title">Select Tee</div>
+                <div class="maModal__subtitle" id="maTeeSelSub"></div>
+              </div>
+              <button type="button" class="iconBtn btnPrimary" id="maTeeSelCancel" aria-label="Close">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </header>
+            <div class="maModal__controls" id="maTeeSelControls" style="display:none;"></div>
+            <div class="maModal__body">
+              <div id="maTeeSelRows" class="maCards"></div>
+            </div>
           </div>
-          <button type="button" class="iconBtn btnPrimary" id="maTeeSelCancel" aria-label="Close">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-          </button>
-        </header>
-        <div class="maModal__body">
-          <div id="maTeeSelRows" class="maCards"></div>
-        </div>
-      </div>
-    `;
+        `;
     document.body.appendChild(div);
 
-    elOverlay = div;
-    elSub = div.querySelector("#maTeeSelSub");
-    elRows = div.querySelector("#maTeeSelRows");
-    elCancel = div.querySelector("#maTeeSelCancel");
+    elOverlay  = div;
+    elSub      = div.querySelector("#maTeeSelSub");
+    elControls = div.querySelector("#maTeeSelControls");
+    elRows     = div.querySelector("#maTeeSelRows");
+    elCancel   = div.querySelector("#maTeeSelCancel");
 
     elCancel.addEventListener("click", close);
   }
@@ -80,35 +85,39 @@
   }
 
   async function open(config) {
-    _config = config || {};
-    ensureDom();
+      _config = config || {};
+      _forceAssign = false;  // always reset — toggle must not persist between opens
+      ensureDom();
 
-    const player = _config.player || {};
-    const playerName = (player.name || (player.first_name + " " + player.last_name)).trim();
-    elSub.textContent = _config.subtitle || playerName || "Player";
-    elRows.innerHTML = '<div class="maEmptyState">Loading tee sets.</div>';
+      const player = _config.player || {};
+      const playerName = (player.name || (player.first_name + " " + player.last_name)).trim();
+      elSub.textContent = _config.subtitle || playerName || "Player";
+      elRows.innerHTML = '<div class="maEmptyState">Loading tee sets.</div>';
 
-    elOverlay.style.display = "flex";
-    elOverlay.setAttribute("aria-hidden", "false");
-    document.documentElement.classList.add("maOverlayOpen");
+      // Render the controls strip for batch-setup mode; hide it for single-player mode
+      renderControls();
 
-    try {
-      const payload = await getOptions(_config);
-      _teeOptions = Array.isArray(payload.teeSets) ? payload.teeSets : [];
-      _preferredYards = payload.preferredYards || null;
-      renderRows();
+      elOverlay.style.display = "flex";
+      elOverlay.setAttribute("aria-hidden", "false");
+      document.documentElement.classList.add("maOverlayOpen");
 
-    } catch (e) {
-      console.error(e);
-      elRows.innerHTML = `<div class="maEmptyState" style="color:var(--danger)">Error: ${esc(e.message)}</div>`;
+      try {
+        const payload = await getOptions(_config);
+        _teeOptions = Array.isArray(payload.teeSets) ? payload.teeSets : [];
+        _preferredYards = payload.preferredYards || null;
+        renderRows();
+
+      } catch (e) {
+        console.error(e);
+        elRows.innerHTML = `<div class="maEmptyState" style="color:var(--danger)">Error: ${esc(e.message)}</div>`;
+      }
     }
-  }
 
-    function teeNumericYards(t) {
-    const raw = String(t?.teeSetYards || t?.yards || "").replace(/[^\d.-]/g, "");
-    const n = Number(raw);
-    return Number.isFinite(n) ? n : 0;
-  }
+  function teeNumericYards(t) {
+      const raw = String(t?.teeSetYards || t?.yards || "").replace(/[^\d.-]/g, "");
+      const n = Number(raw);
+      return Number.isFinite(n) ? n : 0;
+    }
 
   function findRecommendedTee(teeOptions, preferredYards) {
     if (!Array.isArray(teeOptions) || !teeOptions.length) return null;
@@ -252,15 +261,77 @@
     });
   }
 
+  function renderControls() {
+    if (!elControls) return;
+
+    // Controls strip only appears in batch-setup mode (paths 2, 3, 4).
+    // Single-player mode (path 1) keeps it hidden — no behaviour change.
+    const isBatchSetup = (_config.mode === "batch" || _config.mode === "batch-setup");
+    if (!isBatchSetup) {
+      elControls.style.display = "none";
+      elControls.innerHTML = "";
+      return;
+    }
+
+    elControls.style.display = "";
+    elControls.innerHTML = `
+      <div style="display:flex; align-items:flex-start; gap:10px;">
+        <div style="position:relative; width:40px; height:24px; flex:0 0 auto; margin-top:1px;">
+          <input type="checkbox" id="maTeeForceToggle" style="opacity:0; position:absolute; width:0; height:0;"
+            ${_forceAssign ? "checked" : ""}>
+          <div id="maTeeForceTrack" style="position:absolute; inset:0; border-radius:99px;
+            background:${_forceAssign ? "var(--brandSecondary)" : "rgba(0,0,0,.2)"};
+            cursor:pointer; transition:background .2s;"></div>
+          <div id="maTeeForceThumb" style="position:absolute; top:3px; left:${_forceAssign ? "19px" : "3px"};
+            width:18px; height:18px; background:#fff; border-radius:50%; transition:left .2s;
+            pointer-events:none;"></div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:2px;">
+          <div id="maTeeForceLabel" style="font-size:12px; font-weight:900; color:var(--ink);">
+            ${_forceAssign ? "Force assign to all players" : "Use as fallback only"}
+          </div>
+          <div id="maTeeForceDesc" style="font-size:11px; font-weight:600; color:var(--mutedText);">
+            ${_forceAssign
+              ? "Hierarchy skipped &mdash; every player receives this tee"
+              : "Hierarchy runs first &mdash; this tee used only if no match found"}
+          </div>
+        </div>
+      </div>
+      <div id="maTeeForceBanner" style="display:${_forceAssign ? "block" : "none"};
+        margin-top:8px; background:#FFF3CD; border:1px solid #E8C87A;
+        border-radius:var(--radiusSq,6px); padding:7px 10px;
+        font-size:11px; font-weight:700; color:#7A5A10; line-height:1.4;">
+        Force assign is on &mdash; all players will receive the selected tee.
+        History and preferences will be ignored.
+      </div>
+    `;
+
+    // Wire the toggle — click the track div since the input is visually hidden
+    const track = elControls.querySelector("#maTeeForceTrack");
+    const input = elControls.querySelector("#maTeeForceToggle");
+    if (track && input) {
+      track.addEventListener("click", () => {
+        _forceAssign = !_forceAssign;
+        input.checked = _forceAssign;
+        // Re-render the controls strip to reflect new state
+        renderControls();
+      });
+    }
+  }
+
   async function selectTee(teeId) {
     const tee = _teeOptions.find(t => String(t.teeSetID || t.value) === String(teeId));
     if (!tee) return;
 
     close(); // Close UI immediately for responsiveness
-    if (_config.mode === "batch" && _config.onSaveBatch) {
-      _config.onSaveBatch(tee);
+
+    // batch-setup mode: caller receives { selectedTee, forceAssign }
+    // so downstream evaluate logic knows which mode to operate in.
+    if ((_config.mode === "batch" || _config.mode === "batch-setup") && _config.onSaveBatch) {
+      _config.onSaveBatch({ selectedTee: tee, forceAssign: _forceAssign });
       return;
     }
+    // Single-player path (mode unset or "single"): behaviour unchanged.
     if (_config.onSave) _config.onSave(tee);
   }
 
