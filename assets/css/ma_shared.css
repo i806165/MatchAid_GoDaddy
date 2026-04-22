@@ -1398,9 +1398,9 @@ body {
   justify-content: center;
   padding:
         calc(20px + env(safe-area-inset-top))
-        6px
+        16px
         calc(20px + env(safe-area-inset-bottom))
-        6px;
+        16px;
   background: var(--overlayBgDim);
   z-index: var(--overlayZ);
   backdrop-filter: blur(var(--overlayBlur));
