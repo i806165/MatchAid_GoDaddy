@@ -41,7 +41,7 @@ try {
     // are not useful as import sources.
     $games = [];
     foreach ($rawGames as $g) {
-        $playerCount = (int)($g["dbGames_PlayerCount"] ?? 0);
+        $playerCount = (int)($g["playerCount"] ?? 0);
         if ($playerCount < 1) continue;
         $games[] = [
             "ggid"        => (string)($g["dbGames_GGID"]       ?? ""),
@@ -51,6 +51,14 @@ try {
             "playerCount" => $playerCount,
         ];
     }
+
+    Logger::info("IMPORT_SOURCE_GAMES_DEBUG", [
+        "adminGhin"   => $adminGhin,
+        "clubId"      => $clubId,
+        "rawCount"    => count($rawGames),
+        "gamesCount"  => count($games),
+        "firstRaw"    => !empty($rawGames) ? array_slice($rawGames[0], 0, 5) : null,
+    ]);
 
     echo json_encode([
         "ok" => true,
