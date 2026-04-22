@@ -1272,6 +1272,9 @@ body {
   .maGameCard__manageBtn {
     display: none !important;
   }
+  .maModal .maField {
+    flex: 1 1 160px;
+  }
 }
 .maPanels{
   height: 100%;
