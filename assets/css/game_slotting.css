@@ -373,11 +373,28 @@
 
 .gsAutoSlotModal .maModal__controls {
   display: block;
+  overflow-y: auto;
+  /* Scrollable controls region so inputs stay reachable when keyboard opens */
+  max-height: 52dvh;
+  flex-shrink: 1;
+  min-height: 0;
 }
 
 .gsAutoSlotModal .maModal__body {
-  max-height: 52dvh;
   overflow: auto;
+  flex-shrink: 1;
+  min-height: 0;
+  /* No fixed max-height — let the dialog constrain it instead */
+}
+
+/* Constrain the whole dialog to the visible viewport including
+   keyboard-reduced height. Using svh (small viewport height) as
+   the safe fallback — it represents the smallest possible viewport
+   which accounts for the keyboard being open. */
+.gsAutoSlotModal {
+  max-height: min(92svh, 92dvh);
+  display: flex;
+  flex-direction: column;
 }
 
 .asPreviewRow {

@@ -1240,7 +1240,15 @@ function openAutoSlotModal() {
   btnCancel.onclick = closeDialog;
 
   dialog.classList.add("is-open");
-  if (!dialog.open) dialog.showModal();
+    if (!dialog.open) dialog.showModal();
+
+    // On mobile, when the keyboard opens it reduces the viewport.
+    // Scroll the active input into view so it stays above the keyboard.
+    dialog.addEventListener("focusin", (e) => {
+      if (e.target.matches("input, select, textarea")) {
+        setTimeout(() => e.target.scrollIntoView({ behavior: "smooth", block: "nearest" }), 120);
+      }
+    }, { once: false });
 }
 
 function onResetChanges() {
