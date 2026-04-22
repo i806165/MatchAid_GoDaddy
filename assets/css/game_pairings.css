@@ -374,6 +374,15 @@
   color: var(--ink);
 }
 
+/* iOS Safari auto-zoom prevention: inputs in the AutoPair modal must be
+   >= 16px or Safari zooms the viewport on focus and pushes content off-screen.
+   The modal is built dynamically so we scope by the overlay class. */
+.maModalOverlay input,
+.maModalOverlay select,
+.maModalOverlay textarea {
+  font-size: max(16px, 1rem) !important;
+}
+
 /* Desktop tray panels visible; mobile uses drawer */
 @media (max-width: 900px){
   .gpTrayPanel{
