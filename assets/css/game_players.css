@@ -507,3 +507,98 @@
     justify-content: flex-end;
   }
 }
+
+/* ==========================================================================
+   Existing Game Import — Game list
+   ========================================================================== */
+
+.gpGameListHdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--brandSecondary);
+  color: var(--brandSecondaryText);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.gpGameListHdr__hint {
+  font-weight: 600;
+  opacity: .8;
+}
+
+.gpGameRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+}
+
+.gpGameRow--selected {
+  background: color-mix(in srgb, var(--brandSecondary) 8%, white);
+  border-left: 3px solid var(--brandSecondary);
+  padding-left: 9px;
+}
+
+.gpGameRow--selected .gpGameRow__title {
+  color: var(--brandSecondary);
+}
+
+.gpGameRow--selected .gpGameRow__countNum {
+  color: var(--brandSecondary);
+}
+
+.gpGameRow__info {
+  flex: 1;
+  min-width: 0;
+}
+
+.gpGameRow__title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gpGameRow__course {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--mutedText);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gpGameRow__count {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.gpGameRow__countNum {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--brandSecondary);
+  line-height: 1;
+}
+
+.gpGameRow__countLbl {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--mutedText);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.gpGameRow__chevron {
+  flex: 0 0 auto;
+  color: var(--mutedText);
+  display: flex;
+  align-items: center;
+}

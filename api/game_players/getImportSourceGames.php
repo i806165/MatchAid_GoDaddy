@@ -32,19 +32,25 @@ try {
         "adminScope"  => "ME",
         "adminGhin"   => $adminGhin,
         // no date filters so both past and future games are available
-        "includePlayerCounts" => false,
+        "includePlayerCounts" => true,
     ]);
 
     $rawGames = is_array($result["games"]["raw"] ?? null) ? $result["games"]["raw"] : [];
 
-    $games = array_map(static function(array $g): array {
-        return [
-            "ggid"       => (string)($g["dbGames_GGID"] ?? ""),
-            "playDate"   => (string)($g["dbGames_PlayDate"] ?? ""),
-            "title"      => (string)($g["dbGames_Title"] ?? ""),
-            "courseName" => (string)($g["dbGames_CourseName"] ?? ""),
+    // Only include games that have at least one player — empty games
+    // are not useful as import sources.
+    $games = [];
+    foreach ($rawGames as $g) {
+        $playerCount = (int)($g["dbGames_PlayerCount"] ?? 0);
+        if ($playerCount < 1) continue;
+        $games[] = [
+            "ggid"        => (string)($g["dbGames_GGID"]       ?? ""),
+            "playDate"    => (string)($g["dbGames_PlayDate"]    ?? ""),
+            "title"       => (string)($g["dbGames_Title"]       ?? ""),
+            "courseName"  => (string)($g["dbGames_CourseName"]  ?? ""),
+            "playerCount" => $playerCount,
         ];
-    }, $rawGames);
+    }
 
     echo json_encode([
         "ok" => true,

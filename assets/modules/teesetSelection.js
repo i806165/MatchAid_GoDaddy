@@ -295,8 +295,8 @@
           </div>
           <div id="maTeeForceDesc" style="font-size:11px; font-weight:600; color:var(--mutedText);">
             ${_forceAssign
-              ? "Hierarchy skipped &mdash; every player receives this tee"
-              : "Hierarchy runs first &mdash; this tee used only if no match found"}
+              ? "Forced assignment- Every player assigned to selected teeset below"
+              : "Recent/Profile assignment- Player teeset chosen from users profile or recent play. Selected teeset below used as fallback"}
           </div>
         </div>
       </div>
