@@ -265,7 +265,6 @@
     
     const modal = document.createElement("div");
     modal.className = "maModal";
-    modal.style.maxWidth = "600px"; // Override default max-width for this specific modal
 
     // 2. Header
     const header = document.createElement("div");
