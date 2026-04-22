@@ -258,7 +258,8 @@ textarea {
 body {
   display: flex; 
   flex-direction: column; 
-  background: var(--surfaceApp); 
+  background: var(--surfaceApp);
+  overflow-x: hidden; 
 }
 
 .maControlArea{
