@@ -432,3 +432,78 @@
     text-align: left;
   }
 }
+
+/* ==========================================================================
+   Import — Entry card (GHIN textarea with inline header)
+   ========================================================================== */
+
+.gpImportCard {
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--radiusMd);
+  overflow: hidden;
+  background: #fff;
+}
+
+.gpImportCard__hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--borderSubtle);
+  background: rgba(7,67,42,.04);
+}
+
+.gpImportCard__label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--mutedText);
+}
+
+.gpImportCard__btn {
+  flex: 0 0 auto;
+}
+
+/* Override maTextInput border/radius when nested inside the card */
+.gpImportCard .gpImportText {
+  border: none;
+  border-radius: 0;
+  width: 100%;
+}
+
+/* ==========================================================================
+   Import — Review footer band (count + actions)
+   ========================================================================== */
+
+.gpImportFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-top: 1px solid var(--borderSubtle);
+  background: color-mix(in srgb, var(--panelBg) 96%, black);
+}
+
+.gpImportFooter__count {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--mutedText);
+}
+
+.gpImportFooter__actions {
+  display: flex;
+  gap: 8px;
+}
+
+@media (max-width: 480px) {
+  .gpImportFooter {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .gpImportFooter__actions {
+    justify-content: flex-end;
+  }
+}

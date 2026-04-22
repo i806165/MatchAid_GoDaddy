@@ -215,13 +215,16 @@
     const currentId = String(_config.currentTeeSetId || _config.selectedTeeSetId || "").trim();
     const recentId = String(_config.recentTeeSetId || "").trim();
 
-    const recentTee = recentId
+// Suppress suggested card entirely in batch and batch-setup modes —
+    // no per-player HI data is available so suggestions are not meaningful.
+    const isBatchMode = (_config.mode === "batch" || _config.mode === "batch-setup");
+    const recentTee = (!isBatchMode && recentId)
       ? _teeOptions.find(t => String(t.teeSetID || t.value || "").trim() === recentId)
       : null;
-
-    const recommendedTee = (_config.mode === "batch")
+    const recommendedTee = isBatchMode
       ? null
       : findRecommendedTee(_teeOptions, _preferredYards);
+
     const recommendedId = recommendedTee
       ? String(recommendedTee.teeSetID || recommendedTee.value || "").trim()
       : "";

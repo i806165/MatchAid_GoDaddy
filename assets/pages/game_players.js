@@ -771,56 +771,12 @@
 
       if (isExternal) {
         if (state.importMode === "entry") {
-          el.controls.innerHTML += `
-            <div class="maFieldRow gpImportRow">
-              <div class="maField gpFieldBtn">
-                <div class="gpFavBtnRow">
-                  <button id="gpBtnImportEvaluate" class="btn btnSecondary" type="button">Evaluate</button>
-                </div>
-              </div>
-            </div>
-            <div class="maFieldRow">
-              <div class="maField">
-                <div class="maHelpText">Enter one player GHIN number per line. A tee picker will open before evaluate runs.</div>
-              </div>
-            </div>
-          `;
-
-          const btnEval = document.getElementById("gpBtnImportEvaluate");
-          if (btnEval) btnEval.onclick = evaluateImportRows;
+          // Controls band shows only the sub-tab toggle in entry state.
+          // The Evaluate button and hint live inside the body card header.
+          // Nothing extra needed here.
         } else {
-          const fallbackTee  = state.batchFallbackTee;
-          const teeName      = safe(fallbackTee?.teeSetName || fallbackTee?.name || "");
-          const teeYards     = safe(fallbackTee?.teeSetYards || fallbackTee?.yards || "");
-          const teeLabel     = [teeName, teeYards ? `${teeYards} yds` : ""].filter(Boolean).join(" • ");
-          const modeLabel    = state.batchForceAssign ? "Force assigned" : "Fallback only";
-          const modePillClass = state.batchForceAssign ? "gpTeePill--force" : "gpTeePill--fallback";
-
-          el.controls.innerHTML += `
-            <div class="maFieldRow gpImportRow">
-              <div class="maField" style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
-                background:rgba(7,67,42,.05); border:1px solid rgba(7,67,42,.14);
-                border-radius:var(--radiusMd); padding:8px 12px;">
-                <div style="font-size:12px; font-weight:800; color:var(--ink); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                  <span style="font-size:11px; font-weight:700; color:var(--mutedText);">Fallback tee:</span>
-                  ${esc(teeLabel)}
-                  <span class="maPill ${esc(modePillClass)}">${esc(modeLabel)}</span>
-                </div>
-              </div>
-              <div class="maField gpFieldBtn">
-                <div class="gpFavBtnRow">
-                  <button id="gpBtnImportBack" class="btn btnSecondary" type="button">Back</button>
-                  <button id="gpBtnImportRun" class="btn btnSecondary" type="button" ${canImportAllRows() ? "" : "disabled"}>Import</button>
-                </div>
-              </div>
-            </div>
-          `;
-
-          const btnBack = document.getElementById("gpBtnImportBack");
-          if (btnBack) btnBack.onclick = () => { resetImportMode(); render(); };
-
-          const btnRun = document.getElementById("gpBtnImportRun");
-          if (btnRun) btnRun.onclick = beginImportBatch;
+          // Controls band shows only sub-tab toggle in review state.
+          // Buttons are rendered in the body footer band instead.
         }
       }
 
@@ -1015,7 +971,11 @@
       if (isExternal) {
         if (state.importMode === "entry") {
           el.body.innerHTML = `<section class="maPanel gpImportPanel">
-            <div class="maField">
+            <div class="gpImportCard">
+              <div class="gpImportCard__hdr">
+                <div class="gpImportCard__label">Enter one GHIN number per line</div>
+                <button id="gpBtnImportEvaluate" class="btn btnSecondary gpImportCard__btn" type="button">Evaluate</button>
+              </div>
               <textarea id="gpImportText" class="maTextInput gpImportText" placeholder="6105388&#10;1234567&#10;7654321">${esc(state.importText)}</textarea>
             </div>
           </section>`;
@@ -1026,6 +986,9 @@
               state.importText = safe(ta.value);
             };
           }
+
+          const btnEval = document.getElementById("gpBtnImportEvaluate");
+          if (btnEval) btnEval.onclick = evaluateImportRows;
           return;
         }
 
@@ -1052,6 +1015,7 @@
           </div>`;
         }).join("");
 
+        const actionable = state.importRows.filter(r => !r.alreadyOnRoster).length;
         el.body.innerHTML = `<section class="maPanel gpImportPanel">
           <div class="maListRow maListRow--hdr gpRow--import">
             <div class="maListRow__col">GHIN</div>
@@ -1062,7 +1026,20 @@
             <div class="maListRow__col">Status</div>
           </div>
           <div class="maListRows">${rows || `<div class="gpEmpty">No import rows evaluated.</div>`}</div>
+          <div class="gpImportFooter">
+            <div class="gpImportFooter__count">${actionable} player${actionable !== 1 ? "s" : ""} evaluated</div>
+            <div class="gpImportFooter__actions">
+              <button id="gpBtnImportBack" class="btn btnPrimary" type="button">Back</button>
+              <button id="gpBtnImportRun" class="btn btnSecondary" type="button" ${canImportAllRows() ? "" : "disabled"}>Import ${actionable} Player${actionable !== 1 ? "s" : ""}</button>
+            </div>
+          </div>
         </section>`;
+
+        const btnBack = document.getElementById("gpBtnImportBack");
+        if (btnBack) btnBack.onclick = () => { resetImportMode(); render(); };
+
+        const btnRun = document.getElementById("gpBtnImportRun");
+        if (btnRun) btnRun.onclick = beginImportBatch;
         return;
       }
 
