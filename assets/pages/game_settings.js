@@ -728,7 +728,7 @@
 
     // Segments options derived from holes (preserve stored value if possible)
     if (el.segments) {
-      const desiredSeg = String(el.segments.value ?? g.dbGames_Segments ?? "").trim() || "9";
+      const desiredSeg = String(g.dbGames_Segments ?? el.segments.value ?? "").trim() || "9";
       setSelectOptions(el.segments, buildSegmentsOptionsFromHoles());
       if (Array.from(el.segments.options).some(o => o.value === desiredSeg)) el.segments.value = desiredSeg;
       else el.segments.value = el.segments.options[0]?.value || "9";
