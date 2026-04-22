@@ -286,6 +286,12 @@ body {
   overflow: hidden;
 }
 
+.maOverlayOpen body{
+  width: 100vw;
+  overflow-x: hidden;
+  position: relative;
+}
+
 .maChrome__hdr{
   background: var(--chromeHdrBg);
   border-bottom: 1px solid var(--chromeBorder);
@@ -1383,6 +1389,10 @@ body {
 .maModalOverlay{
   position: fixed;
   inset: 0;
+  width: 100%;
+  height: 100svh;
+  overflow: hidden;
+  overscroll-behavior: none;
   display: none;
   align-items: center;
   justify-content: center;

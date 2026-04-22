@@ -216,6 +216,12 @@
    Course picker modal
    ========================================================================== */
 
+#gmCourseModal input,
+#gmCourseModal select,
+#gmCourseModal textarea {
+  font-size: max(16px, 1rem) !important;
+}
+
 .gmCourseSearchControls{
   margin-top: 10px;
 }
