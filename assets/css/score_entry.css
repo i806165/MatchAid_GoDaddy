@@ -354,8 +354,8 @@
   }
 
   .scorePlayerRow{
-    padding: 12px 10px 10px 6px;
-    gap: 8px;
+    padding: 8px 10px 6px 6px;
+    gap: 4px;
   }
 
   .scorePlayerMain{
@@ -423,11 +423,12 @@
 
   .scorePlayerMetaRow{
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 6px;
+    gap: 4px;
   }
 
   .scorePlayerDetail{
-    font-size: 13px;
+    font-size: 14px;
+    color: var(--ink);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
