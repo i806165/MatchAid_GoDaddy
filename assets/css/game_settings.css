@@ -335,13 +335,14 @@
 }
 .gsWizSetAllBtn:hover { background: var(--segmentSelectedBg); border-color: color-mix(in srgb, var(--segmentSelectedBg) 55%, black); color: var(--ink); }
 
-.gsWizHoleDeclGrid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+.gsWizHoleDeclGrid { display: grid; grid-template-columns: repeat(9, auto); gap: 5px; justify-content: start; }
 
 .wizHoleCell {
   background: var(--surfaceApp); border: 1px solid var(--borderSubtle);
   border-radius: var(--radiusMd); padding: 7px 4px 5px;
   display: flex; flex-direction: column; align-items: center; gap: 3px;
   transition: border-color 0.12s;
+  width: 36px;
 }
 .wizHoleCell:focus-within { border-color: var(--brandSecondary); background: var(--brandPrimaryBg); }
 .wizHoleCellLabel         { font-size: 9px; font-weight: 900; color: var(--mutedText); text-align: center; line-height: 1.2; }
@@ -349,8 +350,8 @@
 .wizHoleCellSelect {
   width: 100%; border: none; background: transparent;
   font-size: 15px; font-weight: 900; font-family: var(--fontFamilyBase);
-  color: var(--brandPrimary); text-align: center; cursor: pointer;
-  appearance: none; -webkit-appearance: none; padding: 0;
+  color: var(--brandPrimary); text-align: center; text-align-last: center; cursor: pointer;
+  appearance: none; -webkit-appearance: none; padding: 0; display: block; margin: 0 auto;
 }
 .wizHoleCellSelect:focus { outline: none; }
 
@@ -418,7 +419,7 @@
 @media (max-width: 720px) {
   .gsWizLayout           { flex-direction: column; }
   .gsWizAside            { width: 100%; position: static; }
-  .gsWizHoleDeclGrid     { grid-template-columns: repeat(3, 1fr); }
+  .gsWizHoleDeclGrid     { grid-template-columns: repeat(6, auto); }
   .gsWizStableford__grid { grid-template-columns: repeat(3, 1fr); }
   .wizGameCard           { flex: 0 0 96px; }
   .gsWizCarouselArrows   { display: none; }
