@@ -120,3 +120,308 @@
   text-align: center;
   font-size: 13px;
 }
+
+/* ==========================================================================
+   WIZARD — View toggle + progress strip
+   ========================================================================== */
+
+.gsViewToggle { margin-bottom: 8px; }
+
+.gsWizProgress {
+  display: flex;
+  align-items: flex-start;
+  margin-top: 8px;
+  padding: 0 4px;
+}
+.gsWizStep {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  cursor: pointer; position: relative;
+  user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.gsWizStep + .gsWizStep::before {
+  content: ''; position: absolute;
+  left: -50%; top: 10px; width: 100%; height: 2px;
+  background: rgba(0,0,0,.12); z-index: 0;
+}
+.gsWizStep.done + .gsWizStep::before { background: var(--brandPrimary); opacity: .35; }
+
+.gsWizDot {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: rgba(0,0,0,.06); border: 2px solid rgba(0,0,0,.15);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 900; color: transparent;
+  transition: all 0.2s; position: relative; z-index: 1;
+  font-family: var(--fontFamilyBase);
+}
+.gsWizStep.done   .gsWizDot { background: var(--brandPrimary); border-color: var(--brandPrimary); color: #fff; }
+.gsWizStep.active .gsWizDot { background: var(--segmentSelectedBg); border-color: color-mix(in srgb, var(--segmentSelectedBg) 55%, black); color: var(--ink); box-shadow: 0 0 0 3px rgba(241,215,183,.35); }
+
+.gsWizStepLabel {
+  font-size: 9px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase;
+  color: rgba(0,0,0,.35); white-space: nowrap; font-family: var(--fontFamilyBase);
+}
+.gsWizStep.active .gsWizStepLabel { color: var(--brandPrimary); font-weight: 900; }
+.gsWizStep.done   .gsWizStepLabel { color: rgba(0,0,0,.5); }
+
+/* ==========================================================================
+   WIZARD — Layout
+   ========================================================================== */
+
+.gsWizLayout { display: flex; gap: 10px; align-items: flex-start; }
+.gsWizMain   { flex: 1 1 0; min-width: 0; }
+.gsWizAside  { width: 240px; flex-shrink: 0; position: sticky; top: 10px; }
+
+.gsWizStepPanel { animation: gsWizIn 0.22s cubic-bezier(0.22,1,0.36,1) both; }
+@keyframes gsWizIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+/* ==========================================================================
+   WIZARD — Typography
+   ========================================================================== */
+
+.gsWizEyebrow { font-size: 15px; font-weight: 900; color: var(--ink); margin-bottom: 4px; line-height: 1.2; }
+.gsWizHint    { font-size: 12px; font-weight: 700; color: var(--mutedText); margin-bottom: 14px; line-height: 1.4; }
+
+.gsWizFieldGroup  { display: flex; flex-direction: column; gap: 8px; }
+.gsWizFieldLabel  { font-size: 11px; font-weight: 900; letter-spacing: .3px; text-transform: uppercase; color: var(--mutedText); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.gsWizDivider     { height: 1px; background: var(--borderSubtle); margin: 4px 0; }
+.gsWizCascadeNote { font-size: 11px; font-weight: 700; color: var(--mutedText); line-height: 1.4; min-height: 16px; }
+
+.gsWizBadge          { font-size: 10px; font-weight: 800; border-radius: 6px; padding: 1px 6px; text-transform: none; letter-spacing: 0; }
+.gsWizBadge--forced  { background: var(--brandPrimaryBg); color: var(--brandPrimary); border: 1px solid rgba(7,67,42,.2); }
+.gsWizBadge--derived { background: #e8f0fe; color: #1a3a6b; }
+.gsWizBadge--adj     { background: #fff3e0; color: #7a4400; }
+
+/* ==========================================================================
+   WIZARD — Choice chips
+   ========================================================================== */
+
+.wizChips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.wizChip {
+  height: var(--btnHeight); padding: 0 14px;
+  border-radius: var(--controlRadius); border: 1px solid var(--controlBorder);
+  background: var(--bg); color: var(--ink);
+  font-family: var(--fontFamilyBase); font-size: 12px; font-weight: 800;
+  cursor: pointer; display: flex; align-items: center;
+  transition: background 0.12s, border-color 0.12s;
+  user-select: none; -webkit-tap-highlight-color: transparent; white-space: nowrap;
+}
+.wizChip:hover:not(.locked):not(.disabled) { background: var(--btnHoverBg); }
+.wizChip.selected  { background: var(--segmentSelectedBg); border-color: color-mix(in srgb, var(--segmentSelectedBg) 55%, black); }
+.wizChip.locked    { background: var(--brandPrimaryBg); border-color: rgba(7,67,42,.25); color: var(--brandPrimary); cursor: default; font-weight: 900; }
+.wizChip.disabled  { opacity: .28; cursor: not-allowed; pointer-events: none; }
+
+/* ==========================================================================
+   WIZARD — Option cards with descriptions
+   ========================================================================== */
+
+.gsWizOptList { display: flex; flex-direction: column; gap: 6px; }
+
+.wizOptCard {
+  border: 1px solid var(--borderSubtle); background: var(--bg);
+  border-radius: var(--radiusMd); padding: 10px 12px;
+  cursor: pointer; display: flex; align-items: flex-start; gap: 10px;
+  transition: background 0.12s, border-color 0.12s; user-select: none;
+}
+.wizOptCard:hover:not(.locked) { background: var(--btnHoverBg); border-color: rgba(0,0,0,.2); }
+.wizOptCard.selected { background: var(--segmentSelectedBg); border-color: color-mix(in srgb, var(--segmentSelectedBg) 55%, black); }
+.wizOptCard.locked   { background: var(--brandPrimaryBg); border-color: rgba(7,67,42,.25); cursor: default; }
+
+.wizOptCard__radio {
+  width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(0,0,0,.2);
+  flex-shrink: 0; margin-top: 2px; background: #fff;
+  display: flex; align-items: center; justify-content: center; transition: all 0.12s;
+}
+.wizOptCard.selected .wizOptCard__radio::after,
+.wizOptCard.locked   .wizOptCard__radio::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #fff; }
+
+.wizOptCard__body { flex: 1; min-width: 0; }
+.wizOptCard__name { font-size: 13px; font-weight: 800; color: var(--ink); line-height: 1.2; }
+.wizOptCard.locked .wizOptCard__name { color: var(--brandPrimary); }
+.wizOptCard__desc { font-size: 11px; font-weight: 700; color: var(--mutedText); margin-top: 2px; line-height: 1.4; }
+
+/* ==========================================================================
+   WIZARD — Basis strip, forced display, selects
+   ========================================================================== */
+
+.gsWizBasisStrip {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--brandPrimaryBg); border: 1px solid rgba(7,67,42,.15);
+  border-radius: var(--radiusMd); padding: 8px 12px;
+  font-size: 13px; font-weight: 900; color: var(--brandPrimary);
+}
+.gsWizBasisNote { font-size: 11px; font-weight: 700; color: var(--mutedText); }
+
+.gsWizForced {
+  display: inline-flex; align-items: center; gap: 10px;
+  background: var(--brandPrimaryBg); border: 1px solid rgba(7,67,42,.2);
+  border-radius: var(--radiusMd); padding: 10px 14px;
+}
+.gsWizForced__val  { font-size: 14px; font-weight: 900; color: var(--brandPrimary); }
+.gsWizForced__note { font-size: 11px; font-weight: 700; color: var(--mutedText); margin-top: 2px; }
+
+.gsWizSelectWrap { position: relative; }
+.gsWizSelect     { width: 100%; }
+.gsWizLockedNote { font-size: 11px; font-weight: 800; color: var(--brandPrimary); margin-top: 4px; }
+
+.gsWizAdjBanner {
+  background: #fff3e0; border: 1px solid #e0b060;
+  border-radius: var(--radiusMd); padding: 10px 12px;
+  font-size: 12px; font-weight: 700; color: #7a4400; line-height: 1.5;
+  margin-bottom: 4px;
+}
+
+/* ==========================================================================
+   WIZARD — Carousel
+   ========================================================================== */
+
+.gsWizCarouselHeader  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.gsWizCarouselHint    { font-size: 11px; font-weight: 800; color: var(--mutedText); }
+.gsWizCarouselArrows  { display: flex; gap: 5px; }
+.gsWizCarouselArrow   {
+  width: 30px; height: 30px; border-radius: var(--controlRadius);
+  border: 1px solid var(--controlBorder); background: var(--bg);
+  cursor: pointer; font-size: 13px; font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--mutedText); transition: background 0.12s;
+}
+.gsWizCarouselArrow:hover { background: var(--btnHoverBg); }
+
+.gsWizCarouselWrap { position: relative; }
+.gsWizCarouselWrap::before,
+.gsWizCarouselWrap::after { content: ''; position: absolute; top: 0; bottom: 14px; width: 20px; z-index: 2; pointer-events: none; }
+.gsWizCarouselWrap::before { left:  0; background: linear-gradient(to right, var(--bg), transparent); }
+.gsWizCarouselWrap::after  { right: 0; background: linear-gradient(to left,  var(--bg), transparent); }
+
+.wizCarousel {
+  display: flex; gap: 8px; overflow-x: auto;
+  scroll-snap-type: x mandatory; scroll-behavior: smooth;
+  padding: 4px 2px 12px; -ms-overflow-style: none; scrollbar-width: none; cursor: grab;
+}
+.wizCarousel::-webkit-scrollbar { display: none; }
+.wizCarousel:active { cursor: grabbing; }
+
+.wizGameCard {
+  scroll-snap-align: start; flex: 0 0 110px;
+  background: var(--bg); border: 1px solid var(--borderSubtle);
+  border-radius: var(--controlRadius); padding: 12px 8px 10px;
+  cursor: pointer; text-align: center; user-select: none;
+  transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
+  -webkit-tap-highlight-color: transparent;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.wizGameCard:hover    { background: var(--btnHoverBg); border-color: rgba(0,0,0,.2); }
+.wizGameCard.selected { background: var(--segmentSelectedBg); border-color: color-mix(in srgb, var(--segmentSelectedBg) 55%, black); box-shadow: 0 2px 8px rgba(0,0,0,.10); }
+.wizGameCard__name    { font-size: 12px; font-weight: 900; color: var(--ink); line-height: 1.25; }
+.wizGameCard__fmt     { font-size: 9px;  font-weight: 800; color: var(--mutedText); letter-spacing: .2px; }
+
+.gsWizSelBanner        { background: var(--brandPrimaryBg); border: 1px solid rgba(7,67,42,.2); border-radius: var(--radiusMd); padding: 10px 12px; margin-top: 8px; }
+.gsWizSelBanner__label { font-size: 13px; font-weight: 900; color: var(--brandPrimary); }
+.gsWizSelBanner__detail{ font-size: 11px; font-weight: 700; color: var(--mutedText); margin-top: 2px; }
+
+/* ==========================================================================
+   WIZARD — Hole declaration grid
+   ========================================================================== */
+
+.gsWizHoleDeclHint { font-size: 11px; font-weight: 700; color: var(--mutedText); line-height: 1.4; }
+.gsWizSetAllRow    { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0; }
+.gsWizSetAllLabel  { font-size: 12px; font-weight: 800; color: var(--mutedText); white-space: nowrap; }
+.gsWizSetAllBtns   { display: flex; gap: 5px; }
+.gsWizSetAllBtn {
+  width: 34px; height: 34px; border-radius: var(--controlRadius);
+  border: 1px solid var(--controlBorder); background: var(--bg);
+  font-size: 13px; font-weight: 900; font-family: var(--fontFamilyBase);
+  color: var(--mutedText); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; transition: background 0.12s;
+}
+.gsWizSetAllBtn:hover { background: var(--segmentSelectedBg); border-color: color-mix(in srgb, var(--segmentSelectedBg) 55%, black); color: var(--ink); }
+
+.gsWizHoleDeclGrid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; }
+
+.wizHoleCell {
+  background: var(--surfaceApp); border: 1px solid var(--borderSubtle);
+  border-radius: var(--radiusMd); padding: 7px 4px 5px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  transition: border-color 0.12s;
+}
+.wizHoleCell:focus-within { border-color: var(--brandSecondary); background: var(--brandPrimaryBg); }
+.wizHoleCellLabel         { font-size: 9px; font-weight: 900; color: var(--mutedText); text-align: center; line-height: 1.2; }
+.wizHoleCellLabel .par-text { display: block; font-size: 8px; color: var(--brandSecondary); margin-top: 1px; }
+.wizHoleCellSelect {
+  width: 100%; border: none; background: transparent;
+  font-size: 15px; font-weight: 900; font-family: var(--fontFamilyBase);
+  color: var(--brandPrimary); text-align: center; cursor: pointer;
+  appearance: none; -webkit-appearance: none; padding: 0;
+}
+.wizHoleCellSelect:focus { outline: none; }
+
+/* ==========================================================================
+   WIZARD — Stableford preview
+   ========================================================================== */
+
+.gsWizStableford        { background: var(--surfaceApp); border: 1px solid var(--borderSubtle); border-radius: var(--radiusMd); overflow: hidden; }
+.gsWizStableford__hdr   { background: rgba(0,0,0,.04); padding: 7px 12px; font-size: 10px; font-weight: 900; color: var(--mutedText); letter-spacing: .5px; text-transform: uppercase; }
+.gsWizStableford__grid  { display: grid; grid-template-columns: repeat(6, 1fr); }
+.wizStableford__cell    { padding: 8px 4px; text-align: center; border-right: 1px solid var(--borderSubtle); border-bottom: 1px solid var(--borderSubtle); }
+.wizStableford__cell:last-child { border-right: none; }
+.wizStableford__rel     { font-size: 9px;  font-weight: 900; color: var(--mutedText); margin-bottom: 2px; }
+.wizStableford__pts     { font-size: 15px; font-weight: 900; color: var(--brandPrimary); }
+.wizStableford__name    { font-size: 8px;  font-weight: 700; color: rgba(0,0,0,.3); margin-top: 1px; }
+
+/* ==========================================================================
+   WIZARD — Summary panel
+   ========================================================================== */
+
+.gsWizSummary__body    { padding: 0; }
+.gsWizSummary__section { font-size: 9px; font-weight: 900; letter-spacing: 1.1px; text-transform: uppercase; color: var(--brandPrimary); padding: 8px 10px 3px; border-top: 1px solid var(--borderSubtle); }
+.gsWizSummary__section:first-of-type { border-top: none; }
+.gsWizSummary__row     { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 10px; gap: 8px; }
+.gsWizSummary__key     { font-size: 11px; font-weight: 700; color: var(--mutedText); white-space: nowrap; flex-shrink: 0; }
+
+.wizSummary__val        { font-size: 11px; font-weight: 900; color: var(--ink); text-align: right; max-width: 130px; word-break: break-word; }
+.wizSummary__val.empty  { color: rgba(0,0,0,.2); font-weight: 700; font-style: italic; }
+.wizSummary__val.forced { color: var(--brandPrimary); }
+
+/* ==========================================================================
+   WIZARD — Nav buttons
+   ========================================================================== */
+
+.gsWizNav { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; gap: 8px; }
+
+.gsWizNavBtn {
+  height: var(--btnHeight); padding: 0 18px;
+  border-radius: var(--controlRadius); border: 1px solid var(--controlBorder);
+  background: var(--bg); color: var(--mutedText);
+  font-family: var(--fontFamilyBase); font-size: 12px; font-weight: 800;
+  cursor: pointer; transition: background 0.12s;
+}
+.gsWizNavBtn:hover:not(:disabled) { background: var(--btnHoverBg); color: var(--ink); }
+.gsWizNavBtn:disabled { opacity: .38; cursor: default; }
+
+.gsWizNavBtn--primary {
+  background: var(--brandPrimary); color: #fff;
+  border-color: var(--brandPrimary); font-weight: 900;
+}
+.gsWizNavBtn--primary:hover:not(:disabled) { background: var(--brandSecondary); }
+
+.gsWizNavBtn--primary.wiz-save {
+  background: var(--segmentSelectedBg); color: var(--ink);
+  border-color: color-mix(in srgb, var(--segmentSelectedBg) 55%, black);
+}
+.gsWizNavBtn--primary.wiz-save:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--segmentSelectedBg) 85%, black);
+}
+
+/* ==========================================================================
+   WIZARD — Responsive
+   ========================================================================== */
+
+@media (max-width: 720px) {
+  .gsWizLayout           { flex-direction: column; }
+  .gsWizAside            { width: 100%; position: static; }
+  .gsWizHoleDeclGrid     { grid-template-columns: repeat(3, 1fr); }
+  .gsWizStableford__grid { grid-template-columns: repeat(3, 1fr); }
+  .wizGameCard           { flex: 0 0 96px; }
+  .gsWizCarouselArrows   { display: none; }
+}

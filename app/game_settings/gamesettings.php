@@ -52,6 +52,7 @@ try {
     "game" => $game,
     "roster" => $roster,
     "coursePars" => $coursePars,
+    "recallTemplates"=> [],   // Custom Points — future feature
     "header" => [
       "subtitle" => $game["dbGames_Title"] ?? ("GGID " . (string)$ggid)
     ]
@@ -101,15 +102,6 @@ $maChromeLogoUrl = null;
 </head>
 <body>
   <?php include __DIR__ . "/../../includes/chromeHeader.php"; ?>
-
-  <div class="maControlArea">
-    <div class="maSeg" id="gsTabs" role="tablist" aria-label="Game Settings Tabs">
-      <button type="button" class="maSegBtn is-active" data-tab="general" role="tab" aria-selected="true">General</button>
-      <button type="button" class="maSegBtn" data-tab="scoring" role="tab" aria-selected="false">Scoring</button>
-      <button type="button" class="maSegBtn" data-tab="handicaps" role="tab" aria-selected="false">Handicaps</button>
-      <button type="button" class="maSegBtn" data-tab="customPoints" role="tab" aria-selected="false">Custom Points</button>
-    </div>
-  </div>
 
   <main class="maPage" role="main">
     <?php include __DIR__ . "/gamesettings_view.php"; ?>

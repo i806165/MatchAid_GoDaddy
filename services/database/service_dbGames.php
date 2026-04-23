@@ -306,6 +306,7 @@ public static function queryGames(array $args): array {
 
     // Allowlist for Settings fields
     $allow = [
+      "dbGames_GameLabel",                                          // NEW — user-facing game label
       "dbGames_GameFormat", "dbGames_TOMethod", "dbGames_ScoringBasis",
       "dbGames_Competition", "dbGames_Segments", "dbGames_RotationMethod",
       "dbGames_ScoringMethod", "dbGames_ScoringSystem", "dbGames_BestBall",
