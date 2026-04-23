@@ -1,15 +1,15 @@
 /* /assets/css/game_settings.css
-   Local, page-specific rules for Game Settings.
+   Local, page-specific rules for Game Settings — Wizard view only.
    Shared tokens/layout live in /assets/css/ma_shared.css.
 */
 
-/* Style card headers to match other admin pages */
+/* Card header style */
 .maCard__hdr {
   color: var(--brandSecondaryText);
   background: var(--brandSecondary);
 }
 
-/* Desktop canvas style (optional, matches game_maintenance) */
+/* Desktop canvas */
 @media (min-width: 980px) {
   body {
     background:
@@ -24,108 +24,11 @@
         var(--surfaceApp));
     background-attachment: fixed;
   }
-
-  .maPage > .gsTabPanels {
-    width: min(980px, 100%);
-    margin: 0 auto;
-  }
-}
-
-/* Hole Declarations Grid */
-.gsGridList {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr); /* Mobile: 3 cols x 6 rows */
-  gap: 8px;
-}
-
-@media (min-width: 768px) {
-  .gsGridList {
-    grid-template-columns: repeat(9, 1fr); /* Desktop: 9 cols x 2 rows */
-  }
-}
-
-.holeDeclCell {
-  background: var(--surface);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--radiusMd);
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-
-.holeDeclLabel__hole {
-  display: block;
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--mutedText);
-  text-align: center;
-  line-height: 1.2;
-}
-
-.holeDeclLabel__par {
-  display: block;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--brandSecondary);
-  text-align: center;
-  line-height: 1.2;
-}
-
-.holeDeclCell .maTextInput {
-  height: 30px;
-  min-height: 30px;
-  padding: 0 4px;
-  text-align: center;
-  font-size: 13px;
-}
-
-/* Stableford Grid */
-.gsStablefordGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr); /* Mobile: 3 cols x 2 rows */
-  gap: 8px;
-}
-
-@media (min-width: 768px) {
-  .gsStablefordGrid {
-    grid-template-columns: repeat(6, 1fr); /* Desktop: 6 cols across */
-  }
-}
-
-.stablefordCell {
-  background: var(--surface);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--radiusMd);
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-}
-
-.stablefordLabel {
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--mutedText);
-  text-align: center;
-  line-height: 1.2;
-}
-
-.stablefordCell .maTextInput {
-  height: 30px;
-  min-height: 30px;
-  padding: 0 4px;
-  text-align: center;
-  font-size: 13px;
 }
 
 /* ==========================================================================
-   WIZARD — View toggle + progress strip
+   WIZARD — Progress strip
    ========================================================================== */
-
-.gsViewToggle { margin-bottom: 8px; }
 
 .gsWizProgress {
   display: flex;
@@ -144,7 +47,6 @@
   left: -50%; top: 10px; width: 100%; height: 2px;
   background: rgba(0,0,0,.12); z-index: 0;
 }
-
 .gsWizDot {
   width: 20px; height: 20px; border-radius: 50%;
   background: rgba(0,0,0,.06); border: 2px solid rgba(0,0,0,.15);
@@ -184,10 +86,7 @@
 .gsWizDivider     { height: 1px; background: var(--borderSubtle); margin: 4px 0; }
 .gsWizCascadeNote { font-size: 11px; font-weight: 700; color: var(--mutedText); line-height: 1.4; min-height: 16px; }
 
-.gsWizBadge          { font-size: 10px; font-weight: 800; border-radius: 6px; padding: 1px 6px; text-transform: none; letter-spacing: 0; }
-.gsWizBadge--forced  { background: var(--brandPrimaryBg); color: var(--brandPrimary); border: 1px solid rgba(7,67,42,.2); }
-.gsWizBadge--derived { background: #e8f0fe; color: #1a3a6b; }
-.gsWizBadge--adj     { background: #fff3e0; color: #7a4400; }
+.gsWizBasisInline { font-size: 13px; font-weight: 900; color: var(--brandPrimary); }
 
 /* ==========================================================================
    WIZARD — Choice chips
@@ -210,65 +109,11 @@
 .wizChip.disabled  { opacity: .28; cursor: not-allowed; pointer-events: none; }
 
 /* ==========================================================================
-   WIZARD — Option cards with descriptions
+   WIZARD — Selects
    ========================================================================== */
-
-.gsWizOptList { display: flex; flex-direction: column; gap: 6px; }
-
-.wizOptCard {
-  border: 1px solid var(--borderSubtle); background: var(--bg);
-  border-radius: var(--radiusMd); padding: 10px 12px;
-  cursor: pointer; display: flex; align-items: flex-start; gap: 10px;
-  transition: background 0.12s, border-color 0.12s; user-select: none;
-}
-.wizOptCard:hover:not(.locked) { background: var(--btnHoverBg); border-color: rgba(0,0,0,.2); }
-.wizOptCard.selected { background: var(--segmentSelectedBg); border-color: color-mix(in srgb, var(--segmentSelectedBg) 55%, black); }
-.wizOptCard.locked   { background: var(--brandPrimaryBg); border-color: rgba(7,67,42,.25); cursor: default; }
-
-.wizOptCard__radio {
-  width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(0,0,0,.2);
-  flex-shrink: 0; margin-top: 2px; background: #fff;
-  display: flex; align-items: center; justify-content: center; transition: all 0.12s;
-}
-.wizOptCard.selected .wizOptCard__radio::after,
-.wizOptCard.locked   .wizOptCard__radio::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #fff; }
-
-.wizOptCard__body { flex: 1; min-width: 0; }
-.wizOptCard__name { font-size: 13px; font-weight: 800; color: var(--ink); line-height: 1.2; }
-.wizOptCard.locked .wizOptCard__name { color: var(--brandPrimary); }
-.wizOptCard__desc { font-size: 11px; font-weight: 700; color: var(--mutedText); margin-top: 2px; line-height: 1.4; }
-
-/* ==========================================================================
-   WIZARD — Basis strip, forced display, selects
-   ========================================================================== */
-
-.gsWizBasisStrip {
-  display: inline-flex; align-items: center; gap: 8px;
-  background: var(--brandPrimaryBg); border: 1px solid rgba(7,67,42,.15);
-  border-radius: var(--radiusMd); padding: 8px 12px;
-  font-size: 13px; font-weight: 900; color: var(--brandPrimary);
-}
-.gsWizBasisNote   { font-size: 11px; font-weight: 700; color: var(--mutedText); }
-.gsWizBasisInline { font-size: 13px; font-weight: 900; color: var(--brandPrimary); }
-
-.gsWizForced {
-  display: inline-flex; align-items: center; gap: 10px;
-  background: var(--brandPrimaryBg); border: 1px solid rgba(7,67,42,.2);
-  border-radius: var(--radiusMd); padding: 10px 14px;
-}
-.gsWizForced__val  { font-size: 14px; font-weight: 900; color: var(--brandPrimary); }
-.gsWizForced__note { font-size: 11px; font-weight: 700; color: var(--mutedText); margin-top: 2px; }
 
 .gsWizSelectWrap { position: relative; }
 .gsWizSelect     { width: 100%; }
-.gsWizLockedNote { font-size: 11px; font-weight: 800; color: var(--brandPrimary); margin-top: 4px; }
-
-.gsWizAdjBanner {
-  background: #fff3e0; border: 1px solid #e0b060;
-  border-radius: var(--radiusMd); padding: 10px 12px;
-  font-size: 12px; font-weight: 700; color: #7a4400; line-height: 1.5;
-  margin-bottom: 4px;
-}
 
 /* ==========================================================================
    WIZARD — Carousel
@@ -313,10 +158,6 @@
 .wizGameCard.selected { background: var(--segmentSelectedBg); border-color: color-mix(in srgb, var(--segmentSelectedBg) 55%, black); box-shadow: 0 2px 8px rgba(0,0,0,.10); }
 .wizGameCard__name    { font-size: 12px; font-weight: 900; color: var(--ink); line-height: 1.25; }
 .wizGameCard__fmt     { font-size: 9px;  font-weight: 800; color: var(--mutedText); letter-spacing: .2px; }
-
-.gsWizSelBanner        { background: var(--brandPrimaryBg); border: 1px solid rgba(7,67,42,.2); border-radius: var(--radiusMd); padding: 10px 12px; margin-top: 8px; }
-.gsWizSelBanner__label { font-size: 13px; font-weight: 900; color: var(--brandPrimary); }
-.gsWizSelBanner__detail{ font-size: 11px; font-weight: 700; color: var(--mutedText); margin-top: 2px; }
 
 /* ==========================================================================
    WIZARD — Hole declaration grid

@@ -1,8 +1,6 @@
 /* /assets/pages/game_settings.js
-   Game Settings page controller (GoDaddy/PHP).
-   - Aligns field-dependency logic to Wix HTML reference
-   - Uses /assets/js/ma_shared.js (MA.postJson, MA.chrome, MA.setStatus, MA.routerGo)
-   - Includes wizard controller (Guided view) alongside existing form controller (Advanced view)
+   Game Settings — Wizard (Guided) controller only.
+   Uses /assets/js/ma_shared.js (MA.postJson, MA.chrome, MA.setStatus, MA.routerGo)
 */
 (function () {
   "use strict";
@@ -10,21 +8,18 @@
   const MA = window.MA || {};
   const chrome = MA.chrome || {};
 
-  // INIT payload (server-embedded preferred)
   const init = window.__MA_INIT__ || window.__INIT__ || {};
 
-  // Canonical client POST (centralized auth-fail -> login lives inside MA.postJson)
   const postJson = typeof MA.postJson === "function" ? MA.postJson : null;
   if (!postJson) throw new Error("ma_shared.js not loaded (MA.postJson missing).");
 
-  // API bases injected by PHP (preferred). Fallbacks are last-resort.
   const routes = MA.routes || {};
   const gsApiBase = routes.apiGameSettings || MA.paths?.apiGameSettings || "/api/game_settings";
   const apiGHIN = MA.paths?.apiGHIN || "/api/GHIN";
   const returnToUrl = init.returnTo || routes.returnTo || "/app/admin_games/gameslist.php";
 
   // =========================================================================
-  // SHARED CONSTANTS (used by both form and wizard controllers)
+  // CONSTANTS
   // =========================================================================
 
   const stablefordTemplate = [
@@ -36,40 +31,16 @@
     { reltoPar:  2, defaultPoints: 0 },
   ];
 
-  // GameFormat => basis + constrained options (Wix logic)
   const gameFormatConfig = {
-    StrokePlay: { label: "Stroke Play", basis: "Strokes", methods: ["NET", "ADJ GROSS"], competition: ["PairPair", "PairField"] },
-    Stableford: { label: "Stableford",  basis: "Points",  methods: ["NET", "ADJ GROSS"], competition: ["PairPair", "PairField"] },
-    MatchPlay:  { label: "Match Play",  basis: "Holes",   methods: ["NET", "ADJ GROSS"], competition: ["PairPair"] },
-    Skins:      { label: "Skins",       basis: "Skins",   methods: ["NET", "ADJ GROSS"], competition: ["PairPair"] },
-    Scramble:   { label: "Scramble",    basis: "Strokes", methods: ["NET", "ADJ GROSS"], competition: ["PairPair", "PairField"] },
-    Shamble:    { label: "Shamble",     basis: "Strokes", methods: ["NET", "ADJ GROSS"], competition: ["PairPair", "PairField"] },
-    AltShot:    { label: "Alt-Shot",    basis: "Strokes", methods: ["NET", "ADJ GROSS"], competition: ["PairPair", "PairField"] },
-    Chapman:    { label: "Chapman",     basis: "Strokes", methods: ["NET", "ADJ GROSS"], competition: ["PairPair", "PairField"] },
+    StrokePlay: { label: "Stroke Play", basis: "Strokes" },
+    Stableford: { label: "Stableford",  basis: "Points"  },
+    MatchPlay:  { label: "Match Play",  basis: "Holes"   },
+    Skins:      { label: "Skins",       basis: "Skins"   },
+    Scramble:   { label: "Scramble",    basis: "Strokes" },
+    Shamble:    { label: "Shamble",     basis: "Strokes" },
+    AltShot:    { label: "Alt-Shot",    basis: "Strokes" },
+    Chapman:    { label: "Chapman",     basis: "Strokes" },
   };
-
-  const competitionConfig = {
-    PairPair:  { label: "Pair v. another Pair", value: "PairPair" },
-    PairField: { label: "Pair v. the Field",    value: "PairField" },
-  };
-
-  const scoringSystemOptions = [
-    { label: "Use All Scores",                    value: "AllScores" },
-    { label: "Use N Best Ball(s)",                value: "BestBall" },
-    { label: "Use N Scores-Set per Hole",         value: "DeclareHole" },
-    //{ label: "Use N Scores-Set per Group (33/44)", value: "DeclarePlayer" },
-    { label: "Declare Scores at your Discretion", value: "DeclareManual" },
-  ];
-
-  const toMethodOptions = [
-    { label: "ShotGun",   value: "ShotGun" },
-    { label: "Tee Times", value: "TeeTimes" },
-  ];
-
-  const hcMethodOptions = [
-    { label: "CH with Allowance", value: "CH" },
-    { label: "Shots-Off",         value: "SO" },
-  ];
 
   const allowanceOptions = (() => {
     const out = [];
@@ -78,163 +49,108 @@
   })();
 
   const strokeDistOptions = [
-    { label: "Standard stroke allocation",              value: "Standard" },
-    { label: "Strokes distributed across spins",        value: "Balanced" },
+    { label: "Standard stroke allocation",              value: "Standard"         },
+    { label: "Strokes distributed across spins",        value: "Balanced"         },
     { label: "Round HCP's and distribute across spins", value: "Balanced-Rounded" },
   ];
 
   const hcEffectivityOptions = [
     { label: "Play Date",    value: "PlayDate" },
-    { label: "3-Month Low",  value: "Low3" },
-    { label: "6-Month Low",  value: "Low6" },
-    { label: "12-Month Low", value: "Low12" },
-    { label: "Choose Date",  value: "Date" },
-  ];
-
-  const scoringBasisOptions = [
-    { label: "Strokes", value: "Strokes" },
-    { label: "Points",  value: "Points" },
-    { label: "Holes",   value: "Holes" },
-    { label: "Skins",   value: "Skins" },
+    { label: "3-Month Low",  value: "Low3"     },
+    { label: "6-Month Low",  value: "Low6"     },
+    { label: "12-Month Low", value: "Low12"    },
+    { label: "Choose Date",  value: "Date"     },
   ];
 
   const rotationBase = [{ label: "None", value: "None" }];
-  const rotationCOD  = { label: "COD",  value: "COD" };
+  const rotationCOD  = { label: "COD",  value: "COD"  };
   const rotation1324 = { label: "1324", value: "1324" };
   const rotation1423 = { label: "1423", value: "1423" };
 
-  // Game label → format/preset mapping (wizard carousel source of truth)
-  // Ordered by group: Stroke Play family, Match Play family, Skins, Team formats
   const GAME_LABELS = [
     // ── Stroke Play family ──
-    { label: "Stroke Play",   dbFormat: "StrokePlay", basis: "Strokes", compLock: null,       scoringSystem: null,            scoringSystemLock: false, bbCount: null,bbCountLock: false },
-    { label: "Best Ball",     dbFormat: "StrokePlay", basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2", bbCountLock: false },
-    { label: "Declare 33/44", dbFormat: "StrokePlay", basis: "Strokes", compLock: null,       scoringSystem: "DeclareManual", scoringSystemLock: true,  bbCount: null,bbCountLock: true  },
-    { label: "Stableford",    dbFormat: "Stableford", basis: "Points",  compLock: null,       scoringSystem: null,            scoringSystemLock: false, bbCount: null,bbCountLock: false },
+    { label: "Stroke Play",   dbFormat: "StrokePlay", basis: "Strokes", compLock: null,       scoringSystem: null,            scoringSystemLock: false, bbCount: null, bbCountLock: false },
+    { label: "Best Ball",     dbFormat: "StrokePlay", basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2",  bbCountLock: false },
+    { label: "Declare 33/44", dbFormat: "StrokePlay", basis: "Strokes", compLock: null,       scoringSystem: "DeclareManual", scoringSystemLock: true,  bbCount: null, bbCountLock: true  },
+    { label: "Stableford",    dbFormat: "Stableford", basis: "Points",  compLock: null,       scoringSystem: null,            scoringSystemLock: false, bbCount: null, bbCountLock: false },
     // ── Match Play family ──
-    { label: "Match Play",    dbFormat: "MatchPlay",  basis: "Holes",   compLock: "PairPair", scoringSystem: null,            scoringSystemLock: false, bbCount: null,bbCountLock: false },
-    { label: "Four Ball",     dbFormat: "MatchPlay",  basis: "Holes",   compLock: "PairPair", scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2", bbCountLock: false },
-    { label: "C-O-D",         dbFormat: "MatchPlay",  basis: "Holes",   compLock: "PairPair", scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2", bbCountLock: false },
+    { label: "Match Play",    dbFormat: "MatchPlay",  basis: "Holes",   compLock: "PairPair", scoringSystem: null,            scoringSystemLock: false, bbCount: null, bbCountLock: false },
+    { label: "Four Ball",     dbFormat: "MatchPlay",  basis: "Holes",   compLock: "PairPair", scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2",  bbCountLock: false },
+    { label: "C-O-D",         dbFormat: "MatchPlay",  basis: "Holes",   compLock: "PairPair", scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2",  bbCountLock: false },
     // ── Skins ──
-    { label: "Skins",         dbFormat: "Skins",      basis: "Skins",   compLock: "PairPair", scoringSystem: "AllScores",     scoringSystemLock: true,  bbCount: null,bbCountLock: true  },
+    { label: "Skins",         dbFormat: "Skins",      basis: "Skins",   compLock: "PairPair", scoringSystem: "AllScores",     scoringSystemLock: true,  bbCount: null, bbCountLock: true  },
     // ── Team formats ──
-    { label: "Alt-Shot",      dbFormat: "AltShot",    basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1", bbCountLock: true  },
-    { label: "Chapman",       dbFormat: "Chapman",    basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1", bbCountLock: true  },
-    { label: "Scramble",      dbFormat: "Scramble",   basis: "Strokes", compLock: "PairPair", scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1", bbCountLock: true  },
-    { label: "Shamble",       dbFormat: "Shamble",    basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1", bbCountLock: true  },
+    { label: "Alt-Shot",      dbFormat: "AltShot",    basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
+    { label: "Chapman",       dbFormat: "Chapman",    basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
+    { label: "Scramble",      dbFormat: "Scramble",   basis: "Strokes", compLock: "PairPair", scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
+    { label: "Shamble",       dbFormat: "Shamble",    basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
   ];
 
-  function bestBallOptionsForFormat(fmt) {
-    const base = [
-      { label: "1", value: "1" },
-      { label: "2", value: "2" },
-      { label: "3", value: "3" },
-      { label: "4", value: "4" },
-    ];
-    if (["Scramble", "Shamble", "AltShot", "Chapman"].includes(fmt)) return base.filter(o => o.value === "1");
-    if (fmt === "MatchPlay") return base.filter(o => o.value === "1" || o.value === "2");
-    return base;
-  }
-
-  function scoringSystemOptionsForFormat(fmt) {
-    const base = scoringSystemOptions.slice();
-    if (["Scramble", "Shamble", "AltShot", "Chapman"].includes(fmt)) return base.filter(o => o.value === "BestBall");
-    return base;
-  }
-
-  // =========================================================================
-  // SHARED STATE
-  // =========================================================================
-
-  const state = {
-    ggid: null,
-    game: null,
-    players: [],
-    roster: [],
-    coursePars: [],
-    courseParsByHole: null,
-    recallTemplates: [],
-    stableford: [],
-    holeDecls: [],
-    activeTab: "general",
-    customScores: { templateName: "", items: [] },
-    dirty: false,
-    busy: false,
-    // Wizard state
-    wizStep: 1,          // current active wizard step (1-4)
-    wizMode: "guided",   // "guided" | "advanced"
-    _strokeDistPrior: null,
+  const WIZ_SYSTEMS = {
+    AllScores:     { label: "Use All Scores",        desc: "Every player's score counts on every hole." },
+    BestBall:      { label: "Best Ball",             desc: "The lowest N scores from the team count on each hole." },
+    DeclareHole:   { label: "Declare per Hole",      desc: "The administrator sets how many scores count on each hole before the round." },
+    DeclareManual: { label: "Declare at Discretion", desc: "Players declare which scores count at their own discretion." },
   };
 
   // =========================================================================
-  // SHARED DOM REFS (form fields — unchanged)
+  // STATE
+  // =========================================================================
+
+  const state = {
+    ggid:            null,
+    game:            null,
+    players:         [],
+    roster:          [],
+    coursePars:      [],
+    courseParsByHole: null,
+    recallTemplates: [],
+    dirty:           false,
+    busy:            false,
+    wizStep:         1,
+  };
+
+  // Wizard step state — source of truth for save
+  const wiz = {
+    // Step 1
+    selectedLabel:      null,
+    selectedFormat:     null,
+    selectedBasis:      null,
+    compLock:           null,
+    scoringSystem:      null,
+    scoringSystemLock:  false,
+    bbCount:            null,
+    bbCountLock:        false,
+    // Step 2
+    competition:        null,
+    segments:           null,
+    rotation:           null,
+    // Step 3
+    scoringMethod:      null,
+    scoringSystemVal:   null,
+    bestBall:           null,
+    holeDecls:          [],
+    // Step 4
+    hcMethod:           null,
+    allowance:          null,
+    strokeDistribution: null,
+    hcEffectivity:      null,
+    hcEffectivityDate:  null,
+  };
+
+  // =========================================================================
+  // DOM REFS — wizard only
   // =========================================================================
 
   const el = {
-    tabs: document.getElementById("gsTabs"),
-    panels: {
-      general:      document.getElementById("gsPanelGeneral"),
-      scoring:      document.getElementById("gsPanelScoring"),
-      handicaps:    document.getElementById("gsPanelHandicaps"),
-      customPoints: document.getElementById("gsPanelCustomPoints"),
-    },
-
-    // General
-    gameFormat:    document.getElementById("gsGameFormat"),
-    toMethod:      document.getElementById("gsTOMethod"),
-    scoringBasis:  document.getElementById("gsScoringBasis"),
-    competition:   document.getElementById("gsCompetition"),
-    segments:      document.getElementById("gsSegments"),
-    holesDisplay:  document.getElementById("gsHoles"),
-    rotation:      document.getElementById("gsRotationMethod"),
-    useBlind:      document.getElementById("gsUseBlindPlayer"),
-    blindPlayer:   document.getElementById("gsBlindPlayer"),
-
-    // Scoring
-    scoringMethod: document.getElementById("gsScoringMethod"),
-    scoringSystem: document.getElementById("gsScoringSystem"),
-    bestBallCnt:   document.getElementById("gsBestBallCnt"),
-    playerDecl:    document.getElementById("gsPlayerDeclaration"),
-
-    // Dynamic cards
-    cardHoleDecl:    document.getElementById("gsCardHoleDecl"),
-    listHoleDecl:    document.getElementById("gsListHoleDecl"),
-    cardStableford:  document.getElementById("gsCardStableford"),
-    listStableford:  document.getElementById("gsListStableford"),
-    resetStableford: document.getElementById("gsResetStableford"),
-
-    // Custom Points
-    recallPattern:       document.getElementById("gsRecallPattern"),
-    templateName:        document.getElementById("gsTemplateName"),
-    customPointsRows:    document.getElementById("gsCustomPointsRows"),
-    btnClearCustomPoints:document.getElementById("gsBtnClearCustomPoints"),
-
-    // Handicaps
-    hcMethod:           document.getElementById("gsHCMethod"),
-    allowance:          document.getElementById("gsAllowance"),
-    strokeDistribution: document.getElementById("gsStrokeDistribution"),
-    hcEffectivity:      document.getElementById("gsHCEffectivity"),
-    hcEffDate:          document.getElementById("gsHCEffectivityDate"),
-    divHCEffDate:       document.getElementById("divHCEffDate"),
-
-    // Wrappers
-    divBestBall:   document.getElementById("divBestBall"),
-    divPlayerDecl: document.getElementById("divPlayerDecl"),
-
-    // View toggle
-    viewToggle:    document.getElementById("gsViewToggle"),
-    viewGuided:    document.getElementById("gsViewGuided"),
-    viewAdvanced:  document.getElementById("gsViewAdvanced"),
-
-    // Wizard containers
-    wizContainer:  document.getElementById("gsWizardContainer"),
+    // Wizard container + steps
+    wizContainer: document.getElementById("gsWizardContainer"),
     wizSteps: {
       s1: document.getElementById("gsWizStep1"),
       s2: document.getElementById("gsWizStep2"),
       s3: document.getElementById("gsWizStep3"),
       s4: document.getElementById("gsWizStep4"),
     },
-    // Wizard progress dots
     wizDots: [
       document.getElementById("gsWizDot1"),
       document.getElementById("gsWizDot2"),
@@ -242,26 +158,26 @@
       document.getElementById("gsWizDot4"),
     ],
 
-    // Wizard step 1 — format
-    wizCarousel:      document.getElementById("gsWizCarousel"),
+    // Step 1
+    wizCarousel: document.getElementById("gsWizCarousel"),
 
-    // Wizard step 2 — structure
-    wizSegChips:      document.getElementById("gsWizSegChips"),
-    wizRotChips:      document.getElementById("gsWizRotChips"),
-    wizRotNote:       document.getElementById("gsWizRotNote"),
+    // Step 2
+    wizCompChips: document.getElementById("gsWizCompChips"),
+    wizSegChips:  document.getElementById("gsWizSegChips"),
+    wizRotChips:  document.getElementById("gsWizRotChips"),
+    wizRotNote:   document.getElementById("gsWizRotNote"),
 
-    // Wizard step 3 — scoring
-    wizBasisVal:      document.getElementById("gsWizBasisVal"),
-    wizMethodChips:   document.getElementById("gsWizMethodChips"),
-    // wizSystemList resolved fresh each render (see wizRenderStep3)
-    wizGroupBB:       document.getElementById("gsWizGroupBB"),
-    wizBBChips:       document.getElementById("gsWizBBChips"),
-    wizGroupHoleDecl: document.getElementById("gsWizGroupHoleDecl"),
-    wizHoleDeclGrid:  document.getElementById("gsWizHoleDeclGrid"),
+    // Step 3 (wizSystemList resolved fresh each render)
+    wizBasisVal:       document.getElementById("gsWizBasisVal"),
+    wizMethodChips:    document.getElementById("gsWizMethodChips"),
+    wizGroupBB:        document.getElementById("gsWizGroupBB"),
+    wizBBChips:        document.getElementById("gsWizBBChips"),
+    wizGroupHoleDecl:  document.getElementById("gsWizGroupHoleDecl"),
+    wizHoleDeclGrid:   document.getElementById("gsWizHoleDeclGrid"),
     wizGroupStableford:document.getElementById("gsWizGroupStableford"),
-    wizStablefordGrid:document.getElementById("gsWizStablefordGrid"),
+    wizStablefordGrid: document.getElementById("gsWizStablefordGrid"),
 
-    // Wizard step 4 — handicaps
+    // Step 4
     wizHCMethodChips:  document.getElementById("gsWizHCMethodChips"),
     wizAllowanceSelect:document.getElementById("gsWizAllowanceSelect"),
     wizStrokeDistChips:document.getElementById("gsWizStrokeDistChips"),
@@ -270,7 +186,7 @@
     wizEffDateWrap:    document.getElementById("gsWizEffDateWrap"),
     wizEffDateInput:   document.getElementById("gsWizEffDateInput"),
 
-    // Wizard summary panel
+    // Summary panel
     wizSummary: {
       label:       document.getElementById("gsWizSvLabel"),
       format:      document.getElementById("gsWizSvFormat"),
@@ -287,41 +203,13 @@
       hceff:       document.getElementById("gsWizSvHCEff"),
     },
 
-    // Wizard nav buttons
+    // Nav buttons
     wizBtnBack: document.getElementById("gsWizBtnBack"),
     wizBtnNext: document.getElementById("gsWizBtnNext"),
   };
 
-  // Wizard step-scoped state (separate from form state to avoid cross-contamination)
-  const wiz = {
-    // Step 1
-    selectedLabel:       null,
-    selectedFormat:      null,
-    selectedBasis:       null,
-    compLock:            null,
-    scoringSystem:       null,
-    scoringSystemLock:   false,
-    bbCount:             null,
-    bbCountLock:         false,
-    // Step 2
-    competition:         null,
-    segments:            null,
-    rotation:            null,
-    // Step 3
-    scoringMethod:       null,
-    scoringSystemVal:    null,
-    bestBall:            null,
-    holeDecls:           [],
-    // Step 4
-    hcMethod:            null,
-    allowance:           null,
-    strokeDistribution:  null,
-    hcEffectivity:       null,
-    hcEffectivityDate:   null,
-  };
-
   // =========================================================================
-  // HELPERS (unchanged from original)
+  // HELPERS
   // =========================================================================
 
   const setStatus = typeof MA.setStatus === "function"
@@ -333,52 +221,37 @@
         s.textContent = msg || "";
       };
 
-  function $(id) { return document.getElementById(id); }
-
   function setBusy(on) {
     state.busy = !!on;
-    const saveBtn = document.getElementById("chromeBtnRight");
-    if (saveBtn) saveBtn.disabled = state.busy;
+    const btn = document.getElementById("chromeBtnRight");
+    if (btn) btn.disabled = state.busy;
   }
 
   function setDirty(on) {
     state.dirty = !!on;
-    if (state.dirty) setStatus("Unsaved changes.", "warn");
-    else setStatus("", "");
+    setStatus(on ? "Unsaved changes." : "", on ? "warn" : "");
   }
 
   function esc(s) {
-    return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
   function isoDate(v) {
     const s = String(v || "").trim();
-    if (!s) return "";
     const m = s.match(/^(\d{4}-\d{2}-\d{2})/);
     return m ? m[1] : "";
   }
 
   function formatDate(s) {
     if (!s) return "";
-    let d = null;
-    if (String(s).match(/^\d{4}-\d{2}-\d{2}$/)) {
-      const [y, m, day] = s.split("-").map(Number);
-      d = new Date(y, m - 1, day);
-    } else {
-      d = new Date(s);
-    }
+    let d = String(s).match(/^\d{4}-\d{2}-\d{2}$/)
+      ? (() => { const [y,m,day] = s.split("-").map(Number); return new Date(y, m-1, day); })()
+      : new Date(s);
     if (isNaN(d.getTime())) return s;
-    const dayName = d.toLocaleDateString("en-US", { weekday: "short" });
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    const dd = String(d.getDate()).padStart(2,"0");
     const yy = String(d.getFullYear()).slice(-2);
-    return `${dayName} ${mm}/${dd}/${yy}`;
-  }
-
-  function setDisabled(node, disabled) {
-    if (!node) return;
-    node.disabled = !!disabled;
-    node.setAttribute("aria-disabled", disabled ? "true" : "false");
+    return `${d.toLocaleDateString("en-US",{weekday:"short"})} ${mm}/${dd}/${yy}`;
   }
 
   function show(node, on) {
@@ -387,29 +260,8 @@
     node.style.display = on ? "" : "none";
   }
 
-  function setSelectOptions(sel, opts) {
-    if (!sel) return;
-    const current = String(sel.value ?? "");
-    sel.innerHTML = (opts || []).map(o => `<option value="${esc(o.value)}">${esc(o.label)}</option>`).join("");
-    if (sel.options && Array.from(sel.options).some(o => o.value === current)) {
-      sel.value = current;
-    }
-  }
-
-  function ensureOption(sel, value) {
-    if (!sel) return;
-    const v = String(value ?? "").trim();
-    if (!v) return;
-    if (!Array.from(sel.options).some(o => o.value === v)) {
-      const opt = document.createElement("option");
-      opt.value = v;
-      opt.textContent = v;
-      sel.appendChild(opt);
-    }
-  }
-
   // =========================================================================
-  // SHARED LOGIC (used by both form and wizard)
+  // SHARED LOGIC
   // =========================================================================
 
   function buildCourseParsByHole(arr) {
@@ -427,13 +279,11 @@
   }
 
   function getParTextForHole(holeNum) {
-    const parText = state.courseParsByHole ? state.courseParsByHole[holeNum] : "";
-    return String(parText || "").trim();
+    return String(state.courseParsByHole?.[holeNum] || "").trim();
   }
 
   function buildSegmentsOptionsFromHoles() {
-    const g = state.game || {};
-    const holesSetting = String(g.dbGames_Holes || "All 18");
+    const holesSetting = String(state.game?.dbGames_Holes || "All 18");
     if (holesSetting === "F9" || holesSetting === "B9") {
       return [{ label: "3's", value: "3" }, { label: "9's", value: "9" }];
     }
@@ -450,15 +300,10 @@
     return opts;
   }
 
-  // Default segments for a given game label + holes setting (wizard rule)
   function defaultSegmentsForLabel(gameLabel, holesVal) {
     if (gameLabel === "C-O-D") return (holesVal === "All 18") ? "6" : "3";
     return "9";
   }
-
-  // =========================================================================
-  // STABLEFORD (shared render, used by both views)
-  // =========================================================================
 
   function normalizeStableford(existing) {
     let arr = existing;
@@ -471,161 +316,6 @@
     }));
   }
 
-  function renderStableford() {
-    if (!el.listStableford) return;
-    el.listStableford.innerHTML = "";
-    state.stableford = normalizeStableford(state.stableford);
-    for (const row of state.stableford) {
-      const cell = document.createElement("div");
-      cell.className = "stablefordCell";
-      const lab = document.createElement("div");
-      lab.className = "stablefordLabel";
-      lab.textContent = (row.reltoPar > 0 ? "+" : "") + row.reltoPar;
-      const sel = document.createElement("select");
-      sel.className = "maTextInput";
-      const opts = [];
-      for (let i = -3; i <= 8; i++) opts.push({ label: String(i), value: String(i) });
-      sel.innerHTML = opts.map(o => `<option value="${o.value}">${o.label}</option>`).join("");
-      sel.value = String(row.points);
-      sel.addEventListener("change", () => { row.points = Number(sel.value); setDirty(true); });
-      cell.appendChild(lab);
-      cell.appendChild(sel);
-      el.listStableford.appendChild(cell);
-    }
-  }
-
-  // =========================================================================
-  // HOLE DECLARATIONS (shared normalize, form render)
-  // =========================================================================
-
-  function normalizeHoleDecls(existing) {
-    const g = state.game || {};
-    const holesSetting = String(g.dbGames_Holes || "All 18");
-    let start = 1, end = 18;
-    if (holesSetting === "F9") { start = 1;  end = 9; }
-    if (holesSetting === "B9") { start = 10; end = 18; }
-    const bestBallDefault = String(el.bestBallCnt?.value || "2");
-    let arr = existing;
-    if (typeof arr === "string") { try { arr = JSON.parse(arr); } catch (e) { arr = []; } }
-    arr = Array.isArray(arr) ? arr : [];
-    const map = {};
-    arr.forEach(r => { if (r && r.hole) map[String(r.hole)] = String(r.count); });
-    const out = [];
-    for (let h = start; h <= end; h++) {
-      const val = (map[String(h)] !== undefined) ? String(map[String(h)]) : bestBallDefault;
-      out.push({ _id: String(h), hole: h, count: val });
-    }
-    return out;
-  }
-
-  function buildHoleDeclLabelEl(holeNum) {
-    const wrap = document.createElement("div");
-    wrap.className = "holeDeclLabel";
-    const s1 = document.createElement("span");
-    s1.className = "holeDeclLabel__hole";
-    s1.textContent = `Hole ${holeNum}`;
-    wrap.appendChild(s1);
-    const parText = getParTextForHole(holeNum);
-    if (parText) {
-      const s2 = document.createElement("span");
-      s2.className = "holeDeclLabel__par";
-      s2.textContent = parText;
-      wrap.appendChild(s2);
-    }
-    return wrap;
-  }
-
-  function renderHoleDecls() {
-    if (!el.listHoleDecl) return;
-    el.listHoleDecl.innerHTML = "";
-    state.holeDecls = normalizeHoleDecls(state.holeDecls);
-    for (const row of state.holeDecls) {
-      const cell = document.createElement("div");
-      cell.className = "holeDeclCell";
-      cell.appendChild(buildHoleDeclLabelEl(row.hole));
-      const sel = document.createElement("select");
-      sel.className = "maTextInput";
-      const parText = getParTextForHole(row.hole);
-      sel.setAttribute("aria-label", parText ? `Count for Hole ${row.hole} ${parText}` : `Count for Hole ${row.hole}`);
-      const opts = [0, 1, 2, 3, 4].map(v => ({ label: String(v), value: String(v) }));
-      sel.innerHTML = opts.map(o => `<option value="${o.value}">${o.label}</option>`).join("");
-      sel.value = String(row.count ?? "2");
-      sel.addEventListener("change", () => { row.count = String(sel.value); setDirty(true); });
-      cell.appendChild(sel);
-      el.listHoleDecl.appendChild(cell);
-    }
-  }
-
-  // =========================================================================
-  // CUSTOM POINTS (unchanged)
-  // =========================================================================
-
-  function renderCustomPoints() {
-    if (!el.customPointsRows) return;
-    el.customPointsRows.innerHTML = "";
-    const items = state.customScores?.items || [];
-    for (let i = 0; i < 8; i++) {
-      const item = items[i] || { label: "", points: "", awardTo: "" };
-      const row = document.createElement("div");
-      row.className = "maFieldRow";
-      row.style.marginTop = "8px"; row.style.gap = "8px"; row.style.alignItems = "center";
-      const labelIn = document.createElement("input");
-      labelIn.type = "text"; labelIn.className = "maTextInput"; labelIn.style.flex = "1";
-      labelIn.placeholder = "Item label"; labelIn.value = item.label || "";
-      labelIn.dataset.idx = i; labelIn.dataset.field = "label";
-      const pointsIn = document.createElement("input");
-      pointsIn.type = "number"; pointsIn.className = "maTextInput"; pointsIn.style.width = "80px";
-      pointsIn.style.textAlign = "center"; pointsIn.value = (item.points ?? "");
-      pointsIn.dataset.idx = i; pointsIn.dataset.field = "points";
-      const awardSel = document.createElement("select");
-      awardSel.className = "maTextInput"; awardSel.style.width = "120px";
-      awardSel.innerHTML = `<option value="">Select...</option><option value="Player">Player</option><option value="Team">Team</option>`;
-      awardSel.value = item.awardTo || "";
-      awardSel.dataset.idx = i; awardSel.dataset.field = "awardTo";
-      const onInput = (e) => {
-        const idx = parseInt(e.target.dataset.idx, 10);
-        if (!state.customScores.items) state.customScores.items = [];
-        if (!state.customScores.items[idx]) state.customScores.items[idx] = { label: "", points: "", awardTo: "" };
-        const val = (e.target.dataset.field === "points") ? e.target.value : e.target.value.trim();
-        state.customScores.items[idx][e.target.dataset.field] = val;
-        setDirty(true);
-      };
-      labelIn.addEventListener("change", onInput);
-      pointsIn.addEventListener("change", onInput);
-      awardSel.addEventListener("change", onInput);
-      row.appendChild(labelIn); row.appendChild(pointsIn); row.appendChild(awardSel);
-      el.customPointsRows.appendChild(row);
-    }
-  }
-
-  function populateRecallDropdown() {
-    if (!el.recallPattern) return;
-    const current = el.recallPattern.value;
-    el.recallPattern.innerHTML = '<option value="">Select template...</option>';
-    (state.recallTemplates || []).forEach(t => {
-      const opt = document.createElement("option");
-      opt.value = t.templateName;
-      opt.textContent = t.templateName;
-      el.recallPattern.appendChild(opt);
-    });
-    el.recallPattern.value = current;
-  }
-
-  function loadRecallTemplate(name) {
-    const t = (state.recallTemplates || []).find(x => x.templateName === name);
-    if (!t) return;
-    if (state.dirty) {
-      if (!confirm("This will overwrite your current entries. Continue?")) {
-        el.recallPattern.value = "";
-        return;
-      }
-    }
-    state.customScores = JSON.parse(JSON.stringify(t));
-    if (el.templateName) el.templateName.value = state.customScores.templateName || "";
-    renderCustomPoints();
-    setDirty(true);
-  }
-
   // =========================================================================
   // CHROME
   // =========================================================================
@@ -636,304 +326,70 @@
       const gameTitle = String(g.dbGames_Title || `GGID ${state.ggid || ""}`).trim();
       const course = String(g.dbGames_CourseName || "");
       const date = formatDate(g.dbGames_PlayDate);
-      const subTitle = [course, date].filter(Boolean).join(" • ");
-      chrome.setHeaderLines(["Game Settings", gameTitle, subTitle]);
+      chrome.setHeaderLines(["Game Settings", gameTitle, [course, date].filter(Boolean).join(" • ")]);
     }
     if (chrome && typeof chrome.setActions === "function") {
       chrome.setActions({
         left:  { show: true, label: "Cancel", onClick: onCancel },
-        right: { show: true, label: "Save",   onClick: doSave },
+        right: { show: true, label: "Save",   onClick: doSave  },
       });
     }
     if (chrome && typeof chrome.setBottomNav === "function") {
       chrome.setBottomNav({
         visible: ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary"],
         active: "settings",
-        onNavigate: (id) => (typeof MA.routerGo === "function" ? MA.routerGo(id) : null),
+        onNavigate: id => (typeof MA.routerGo === "function" ? MA.routerGo(id) : null),
       });
     }
   }
 
   function onCancel() {
-    if (state.dirty) {
-      const ok = confirm("Discard unsaved changes and go back?");
-      if (!ok) return;
-    }
+    if (state.dirty && !confirm("Discard unsaved changes and go back?")) return;
     window.location.assign(returnToUrl);
   }
 
   // =========================================================================
-  // DROPDOWN POPULATION (form view — unchanged)
+  // SAVE — reads directly from wiz.* state
   // =========================================================================
 
-  function populateDropdowns() {
-    setSelectOptions(el.gameFormat, Object.entries(gameFormatConfig).map(([k, cfg]) => ({ value: k, label: cfg.label })));
-    setSelectOptions(el.toMethod, toMethodOptions);
-    setSelectOptions(el.scoringBasis, scoringBasisOptions);
-    setSelectOptions(el.scoringSystem, scoringSystemOptionsForFormat("StrokePlay"));
-    setSelectOptions(el.hcMethod, hcMethodOptions);
-    setSelectOptions(el.allowance, allowanceOptions);
-    setSelectOptions(el.strokeDistribution, strokeDistOptions);
-    setSelectOptions(el.hcEffectivity, hcEffectivityOptions);
-    setSelectOptions(el.competition, Object.values(competitionConfig));
-    setSelectOptions(el.rotation, rotationBase);
-    if (el.playerDecl) setSelectOptions(el.playerDecl, [{ label: "11", value: "11" }]);
-    setSelectOptions(el.bestBallCnt, bestBallOptionsForFormat("StrokePlay"));
-    populateRecallDropdown();
-  }
-
-  function parseCustomScores(val) {
-    if (!val) return { templateName: "", items: [] };
-    if (typeof val === "object") return val;
-    try { return JSON.parse(val); } catch (e) { return { templateName: "", items: [] }; }
-  }
-
-  function populateBlindPlayerSelect() {
-    if (!el.blindPlayer) return;
-    const arr = (Array.isArray(state.players) && state.players.length) ? state.players : (Array.isArray(state.roster) ? state.roster : []);
-    const rows = arr.slice().sort((a, b) => {
-      const la = String(a.dbPlayers_LName || a.lname || "").toLowerCase();
-      const lb = String(b.dbPlayers_LName || b.lname || "").toLowerCase();
-      return la.localeCompare(lb);
-    });
-    const opts = [{ label: "Select…", value: "" }].concat(rows.map(p => {
-      const ghin = String(p.dbPlayers_PlayerGHIN || p.ghin || "").trim();
-      const name = String(p.dbPlayers_Name || p.name || "").trim()
-        || `${String(p.dbPlayers_FName || p.fname || "").trim()} ${String(p.dbPlayers_LName || p.lname || "").trim()}`.trim();
-      return { label: name || ghin, value: ghin };
-    }));
-    setSelectOptions(el.blindPlayer, opts);
-  }
-
-  // =========================================================================
-  // HYDRATE FROM GAME (form view — with dbGames_GameLabel addition)
-  // =========================================================================
-
-  function hydrateFromGame() {
+  function buildPatchFromWiz() {
     const g = state.game || {};
-    if (el.holesDisplay) el.holesDisplay.value = String(g.dbGames_Holes || "");
-    if (el.toMethod)     el.toMethod.value     = String(g.dbGames_TOMethod    || "TeeTimes");
-    if (el.gameFormat)   el.gameFormat.value   = String(g.dbGames_GameFormat  || "StrokePlay");
-    if (el.scoringMethod) el.scoringMethod.value = String(g.dbGames_ScoringMethod || "NET");
-    if (el.scoringSystem) el.scoringSystem.value = String(g.dbGames_ScoringSystem || "BestBall");
-    if (el.bestBallCnt)   el.bestBallCnt.value   = String(g.dbGames_BestBall ?? "2");
-    const playerDecl = String(g.dbGames_PlayerDeclaration || "11");
-    if (el.playerDecl) {
-      setSelectOptions(el.playerDecl, [{ label: playerDecl, value: playerDecl }]);
-      el.playerDecl.value = playerDecl;
-    }
-    if (el.competition) el.competition.value = String(g.dbGames_Competition    || "PairField");
-    if (el.segments)    el.segments.value    = String(g.dbGames_Segments       || "9");
-    if (el.rotation)    el.rotation.value    = String(g.dbGames_RotationMethod || "None");
-    const blindArr = Array.isArray(g.dbGames_BlindPlayers) ? g.dbGames_BlindPlayers : [];
-    let blindGHIN = "";
-    if (blindArr.length > 0) { try { blindGHIN = JSON.parse(blindArr[0] || "{}").ghin || ""; } catch (e) {} }
-    if (el.useBlind)    el.useBlind.checked  = !!blindGHIN;
-    if (el.blindPlayer) el.blindPlayer.value = blindGHIN;
-    if (el.hcMethod)           el.hcMethod.value           = String(g.dbGames_HCMethod           || "CH");
-    if (el.allowance)          el.allowance.value          = String(g.dbGames_Allowance           ?? "100");
-    if (el.strokeDistribution) el.strokeDistribution.value = String(g.dbGames_StrokeDistribution  || "Standard");
-    const eff = String(g.dbGames_HCEffectivity || "PlayDate");
-    if (el.hcEffectivity) { ensureOption(el.hcEffectivity, eff); el.hcEffectivity.value = eff; }
-    const effDateRaw = g.dbGames_HCEffectivityDate || g.dbGames_PlayDate;
-    if (el.hcEffDate) el.hcEffDate.value = isoDate(effDateRaw);
-    const playIso = isoDate(g.dbGames_PlayDate);
-    if (playIso && el.hcEffDate) el.hcEffDate.max = playIso;
-    state.stableford   = normalizeStableford(g.dbGames_StablefordPoints);
-    state.holeDecls    = normalizeHoleDecls(g.dbGames_HoleDeclaration);
-    state.customScores = parseCustomScores(g.dbGames_CustomScores);
-    if (el.templateName) el.templateName.value = state.customScores.templateName || "";
-    renderCustomPoints();
-  }
 
-  // =========================================================================
-  // APPLY DEPENDENCIES (form view — unchanged logic, bug fix applied)
-  // =========================================================================
-
-  function applyDependencies() {
-    const g = state.game || {};
-    const fmt = String(el.gameFormat?.value || "StrokePlay");
-    const cfg = gameFormatConfig[fmt] || gameFormatConfig.StrokePlay;
-
-    // Basis forced
-    if (el.scoringBasis) { el.scoringBasis.value = cfg.basis; setDisabled(el.scoringBasis, true); }
-    if (el.toMethod)     { setDisabled(el.toMethod, true); }
-
-    // Segments — BUG FIX: read g.dbGames_Segments before el.segments.value
-    if (el.segments) {
-      const desiredSeg = String(g.dbGames_Segments ?? el.segments.value ?? "").trim() || "9";
-      setSelectOptions(el.segments, buildSegmentsOptionsFromHoles());
-      if (Array.from(el.segments.options).some(o => o.value === desiredSeg)) el.segments.value = desiredSeg;
-      else el.segments.value = el.segments.options[0]?.value || "9";
-    }
-
-    // Scoring Method
-    if (el.scoringMethod) {
-      const desiredMethod = String(el.scoringMethod.value ?? g.dbGames_ScoringMethod ?? "").trim();
-      const methodOptions = cfg.methods.map(m => ({ label: m, value: m }));
-      setSelectOptions(el.scoringMethod, methodOptions);
-      const valid = cfg.methods.map(m => String(m));
-      if (desiredMethod && valid.includes(desiredMethod)) el.scoringMethod.value = desiredMethod;
-      else if (!valid.includes(String(el.scoringMethod.value))) el.scoringMethod.value = cfg.methods[0] || "NET";
-    }
-
-    // Scoring System
-    if (el.scoringSystem) {
-      const desiredSystem = String(el.scoringSystem.value ?? g.dbGames_ScoringSystem ?? "").trim();
-      const systemOpts = scoringSystemOptionsForFormat(fmt);
-      setSelectOptions(el.scoringSystem, systemOpts);
-      const valid = systemOpts.map(o => String(o.value));
-      if (desiredSystem && valid.includes(desiredSystem)) el.scoringSystem.value = desiredSystem;
-      else if (!valid.includes(String(el.scoringSystem.value))) el.scoringSystem.value = valid[0] || "BestBall";
-    }
-
-    // Competition
-    if (el.competition) {
-      const desiredComp = String(el.competition.value ?? g.dbGames_Competition ?? "").trim();
-      const compOpts = (cfg.competition || []).map(c => competitionConfig[c]).filter(Boolean);
-      setSelectOptions(el.competition, compOpts);
-      const valid = compOpts.map(o => String(o.value));
-      if (desiredComp && valid.includes(desiredComp)) el.competition.value = desiredComp;
-      else if (!valid.includes(String(el.competition.value))) el.competition.value = valid[0] || "PairField";
-    }
-
-    // Rotation
-    if (el.rotation) {
-      const desiredRot = String(el.rotation.value ?? g.dbGames_RotationMethod ?? "").trim() || "None";
-      const rotOpts = buildRotationOptions(el.segments?.value, el.competition?.value);
-      setSelectOptions(el.rotation, rotOpts);
-      const valid = rotOpts.map(o => String(o.value));
-      if (valid.includes(desiredRot)) el.rotation.value = desiredRot;
-      else el.rotation.value = valid[0] || "None";
-    }
-
-    // BestBall count
-    if (el.bestBallCnt) {
-      const desiredBB = String(el.bestBallCnt.value ?? g.dbGames_BestBall ?? "").trim() || "2";
-      const bbOpts = bestBallOptionsForFormat(fmt);
-      setSelectOptions(el.bestBallCnt, bbOpts);
-      const valid = bbOpts.map(o => String(o.value));
-      if (valid.includes(desiredBB)) el.bestBallCnt.value = desiredBB;
-      else el.bestBallCnt.value = valid[valid.length - 1] || "2";
-    }
-
-    // ADJ GROSS cascade
-    const scoringMethod = String(el.scoringMethod?.value || "NET");
-    const isAdjGross = (scoringMethod === "ADJ GROSS");
-    if (el.hcMethod)  { if (isAdjGross) el.hcMethod.value  = "CH";  setDisabled(el.hcMethod,  isAdjGross); }
-    if (el.allowance) { if (isAdjGross) el.allowance.value = "100"; setDisabled(el.allowance, isAdjGross); }
-
-    // Stroke distribution
-    const rot = String(el.rotation?.value || "None");
-    const allowStrokeDist = (!isAdjGross && rot === "COD");
-    if (el.strokeDistribution) {
-      if (!allowStrokeDist) {
-        if (!el.strokeDistribution.disabled) state._strokeDistPrior = String(el.strokeDistribution.value ?? "").trim();
-        el.strokeDistribution.value = "Standard";
-        setDisabled(el.strokeDistribution, true);
-      } else {
-        setDisabled(el.strokeDistribution, false);
-        const want = String(el.strokeDistribution.value ?? "").trim() || String(state._strokeDistPrior ?? "").trim();
-        if (want && Array.from(el.strokeDistribution.options).some(o => o.value === want)) el.strokeDistribution.value = want;
-      }
-    }
-
-    // Show/hide dependent sections
-    const sys = String(el.scoringSystem?.value || "BestBall");
-    const showBB = (sys === "BestBall");
-    show(el.divBestBall, showBB);
-    if (el.bestBallCnt) setDisabled(el.bestBallCnt, !showBB);
-    const showPD = (sys === "DeclarePlayer");
-    show(el.divPlayerDecl, showPD);
-    if (el.playerDecl) setDisabled(el.playerDecl, !showPD);
-    const basis = String(el.scoringBasis?.value || cfg.basis);
-    show(el.cardStableford, basis === "Points");
-    show(el.cardHoleDecl, sys === "DeclareHole");
-    if (basis === "Points") renderStableford();
-    if (sys === "DeclareHole") renderHoleDecls();
-    if (state.activeTab === "customPoints") renderCustomPoints();
-    if (el.blindPlayer && el.useBlind) el.blindPlayer.disabled = !el.useBlind.checked;
-    toggleHCEffDate();
-  }
-
-  function toggleHCEffDate() {
-    if (!el.hcEffectivity || !el.divHCEffDate) return;
-    show(el.divHCEffDate, String(el.hcEffectivity.value) === "Date");
-  }
-
-  // =========================================================================
-  // SAVE (shared — called by form Save button AND wizard Save button)
-  // =========================================================================
-
-  function buildPatchFromUI() {
-    const g = state.game || {};
-    const blindValue = String(el.blindPlayer?.value || "").trim();
-    const blindLabel = el.blindPlayer
-      ? (Array.from(el.blindPlayer.options).find(o => o.value === blindValue)?.textContent || "")
-      : "";
-    const blindPlayersArray = (el.useBlind?.checked && blindValue && blindLabel)
-      ? [JSON.stringify({ ghin: blindValue, name: String(blindLabel).trim() })]
+    const holeDecls = (wiz.scoringSystemVal === "DeclareHole" && wiz.holeDecls.length)
+      ? wiz.holeDecls.map(r => ({ hole: Number(r.hole), count: String(r.count || "0") }))
       : [];
-    const eff = String(el.hcEffectivity?.value || "PlayDate");
-    let effDate = (eff === "Date") ? String(el.hcEffDate?.value || "").trim() : null;
-    const playIso = isoDate(g.dbGames_PlayDate);
-    if (effDate && playIso && effDate > playIso) effDate = playIso;
-    const basis = String(el.scoringBasis?.value || "");
-    const stableford = (basis === "Points")
-      ? (state.stableford || []).map(r => ({ reltoPar: Number(r.reltoPar), points: Number(r.points) }))
+
+    const stableford = (wiz.selectedBasis === "Points")
+      ? normalizeStableford(g.dbGames_StablefordPoints)
       : (Array.isArray(g.dbGames_StablefordPoints) ? g.dbGames_StablefordPoints : []);
-    const scoringSystem = String(el.scoringSystem?.value || "");
-    const holeDecls = (scoringSystem === "DeclareHole")
-      ? (state.holeDecls || []).map(r => ({ hole: Number(r.hole), count: String(r.count || "0") }))
-      : [];
-    let customScores = null;
-    const rawItems = state.customScores?.items || [];
-    const items = [];
-    const seenLabels = new Set();
-    for (const it of rawItems) {
-      const label   = (it.label  || "").trim();
-      const points  = it.points !== "" ? Number(it.points) : NaN;
-      const awardTo = (it.awardTo || "").trim();
-      if (!label && isNaN(points) && !awardTo) continue;
-      const lKey = label.toLowerCase();
-      if (seenLabels.has(lKey)) throw new Error(`Duplicate label in Custom Points: "${label}"`);
-      seenLabels.add(lKey);
-      if (!label || isNaN(points) || !awardTo) throw new Error("Custom Points rows must have a Label, Numeric Points, and Award To (or be fully blank).");
-      items.push({ label, points, awardTo });
-    }
-    if (items.length > 0) {
-      const tName = (el.templateName?.value || "").trim();
-      if (!tName) throw new Error("Template Name is required when Custom Points exist.");
-      const sameNameOtherContent = (state.recallTemplates || []).find(t =>
-        t.templateName.toLowerCase() === tName.toLowerCase() &&
-        JSON.stringify(t.items) !== JSON.stringify(items)
-      );
-      if (sameNameOtherContent) throw new Error(`Template name "${tName}" already exists with different items.`);
-      customScores = { templateName: tName, items };
-    }
+
+    const eff     = wiz.hcEffectivity || "PlayDate";
+    const playIso = isoDate(g.dbGames_PlayDate);
+    let effDate   = (eff === "Date") ? (wiz.hcEffectivityDate || null) : null;
+    if (effDate && playIso && effDate > playIso) effDate = playIso;
+
     return {
       dbGames_GGID:               state.ggid,
-      // NEW FIELD — game label captured from wizard or existing value
-      dbGames_GameLabel:          String(g.dbGames_GameLabel || ""),
-      dbGames_GameFormat:         String(el.gameFormat?.value    || "StrokePlay"),
-      dbGames_TOMethod:           String(el.toMethod?.value      || "TeeTimes"),
-      dbGames_ScoringBasis:       String(el.scoringBasis?.value  || ""),
-      dbGames_Competition:        String(el.competition?.value   || "PairField"),
-      dbGames_Segments:           String(el.segments?.value      || "9"),
-      dbGames_RotationMethod:     String(el.rotation?.value      || "None"),
-      dbGames_BlindPlayers:       blindPlayersArray,
-      dbGames_ScoringMethod:      String(el.scoringMethod?.value  || "NET"),
-      dbGames_ScoringSystem:      scoringSystem,
-      dbGames_BestBall:           String(el.bestBallCnt?.value    || "4"),
-      dbGames_PlayerDeclaration:  String(el.playerDecl?.value     || "11"),
-      dbGames_HCMethod:           String(el.hcMethod?.value       || "CH"),
-      dbGames_Allowance:          parseInt(String(el.allowance?.value || "100"), 10) || 100,
-      dbGames_StrokeDistribution: String(el.strokeDistribution?.value || "Standard"),
+      dbGames_GameLabel:          wiz.selectedLabel          || "",
+      dbGames_GameFormat:         wiz.selectedFormat         || "StrokePlay",
+      dbGames_TOMethod:           String(g.dbGames_TOMethod  || "TeeTimes"),
+      dbGames_ScoringBasis:       wiz.selectedBasis          || "Strokes",
+      dbGames_Competition:        wiz.competition            || "PairField",
+      dbGames_Segments:           wiz.segments               || "9",
+      dbGames_RotationMethod:     wiz.rotation               || "None",
+      dbGames_BlindPlayers:       Array.isArray(g.dbGames_BlindPlayers) ? g.dbGames_BlindPlayers : [],
+      dbGames_ScoringMethod:      wiz.scoringMethod          || "NET",
+      dbGames_ScoringSystem:      wiz.scoringSystemVal       || "BestBall",
+      dbGames_BestBall:           wiz.bestBall               || "4",
+      dbGames_PlayerDeclaration:  String(g.dbGames_PlayerDeclaration || "11"),
+      dbGames_HCMethod:           wiz.hcMethod               || "CH",
+      dbGames_Allowance:          parseInt(wiz.allowance || "100", 10) || 100,
+      dbGames_StrokeDistribution: wiz.strokeDistribution     || "Standard",
       dbGames_HCEffectivity:      eff,
       dbGames_HCEffectivityDate:  effDate,
       dbGames_StablefordPoints:   stableford,
       dbGames_HoleDeclaration:    holeDecls,
-      dbGames_CustomScores:       customScores,
+      dbGames_CustomScores:       g.dbGames_CustomScores     || null,
     };
   }
 
@@ -943,17 +399,14 @@
     setStatus("Saving...", "info");
     setBusy(true);
     try {
-      const patch = buildPatchFromUI();
-      const baseClean = String(gsApiBase || "").replace(/\/$/, "");
-      const url = `${baseClean}/saveGameSettings.php`;
+      const patch = buildPatchFromWiz();
+      const url = `${String(gsApiBase).replace(/\/$/, "")}/saveGameSettings.php`;
       const res = await postJson(url, { payload: { patch } });
       if (!res || !res.ok) throw new Error(res?.message || "Save failed.");
       state.game = res.payload?.game || state.game;
       setDirty(false);
       setStatus("Settings saved successfully.", "success");
       if (MA.recalculateHandicaps) await MA.recalculateHandicaps(apiGHIN);
-      hydrateFromGame();
-      applyDependencies();
       window.location.assign(returnToUrl);
     } catch (e) {
       console.error(e);
@@ -964,93 +417,26 @@
   }
 
   // =========================================================================
-  // VIEW TOGGLE (Guided ↔ Advanced)
+  // WIZARD — HYDRATE FROM GAME (populate wiz.* from saved game data)
   // =========================================================================
 
-  function setViewMode(mode) {
-    state.wizMode = mode;
-    const isGuided = (mode === "guided");
-
-    // Toggle the maControlArea content
-    if (el.viewToggle) {
-      el.viewToggle.querySelectorAll(".maSegBtn").forEach(btn => {
-        btn.classList.toggle("is-active", btn.dataset.view === mode);
-        btn.setAttribute("aria-selected", btn.dataset.view === mode ? "true" : "false");
-      });
-    }
-
-    // Show wizard or tab view
-    show(el.wizContainer,                        isGuided);
-    show(document.getElementById("gsWizProgress"), isGuided);
-    show(el.tabs,                                !isGuided);
-
-    // Show correct panels
-    Object.values(el.panels).forEach(p => {
-      if (!p) return;
-      if (isGuided) {
-        p.classList.add("hidden");
-        p.style.display = "none";
-      } else {
-        // Restore to the active tab's panel
-        const active = p.dataset.tabPanel === state.activeTab;
-        p.classList.toggle("hidden", !active);
-        p.style.display = active ? "" : "none";
-      }
-    });
-
-    if (isGuided) {
-      // Sync wizard state from current form values on first open
-      wizHydrateFromForm();
-      wizRenderStep(state.wizStep);
-      wizUpdateSummary();
-    }
-  }
-
-  // =========================================================================
-  // TABS (form view — unchanged)
-  // =========================================================================
-
-  function setActiveTab(tabId) {
-    state.activeTab = tabId;
-    if (el.tabs) {
-      el.tabs.querySelectorAll(".maSegBtn").forEach(btn => {
-        const on = btn.dataset.tab === tabId;
-        btn.classList.toggle("is-active", on);
-        btn.setAttribute("aria-selected", on ? "true" : "false");
-      });
-    }
-    Object.values(el.panels || {}).forEach(panel => {
-      if (!panel) return;
-      panel.classList.toggle("is-active", panel.dataset.tabPanel === tabId);
-      panel.classList.toggle("hidden", panel.dataset.tabPanel !== tabId);
-    });
-  }
-
-  // =========================================================================
-  // WIZARD — HYDRATE FROM FORM
-  // Syncs wiz{} state from the current form field values so the wizard
-  // always reflects the live game record when first opened.
-  // =========================================================================
-
-  function wizHydrateFromForm() {
+  function wizHydrateFromGame() {
     const g = state.game || {};
 
-    // Step 1 — find the game label; fall back to format matching
-    const storedLabel = String(g.dbGames_GameLabel || "").trim();
-    const storedFormat = String(g.dbGames_GameFormat || "StrokePlay");
-    let labelEntry = storedLabel
-      ? GAME_LABELS.find(x => x.label === storedLabel)
-      : GAME_LABELS.find(x => x.dbFormat === storedFormat);
-    if (!labelEntry) labelEntry = GAME_LABELS.find(x => x.label === "Stroke Play");
-
-    wiz.selectedLabel      = labelEntry.label;
-    wiz.selectedFormat     = labelEntry.dbFormat;
-    wiz.selectedBasis      = (gameFormatConfig[labelEntry.dbFormat] || gameFormatConfig.StrokePlay).basis;
-    wiz.compLock           = labelEntry.compLock;
-    wiz.scoringSystem      = labelEntry.scoringSystem;
-    wiz.scoringSystemLock  = labelEntry.scoringSystemLock;
-    wiz.bbCount            = labelEntry.bbCount;
-    wiz.bbCountLock        = labelEntry.bbCountLock;
+    // Step 1 — match saved format/label to a GAME_LABELS entry
+    const savedFmt   = String(g.dbGames_GameFormat  || "StrokePlay");
+    const savedLabel = String(g.dbGames_GameLabel   || "");
+    const match = GAME_LABELS.find(gl => gl.label === savedLabel && gl.dbFormat === savedFmt)
+               || GAME_LABELS.find(gl => gl.dbFormat === savedFmt)
+               || GAME_LABELS[0];
+    wiz.selectedLabel     = match.label;
+    wiz.selectedFormat    = match.dbFormat;
+    wiz.selectedBasis     = (gameFormatConfig[match.dbFormat] || gameFormatConfig.StrokePlay).basis;
+    wiz.compLock          = match.compLock;
+    wiz.scoringSystem     = match.scoringSystem  || null;
+    wiz.scoringSystemLock = match.scoringSystemLock || false;
+    wiz.bbCount           = match.bbCount        || null;
+    wiz.bbCountLock       = match.bbCountLock    || false;
 
     // Step 2
     wiz.competition = String(g.dbGames_Competition    || "PairField");
@@ -1059,73 +445,16 @@
 
     // Step 3
     wiz.scoringMethod   = String(g.dbGames_ScoringMethod  || "NET");
-    wiz.scoringSystemVal= String(g.dbGames_ScoringSystem  || "BestBall");
-    wiz.bestBall        = String(g.dbGames_BestBall        || "2");
-
-    // Hole decls
-    const holesVal = String(g.dbGames_Holes || "All 18");
-    let hStart = 1, hEnd = 18;
-    if (holesVal === "F9") { hStart = 1;  hEnd = 9;  }
-    if (holesVal === "B9") { hStart = 10; hEnd = 18; }
-    let hArr = g.dbGames_HoleDeclaration;
-    if (typeof hArr === "string") { try { hArr = JSON.parse(hArr); } catch (e) { hArr = []; } }
-    hArr = Array.isArray(hArr) ? hArr : [];
-    const hMap = {};
-    hArr.forEach(r => { if (r && r.hole) hMap[String(r.hole)] = String(r.count); });
-    wiz.holeDecls = [];
-    for (let h = hStart; h <= hEnd; h++) {
-      wiz.holeDecls.push({ hole: h, count: hMap[String(h)] !== undefined ? hMap[String(h)] : (wiz.bestBall || "2") });
-    }
+    wiz.scoringSystemVal= String(g.dbGames_ScoringSystem  || match.scoringSystem || "BestBall");
+    wiz.bestBall        = String(g.dbGames_BestBall        ?? "2");
+    wiz.holeDecls       = [];
 
     // Step 4
     wiz.hcMethod           = String(g.dbGames_HCMethod           || "CH");
     wiz.allowance          = String(g.dbGames_Allowance           ?? "100");
     wiz.strokeDistribution = String(g.dbGames_StrokeDistribution  || "Standard");
     wiz.hcEffectivity      = String(g.dbGames_HCEffectivity       || "PlayDate");
-    wiz.hcEffectivityDate  = g.dbGames_HCEffectivityDate ? isoDate(g.dbGames_HCEffectivityDate) : null;
-  }
-
-  // =========================================================================
-  // WIZARD — APPLY TO FORM
-  // Pushes wiz{} state into the existing form fields then calls
-  // applyDependencies() so all cascades fire exactly as they do today.
-  // doSave() then handles the actual save unchanged.
-  // =========================================================================
-
-  function wizApplyToForm() {
-    const g = state.game || {};
-
-    // Write GameLabel into game state so buildPatchFromUI() picks it up
-    if (state.game) state.game.dbGames_GameLabel = wiz.selectedLabel || "";
-
-    // Step 1
-    if (el.gameFormat) el.gameFormat.value = wiz.selectedFormat || "StrokePlay";
-
-    // Step 2
-    if (el.competition) el.competition.value = wiz.competition || "PairField";
-    if (el.segments)    el.segments.value    = wiz.segments    || "9";
-    if (el.rotation)    el.rotation.value    = wiz.rotation    || "None";
-
-    // Step 3
-    if (el.scoringMethod) el.scoringMethod.value = wiz.scoringMethod    || "NET";
-    if (el.scoringSystem) el.scoringSystem.value = wiz.scoringSystemVal || "BestBall";
-    if (el.bestBallCnt)   el.bestBallCnt.value   = wiz.bestBall         || "2";
-
-    // Hole decls — write into state.holeDecls so buildPatchFromUI picks them up
-    if (wiz.scoringSystemVal === "DeclareHole" && wiz.holeDecls.length) {
-      state.holeDecls = wiz.holeDecls.map(r => ({ _id: String(r.hole), hole: r.hole, count: r.count }));
-    }
-
-    // Step 4
-    if (el.hcMethod)           el.hcMethod.value           = wiz.hcMethod           || "CH";
-    if (el.allowance)          el.allowance.value          = wiz.allowance           || "100";
-    if (el.strokeDistribution) el.strokeDistribution.value = wiz.strokeDistribution  || "Standard";
-    if (el.hcEffectivity)      el.hcEffectivity.value      = wiz.hcEffectivity       || "PlayDate";
-    if (el.hcEffDate && wiz.hcEffectivityDate) el.hcEffDate.value = wiz.hcEffectivityDate;
-
-    // Fire cascade — same as if the user had changed the fields manually
-    applyDependencies();
-    setDirty(true);
+    wiz.hcEffectivityDate  = isoDate(g.dbGames_HCEffectivityDate  || g.dbGames_PlayDate);
   }
 
   // =========================================================================
@@ -1135,17 +464,17 @@
   function wizRenderStep(step) {
     state.wizStep = step;
 
-    // Update progress dots — only mark the current step as active, all others neutral
+    // Progress dots — active only on current step
     el.wizDots.forEach((dot, i) => {
       if (!dot) return;
       const n = i + 1;
-      const step_el = dot.parentElement; // .gsWizStep wrapper — CSS targets this
-      step_el.classList.toggle("active", n === step);
-      step_el.classList.remove("done", "upcoming");
+      const stepEl = dot.parentElement;
+      stepEl.classList.toggle("active", n === step);
+      stepEl.classList.remove("done", "upcoming");
       dot.textContent = "";
     });
 
-    // Show/hide step panels
+    // Show only the current step panel
     Object.entries(el.wizSteps).forEach(([key, panel]) => {
       if (!panel) return;
       const n = parseInt(key.replace("s", ""), 10);
@@ -1169,7 +498,6 @@
       }
     }
 
-    // Render the current step's content
     switch (step) {
       case 1: wizRenderStep1(); break;
       case 2: wizRenderStep2(); break;
@@ -1183,49 +511,48 @@
 
   // ---- Step 1: Game Format ----
   function wizRenderStep1() {
-    const carousel = el.wizCarousel;
-    if (!carousel) return;
-    carousel.innerHTML = "";
-
+    if (!el.wizCarousel) return;
+    el.wizCarousel.innerHTML = "";
     GAME_LABELS.forEach(game => {
       const card = document.createElement("div");
       card.className = "wizGameCard" + (wiz.selectedLabel === game.label ? " selected" : "");
-      card.innerHTML = `<div class="wizGameCard__name">${esc(game.label)}</div><div class="wizGameCard__fmt">${esc(game.dbFormat)}</div>`;
-      card.addEventListener("click", () => wizSelectGame(card, game));
-      carousel.appendChild(card);
+      card.dataset.label = game.label;
+      const cfg = gameFormatConfig[game.dbFormat] || gameFormatConfig.StrokePlay;
+      card.innerHTML = `<div class="wizGameCard__name">${esc(game.label)}</div><div class="wizGameCard__fmt">${esc(cfg.basis)}</div>`;
+      card.addEventListener("click", () => wizSelectGame(game.label));
+      el.wizCarousel.appendChild(card);
     });
-
-    // Scroll to selected card
-    const selectedCard = carousel.querySelector(".selected");
-    if (selectedCard) setTimeout(() => selectedCard.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" }), 100);
-
-
-
-    wizDragScroll(carousel);
+    wizDragScroll(el.wizCarousel);
+    if (wiz.selectedLabel) {
+      const sel = el.wizCarousel.querySelector(`[data-label="${CSS.escape(wiz.selectedLabel)}"]`);
+      if (sel) sel.scrollIntoView({ block: "nearest", inline: "center" });
+    }
   }
 
-  function wizSelectGame(card, game) {
-    if (el.wizCarousel) el.wizCarousel.querySelectorAll(".wizGameCard").forEach(c => c.classList.remove("selected"));
-    card.classList.add("selected");
-    wiz.selectedLabel      = game.label;
-    wiz.selectedFormat     = game.dbFormat;
-    wiz.selectedBasis      = (gameFormatConfig[game.dbFormat] || gameFormatConfig.StrokePlay).basis;
-    wiz.compLock           = game.compLock;
-    wiz.scoringSystem      = game.scoringSystem  || null;
-    wiz.scoringSystemLock  = game.scoringSystemLock || false;
-    wiz.bbCount            = game.bbCount        || null;
-    wiz.bbCountLock        = game.bbCountLock    || false;
-
+  function wizSelectGame(label) {
+    const game = GAME_LABELS.find(g => g.label === label);
+    if (!game) return;
+    wiz.selectedLabel     = game.label;
+    wiz.selectedFormat    = game.dbFormat;
+    wiz.selectedBasis     = (gameFormatConfig[game.dbFormat] || gameFormatConfig.StrokePlay).basis;
+    wiz.compLock          = game.compLock;
+    wiz.scoringSystem     = game.scoringSystem  || null;
+    wiz.scoringSystemLock = game.scoringSystemLock || false;
+    wiz.bbCount           = game.bbCount        || null;
+    wiz.bbCountLock       = game.bbCountLock    || false;
+    if (el.wizCarousel) {
+      el.wizCarousel.querySelectorAll(".wizGameCard").forEach(c => c.classList.toggle("selected", c.dataset.label === label));
+    }
+    setDirty(true);
     wizUpdateSummary();
     wizCheckComplete();
   }
 
   // ---- Step 2: Structure ----
   function wizRenderStep2() {
-    const g = state.game || {};
-
-    // Competition
     const lock = wiz.compLock;
+
+    // Competition chips — hide if locked (value still set on wiz.competition)
     if (el.wizCompChips) {
       el.wizCompChips.style.display = lock ? "none" : "";
       if (lock) {
@@ -1238,12 +565,11 @@
       }
     }
 
-    // Segments
+    // Segments chips
     if (el.wizSegChips) {
       const opts = buildSegmentsOptionsFromHoles();
       el.wizSegChips.innerHTML = "";
-      const defSeg = defaultSegmentsForLabel(wiz.selectedLabel, String(g.dbGames_Holes || "All 18"));
-      // Pre-select: stored value if valid, else label default, else first option
+      const defSeg = defaultSegmentsForLabel(wiz.selectedLabel, String(state.game?.dbGames_Holes || "All 18"));
       const validVals = opts.map(o => o.value);
       if (!validVals.includes(wiz.segments)) wiz.segments = validVals.includes(defSeg) ? defSeg : validVals[0];
       opts.forEach(opt => {
@@ -1256,74 +582,63 @@
       });
     }
 
-    wizBuildRotation();
+    // Rotation chips
+    wizRenderRotChips();
+  }
+
+  function wizRenderRotChips() {
+    if (!el.wizRotChips) return;
+    const opts = buildRotationOptions(wiz.segments, wiz.competition);
+    el.wizRotChips.innerHTML = "";
+    const validVals = opts.map(o => o.value);
+    if (!validVals.includes(wiz.rotation)) wiz.rotation = validVals[0] || "None";
+    opts.forEach(opt => {
+      const b = document.createElement("button");
+      b.className = "wizChip" + (wiz.rotation === opt.value ? " selected" : "");
+      b.dataset.val = opt.value;
+      b.textContent = opt.label;
+      b.addEventListener("click", () => wizSelectRotation(opt.value));
+      el.wizRotChips.appendChild(b);
+    });
+    wizUpdateRotNote();
+  }
+
+  function wizUpdateRotNote() {
+    if (!el.wizRotNote) return;
+    const seg = wiz.segments; const rot = wiz.rotation; const comp = wiz.competition;
+    if (comp === "PairField") { el.wizRotNote.textContent = "Rotation not available for Pair vs. the Field."; return; }
+    if (seg === "9") { el.wizRotNote.textContent = rot !== "None" ? "Partners rotate between the two 9-hole segments." : ""; return; }
+    if (seg === "6" || seg === "3") {
+      el.wizRotNote.textContent = rot === "COD" ? "COD rotation — partners change each segment." : "Select COD to rotate partners.";
+    }
   }
 
   function wizSelectCompetition(val) {
     wiz.competition = val;
     if (el.wizCompChips) el.wizCompChips.querySelectorAll(".wizChip").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
-    wizBuildRotation();
-    wizUpdateSummary();
-    wizCheckComplete();
+    wizRenderRotChips();
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
   }
 
   function wizSelectSegments(val) {
     wiz.segments = val;
     if (el.wizSegChips) el.wizSegChips.querySelectorAll(".wizChip").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
-    wizBuildRotation();
-    wizUpdateSummary();
-    wizCheckComplete();
-  }
-
-  function wizBuildRotation() {
-    if (!el.wizRotChips) return;
-    const opts = buildRotationOptions(wiz.segments, wiz.competition);
-    const validVals = opts.map(o => o.value);
-    if (!validVals.includes(wiz.rotation)) wiz.rotation = validVals[0] || "None";
-    el.wizRotChips.innerHTML = "";
-    opts.forEach(opt => {
-      const b = document.createElement("button");
-      b.className = "wizChip" + (wiz.rotation === opt.value ? " selected" : "") + (opts.length === 1 ? " locked" : "");
-      b.dataset.val = opt.value;
-      b.textContent = opt.label;
-      if (opts.length > 1) b.addEventListener("click", () => wizSelectRotation(opt.value));
-      el.wizRotChips.appendChild(b);
-    });
-    if (el.wizRotNote) {
-      const comp = wiz.competition; const seg = wiz.segments; const rot = wiz.rotation;
-      if (comp === "PairField") el.wizRotNote.textContent = "Rotation not available for Pair vs. the Field.";
-      else if (seg === "6" || seg === "3") el.wizRotNote.textContent = rot === "COD" ? "COD rotation — partners change each segment." : "Select COD to rotate partners.";
-      else if (seg === "9") el.wizRotNote.textContent = (rot === "1324" || rot === "1423") ? `${rot} rotation pattern selected.` : "Select a rotation pattern, or None for fixed partners.";
-      else el.wizRotNote.textContent = "";
-    }
-    wizUpdateSummary();
-    wizCheckComplete();
+    wizRenderRotChips();
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
   }
 
   function wizSelectRotation(val) {
     wiz.rotation = val;
     if (el.wizRotChips) el.wizRotChips.querySelectorAll(".wizChip").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
-    if (el.wizRotNote) {
-      const seg = wiz.segments; const rot = val;
-      if (seg === "6" || seg === "3") el.wizRotNote.textContent = rot === "COD" ? "COD rotation — partners change each segment." : "Select COD to rotate partners.";
-      else if (seg === "9") el.wizRotNote.textContent = (rot === "1324" || rot === "1423") ? `${rot} rotation selected.` : "None — fixed partners.";
-    }
-    wizUpdateSummary();
-    wizCheckComplete();
+    wizUpdateRotNote();
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
   }
 
   // ---- Step 3: Scoring ----
-  const WIZ_SYSTEMS = {
-    AllScores:    { label: "Use All Scores",          desc: "Every player's score counts on every hole." },
-    BestBall:     { label: "Best Ball",               desc: "The lowest N scores from the team count on each hole." },
-    DeclareHole:  { label: "Declare per Hole",        desc: "The administrator sets how many scores count on each hole before the round." },
-    DeclareManual:{ label: "Declare at Discretion",   desc: "Players declare which scores count at their own discretion." },
-  };
-
   function wizRenderStep3() {
     const fmt = wiz.selectedFormat || "StrokePlay";
 
-    // Basis (inline next to label)
+    // Basis inline
     if (el.wizBasisVal) el.wizBasisVal.textContent = wiz.selectedBasis || "Strokes";
 
     // Stableford preview
@@ -1331,12 +646,12 @@
       const showSF = (wiz.selectedBasis === "Points");
       show(el.wizGroupStableford, showSF);
       if (showSF && el.wizStablefordGrid) {
-        const relLabels = {"-3":"−3","-2":"−2","-1":"−1","0":"E","1":"+1","2":"+2"};
+        const relLabels = { "-3":"−3","-2":"−2","-1":"−1","0":"E","1":"+1","2":"+2" };
         el.wizStablefordGrid.innerHTML = "";
-        stablefordTemplate.forEach(row => {
+        stablefordTemplate.forEach((row, i) => {
           const cell = document.createElement("div");
           cell.className = "wizStableford__cell";
-          cell.innerHTML = `<div class="wizStableford__rel">${relLabels[String(row.reltoPar)]||row.reltoPar}</div><div class="wizStableford__pts">${row.defaultPoints}</div><div class="wizStableford__name">${["Albatross","Eagle","Birdie","Par","Bogey","Dbl Bogey"][stablefordTemplate.indexOf(row)]||""}</div>`;
+          cell.innerHTML = `<div class="wizStableford__rel">${relLabels[String(row.reltoPar)] || row.reltoPar}</div><div class="wizStableford__pts">${row.defaultPoints}</div><div class="wizStableford__name">${["Albatross","Eagle","Birdie","Par","Bogey","Dbl Bogey"][i]||""}</div>`;
           el.wizStablefordGrid.appendChild(cell);
         });
       }
@@ -1347,7 +662,7 @@
       el.wizMethodChips.querySelectorAll(".wizChip").forEach(b => b.classList.toggle("selected", b.dataset.val === wiz.scoringMethod));
     }
 
-    // System dropdown — always looked up fresh so the <select> element is guaranteed
+    // System dropdown — resolved fresh to guarantee <select> reference
     const sysSel = document.getElementById("gsWizSystemList");
     if (sysSel) {
       const locked = wiz.scoringSystemLock;
@@ -1356,10 +671,9 @@
       const avail = teamFmts.includes(fmt) ? ["BestBall"] : ["AllScores", "BestBall", "DeclareHole", "DeclareManual"];
       sysSel.innerHTML = "";
       avail.forEach(key => {
-        const def = WIZ_SYSTEMS[key];
         const opt = document.createElement("option");
         opt.value = key;
-        opt.textContent = def.label;
+        opt.textContent = WIZ_SYSTEMS[key].label;
         sysSel.appendChild(opt);
       });
       if (locked && preset) {
@@ -1391,10 +705,10 @@
           b.className = "wizChip";
           b.dataset.val = v;
           b.textContent = v;
-          const isLocked = wiz.bbCountLock && wiz.bbCount === v;
+          const isLocked   = wiz.bbCountLock && wiz.bbCount === v;
           const isDisabled = wiz.bbCountLock && wiz.bbCount !== v;
-          if (isLocked)   { b.classList.add("locked"); }
-          else if (isDisabled) { b.classList.add("disabled"); }
+          if (isLocked)        b.classList.add("locked");
+          else if (isDisabled) b.classList.add("disabled");
           else {
             b.addEventListener("click", () => wizSelectBB(v));
             if (wiz.bestBall === v) b.classList.add("selected");
@@ -1405,7 +719,7 @@
       }
     }
 
-    // Hole Decl
+    // Hole Declarations
     if (el.wizGroupHoleDecl) {
       const showHD = (wiz.scoringSystemVal === "DeclareHole");
       show(el.wizGroupHoleDecl, showHD);
@@ -1416,29 +730,25 @@
   function wizSelectMethod(val) {
     wiz.scoringMethod = val;
     if (el.wizMethodChips) el.wizMethodChips.querySelectorAll(".wizChip").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
-    wizUpdateSummary();
-    wizCheckComplete();
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
   }
 
   function wizSelectSystem(val) {
     wiz.scoringSystemVal = val;
     const sysSel = document.getElementById("gsWizSystemList");
     if (sysSel && !sysSel.disabled) sysSel.value = val;
-    // Show/hide BB and HoleDecl
     if (el.wizGroupBB)       show(el.wizGroupBB,       val === "BestBall");
     if (el.wizGroupHoleDecl) {
       show(el.wizGroupHoleDecl, val === "DeclareHole");
       if (val === "DeclareHole") wizRenderHoleDeclGrid();
     }
-    wizUpdateSummary();
-    wizCheckComplete();
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
   }
 
   function wizSelectBB(val) {
     wiz.bestBall = val;
     if (el.wizBBChips) el.wizBBChips.querySelectorAll(".wizChip:not(.locked):not(.disabled)").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
-    wizUpdateSummary();
-    wizCheckComplete();
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
   }
 
   function wizRenderHoleDeclGrid() {
@@ -1449,14 +759,11 @@
     let hStart = 1, hEnd = 18;
     if (holesVal === "F9") { hStart = 1;  hEnd = 9;  }
     if (holesVal === "B9") { hStart = 10; hEnd = 18; }
-
-    // Ensure wiz.holeDecls covers the correct range
     if (!wiz.holeDecls.length || wiz.holeDecls[0].hole !== hStart) {
       const defCount = wiz.bestBall || "2";
       wiz.holeDecls = [];
       for (let h = hStart; h <= hEnd; h++) wiz.holeDecls.push({ hole: h, count: defCount });
     }
-
     wiz.holeDecls.forEach(row => {
       const cell = document.createElement("div");
       cell.className = "wizHoleCell";
@@ -1480,12 +787,12 @@
       });
       sel.value = String(row.count);
       sel.addEventListener("change", () => { row.count = sel.value; wizUpdateSummary(); });
-      cell.appendChild(lbl); cell.appendChild(sel);
+      cell.appendChild(lbl);
+      cell.appendChild(sel);
       el.wizHoleDeclGrid.appendChild(cell);
     });
   }
 
-  // Exposed for inline onclick in HTML
   function wizSetAllHoles(val) {
     wiz.holeDecls.forEach(r => r.count = val);
     wizRenderHoleDeclGrid();
@@ -1493,7 +800,6 @@
 
   // ---- Step 4: Handicaps ----
   function wizRenderStep4() {
-    const g = state.game || {};
     const isAdjGross = (wiz.scoringMethod === "ADJ GROSS");
 
     // HC Method chips
@@ -1537,7 +843,7 @@
         strokeDistOptions.forEach(opt => {
           const b = document.createElement("button");
           b.className = "wizChip" + (wiz.strokeDistribution === opt.value ? " selected" : "");
-          b.dataset.val = opt.value; b.title = opt.label; b.textContent = opt.label;
+          b.dataset.val = opt.value; b.textContent = opt.label;
           b.addEventListener("click", () => wizSelectStrokeDist(opt.value));
           el.wizStrokeDistChips.appendChild(b);
         });
@@ -1551,13 +857,13 @@
         hcEffectivityOptions.forEach(opt => {
           const o = document.createElement("option");
           o.value = opt.value;
-          o.textContent = opt.label + " — " + {
+          o.textContent = opt.label + " — " + ({
             PlayDate: "Handicap index as of the day of play.",
             Low3:     "Lowest index over the past 3 months.",
             Low6:     "Lowest index over the past 6 months.",
             Low12:    "Lowest index over the past 12 months.",
             Date:     "Specify an exact date to lock the index.",
-          }[opt.value];
+          }[opt.value] || "");
           el.wizEffSelect.appendChild(o);
         });
       }
@@ -1567,93 +873,83 @@
     // Effectivity date
     if (el.wizEffDateWrap) show(el.wizEffDateWrap, wiz.hcEffectivity === "Date");
     if (el.wizEffDateInput) {
-      const playIso = isoDate(g.dbGames_PlayDate);
+      const playIso = isoDate(state.game?.dbGames_PlayDate);
       if (playIso) el.wizEffDateInput.max = playIso;
       if (wiz.hcEffectivityDate) el.wizEffDateInput.value = wiz.hcEffectivityDate;
     }
-
-    wizUpdateSummary();
-    wizCheckComplete();
-  }
-
-  function wizSelectHCMethod(val) {
-    if (wiz.scoringMethod === "ADJ GROSS" && val !== "CH") return;
-    wiz.hcMethod = val;
-    if (el.wizHCMethodChips) el.wizHCMethodChips.querySelectorAll(".wizChip:not(.locked):not(.disabled)").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
-    wizUpdateSummary();
-    wizCheckComplete();
-  }
-
-  function wizSelectAllowance(val) {
-    if (wiz.scoringMethod === "ADJ GROSS") return;
-    wiz.allowance = val;
-    wizUpdateSummary();
-    wizCheckComplete();
   }
 
   function wizSetStrokeDistHint(val) {
     if (!el.wizStrokeDistNote) return;
     const seg = wiz.segments || "9";
     const hints = {
-      Standard:          "Use standard hole handicaps.",
-      Balanced:          "Strokes distributed evenly across segments.",
+      Standard:           "Use standard hole handicaps.",
+      Balanced:           "Strokes distributed evenly across segments.",
       "Balanced-Rounded": `Player handicaps are rounded to nearest ${seg} and distributed evenly across segments.`,
     };
     el.wizStrokeDistNote.textContent = hints[val] || "";
+  }
+
+  function wizSelectHCMethod(val) {
+    wiz.hcMethod = val;
+    if (el.wizHCMethodChips) el.wizHCMethodChips.querySelectorAll(".wizChip:not(.locked):not(.disabled)").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
+  }
+
+  function wizSelectAllowance(val) {
+    wiz.allowance = val;
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
   }
 
   function wizSelectStrokeDist(val) {
     wiz.strokeDistribution = val;
     if (el.wizStrokeDistChips) el.wizStrokeDistChips.querySelectorAll(".wizChip:not(.locked)").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
     wizSetStrokeDistHint(val);
-    wizUpdateSummary();
-    wizCheckComplete();
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
   }
 
   function wizSelectEffectivity(val) {
     wiz.hcEffectivity = val;
     if (el.wizEffDateWrap) show(el.wizEffDateWrap, val === "Date");
-    wizUpdateSummary();
-    wizCheckComplete();
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
   }
 
   function wizOnEffDateChange(val) {
     wiz.hcEffectivityDate = val || null;
-    wizUpdateSummary();
-    wizCheckComplete();
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
   }
 
   // =========================================================================
-  // WIZARD — SUMMARY PANEL
+  // WIZARD — SUMMARY
   // =========================================================================
 
   function wizUpdateSummary() {
-    const sv = (elRef, val, forced) => {
-      if (!elRef) return;
-      if (val) { elRef.textContent = val; elRef.className = "wizSummary__val" + (forced ? " forced" : ""); }
-      else     { elRef.textContent = "—"; elRef.className = "wizSummary__val empty"; }
-    };
     const s = el.wizSummary;
-    sv(s.label,       wiz.selectedLabel,  false);
-    sv(s.format,      wiz.selectedFormat, false);
-    sv(s.basis,       wiz.selectedBasis,  true);
-    const cl = wiz.competition === "PairPair" ? "Pair v. Pair" : wiz.competition === "PairField" ? "Pair v. Field" : null;
-    sv(s.competition, cl,                 !!wiz.compLock);
-    sv(s.segments,    wiz.segments ? wiz.segments + "'s" : null, false);
-    sv(s.rotation,    wiz.rotation,       false);
-    sv(s.method,      wiz.scoringMethod,  false);
-    sv(s.system,      wiz.scoringSystemVal, wiz.scoringSystemLock);
-    sv(s.bb,          wiz.scoringSystemVal === "BestBall" && wiz.bestBall ? wiz.bestBall + (wiz.bestBall === "1" ? " ball" : " balls") : null, wiz.bbCountLock);
-    sv(s.hcmethod,    wiz.hcMethod === "CH" ? "CH w/ Allow." : wiz.hcMethod, wiz.scoringMethod === "ADJ GROSS");
-    sv(s.allowance,   wiz.allowance ? wiz.allowance + "%" : null, wiz.scoringMethod === "ADJ GROSS");
-    sv(s.strokedist,  wiz.strokeDistribution, false);
-    const effOpt  = hcEffectivityOptions.find(o => o.value === wiz.hcEffectivity);
-    const effLabel = effOpt ? effOpt.label : null;
-    sv(s.hceff, wiz.hcEffectivity === "Date" && wiz.hcEffectivityDate ? effLabel + " · " + wiz.hcEffectivityDate : effLabel, false);
+    if (!s) return;
+    function sv(el, val, empty) {
+      if (!el) return;
+      const isEmpty = !val;
+      el.textContent = isEmpty ? "—" : val;
+      el.classList.toggle("empty",  isEmpty);
+      el.classList.toggle("forced", !isEmpty && empty === false);
+    }
+    sv(s.label,       wiz.selectedLabel,     true);
+    sv(s.format,      wiz.selectedFormat,    true);
+    sv(s.competition, wiz.competition,       true);
+    sv(s.segments,    wiz.segments ? wiz.segments + "'s" : null, true);
+    sv(s.rotation,    wiz.rotation,          true);
+    sv(s.basis,       wiz.selectedBasis,     false);
+    sv(s.method,      wiz.scoringMethod,     true);
+    sv(s.system,      wiz.scoringSystemVal ? (WIZ_SYSTEMS[wiz.scoringSystemVal]?.label || wiz.scoringSystemVal) : null, true);
+    sv(s.bb,          wiz.scoringSystemVal === "BestBall" ? wiz.bestBall : null, true);
+    sv(s.hcmethod,    wiz.hcMethod,          true);
+    sv(s.allowance,   wiz.allowance ? wiz.allowance + "%" : null, true);
+    sv(s.strokedist,  wiz.strokeDistribution, true);
+    sv(s.hceff,       wiz.hcEffectivity,     true);
   }
 
   // =========================================================================
-  // WIZARD — COMPLETION CHECK PER STEP
+  // WIZARD — COMPLETION CHECK
   // =========================================================================
 
   function wizCheckComplete() {
@@ -1683,8 +979,6 @@
 
   function wizGoNext() {
     if (state.wizStep === 4) {
-      // Final step — apply to form and save
-      wizApplyToForm();
       doSave();
     } else {
       wizRenderStep(state.wizStep + 1);
@@ -1696,23 +990,22 @@
   }
 
   function wizGoToStep(n) {
-    // All steps are always navigable (change record mode)
     if (n >= 1 && n <= 4) wizRenderStep(n);
   }
 
   // =========================================================================
-  // WIZARD — DRAG SCROLL (carousel)
+  // WIZARD — CAROUSEL DRAG SCROLL
   // =========================================================================
 
-  function wizDragScroll(el) {
+  function wizDragScroll(carousel) {
     let isDown = false, startX = 0, scrollLeft = 0;
-    el.addEventListener("mousedown", e => { isDown = true; startX = e.pageX - el.offsetLeft; scrollLeft = el.scrollLeft; });
-    el.addEventListener("mouseleave", () => { isDown = false; });
-    el.addEventListener("mouseup",    () => { isDown = false; });
-    el.addEventListener("mousemove",  e => {
+    carousel.addEventListener("mousedown",  e => { isDown = true; startX = e.pageX - carousel.offsetLeft; scrollLeft = carousel.scrollLeft; });
+    carousel.addEventListener("mouseleave", () => { isDown = false; });
+    carousel.addEventListener("mouseup",    () => { isDown = false; });
+    carousel.addEventListener("mousemove",  e => {
       if (!isDown) return;
       e.preventDefault();
-      el.scrollLeft = scrollLeft - (e.pageX - el.offsetLeft - startX) * 1.2;
+      carousel.scrollLeft = scrollLeft - (e.pageX - carousel.offsetLeft - startX) * 1.2;
     });
   }
 
@@ -1725,96 +1018,19 @@
   // =========================================================================
 
   function wireEvents() {
-    // View toggle (Guided / Advanced)
-    if (el.viewToggle) {
-      el.viewToggle.addEventListener("click", e => {
-        const btn = e.target.closest(".maSegBtn");
-        if (btn && btn.dataset.view) setViewMode(btn.dataset.view);
-      });
-    }
-
-    // Form tab events (Advanced view)
-    if (el.tabs) {
-      el.tabs.addEventListener("click", (e) => {
-        const btn = e.target.closest(".maSegBtn");
-        if (btn && !btn.disabled) setActiveTab(btn.dataset.tab);
-      });
-    }
-
-    function wireDirty(input, onChange) {
-      if (!input) return;
-      input.addEventListener("change", () => {
-        setDirty(true);
-        if (typeof onChange === "function") onChange();
-      });
-    }
-
-    wireDirty(el.gameFormat,       applyDependencies);
-    wireDirty(el.toMethod);
-    wireDirty(el.competition,      applyDependencies);
-    wireDirty(el.segments,         applyDependencies);
-    wireDirty(el.rotation,         applyDependencies);
-    wireDirty(el.scoringMethod,    applyDependencies);
-    wireDirty(el.scoringSystem,    applyDependencies);
-    wireDirty(el.bestBallCnt, () => {
-      if (String(el.scoringSystem?.value || "") === "DeclareHole") renderHoleDecls();
-      applyDependencies();
-    });
-    wireDirty(el.playerDecl);
-    wireDirty(el.hcMethod,         applyDependencies);
-    wireDirty(el.allowance);
-    wireDirty(el.strokeDistribution);
-    wireDirty(el.hcEffectivity,    toggleHCEffDate);
-    wireDirty(el.hcEffDate);
-
-    if (el.useBlind) {
-      el.useBlind.addEventListener("change", () => {
-        if (el.blindPlayer) el.blindPlayer.disabled = !el.useBlind.checked;
-        setDirty(true);
-      });
-    }
-    wireDirty(el.blindPlayer);
-
-    if (el.recallPattern) el.recallPattern.addEventListener("change", () => loadRecallTemplate(el.recallPattern.value));
-    if (el.templateName)  el.templateName.addEventListener("change",  () => { state.customScores.templateName = el.templateName.value.trim(); setDirty(true); });
-
-    if (el.btnClearCustomPoints) {
-      el.btnClearCustomPoints.addEventListener("click", () => {
-        if (!confirm("Clear this custom points pattern?")) return;
-        state.customScores = { templateName: "", items: [] };
-        if (el.templateName)   el.templateName.value  = "";
-        if (el.recallPattern)  el.recallPattern.value = "";
-        renderCustomPoints();
-        setDirty(true);
-      });
-    }
-
-    if (el.resetStableford) {
-      el.resetStableford.addEventListener("click", () => {
-        if (!confirm("Reset Stableford points to defaults?")) return;
-        state.stableford = stablefordTemplate.map(r => ({ reltoPar: r.reltoPar, points: r.defaultPoints }));
-        renderStableford();
-        setDirty(true);
-      });
-    }
-
-    // Wizard nav buttons
     if (el.wizBtnBack) el.wizBtnBack.addEventListener("click", wizGoBack);
     if (el.wizBtnNext) el.wizBtnNext.addEventListener("click", wizGoNext);
 
-    // Wizard progress dots (all clickable — change record mode)
     el.wizDots.forEach((dot, i) => {
       if (!dot) return;
       dot.addEventListener("click", () => wizGoToStep(i + 1));
     });
 
-    // Wizard carousel arrow buttons (set via onclick in HTML, but also support JS binding)
     const carouselLeft  = document.getElementById("gsWizCarouselLeft");
     const carouselRight = document.getElementById("gsWizCarouselRight");
     if (carouselLeft)  carouselLeft.addEventListener("click",  () => wizScrollCarousel(-1));
     if (carouselRight) carouselRight.addEventListener("click", () => wizScrollCarousel(1));
 
-    // Wizard inline event handlers exposed on window for HTML onclick attributes
     window.gsWiz = {
       selectGame:        wizSelectGame,
       selectCompetition: wizSelectCompetition,
@@ -1844,30 +1060,23 @@
       console.error("Missing or invalid __MA_INIT__ payload.", init);
       return false;
     }
-    state.ggid   = init.ggid ?? init.GGID ?? null;
-    state.game   = init.game || null;
-    state.players = Array.isArray(init.players) ? init.players : [];
-    state.roster  = Array.isArray(init.roster)  ? init.roster  : state.players;
-    state.coursePars       = Array.isArray(init.coursePars)       ? init.coursePars       : [];
+    state.ggid           = init.ggid ?? init.GGID ?? null;
+    state.game           = init.game || null;
+    state.players        = Array.isArray(init.players)         ? init.players         : [];
+    state.roster         = Array.isArray(init.roster)          ? init.roster          : state.players;
+    state.coursePars     = Array.isArray(init.coursePars)      ? init.coursePars      : [];
     state.courseParsByHole = buildCourseParsByHole(state.coursePars);
-    state.recallTemplates  = Array.isArray(init.recallTemplates)  ? init.recallTemplates  : [];
+    state.recallTemplates  = Array.isArray(init.recallTemplates) ? init.recallTemplates : [];
     return true;
   }
 
   function initialize() {
-    const ok = loadContext();
-    if (!ok) return;
-
-    populateDropdowns();
-    populateBlindPlayerSelect();
-    hydrateFromGame();
+    if (!loadContext()) return;
+    wizHydrateFromGame();
     applyChrome();
-    applyDependencies();
-    setActiveTab("general");
-
-    // Default view: guided (wizard)
-    setViewMode("guided");
-
+    show(el.wizContainer, true);
+    show(document.getElementById("gsWizProgress"), true);
+    wizRenderStep(1);
     wireEvents();
     setDirty(false);
     setStatus("Ready", "info");
