@@ -432,6 +432,7 @@ public static function queryGames(array $args): array {
 
     // Legacy defaults (match Wix orchestrator)
     $g["dbGames_TOMethod"] = $g["dbGames_TOMethod"] ?? "TeeTimes";
+    $g["dbGames_GameLabel"] = $g["dbGames_GameLabel"] ?? "Stroke Play";
     $g["dbGames_GameFormat"] = $g["dbGames_GameFormat"] ?? "StrokePlay";
     $g["dbGames_ScoringBasis"] = $g["dbGames_ScoringBasis"] ?? "Strokes";
     $g["dbGames_ScoringMethod"] = $g["dbGames_ScoringMethod"] ?? "NET";
