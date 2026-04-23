@@ -78,7 +78,6 @@
         </header>
         <div class="maCard__body">
           <div class="gsWizEyebrow">How is your game structured?</div>
-          <div class="gsWizHint">Competition format, round segments, and partner rotation.</div>
 
           <div class="gsWizFieldGroup">
             <div class="gsWizFieldLabel">Competition</div>
@@ -86,23 +85,21 @@
               <button class="wizChip" data-val="PairPair"  onclick="window.gsWiz.selectCompetition('PairPair')">Pair vs. Pair</button>
               <button class="wizChip" data-val="PairField" onclick="window.gsWiz.selectCompetition('PairField')">Pair vs. the Field</button>
             </div>
-            <div class="gsWizForced hidden" id="gsWizCompForced">
-              <div class="gsWizForced__val"  id="gsWizCompForcedVal">Pair vs. Pair</div>
-              <div class="gsWizForced__note" id="gsWizCompForcedNote">Required by this game format</div>
-            </div>
+            <div class="gsWizHint">Pair vs. Pair pits a pair directly against another pair in a head to head match. Pair vs. the Field pits each pair against the field of all paired players.</div>
           </div>
 
           <div class="gsWizDivider"></div>
 
           <div class="gsWizFieldGroup">
-            <div class="gsWizFieldLabel">Segments <span class="gsWizBadge gsWizBadge--derived">from round holes</span></div>
+            <div class="gsWizFieldLabel">Segments</div>
             <div class="wizChips" id="gsWizSegChips"></div>
+            <div class="gsWizHint">Segments split the round into independent scoring periods. 3's play three 3-hole segments (9-hole games only). 6's plays three 6-hole segments and 9's plays as two 9-hole segments (18 hole games).</div>
           </div>
 
           <div class="gsWizDivider"></div>
 
           <div class="gsWizFieldGroup">
-            <div class="gsWizFieldLabel">Rotation Method <span class="gsWizBadge gsWizBadge--derived">derived from segments + competition</span></div>
+            <div class="gsWizFieldLabel">Rotation Method</div>
             <div class="wizChips" id="gsWizRotChips"></div>
             <div class="gsWizCascadeNote" id="gsWizRotNote"></div>
           </div>
