@@ -1228,15 +1228,13 @@
     const lock = wiz.compLock;
     if (el.wizCompChips) {
       el.wizCompChips.style.display = lock ? "none" : "";
-      if (!lock) {
+      if (lock) {
+        wiz.competition = lock;
+      } else {
         el.wizCompChips.querySelectorAll(".wizChip").forEach(b => {
           b.classList.toggle("selected", b.dataset.val === wiz.competition);
-          if (lock) { b.classList.add(b.dataset.val === lock ? "locked" : "disabled"); }
-          else      { b.classList.remove("locked", "disabled"); }
+          b.classList.remove("locked", "disabled");
         });
-      }
-    }
-        wiz.competition = lock;
       }
     }
 
