@@ -246,19 +246,14 @@
     wizCarousel:      document.getElementById("gsWizCarousel"),
 
     // Wizard step 2 — structure
-    wizCompChips:     document.getElementById("gsWizCompChips"),
-    wizCompForced:    document.getElementById("gsWizCompForced"),
-    wizCompForcedVal: document.getElementById("gsWizCompForcedVal"),
-    wizCompForcedNote:document.getElementById("gsWizCompForcedNote"),
     wizSegChips:      document.getElementById("gsWizSegChips"),
     wizRotChips:      document.getElementById("gsWizRotChips"),
     wizRotNote:       document.getElementById("gsWizRotNote"),
 
     // Wizard step 3 — scoring
     wizBasisVal:      document.getElementById("gsWizBasisVal"),
-    wizBasisNote:     document.getElementById("gsWizBasisNote"),
     wizMethodChips:   document.getElementById("gsWizMethodChips"),
-    wizSystemList:    document.getElementById("gsWizSystemList"),
+    // wizSystemList resolved fresh each render (see wizRenderStep3)
     wizGroupBB:       document.getElementById("gsWizGroupBB"),
     wizBBChips:       document.getElementById("gsWizBBChips"),
     wizGroupHoleDecl: document.getElementById("gsWizGroupHoleDecl"),
@@ -267,10 +262,8 @@
     wizStablefordGrid:document.getElementById("gsWizStablefordGrid"),
 
     // Wizard step 4 — handicaps
-    wizAdjBanner:      document.getElementById("gsWizAdjBanner"),
     wizHCMethodChips:  document.getElementById("gsWizHCMethodChips"),
     wizAllowanceSelect:document.getElementById("gsWizAllowanceSelect"),
-    wizAllowanceLocked:document.getElementById("gsWizAllowanceLocked"),
     wizStrokeDistChips:document.getElementById("gsWizStrokeDistChips"),
     wizStrokeDistNote: document.getElementById("gsWizStrokeDistNote"),
     wizEffSelect:      document.getElementById("gsWizEffSelect"),
@@ -1243,11 +1236,6 @@
         });
       }
     }
-    if (el.wizCompForced) {
-      el.wizCompForced.classList.toggle("hidden", !lock);
-      if (lock) {
-        if (el.wizCompForcedVal)  el.wizCompForcedVal.textContent  = lock === "PairPair" ? "Pair vs. Pair" : "Pair vs. the Field";
-        if (el.wizCompForcedNote) el.wizCompForcedNote.textContent = `${wiz.selectedLabel} always plays as ${lock === "PairPair" ? "Pair vs. Pair" : "Pair vs. the Field"}`;
         wiz.competition = lock;
       }
     }
@@ -1361,36 +1349,35 @@
       el.wizMethodChips.querySelectorAll(".wizChip").forEach(b => b.classList.toggle("selected", b.dataset.val === wiz.scoringMethod));
     }
 
-    // System dropdown
-    if (el.wizSystemList) {
+    // System dropdown — always looked up fresh so the <select> element is guaranteed
+    const sysSel = document.getElementById("gsWizSystemList");
+    if (sysSel) {
       const locked = wiz.scoringSystemLock;
       const preset = wiz.scoringSystem;
       const teamFmts = ["Scramble", "Shamble", "AltShot", "Chapman"];
       const avail = teamFmts.includes(fmt) ? ["BestBall"] : ["AllScores", "BestBall", "DeclareHole", "DeclareManual"];
-      el.wizSystemList.innerHTML = "";
+      sysSel.innerHTML = "";
       avail.forEach(key => {
         const def = WIZ_SYSTEMS[key];
         const opt = document.createElement("option");
         opt.value = key;
         opt.textContent = def.label;
-        el.wizSystemList.appendChild(opt);
+        sysSel.appendChild(opt);
       });
-      // If locked, force the preset value and disable the select
       if (locked && preset) {
-        el.wizSystemList.value = preset;
-        el.wizSystemList.disabled = true;
+        sysSel.value = preset;
+        sysSel.disabled = true;
         wiz.scoringSystemVal = preset;
       } else {
-        el.wizSystemList.disabled = false;
+        sysSel.disabled = false;
         if (wiz.scoringSystemVal && avail.includes(wiz.scoringSystemVal)) {
-          el.wizSystemList.value = wiz.scoringSystemVal;
+          sysSel.value = wiz.scoringSystemVal;
         } else if (avail.length) {
-          el.wizSystemList.value = avail[0];
+          sysSel.value = avail[0];
           wiz.scoringSystemVal = avail[0];
         }
       }
-      // Wire change event (re-wire each render to avoid stale listeners)
-      el.wizSystemList.onchange = () => wizSelectSystem(el.wizSystemList.value);
+      sysSel.onchange = () => wizSelectSystem(sysSel.value);
     }
 
     // Best Ball
@@ -1437,7 +1424,8 @@
 
   function wizSelectSystem(val) {
     wiz.scoringSystemVal = val;
-    if (el.wizSystemList && !el.wizSystemList.disabled) el.wizSystemList.value = val;
+    const sysSel = document.getElementById("gsWizSystemList");
+    if (sysSel && !sysSel.disabled) sysSel.value = val;
     // Show/hide BB and HoleDecl
     if (el.wizGroupBB)       show(el.wizGroupBB,       val === "BestBall");
     if (el.wizGroupHoleDecl) {
@@ -1510,9 +1498,6 @@
     const g = state.game || {};
     const isAdjGross = (wiz.scoringMethod === "ADJ GROSS");
 
-    // ADJ GROSS banner
-    if (el.wizAdjBanner) el.wizAdjBanner.classList.toggle("hidden", !isAdjGross);
-
     // HC Method chips
     if (el.wizHCMethodChips) {
       el.wizHCMethodChips.querySelectorAll(".wizChip").forEach(b => {
@@ -1539,7 +1524,6 @@
       el.wizAllowanceSelect.disabled = isAdjGross;
       if (isAdjGross) wiz.allowance = "100";
     }
-    if (el.wizAllowanceLocked) el.wizAllowanceLocked.classList.toggle("hidden", !isAdjGross);
 
     // Stroke distribution
     if (el.wizStrokeDistChips) {
@@ -1549,10 +1533,9 @@
         const b = document.createElement("button");
         b.className = "wizChip locked"; b.textContent = "Standard";
         el.wizStrokeDistChips.appendChild(b);
-        if (el.wizStrokeDistNote) el.wizStrokeDistNote.textContent = isAdjGross ? "Forced to Standard — ADJ GROSS is selected." : "Only configurable when Rotation is COD.";
         wiz.strokeDistribution = "Standard";
+        wizSetStrokeDistHint("Standard");
       } else {
-        if (el.wizStrokeDistNote) el.wizStrokeDistNote.textContent = "COD rotation active — choose how strokes are distributed across segments.";
         strokeDistOptions.forEach(opt => {
           const b = document.createElement("button");
           b.className = "wizChip" + (wiz.strokeDistribution === opt.value ? " selected" : "");
@@ -1560,6 +1543,7 @@
           b.addEventListener("click", () => wizSelectStrokeDist(opt.value));
           el.wizStrokeDistChips.appendChild(b);
         });
+        wizSetStrokeDistHint(wiz.strokeDistribution || "Standard");
       }
     }
 
@@ -1609,9 +1593,21 @@
     wizCheckComplete();
   }
 
+  function wizSetStrokeDistHint(val) {
+    if (!el.wizStrokeDistNote) return;
+    const seg = wiz.segments || "9";
+    const hints = {
+      Standard:          "Use standard hole handicaps.",
+      Balanced:          "Strokes distributed evenly across segments.",
+      "Balanced-Rounded": `Player handicaps are rounded to nearest ${seg} and distributed evenly across segments.`,
+    };
+    el.wizStrokeDistNote.textContent = hints[val] || "";
+  }
+
   function wizSelectStrokeDist(val) {
     wiz.strokeDistribution = val;
     if (el.wizStrokeDistChips) el.wizStrokeDistChips.querySelectorAll(".wizChip:not(.locked)").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
+    wizSetStrokeDistHint(val);
     wizUpdateSummary();
     wizCheckComplete();
   }

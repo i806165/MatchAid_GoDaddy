@@ -176,14 +176,9 @@
         </header>
         <div class="maCard__body">
           <div class="gsWizEyebrow">How are handicaps applied?</div>
-          <div class="gsWizHint">Configure handicap calculation and when the index takes effect.</div>
-
-          <div class="gsWizAdjBanner hidden" id="gsWizAdjBanner">
-            <strong>ADJ GROSS selected on Step 3</strong> — HC Method is forced to CH with Allowance and allowance is fixed at 100%.
-          </div>
 
           <div class="gsWizFieldGroup">
-            <div class="gsWizFieldLabel">HC Method <span class="gsWizBadge gsWizBadge--adj hidden" id="gsWizHCMethodBadge">forced by ADJ GROSS</span></div>
+            <div class="gsWizFieldLabel">HC Method</div>
             <div class="wizChips" id="gsWizHCMethodChips">
               <button class="wizChip" data-val="CH" onclick="window.gsWiz.selectHCMethod('CH')">CH with Allowance</button>
               <button class="wizChip" data-val="SO" onclick="window.gsWiz.selectHCMethod('SO')">Shots-Off</button>
@@ -193,19 +188,18 @@
           <div class="gsWizDivider"></div>
 
           <div class="gsWizFieldGroup">
-            <div class="gsWizFieldLabel">Allowance <span class="gsWizBadge gsWizBadge--adj hidden" id="gsWizAllowanceBadge">forced by ADJ GROSS</span></div>
+            <div class="gsWizFieldLabel">Allowance</div>
             <div class="gsWizSelectWrap">
               <select class="maTextInput gsWizSelect" id="gsWizAllowanceSelect" onchange="window.gsWiz.selectAllowance(this.value)"></select>
             </div>
-            <div class="gsWizLockedNote hidden" id="gsWizAllowanceLocked">&#128274; Forced to 100% — ADJ GROSS method</div>
           </div>
 
           <div class="gsWizDivider"></div>
 
           <div class="gsWizFieldGroup">
-            <div class="gsWizFieldLabel">Stroke Distribution <span class="gsWizBadge gsWizBadge--derived">derived from rotation + method</span></div>
+            <div class="gsWizFieldLabel">Stroke Distribution</div>
             <div class="wizChips" id="gsWizStrokeDistChips"></div>
-            <div class="gsWizCascadeNote" id="gsWizStrokeDistNote"></div>
+            <div class="gsWizHint" id="gsWizStrokeDistNote"></div>
           </div>
 
           <div class="gsWizDivider"></div>

@@ -405,11 +405,11 @@
 .gsWizNavBtn--primary:hover:not(:disabled) { background: var(--brandSecondary); }
 
 .gsWizNavBtn--primary.wiz-save {
-  background: var(--segmentSelectedBg); color: var(--ink);
-  border-color: color-mix(in srgb, var(--segmentSelectedBg) 55%, black);
+  background: var(--btnSecondaryBg); color: var(--btnSecondaryText);
+  border-color: color-mix(in srgb, var(--btnSecondaryBg) 70%, black);
 }
 .gsWizNavBtn--primary.wiz-save:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--segmentSelectedBg) 85%, black);
+  background: color-mix(in srgb, var(--btnSecondaryBg) 85%, black);
 }
 
 /* ==========================================================================
