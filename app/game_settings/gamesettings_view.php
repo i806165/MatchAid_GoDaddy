@@ -113,14 +113,9 @@
         </header>
         <div class="maCard__body">
           <div class="gsWizEyebrow">How is the game scored?</div>
-          <div class="gsWizHint">Scoring basis is set by your format. Choose method and how scores are counted.</div>
 
           <div class="gsWizFieldGroup">
-            <div class="gsWizFieldLabel">Scoring Basis <span class="gsWizBadge gsWizBadge--forced">forced by format</span></div>
-            <div class="gsWizBasisStrip">
-              <span id="gsWizBasisVal">Strokes</span>
-              <span class="gsWizBasisNote" id="gsWizBasisNote">— set by format</span>
-            </div>
+            <div class="gsWizFieldLabel">Scoring Basis &nbsp;<span id="gsWizBasisVal" class="gsWizBasisInline">Strokes</span></div>
           </div>
 
           <div class="gsWizDivider"></div>
@@ -137,7 +132,7 @@
 
           <div class="gsWizFieldGroup">
             <div class="gsWizFieldLabel">Scoring System</div>
-            <div class="gsWizOptList" id="gsWizSystemList"></div>
+            <select class="maTextInput gsWizSelect" id="gsWizSystemList"></select>
           </div>
 
           <div class="gsWizFieldGroup hidden" id="gsWizGroupBB">

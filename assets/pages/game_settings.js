@@ -1142,14 +1142,14 @@
   function wizRenderStep(step) {
     state.wizStep = step;
 
-    // Update progress dots
+    // Update progress dots — only mark the current step as active, all others neutral
     el.wizDots.forEach((dot, i) => {
       if (!dot) return;
       const n = i + 1;
-      dot.classList.toggle("done",   n < step);
-      dot.classList.toggle("active", n === step);
-      dot.classList.toggle("upcoming", n > step);
-      dot.textContent = n < step ? "✓" : "";
+      const step_el = dot.parentElement; // .gsWizStep wrapper — CSS targets this
+      step_el.classList.toggle("active", n === step);
+      step_el.classList.remove("done", "upcoming");
+      dot.textContent = "";
     });
 
     // Show/hide step panels
@@ -1337,9 +1337,8 @@
   function wizRenderStep3() {
     const fmt = wiz.selectedFormat || "StrokePlay";
 
-    // Basis
-    if (el.wizBasisVal)  el.wizBasisVal.textContent  = wiz.selectedBasis || "Strokes";
-    if (el.wizBasisNote) el.wizBasisNote.textContent = `— forced by ${wiz.selectedLabel || "format"}`;
+    // Basis (inline next to label)
+    if (el.wizBasisVal) el.wizBasisVal.textContent = wiz.selectedBasis || "Strokes";
 
     // Stableford preview
     if (el.wizGroupStableford) {
@@ -1362,7 +1361,7 @@
       el.wizMethodChips.querySelectorAll(".wizChip").forEach(b => b.classList.toggle("selected", b.dataset.val === wiz.scoringMethod));
     }
 
-    // System option cards
+    // System dropdown
     if (el.wizSystemList) {
       const locked = wiz.scoringSystemLock;
       const preset = wiz.scoringSystem;
@@ -1371,22 +1370,27 @@
       el.wizSystemList.innerHTML = "";
       avail.forEach(key => {
         const def = WIZ_SYSTEMS[key];
-        const card = document.createElement("div");
-        card.className = "wizOptCard";
-        card.dataset.val = key;
-        const isLocked = locked && preset === key;
-        if (isLocked) card.classList.add("locked");
-        else card.addEventListener("click", () => wizSelectSystem(key));
-        if (wiz.scoringSystemVal === key && !isLocked) card.classList.add("selected");
-        card.innerHTML = `<div class="wizOptCard__radio"></div><div class="wizOptCard__body"><div class="wizOptCard__name">${esc(def.label)}${isLocked ? ' <small style="font-size:10px;opacity:.6">(locked)</small>' : ""}</div><div class="wizOptCard__desc">${esc(def.desc)}</div></div>`;
-        el.wizSystemList.appendChild(card);
+        const opt = document.createElement("option");
+        opt.value = key;
+        opt.textContent = def.label;
+        el.wizSystemList.appendChild(opt);
       });
-      // Apply locked card visual
+      // If locked, force the preset value and disable the select
       if (locked && preset) {
-        const lockedCard = el.wizSystemList.querySelector(`[data-val="${preset}"]`);
-        if (lockedCard) { lockedCard.classList.add("locked"); lockedCard.querySelector(".wizOptCard__radio").style.background = "#07432A"; }
+        el.wizSystemList.value = preset;
+        el.wizSystemList.disabled = true;
         wiz.scoringSystemVal = preset;
+      } else {
+        el.wizSystemList.disabled = false;
+        if (wiz.scoringSystemVal && avail.includes(wiz.scoringSystemVal)) {
+          el.wizSystemList.value = wiz.scoringSystemVal;
+        } else if (avail.length) {
+          el.wizSystemList.value = avail[0];
+          wiz.scoringSystemVal = avail[0];
+        }
       }
+      // Wire change event (re-wire each render to avoid stale listeners)
+      el.wizSystemList.onchange = () => wizSelectSystem(el.wizSystemList.value);
     }
 
     // Best Ball
@@ -1433,14 +1437,7 @@
 
   function wizSelectSystem(val) {
     wiz.scoringSystemVal = val;
-    if (el.wizSystemList) {
-      el.wizSystemList.querySelectorAll(".wizOptCard:not(.locked)").forEach(c => {
-        const sel = c.dataset.val === val;
-        c.classList.toggle("selected", sel);
-        const radio = c.querySelector(".wizOptCard__radio");
-        if (radio) radio.style.background = sel ? "#07432A" : "";
-      });
-    }
+    if (el.wizSystemList && !el.wizSystemList.disabled) el.wizSystemList.value = val;
     // Show/hide BB and HoleDecl
     if (el.wizGroupBB)       show(el.wizGroupBB,       val === "BestBall");
     if (el.wizGroupHoleDecl) {
