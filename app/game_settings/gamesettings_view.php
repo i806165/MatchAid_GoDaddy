@@ -57,8 +57,6 @@
         </header>
         <div class="maCard__body">
           <div class="gsWizEyebrow">What kind of game are you running?</div>
-          <div class="gsWizHint">Your selection determines the scoring basis and shapes all downstream settings.</div>
-
           <div class="gsWizCarouselHeader">
             <span class="gsWizCarouselHint">Scroll or swipe to see all formats</span>
             <div class="gsWizCarouselArrows">
@@ -70,10 +68,6 @@
             <div class="wizCarousel" id="gsWizCarousel"></div>
           </div>
 
-          <div class="gsWizSelBanner hidden" id="gsWizSelBanner">
-            <div class="gsWizSelBanner__label"  id="gsWizSelLabel">—</div>
-            <div class="gsWizSelBanner__detail" id="gsWizSelDetail">—</div>
-          </div>
         </div>
       </div>
 

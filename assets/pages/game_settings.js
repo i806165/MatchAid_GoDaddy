@@ -104,19 +104,24 @@
   const rotation1423 = { label: "1423", value: "1423" };
 
   // Game label → format/preset mapping (wizard carousel source of truth)
+  // Ordered by group: Stroke Play family, Match Play family, Skins, Team formats
   const GAME_LABELS = [
-    { label: "Alt-Shot",      dbFormat: "AltShot",   basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1", bbCountLock: true  },
+    // ── Stroke Play family ──
+    { label: "Stroke Play",   dbFormat: "StrokePlay", basis: "Strokes", compLock: null,       scoringSystem: null,            scoringSystemLock: false, bbCount: null,bbCountLock: false },
     { label: "Best Ball",     dbFormat: "StrokePlay", basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2", bbCountLock: false },
-    { label: "Chapman",       dbFormat: "Chapman",    basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1", bbCountLock: true  },
-    { label: "C-O-D",         dbFormat: "MatchPlay",  basis: "Holes",   compLock: "PairPair", scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2", bbCountLock: false },
     { label: "Declare 33/44", dbFormat: "StrokePlay", basis: "Strokes", compLock: null,       scoringSystem: "DeclareManual", scoringSystemLock: true,  bbCount: null,bbCountLock: true  },
-    { label: "Four Ball",     dbFormat: "MatchPlay",  basis: "Holes",   compLock: "PairPair", scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2", bbCountLock: false },
+    { label: "Stableford",    dbFormat: "Stableford", basis: "Points",  compLock: null,       scoringSystem: null,            scoringSystemLock: false, bbCount: null,bbCountLock: false },
+    // ── Match Play family ──
     { label: "Match Play",    dbFormat: "MatchPlay",  basis: "Holes",   compLock: "PairPair", scoringSystem: null,            scoringSystemLock: false, bbCount: null,bbCountLock: false },
+    { label: "Four Ball",     dbFormat: "MatchPlay",  basis: "Holes",   compLock: "PairPair", scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2", bbCountLock: false },
+    { label: "C-O-D",         dbFormat: "MatchPlay",  basis: "Holes",   compLock: "PairPair", scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2", bbCountLock: false },
+    // ── Skins ──
+    { label: "Skins",         dbFormat: "Skins",      basis: "Skins",   compLock: "PairPair", scoringSystem: "AllScores",     scoringSystemLock: true,  bbCount: null,bbCountLock: true  },
+    // ── Team formats ──
+    { label: "Alt-Shot",      dbFormat: "AltShot",    basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1", bbCountLock: true  },
+    { label: "Chapman",       dbFormat: "Chapman",    basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1", bbCountLock: true  },
     { label: "Scramble",      dbFormat: "Scramble",   basis: "Strokes", compLock: "PairPair", scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1", bbCountLock: true  },
     { label: "Shamble",       dbFormat: "Shamble",    basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1", bbCountLock: true  },
-    { label: "Skins",         dbFormat: "Skins",      basis: "Skins",   compLock: "PairPair", scoringSystem: "AllScores",     scoringSystemLock: true,  bbCount: null,bbCountLock: true  },
-    { label: "Stableford",    dbFormat: "Stableford", basis: "Points",  compLock: null,       scoringSystem: null,            scoringSystemLock: false, bbCount: null,bbCountLock: false },
-    { label: "Stroke Play",   dbFormat: "StrokePlay", basis: "Strokes", compLock: null,       scoringSystem: null,            scoringSystemLock: false, bbCount: null,bbCountLock: false },
   ];
 
   function bestBallOptionsForFormat(fmt) {
@@ -239,9 +244,6 @@
 
     // Wizard step 1 — format
     wizCarousel:      document.getElementById("gsWizCarousel"),
-    wizSelBanner:     document.getElementById("gsWizSelBanner"),
-    wizSelLabel:      document.getElementById("gsWizSelLabel"),
-    wizSelDetail:     document.getElementById("gsWizSelDetail"),
 
     // Wizard step 2 — structure
     wizCompChips:     document.getElementById("gsWizCompChips"),
@@ -985,8 +987,9 @@
     }
 
     // Show wizard or tab view
-    show(el.wizContainer,   isGuided);
-    show(el.tabs,           !isGuided);
+    show(el.wizContainer,                        isGuided);
+    show(document.getElementById("gsWizProgress"), isGuided);
+    show(el.tabs,                                !isGuided);
 
     // Show correct panels
     Object.values(el.panels).forEach(p => {
@@ -1203,15 +1206,7 @@
     const selectedCard = carousel.querySelector(".selected");
     if (selectedCard) setTimeout(() => selectedCard.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" }), 100);
 
-    // Banner
-    if (wiz.selectedLabel && el.wizSelBanner) {
-      el.wizSelBanner.classList.remove("hidden");
-      if (el.wizSelLabel)  el.wizSelLabel.textContent  = wiz.selectedLabel + " selected";
-      if (el.wizSelDetail) el.wizSelDetail.textContent =
-        `GameFormat: ${wiz.selectedFormat} · Basis: ${wiz.selectedBasis}` +
-        (wiz.compLock ? ` · Competition: ${wiz.compLock}` : "") +
-        (wiz.scoringSystem ? ` · System: ${wiz.scoringSystem}${wiz.scoringSystemLock ? " (locked)" : ""}` : "");
-    }
+
 
     wizDragScroll(carousel);
   }
@@ -1227,12 +1222,7 @@
     wiz.scoringSystemLock  = game.scoringSystemLock || false;
     wiz.bbCount            = game.bbCount        || null;
     wiz.bbCountLock        = game.bbCountLock    || false;
-    if (el.wizSelBanner)  el.wizSelBanner.classList.remove("hidden");
-    if (el.wizSelLabel)   el.wizSelLabel.textContent  = game.label + " selected";
-    if (el.wizSelDetail)  el.wizSelDetail.textContent =
-      `GameFormat: ${game.dbFormat} · Basis: ${wiz.selectedBasis}` +
-      (game.compLock ? ` · Competition: ${game.compLock}` : "") +
-      (game.scoringSystem ? ` · System: ${game.scoringSystem}${game.scoringSystemLock ? " (locked)" : ""}` : "");
+
     wizUpdateSummary();
     wizCheckComplete();
   }
