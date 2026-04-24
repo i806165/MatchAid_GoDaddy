@@ -750,33 +750,62 @@ final class ServiceScoreCard {
   }
 
   public static function buildStrokeAllocationMap(array $gameRow, $playerHC, array $teeSetHoles = []): array {
-    $holes = [];
-    foreach ($teeSetHoles as $h) {
-      if (!is_array($h)) continue;
-      $holes[] = [
-        "Number" => intval($h["Number"] ?? $h["number"] ?? 0),
-        "Allocation" => intval($h["Allocation"] ?? $h["allocation"] ?? 99),
-        "hcpSpin" => intval($h["hcpSpin"] ?? ($h["Allocation"] ?? $h["allocation"] ?? 99)),
-      ];
-    }
+      $holes = [];
+      foreach ($teeSetHoles as $h) {
+        if (!is_array($h)) continue;
+        $holes[] = [
+          "Number"     => intval($h["Number"] ?? $h["number"] ?? 0),
+          "Allocation" => intval($h["Allocation"] ?? $h["allocation"] ?? 99),
+          // "hcpSpin" no longer needed here — spin-aware allocation is handled
+          // exclusively by ServiceScoreRotation::buildSpinAwareStrokeAllocationMap().
+          // "hcpSpin" => intval($h["hcpSpin"] ?? ($h["Allocation"] ?? $h["allocation"] ?? 99)),
+        ];
+      }
 
-    $filtered = array_values(array_filter($holes, function($h) use ($gameRow) {
-      $holesToPlay = (string)($gameRow["dbGames_Holes"] ?? "All 18");
-      if ($holesToPlay === "F9") return $h["Number"] >= 1 && $h["Number"] <= 9;
-      if ($holesToPlay === "B9") return $h["Number"] >= 10 && $h["Number"] <= 18;
-      return true;
-    }));
+      $filtered = array_values(array_filter($holes, function($h) use ($gameRow) {
+        $holesToPlay = (string)($gameRow["dbGames_Holes"] ?? "All 18");
+        if ($holesToPlay === "F9") return $h["Number"] >= 1 && $h["Number"] <= 9;
+        if ($holesToPlay === "B9") return $h["Number"] >= 10 && $h["Number"] <= 18;
+        return true;
+      }));
 
-    $strokeMap = [];
-    foreach ($holes as $h) $strokeMap[$h["Number"]] = 0;
+      $strokeMap = [];
+      foreach ($holes as $h) $strokeMap[$h["Number"]] = 0;
 
-    if (!is_numeric($playerHC) || floatval($playerHC) == 0) return $strokeMap;
-    $hc = floatval($playerHC);
+      if (!is_numeric($playerHC) || floatval($playerHC) == 0) return $strokeMap;
+      $hc = floatval($playerHC);
 
-    $rotation = (string)($gameRow["dbGames_RotationMethod"] ?? "");
-    $strokeMode = (string)($gameRow["dbGames_StrokeDistribution"] ?? "Standard");
+      // COD spin-aware stroke distribution (Balanced / Balanced-Rounded) was previously
+      // handled here but has been superseded by ServiceScoreRotation::buildSpinAwareStrokeAllocationMap().
+      // This function now serves as the standard scorecard stroke allocator only.
+      // The rotation/strokeMode branching below is retained for reference but is no longer active.
+      //
+      // $rotation  = (string)($gameRow["dbGames_RotationMethod"] ?? "");
+      // $strokeMode = (string)($gameRow["dbGames_StrokeDistribution"] ?? "Standard");
+      //
+      // if ($rotation === "COD" && $strokeMode === "Balanced-Rounded") {
+      //   $isPlus  = ($hc < 0);
+      //   $total   = (int)abs($hc);
+      //   $basePer = (int)floor($total / 3);
+      //   $rem     = $total % 3;
+      //   $spins   = [[], [], []];
+      //   foreach ($filtered as $h) {
+      //     if ($h["Number"] <= 6)       $spins[0][] = $h;
+      //     else if ($h["Number"] <= 12) $spins[1][] = $h;
+      //     else                         $spins[2][] = $h;
+      //   }
+      //   foreach ($spins as $idx => $spin) {
+      //     usort($spin, fn($a, $b) => $isPlus ? ($b["hcpSpin"] <=> $a["hcpSpin"]) : ($a["hcpSpin"] <=> $b["hcpSpin"]));
+      //     $count = $basePer + ($idx < $rem ? 1 : 0);
+      //     for ($i = 0; $i < $count; $i++) {
+      //       if ($h = $spin[$i % count($spin)]) {
+      //         $strokeMap[$h["Number"]] += $isPlus ? -1 : 1;
+      //       }
+      //     }
+      //   }
+      //   return $strokeMap;
+      // }
 
-    if ($rotation !== "COD" || $strokeMode === "Standard") {
       if ($hc < 0) {
         $giveBack = (int)abs($hc);
         usort($filtered, fn($a, $b) => $b["Allocation"] <=> $a["Allocation"]);
@@ -787,7 +816,7 @@ final class ServiceScoreCard {
         }
       } else {
         $base = (int)floor($hc / 18);
-        $rem = (int)($hc % 18);
+        $rem  = (int)($hc % 18);
         foreach ($filtered as $h) $strokeMap[$h["Number"]] = $base;
         usort($filtered, fn($a, $b) => $a["Allocation"] <=> $b["Allocation"]);
         for ($i = 0; $i < $rem; $i++) {
@@ -796,37 +825,9 @@ final class ServiceScoreCard {
           }
         }
       }
-      return $strokeMap;
-    }
-
-    if ($rotation === "COD" && $strokeMode === "Balanced-Rounded") {
-      $isPlus = ($hc < 0);
-      $total = (int)abs($hc);
-      $basePer = (int)floor($total / 3);
-      $rem = $total % 3;
-      $spins = [[], [], []];
-
-      foreach ($filtered as $h) {
-        if ($h["Number"] <= 6) $spins[0][] = $h;
-        else if ($h["Number"] <= 12) $spins[1][] = $h;
-        else $spins[2][] = $h;
-      }
-
-      foreach ($spins as $idx => $spin) {
-        usort($spin, fn($a, $b) => $isPlus ? ($b["hcpSpin"] <=> $a["hcpSpin"]) : ($a["hcpSpin"] <=> $b["hcpSpin"]));
-        $count = $basePer + ($idx < $rem ? 1 : 0);
-        for ($i = 0; $i < $count; $i++) {
-          if ($h = $spin[$i % count($spin)]) {
-            $strokeMap[$h["Number"]] += $isPlus ? -1 : 1;
-          }
-        }
-      }
 
       return $strokeMap;
     }
-
-    return $strokeMap;
-  }
 
   // ==========================================================================
   // 7. Future Scorecard View-Model Adapters

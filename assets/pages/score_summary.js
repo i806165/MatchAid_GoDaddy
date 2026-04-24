@@ -17,7 +17,7 @@
   ];
 
   const state = {
-    valueMode: String(payload.meta?.defaultValueMode || 'net')
+    valueMode: String(payload.meta?.defaultValueMode || 'game')
   };
 
   const dom = {
@@ -74,13 +74,25 @@
   }
 
   function bestBallCount() {
-    const n = Number(
-      game.dbGames_BestBallCnt ??
-      game.dbGames_BestBall ??
-      game.dbGames_BestBallCount ??
-      0
-    );
+    const n = Number(game.dbGames_BestBall ?? 0);
     return Number.isFinite(n) && n > 0 ? n : 0;
+  }
+
+  function isSkinsBasis() {
+    return scoringBasis() === 'Skins';
+  }
+
+  // Derives the skins count for a row or side from the correct field
+  // based on scoringMethod — gross skins for ADJ GROSS, net skins otherwise.
+  function skinsValue(rowOrSide) {
+    return scoringMethod() === 'ADJ GROSS'
+      ? Number(rowOrSide?.grossSkins ?? 0)
+      : Number(rowOrSide?.netSkins ?? 0);
+  }
+
+  function skinsDisplay(rowOrSide) {
+    const n = skinsValue(rowOrSide);
+    return n === 1 ? '1 Skin' : `${n} Skins`;
   }
 
   function headerContextText() {
@@ -90,31 +102,22 @@
     return [format, method, basis].filter(Boolean).join(' ');
   }
 
-  function supportsDistinctGameMode() {
+  // Returns the label for the Game/Match/Skins/Points/Strokes tab.
+  function gameTabLabel() {
     const basis = scoringBasis();
-    return basis === 'Holes' || basis === 'Skins';
+    if (basis === 'Holes')   return 'Match';
+    if (basis === 'Skins')   return 'Skins';
+    if (basis === 'Points')  return 'Points';
+    if (basis === 'Strokes') return 'Strokes';
+    return 'Game';
   }
 
-  function normalizeValueMode() {
-    if (supportsDistinctGameMode()) return;
-
-    if (state.valueMode === 'game') {
-      state.valueMode = scoringMethod() === 'ADJ GROSS' ? 'gross' : 'net';
-    }
-  }
-
+  // Game tab is now always present — three tabs for all game types.
   function availableModes() {
-    if (supportsDistinctGameMode()) {
-      return [
-        ['game', 'Game'],
-        ['gross', 'Gross'],
-        ['net', 'Net']
-      ];
-    }
-
     return [
+      ['game',  gameTabLabel()],
       ['gross', 'Gross'],
-      ['net', 'Net']
+      ['net',   'Net']
     ];
   }
 
@@ -151,8 +154,10 @@
     const basis = scoringBasis();
 
     if (state.valueMode === 'game') {
-      if (basis === 'Holes') return 'Holes';
-      if (basis === 'Skins') return 'Skins';
+      if (basis === 'Holes')   return 'Holes';
+      if (basis === 'Skins')   return scoringMethod() === 'ADJ GROSS' ? 'Gross Skins' : 'Net Skins';
+      if (basis === 'Points')  return 'Points';
+      if (basis === 'Strokes') return scoringMethod() === 'ADJ GROSS' ? '+/- Gross' : '+/- Net';
       return 'Game';
     }
 
@@ -161,7 +166,9 @@
 
   function currentMetricValue(row, side) {
     if (side) {
+      // PairPair side context
       if (state.valueMode === 'game') {
+        if (isSkinsBasis()) return skinsDisplay(row?.[side]);
         return row?.[side]?.gameDisplay ?? '—';
       }
       return state.valueMode === 'gross'
@@ -169,7 +176,9 @@
         : (row?.[side]?.netDiffDisplay ?? '—');
     }
 
+    // PairField row context
     if (state.valueMode === 'game') {
+      if (isSkinsBasis()) return skinsDisplay(row);
       return row?.gameDisplay ?? '—';
     }
 
@@ -179,6 +188,18 @@
   }
 
   function pairPairLeaderClass(row, side) {
+    // For skins games in game mode, leader is determined by skins won (higher wins).
+    // For all other cases, leader is determined by diff value (higher wins for Holes,
+    // handled by the existing gameValue which is already signed correctly).
+    if (state.valueMode === 'game' && isSkinsBasis()) {
+      const leftVal  = skinsValue(row?.left);
+      const rightVal = skinsValue(row?.right);
+      if (leftVal === rightVal) return '';
+      if (side === 'left')  return leftVal  > rightVal ? 'is-leading' : '';
+      if (side === 'right') return rightVal > leftVal  ? 'is-leading' : '';
+      return '';
+    }
+
     const leftVal = state.valueMode === 'game'
       ? Number(row?.left?.gameValue ?? 0)
       : state.valueMode === 'gross'
@@ -192,8 +213,8 @@
         : Number(row?.right?.netDiffValue ?? 0);
 
     if (leftVal === rightVal) return '';
-    if (side === 'left') return leftVal > rightVal ? 'is-leading' : '';
-    if (side === 'right') return rightVal > leftVal ? 'is-leading' : '';
+    if (side === 'left')  return leftVal  > rightVal ? 'is-leading' : '';
+    if (side === 'right') return rightVal > leftVal  ? 'is-leading' : '';
     return '';
   }
 
@@ -237,7 +258,6 @@
   function renderControls() {
     if (!dom.controls) return;
 
-    normalizeValueMode();
     const modes = availableModes();
 
     dom.controls.innerHTML = `
@@ -268,7 +288,7 @@
       if (n > 0) return `${n} Best Ball${n === 1 ? '' : 's'}`;
       return 'Best Ball Scores';
     }
-    if (system === 'DeclareHole') return 'Use N Scores';
+    if (system === 'DeclareHole')   return 'Use N Scores';
     if (system === 'DeclareManual') return 'Declared Scores';
 
     return 'Counted Scores';
@@ -277,8 +297,8 @@
   function excludedSectionLabel() {
     const system = scoringSystem();
 
-    if (system === 'AllScores') return '';
-    if (system === 'BestBall') return 'Other Scores';
+    if (system === 'AllScores')   return '';
+    if (system === 'BestBall')    return 'Other Scores';
     if (system === 'DeclareHole') return 'Not Counted';
     if (system === 'DeclareManual') return 'Not Declared';
 
@@ -286,6 +306,11 @@
   }
 
   function fieldStatsModeKey() {
+    // Shape stats grid always follows gross/net — never game mode.
+    // When game tab is active, default to net (or gross for ADJ GROSS).
+    if (state.valueMode === 'game') {
+      return scoringMethod() === 'ADJ GROSS' ? 'Gross' : 'Net';
+    }
     return state.valueMode === 'gross' ? 'Gross' : 'Net';
   }
 
@@ -296,9 +321,9 @@
 
     return {
       eaglePlus: stats?.eaglePlus ?? 0,
-      birdie: stats?.birdie ?? 0,
-      par: stats?.par ?? 0,
-      bogey: stats?.bogey ?? 0,
+      birdie:    stats?.birdie    ?? 0,
+      par:       stats?.par       ?? 0,
+      bogey:     stats?.bogey     ?? 0,
       bogeyPlus: stats?.bogeyPlus ?? 0,
     };
   }
@@ -324,7 +349,7 @@
     return `
       <div class="ssPairFieldGrid">
         ${dataRows.map((row) => {
-          const counted = extractPairFieldStats(row, 'counted');
+          const counted  = extractPairFieldStats(row, 'counted');
           const excluded = extractPairFieldStats(row, 'notCounted');
 
           return `
@@ -370,8 +395,9 @@
     return `
       <div class="ssPairPairGrid">
         ${dataRows.map((row) => {
-          const leftSeg = pairPairSegmentLines(row, 'left');
+          const leftSeg  = pairPairSegmentLines(row, 'left');
           const rightSeg = pairPairSegmentLines(row, 'right');
+          const isSkins  = isSkinsBasis();
 
           return `
             <article class="maCard ssMatchCard" aria-label="${esc(row.matchLabel || 'Matchup')}">
@@ -397,14 +423,14 @@
 
                     <div class="ssSideBox__values">
                       ${state.valueMode === 'game'
-                        ? `
-                          <div><span class="ssSideBox__label">Front:</span> <span class="ssSideBox__value">${esc(leftSeg.front)}</span></div>
-                          <div><span class="ssSideBox__label">Back:</span> <span class="ssSideBox__value">${esc(leftSeg.back)}</span></div>
-                          <div><span class="ssSideBox__label">Overall:</span> <span class="ssSideBox__value">${esc(leftSeg.overall)}</span></div>
-                        `
-                        : `
-                          <div><span class="ssSideBox__label">${esc(currentMetricLabel())}</span> <span class="ssSideBox__value">${esc(currentMetricValue(row, 'left'))}</span></div>
-                        `
+                        ? isSkins
+                          ? `<div><span class="ssSideBox__label">${esc(currentMetricLabel())}</span> <span class="ssSideBox__value">${esc(skinsDisplay(row?.left))}</span></div>`
+                          : `
+                            <div><span class="ssSideBox__label">Front:</span> <span class="ssSideBox__value">${esc(leftSeg.front)}</span></div>
+                            <div><span class="ssSideBox__label">Back:</span> <span class="ssSideBox__value">${esc(leftSeg.back)}</span></div>
+                            <div><span class="ssSideBox__label">Overall:</span> <span class="ssSideBox__value">${esc(leftSeg.overall)}</span></div>
+                          `
+                        : `<div><span class="ssSideBox__label">${esc(currentMetricLabel())}</span> <span class="ssSideBox__value">${esc(currentMetricValue(row, 'left'))}</span></div>`
                       }
                     </div>
                   </div>
@@ -417,14 +443,14 @@
 
                     <div class="ssSideBox__values">
                       ${state.valueMode === 'game'
-                        ? `
-                          <div><span class="ssSideBox__label">Front:</span> <span class="ssSideBox__value">${esc(rightSeg.front)}</span></div>
-                          <div><span class="ssSideBox__label">Back:</span> <span class="ssSideBox__value">${esc(rightSeg.back)}</span></div>
-                          <div><span class="ssSideBox__label">Overall:</span> <span class="ssSideBox__value">${esc(rightSeg.overall)}</span></div>
-                        `
-                        : `
-                          <div><span class="ssSideBox__label">${esc(currentMetricLabel())}</span> <span class="ssSideBox__value">${esc(currentMetricValue(row, 'right'))}</span></div>
-                        `
+                        ? isSkins
+                          ? `<div><span class="ssSideBox__label">${esc(currentMetricLabel())}</span> <span class="ssSideBox__value">${esc(skinsDisplay(row?.right))}</span></div>`
+                          : `
+                            <div><span class="ssSideBox__label">Front:</span> <span class="ssSideBox__value">${esc(rightSeg.front)}</span></div>
+                            <div><span class="ssSideBox__label">Back:</span> <span class="ssSideBox__value">${esc(rightSeg.back)}</span></div>
+                            <div><span class="ssSideBox__label">Overall:</span> <span class="ssSideBox__value">${esc(rightSeg.overall)}</span></div>
+                          `
+                        : `<div><span class="ssSideBox__label">${esc(currentMetricLabel())}</span> <span class="ssSideBox__value">${esc(currentMetricValue(row, 'right'))}</span></div>`
                       }
                     </div>
                   </div>
@@ -458,7 +484,6 @@
   }
 
   function initialize() {
-    normalizeValueMode();
     applyChrome();
     renderControls();
     renderBody();

@@ -3,6 +3,7 @@ declare(strict_types=1);
 // /public_html/services/scoring/service_ScoreSummary.php
 
 require_once __DIR__ . '/service_ScoreCardRotation.php';
+require_once __DIR__ . '/service_CalcSkins.php'; 
 
 final class ServiceScoreSummary
 {
@@ -147,6 +148,27 @@ final class ServiceScoreSummary
 
         $basis = strtolower((string)($meta['scoringBasis'] ?? 'Strokes'));
 
+        // ── Skins resolution for Traditional Skins (PairField) ───────────────────────
+        // Runs after all pairing rows are built so the full field is available.
+        // Attaches grossSkins and netSkins to each row for rendering alongside
+        // the Gross and Net KPIs on the summary leaderboard.
+        if ($basis === 'skins') {
+            $skinsResult = self::resolvePairFieldSkins($out, $scorecardRows, $gameRow);
+            foreach ($out as &$row) {
+                $pId = $row['pairingId'];
+                $row['grossSkins'] = $skinsResult['gross'][$pId] ?? 0;
+                $row['netSkins']   = $skinsResult['net'][$pId]   ?? 0;
+            }
+            unset($row);
+        } else {
+            foreach ($out as &$row) {
+                $row['grossSkins'] = 0;
+                $row['netSkins']   = 0;
+            }
+            unset($row);
+        }
+        // ─────────────────────────────────────────────────────────────────────────────
+
         usort($out, function (array $a, array $b) use ($basis): int {
             return self::comparePairFieldRows($a, $b, $basis);
         });
@@ -252,6 +274,8 @@ final class ServiceScoreSummary
     private static function buildPairPairRows(array $scorecardRows, array $gameRow, array $meta): array
     {
         $out = [];
+        $scoringBasis = trim((string)($meta['scoringBasis'] ?? $gameRow['dbGames_ScoringBasis'] ?? 'Strokes'));
+        $isSkins = (strtolower($scoringBasis) === 'skins');
 
         foreach ($scorecardRows as $row) {
             $players = is_array($row['players'] ?? null) ? $row['players'] : [];
@@ -280,13 +304,32 @@ final class ServiceScoreSummary
             $rightTotal = self::findTotalRowForPairingAndFlightPos($row['columnTotals'] ?? [], $rightPairingId, $rightKey);
 
             $leftGross = self::metricFromTotalRow($leftTotal, 'grossDiff', $metricKey);
-            $leftNet = self::metricFromTotalRow($leftTotal, 'netDiff', $metricKey);
+            $leftNet   = self::metricFromTotalRow($leftTotal, 'netDiff', $metricKey);
 
             $rightGross = self::metricFromTotalRow($rightTotal, 'grossDiff', $metricKey);
-            $rightNet = self::metricFromTotalRow($rightTotal, 'netDiff', $metricKey);
+            $rightNet   = self::metricFromTotalRow($rightTotal, 'netDiff', $metricKey);
 
-            $scoringBasis = trim((string)($meta['scoringBasis'] ?? $gameRow['dbGames_ScoringBasis'] ?? 'Strokes'));
             $gameKpi = self::buildPairPairGameKpi($leftPlayers, $rightPlayers, $gameRow, $scoringBasis, $scopedHoles);
+
+            // ── Skins Match resolution ────────────────────────────────────────────
+            // Each flight is an independent skins matchup. Carryovers are scoped
+            // within the flight only. ServiceCalcSkins receives exactly two pairings
+            // and resolves gross and net skins independently.
+            $pairPairSkins = ['gross' => [], 'net' => []];
+            if ($isSkins) {
+                $matchPairings = [
+                    [
+                        'pairingId' => (string)$leftPairingId,
+                        'holes'     => self::extractHolesForCalc($leftPlayers, $scopedHoles),
+                    ],
+                    [
+                        'pairingId' => (string)$rightPairingId,
+                        'holes'     => self::extractHolesForCalc($rightPlayers, $scopedHoles),
+                    ],
+                ];
+                $pairPairSkins = ServiceCalcSkins::resolveSkins($matchPairings, $scopedHoles);
+            }
+            // ─────────────────────────────────────────────────────────────────────
 
             $flightId = (string)($row['flightIDs'][0] ?? $row['flightID'] ?? $ctx['virtualFlightId'] ?? '');
             $spinPrefix = ($ctx['spinLabel'] ?? 'Round') !== 'Round'
@@ -300,54 +343,58 @@ final class ServiceScoreSummary
             $leftSort = self::pairPairSortSeed($leftPlayers);
 
             $out[] = [
-                'flightId' => $flightId,
-                'matchLabel' => $pairingLabel,
-                'matchLabelTop' => self::buildPairFieldLabel($leftPlayers),
+                'flightId'       => $flightId,
+                'matchLabel'     => $pairingLabel,
+                'matchLabelTop'  => self::buildPairFieldLabel($leftPlayers),
                 'matchLabelBottom' => self::buildPairFieldLabel($rightPlayers),
 
-                'spinNumber' => $ctx['spinNumber'],
-                'spinLabel' => $ctx['spinLabel'],
-                'spinStartHole' => $ctx['spinStartHole'],
-                'spinEndHole' => $ctx['spinEndHole'],
-                'visibleHoles' => $ctx['visibleHoles'],
+                'spinNumber'      => $ctx['spinNumber'],
+                'spinLabel'       => $ctx['spinLabel'],
+                'spinStartHole'   => $ctx['spinStartHole'],
+                'spinEndHole'     => $ctx['spinEndHole'],
+                'visibleHoles'    => $ctx['visibleHoles'],
                 'virtualFlightId' => $ctx['virtualFlightId'],
                 'virtualPairingIds' => $ctx['virtualPairingIds'],
                 'isRotationAware' => $ctx['isRotationAware'],
 
                 'left' => [
-                    'flightPos' => (string)$leftKey,
-                    'pairingId' => (string)$leftPairingId,
-                    'scoreCount' => self::countDeclaredScores($leftPlayers, $scopedHoles),
-                    'grossDiffValue' => $leftGross['value'],
-                    'grossDiffDisplay' => $leftGross['display'],
-                    'netDiffValue' => $leftNet['value'],
-                    'netDiffDisplay' => $leftNet['display'],
-                    'gameValue' => $gameKpi['left']['total']['value'],
-                    'gameDisplay' => $gameKpi['left']['total']['display'],
-                    'gameSegments' => $gameKpi['left'],
+                    'flightPos'       => (string)$leftKey,
+                    'pairingId'       => (string)$leftPairingId,
+                    'scoreCount'      => self::countDeclaredScores($leftPlayers, $scopedHoles),
+                    'grossDiffValue'  => $leftGross['value'],
+                    'grossDiffDisplay'=> $leftGross['display'],
+                    'netDiffValue'    => $leftNet['value'],
+                    'netDiffDisplay'  => $leftNet['display'],
+                    'gameValue'       => $gameKpi['left']['total']['value'],
+                    'gameDisplay'     => $gameKpi['left']['total']['display'],
+                    'gameSegments'    => $gameKpi['left'],
+                    'grossSkins'      => $pairPairSkins['gross'][(string)$leftPairingId]  ?? 0,
+                    'netSkins'        => $pairPairSkins['net'][(string)$leftPairingId]    ?? 0,
                 ],
                 'right' => [
-                    'flightPos' => (string)$rightKey,
-                    'pairingId' => (string)$rightPairingId,
-                    'scoreCount' => self::countDeclaredScores($rightPlayers, $scopedHoles),
-                    'grossDiffValue' => $rightGross['value'],
-                    'grossDiffDisplay' => $rightGross['display'],
-                    'netDiffValue' => $rightNet['value'],
-                    'netDiffDisplay' => $rightNet['display'],
-                    'gameValue' => $gameKpi['right']['total']['value'],
-                    'gameDisplay' => $gameKpi['right']['total']['display'],
-                    'gameSegments' => $gameKpi['right'],
+                    'flightPos'       => (string)$rightKey,
+                    'pairingId'       => (string)$rightPairingId,
+                    'scoreCount'      => self::countDeclaredScores($rightPlayers, $scopedHoles),
+                    'grossDiffValue'  => $rightGross['value'],
+                    'grossDiffDisplay'=> $rightGross['display'],
+                    'netDiffValue'    => $rightNet['value'],
+                    'netDiffDisplay'  => $rightNet['display'],
+                    'gameValue'       => $gameKpi['right']['total']['value'],
+                    'gameDisplay'     => $gameKpi['right']['total']['display'],
+                    'gameSegments'    => $gameKpi['right'],
+                    'grossSkins'      => $pairPairSkins['gross'][(string)$rightPairingId] ?? 0,
+                    'netSkins'        => $pairPairSkins['net'][(string)$rightPairingId]   ?? 0,
                 ],
                 'thru' => max(
                     self::deriveThru($leftPlayers, $scopedHoles),
                     self::deriveThru($rightPlayers, $scopedHoles)
                 ),
                 '_sort' => [
-                    'flightId' => $leftSort['flightId'],
-                    'flightPos' => $leftSort['flightPos'],
-                    'pairingId' => $leftSort['pairingId'],
+                    'flightId'   => $leftSort['flightId'],
+                    'flightPos'  => $leftSort['flightPos'],
+                    'pairingId'  => $leftSort['pairingId'],
                     'pairingPos' => $leftSort['pairingPos'],
-                    'lName' => $leftSort['lName'],
+                    'lName'      => $leftSort['lName'],
                     'spinNumber' => $ctx['spinNumber'],
                 ],
             ];
@@ -376,7 +423,7 @@ final class ServiceScoreSummary
     private static function buildPairPairGameKpi(array $leftPlayers, array $rightPlayers, array $gameRow, string $scoringBasis, array $scopedHoles): array
     {
         $basis = trim($scoringBasis);
-        if (!in_array($basis, ['Holes', 'Skins'], true)) {
+        if (!in_array($basis, ['Holes'], true)) {
             return [
                 'left' => self::emptyGameSegments(),
                 'right' => self::emptyGameSegments(),
@@ -390,7 +437,7 @@ final class ServiceScoreSummary
         $left = self::emptyGameSegments();
         $right = self::emptyGameSegments();
 
-        $carry = 0;
+        //$carry = 0;
         $holes = $scopedHoles ?: self::holesForGame($gameRow);
 
         foreach ($holes as $holeNumber) {
@@ -414,18 +461,17 @@ final class ServiceScoreSummary
                 continue;
             }
 
-            // Skins
-            $carry++;
-
-            if ($leftScore < $rightScore) {
-                self::bumpGameSegment($left, $segmentKey, $carry);
-                self::bumpGameSegment($right, $segmentKey, -$carry);
-                $carry = 0;
-            } elseif ($rightScore < $leftScore) {
-                self::bumpGameSegment($left, $segmentKey, -$carry);
-                self::bumpGameSegment($right, $segmentKey, $carry);
-                $carry = 0;
-            }
+            // OLD Skins logic replaced by new service file
+            //$carry++;
+            //if ($leftScore < $rightScore) {
+            //    self::bumpGameSegment($left, $segmentKey, $carry);
+            //    self::bumpGameSegment($right, $segmentKey, -$carry);
+            //    $carry = 0;
+            //} elseif ($rightScore < $leftScore) {
+            //    self::bumpGameSegment($left, $segmentKey, -$carry);
+            //    self::bumpGameSegment($right, $segmentKey, $carry);
+            //    $carry = 0;
+            //}
         }
 
         self::finalizeGameSegments($left);
@@ -723,4 +769,107 @@ final class ServiceScoreSummary
             'lName' => trim((string)($first['dbPlayers_LName'] ?? '')),
         ];
     }
+
+    /**
+     * Prepare pairings and delegate to ServiceCalcSkins for PairField skins resolution.
+     *
+     * For Traditional Skins, all pairings compete against the full field on each hole.
+     * Holes are scoped to the game's visible hole window (All 18, F9, B9).
+     * Each pairing contributes one declared score per hole (BestBall/1 locked upstream).
+     */
+    private static function resolvePairFieldSkins(
+        array $builtRows,
+        array $scorecardRows,
+        array $gameRow
+    ): array {
+        $holes = self::holesForGame($gameRow);
+
+        // Build the pairings array ServiceCalcSkins expects:
+        // one entry per pairing, keyed holes array with gross/net/declared per hole
+        $pairings = [];
+
+        foreach ($scorecardRows as $scoreRow) {
+            $players = is_array($scoreRow['players'] ?? null) ? $scoreRow['players'] : [];
+            if (!$players) continue;
+
+            $playersByPairing = self::groupPlayersByPairing($players);
+
+            foreach ($playersByPairing as $pairingId => $pairPlayers) {
+                $pairingId = (string)$pairingId;
+                if (!isset($pairings[$pairingId])) {
+                    $pairings[$pairingId] = [
+                        'pairingId' => $pairingId,
+                        'holes'     => [],
+                    ];
+                }
+
+                foreach ($holes as $holeNumber) {
+                    $holeKey = 'h' . $holeNumber;
+
+                    foreach ($pairPlayers as $player) {
+                        $cell = $player['holes'][$holeKey] ?? null;
+                        if (!is_array($cell) || empty($cell['declared'])) {
+                            continue;
+                        }
+
+                        $gross = $cell['gross'] ?? null;
+                        $net   = $cell['net']   ?? null;
+
+                        if ($gross === null && $net === null) {
+                            continue;
+                        }
+
+                        // First declared score found wins — BestBall/1 guarantees
+                        // only one declared score per pairing per hole
+                        $pairings[$pairingId]['holes'][$holeKey] = [
+                            'gross'    => is_numeric($gross) ? (float)$gross : null,
+                            'net'      => is_numeric($net)   ? (float)$net   : null,
+                            'declared' => true,
+                        ];
+                        break; // move to next hole once declared score found
+                    }
+                }
+            }
+        }
+
+        return ServiceCalcSkins::resolveSkins(array_values($pairings), $holes);
+    }
+
+    /**
+     * Extract declared hole scores from a set of players into the flat structure
+     * ServiceCalcSkins expects. Scoped to the provided hole list.
+     * BestBall/1 lock guarantees one declared score per pairing per hole.
+     */
+    private static function extractHolesForCalc(array $players, array $scopedHoles): array
+    {
+        $holes = [];
+
+        foreach ($scopedHoles as $holeNumber) {
+            $holeKey = 'h' . (int)$holeNumber;
+
+            foreach ($players as $player) {
+                $cell = $player['holes'][$holeKey] ?? null;
+                if (!is_array($cell) || empty($cell['declared'])) {
+                    continue;
+                }
+
+                $gross = $cell['gross'] ?? null;
+                $net   = $cell['net']   ?? null;
+
+                if ($gross === null && $net === null) {
+                    continue;
+                }
+
+                $holes[$holeKey] = [
+                    'gross'    => is_numeric($gross) ? (float)$gross : null,
+                    'net'      => is_numeric($net)   ? (float)$net   : null,
+                    'declared' => true,
+                ];
+                break; // first declared score per hole per pairing
+            }
+        }
+
+        return $holes;
+    }
+
 }

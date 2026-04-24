@@ -50,8 +50,8 @@
 
   const strokeDistOptions = [
     { label: "Standard stroke allocation",              value: "Standard"         },
-    { label: "Strokes distributed across spins",        value: "Balanced"         },
-    { label: "Round HCP's and distribute across spins", value: "Balanced-Rounded" },
+    { label: "Strokes trimmed and distributed to spins",        value: "Balanced"         },
+    { label: "Strokes rounded and distributed to spins", value: "Balanced-Rounded" },
   ];
 
   const hcEffectivityOptions = [
@@ -529,7 +529,7 @@
     }
   }
 
-  function wizSelectGame(label) {
+function wizSelectGame(label) {
     const game = GAME_LABELS.find(g => g.label === label);
     if (!game) return;
     wiz.selectedLabel     = game.label;
@@ -540,13 +540,24 @@
     wiz.scoringSystemLock = game.scoringSystemLock || false;
     wiz.bbCount           = game.bbCount        || null;
     wiz.bbCountLock       = game.bbCountLock    || false;
+
+    // ── NEW: COD enforcement ──────────────────────────────────────────────────
+    if (label === "C-O-D") {
+        const holesVal = String(state.game?.dbGames_Holes || "All 18");
+        wiz.segments = holesVal === "All 18" ? "6" : "3";
+        wiz.rotation = "COD";
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     if (el.wizCarousel) {
-      el.wizCarousel.querySelectorAll(".wizGameCard").forEach(c => c.classList.toggle("selected", c.dataset.label === label));
+        el.wizCarousel.querySelectorAll(".wizGameCard").forEach(c =>
+            c.classList.toggle("selected", c.dataset.label === label)
+        );
     }
     setDirty(true);
     wizUpdateSummary();
     wizCheckComplete();
-  }
+}
 
   // ---- Step 2: Structure ----
   function wizRenderStep2() {
@@ -567,19 +578,38 @@
 
     // Segments chips
     if (el.wizSegChips) {
-      const opts = buildSegmentsOptionsFromHoles();
-      el.wizSegChips.innerHTML = "";
-      const defSeg = defaultSegmentsForLabel(wiz.selectedLabel, String(state.game?.dbGames_Holes || "All 18"));
-      const validVals = opts.map(o => o.value);
-      if (!validVals.includes(wiz.segments)) wiz.segments = validVals.includes(defSeg) ? defSeg : validVals[0];
-      opts.forEach(opt => {
-        const b = document.createElement("button");
-        b.className = "wizChip" + (wiz.segments === opt.value ? " selected" : "");
-        b.dataset.val = opt.value;
-        b.textContent = opt.label;
-        b.addEventListener("click", () => wizSelectSegments(opt.value));
-        el.wizSegChips.appendChild(b);
-      });
+        const opts = buildSegmentsOptionsFromHoles();
+        el.wizSegChips.innerHTML = "";
+        const holesVal = String(state.game?.dbGames_Holes || "All 18");
+        const defSeg = defaultSegmentsForLabel(wiz.selectedLabel, holesVal);
+        const validVals = opts.map(o => o.value);
+        if (!validVals.includes(wiz.segments)) {
+            wiz.segments = validVals.includes(defSeg) ? defSeg : validVals[0];
+        }
+
+        // ── NEW: lock segments for COD ───────────────────────────────────────────
+        const isCOD = (wiz.selectedLabel === "C-O-D");
+        if (isCOD) wiz.segments = defSeg; // enforce regardless of stored value
+        // ────────────────────────────────────────────────────────────────────────
+
+        opts.forEach(opt => {
+            const b = document.createElement("button");
+            b.dataset.val = opt.value;
+            b.textContent = opt.label;
+
+            // ── NEW: locked appearance for COD ──────────────────────────────────
+            if (isCOD && opt.value === defSeg) {
+                b.className = "wizChip locked";
+            } else if (isCOD) {
+                b.className = "wizChip disabled";
+            } else {
+                b.className = "wizChip" + (wiz.segments === opt.value ? " selected" : "");
+                b.addEventListener("click", () => wizSelectSegments(opt.value));
+            }
+            // ────────────────────────────────────────────────────────────────────
+
+            el.wizSegChips.appendChild(b);
+        });
     }
 
     // Rotation chips
@@ -587,20 +617,37 @@
   }
 
   function wizRenderRotChips() {
-    if (!el.wizRotChips) return;
-    const opts = buildRotationOptions(wiz.segments, wiz.competition);
-    el.wizRotChips.innerHTML = "";
-    const validVals = opts.map(o => o.value);
-    if (!validVals.includes(wiz.rotation)) wiz.rotation = validVals[0] || "None";
-    opts.forEach(opt => {
-      const b = document.createElement("button");
-      b.className = "wizChip" + (wiz.rotation === opt.value ? " selected" : "");
-      b.dataset.val = opt.value;
-      b.textContent = opt.label;
-      b.addEventListener("click", () => wizSelectRotation(opt.value));
-      el.wizRotChips.appendChild(b);
-    });
-    wizUpdateRotNote();
+      if (!el.wizRotChips) return;
+      const opts = buildRotationOptions(wiz.segments, wiz.competition);
+      el.wizRotChips.innerHTML = "";
+      const validVals = opts.map(o => o.value);
+      if (!validVals.includes(wiz.rotation)) wiz.rotation = validVals[0] || "None";
+
+      // ── NEW: lock rotation for COD ───────────────────────────────────────────
+      const isCOD = (wiz.selectedLabel === "C-O-D");
+      if (isCOD) wiz.rotation = "COD";
+      // ────────────────────────────────────────────────────────────────────────
+
+      opts.forEach(opt => {
+          const b = document.createElement("button");
+          b.dataset.val = opt.value;
+          b.textContent = opt.label;
+
+          // ── NEW: locked/disabled appearance for COD ──────────────────────────
+          if (isCOD && opt.value === "COD") {
+              b.className = "wizChip locked";
+          } else if (isCOD) {
+              b.className = "wizChip disabled";
+          } else {
+              b.className = "wizChip" + (wiz.rotation === opt.value ? " selected" : "");
+              b.addEventListener("click", () => wizSelectRotation(opt.value));
+          }
+          // ────────────────────────────────────────────────────────────────────
+
+          el.wizRotChips.appendChild(b);
+      });
+
+      wizUpdateRotNote();
   }
 
   function wizUpdateRotNote() {

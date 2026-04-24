@@ -212,14 +212,18 @@ public static function buildEffectiveBaselinePlayers(array $players, array $seat
             return self::buildStandardStrokeAllocationMap($filteredHoles, $playerHC, $strokeMap);
         }
 
-        $workingHC = $playerHC;
-        if ($strokeMode === 'Balanced-Rounded') {
-            $workingHC = round($playerHC / 3.0) * 3.0;
-        }
-
+        // Derive working handicap based on stroke distribution mode:
+        // Balanced (Trimmed) — use raw handicap, remainder will be dropped
+        // Balanced-Rounded   — round to nearest multiple of spin count for exact equal distribution
         $spinDefinitions = self::buildSpinDefinitions($gameRow);
         if (!$spinDefinitions) {
-            return self::buildStandardStrokeAllocationMap($filteredHoles, $workingHC, $strokeMap);
+            return self::buildStandardStrokeAllocationMap($filteredHoles, $playerHC, $strokeMap);
+        }
+
+        $spinCount = count($spinDefinitions);
+        $workingHC = $playerHC;
+        if ($strokeMode === 'Balanced-Rounded') {
+            $workingHC = round($playerHC / (float)$spinCount) * (float)$spinCount;
         }
 
         $isPlus = $workingHC < 0;
@@ -228,9 +232,7 @@ public static function buildEffectiveBaselinePlayers(array $players, array $seat
             return $strokeMap;
         }
 
-        $spinCount = count($spinDefinitions);
         $basePerSpin = intdiv($totalStrokes, $spinCount);
-        $remainder = $totalStrokes % $spinCount;
 
         $holesBySpin = [];
         foreach ($spinDefinitions as $spin) {
@@ -253,27 +255,32 @@ public static function buildEffectiveBaselinePlayers(array $players, array $seat
             }
         }
 
-        if ($remainder > 0) {
-            $alreadyTouched = [];
-            foreach ($strokeMap as $holeNumber => $value) {
-                if ($value !== 0) {
-                    $alreadyTouched[$holeNumber] = true;
+        // Balanced-Rounded only — distribute remainder strokes after rounding.
+        // Balanced (Trimmed) intentionally drops the remainder for clean equal spin allocation.
+        if ($strokeMode === 'Balanced-Rounded') {
+            $remainder = $totalStrokes % $spinCount;
+            if ($remainder > 0) {
+                $alreadyTouched = [];
+                foreach ($strokeMap as $holeNumber => $value) {
+                    if ($value !== 0) {
+                        $alreadyTouched[$holeNumber] = true;
+                    }
                 }
-            }
 
-            $remaining = array_values(array_filter($filteredHoles, static function (array $hole) use ($alreadyTouched): bool {
-                return !isset($alreadyTouched[$hole['Number']]);
-            }));
+                $remaining = array_values(array_filter($filteredHoles, static function (array $hole) use ($alreadyTouched): bool {
+                    return !isset($alreadyTouched[$hole['Number']]);
+                }));
 
-            usort($remaining, static function (array $a, array $b) use ($isPlus): int {
-                return $isPlus ? ($b['Allocation'] <=> $a['Allocation']) : ($a['Allocation'] <=> $b['Allocation']);
-            });
+                usort($remaining, static function (array $a, array $b) use ($isPlus): int {
+                    return $isPlus ? ($b['Allocation'] <=> $a['Allocation']) : ($a['Allocation'] <=> $b['Allocation']);
+                });
 
-            for ($i = 0; $i < $remainder; $i++) {
-                if (!isset($remaining[$i])) {
-                    break;
+                for ($i = 0; $i < $remainder; $i++) {
+                    if (!isset($remaining[$i])) {
+                        break;
+                    }
+                    $strokeMap[$remaining[$i]['Number']] += $isPlus ? -1 : 1;
                 }
-                $strokeMap[$remaining[$i]['Number']] += $isPlus ? -1 : 1;
             }
         }
 
