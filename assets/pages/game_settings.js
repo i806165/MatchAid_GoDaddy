@@ -607,7 +607,7 @@
                || GAME_LABELS[0];
     wiz.selectedLabel     = match.label;
     wiz.selectedFormat    = match.dbFormat;
-    wiz.selectedBasis     = (gameFormatConfig[match.dbFormat] || gameFormatConfig.StrokePlay).basis;
+    wiz.selectedBasis     = match.basis || (gameFormatConfig[match.dbFormat] || gameFormatConfig.StrokePlay).basis;
     wiz.compLock          = match.compLock    || null;
     wiz.scoringSystem     = match.scoringSystem  || null;
     wiz.scoringSystemLock = match.scoringSystemLock || false;
@@ -1296,7 +1296,7 @@
     if (!game) return;
     wiz.selectedLabel     = game.label;
     wiz.selectedFormat    = game.dbFormat;
-    wiz.selectedBasis     = (gameFormatConfig[game.dbFormat] || gameFormatConfig.StrokePlay).basis;
+    wiz.selectedBasis     = game.basis || (gameFormatConfig[game.dbFormat] || gameFormatConfig.StrokePlay).basis;
     wiz.compLock          = game.compLock    || null;
     wiz.scoringSystem     = game.scoringSystem  || null;
     wiz.scoringSystemLock = game.scoringSystemLock || false;

@@ -212,13 +212,13 @@
    ========================================================================== */
 
 .gsWizStableford        { background: var(--surfaceApp); border: 1px solid var(--borderSubtle); border-radius: var(--radiusMd); overflow: hidden; }
-.gsWizStableford__hdr   { background: rgba(0,0,0,.04); padding: 7px 12px; font-size: 10px; font-weight: 900; color: var(--mutedText); letter-spacing: .5px; text-transform: uppercase; }
+.gsWizStableford__hdr   { background: rgba(0,0,0,.04); padding: 7px 12px; font-size: 10px; font-weight: 900; color: var(--ink); letter-spacing: .5px; text-transform: uppercase; opacity: .7; }
 .gsWizStableford__grid  { display: grid; grid-template-columns: repeat(6, 1fr); }
 .wizStableford__cell    { padding: 8px 4px; text-align: center; border-right: 1px solid var(--borderSubtle); border-bottom: 1px solid var(--borderSubtle); }
 .wizStableford__cell:last-child { border-right: none; }
-.wizStableford__rel     { font-size: 9px;  font-weight: 900; color: var(--mutedText); margin-bottom: 2px; }
+.wizStableford__rel     { font-size: 9px;  font-weight: 900; color: var(--ink); margin-bottom: 2px; }
 .wizStableford__pts     { font-size: 15px; font-weight: 900; color: var(--brandPrimary); }
-.wizStableford__name    { font-size: 8px;  font-weight: 700; color: rgba(0,0,0,.3); margin-top: 1px; }
+.wizStableford__name    { font-size: 8px;  font-weight: 800; color: var(--ink); margin-top: 1px; opacity: .6; }
 
 /* ==========================================================================
    WIZARD — Summary panel
