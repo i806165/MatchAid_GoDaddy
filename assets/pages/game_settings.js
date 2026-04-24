@@ -670,13 +670,7 @@
 
     // Next/Save button
     if (el.wizBtnNext) {
-      if (step === totalSteps) {
-        el.wizBtnNext.textContent = "Save Settings";
-        el.wizBtnNext.classList.add("wiz-save");
-      } else {
-        el.wizBtnNext.textContent = "Next →";
-        el.wizBtnNext.classList.remove("wiz-save");
-      }
+        el.wizBtnNext.textContent = (step === totalSteps) ? "Save Settings" : "Next →";
     }
 
     switch (step) {

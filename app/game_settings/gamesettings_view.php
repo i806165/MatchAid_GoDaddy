@@ -273,8 +273,8 @@
 
       <!-- Wizard nav buttons -->
       <div class="gsWizNav">
-        <button class="gsWizNavBtn"                     id="gsWizBtnBack" disabled>&#8592; Back</button>
-        <button class="gsWizNavBtn gsWizNavBtn--primary" id="gsWizBtnNext" disabled>Next &#8594;</button>
+        <button class="btn"          id="gsWizBtnBack" disabled>&#8592; Back</button>
+        <button class="btn btnSecondary" id="gsWizBtnNext" disabled>Next &#8594;</button>
       </div>
 
     </div><!-- /gsWizMain -->

@@ -240,30 +240,6 @@
 
 .gsWizNav { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; gap: 8px; }
 
-.gsWizNavBtn {
-  height: var(--btnHeight); padding: 0 18px;
-  border-radius: var(--controlRadius); border: 1px solid var(--controlBorder);
-  background: var(--bg); color: var(--mutedText);
-  font-family: var(--fontFamilyBase); font-size: 12px; font-weight: 800;
-  cursor: pointer; transition: background 0.12s;
-}
-.gsWizNavBtn:hover:not(:disabled) { background: var(--btnHoverBg); color: var(--ink); }
-.gsWizNavBtn:disabled { opacity: .38; cursor: default; }
-
-.gsWizNavBtn--primary {
-  background: var(--brandPrimary); color: #fff;
-  border-color: var(--brandPrimary); font-weight: 900;
-}
-.gsWizNavBtn--primary:hover:not(:disabled) { background: var(--brandSecondary); }
-
-.gsWizNavBtn--primary.wiz-save {
-  background: var(--btnSecondaryBg); color: var(--btnSecondaryText);
-  border-color: color-mix(in srgb, var(--btnSecondaryBg) 70%, black);
-}
-.gsWizNavBtn--primary.wiz-save:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--btnSecondaryBg) 85%, black);
-}
-
 /* ==========================================================================
    WIZARD — Responsive
    ========================================================================== */
