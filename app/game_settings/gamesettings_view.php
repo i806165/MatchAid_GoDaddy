@@ -52,6 +52,8 @@
           <div class="gsWizCarouselWrap">
             <div class="wizCarousel" id="gsWizCarousel"></div>
           </div>
+           <!-- Game format hint — populated by wizSelectGame() -->
+          <div id="gsWizGameHint" class="gsWizHint"></div>
         </div>
       </div>
 
