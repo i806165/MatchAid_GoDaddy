@@ -71,15 +71,17 @@
     // ── Stroke Play family ──
     { label: "Stroke Play",   dbFormat: "StrokePlay", basis: "Strokes", compLock: null,       scoringSystem: null,            scoringSystemLock: false, bbCount: null, bbCountLock: false },
     { label: "Best Ball",     dbFormat: "StrokePlay", basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2",  bbCountLock: false },
-    { label: "Declare 33/44", dbFormat: "StrokePlay", basis: "Strokes", compLock: null,       scoringSystem: "DeclareManual", scoringSystemLock: true,  bbCount: null, bbCountLock: true  },
-    { label: "Stableford",    dbFormat: "Stableford", basis: "Points",  compLock: null,       scoringSystem: null,            scoringSystemLock: false, bbCount: null, bbCountLock: false },
+    { label: "Declare",       dbFormat: "StrokePlay", basis: "Strokes", compLock: null,       scoringSystem: "DeclareManual", scoringSystemLock: true,  bbCount: null, bbCountLock: true  },
     // ── Match Play family ──
-    { label: "Match Play",    dbFormat: "MatchPlay",  basis: "Holes",   compLock: "PairPair", scoringSystem: null,            scoringSystemLock: false, bbCount: null, bbCountLock: false },
-    { label: "Four Ball",     dbFormat: "MatchPlay",  basis: "Holes",   compLock: "PairPair", scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2",  bbCountLock: false },
     { label: "C-O-D",         dbFormat: "MatchPlay",  basis: "Holes",   compLock: "PairPair", scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2",  bbCountLock: false },
+    { label: "Four Ball",     dbFormat: "MatchPlay",  basis: "Holes",   compLock: "PairPair", scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2",  bbCountLock: false },
+    { label: "Medal Match",   dbFormat: "MatchPlay",  basis: "Strokes", compLock: "PairPair", scoringSystem: null,            scoringSystemLock: false, bbCount: null, bbCountLock: false },
+    { label: "Points Match",  dbFormat: "MatchPlay",  basis: "Points",  compLock: "PairPair", scoringSystem: null,            scoringSystemLock: false, bbCount: null, bbCountLock: false },
+    // ── Points ──
+    { label: "Stableford",    dbFormat: "Stableford", basis: "Points",  compLock: null,       scoringSystem: null,            scoringSystemLock: false, bbCount: null, bbCountLock: false },
     // ── Skins ──
-    { label: "Skins",         dbFormat: "Skins", basis: "Skins", compLock: "PairField", scoringSystem: "BestBall", scoringSystemLock: true, bbCount: "1", bbCountLock: true },
-    { label: "Skins Match",   dbFormat: "Skins", basis: "Skins", compLock: "PairPair",  scoringSystem: "BestBall", scoringSystemLock: true, bbCount: "1", bbCountLock: true },
+    { label: "Skins",         dbFormat: "Skins",      basis: "Skins",   compLock: "PairField", scoringSystem: "BestBall",     scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
+    { label: "Skins Match",   dbFormat: "Skins",      basis: "Skins",   compLock: "PairPair",  scoringSystem: "BestBall",     scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
     // ── Team formats ──
     { label: "Alt-Shot",      dbFormat: "AltShot",    basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
     { label: "Chapman",       dbFormat: "Chapman",    basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
@@ -88,19 +90,20 @@
   ];
 
   const GAME_HINTS = {
-    "Stroke Play":        "Every player counts their own score on every hole. Low total wins.",
-    "Best Ball":          "Each team counts their lowest N scores per hole. Great for mixed-skill groups.",
-    "Declare 33/44":      "Players choose which nine holes count — front, back, or split — at their discretion.",
-    "Stableford":         "Points awarded per hole relative to par. More points wins. Rewards aggressive play.",
-    "Match Play":         "Hole by hole — win the hole, earn a point. Most holes won takes the match.",
-    "Four Ball":          "Two vs. two. Each player plays their own ball — best ball from each side counts per hole.",
-    "C-O-D":              "Cart, Opposite, Driver — partners rotate every six holes across three spins.",
-    "Traditional Skins":  "Every player competes for each hole. Ties carry the skin forward until someone wins it outright.",
-    "Skins Match":        "Two teams compete skin by skin. Ties carry forward within the matchup until won outright.",
-    "Alt-Shot":           "Partners alternate shots on the same ball throughout the round. One score per team per hole.",
-    "Chapman":            "Each player hits a tee shot, then switches — best second shot chosen, alternate shot to finish.",
-    "Scramble":           "All players hit every shot from the best lie. One team score per hole.",
-    "Shamble":            "All players hit tee shots, best drive chosen — each player finishes their own ball from there.",
+    "Stroke Play":   "Every player counts their own score on every hole.",
+    "Best Ball":     "Each team counts their lowest N scores. Fixed count on every hole or vary count per hole.",
+    "Declare":       "Players choose which scores they wish to count on each hole. N scores must be declared by games end.",
+    "Four Ball":     "1 or 2 player teams compete head to head. One best ball from each side wins hole.",
+    "C-O-D":         "Foursomes organized into twosomes, rotating every three/six holes (spins) Carts, Opposites, Drivers.",
+    "Medal Match":   "Two sides compete head to head on total net strokes. Lower cumulative score wins the match.",
+    "Points Match":  "Two sides compete head to head on points. Higher cumulative points wins the match.",
+    "Stableford":    "Points awarded per hole relative to par.",
+    "Skins":         "Players compete for skins against the field. Ties carry forward.",
+    "Skins Match":   "Two teams compete against each other for skins. Ties carry forward.",
+    "Alt-Shot":      "Partners alternate shots on the same ball throughout the round. One score per team per hole.",
+    "Chapman":       "Each player hits a tee shot, then switches — best second shot chosen, alternate shot to finish.",
+    "Scramble":      "All players hit every shot from the best lie. One team score per hole.",
+    "Shamble":       "All players hit tee shots, best drive chosen — each player finishes their own ball from there.",
   };
 
   const WIZ_SYSTEMS = {
