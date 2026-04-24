@@ -3,7 +3,8 @@ declare(strict_types=1);
 // /public_html/services/scoring/service_ScoreSummary.php
 
 require_once __DIR__ . '/service_ScoreCardRotation.php';
-require_once __DIR__ . '/service_CalcSkins.php'; 
+require_once __DIR__ . '/service_CalcSkins.php';
+require_once __DIR__ . '/service_CalcPoints.php';
 
 final class ServiceScoreSummary
 {
@@ -21,7 +22,7 @@ final class ServiceScoreSummary
             : self::buildPairFieldRows($scorecards['rows'] ?? [], $gameRow, $meta);
 
         $scoringBasis = trim((string)($meta['scoringBasis'] ?? $gameRow['dbGames_ScoringBasis'] ?? 'Strokes'));
-        $defaultValueMode = in_array($scoringBasis, ['Holes', 'Skins'], true) ? 'game' : 'net';
+        $defaultValueMode = in_array($scoringBasis, ['Holes', 'Skins', 'Points'], true) ? 'game' : 'net';
 
         return [
             'mode' => 'game',
@@ -149,9 +150,6 @@ final class ServiceScoreSummary
         $basis = strtolower((string)($meta['scoringBasis'] ?? 'Strokes'));
 
         // ── Skins resolution for Traditional Skins (PairField) ───────────────────────
-        // Runs after all pairing rows are built so the full field is available.
-        // Attaches grossSkins and netSkins to each row for rendering alongside
-        // the Gross and Net KPIs on the summary leaderboard.
         if ($basis === 'skins') {
             $skinsResult = self::resolvePairFieldSkins($out, $scorecardRows, $gameRow);
             foreach ($out as &$row) {
@@ -164,6 +162,24 @@ final class ServiceScoreSummary
             foreach ($out as &$row) {
                 $row['grossSkins'] = 0;
                 $row['netSkins']   = 0;
+            }
+            unset($row);
+        }
+        // ─────────────────────────────────────────────────────────────────────────────
+
+        // ── Points resolution for Points (PairField) ─────────────────────────────────
+        if ($basis === 'points') {
+            $pointsResult = self::resolvePairFieldPoints($out, $scorecardRows, $gameRow);
+            foreach ($out as &$row) {
+                $pId = $row['pairingId'];
+                $row['grossPoints'] = $pointsResult['gross'][$pId] ?? ['front' => 0, 'back' => 0, 'total' => 0];
+                $row['netPoints']   = $pointsResult['net'][$pId]   ?? ['front' => 0, 'back' => 0, 'total' => 0];
+            }
+            unset($row);
+        } else {
+            foreach ($out as &$row) {
+                $row['grossPoints'] = ['front' => 0, 'back' => 0, 'total' => 0];
+                $row['netPoints']   = ['front' => 0, 'back' => 0, 'total' => 0];
             }
             unset($row);
         }
@@ -312,9 +328,6 @@ final class ServiceScoreSummary
             $gameKpi = self::buildPairPairGameKpi($leftPlayers, $rightPlayers, $gameRow, $scoringBasis, $scopedHoles);
 
             // ── Skins Match resolution ────────────────────────────────────────────
-            // Each flight is an independent skins matchup. Carryovers are scoped
-            // within the flight only. ServiceCalcSkins receives exactly two pairings
-            // and resolves gross and net skins independently.
             $pairPairSkins = ['gross' => [], 'net' => []];
             if ($isSkins) {
                 $matchPairings = [
@@ -328,6 +341,25 @@ final class ServiceScoreSummary
                     ],
                 ];
                 $pairPairSkins = ServiceCalcSkins::resolveSkins($matchPairings, $scopedHoles);
+            }
+            // ─────────────────────────────────────────────────────────────────────
+
+            // ── Points Match resolution ───────────────────────────────────────────
+            $pairPairPoints = ['gross' => [], 'net' => []];
+            $isPoints = (strtolower($scoringBasis) === 'points');
+            if ($isPoints) {
+                $pointsConfig  = self::parsePointsConfig($gameRow);
+                $matchPairings = [
+                    [
+                        'pairingId' => (string)$leftPairingId,
+                        'holes'     => self::extractHolesForCalc($leftPlayers, $scopedHoles),
+                    ],
+                    [
+                        'pairingId' => (string)$rightPairingId,
+                        'holes'     => self::extractHolesForCalc($rightPlayers, $scopedHoles),
+                    ],
+                ];
+                $pairPairPoints = ServiceCalcPoints::resolvePoints($matchPairings, $scopedHoles, $pointsConfig);
             }
             // ─────────────────────────────────────────────────────────────────────
 
@@ -370,6 +402,8 @@ final class ServiceScoreSummary
                     'gameSegments'    => $gameKpi['left'],
                     'grossSkins'      => $pairPairSkins['gross'][(string)$leftPairingId]  ?? 0,
                     'netSkins'        => $pairPairSkins['net'][(string)$leftPairingId]    ?? 0,
+                    'grossPoints'     => $pairPairPoints['gross'][(string)$leftPairingId] ?? ['front' => 0, 'back' => 0, 'total' => 0],
+                    'netPoints'       => $pairPairPoints['net'][(string)$leftPairingId]   ?? ['front' => 0, 'back' => 0, 'total' => 0],
                 ],
                 'right' => [
                     'flightPos'       => (string)$rightKey,
@@ -384,6 +418,8 @@ final class ServiceScoreSummary
                     'gameSegments'    => $gameKpi['right'],
                     'grossSkins'      => $pairPairSkins['gross'][(string)$rightPairingId] ?? 0,
                     'netSkins'        => $pairPairSkins['net'][(string)$rightPairingId]   ?? 0,
+                    'grossPoints'     => $pairPairPoints['gross'][(string)$rightPairingId] ?? ['front' => 0, 'back' => 0, 'total' => 0],
+                    'netPoints'       => $pairPairPoints['net'][(string)$rightPairingId]   ?? ['front' => 0, 'back' => 0, 'total' => 0],
                 ],
                 'thru' => max(
                     self::deriveThru($leftPlayers, $scopedHoles),
@@ -423,9 +459,9 @@ final class ServiceScoreSummary
     private static function buildPairPairGameKpi(array $leftPlayers, array $rightPlayers, array $gameRow, string $scoringBasis, array $scopedHoles): array
     {
         $basis = trim($scoringBasis);
-        if (!in_array($basis, ['Holes'], true)) {
+        if (!in_array($basis, ['Holes', 'Points'], true)) {
             return [
-                'left' => self::emptyGameSegments(),
+                'left'  => self::emptyGameSegments(),
                 'right' => self::emptyGameSegments(),
             ];
         }
@@ -434,51 +470,36 @@ final class ServiceScoreSummary
             ? 'gross'
             : 'net';
 
-        $left = self::emptyGameSegments();
+        $left  = self::emptyGameSegments();
         $right = self::emptyGameSegments();
-
-        //$carry = 0;
         $holes = $scopedHoles ?: self::holesForGame($gameRow);
 
         foreach ($holes as $holeNumber) {
             $segmentKey = ($holeNumber <= 9) ? 'front' : 'back';
 
-            $leftScore = self::countedSideScoreForHole($leftPlayers, $holeNumber, $metricMode);
+            $leftScore  = self::countedSideScoreForHole($leftPlayers,  $holeNumber, $metricMode);
             $rightScore = self::countedSideScoreForHole($rightPlayers, $holeNumber, $metricMode);
 
-            if ($leftScore === null || $rightScore === null) {
-                continue;
-            }
+            if ($leftScore === null || $rightScore === null) continue;
 
             if ($basis === 'Holes') {
                 if ($leftScore < $rightScore) {
-                    self::bumpGameSegment($left, $segmentKey, 1);
+                    self::bumpGameSegment($left,  $segmentKey,  1);
                     self::bumpGameSegment($right, $segmentKey, -1);
                 } elseif ($rightScore < $leftScore) {
-                    self::bumpGameSegment($left, $segmentKey, -1);
-                    self::bumpGameSegment($right, $segmentKey, 1);
+                    self::bumpGameSegment($left,  $segmentKey, -1);
+                    self::bumpGameSegment($right, $segmentKey,  1);
                 }
-                continue;
             }
-
-            // OLD Skins logic replaced by new service file
-            //$carry++;
-            //if ($leftScore < $rightScore) {
-            //    self::bumpGameSegment($left, $segmentKey, $carry);
-            //    self::bumpGameSegment($right, $segmentKey, -$carry);
-            //    $carry = 0;
-            //} elseif ($rightScore < $leftScore) {
-            //    self::bumpGameSegment($left, $segmentKey, -$carry);
-            //    self::bumpGameSegment($right, $segmentKey, $carry);
-            //    $carry = 0;
-            //}
+            // Points basis: gameKpi segments are driven by pairPairPoints
+            // resolved via ServiceCalcPoints in buildPairPairRows — nothing per-hole here.
         }
 
         self::finalizeGameSegments($left);
         self::finalizeGameSegments($right);
 
         return [
-            'left' => $left,
+            'left'  => $left,
             'right' => $right,
         ];
     }
@@ -853,23 +874,117 @@ final class ServiceScoreSummary
                     continue;
                 }
 
-                $gross = $cell['gross'] ?? null;
-                $net   = $cell['net']   ?? null;
+                $gross     = $cell['gross']     ?? null;
+                $net       = $cell['net']       ?? null;
+                $grossDiff = $cell['diff']      ?? null; // grossDiff stored as 'diff' on hole cell
+                $netDiff   = isset($cell['net'], $cell['par'])
+                    ? ((float)$cell['net'] - (float)($cell['par'] ?? 0))
+                    : null;
 
                 if ($gross === null && $net === null) {
                     continue;
                 }
 
                 $holes[$holeKey] = [
-                    'gross'    => is_numeric($gross) ? (float)$gross : null,
-                    'net'      => is_numeric($net)   ? (float)$net   : null,
-                    'declared' => true,
+                    'gross'     => is_numeric($gross)     ? (float)$gross     : null,
+                    'net'       => is_numeric($net)       ? (float)$net       : null,
+                    'grossDiff' => is_numeric($grossDiff) ? (float)$grossDiff : null,
+                    'netDiff'   => is_numeric($netDiff)   ? (float)$netDiff   : null,
+                    'declared'  => true,
                 ];
-                break; // first declared score per hole per pairing
+                break;
             }
         }
 
         return $holes;
+    }
+
+    /**
+     * Resolve points for all pairings in a PairField game.
+     * Mirrors resolvePairFieldSkins — builds pairings array then calls ServiceCalcPoints.
+     */
+    private static function resolvePairFieldPoints(
+        array $builtRows,
+        array $scorecardRows,
+        array $gameRow
+    ): array {
+        $holes        = self::holesForGame($gameRow);
+        $pointsConfig = self::parsePointsConfig($gameRow);
+        $pairings     = [];
+
+        foreach ($scorecardRows as $scoreRow) {
+            $players = is_array($scoreRow['players'] ?? null) ? $scoreRow['players'] : [];
+            if (!$players) continue;
+
+            $playersByPairing = self::groupPlayersByPairing($players);
+
+            foreach ($playersByPairing as $pairingId => $pairPlayers) {
+                $pairingId = (string)$pairingId;
+                if (!isset($pairings[$pairingId])) {
+                    $pairings[$pairingId] = [
+                        'pairingId' => $pairingId,
+                        'holes'     => [],
+                    ];
+                }
+
+                foreach ($holes as $holeNumber) {
+                    $holeKey = 'h' . $holeNumber;
+                    foreach ($pairPlayers as $player) {
+                        $cell = $player['holes'][$holeKey] ?? null;
+                        if (!is_array($cell) || empty($cell['declared'])) continue;
+
+                        $gross     = $cell['gross'] ?? null;
+                        $net       = $cell['net']   ?? null;
+                        $grossDiff = $cell['diff']  ?? null;
+                        $netDiff   = isset($cell['net'], $cell['par'])
+                            ? ((float)$cell['net'] - (float)($cell['par'] ?? 0))
+                            : null;
+
+                        if ($gross === null && $net === null) continue;
+
+                        $pairings[$pairingId]['holes'][$holeKey] = [
+                            'gross'     => is_numeric($gross)     ? (float)$gross     : null,
+                            'net'       => is_numeric($net)       ? (float)$net       : null,
+                            'grossDiff' => is_numeric($grossDiff) ? (float)$grossDiff : null,
+                            'netDiff'   => is_numeric($netDiff)   ? (float)$netDiff   : null,
+                            'declared'  => true,
+                        ];
+                        break;
+                    }
+                }
+            }
+        }
+
+        return ServiceCalcPoints::resolvePoints(array_values($pairings), $holes, $pointsConfig);
+    }
+
+    /**
+     * Parse dbGames_PointsConfig from the game row.
+     * Supports new envelope format and legacy dbGames_StablefordPoints flat array.
+     * Returns a normalized config array always containing at least 'strategy'.
+     */
+    private static function parsePointsConfig(array $gameRow): array
+    {
+        $default = ['strategy' => 'Stableford', 'values' => []];
+
+        $raw = $gameRow['dbGames_PointsConfig'] ?? $gameRow['dbGames_StablefordPoints'] ?? null;
+
+        if (is_string($raw) && trim($raw) !== '') {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) $raw = $decoded;
+        }
+
+        if (!is_array($raw)) return $default;
+
+        // New envelope: { strategy, values, ... }
+        if (isset($raw['strategy'])) return $raw;
+
+        // Legacy: flat array of stableford rows [{ reltoPar, points }, ...]
+        if (!empty($raw)) {
+            return ['strategy' => 'Stableford', 'values' => $raw];
+        }
+
+        return $default;
     }
 
 }

@@ -834,7 +834,6 @@ final class ServiceScoreCard {
   // ==========================================================================
 
   private static function decorateScoredPlayers(array $gameRow, array $players): array {
-    $stablefordMap = self::parseStablefordMap($gameRow);
     $holes = self::holesForGame($gameRow);
     $out = [];
 
@@ -869,9 +868,8 @@ final class ServiceScoreCard {
         $netDiff = ($net !== null && $par !== null) ? ($net - $par) : null;
 
         $points = null;
-        if (self::deriveScoringBasis($gameRow) === "Points" && $declared && $grossDiff !== null) {
-          $points = self::stablefordPointsForDiff((int)round($grossDiff), $stablefordMap);
-        }
+        // Points are resolved by ServiceCalcPoints in service_ScoreSummary.php
+        // after decoration — not calculated per-player here.
 
         $modeValues["gross"][$holeNumber]     = $gross;
         $modeValues["net"][$holeNumber]       = $net;
