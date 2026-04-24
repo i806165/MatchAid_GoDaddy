@@ -172,14 +172,20 @@ final class ServiceScoreSummary
             $pointsResult = self::resolvePairFieldPoints($out, $scorecardRows, $gameRow);
             foreach ($out as &$row) {
                 $pId = $row['pairingId'];
-                $row['grossPoints'] = $pointsResult['gross'][$pId] ?? ['front' => 0, 'back' => 0, 'total' => 0];
-                $row['netPoints']   = $pointsResult['net'][$pId]   ?? ['front' => 0, 'back' => 0, 'total' => 0];
+                $grossPts = $pointsResult['gross'][$pId] ?? ['front' => 0, 'back' => 0, 'total' => 0];
+                $netPts   = $pointsResult['net'][$pId]   ?? ['front' => 0, 'back' => 0, 'total' => 0];
+                $row['grossPoints']   = $grossPts;
+                $row['netPoints']     = $netPts;
+                // Populate pointsValue/pointsDisplay from net points (matches scoringMethod default)
+                // so comparePairFieldRows and existing gameDisplay logic work correctly
+                $row['pointsValue']   = (float)$netPts['total'];
+                $row['pointsDisplay'] = (string)$netPts['total'];
             }
             unset($row);
         } else {
             foreach ($out as &$row) {
-                $row['grossPoints'] = ['front' => 0, 'back' => 0, 'total' => 0];
-                $row['netPoints']   = ['front' => 0, 'back' => 0, 'total' => 0];
+                $row['grossPoints']   = ['front' => 0, 'back' => 0, 'total' => 0];
+                $row['netPoints']     = ['front' => 0, 'back' => 0, 'total' => 0];
             }
             unset($row);
         }

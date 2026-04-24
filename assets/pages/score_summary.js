@@ -125,13 +125,12 @@
 
   // PairField — total points for the row
   function pairFieldPointsValue(row) {
-    return scoringMethod() === 'ADJ GROSS'
-      ? Number(row?.grossPoints?.total ?? 0)
-      : Number(row?.netPoints?.total   ?? 0);
+    return Number(row?.pointsValue ?? 0);
   }
 
   function pairFieldPointsDisplay(row) {
-    return String(pairFieldPointsValue(row));
+    const v = row?.pointsDisplay;
+    return (v !== undefined && v !== null && v !== '—') ? String(v) : '—';
   }
 
   function headerContextText() {
