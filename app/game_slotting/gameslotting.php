@@ -76,7 +76,7 @@ $maChromeLogoUrl = null;
   <link rel="stylesheet" href="/assets/css/ma_shared.css">
   <link rel="stylesheet" href="/assets/css/game_slotting.css">
 </head>
-<body class="maPage--slotting">
+<body>
   <?php include __DIR__ . "/../../includes/chromeHeader.php"; ?>
   <?php include __DIR__ . "/gameslotting_view.php"; ?>
   <?php include __DIR__ . "/../../includes/chromeFooter.php"; ?>
