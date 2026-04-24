@@ -31,6 +31,60 @@
     { reltoPar:  2, defaultPoints: 0 },
   ];
 
+  // Points strategies available per pairing type.
+  // compFilter: 'PairField' | 'PairPair' | 'both'
+  const POINTS_STRATEGIES = [
+    {
+      strategy:   "Stableford",
+      label:      "Stableford",
+      compFilter: "both",
+      hint:       "Points awarded per hole based on score relative to par.",
+      hasConfig:  true,  // shows the stableford grid
+    },
+    {
+      strategy:   "Nines",
+      label:      "9's",
+      compFilter: "both",
+      hint:       "A pool of 9 points is distributed each hole by finish position within the group.",
+      hasConfig:  true,  // shows nines distribution chips
+    },
+    {
+      strategy:   "LowBallLowTotal",
+      label:      "Low-Ball / Low-Total",
+      compFilter: "PairPair",
+      hint:       "1 point for the side with the lowest individual score, 1 point for the lowest combined team score.",
+      hasConfig:  false,
+    },
+    {
+      strategy:   "LowBallHighBall",
+      label:      "Low-Ball / High-Ball",
+      compFilter: "PairPair",
+      hint:       "1 point for the side with the lowest individual score, 1 point for the side with the lower high score between partners.",
+      hasConfig:  false,
+    },
+    {
+      strategy:   "Vegas",
+      label:      "Vegas",
+      compFilter: "PairPair",
+      hint:       "Each side's scores combine into a two-digit number. The difference between the two numbers determines points won or lost per hole.",
+      hasConfig:  false,
+    },
+    {
+      strategy:   "Chicago",
+      label:      "Chicago",
+      compFilter: "PairField",
+      hint:       "Each player has a points quota based on handicap. The winner is whoever most exceeds their quota.",
+      hasConfig:  false,
+    },
+  ];
+
+  // Nines preset distributions keyed by group size
+  const NINES_PRESETS = {
+    4: [{ label: "5-3-1-0", values: [5, 3, 1, 0] }, { label: "4-3-2-0", values: [4, 3, 2, 0] }],
+    3: [{ label: "4-3-2",   values: [4, 3, 2]     }, { label: "5-3-1",   values: [5, 3, 1]   }],
+    2: [{ label: "5-4",     values: [5, 4]         }, { label: "6-3",     values: [6, 3]      }],
+  };
+
   const gameFormatConfig = {
     StrokePlay: { label: "Stroke Play", basis: "Strokes" },
     Stableford: { label: "Stableford",  basis: "Points"  },
@@ -49,8 +103,8 @@
   })();
 
   const strokeDistOptions = [
-    { label: "Standard stroke allocation",              value: "Standard"         },
-    { label: "Strokes trimmed and distributed to spins",        value: "Balanced"         },
+    { label: "Standard stroke allocation",               value: "Standard"         },
+    { label: "Strokes trimmed and distributed to spins", value: "Balanced"         },
     { label: "Strokes rounded and distributed to spins", value: "Balanced-Rounded" },
   ];
 
@@ -67,43 +121,52 @@
   const rotation1324 = { label: "1324", value: "1324" };
   const rotation1423 = { label: "1423", value: "1423" };
 
+  // compFilter: null = both, "PairField" = field only, "PairPair" = pair only
   const GAME_LABELS = [
-    // ── Stroke Play family ──
-    { label: "Stroke Play",   dbFormat: "StrokePlay", basis: "Strokes", compLock: null,       scoringSystem: null,            scoringSystemLock: false, bbCount: null, bbCountLock: false },
-    { label: "Best Ball",     dbFormat: "StrokePlay", basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2",  bbCountLock: false },
-    { label: "Declare",       dbFormat: "StrokePlay", basis: "Strokes", compLock: null,       scoringSystem: "DeclareManual", scoringSystemLock: true,  bbCount: null, bbCountLock: true  },
-    // ── Match Play family ──
-    { label: "C-O-D",         dbFormat: "MatchPlay",  basis: "Holes",   compLock: "PairPair", scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2",  bbCountLock: false },
-    { label: "Four Ball",     dbFormat: "MatchPlay",  basis: "Holes",   compLock: "PairPair", scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2",  bbCountLock: false },
-    { label: "Medal Match",   dbFormat: "MatchPlay",  basis: "Strokes", compLock: "PairPair", scoringSystem: null,            scoringSystemLock: false, bbCount: null, bbCountLock: false },
-    { label: "Points Match",  dbFormat: "MatchPlay",  basis: "Points",  compLock: "PairPair", scoringSystem: null,            scoringSystemLock: false, bbCount: null, bbCountLock: false },
-    // ── Points ──
-    { label: "Stableford",    dbFormat: "Stableford", basis: "Points",  compLock: null,       scoringSystem: null,            scoringSystemLock: false, bbCount: null, bbCountLock: false },
-    // ── Skins ──
-    { label: "Skins",         dbFormat: "Skins",      basis: "Skins",   compLock: "PairField", scoringSystem: "BestBall",     scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
-    { label: "Skins Match",   dbFormat: "Skins",      basis: "Skins",   compLock: "PairPair",  scoringSystem: "BestBall",     scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
-    // ── Team formats ──
-    { label: "Alt-Shot",      dbFormat: "AltShot",    basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
-    { label: "Chapman",       dbFormat: "Chapman",    basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
-    { label: "Scramble",      dbFormat: "Scramble",   basis: "Strokes", compLock: "PairPair", scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
-    { label: "Shamble",       dbFormat: "Shamble",    basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
+    // ── Stroke Play / Field ──
+    { label: "Stroke Play",  dbFormat: "StrokePlay", basis: "Strokes", compFilter: "PairField", scoringSystem: null,            scoringSystemLock: false, bbCount: null, bbCountLock: false },
+    // ── Points / Field ──
+    { label: "Points",       dbFormat: "Stableford", basis: "Points",  compFilter: "PairField", scoringSystem: null,            scoringSystemLock: false, bbCount: null, bbCountLock: false },
+    // ── Skins / Field ──
+    { label: "Skins",        dbFormat: "Skins",      basis: "Skins",   compFilter: "PairField", scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
+    // ── PairPair ──
+    { label: "Medal Match",  dbFormat: "MatchPlay",  basis: "Strokes", compFilter: "PairPair",  scoringSystem: null,            scoringSystemLock: false, bbCount: null, bbCountLock: false },
+    { label: "Four Ball",    dbFormat: "MatchPlay",  basis: "Holes",   compFilter: "PairPair",  scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2",  bbCountLock: false },
+    { label: "Skins Match",  dbFormat: "Skins",      basis: "Skins",   compFilter: "PairPair",  scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
+    { label: "Points Match", dbFormat: "MatchPlay",  basis: "Points",  compFilter: "PairPair",  scoringSystem: null,            scoringSystemLock: false, bbCount: null, bbCountLock: false },
+    // ── Team formats — available for both ──
+    { label: "Alt-Shot",     dbFormat: "AltShot",    basis: "Strokes", compFilter: null,        scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
+    { label: "Chapman",      dbFormat: "Chapman",    basis: "Strokes", compFilter: null,        scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
+    { label: "Scramble",     dbFormat: "Scramble",   basis: "Strokes", compFilter: null,        scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
+    { label: "Shamble",      dbFormat: "Shamble",    basis: "Strokes", compFilter: null,        scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
+    // ── Legacy / COD — kept for backward compat, hidden from new carousel ──
+    { label: "C-O-D",        dbFormat: "MatchPlay",  basis: "Holes",   compFilter: "PairPair",  scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2",  bbCountLock: false, legacy: true },
+    { label: "Best Ball",    dbFormat: "StrokePlay", basis: "Strokes", compFilter: null,        scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2",  bbCountLock: false, legacy: true },
+    { label: "Declare",      dbFormat: "StrokePlay", basis: "Strokes", compFilter: null,        scoringSystem: "DeclareManual", scoringSystemLock: true,  bbCount: null, bbCountLock: true,  legacy: true },
+    { label: "Stableford",   dbFormat: "Stableford", basis: "Points",  compFilter: null,        scoringSystem: null,            scoringSystemLock: false, bbCount: null, bbCountLock: false,  legacy: true },
   ];
 
   const GAME_HINTS = {
-    "Stroke Play":   "Every player counts their own score on every hole.",
-    "Best Ball":     "Each team counts their lowest N scores. Fixed count on every hole or vary count per hole.",
-    "Declare":       "Players choose which scores they wish to count on each hole. N scores must be declared by games end.",
-    "Four Ball":     "1 or 2 player teams compete head to head. One best ball from each side wins hole.",
-    "C-O-D":         "Foursomes organized into twosomes, rotating every three/six holes (spins) Carts, Opposites, Drivers.",
-    "Medal Match":   "Two sides compete head to head on total net strokes. Lower cumulative score wins the match.",
-    "Points Match":  "Two sides compete head to head on points. Higher cumulative points wins the match.",
-    "Stableford":    "Points awarded per hole relative to par.",
-    "Skins":         "Players compete for skins against the field. Ties carry forward.",
-    "Skins Match":   "Two teams compete against each other for skins. Ties carry forward.",
-    "Alt-Shot":      "Partners alternate shots on the same ball throughout the round. One score per team per hole.",
-    "Chapman":       "Each player hits a tee shot, then switches — best second shot chosen, alternate shot to finish.",
-    "Scramble":      "All players hit every shot from the best lie. One team score per hole.",
-    "Shamble":       "All players hit tee shots, best drive chosen — each player finishes their own ball from there.",
+    "Stroke Play":  "Every player counts their own score on every hole.",
+    "Points":       "Points awarded per hole. Choose your points strategy on the next step.",
+    "Points Match": "Two sides compete head to head on points. Higher cumulative points wins the match.",
+    "Four Ball":    "1 or 2 player teams compete head to head. One best ball from each side wins hole.",
+    "C-O-D":        "Foursomes organized into twosomes, rotating every three/six holes (spins) Carts, Opposites, Drivers.",
+    "Medal Match":  "Two sides compete head to head on total net strokes. Lower cumulative score wins the match.",
+    "Stableford":   "Points awarded per hole relative to par.",
+    "Skins":        "Players compete for skins against the field. Ties carry forward.",
+    "Skins Match":  "Two teams compete against each other for skins. Ties carry forward.",
+    "Alt-Shot":     "Partners alternate shots on the same ball throughout the round. One score per team per hole.",
+    "Chapman":      "Each player hits a tee shot, then switches — best second shot chosen, alternate shot to finish.",
+    "Scramble":     "All players hit every shot from the best lie. One team score per hole.",
+    "Shamble":      "All players hit tee shots, best drive chosen — each player finishes their own ball from there.",
+    "Best Ball":    "Each team counts their lowest N scores. Fixed count on every hole or vary count per hole.",
+    "Declare":      "Players choose which scores they wish to count on each hole. N scores must be declared by games end.",
+  };
+
+  const PAIRING_HINTS = {
+    PairField: "Each pairing competes against the full field of players.",
+    PairPair:  "Each pairing competes head-to-head against one other pairing.",
   };
 
   const WIZ_SYSTEMS = {
@@ -118,21 +181,22 @@
   // =========================================================================
 
   const state = {
-    ggid:            null,
-    game:            null,
-    players:         [],
-    roster:          [],
-    coursePars:      [],
+    ggid:             null,
+    game:             null,
+    players:          [],
+    roster:           [],
+    coursePars:       [],
     courseParsByHole: null,
-    recallTemplates: [],
-    dirty:           false,
-    busy:            false,
-    wizStep:         1,
+    recallTemplates:  [],
+    dirty:            false,
+    busy:             false,
+    wizStep:          1,
   };
 
   // Wizard step state — source of truth for save
   const wiz = {
-    // Step 1
+    // Step 1 — Format
+    pairing:            null,   // 'PairField' | 'PairPair'
     selectedLabel:      null,
     selectedFormat:     null,
     selectedBasis:      null,
@@ -141,16 +205,16 @@
     scoringSystemLock:  false,
     bbCount:            null,
     bbCountLock:        false,
-    // Step 2
-    competition:        null,
     segments:           null,
     rotation:           null,
-    // Step 3
+    // Step 2 — Scoring
     scoringMethod:      null,
     scoringSystemVal:   null,
     bestBall:           null,
     holeDecls:          [],
-    // Step 4
+    pointsStrategy:     null,   // strategy key e.g. 'Stableford', 'Nines', etc.
+    pointsConfig:       null,   // strategy-specific config object
+    // Step 3 — Handicaps
     hcMethod:           null,
     allowance:          null,
     strokeDistribution: null,
@@ -163,64 +227,67 @@
   // =========================================================================
 
   const el = {
-    // Wizard container + steps
     wizContainer: document.getElementById("gsWizardContainer"),
     wizSteps: {
       s1: document.getElementById("gsWizStep1"),
       s2: document.getElementById("gsWizStep2"),
       s3: document.getElementById("gsWizStep3"),
-      s4: document.getElementById("gsWizStep4"),
     },
     wizDots: [
       document.getElementById("gsWizDot1"),
       document.getElementById("gsWizDot2"),
       document.getElementById("gsWizDot3"),
-      document.getElementById("gsWizDot4"),
     ],
 
     // Step 1
-    wizCarousel: document.getElementById("gsWizCarousel"),
+    wizPairingChips:  document.getElementById("gsWizPairingChips"),
+    wizPairingHint:   document.getElementById("gsWizPairingHint"),
+    wizCarousel:      document.getElementById("gsWizCarousel"),
+    wizGroupSegments: document.getElementById("gsWizGroupSegments"),
+    wizGroupRotation: document.getElementById("gsWizGroupRotation"),
+    wizSegChips:      document.getElementById("gsWizSegChips"),
+    wizRotChips:      document.getElementById("gsWizRotChips"),
+    wizRotNote:       document.getElementById("gsWizRotNote"),
 
     // Step 2
-    wizCompChips: document.getElementById("gsWizCompChips"),
-    wizSegChips:  document.getElementById("gsWizSegChips"),
-    wizRotChips:  document.getElementById("gsWizRotChips"),
-    wizRotNote:   document.getElementById("gsWizRotNote"),
+    wizMethodChips:          document.getElementById("gsWizMethodChips"),
+    wizGroupBB:              document.getElementById("gsWizGroupBB"),
+    wizBBChips:              document.getElementById("gsWizBBChips"),
+    wizGroupHoleDecl:        document.getElementById("gsWizGroupHoleDecl"),
+    wizHoleDeclGrid:         document.getElementById("gsWizHoleDeclGrid"),
+    wizGroupPoints:          document.getElementById("gsWizGroupPoints"),
+    wizPointsStrategyChips:  document.getElementById("gsWizPointsStrategyChips"),
+    wizPointsStrategyHint:   document.getElementById("gsWizPointsStrategyHint"),
+    wizGroupStableford:      document.getElementById("gsWizGroupStableford"),
+    wizStablefordGrid:       document.getElementById("gsWizStablefordGrid"),
+    wizGroupNines:           document.getElementById("gsWizGroupNines"),
+    wizNinesChips:           document.getElementById("gsWizNinesChips"),
 
-    // Step 3 (wizSystemList resolved fresh each render)
-    wizBasisVal:       document.getElementById("gsWizBasisVal"),
-    wizMethodChips:    document.getElementById("gsWizMethodChips"),
-    wizGroupBB:        document.getElementById("gsWizGroupBB"),
-    wizBBChips:        document.getElementById("gsWizBBChips"),
-    wizGroupHoleDecl:  document.getElementById("gsWizGroupHoleDecl"),
-    wizHoleDeclGrid:   document.getElementById("gsWizHoleDeclGrid"),
-    wizGroupStableford:document.getElementById("gsWizGroupStableford"),
-    wizStablefordGrid: document.getElementById("gsWizStablefordGrid"),
-
-    // Step 4
-    wizHCMethodChips:  document.getElementById("gsWizHCMethodChips"),
-    wizAllowanceSelect:document.getElementById("gsWizAllowanceSelect"),
-    wizStrokeDistChips:document.getElementById("gsWizStrokeDistChips"),
-    wizStrokeDistNote: document.getElementById("gsWizStrokeDistNote"),
-    wizEffSelect:      document.getElementById("gsWizEffSelect"),
-    wizEffDateWrap:    document.getElementById("gsWizEffDateWrap"),
-    wizEffDateInput:   document.getElementById("gsWizEffDateInput"),
+    // Step 3
+    wizHCMethodChips:   document.getElementById("gsWizHCMethodChips"),
+    wizAllowanceSelect: document.getElementById("gsWizAllowanceSelect"),
+    wizStrokeDistChips: document.getElementById("gsWizStrokeDistChips"),
+    wizStrokeDistNote:  document.getElementById("gsWizStrokeDistNote"),
+    wizEffSelect:       document.getElementById("gsWizEffSelect"),
+    wizEffDateWrap:     document.getElementById("gsWizEffDateWrap"),
+    wizEffDateInput:    document.getElementById("gsWizEffDateInput"),
 
     // Summary panel
     wizSummary: {
-      label:       document.getElementById("gsWizSvLabel"),
-      format:      document.getElementById("gsWizSvFormat"),
-      competition: document.getElementById("gsWizSvCompetition"),
-      segments:    document.getElementById("gsWizSvSegments"),
-      rotation:    document.getElementById("gsWizSvRotation"),
-      basis:       document.getElementById("gsWizSvBasis"),
-      method:      document.getElementById("gsWizSvMethod"),
-      system:      document.getElementById("gsWizSvSystem"),
-      bb:          document.getElementById("gsWizSvBB"),
-      hcmethod:    document.getElementById("gsWizSvHCMethod"),
-      allowance:   document.getElementById("gsWizSvAllowance"),
-      strokedist:  document.getElementById("gsWizSvStrokeDist"),
-      hceff:       document.getElementById("gsWizSvHCEff"),
+      label:          document.getElementById("gsWizSvLabel"),
+      format:         document.getElementById("gsWizSvFormat"),
+      competition:    document.getElementById("gsWizSvCompetition"),
+      segments:       document.getElementById("gsWizSvSegments"),
+      rotation:       document.getElementById("gsWizSvRotation"),
+      basis:          document.getElementById("gsWizSvBasis"),
+      method:         document.getElementById("gsWizSvMethod"),
+      system:         document.getElementById("gsWizSvSystem"),
+      bb:             document.getElementById("gsWizSvBB"),
+      pointsStrategy: document.getElementById("gsWizSvPointsStrategy"),
+      hcmethod:       document.getElementById("gsWizSvHCMethod"),
+      allowance:      document.getElementById("gsWizSvAllowance"),
+      strokedist:     document.getElementById("gsWizSvStrokeDist"),
+      hceff:          document.getElementById("gsWizSvHCEff"),
     },
 
     // Nav buttons
@@ -329,11 +396,101 @@
     let arr = existing;
     if (typeof arr === "string") { try { arr = JSON.parse(arr); } catch (e) { arr = []; } }
     arr = Array.isArray(arr) ? arr : [];
+    // Support both old flat array and new strategy envelope
+    if (arr.strategy === "Stableford" && Array.isArray(arr.values)) arr = arr.values;
     if (!arr.length) return stablefordTemplate.map(r => ({ reltoPar: r.reltoPar, points: r.defaultPoints }));
     return arr.map((r, i) => ({
       reltoPar: Number(r.reltoPar ?? stablefordTemplate[i]?.reltoPar ?? 0),
       points:   Number(r.points   ?? r.defaultPoints ?? stablefordTemplate[i]?.defaultPoints ?? 0),
     }));
+  }
+
+  /**
+   * Parse saved dbGames_PointsConfig into wiz.pointsStrategy + wiz.pointsConfig.
+   * Supports both old flat Stableford array and new strategy envelope.
+   */
+  function parsePointsConfig(raw) {
+    let parsed = raw;
+    if (typeof parsed === "string") {
+      try { parsed = JSON.parse(parsed); } catch (e) { parsed = null; }
+    }
+    if (!parsed) return { strategy: null, config: null };
+
+    // New envelope format: { strategy, values }
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed) && parsed.strategy) {
+      return { strategy: parsed.strategy, config: parsed };
+    }
+
+    // Legacy: flat array of stableford rows
+    if (Array.isArray(parsed) && parsed.length) {
+      return {
+        strategy: "Stableford",
+        config: { strategy: "Stableford", values: parsed },
+      };
+    }
+
+    return { strategy: null, config: null };
+  }
+
+  /**
+   * Build the dbGames_PointsConfig envelope from current wiz state.
+   */
+  function buildPointsConfig() {
+    if (!wiz.pointsStrategy) return null;
+
+    switch (wiz.pointsStrategy) {
+      case "Stableford": {
+        const g = state.game || {};
+        const existingRaw = g.dbGames_PointsConfig ?? g.dbGames_StablefordPoints ?? null;
+        let existingValues = null;
+        if (existingRaw) {
+          const parsed = parsePointsConfig(existingRaw);
+          if (parsed.strategy === "Stableford") existingValues = parsed.config?.values ?? null;
+        }
+        return {
+          strategy: "Stableford",
+          values: normalizeStableford(existingValues),
+        };
+      }
+      case "Nines":
+        return {
+          strategy: "Nines",
+          values: Array.isArray(wiz.pointsConfig?.values) ? wiz.pointsConfig.values : [5, 3, 1, 0],
+        };
+      case "LowBallLowTotal":
+        return { strategy: "LowBallLowTotal", values: { category1: 1, category2: 1 } };
+      case "LowBallHighBall":
+        return { strategy: "LowBallHighBall", values: { category1: 1, category2: 1 } };
+      case "Vegas":
+        return { strategy: "Vegas", values: { pointsPerUnit: 1 } };
+      case "Chicago":
+        return { strategy: "Chicago", values: { quotaMethod: "handicap" } };
+      default:
+        return { strategy: wiz.pointsStrategy, values: wiz.pointsConfig?.values ?? null };
+    }
+  }
+
+  /**
+   * Returns GAME_LABELS filtered to the current pairing strategy.
+   * Legacy entries are excluded from the carousel but used for hydration.
+   */
+  function filteredGameLabels() {
+    const pairing = wiz.pairing || "PairField";
+    return GAME_LABELS.filter(gl => {
+      if (gl.legacy) return false;
+      if (!gl.compFilter) return true;          // 'both' — team formats
+      return gl.compFilter === pairing;
+    });
+  }
+
+  /**
+   * Returns POINTS_STRATEGIES filtered to the current pairing strategy.
+   */
+  function filteredPointsStrategies() {
+    const pairing = wiz.pairing || "PairField";
+    return POINTS_STRATEGIES.filter(ps =>
+      ps.compFilter === "both" || ps.compFilter === pairing
+    );
   }
 
   // =========================================================================
@@ -379,9 +536,9 @@
       ? wiz.holeDecls.map(r => ({ hole: Number(r.hole), count: String(r.count || "0") }))
       : [];
 
-    const stableford = (wiz.selectedBasis === "Points")
-      ? normalizeStableford(g.dbGames_StablefordPoints)
-      : (Array.isArray(g.dbGames_StablefordPoints) ? g.dbGames_StablefordPoints : []);
+    const pointsConfig = (wiz.selectedBasis === "Points")
+      ? buildPointsConfig()
+      : null;
 
     const eff     = wiz.hcEffectivity || "PlayDate";
     const playIso = isoDate(g.dbGames_PlayDate);
@@ -394,7 +551,7 @@
       dbGames_GameFormat:         wiz.selectedFormat         || "StrokePlay",
       dbGames_TOMethod:           String(g.dbGames_TOMethod  || "TeeTimes"),
       dbGames_ScoringBasis:       wiz.selectedBasis          || "Strokes",
-      dbGames_Competition:        wiz.competition            || "PairField",
+      dbGames_Competition:        wiz.pairing                || "PairField",
       dbGames_Segments:           wiz.segments               || "9",
       dbGames_RotationMethod:     wiz.rotation               || "None",
       dbGames_BlindPlayers:       Array.isArray(g.dbGames_BlindPlayers) ? g.dbGames_BlindPlayers : [],
@@ -407,7 +564,7 @@
       dbGames_StrokeDistribution: wiz.strokeDistribution     || "Standard",
       dbGames_HCEffectivity:      eff,
       dbGames_HCEffectivityDate:  effDate,
-      dbGames_StablefordPoints:   stableford,
+      dbGames_PointsConfig:       pointsConfig,              // replaces dbGames_StablefordPoints
       dbGames_HoleDeclaration:    holeDecls,
       dbGames_CustomScores:       g.dbGames_CustomScores     || null,
     };
@@ -443,7 +600,11 @@
   function wizHydrateFromGame() {
     const g = state.game || {};
 
+    // Pairing strategy — derived from dbGames_Competition
+    wiz.pairing = String(g.dbGames_Competition || "PairField");
+
     // Step 1 — match saved format/label to a GAME_LABELS entry
+    // Check all labels including legacy entries for backward compat
     const savedFmt   = String(g.dbGames_GameFormat  || "StrokePlay");
     const savedLabel = String(g.dbGames_GameLabel   || "");
     const match = GAME_LABELS.find(gl => gl.label === savedLabel && gl.dbFormat === savedFmt)
@@ -452,24 +613,28 @@
     wiz.selectedLabel     = match.label;
     wiz.selectedFormat    = match.dbFormat;
     wiz.selectedBasis     = (gameFormatConfig[match.dbFormat] || gameFormatConfig.StrokePlay).basis;
-    wiz.compLock          = match.compLock;
+    wiz.compLock          = match.compLock    || null;
     wiz.scoringSystem     = match.scoringSystem  || null;
     wiz.scoringSystemLock = match.scoringSystemLock || false;
     wiz.bbCount           = match.bbCount        || null;
     wiz.bbCountLock       = match.bbCountLock    || false;
 
+    wiz.segments = String(g.dbGames_Segments       || "9");
+    wiz.rotation = String(g.dbGames_RotationMethod || "None");
+
     // Step 2
-    wiz.competition = String(g.dbGames_Competition    || "PairField");
-    wiz.segments    = String(g.dbGames_Segments       || "9");
-    wiz.rotation    = String(g.dbGames_RotationMethod || "None");
+    wiz.scoringMethod    = String(g.dbGames_ScoringMethod  || "NET");
+    wiz.scoringSystemVal = String(g.dbGames_ScoringSystem  || match.scoringSystem || "BestBall");
+    wiz.bestBall         = String(g.dbGames_BestBall        ?? "2");
+    wiz.holeDecls        = [];
+
+    // Points config — support both new field and legacy field
+    const rawConfig = g.dbGames_PointsConfig ?? g.dbGames_StablefordPoints ?? null;
+    const parsed = parsePointsConfig(rawConfig);
+    wiz.pointsStrategy = parsed.strategy;
+    wiz.pointsConfig   = parsed.config;
 
     // Step 3
-    wiz.scoringMethod   = String(g.dbGames_ScoringMethod  || "NET");
-    wiz.scoringSystemVal= String(g.dbGames_ScoringSystem  || match.scoringSystem || "BestBall");
-    wiz.bestBall        = String(g.dbGames_BestBall        ?? "2");
-    wiz.holeDecls       = [];
-
-    // Step 4
     wiz.hcMethod           = String(g.dbGames_HCMethod           || "CH");
     wiz.allowance          = String(g.dbGames_Allowance           ?? "100");
     wiz.strokeDistribution = String(g.dbGames_StrokeDistribution  || "Standard");
@@ -483,8 +648,9 @@
 
   function wizRenderStep(step) {
     state.wizStep = step;
+    const totalSteps = 3;
 
-    // Progress dots — active only on current step
+    // Progress dots
     el.wizDots.forEach((dot, i) => {
       if (!dot) return;
       const n = i + 1;
@@ -494,7 +660,7 @@
       dot.textContent = "";
     });
 
-    // Show only the current step panel
+    // Show only current step panel
     Object.entries(el.wizSteps).forEach(([key, panel]) => {
       if (!panel) return;
       const n = parseInt(key.replace("s", ""), 10);
@@ -509,7 +675,7 @@
 
     // Next/Save button
     if (el.wizBtnNext) {
-      if (step === 4) {
+      if (step === totalSteps) {
         el.wizBtnNext.textContent = "Save Settings";
         el.wizBtnNext.classList.add("wiz-save");
       } else {
@@ -522,228 +688,151 @@
       case 1: wizRenderStep1(); break;
       case 2: wizRenderStep2(); break;
       case 3: wizRenderStep3(); break;
-      case 4: wizRenderStep4(); break;
     }
 
     wizUpdateSummary();
     wizCheckComplete();
   }
 
-// ---- Step 1: Game Format ----
+  // ---- Step 1: Format — Pairing chips + Carousel + Segments + Rotation ----
   function wizRenderStep1() {
-    if (!el.wizCarousel) return;
-    el.wizCarousel.innerHTML = "";
-    GAME_LABELS.forEach(game => {
-      const card = document.createElement("div");
-      card.className = "wizGameCard" + (wiz.selectedLabel === game.label ? " selected" : "");
-      card.dataset.label = game.label;
-      card.innerHTML = `
-        <div class="wizGameCard__name">${esc(game.label)}</div>
-        <div class="wizGameCard__fmt">${esc(game.dbFormat)}</div>
-        <div class="wizGameCard__fmt">${esc(game.basis)}</div>
-      `;
-      card.addEventListener("click", () => wizSelectGame(game.label));
-      el.wizCarousel.appendChild(card);
-    });
-    wizDragScroll(el.wizCarousel);
-    if (wiz.selectedLabel) {
-      const sel = el.wizCarousel.querySelector(`[data-label="${CSS.escape(wiz.selectedLabel)}"]`);
-      if (sel) sel.scrollIntoView({ block: "nearest", inline: "center" });
+    // Pairing chips
+    if (el.wizPairingChips) {
+      el.wizPairingChips.querySelectorAll(".wizChip").forEach(b => {
+        b.classList.toggle("selected", b.dataset.val === wiz.pairing);
+      });
     }
+    if (el.wizPairingHint) {
+      el.wizPairingHint.textContent = PAIRING_HINTS[wiz.pairing] || "";
+    }
+
+    // Carousel — filtered by pairing
+    if (el.wizCarousel) {
+      el.wizCarousel.innerHTML = "";
+      filteredGameLabels().forEach(game => {
+        const card = document.createElement("div");
+        card.className = "wizGameCard" + (wiz.selectedLabel === game.label ? " selected" : "");
+        card.dataset.label = game.label;
+        card.innerHTML = `
+          <div class="wizGameCard__name">${esc(game.label)}</div>
+          <div class="wizGameCard__fmt">${esc(game.dbFormat)}</div>
+          <div class="wizGameCard__fmt">${esc(game.basis)}</div>
+        `;
+        card.addEventListener("click", () => wizSelectGame(game.label));
+        el.wizCarousel.appendChild(card);
+      });
+      wizDragScroll(el.wizCarousel);
+      if (wiz.selectedLabel) {
+        const sel = el.wizCarousel.querySelector(`[data-label="${CSS.escape(wiz.selectedLabel)}"]`);
+        if (sel) sel.scrollIntoView({ block: "nearest", inline: "center" });
+      }
+    }
+
     const hintEl = document.getElementById("gsWizGameHint");
     if (hintEl) hintEl.textContent = GAME_HINTS[wiz.selectedLabel] || "";
-  }
 
-  function wizSelectGame(label) {
-      const game = GAME_LABELS.find(g => g.label === label);
-      if (!game) return;
-      wiz.selectedLabel     = game.label;
-      wiz.selectedFormat    = game.dbFormat;
-      wiz.selectedBasis     = (gameFormatConfig[game.dbFormat] || gameFormatConfig.StrokePlay).basis;
-      wiz.compLock          = game.compLock;
-      wiz.scoringSystem     = game.scoringSystem  || null;
-      wiz.scoringSystemLock = game.scoringSystemLock || false;
-      wiz.bbCount           = game.bbCount        || null;
-      wiz.bbCountLock       = game.bbCountLock    || false;
+    // Segments + Rotation — PairPair only
+    const isPairPair = (wiz.pairing === "PairPair");
+    show(el.wizGroupSegments, isPairPair);
+    show(el.wizGroupRotation, isPairPair);
 
-      // ── NEW: COD enforcement ──────────────────────────────────────────────────
-      if (label === "C-O-D") {
-          const holesVal = String(state.game?.dbGames_Holes || "All 18");
-          wiz.segments = holesVal === "All 18" ? "6" : "3";
-          wiz.rotation = "COD";
-      }
-      // ─────────────────────────────────────────────────────────────────────────
-
-      const hintEl = document.getElementById("gsWizGameHint");
-      if (hintEl) hintEl.textContent = GAME_HINTS[label] || "";
-
-      if (el.wizCarousel) {
-          el.wizCarousel.querySelectorAll(".wizGameCard").forEach(c =>
-              c.classList.toggle("selected", c.dataset.label === label)
-          );
-      }
-      setDirty(true);
-      wizUpdateSummary();
-      wizCheckComplete();
-  }
-
-  // ---- Step 2: Structure ----
-  function wizRenderStep2() {
-    const lock = wiz.compLock;
-
-    // Competition chips — hide if locked (value still set on wiz.competition)
-    if (el.wizCompChips) {
-      el.wizCompChips.style.display = lock ? "none" : "";
-      if (lock) {
-        wiz.competition = lock;
-      } else {
-        el.wizCompChips.querySelectorAll(".wizChip").forEach(b => {
-          b.classList.toggle("selected", b.dataset.val === wiz.competition);
-          b.classList.remove("locked", "disabled");
-        });
-      }
-    }
-
-    // Segments chips
-    if (el.wizSegChips) {
+    if (isPairPair) {
+      // Segments chips
+      if (el.wizSegChips) {
         const opts = buildSegmentsOptionsFromHoles();
         el.wizSegChips.innerHTML = "";
         const holesVal = String(state.game?.dbGames_Holes || "All 18");
         const defSeg = defaultSegmentsForLabel(wiz.selectedLabel, holesVal);
         const validVals = opts.map(o => o.value);
         if (!validVals.includes(wiz.segments)) {
-            wiz.segments = validVals.includes(defSeg) ? defSeg : validVals[0];
+          wiz.segments = validVals.includes(defSeg) ? defSeg : validVals[0];
         }
-
-        // ── NEW: lock segments for COD ───────────────────────────────────────────
         const isCOD = (wiz.selectedLabel === "C-O-D");
-        if (isCOD) wiz.segments = defSeg; // enforce regardless of stored value
-        // ────────────────────────────────────────────────────────────────────────
+        if (isCOD) wiz.segments = defSeg;
 
         opts.forEach(opt => {
-            const b = document.createElement("button");
-            b.dataset.val = opt.value;
-            b.textContent = opt.label;
-
-            // ── NEW: locked appearance for COD ──────────────────────────────────
-            if (isCOD && opt.value === defSeg) {
-                b.className = "wizChip locked";
-            } else if (isCOD) {
-                b.className = "wizChip disabled";
-            } else {
-                b.className = "wizChip" + (wiz.segments === opt.value ? " selected" : "");
-                b.addEventListener("click", () => wizSelectSegments(opt.value));
-            }
-            // ────────────────────────────────────────────────────────────────────
-
-            el.wizSegChips.appendChild(b);
-        });
-    }
-
-    // Rotation chips
-    wizRenderRotChips();
-  }
-
-  function wizRenderRotChips() {
-      if (!el.wizRotChips) return;
-      const opts = buildRotationOptions(wiz.segments, wiz.competition);
-      el.wizRotChips.innerHTML = "";
-      const validVals = opts.map(o => o.value);
-      if (!validVals.includes(wiz.rotation)) wiz.rotation = validVals[0] || "None";
-
-      // ── NEW: lock rotation for COD ───────────────────────────────────────────
-      const isCOD = (wiz.selectedLabel === "C-O-D");
-      if (isCOD) wiz.rotation = "COD";
-      // ────────────────────────────────────────────────────────────────────────
-
-      opts.forEach(opt => {
           const b = document.createElement("button");
           b.dataset.val = opt.value;
           b.textContent = opt.label;
-
-          // ── NEW: locked/disabled appearance for COD ──────────────────────────
-          if (isCOD && opt.value === "COD") {
-              b.className = "wizChip locked";
+          if (isCOD && opt.value === defSeg) {
+            b.className = "wizChip locked";
           } else if (isCOD) {
-              b.className = "wizChip disabled";
+            b.className = "wizChip disabled";
           } else {
-              b.className = "wizChip" + (wiz.rotation === opt.value ? " selected" : "");
-              b.addEventListener("click", () => wizSelectRotation(opt.value));
+            b.className = "wizChip" + (wiz.segments === opt.value ? " selected" : "");
+            b.addEventListener("click", () => wizSelectSegments(opt.value));
           }
-          // ────────────────────────────────────────────────────────────────────
+          el.wizSegChips.appendChild(b);
+        });
+      }
 
-          el.wizRotChips.appendChild(b);
-      });
+      // Rotation chips
+      wizRenderRotChips();
+    }
+  }
 
-      wizUpdateRotNote();
+  function wizRenderRotChips() {
+    if (!el.wizRotChips) return;
+    const opts = buildRotationOptions(wiz.segments, wiz.pairing);
+    el.wizRotChips.innerHTML = "";
+    const validVals = opts.map(o => o.value);
+    if (!validVals.includes(wiz.rotation)) wiz.rotation = validVals[0] || "None";
+
+    const isCOD = (wiz.selectedLabel === "C-O-D");
+    if (isCOD) wiz.rotation = "COD";
+
+    opts.forEach(opt => {
+      const b = document.createElement("button");
+      b.dataset.val = opt.value;
+      b.textContent = opt.label;
+      if (isCOD && opt.value === "COD") {
+        b.className = "wizChip locked";
+      } else if (isCOD) {
+        b.className = "wizChip disabled";
+      } else {
+        b.className = "wizChip" + (wiz.rotation === opt.value ? " selected" : "");
+        b.addEventListener("click", () => wizSelectRotation(opt.value));
+      }
+      el.wizRotChips.appendChild(b);
+    });
+
+    wizUpdateRotNote();
   }
 
   function wizUpdateRotNote() {
     if (!el.wizRotNote) return;
-    const seg = wiz.segments; const rot = wiz.rotation; const comp = wiz.competition;
-    if (comp === "PairField") { el.wizRotNote.textContent = "Rotation not available for Pair vs. the Field."; return; }
+    const seg = wiz.segments; const rot = wiz.rotation;
+    if (wiz.pairing === "PairField") { el.wizRotNote.textContent = ""; return; }
     if (seg === "9") { el.wizRotNote.textContent = rot !== "None" ? "Partners rotate between the two 9-hole segments." : ""; return; }
     if (seg === "6" || seg === "3") {
       el.wizRotNote.textContent = rot === "COD" ? "COD rotation — partners change each segment." : "Select COD to rotate partners.";
     }
   }
 
-  function wizSelectCompetition(val) {
-    wiz.competition = val;
-    if (el.wizCompChips) el.wizCompChips.querySelectorAll(".wizChip").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
-    wizRenderRotChips();
-    setDirty(true); wizUpdateSummary(); wizCheckComplete();
-  }
-
-  function wizSelectSegments(val) {
-    wiz.segments = val;
-    if (el.wizSegChips) el.wizSegChips.querySelectorAll(".wizChip").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
-    wizRenderRotChips();
-    setDirty(true); wizUpdateSummary(); wizCheckComplete();
-  }
-
-  function wizSelectRotation(val) {
-    wiz.rotation = val;
-    if (el.wizRotChips) el.wizRotChips.querySelectorAll(".wizChip").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
-    wizUpdateRotNote();
-    setDirty(true); wizUpdateSummary(); wizCheckComplete();
-  }
-
-  // ---- Step 3: Scoring ----
-  function wizRenderStep3() {
+  // ---- Step 2: Scoring ----
+  function wizRenderStep2() {
     const fmt = wiz.selectedFormat || "StrokePlay";
-
-    // Basis inline
-    if (el.wizBasisVal) el.wizBasisVal.textContent = wiz.selectedBasis || "Strokes";
-
-    // Stableford preview
-    if (el.wizGroupStableford) {
-      const showSF = (wiz.selectedBasis === "Points");
-      show(el.wizGroupStableford, showSF);
-      if (showSF && el.wizStablefordGrid) {
-        const relLabels = { "-3":"−3","-2":"−2","-1":"−1","0":"E","1":"+1","2":"+2" };
-        el.wizStablefordGrid.innerHTML = "";
-        stablefordTemplate.forEach((row, i) => {
-          const cell = document.createElement("div");
-          cell.className = "wizStableford__cell";
-          cell.innerHTML = `<div class="wizStableford__rel">${relLabels[String(row.reltoPar)] || row.reltoPar}</div><div class="wizStableford__pts">${row.defaultPoints}</div><div class="wizStableford__name">${["Albatross","Eagle","Birdie","Par","Bogey","Dbl Bogey"][i]||""}</div>`;
-          el.wizStablefordGrid.appendChild(cell);
-        });
-      }
-    }
 
     // Method chips
     if (el.wizMethodChips) {
-      el.wizMethodChips.querySelectorAll(".wizChip").forEach(b => b.classList.toggle("selected", b.dataset.val === wiz.scoringMethod));
+      el.wizMethodChips.querySelectorAll(".wizChip").forEach(b =>
+        b.classList.toggle("selected", b.dataset.val === wiz.scoringMethod)
+      );
     }
 
-    // System dropdown — resolved fresh to guarantee <select> reference
+    // System dropdown
     const sysSel = document.getElementById("gsWizSystemList");
     if (sysSel) {
       const locked = wiz.scoringSystemLock;
       const preset = wiz.scoringSystem;
       const teamFmts = ["Scramble", "Shamble", "AltShot", "Chapman"];
-      const avail = teamFmts.includes(fmt) ? ["BestBall"] : ["AllScores", "BestBall", "DeclareHole", "DeclareManual"];
+      const isPoints = (wiz.selectedBasis === "Points");
+      // Points games use BestBall only for system (simplest path)
+      const avail = isPoints
+        ? ["BestBall"]
+        : teamFmts.includes(fmt)
+          ? ["BestBall"]
+          : ["AllScores", "BestBall", "DeclareHole", "DeclareManual"];
       sysSel.innerHTML = "";
       avail.forEach(key => {
         const opt = document.createElement("option");
@@ -800,81 +889,120 @@
       show(el.wizGroupHoleDecl, showHD);
       if (showHD) wizRenderHoleDeclGrid();
     }
-  }
 
-  function wizSelectMethod(val) {
-    wiz.scoringMethod = val;
-    if (el.wizMethodChips) el.wizMethodChips.querySelectorAll(".wizChip").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
-    setDirty(true); wizUpdateSummary(); wizCheckComplete();
-  }
+    // Points Strategy section — only when basis === 'Points'
+    const isPoints = (wiz.selectedBasis === "Points");
+    show(el.wizGroupPoints, isPoints);
 
-  function wizSelectSystem(val) {
-    wiz.scoringSystemVal = val;
-    const sysSel = document.getElementById("gsWizSystemList");
-    if (sysSel && !sysSel.disabled) sysSel.value = val;
-    if (el.wizGroupBB)       show(el.wizGroupBB,       val === "BestBall");
-    if (el.wizGroupHoleDecl) {
-      show(el.wizGroupHoleDecl, val === "DeclareHole");
-      if (val === "DeclareHole") wizRenderHoleDeclGrid();
+    if (isPoints) {
+      wizRenderPointsStrategyChips();
     }
-    setDirty(true); wizUpdateSummary(); wizCheckComplete();
+
+    // Points config sub-sections
+    wizRenderPointsConfigSections();
   }
 
-  function wizSelectBB(val) {
-    wiz.bestBall = val;
-    if (el.wizBBChips) el.wizBBChips.querySelectorAll(".wizChip:not(.locked):not(.disabled)").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
-    setDirty(true); wizUpdateSummary(); wizCheckComplete();
-  }
+  function wizRenderPointsStrategyChips() {
+    if (!el.wizPointsStrategyChips) return;
+    el.wizPointsStrategyChips.innerHTML = "";
+    const strategies = filteredPointsStrategies();
 
-  function wizRenderHoleDeclGrid() {
-    if (!el.wizHoleDeclGrid) return;
-    el.wizHoleDeclGrid.innerHTML = "";
-    const g = state.game || {};
-    const holesVal = String(g.dbGames_Holes || "All 18");
-    let hStart = 1, hEnd = 18;
-    if (holesVal === "F9") { hStart = 1;  hEnd = 9;  }
-    if (holesVal === "B9") { hStart = 10; hEnd = 18; }
-    if (!wiz.holeDecls.length || wiz.holeDecls[0].hole !== hStart) {
-      const defCount = wiz.bestBall || "2";
-      wiz.holeDecls = [];
-      for (let h = hStart; h <= hEnd; h++) wiz.holeDecls.push({ hole: h, count: defCount });
-    }
-    wiz.holeDecls.forEach(row => {
-      const cell = document.createElement("div");
-      cell.className = "wizHoleCell";
-      const lbl = document.createElement("div");
-      lbl.className = "wizHoleCellLabel";
-      const parText = getParTextForHole(row.hole);
-      lbl.textContent = "H" + row.hole;
-      if (parText) {
-        const sub = document.createElement("span");
-        sub.className = "par-text";
-        sub.textContent = parText;
-        lbl.appendChild(sub);
-      }
-      const sel = document.createElement("select");
-      sel.className = "wizHoleCellSelect";
-      sel.setAttribute("aria-label", `Count for Hole ${row.hole}${parText ? " " + parText : ""}`);
-      [0,1,2,3,4].forEach(v => {
-        const o = document.createElement("option");
-        o.value = String(v); o.textContent = String(v);
-        sel.appendChild(o);
-      });
-      sel.value = String(row.count);
-      sel.addEventListener("change", () => { row.count = sel.value; wizUpdateSummary(); });
-      cell.appendChild(lbl);
-      cell.appendChild(sel);
-      el.wizHoleDeclGrid.appendChild(cell);
+    strategies.forEach(ps => {
+      const b = document.createElement("button");
+      b.className = "wizChip" + (wiz.pointsStrategy === ps.strategy ? " selected" : "");
+      b.dataset.val = ps.strategy;
+      b.textContent = ps.label;
+      b.addEventListener("click", () => wizSelectPointsStrategy(ps.strategy));
+      el.wizPointsStrategyChips.appendChild(b);
     });
+
+    // Update hint
+    if (el.wizPointsStrategyHint) {
+      const current = strategies.find(ps => ps.strategy === wiz.pointsStrategy);
+      el.wizPointsStrategyHint.textContent = current?.hint || "";
+    }
   }
 
-  function wizSetAllHoles(val) {
-    wiz.holeDecls.forEach(r => r.count = val);
-    wizRenderHoleDeclGrid();
+  function wizRenderPointsConfigSections() {
+    const strategy = wiz.pointsStrategy;
+
+    // Stableford grid
+    if (el.wizGroupStableford) {
+      const show_ = (strategy === "Stableford");
+      show(el.wizGroupStableford, show_);
+      if (show_ && el.wizStablefordGrid) {
+        const relLabels = { "-3":"−3","-2":"−2","-1":"−1","0":"E","1":"+1","2":"+2" };
+        el.wizStablefordGrid.innerHTML = "";
+        stablefordTemplate.forEach((row, i) => {
+          const cell = document.createElement("div");
+          cell.className = "wizStableford__cell";
+          cell.innerHTML = `
+            <div class="wizStableford__rel">${relLabels[String(row.reltoPar)] || row.reltoPar}</div>
+            <div class="wizStableford__pts">${row.defaultPoints}</div>
+            <div class="wizStableford__name">${["Albatross","Eagle","Birdie","Par","Bogey","Dbl Bogey"][i] || ""}</div>
+          `;
+          el.wizStablefordGrid.appendChild(cell);
+        });
+      }
+    }
+
+    // Nines distribution
+    if (el.wizGroupNines) {
+      const show_ = (strategy === "Nines");
+      show(el.wizGroupNines, show_);
+      if (show_ && el.wizNinesChips) {
+        el.wizNinesChips.innerHTML = "";
+        const presets = NINES_PRESETS[4]; // default to 4-player presets
+        const currentVals = Array.isArray(wiz.pointsConfig?.values) ? wiz.pointsConfig.values : null;
+        const currentKey  = currentVals ? currentVals.join("-") : null;
+
+        presets.forEach(preset => {
+          const b = document.createElement("button");
+          const key = preset.values.join("-");
+          b.className = "wizChip" + (currentKey === key ? " selected" : "");
+          b.dataset.val = key;
+          b.textContent = preset.label;
+          b.addEventListener("click", () => wizSelectNinesPreset(preset.values));
+          el.wizNinesChips.appendChild(b);
+        });
+
+        // Default to first preset if nothing selected
+        if (!currentKey) wizSelectNinesPreset(presets[0].values);
+      }
+    }
   }
 
-  // ---- Step 4: Handicaps ----
-  function wizRenderStep4() {
+  function wizSelectPointsStrategy(strategy) {
+    wiz.pointsStrategy = strategy;
+    wiz.pointsConfig   = null; // reset config when strategy changes
+
+    if (el.wizPointsStrategyChips) {
+      el.wizPointsStrategyChips.querySelectorAll(".wizChip").forEach(b =>
+        b.classList.toggle("selected", b.dataset.val === strategy)
+      );
+    }
+    if (el.wizPointsStrategyHint) {
+      const ps = POINTS_STRATEGIES.find(p => p.strategy === strategy);
+      el.wizPointsStrategyHint.textContent = ps?.hint || "";
+    }
+
+    wizRenderPointsConfigSections();
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
+  }
+
+  function wizSelectNinesPreset(values) {
+    wiz.pointsConfig = { strategy: "Nines", values };
+    if (el.wizNinesChips) {
+      const key = values.join("-");
+      el.wizNinesChips.querySelectorAll(".wizChip").forEach(b =>
+        b.classList.toggle("selected", b.dataset.val === key)
+      );
+    }
+    setDirty(true); wizCheckComplete();
+  }
+
+  // ---- Step 3: Handicaps ----
+  function wizRenderStep3() {
     const isAdjGross = (wiz.scoringMethod === "ADJ GROSS");
 
     // HC Method chips
@@ -960,13 +1088,176 @@
     const holesVal = String(state.game?.dbGames_Holes || "All 18");
     const totalHoles = (holesVal === "F9" || holesVal === "B9") ? 9 : 18;
     const spinCount = seg > 0 ? Math.round(totalHoles / seg) : 3;
-
     const hints = {
       Standard:           "Use standard hole handicaps.",
       Balanced:           "Strokes trimmed and distributed evenly across spins.",
       "Balanced-Rounded": `Player handicaps are rounded to nearest multiple of ${spinCount} and distributed evenly across spins.`,
     };
     el.wizStrokeDistNote.textContent = hints[val] || "";
+  }
+
+  // =========================================================================
+  // WIZARD — ACTION HANDLERS
+  // =========================================================================
+
+  function wizSelectPairing(val) {
+    wiz.pairing = val;
+
+    // If current game label not valid for new pairing, reset it
+    const valid = filteredGameLabels();
+    if (!valid.find(gl => gl.label === wiz.selectedLabel)) {
+      const first = valid[0];
+      if (first) {
+        wiz.selectedLabel     = first.label;
+        wiz.selectedFormat    = first.dbFormat;
+        wiz.selectedBasis     = (gameFormatConfig[first.dbFormat] || gameFormatConfig.StrokePlay).basis;
+        wiz.compLock          = first.compLock    || null;
+        wiz.scoringSystem     = first.scoringSystem  || null;
+        wiz.scoringSystemLock = first.scoringSystemLock || false;
+        wiz.bbCount           = first.bbCount        || null;
+        wiz.bbCountLock       = first.bbCountLock    || false;
+      }
+    }
+
+    // Reset points strategy if it's no longer valid for new pairing
+    if (wiz.pointsStrategy) {
+      const validStrategies = filteredPointsStrategies();
+      if (!validStrategies.find(ps => ps.strategy === wiz.pointsStrategy)) {
+        wiz.pointsStrategy = null;
+        wiz.pointsConfig   = null;
+      }
+    }
+
+    // Re-render Step 1 in place
+    wizRenderStep1();
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
+  }
+
+  function wizSelectGame(label) {
+    const game = GAME_LABELS.find(g => g.label === label);
+    if (!game) return;
+    wiz.selectedLabel     = game.label;
+    wiz.selectedFormat    = game.dbFormat;
+    wiz.selectedBasis     = (gameFormatConfig[game.dbFormat] || gameFormatConfig.StrokePlay).basis;
+    wiz.compLock          = game.compLock    || null;
+    wiz.scoringSystem     = game.scoringSystem  || null;
+    wiz.scoringSystemLock = game.scoringSystemLock || false;
+    wiz.bbCount           = game.bbCount        || null;
+    wiz.bbCountLock       = game.bbCountLock    || false;
+
+    // COD enforcement
+    if (label === "C-O-D") {
+      const holesVal = String(state.game?.dbGames_Holes || "All 18");
+      wiz.segments = holesVal === "All 18" ? "6" : "3";
+      wiz.rotation = "COD";
+    }
+
+    // Reset points strategy if basis changed away from Points
+    if (wiz.selectedBasis !== "Points") {
+      wiz.pointsStrategy = null;
+      wiz.pointsConfig   = null;
+    }
+
+    const hintEl = document.getElementById("gsWizGameHint");
+    if (hintEl) hintEl.textContent = GAME_HINTS[label] || "";
+
+    if (el.wizCarousel) {
+      el.wizCarousel.querySelectorAll(".wizGameCard").forEach(c =>
+        c.classList.toggle("selected", c.dataset.label === label)
+      );
+    }
+
+    // Re-render segments/rotation if visible
+    if (wiz.pairing === "PairPair") {
+      if (el.wizSegChips) wizRenderStep1();
+    }
+
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
+  }
+
+  function wizSelectSegments(val) {
+    wiz.segments = val;
+    if (el.wizSegChips) el.wizSegChips.querySelectorAll(".wizChip").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
+    wizRenderRotChips();
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
+  }
+
+  function wizSelectRotation(val) {
+    wiz.rotation = val;
+    if (el.wizRotChips) el.wizRotChips.querySelectorAll(".wizChip").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
+    wizUpdateRotNote();
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
+  }
+
+  function wizSelectMethod(val) {
+    wiz.scoringMethod = val;
+    if (el.wizMethodChips) el.wizMethodChips.querySelectorAll(".wizChip").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
+  }
+
+  function wizSelectSystem(val) {
+    wiz.scoringSystemVal = val;
+    const sysSel = document.getElementById("gsWizSystemList");
+    if (sysSel && !sysSel.disabled) sysSel.value = val;
+    if (el.wizGroupBB)       show(el.wizGroupBB,       val === "BestBall");
+    if (el.wizGroupHoleDecl) {
+      show(el.wizGroupHoleDecl, val === "DeclareHole");
+      if (val === "DeclareHole") wizRenderHoleDeclGrid();
+    }
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
+  }
+
+  function wizSelectBB(val) {
+    wiz.bestBall = val;
+    if (el.wizBBChips) el.wizBBChips.querySelectorAll(".wizChip:not(.locked):not(.disabled)").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
+  }
+
+  function wizRenderHoleDeclGrid() {
+    if (!el.wizHoleDeclGrid) return;
+    el.wizHoleDeclGrid.innerHTML = "";
+    const g = state.game || {};
+    const holesVal = String(g.dbGames_Holes || "All 18");
+    let hStart = 1, hEnd = 18;
+    if (holesVal === "F9") { hStart = 1;  hEnd = 9;  }
+    if (holesVal === "B9") { hStart = 10; hEnd = 18; }
+    if (!wiz.holeDecls.length || wiz.holeDecls[0].hole !== hStart) {
+      const defCount = wiz.bestBall || "2";
+      wiz.holeDecls = [];
+      for (let h = hStart; h <= hEnd; h++) wiz.holeDecls.push({ hole: h, count: defCount });
+    }
+    wiz.holeDecls.forEach(row => {
+      const cell = document.createElement("div");
+      cell.className = "wizHoleCell";
+      const lbl = document.createElement("div");
+      lbl.className = "wizHoleCellLabel";
+      const parText = getParTextForHole(row.hole);
+      lbl.textContent = "H" + row.hole;
+      if (parText) {
+        const sub = document.createElement("span");
+        sub.className = "par-text";
+        sub.textContent = parText;
+        lbl.appendChild(sub);
+      }
+      const sel = document.createElement("select");
+      sel.className = "wizHoleCellSelect";
+      sel.setAttribute("aria-label", `Count for Hole ${row.hole}${parText ? " " + parText : ""}`);
+      [0,1,2,3,4].forEach(v => {
+        const o = document.createElement("option");
+        o.value = String(v); o.textContent = String(v);
+        sel.appendChild(o);
+      });
+      sel.value = String(row.count);
+      sel.addEventListener("change", () => { row.count = sel.value; wizUpdateSummary(); });
+      cell.appendChild(lbl);
+      cell.appendChild(sel);
+      el.wizHoleDeclGrid.appendChild(cell);
+    });
+  }
+
+  function wizSetAllHoles(val) {
+    wiz.holeDecls.forEach(r => r.count = val);
+    wizRenderHoleDeclGrid();
   }
 
   function wizSelectHCMethod(val) {
@@ -1012,19 +1303,21 @@
       el.classList.toggle("empty",  isEmpty);
       el.classList.toggle("forced", !isEmpty && empty === false);
     }
-    sv(s.label,       wiz.selectedLabel,     true);
-    sv(s.format,      wiz.selectedFormat,    true);
-    sv(s.competition, wiz.competition,       true);
-    sv(s.segments,    wiz.segments ? wiz.segments + "'s" : null, true);
-    sv(s.rotation,    wiz.rotation,          true);
-    sv(s.basis,       wiz.selectedBasis,     false);
-    sv(s.method,      wiz.scoringMethod,     true);
-    sv(s.system,      wiz.scoringSystemVal ? (WIZ_SYSTEMS[wiz.scoringSystemVal]?.label || wiz.scoringSystemVal) : null, true);
-    sv(s.bb,          wiz.scoringSystemVal === "BestBall" ? wiz.bestBall : null, true);
-    sv(s.hcmethod,    wiz.hcMethod,          true);
-    sv(s.allowance,   wiz.allowance ? wiz.allowance + "%" : null, true);
-    sv(s.strokedist,  wiz.strokeDistribution, true);
-    sv(s.hceff,       wiz.hcEffectivity,     true);
+    sv(s.label,          wiz.selectedLabel,     true);
+    sv(s.format,         wiz.selectedFormat,    true);
+    sv(s.competition,    wiz.pairing,           true);
+    sv(s.segments,       wiz.pairing === "PairPair" && wiz.segments ? wiz.segments + "'s" : null, true);
+    sv(s.rotation,       wiz.pairing === "PairPair" ? wiz.rotation : null, true);
+    sv(s.basis,          wiz.selectedBasis,     false);
+    sv(s.method,         wiz.scoringMethod,     true);
+    sv(s.system,         wiz.scoringSystemVal ? (WIZ_SYSTEMS[wiz.scoringSystemVal]?.label || wiz.scoringSystemVal) : null, true);
+    sv(s.bb,             wiz.scoringSystemVal === "BestBall" ? wiz.bestBall : null, true);
+    const psLabel = wiz.pointsStrategy ? (POINTS_STRATEGIES.find(p => p.strategy === wiz.pointsStrategy)?.label || wiz.pointsStrategy) : null;
+    sv(s.pointsStrategy, wiz.selectedBasis === "Points" ? psLabel : null, true);
+    sv(s.hcmethod,       wiz.hcMethod,          true);
+    sv(s.allowance,      wiz.allowance ? wiz.allowance + "%" : null, true);
+    sv(s.strokedist,     wiz.strokeDistribution, true);
+    sv(s.hceff,          wiz.hcEffectivity,     true);
   }
 
   // =========================================================================
@@ -1035,15 +1328,21 @@
     if (!el.wizBtnNext) return;
     let ok = false;
     switch (state.wizStep) {
-      case 1: ok = !!wiz.selectedLabel; break;
-      case 2: ok = !!(wiz.competition && wiz.segments && wiz.rotation !== null); break;
-      case 3: {
-        const bbOk = wiz.scoringSystemVal !== "BestBall"    || !!wiz.bestBall;
-        const hdOk = wiz.scoringSystemVal !== "DeclareHole" || wiz.holeDecls.length > 0;
-        ok = !!(wiz.scoringMethod && wiz.scoringSystemVal && bbOk && hdOk);
+      case 1:
+        ok = !!(wiz.pairing && wiz.selectedLabel);
+        // PairPair also needs segments and rotation
+        if (ok && wiz.pairing === "PairPair") {
+          ok = !!(wiz.segments && wiz.rotation !== null);
+        }
+        break;
+      case 2: {
+        const bbOk    = wiz.scoringSystemVal !== "BestBall"    || !!wiz.bestBall;
+        const hdOk    = wiz.scoringSystemVal !== "DeclareHole" || wiz.holeDecls.length > 0;
+        const ptsOk   = wiz.selectedBasis !== "Points"         || !!wiz.pointsStrategy;
+        ok = !!(wiz.scoringMethod && wiz.scoringSystemVal && bbOk && hdOk && ptsOk);
         break;
       }
-      case 4: {
+      case 3: {
         const dateOk = wiz.hcEffectivity !== "Date" || !!wiz.hcEffectivityDate;
         ok = !!(wiz.hcMethod && wiz.allowance && wiz.strokeDistribution && wiz.hcEffectivity && dateOk);
         break;
@@ -1057,7 +1356,7 @@
   // =========================================================================
 
   function wizGoNext() {
-    if (state.wizStep === 4) {
+    if (state.wizStep === 3) {
       doSave();
     } else {
       wizRenderStep(state.wizStep + 1);
@@ -1069,7 +1368,7 @@
   }
 
   function wizGoToStep(n) {
-    if (n >= 1 && n <= 4) wizRenderStep(n);
+    if (n >= 1 && n <= 3) wizRenderStep(n);
   }
 
   // =========================================================================
@@ -1111,21 +1410,22 @@
     if (carouselRight) carouselRight.addEventListener("click", () => wizScrollCarousel(1));
 
     window.gsWiz = {
-      selectGame:        wizSelectGame,
-      selectCompetition: wizSelectCompetition,
-      selectSegments:    wizSelectSegments,
-      selectRotation:    wizSelectRotation,
-      selectMethod:      wizSelectMethod,
-      selectSystem:      wizSelectSystem,
-      selectBB:          wizSelectBB,
-      setAllHoles:       wizSetAllHoles,
-      selectHCMethod:    wizSelectHCMethod,
-      selectAllowance:   wizSelectAllowance,
-      selectStrokeDist:  wizSelectStrokeDist,
-      selectEffectivity: wizSelectEffectivity,
-      onEffDateChange:   wizOnEffDateChange,
-      scrollCarousel:    wizScrollCarousel,
-      goToStep:          wizGoToStep,
+      selectPairing:         wizSelectPairing,
+      selectGame:            wizSelectGame,
+      selectSegments:        wizSelectSegments,
+      selectRotation:        wizSelectRotation,
+      selectMethod:          wizSelectMethod,
+      selectSystem:          wizSelectSystem,
+      selectBB:              wizSelectBB,
+      setAllHoles:           wizSetAllHoles,
+      selectPointsStrategy:  wizSelectPointsStrategy,
+      selectHCMethod:        wizSelectHCMethod,
+      selectAllowance:       wizSelectAllowance,
+      selectStrokeDist:      wizSelectStrokeDist,
+      selectEffectivity:     wizSelectEffectivity,
+      onEffDateChange:       wizOnEffDateChange,
+      scrollCarousel:        wizScrollCarousel,
+      goToStep:              wizGoToStep,
     };
   }
 
@@ -1139,13 +1439,13 @@
       console.error("Missing or invalid __MA_INIT__ payload.", init);
       return false;
     }
-    state.ggid           = init.ggid ?? init.GGID ?? null;
-    state.game           = init.game || null;
-    state.players        = Array.isArray(init.players)         ? init.players         : [];
-    state.roster         = Array.isArray(init.roster)          ? init.roster          : state.players;
-    state.coursePars     = Array.isArray(init.coursePars)      ? init.coursePars      : [];
+    state.ggid             = init.ggid ?? init.GGID ?? null;
+    state.game             = init.game || null;
+    state.players          = Array.isArray(init.players)          ? init.players          : [];
+    state.roster           = Array.isArray(init.roster)           ? init.roster           : state.players;
+    state.coursePars       = Array.isArray(init.coursePars)       ? init.coursePars       : [];
     state.courseParsByHole = buildCourseParsByHole(state.coursePars);
-    state.recallTemplates  = Array.isArray(init.recallTemplates) ? init.recallTemplates : [];
+    state.recallTemplates  = Array.isArray(init.recallTemplates)  ? init.recallTemplates  : [];
     return true;
   }
 

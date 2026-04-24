@@ -980,7 +980,7 @@ final class ServiceScoreCard {
 
   private static function parseStablefordMap(array $gameRow): array {
     $default = [-3 => 5, -2 => 4, -1 => 3, 0 => 2, 1 => 1, 2 => 0];
-    $raw = $gameRow["dbGames_StablefordPoints"] ?? null;
+    $raw = $gameRow["dbGames_PointsConfig"] ?? null;
 
     if (is_string($raw) && trim($raw) !== "") {
       $decoded = json_decode($raw, true);

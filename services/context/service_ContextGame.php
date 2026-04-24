@@ -303,8 +303,8 @@ final class ServiceContextGame
       if (!isset($record["dbGames_HoleDeclaration"]) || !is_array($record["dbGames_HoleDeclaration"])) {
         $record["dbGames_HoleDeclaration"] = [];
       }
-      if (!isset($record["dbGames_StablefordPoints"]) || !is_array($record["dbGames_StablefordPoints"])) {
-        $record["dbGames_StablefordPoints"] = [];
+      if (!isset($record["dbGames_PointsConfig"]) || !is_array($record["dbGames_PointsConfig"])) {
+        $record["dbGames_PointsConfig"] = [];
       }
 
       // ---- Nullable / derived defaults ----

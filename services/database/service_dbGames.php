@@ -313,7 +313,7 @@ public static function queryGames(array $args): array {
       "dbGames_PlayerDeclaration", "dbGames_HCMethod", "dbGames_Allowance",
       "dbGames_StrokeDistribution", "dbGames_HCEffectivity", "dbGames_HCEffectivityDate",
       // Array fields (will be json_encoded)
-      "dbGames_BlindPlayers", "dbGames_StablefordPoints", "dbGames_HoleDeclaration",
+      "dbGames_BlindPlayers", "dbGames_PointsConfig", "dbGames_HoleDeclaration",
       "dbGames_CustomScores"
     ];
 
@@ -443,7 +443,7 @@ public static function queryGames(array $args): array {
     $g["dbGames_StrokeDistribution"] = $g["dbGames_StrokeDistribution"] ?? "Standard";
     $g["dbGames_BlindPlayers"] = $g["dbGames_BlindPlayers"] ?? "[]";
     $g["dbGames_HoleDeclaration"] = $g["dbGames_HoleDeclaration"] ?? "[]";
-    $g["dbGames_StablefordPoints"] = $g["dbGames_StablefordPoints"] ?? "[]";
+    $g["dbGames_PointsConfig"] = $g["dbGames_PointsConfig"] ?? "[]";
     $g["dbGames_TeeTimeList"] = $g["dbGames_TeeTimeList"] ?? "[]";
     $g["dbGames_CustomScores"] = $g["dbGames_CustomScores"] ?? "[]";
 

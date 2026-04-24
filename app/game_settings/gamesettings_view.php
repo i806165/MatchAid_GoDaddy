@@ -4,7 +4,7 @@
 
 <div class="maControlArea">
 
-  <!-- Wizard progress strip -->
+  <!-- Wizard progress strip — 3 steps -->
   <div class="gsWizProgress hidden" id="gsWizProgress">
     <div class="gsWizStep active" onclick="window.gsWiz && window.gsWiz.goToStep(1)">
       <div class="gsWizDot" id="gsWizDot1"></div>
@@ -12,14 +12,10 @@
     </div>
     <div class="gsWizStep" onclick="window.gsWiz && window.gsWiz.goToStep(2)">
       <div class="gsWizDot" id="gsWizDot2"></div>
-      <div class="gsWizStepLabel">Structure</div>
+      <div class="gsWizStepLabel">Scoring</div>
     </div>
     <div class="gsWizStep" onclick="window.gsWiz && window.gsWiz.goToStep(3)">
       <div class="gsWizDot" id="gsWizDot3"></div>
-      <div class="gsWizStepLabel">Scoring</div>
-    </div>
-    <div class="gsWizStep" onclick="window.gsWiz && window.gsWiz.goToStep(4)">
-      <div class="gsWizDot" id="gsWizDot4"></div>
       <div class="gsWizStepLabel">Handicaps</div>
     </div>
   </div>
@@ -35,12 +31,29 @@
     <!-- ── MAIN STEP AREA ── -->
     <div class="gsWizMain">
 
-      <!-- STEP 1: Game Format -->
+      <!-- ============================================================
+           STEP 1: Format — Pairing Strategy + Game Carousel
+                   + Segments + Rotation (PairPair only)
+           ============================================================ -->
       <div id="gsWizStep1" class="gsWizStepPanel maCard">
         <header class="maCard__hdr">
-          <div class="maCard__title">STEP 1 OF 4 &nbsp;·&nbsp; GAME FORMAT</div>
+          <div class="maCard__title">STEP 1 OF 3 &nbsp;·&nbsp; GAME FORMAT</div>
         </header>
         <div class="maCard__body">
+
+          <!-- Pairing Strategy -->
+          <div class="gsWizFieldGroup">
+            <div class="gsWizEyebrow">How are players paired?</div>
+            <div class="wizChips" id="gsWizPairingChips">
+              <button class="wizChip" data-val="PairField" onclick="window.gsWiz.selectPairing('PairField')">Pair vs. Field</button>
+              <button class="wizChip" data-val="PairPair"  onclick="window.gsWiz.selectPairing('PairPair')">Pair vs. Pair</button>
+            </div>
+            <div class="gsWizHint" id="gsWizPairingHint"></div>
+          </div>
+
+          <div class="gsWizDivider"></div>
+
+          <!-- Game Format Carousel -->
           <div class="gsWizEyebrow">What kind of game are you running?</div>
           <div class="gsWizCarouselHeader">
             <span class="gsWizCarouselHint">Scroll or swipe to see all formats</span>
@@ -52,60 +65,39 @@
           <div class="gsWizCarouselWrap">
             <div class="wizCarousel" id="gsWizCarousel"></div>
           </div>
-           <!-- Game format hint — populated by wizSelectGame() -->
+          <!-- Game format hint — populated by wizSelectGame() -->
           <div id="gsWizGameHint" class="gsWizHint"></div>
-        </div>
-      </div>
 
-      <!-- STEP 2: Competition Structure -->
-      <div id="gsWizStep2" class="gsWizStepPanel maCard hidden">
-        <header class="maCard__hdr">
-          <div class="maCard__title">STEP 2 OF 4 &nbsp;·&nbsp; COMPETITION STRUCTURE</div>
-        </header>
-        <div class="maCard__body">
-          <div class="gsWizEyebrow">How is your game structured?</div>
-
-          <div class="gsWizFieldGroup">
-            <div class="gsWizFieldLabel">Competition</div>
-            <div class="wizChips" id="gsWizCompChips">
-              <button class="wizChip" data-val="PairPair"  onclick="window.gsWiz.selectCompetition('PairPair')">Pair vs. Pair</button>
-              <button class="wizChip" data-val="PairField" onclick="window.gsWiz.selectCompetition('PairField')">Pair vs. the Field</button>
-            </div>
-            <div class="gsWizHint">Pair vs. Pair pits a pair directly against another pair in a head to head match. Pair vs. the Field pits each pair against the field of all paired players.</div>
-          </div>
-
-          <div class="gsWizDivider"></div>
-
-          <div class="gsWizFieldGroup">
+          <!-- Segments — PairPair only -->
+          <div class="gsWizFieldGroup hidden" id="gsWizGroupSegments">
+            <div class="gsWizDivider"></div>
             <div class="gsWizFieldLabel">Segments</div>
             <div class="wizChips" id="gsWizSegChips"></div>
             <div class="gsWizHint">Segments split the round into independent scoring periods. 3's play three 3-hole segments (9-hole games only). 6's plays three 6-hole segments and 9's plays as two 9-hole segments (18 hole games).</div>
           </div>
 
-          <div class="gsWizDivider"></div>
-
-          <div class="gsWizFieldGroup">
+          <!-- Rotation Method — PairPair only -->
+          <div class="gsWizFieldGroup hidden" id="gsWizGroupRotation">
+            <div class="gsWizDivider"></div>
             <div class="gsWizFieldLabel">Rotation Method</div>
             <div class="wizChips" id="gsWizRotChips"></div>
             <div class="gsWizCascadeNote" id="gsWizRotNote"></div>
           </div>
+
         </div>
       </div>
 
-      <!-- STEP 3: Scoring -->
-      <div id="gsWizStep3" class="gsWizStepPanel maCard hidden">
+      <!-- ============================================================
+           STEP 2: Scoring — Method, System, Best Ball, Points Strategy
+           ============================================================ -->
+      <div id="gsWizStep2" class="gsWizStepPanel maCard hidden">
         <header class="maCard__hdr">
-          <div class="maCard__title">STEP 3 OF 4 &nbsp;·&nbsp; SCORING</div>
+          <div class="maCard__title">STEP 2 OF 3 &nbsp;·&nbsp; SCORING</div>
         </header>
         <div class="maCard__body">
           <div class="gsWizEyebrow">How is the game scored?</div>
 
-          <div class="gsWizFieldGroup">
-            <div class="gsWizFieldLabel">Scoring Basis &nbsp;<span id="gsWizBasisVal" class="gsWizBasisInline">Strokes</span></div>
-          </div>
-
-          <div class="gsWizDivider"></div>
-
+          <!-- Scoring Method -->
           <div class="gsWizFieldGroup">
             <div class="gsWizFieldLabel">Scoring Method</div>
             <div class="wizChips" id="gsWizMethodChips">
@@ -116,17 +108,20 @@
 
           <div class="gsWizDivider"></div>
 
+          <!-- Scoring System -->
           <div class="gsWizFieldGroup">
             <div class="gsWizFieldLabel">Scoring System</div>
             <select class="maTextInput gsWizSelect" id="gsWizSystemList"></select>
           </div>
 
+          <!-- Best Ball Count — conditional -->
           <div class="gsWizFieldGroup hidden" id="gsWizGroupBB">
             <div class="gsWizDivider"></div>
             <div class="gsWizFieldLabel">Best Ball Count</div>
             <div class="wizChips" id="gsWizBBChips"></div>
           </div>
 
+          <!-- Hole Declaration — conditional -->
           <div class="gsWizFieldGroup hidden" id="gsWizGroupHoleDecl">
             <div class="gsWizDivider"></div>
             <div class="gsWizFieldLabel">Scores Per Hole</div>
@@ -144,6 +139,15 @@
             <div class="gsWizHoleDeclGrid" id="gsWizHoleDeclGrid"></div>
           </div>
 
+          <!-- ── Points Strategy — conditional on basis === 'Points' ── -->
+          <div class="gsWizFieldGroup hidden" id="gsWizGroupPoints">
+            <div class="gsWizDivider"></div>
+            <div class="gsWizFieldLabel">Points Strategy</div>
+            <div class="wizChips" id="gsWizPointsStrategyChips"></div>
+            <div class="gsWizHint" id="gsWizPointsStrategyHint"></div>
+          </div>
+
+          <!-- Stableford points grid — shown when strategy === 'Stableford' -->
           <div class="gsWizFieldGroup hidden" id="gsWizGroupStableford">
             <div class="gsWizDivider"></div>
             <div class="gsWizFieldLabel">Stableford Points</div>
@@ -152,13 +156,24 @@
               <div class="gsWizStableford__grid" id="gsWizStablefordGrid"></div>
             </div>
           </div>
+
+          <!-- Nines distribution — shown when strategy === 'Nines' -->
+          <div class="gsWizFieldGroup hidden" id="gsWizGroupNines">
+            <div class="gsWizDivider"></div>
+            <div class="gsWizFieldLabel">Nines Distribution</div>
+            <div class="gsWizHint">Set the points awarded per finish position each hole. Values must sum to 9.</div>
+            <div class="wizChips" id="gsWizNinesChips"></div>
+          </div>
+
         </div>
       </div>
 
-      <!-- STEP 4: Handicaps -->
-      <div id="gsWizStep4" class="gsWizStepPanel maCard hidden">
+      <!-- ============================================================
+           STEP 3: Handicaps — unchanged from prior Step 4
+           ============================================================ -->
+      <div id="gsWizStep3" class="gsWizStepPanel maCard hidden">
         <header class="maCard__hdr">
-          <div class="maCard__title">STEP 4 OF 4 &nbsp;·&nbsp; HANDICAPS</div>
+          <div class="maCard__title">STEP 3 OF 3 &nbsp;·&nbsp; HANDICAPS</div>
         </header>
         <div class="maCard__body">
           <div class="gsWizEyebrow">How are handicaps applied?</div>
@@ -222,23 +237,24 @@
         <div class="maCard__body gsWizSummary__body">
 
           <div class="gsWizSummary__section">General</div>
-          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Game Label</span>  <span class="wizSummary__val empty" id="gsWizSvLabel">—</span></div>
-          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Game Format</span> <span class="wizSummary__val empty" id="gsWizSvFormat">—</span></div>
-          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Competition</span> <span class="wizSummary__val empty" id="gsWizSvCompetition">—</span></div>
-          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Segments</span>    <span class="wizSummary__val empty" id="gsWizSvSegments">—</span></div>
-          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Rotation</span>    <span class="wizSummary__val empty" id="gsWizSvRotation">—</span></div>
+          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Game Label</span>   <span class="wizSummary__val empty" id="gsWizSvLabel">—</span></div>
+          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Game Format</span>  <span class="wizSummary__val empty" id="gsWizSvFormat">—</span></div>
+          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Competition</span>  <span class="wizSummary__val empty" id="gsWizSvCompetition">—</span></div>
+          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Segments</span>     <span class="wizSummary__val empty" id="gsWizSvSegments">—</span></div>
+          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Rotation</span>     <span class="wizSummary__val empty" id="gsWizSvRotation">—</span></div>
 
           <div class="gsWizSummary__section">Scoring</div>
-          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Basis</span>       <span class="wizSummary__val empty" id="gsWizSvBasis">—</span></div>
-          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Method</span>      <span class="wizSummary__val empty" id="gsWizSvMethod">—</span></div>
-          <div class="gsWizSummary__row"><span class="gsWizSummary__key">System</span>      <span class="wizSummary__val empty" id="gsWizSvSystem">—</span></div>
-          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Best Ball</span>   <span class="wizSummary__val empty" id="gsWizSvBB">—</span></div>
+          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Basis</span>        <span class="wizSummary__val empty" id="gsWizSvBasis">—</span></div>
+          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Method</span>       <span class="wizSummary__val empty" id="gsWizSvMethod">—</span></div>
+          <div class="gsWizSummary__row"><span class="gsWizSummary__key">System</span>       <span class="wizSummary__val empty" id="gsWizSvSystem">—</span></div>
+          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Best Ball</span>    <span class="wizSummary__val empty" id="gsWizSvBB">—</span></div>
+          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Pts Strategy</span> <span class="wizSummary__val empty" id="gsWizSvPointsStrategy">—</span></div>
 
           <div class="gsWizSummary__section">Handicaps</div>
-          <div class="gsWizSummary__row"><span class="gsWizSummary__key">HC Method</span>   <span class="wizSummary__val empty" id="gsWizSvHCMethod">—</span></div>
-          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Allowance</span>   <span class="wizSummary__val empty" id="gsWizSvAllowance">—</span></div>
-          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Stroke Dist</span> <span class="wizSummary__val empty" id="gsWizSvStrokeDist">—</span></div>
-          <div class="gsWizSummary__row"><span class="gsWizSummary__key">HC Eff.</span>     <span class="wizSummary__val empty" id="gsWizSvHCEff">—</span></div>
+          <div class="gsWizSummary__row"><span class="gsWizSummary__key">HC Method</span>    <span class="wizSummary__val empty" id="gsWizSvHCMethod">—</span></div>
+          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Allowance</span>    <span class="wizSummary__val empty" id="gsWizSvAllowance">—</span></div>
+          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Stroke Dist</span>  <span class="wizSummary__val empty" id="gsWizSvStrokeDist">—</span></div>
+          <div class="gsWizSummary__row"><span class="gsWizSummary__key">HC Eff.</span>      <span class="wizSummary__val empty" id="gsWizSvHCEff">—</span></div>
 
         </div>
       </div>
