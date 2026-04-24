@@ -172,20 +172,14 @@ final class ServiceScoreSummary
             $pointsResult = self::resolvePairFieldPoints($out, $scorecardRows, $gameRow);
             foreach ($out as &$row) {
                 $pId = $row['pairingId'];
-                $grossPts = $pointsResult['gross'][$pId] ?? ['front' => 0, 'back' => 0, 'total' => 0];
-                $netPts   = $pointsResult['net'][$pId]   ?? ['front' => 0, 'back' => 0, 'total' => 0];
-                $row['grossPoints']   = $grossPts;
-                $row['netPoints']     = $netPts;
-                // Populate pointsValue/pointsDisplay from net points (matches scoringMethod default)
-                // so comparePairFieldRows and existing gameDisplay logic work correctly
-                $row['pointsValue']   = (float)$netPts['total'];
-                $row['pointsDisplay'] = (string)$netPts['total'];
+                $row['grossPoints'] = $pointsResult['gross'][$pId] ?? ['front' => 0, 'back' => 0, 'total' => 0];
+                $row['netPoints']   = $pointsResult['net'][$pId]   ?? ['front' => 0, 'back' => 0, 'total' => 0];
             }
             unset($row);
         } else {
             foreach ($out as &$row) {
-                $row['grossPoints']   = ['front' => 0, 'back' => 0, 'total' => 0];
-                $row['netPoints']     = ['front' => 0, 'back' => 0, 'total' => 0];
+                $row['grossPoints'] = ['front' => 0, 'back' => 0, 'total' => 0];
+                $row['netPoints']   = ['front' => 0, 'back' => 0, 'total' => 0];
             }
             unset($row);
         }
@@ -354,18 +348,64 @@ final class ServiceScoreSummary
             $pairPairPoints = ['gross' => [], 'net' => []];
             $isPoints = (strtolower($scoringBasis) === 'points');
             if ($isPoints) {
-                $pointsConfig  = self::parsePointsConfig($gameRow);
-                $matchPairings = [
-                    [
-                        'pairingId' => (string)$leftPairingId,
-                        'holes'     => self::extractHolesForCalc($leftPlayers, $scopedHoles),
-                    ],
-                    [
-                        'pairingId' => (string)$rightPairingId,
-                        'holes'     => self::extractHolesForCalc($rightPlayers, $scopedHoles),
-                    ],
-                ];
-                $pairPairPoints = ServiceCalcPoints::resolvePoints($matchPairings, $scopedHoles, $pointsConfig);
+                $pointsConfig = self::parsePointsConfig($gameRow);
+                // Points are player-specific — build one entry per player,
+                // resolve individually, then sum back to pairing level.
+                $playerEntries  = [];
+                $playerPairings = [];
+                foreach ([
+                    (string)$leftPairingId  => $leftPlayers,
+                    (string)$rightPairingId => $rightPlayers,
+                ] as $pairingId => $sidePlayers) {
+                    foreach ($sidePlayers as $player) {
+                        $playerId = trim((string)(
+                            $player['playerId']
+                            ?? $player['dbPlayers_PlayerGHIN']
+                            ?? $player['dbPlayers_PlayerKey']
+                            ?? ''
+                        ));
+                        if ($playerId === '') continue;
+                        $playerPairings[$playerId] = $pairingId;
+                        if (!isset($playerEntries[$playerId])) {
+                            $playerEntries[$playerId] = ['pairingId' => $playerId, 'holes' => []];
+                        }
+                        foreach ($scopedHoles as $holeNumber) {
+                            $holeKey = 'h' . $holeNumber;
+                            $cell    = $player['holes'][$holeKey] ?? null;
+                            if (!is_array($cell) || empty($cell['declared'])) continue;
+                            $grossDiff = $cell['diff'] ?? null;
+                            $net       = $cell['net']  ?? null;
+                            $par       = $cell['par']  ?? null;
+                            $netDiff   = (is_numeric($net) && is_numeric($par))
+                                ? (float)$net - (float)$par : null;
+                            if ($grossDiff === null && $netDiff === null) continue;
+                            $playerEntries[$playerId]['holes'][$holeKey] = [
+                                'gross'     => $cell['gross'] ?? null,
+                                'net'       => $net,
+                                'grossDiff' => is_numeric($grossDiff) ? (float)$grossDiff : null,
+                                'netDiff'   => $netDiff,
+                                'declared'  => true,
+                            ];
+                        }
+                    }
+                }
+                if ($playerEntries) {
+                    $perPlayer = ServiceCalcPoints::resolvePoints(
+                        array_values($playerEntries), $scopedHoles, $pointsConfig
+                    );
+                    foreach (['gross', 'net'] as $metric) {
+                        foreach ($perPlayer[$metric] as $playerId => $pts) {
+                            $pid = $playerPairings[$playerId] ?? null;
+                            if (!$pid) continue;
+                            if (!isset($pairPairPoints[$metric][$pid])) {
+                                $pairPairPoints[$metric][$pid] = ['front' => 0.0, 'back' => 0.0, 'total' => 0.0];
+                            }
+                            $pairPairPoints[$metric][$pid]['front'] += $pts['front'];
+                            $pairPairPoints[$metric][$pid]['back']  += $pts['back'];
+                            $pairPairPoints[$metric][$pid]['total'] += $pts['total'];
+                        }
+                    }
+                }
             }
             // ─────────────────────────────────────────────────────────────────────
 
@@ -801,18 +841,17 @@ final class ServiceScoreSummary
      * Prepare pairings and delegate to ServiceCalcSkins for PairField skins resolution.
      *
      * For Traditional Skins, all pairings compete against the full field on each hole.
-     * Holes are scoped to the game's visible hole window (All 18, F9, B9).
-     * Each pairing contributes one declared score per hole (BestBall/1 locked upstream).
+     * The pairing's hole score = SUM of grossDiff (gross pass) or netDiff (net pass)
+     * across ALL declared scores on that hole. The declare flag — set upstream by
+     * score entry based on BestBall/N or DeclareManual settings — is the only truth
+     * we interrogate here. This service is intentionally dumb about game settings.
      */
     private static function resolvePairFieldSkins(
         array $builtRows,
         array $scorecardRows,
         array $gameRow
     ): array {
-        $holes = self::holesForGame($gameRow);
-
-        // Build the pairings array ServiceCalcSkins expects:
-        // one entry per pairing, keyed holes array with gross/net/declared per hole
+        $holes    = self::holesForGame($gameRow);
         $pairings = [];
 
         foreach ($scorecardRows as $scoreRow) {
@@ -824,36 +863,39 @@ final class ServiceScoreSummary
             foreach ($playersByPairing as $pairingId => $pairPlayers) {
                 $pairingId = (string)$pairingId;
                 if (!isset($pairings[$pairingId])) {
-                    $pairings[$pairingId] = [
-                        'pairingId' => $pairingId,
-                        'holes'     => [],
-                    ];
+                    $pairings[$pairingId] = ['pairingId' => $pairingId, 'holes' => []];
                 }
 
                 foreach ($holes as $holeNumber) {
-                    $holeKey = 'h' . $holeNumber;
+                    $holeKey      = 'h' . $holeNumber;
+                    $grossDiffSum = null;
+                    $netDiffSum   = null;
 
                     foreach ($pairPlayers as $player) {
                         $cell = $player['holes'][$holeKey] ?? null;
-                        if (!is_array($cell) || empty($cell['declared'])) {
-                            continue;
+                        if (!is_array($cell) || empty($cell['declared'])) continue;
+
+                        $grossDiff = $cell['diff'] ?? null;
+                        $net       = $cell['net']  ?? null;
+                        $par       = $cell['par']  ?? null;
+                        $netDiff   = (is_numeric($net) && is_numeric($par))
+                            ? (float)$net - (float)$par
+                            : null;
+
+                        if (is_numeric($grossDiff)) {
+                            $grossDiffSum = ($grossDiffSum ?? 0) + (float)$grossDiff;
                         }
-
-                        $gross = $cell['gross'] ?? null;
-                        $net   = $cell['net']   ?? null;
-
-                        if ($gross === null && $net === null) {
-                            continue;
+                        if (is_numeric($netDiff)) {
+                            $netDiffSum = ($netDiffSum ?? 0) + (float)$netDiff;
                         }
+                    }
 
-                        // First declared score found wins — BestBall/1 guarantees
-                        // only one declared score per pairing per hole
+                    if ($grossDiffSum !== null || $netDiffSum !== null) {
                         $pairings[$pairingId]['holes'][$holeKey] = [
-                            'gross'    => is_numeric($gross) ? (float)$gross : null,
-                            'net'      => is_numeric($net)   ? (float)$net   : null,
+                            'gross'    => $grossDiffSum, // CalcSkins uses 'gross' key for gross pass
+                            'net'      => $netDiffSum,   // CalcSkins uses 'net' key for net pass
                             'declared' => true,
                         ];
-                        break; // move to next hole once declared score found
                     }
                 }
             }
@@ -863,42 +905,44 @@ final class ServiceScoreSummary
     }
 
     /**
-     * Extract declared hole scores from a set of players into the flat structure
-     * ServiceCalcSkins expects. Scoped to the provided hole list.
-     * BestBall/1 lock guarantees one declared score per pairing per hole.
+     * Extract declared hole scores from players for PairPair skins/points calc.
+     * Skins: sums grossDiff/netDiff across all declared scores per pairing per hole.
+     * One entry per pairing per hole with aggregated diffs.
      */
     private static function extractHolesForCalc(array $players, array $scopedHoles): array
     {
         $holes = [];
 
         foreach ($scopedHoles as $holeNumber) {
-            $holeKey = 'h' . (int)$holeNumber;
+            $holeKey      = 'h' . (int)$holeNumber;
+            $grossDiffSum = null;
+            $netDiffSum   = null;
 
             foreach ($players as $player) {
                 $cell = $player['holes'][$holeKey] ?? null;
-                if (!is_array($cell) || empty($cell['declared'])) {
-                    continue;
-                }
+                if (!is_array($cell) || empty($cell['declared'])) continue;
 
-                $gross     = $cell['gross']     ?? null;
-                $net       = $cell['net']       ?? null;
-                $grossDiff = $cell['diff']      ?? null; // grossDiff stored as 'diff' on hole cell
-                $netDiff   = isset($cell['net'], $cell['par'])
-                    ? ((float)$cell['net'] - (float)($cell['par'] ?? 0))
+                $grossDiff = $cell['diff'] ?? null;
+                $net       = $cell['net']  ?? null;
+                $par       = $cell['par']  ?? null;
+                $netDiff   = (is_numeric($net) && is_numeric($par))
+                    ? (float)$net - (float)$par
                     : null;
 
-                if ($gross === null && $net === null) {
-                    continue;
+                if (is_numeric($grossDiff)) {
+                    $grossDiffSum = ($grossDiffSum ?? 0) + (float)$grossDiff;
                 }
+                if (is_numeric($netDiff)) {
+                    $netDiffSum = ($netDiffSum ?? 0) + (float)$netDiff;
+                }
+            }
 
+            if ($grossDiffSum !== null || $netDiffSum !== null) {
                 $holes[$holeKey] = [
-                    'gross'     => is_numeric($gross)     ? (float)$gross     : null,
-                    'net'       => is_numeric($net)       ? (float)$net       : null,
-                    'grossDiff' => is_numeric($grossDiff) ? (float)$grossDiff : null,
-                    'netDiff'   => is_numeric($netDiff)   ? (float)$netDiff   : null,
-                    'declared'  => true,
+                    'gross'    => $grossDiffSum, // skins compares on diff, not raw score
+                    'net'      => $netDiffSum,
+                    'declared' => true,
                 ];
-                break;
             }
         }
 
@@ -907,7 +951,11 @@ final class ServiceScoreSummary
 
     /**
      * Resolve points for all pairings in a PairField game.
-     * Mirrors resolvePairFieldSkins — builds pairings array then calls ServiceCalcPoints.
+     *
+     * Points are player-specific: each declared score gets an individual
+     * points lookup, then results are summed to the pairing level.
+     * The declare flag is the only truth — this service is intentionally
+     * dumb about BestBall/N settings.
      */
     private static function resolvePairFieldPoints(
         array $builtRows,
@@ -916,52 +964,90 @@ final class ServiceScoreSummary
     ): array {
         $holes        = self::holesForGame($gameRow);
         $pointsConfig = self::parsePointsConfig($gameRow);
-        $pairings     = [];
+
+        $playerEntries  = []; // playerId => ['pairingId' => string, 'holes' => [...]]
+        $playerPairings = []; // playerId => pairingId
 
         foreach ($scorecardRows as $scoreRow) {
             $players = is_array($scoreRow['players'] ?? null) ? $scoreRow['players'] : [];
             if (!$players) continue;
 
-            $playersByPairing = self::groupPlayersByPairing($players);
+            foreach ($players as $player) {
+                $pairingId = trim((string)(
+                    $player['effectivePairingID']
+                    ?? $player['pairingID']
+                    ?? $player['dbPlayers_PairingID']
+                    ?? '000'
+                ));
+                $playerId = trim((string)(
+                    $player['playerId']
+                    ?? $player['dbPlayers_PlayerGHIN']
+                    ?? $player['dbPlayers_PlayerKey']
+                    ?? ''
+                ));
+                if ($playerId === '') continue;
 
-            foreach ($playersByPairing as $pairingId => $pairPlayers) {
-                $pairingId = (string)$pairingId;
-                if (!isset($pairings[$pairingId])) {
-                    $pairings[$pairingId] = [
-                        'pairingId' => $pairingId,
+                $playerPairings[$playerId] = $pairingId;
+
+                if (!isset($playerEntries[$playerId])) {
+                    $playerEntries[$playerId] = [
+                        'pairingId' => $playerId,
                         'holes'     => [],
                     ];
                 }
 
                 foreach ($holes as $holeNumber) {
                     $holeKey = 'h' . $holeNumber;
-                    foreach ($pairPlayers as $player) {
-                        $cell = $player['holes'][$holeKey] ?? null;
-                        if (!is_array($cell) || empty($cell['declared'])) continue;
+                    $cell    = $player['holes'][$holeKey] ?? null;
+                    if (!is_array($cell) || empty($cell['declared'])) continue;
 
-                        $gross     = $cell['gross'] ?? null;
-                        $net       = $cell['net']   ?? null;
-                        $grossDiff = $cell['diff']  ?? null;
-                        $netDiff   = isset($cell['net'], $cell['par'])
-                            ? ((float)$cell['net'] - (float)($cell['par'] ?? 0))
-                            : null;
+                    $grossDiff = $cell['diff'] ?? null;
+                    $net       = $cell['net']  ?? null;
+                    $par       = $cell['par']  ?? null;
+                    $netDiff   = (is_numeric($net) && is_numeric($par))
+                        ? (float)$net - (float)$par
+                        : null;
 
-                        if ($gross === null && $net === null) continue;
+                    if ($grossDiff === null && $netDiff === null) continue;
 
-                        $pairings[$pairingId]['holes'][$holeKey] = [
-                            'gross'     => is_numeric($gross)     ? (float)$gross     : null,
-                            'net'       => is_numeric($net)       ? (float)$net       : null,
-                            'grossDiff' => is_numeric($grossDiff) ? (float)$grossDiff : null,
-                            'netDiff'   => is_numeric($netDiff)   ? (float)$netDiff   : null,
-                            'declared'  => true,
-                        ];
-                        break;
-                    }
+                    $playerEntries[$playerId]['holes'][$holeKey] = [
+                        'gross'     => $cell['gross'] ?? null,
+                        'net'       => $net,
+                        'grossDiff' => is_numeric($grossDiff) ? (float)$grossDiff : null,
+                        'netDiff'   => $netDiff,
+                        'declared'  => true,
+                    ];
                 }
             }
         }
 
-        return ServiceCalcPoints::resolvePoints(array_values($pairings), $holes, $pointsConfig);
+        if (!$playerEntries) {
+            return ['gross' => [], 'net' => []];
+        }
+
+        // Resolve points per player individually
+        $perPlayerResult = ServiceCalcPoints::resolvePoints(
+            array_values($playerEntries),
+            $holes,
+            $pointsConfig
+        );
+
+        // Sum player points up to pairing level
+        $pairingTotals = ['gross' => [], 'net' => []];
+        foreach (['gross', 'net'] as $metric) {
+            foreach ($perPlayerResult[$metric] as $playerId => $pts) {
+                $pairingId = $playerPairings[$playerId] ?? null;
+                if ($pairingId === null) continue;
+                if (!isset($pairingTotals[$metric][$pairingId])) {
+                    $pairingTotals[$metric][$pairingId] = ['front' => 0.0, 'back' => 0.0, 'total' => 0.0];
+                }
+                $pairingTotals[$metric][$pairingId]['front'] += $pts['front'];
+                $pairingTotals[$metric][$pairingId]['back']  += $pts['back'];
+                $pairingTotals[$metric][$pairingId]['total'] += $pts['total'];
+            }
+        }
+
+        return $pairingTotals;
     }
 
     /**
