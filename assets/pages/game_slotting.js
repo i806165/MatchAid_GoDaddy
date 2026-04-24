@@ -16,7 +16,7 @@
     btnAssign: document.getElementById("gsBtnAssign"),
     btnTrayOpen: document.getElementById("gsBtnTrayOpen"),
     btnToggleAll: document.getElementById("gsBtnToggleAll"),
-    panelsWrap: document.getElementById("gsTabPanels"),
+    panelsWrap: document.querySelector("#gsTabPanels .gpTabPanel"),
     mobileCloseBtns: document.querySelectorAll(".gpMobileCloseBtn"),
   };
 
