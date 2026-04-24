@@ -147,13 +147,17 @@
             <div class="gsWizHint" id="gsWizPointsStrategyHint"></div>
           </div>
 
-          <!-- Stableford points grid — shown when strategy === 'Stableford' -->
+          <!-- Stableford points grid — shown when strategy === 'Stableford' or 'Chicago' -->
           <div class="gsWizFieldGroup hidden" id="gsWizGroupStableford">
             <div class="gsWizDivider"></div>
-            <div class="gsWizFieldLabel">Stableford Points</div>
+            <div class="gsWizFieldLabel" id="gsWizStablefordLabel">Points per Score</div>
             <div class="gsWizStableford">
-              <div class="gsWizStableford__hdr">Points per score relative to par</div>
+              <div class="gsWizStableford__hdr">Points awarded per score relative to par — click any value to edit</div>
               <div class="gsWizStableford__grid" id="gsWizStablefordGrid"></div>
+            </div>
+            <!-- Chicago quota note — shown only when strategy === 'Chicago' -->
+            <div class="gsWizCascadeNote hidden" id="gsWizChicagoNote">
+              Each player's quota = 36 minus their course handicap. The player who most exceeds their quota wins.
             </div>
           </div>
 
@@ -161,8 +165,55 @@
           <div class="gsWizFieldGroup hidden" id="gsWizGroupNines">
             <div class="gsWizDivider"></div>
             <div class="gsWizFieldLabel">Nines Distribution</div>
-            <div class="gsWizHint">Set the points awarded per finish position each hole. Values must sum to 9.</div>
-            <div class="wizChips" id="gsWizNinesChips"></div>
+            <div class="gsWizHint">Points awarded per finish position each hole. Set values for both group sizes — the calculator will apply the correct distribution automatically.</div>
+            <div class="gsWizNinesTable" id="gsWizNinesTable"></div>
+          </div>
+
+          <!-- LowBall / LowTotal config — shown when strategy === 'LowBallLowTotal' -->
+          <div class="gsWizFieldGroup hidden" id="gsWizGroupLBLT">
+            <div class="gsWizDivider"></div>
+            <div class="gsWizFieldLabel">Points Per Category</div>
+            <div class="gsWizHint">Each hole has two independent point opportunities.</div>
+            <div class="gsWizPointsInputGrid">
+              <div class="gsWizPointsInputRow">
+                <span class="gsWizPointsInputLabel">Low Ball — lowest individual score</span>
+                <input class="gsWizPointsInput maTextInput" type="number" id="gsWizLBLT_LowBall" min="0" max="9" step="1" value="1" onchange="window.gsWiz.onPointsInputChange()">
+              </div>
+              <div class="gsWizPointsInputRow">
+                <span class="gsWizPointsInputLabel">Low Total — lowest combined team score</span>
+                <input class="gsWizPointsInput maTextInput" type="number" id="gsWizLBLT_LowTotal" min="0" max="9" step="1" value="1" onchange="window.gsWiz.onPointsInputChange()">
+              </div>
+            </div>
+          </div>
+
+          <!-- LowBall / HighBall config — shown when strategy === 'LowBallHighBall' -->
+          <div class="gsWizFieldGroup hidden" id="gsWizGroupLBHB">
+            <div class="gsWizDivider"></div>
+            <div class="gsWizFieldLabel">Points Per Category</div>
+            <div class="gsWizHint">Each hole has two independent point opportunities.</div>
+            <div class="gsWizPointsInputGrid">
+              <div class="gsWizPointsInputRow">
+                <span class="gsWizPointsInputLabel">Low Ball — lowest individual score</span>
+                <input class="gsWizPointsInput maTextInput" type="number" id="gsWizLBHB_LowBall" min="0" max="9" step="1" value="1" onchange="window.gsWiz.onPointsInputChange()">
+              </div>
+              <div class="gsWizPointsInputRow">
+                <span class="gsWizPointsInputLabel">High Ball — lower of the two high scores</span>
+                <input class="gsWizPointsInput maTextInput" type="number" id="gsWizLBHB_HighBall" min="0" max="9" step="1" value="1" onchange="window.gsWiz.onPointsInputChange()">
+              </div>
+            </div>
+          </div>
+
+          <!-- Vegas config — shown when strategy === 'Vegas' -->
+          <div class="gsWizFieldGroup hidden" id="gsWizGroupVegas">
+            <div class="gsWizDivider"></div>
+            <div class="gsWizFieldLabel">Vegas Points</div>
+            <div class="gsWizHint">Each side combines their two scores into a two-digit number (low score first). The difference between the two numbers is multiplied by the points-per-unit value.</div>
+            <div class="gsWizPointsInputGrid">
+              <div class="gsWizPointsInputRow">
+                <span class="gsWizPointsInputLabel">Points per unit of difference</span>
+                <input class="gsWizPointsInput maTextInput" type="number" id="gsWizVegas_PointsPerUnit" min="1" max="99" step="1" value="1" onchange="window.gsWiz.onPointsInputChange()">
+              </div>
+            </div>
           </div>
 
         </div>

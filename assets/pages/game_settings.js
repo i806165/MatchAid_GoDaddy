@@ -78,13 +78,6 @@
     },
   ];
 
-  // Nines preset distributions keyed by group size
-  const NINES_PRESETS = {
-    4: [{ label: "5-3-1-0", values: [5, 3, 1, 0] }, { label: "4-3-2-0", values: [4, 3, 2, 0] }],
-    3: [{ label: "4-3-2",   values: [4, 3, 2]     }, { label: "5-3-1",   values: [5, 3, 1]   }],
-    2: [{ label: "5-4",     values: [5, 4]         }, { label: "6-3",     values: [6, 3]      }],
-  };
-
   const gameFormatConfig = {
     StrokePlay: { label: "Stroke Play", basis: "Strokes" },
     Stableford: { label: "Stableford",  basis: "Points"  },
@@ -261,7 +254,9 @@
     wizGroupStableford:      document.getElementById("gsWizGroupStableford"),
     wizStablefordGrid:       document.getElementById("gsWizStablefordGrid"),
     wizGroupNines:           document.getElementById("gsWizGroupNines"),
-    wizNinesChips:           document.getElementById("gsWizNinesChips"),
+    wizGroupLBLT:            document.getElementById("gsWizGroupLBLT"),
+    wizGroupLBHB:            document.getElementById("gsWizGroupLBHB"),
+    wizGroupVegas:           document.getElementById("gsWizGroupVegas"),
 
     // Step 3
     wizHCMethodChips:   document.getElementById("gsWizHCMethodChips"),
@@ -925,51 +920,217 @@
 
   function wizRenderPointsConfigSections() {
     const strategy = wiz.pointsStrategy;
+    const cfg      = wiz.pointsConfig || {};
 
-    // Stableford grid
-    if (el.wizGroupStableford) {
-      const show_ = (strategy === "Stableford");
-      show(el.wizGroupStableford, show_);
-      if (show_ && el.wizStablefordGrid) {
-        const relLabels = { "-3":"−3","-2":"−2","-1":"−1","0":"E","1":"+1","2":"+2" };
-        el.wizStablefordGrid.innerHTML = "";
-        stablefordTemplate.forEach((row, i) => {
-          const cell = document.createElement("div");
-          cell.className = "wizStableford__cell";
-          cell.innerHTML = `
-            <div class="wizStableford__rel">${relLabels[String(row.reltoPar)] || row.reltoPar}</div>
-            <div class="wizStableford__pts">${row.defaultPoints}</div>
-            <div class="wizStableford__name">${["Albatross","Eagle","Birdie","Par","Bogey","Dbl Bogey"][i] || ""}</div>
-          `;
-          el.wizStablefordGrid.appendChild(cell);
+    // ── Stableford / Chicago grid ─────────────────────────────────────────────
+    const showSF = (strategy === "Stableford" || strategy === "Chicago");
+    show(el.wizGroupStableford, showSF);
+    if (showSF && el.wizStablefordGrid) {
+      // Label varies by strategy
+      const labelEl = document.getElementById("gsWizStablefordLabel");
+      if (labelEl) labelEl.textContent = strategy === "Chicago" ? "Points per Score" : "Stableford Points";
+
+      // Chicago quota note
+      const noteEl = document.getElementById("gsWizChicagoNote");
+      if (noteEl) show(noteEl, strategy === "Chicago");
+
+      // Build editable grid from saved values or template defaults
+      const savedValues = Array.isArray(cfg.values) ? cfg.values : [];
+      const relLabels   = { "-3":"−3", "-2":"−2", "-1":"−1", "0":"E", "1":"+1", "2":"+2" };
+      const scoreNames  = ["Albatross", "Eagle", "Birdie", "Par", "Bogey", "Dbl Bogey"];
+
+      el.wizStablefordGrid.innerHTML = "";
+      stablefordTemplate.forEach((row, i) => {
+        const saved = savedValues.find(r => r.reltoPar === row.reltoPar);
+        const pts   = saved ? saved.points : row.defaultPoints;
+
+        const cell = document.createElement("div");
+        cell.className = "wizStableford__cell";
+
+        const relDiv  = document.createElement("div");
+        relDiv.className = "wizStableford__rel";
+        relDiv.textContent = relLabels[String(row.reltoPar)] || String(row.reltoPar);
+
+        const ptsDiv  = document.createElement("div");
+        ptsDiv.className = "wizStableford__pts";
+
+        const input = document.createElement("input");
+        input.type  = "number";
+        input.min   = "0";
+        input.max   = "99";
+        input.step  = "1";
+        input.value = String(pts);
+        input.setAttribute("aria-label", `Points for ${scoreNames[i] || row.reltoPar}`);
+        input.addEventListener("change", () => {
+          wizSyncStablefordConfig();
+          setDirty(true); wizCheckComplete();
         });
-      }
+
+        ptsDiv.appendChild(input);
+
+        const nameDiv = document.createElement("div");
+        nameDiv.className = "wizStableford__name";
+        nameDiv.textContent = scoreNames[i] || "";
+
+        cell.appendChild(relDiv);
+        cell.appendChild(ptsDiv);
+        cell.appendChild(nameDiv);
+        el.wizStablefordGrid.appendChild(cell);
+      });
+
+      // Sync initial config state
+      wizSyncStablefordConfig();
     }
 
-    // Nines distribution
-    if (el.wizGroupNines) {
-      const show_ = (strategy === "Nines");
-      show(el.wizGroupNines, show_);
-      if (show_ && el.wizNinesChips) {
-        el.wizNinesChips.innerHTML = "";
-        const presets = NINES_PRESETS[4]; // default to 4-player presets
-        const currentVals = Array.isArray(wiz.pointsConfig?.values) ? wiz.pointsConfig.values : null;
-        const currentKey  = currentVals ? currentVals.join("-") : null;
+    // ── Nines table ───────────────────────────────────────────────────────────
+    const showNines = (strategy === "Nines");
+    const ninesTable = document.getElementById("gsWizNinesTable");
+    show(el.wizGroupNines, showNines);
+    if (showNines && ninesTable) {
+      ninesTable.innerHTML = "";
 
-        presets.forEach(preset => {
-          const b = document.createElement("button");
-          const key = preset.values.join("-");
-          b.className = "wizChip" + (currentKey === key ? " selected" : "");
-          b.dataset.val = key;
-          b.textContent = preset.label;
-          b.addEventListener("click", () => wizSelectNinesPreset(preset.values));
-          el.wizNinesChips.appendChild(b);
+      const savedVals = (cfg.values && typeof cfg.values === "object" && !Array.isArray(cfg.values))
+        ? cfg.values
+        : {};
+
+      const rows = [
+        { key: "4", label: "4 Players", defaults: [5, 3, 1, 0] },
+        { key: "3", label: "3 Players", defaults: [4, 3, 2]    },
+      ];
+
+      rows.forEach(r => {
+        const saved  = Array.isArray(savedVals[r.key]) ? savedVals[r.key] : r.defaults;
+        const rowDiv = document.createElement("div");
+        rowDiv.className = "gsWizNinesRow";
+
+        const lbl = document.createElement("div");
+        lbl.className   = "gsWizNinesRowLabel";
+        lbl.textContent = r.label;
+
+        const inputsDiv = document.createElement("div");
+        inputsDiv.className = "gsWizNinesInputs";
+
+        saved.forEach((val, idx) => {
+          if (idx > 0) {
+            const sep = document.createElement("span");
+            sep.className   = "gsWizNinesSep";
+            sep.textContent = "·";
+            inputsDiv.appendChild(sep);
+          }
+          const inp = document.createElement("input");
+          inp.type      = "number";
+          inp.min       = "0";
+          inp.max       = "9";
+          inp.step      = "1";
+          inp.value     = String(val);
+          inp.className = "gsWizNinesInput maTextInput";
+          inp.setAttribute("aria-label", `Position ${idx + 1} points for ${r.label}`);
+          inp.addEventListener("change", () => {
+            wizSyncNinesConfig();
+            setDirty(true); wizCheckComplete();
+          });
+          inputsDiv.appendChild(inp);
         });
 
-        // Default to first preset if nothing selected
-        if (!currentKey) wizSelectNinesPreset(presets[0].values);
-      }
+        rowDiv.appendChild(lbl);
+        rowDiv.appendChild(inputsDiv);
+        ninesTable.appendChild(rowDiv);
+      });
+
+      wizSyncNinesConfig();
     }
+
+    // ── LowBall / LowTotal ────────────────────────────────────────────────────
+    const showLBLT = (strategy === "LowBallLowTotal");
+    show(el.wizGroupLBLT, showLBLT);
+    if (showLBLT) {
+      const lb = document.getElementById("gsWizLBLT_LowBall");
+      const lt = document.getElementById("gsWizLBLT_LowTotal");
+      if (lb) lb.value = String(cfg.values?.lowBall  ?? 1);
+      if (lt) lt.value = String(cfg.values?.lowTotal ?? 1);
+      wizSyncSimplePointsConfig();
+    }
+
+    // ── LowBall / HighBall ────────────────────────────────────────────────────
+    const showLBHB = (strategy === "LowBallHighBall");
+    show(el.wizGroupLBHB, showLBHB);
+    if (showLBHB) {
+      const lb = document.getElementById("gsWizLBHB_LowBall");
+      const hb = document.getElementById("gsWizLBHB_HighBall");
+      if (lb) lb.value = String(cfg.values?.lowBall  ?? 1);
+      if (hb) hb.value = String(cfg.values?.highBall ?? 1);
+      wizSyncSimplePointsConfig();
+    }
+
+    // ── Vegas ─────────────────────────────────────────────────────────────────
+    const showVegas = (strategy === "Vegas");
+    show(el.wizGroupVegas, showVegas);
+    if (showVegas) {
+      const ppu = document.getElementById("gsWizVegas_PointsPerUnit");
+      if (ppu) ppu.value = String(cfg.values?.pointsPerUnit ?? 1);
+      wizSyncSimplePointsConfig();
+    }
+  }
+
+  // Sync stableford/Chicago grid inputs → wiz.pointsConfig
+  function wizSyncStablefordConfig() {
+    if (!el.wizStablefordGrid) return;
+    const inputs = el.wizStablefordGrid.querySelectorAll("input[type=number]");
+    const values = [];
+    stablefordTemplate.forEach((row, i) => {
+      const inp = inputs[i];
+      values.push({
+        reltoPar: row.reltoPar,
+        points:   inp ? Math.max(0, parseInt(inp.value, 10) || 0) : row.defaultPoints,
+      });
+    });
+    const base = { strategy: wiz.pointsStrategy, values };
+    if (wiz.pointsStrategy === "Chicago") {
+      base.quota = { method: "handicap", base: 36 };
+    }
+    wiz.pointsConfig = base;
+  }
+
+  // Sync nines table inputs → wiz.pointsConfig
+  function wizSyncNinesConfig() {
+    const ninesTable = document.getElementById("gsWizNinesTable");
+    if (!ninesTable) return;
+    const rowEls = ninesTable.querySelectorAll(".gsWizNinesRow");
+    const keys   = ["4", "3"];
+    const values = {};
+    rowEls.forEach((rowEl, i) => {
+      const key    = keys[i];
+      const inputs = rowEl.querySelectorAll("input[type=number]");
+      values[key]  = Array.from(inputs).map(inp => Math.max(0, parseInt(inp.value, 10) || 0));
+    });
+    wiz.pointsConfig = { strategy: "Nines", values };
+  }
+
+  // Sync simple point input grids → wiz.pointsConfig
+  function wizSyncSimplePointsConfig() {
+    const strategy = wiz.pointsStrategy;
+    let values = {};
+
+    if (strategy === "LowBallLowTotal") {
+      const lb = document.getElementById("gsWizLBLT_LowBall");
+      const lt = document.getElementById("gsWizLBLT_LowTotal");
+      values = {
+        lowBall:  Math.max(0, parseInt(lb?.value || "1", 10)),
+        lowTotal: Math.max(0, parseInt(lt?.value || "1", 10)),
+      };
+    } else if (strategy === "LowBallHighBall") {
+      const lb = document.getElementById("gsWizLBHB_LowBall");
+      const hb = document.getElementById("gsWizLBHB_HighBall");
+      values = {
+        lowBall:  Math.max(0, parseInt(lb?.value || "1", 10)),
+        highBall: Math.max(0, parseInt(hb?.value || "1", 10)),
+      };
+    } else if (strategy === "Vegas") {
+      const ppu = document.getElementById("gsWizVegas_PointsPerUnit");
+      values = { pointsPerUnit: Math.max(1, parseInt(ppu?.value || "1", 10)) };
+    }
+
+    wiz.pointsConfig = { strategy, values };
   }
 
   function wizSelectPointsStrategy(strategy) {
@@ -990,14 +1151,11 @@
     setDirty(true); wizUpdateSummary(); wizCheckComplete();
   }
 
-  function wizSelectNinesPreset(values) {
-    wiz.pointsConfig = { strategy: "Nines", values };
-    if (el.wizNinesChips) {
-      const key = values.join("-");
-      el.wizNinesChips.querySelectorAll(".wizChip").forEach(b =>
-        b.classList.toggle("selected", b.dataset.val === key)
-      );
-    }
+  function onPointsInputChange() {
+    const strategy = wiz.pointsStrategy;
+    if (strategy === "Stableford" || strategy === "Chicago") wizSyncStablefordConfig();
+    else if (strategy === "Nines")                           wizSyncNinesConfig();
+    else                                                     wizSyncSimplePointsConfig();
     setDirty(true); wizCheckComplete();
   }
 
@@ -1419,6 +1577,7 @@
       selectBB:              wizSelectBB,
       setAllHoles:           wizSetAllHoles,
       selectPointsStrategy:  wizSelectPointsStrategy,
+      onPointsInputChange:   onPointsInputChange,
       selectHCMethod:        wizSelectHCMethod,
       selectAllowance:       wizSelectAllowance,
       selectStrokeDist:      wizSelectStrokeDist,
