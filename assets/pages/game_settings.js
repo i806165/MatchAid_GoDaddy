@@ -529,7 +529,7 @@
     wizCheckComplete();
   }
 
-  // ---- Step 1: Game Format ----
+// ---- Step 1: Game Format ----
   function wizRenderStep1() {
     if (!el.wizCarousel) return;
     el.wizCarousel.innerHTML = "";
@@ -537,8 +537,11 @@
       const card = document.createElement("div");
       card.className = "wizGameCard" + (wiz.selectedLabel === game.label ? " selected" : "");
       card.dataset.label = game.label;
-      const cfg = gameFormatConfig[game.dbFormat] || gameFormatConfig.StrokePlay;
-      card.innerHTML = `<div class="wizGameCard__name">${esc(game.label)}</div><div class="wizGameCard__fmt">${esc(cfg.basis)}</div>`;
+      card.innerHTML = `
+        <div class="wizGameCard__name">${esc(game.label)}</div>
+        <div class="wizGameCard__fmt">${esc(game.dbFormat)}</div>
+        <div class="wizGameCard__fmt">${esc(game.basis)}</div>
+      `;
       card.addEventListener("click", () => wizSelectGame(game.label));
       el.wizCarousel.appendChild(card);
     });
@@ -551,38 +554,38 @@
     if (hintEl) hintEl.textContent = GAME_HINTS[wiz.selectedLabel] || "";
   }
 
-function wizSelectGame(label) {
-    const game = GAME_LABELS.find(g => g.label === label);
-    if (!game) return;
-    wiz.selectedLabel     = game.label;
-    wiz.selectedFormat    = game.dbFormat;
-    wiz.selectedBasis     = (gameFormatConfig[game.dbFormat] || gameFormatConfig.StrokePlay).basis;
-    wiz.compLock          = game.compLock;
-    wiz.scoringSystem     = game.scoringSystem  || null;
-    wiz.scoringSystemLock = game.scoringSystemLock || false;
-    wiz.bbCount           = game.bbCount        || null;
-    wiz.bbCountLock       = game.bbCountLock    || false;
+  function wizSelectGame(label) {
+      const game = GAME_LABELS.find(g => g.label === label);
+      if (!game) return;
+      wiz.selectedLabel     = game.label;
+      wiz.selectedFormat    = game.dbFormat;
+      wiz.selectedBasis     = (gameFormatConfig[game.dbFormat] || gameFormatConfig.StrokePlay).basis;
+      wiz.compLock          = game.compLock;
+      wiz.scoringSystem     = game.scoringSystem  || null;
+      wiz.scoringSystemLock = game.scoringSystemLock || false;
+      wiz.bbCount           = game.bbCount        || null;
+      wiz.bbCountLock       = game.bbCountLock    || false;
 
-    // ── NEW: COD enforcement ──────────────────────────────────────────────────
-    if (label === "C-O-D") {
-        const holesVal = String(state.game?.dbGames_Holes || "All 18");
-        wiz.segments = holesVal === "All 18" ? "6" : "3";
-        wiz.rotation = "COD";
-    }
-    // ─────────────────────────────────────────────────────────────────────────
+      // ── NEW: COD enforcement ──────────────────────────────────────────────────
+      if (label === "C-O-D") {
+          const holesVal = String(state.game?.dbGames_Holes || "All 18");
+          wiz.segments = holesVal === "All 18" ? "6" : "3";
+          wiz.rotation = "COD";
+      }
+      // ─────────────────────────────────────────────────────────────────────────
 
-    const hintEl = document.getElementById("gsWizGameHint");
-    if (hintEl) hintEl.textContent = GAME_HINTS[label] || "";
+      const hintEl = document.getElementById("gsWizGameHint");
+      if (hintEl) hintEl.textContent = GAME_HINTS[label] || "";
 
-    if (el.wizCarousel) {
-        el.wizCarousel.querySelectorAll(".wizGameCard").forEach(c =>
-            c.classList.toggle("selected", c.dataset.label === label)
-        );
-    }
-    setDirty(true);
-    wizUpdateSummary();
-    wizCheckComplete();
-}
+      if (el.wizCarousel) {
+          el.wizCarousel.querySelectorAll(".wizGameCard").forEach(c =>
+              c.classList.toggle("selected", c.dataset.label === label)
+          );
+      }
+      setDirty(true);
+      wizUpdateSummary();
+      wizCheckComplete();
+  }
 
   // ---- Step 2: Structure ----
   function wizRenderStep2() {
