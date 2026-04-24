@@ -171,9 +171,15 @@ final class ServiceScoreSummary
         if ($basis === 'points') {
             $pointsResult = self::resolvePairFieldPoints($out, $scorecardRows, $gameRow);
             foreach ($out as &$row) {
-                $pId = $row['pairingId'];
-                $row['grossPoints'] = $pointsResult['gross'][$pId] ?? ['front' => 0, 'back' => 0, 'total' => 0];
-                $row['netPoints']   = $pointsResult['net'][$pId]   ?? ['front' => 0, 'back' => 0, 'total' => 0];
+                $pId      = $row['pairingId'];
+                $grossPts = $pointsResult['gross'][$pId] ?? ['front' => 0, 'back' => 0, 'total' => 0];
+                $netPts   = $pointsResult['net'][$pId]   ?? ['front' => 0, 'back' => 0, 'total' => 0];
+                $row['grossPoints']   = $grossPts;
+                $row['netPoints']     = $netPts;
+                // Override the columnTotals-derived values (which are zero since
+                // points are now calculated here, not in decorateScoredPlayers)
+                $row['pointsValue']   = (float)$netPts['total'];
+                $row['pointsDisplay'] = (string)(int)$netPts['total'];
             }
             unset($row);
         } else {
