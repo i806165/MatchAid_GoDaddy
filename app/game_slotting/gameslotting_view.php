@@ -1,6 +1,8 @@
 <?php
 // /public_html/app/game_slotting/gameslotting_view.php
 ?>
+<main class="maPage maPage--multi maPage--slotting" role="main">
+
   <div class="gpTabPanels" id="gsTabPanels">
     <div class="gpTabPanel is-active">
 
@@ -109,3 +111,5 @@
       </footer>
     </section>
   </dialog>
+
+</main>

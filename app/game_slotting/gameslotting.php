@@ -78,11 +78,7 @@ $maChromeLogoUrl = null;
 </head>
 <body class="maPage--slotting">
   <?php include __DIR__ . "/../../includes/chromeHeader.php"; ?>
-
-  <main class="maPage maPage--multi" role="main">
-    <?php include __DIR__ . "/gameslotting_view.php"; ?>
-  </main>
-
+  <?php include __DIR__ . "/gameslotting_view.php"; ?>
   <?php include __DIR__ . "/../../includes/chromeFooter.php"; ?>
 
   <script>
