@@ -9,8 +9,15 @@
    Page Shell / Panels
    ========================================================================== */
 
+/* Lock outer page scrolling; panels own their scroll bodies */
 .maPage--slotting {
   overflow: hidden;
+}
+
+/* Height relay — mirrors .gpTabPanels / .gpTabPanel chain in game_pairings.css */
+#gsTabPanels {
+  height: 100%;
+  min-height: 0;
 }
 
 .gsTrayPanel,
