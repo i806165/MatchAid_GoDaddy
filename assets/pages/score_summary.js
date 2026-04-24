@@ -303,10 +303,52 @@
     }
   }
 
+  function pointsHintText() {
+    if (!isPointsBasis()) return '';
+
+    let raw = game.dbGames_PointsConfig ?? game.dbGames_StablefordPoints ?? null;
+    if (typeof raw === 'string') {
+      try { raw = JSON.parse(raw); } catch (e) { raw = null; }
+    }
+    if (!raw || typeof raw !== 'object') return '';
+
+    const strategy = raw.strategy || 'Stableford';
+    const values   = raw.values;
+
+    if ((strategy === 'Stableford' || strategy === 'Chicago') && Array.isArray(values)) {
+      const relLabels = { '-3': 'Albatross', '-2': 'Eagle', '-1': 'Birdie', '0': 'Par', '1': 'Bogey', '2': 'Dbl Bogey' };
+      const parts = values
+        .filter(v => Number(v.points) > 0)
+        .map(v => `${relLabels[String(v.reltoPar)] || v.reltoPar}=${v.points}`);
+      const prefix = strategy === 'Chicago' ? 'Chicago · Quota 36 · ' : 'Stableford · ';
+      return prefix + parts.join(' · ');
+    }
+
+    if (strategy === 'Nines' && values && typeof values === 'object' && !Array.isArray(values)) {
+      const parts = Object.entries(values).map(([size, dist]) => `${size}P: ${dist.join('-')}`);
+      return '9\'s · ' + parts.join(' · ');
+    }
+
+    if (strategy === 'LowBallLowTotal' && values) {
+      return `Low-Ball/Low-Total · LowBall=${values.lowBall ?? 1}pt · LowTotal=${values.lowTotal ?? 1}pt`;
+    }
+
+    if (strategy === 'LowBallHighBall' && values) {
+      return `Low-Ball/High-Ball · LowBall=${values.lowBall ?? 1}pt · HighBall=${values.highBall ?? 1}pt`;
+    }
+
+    if (strategy === 'Vegas' && values) {
+      return `Vegas · ${values.pointsPerUnit ?? 1}pt per unit`;
+    }
+
+    return strategy;
+  }
+
   function renderControls() {
     if (!dom.controls) return;
 
     const modes = availableModes();
+    const hint  = pointsHintText();
 
     dom.controls.innerHTML = `
       <div class="scBrowserControls">
@@ -315,6 +357,7 @@
             `<button class="scCtlBtn ${state.valueMode === key ? 'is-active' : ''}" type="button" data-mode="${key}">${label}</button>`
           ).join('')}
         </div>
+        ${hint ? `<div class="ssPointsHint">${esc(hint)}</div>` : ''}
       </div>
     `;
 

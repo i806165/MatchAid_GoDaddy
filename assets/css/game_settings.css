@@ -1,380 +1,379 @@
-/* /assets/css/game_settings.css
-   Local, page-specific rules for Game Settings — Wizard view only.
-   Shared tokens/layout live in /assets/css/ma_shared.css.
-*/
+/* /assets/css/score_summary.css
+ * Thin, tokenized page CSS.
+ * Reuses browser-control and scoring-page patterns from scorecardShared.css
+ * while keeping score-summary-specific styling here.
+ */
 
-/* Card header style */
-.maCard__hdr {
-  color: var(--brandSecondaryText);
-  background: var(--brandSecondary);
-}
-
-/* Desktop canvas */
-@media (min-width: 980px) {
-  body {
-    background:
-      radial-gradient(1200px circle at 18% 8%,
-        color-mix(in srgb, var(--brandPrimary) 16%, transparent),
-        transparent 58%),
-      radial-gradient(900px circle at 82% 0%,
-        color-mix(in srgb, var(--brandSecondary) 16%, transparent),
-        transparent 60%),
-      linear-gradient(180deg,
-        color-mix(in srgb, var(--surfaceApp) 96%, black),
-        var(--surfaceApp));
-    background-attachment: fixed;
-  }
-}
-
-/* ==========================================================================
-   WIZARD — Progress strip
-   ========================================================================== */
-
-.gsWizProgress {
-  display: flex;
-  align-items: flex-start;
-  margin-top: 8px;
-  padding: 0 4px;
-}
-.gsWizStep {
-  flex: 1;
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  cursor: pointer; position: relative;
-  user-select: none; -webkit-tap-highlight-color: transparent;
-}
-.gsWizStep + .gsWizStep::before {
-  content: ''; position: absolute;
-  left: -50%; top: 10px; width: 100%; height: 2px;
-  background: rgba(0,0,0,.12); z-index: 0;
-}
-.gsWizDot {
-  width: 20px; height: 20px; border-radius: 50%;
-  background: rgba(0,0,0,.06); border: 2px solid rgba(0,0,0,.15);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 900; color: transparent;
-  transition: all 0.2s; position: relative; z-index: 1;
-  font-family: var(--fontFamilyBase);
-}
-.gsWizStep.active .gsWizDot {
-  background: var(--brandColor3);
-  border-color: color-mix(in srgb, var(--brandColor3) 70%, black);
-  color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(0,102,204,.18);
-}
-
-.gsWizStep.active .gsWizStepLabel {
-  color: var(--brandColor3);
-}
-
-.gsWizStepLabel {
-  font-size: 9px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase;
-  color: rgba(0,0,0,.35); white-space: nowrap; font-family: var(--fontFamilyBase);
-}
-.gsWizStep.active .gsWizStepLabel { color: var(--brandPrimary); font-weight: 900; }
-
-/* ==========================================================================
-   WIZARD — Layout
-   ========================================================================== */
-
-.gsWizLayout { display: flex; gap: 10px; align-items: flex-start; }
-.gsWizMain   { flex: 1 1 0; min-width: 0; }
-.gsWizAside  { width: 240px; flex-shrink: 0; position: sticky; top: 10px; }
-
-.gsWizStepPanel { animation: gsWizIn 0.22s cubic-bezier(0.22,1,0.36,1) both; }
-@keyframes gsWizIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-
-/* ==========================================================================
-   WIZARD — Typography
-   ========================================================================== */
-
-.gsWizEyebrow { font-size: 15px; font-weight: 900; color: var(--ink); margin-bottom: 4px; line-height: 1.2; }
-.gsWizHint    { font-size: 12px; font-weight: 700; color: var(--mutedText); margin-bottom: 14px; line-height: 1.4; }
-
-.gsWizFieldGroup  { display: flex; flex-direction: column; gap: 8px; }
-.gsWizFieldLabel  { font-size: 11px; font-weight: 900; letter-spacing: .3px; text-transform: uppercase; color: var(--mutedText); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.gsWizDivider     { height: 1px; background: var(--borderSubtle); margin: 4px 0; }
-.gsWizCascadeNote { font-size: 11px; font-weight: 700; color: var(--mutedText); line-height: 1.4; min-height: 16px; }
-
-.gsWizBasisInline { font-size: 13px; font-weight: 900; color: var(--brandPrimary); }
-
-/* ==========================================================================
-   WIZARD — Choice chips
-   ========================================================================== */
-
-.wizChips { display: flex; flex-wrap: wrap; gap: 6px; }
-
-.wizChip {
-  height: var(--btnHeight); padding: 0 14px;
-  border-radius: var(--controlRadius); border: 1px solid var(--controlBorder);
-  background: var(--bg); color: var(--ink);
-  font-family: var(--fontFamilyBase); font-size: 12px; font-weight: 800;
-  cursor: pointer; display: flex; align-items: center;
-  transition: background 0.12s, border-color 0.12s;
-  user-select: none; -webkit-tap-highlight-color: transparent; white-space: nowrap;
-}
-.wizChip:hover:not(.locked):not(.disabled) { background: var(--btnHoverBg); }
-.wizChip.selected  { background: var(--segmentSelectedBg); border-color: color-mix(in srgb, var(--segmentSelectedBg) 55%, black); }
-.wizChip.locked    { background: var(--brandPrimaryBg); border-color: rgba(7,67,42,.25); color: var(--brandPrimary); cursor: default; font-weight: 900; }
-.wizChip.disabled  { opacity: .28; cursor: not-allowed; pointer-events: none; }
-
-/* ==========================================================================
-   WIZARD — Selects
-   ========================================================================== */
-
-.gsWizSelectWrap { position: relative; }
-.gsWizSelect     { width: 100%; }
-
-/* ==========================================================================
-   WIZARD — Carousel
-   ========================================================================== */
-
-.gsWizCarouselHeader  { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.gsWizCarouselHint    { font-size: 11px; font-weight: 800; color: var(--mutedText); }
-.gsWizCarouselArrows  { display: flex; gap: 5px; }
-.gsWizCarouselArrow   {
-  width: 30px; height: 30px; border-radius: var(--controlRadius);
-  border: 1px solid var(--controlBorder); background: var(--bg);
-  cursor: pointer; font-size: 13px; font-weight: 900;
-  display: flex; align-items: center; justify-content: center;
-  color: var(--mutedText); transition: background 0.12s;
-}
-.gsWizCarouselArrow:hover { background: var(--btnHoverBg); }
-
-.gsWizCarouselWrap { position: relative; }
-.gsWizCarouselWrap::before,
-.gsWizCarouselWrap::after { content: ''; position: absolute; top: 0; bottom: 14px; width: 20px; z-index: 2; pointer-events: none; }
-.gsWizCarouselWrap::before { left:  0; background: linear-gradient(to right, var(--bg), transparent); }
-.gsWizCarouselWrap::after  { right: 0; background: linear-gradient(to left,  var(--bg), transparent); }
-
-.wizCarousel {
-  display: flex; gap: 8px; overflow-x: auto;
-  scroll-snap-type: x mandatory; scroll-behavior: smooth;
-  padding: 4px 2px 12px; -ms-overflow-style: none; scrollbar-width: none; cursor: grab;
-}
-.wizCarousel::-webkit-scrollbar { display: none; }
-.wizCarousel:active { cursor: grabbing; }
-
-.wizGameCard {
-  scroll-snap-align: start; flex: 0 0 110px;
-  background: var(--bg); border: 1px solid var(--borderSubtle);
-  border-radius: var(--controlRadius); padding: 12px 8px 10px;
-  cursor: pointer; text-align: center; user-select: none;
-  transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
-  -webkit-tap-highlight-color: transparent;
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-}
-.wizGameCard:hover    { background: var(--btnHoverBg); border-color: rgba(0,0,0,.2); }
-.wizGameCard.selected { background: var(--segmentSelectedBg); border-color: color-mix(in srgb, var(--segmentSelectedBg) 55%, black); box-shadow: 0 2px 8px rgba(0,0,0,.10); }
-.wizGameCard__name    { font-size: 12px; font-weight: 900; color: var(--ink); line-height: 1.25; }
-.wizGameCard__fmt     { font-size: 9px;  font-weight: 800; color: var(--mutedText); letter-spacing: .2px; }
-
-.gsWizHint { font-size: 12px; font-weight: 700; color: var(--mutedText); margin-bottom: 14px; line-height: 1.4; }
-
-/* ==========================================================================
-   WIZARD — Hole declaration grid
-   ========================================================================== */
-
-.gsWizHoleDeclHint { font-size: 11px; font-weight: 700; color: var(--mutedText); line-height: 1.4; }
-.gsWizSetAllRow    { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0; }
-.gsWizSetAllLabel  { font-size: 12px; font-weight: 800; color: var(--mutedText); white-space: nowrap; }
-.gsWizSetAllBtns   { display: flex; gap: 5px; }
-.gsWizSetAllBtn {
-  width: 34px; height: 34px; border-radius: var(--controlRadius);
-  border: 1px solid var(--controlBorder); background: var(--bg);
-  font-size: 13px; font-weight: 900; font-family: var(--fontFamilyBase);
-  color: var(--mutedText); cursor: pointer;
-  display: flex; align-items: center; justify-content: center; transition: background 0.12s;
-}
-.gsWizSetAllBtn:hover { background: var(--segmentSelectedBg); border-color: color-mix(in srgb, var(--segmentSelectedBg) 55%, black); color: var(--ink); }
-
-.gsWizHoleDeclGrid { display: grid; grid-template-columns: repeat(9, auto); gap: 5px; justify-content: start; }
-
-.wizHoleCell {
-  background: var(--surfaceApp); border: 1px solid var(--borderSubtle);
-  border-radius: var(--radiusMd); padding: 7px 4px 5px;
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  transition: border-color 0.12s;
-  width: 36px;
-}
-.wizHoleCell:focus-within { border-color: var(--brandSecondary); background: var(--brandPrimaryBg); }
-.wizHoleCellLabel         { font-size: 9px; font-weight: 900; color: var(--mutedText); text-align: center; line-height: 1.2; }
-.wizHoleCellLabel .par-text { display: block; font-size: 8px; color: var(--brandSecondary); margin-top: 1px; }
-.wizHoleCellSelect {
-  width: 100%; border: none; background: transparent;
-  font-size: 15px; font-weight: 900; font-family: var(--fontFamilyBase);
-  color: var(--brandPrimary); text-align: center; text-align-last: center; cursor: pointer;
-  appearance: none; -webkit-appearance: none; padding: 0; display: block; margin: 0 auto;
-}
-.wizHoleCellSelect:focus { outline: none; }
-
-/* ==========================================================================
-   WIZARD — Stableford preview
-   ========================================================================== */
-
-.gsWizStableford        { background: var(--surfaceApp); border: 1px solid var(--borderSubtle); border-radius: var(--radiusMd); overflow: hidden; }
-.gsWizStableford__hdr   { background: rgba(0,0,0,.04); padding: 7px 12px; font-size: 10px; font-weight: 900; color: var(--ink); letter-spacing: .5px; text-transform: uppercase; opacity: .7; }
-.gsWizStableford__grid  { display: grid; grid-template-columns: repeat(6, 1fr); }
-.wizStableford__cell    { padding: 8px 4px; text-align: center; border-right: 1px solid var(--borderSubtle); border-bottom: 1px solid var(--borderSubtle); }
-.wizStableford__cell:last-child { border-right: none; }
-.wizStableford__rel     { font-size: 9px;  font-weight: 900; color: var(--ink); margin-bottom: 2px; }
-.wizStableford__pts     { font-size: 15px; font-weight: 900; color: var(--brandPrimary); }
-.wizStableford__name    { font-size: 8px;  font-weight: 800; color: var(--ink); margin-top: 1px; opacity: .6; }
-
-/* ==========================================================================
-   WIZARD — Summary panel
-   ========================================================================== */
-
-.gsWizSummary__body    { padding: 0; }
-.gsWizSummary__section { font-size: 9px; font-weight: 900; letter-spacing: 1.1px; text-transform: uppercase; color: var(--brandPrimary); padding: 8px 10px 3px; border-top: 1px solid var(--borderSubtle); }
-.gsWizSummary__section:first-of-type { border-top: none; }
-.gsWizSummary__row     { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 10px; gap: 8px; }
-.gsWizSummary__key     { font-size: 11px; font-weight: 700; color: var(--mutedText); white-space: nowrap; flex-shrink: 0; }
-
-.wizSummary__val        { font-size: 11px; font-weight: 900; color: var(--ink); text-align: right; max-width: 130px; word-break: break-word; }
-.wizSummary__val.empty  { color: rgba(0,0,0,.2); font-weight: 700; font-style: italic; }
-.wizSummary__val.forced { color: var(--brandPrimary); }
-
-/* ==========================================================================
-   WIZARD — Nav buttons
-   ========================================================================== */
-
-.gsWizNav { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; gap: 8px; }
-
-/* ==========================================================================
-   WIZARD — Responsive
-   ========================================================================== */
-
-@media (max-width: 720px) {
-  .gsWizLayout           { flex-direction: column; }
-  .gsWizAside            { width: 100%; position: static; }
-  .gsWizHoleDeclGrid     { grid-template-columns: repeat(6, auto); }
-  .gsWizStableford__grid { grid-template-columns: repeat(3, 1fr); }
-  .wizGameCard           { flex: 0 0 96px; }
-  .gsWizCarouselArrows   { display: none; }
-}
-
-/* ==========================================================================
-   WIZARD — Points config UI
-   ========================================================================== */
-
-/* Nines table — two-row labeled grid */
-.gsWizNinesTable {
-  display: grid;
-  gap: 8px;
-  margin-top: 4px;
-}
-
-.gsWizNinesRow {
-  display: grid;
-  grid-template-columns: 80px 1fr;
-  align-items: center;
+/* Carry over scorecard browser-shell patterns */
+.ssHost--browser {
   gap: 12px;
-  background: var(--surfaceApp);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--radiusMd);
-  padding: 8px 12px;
 }
 
-.gsWizNinesRowLabel {
-  font-size: 11px;
-  font-weight: 900;
-  color: var(--mutedText);
-  text-transform: uppercase;
-  letter-spacing: .3px;
-  white-space: nowrap;
-}
-
-.gsWizNinesInputs {
+.scBrowserControls {
   display: flex;
-  gap: 6px;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
-.gsWizNinesInput {
-  width: 44px;
-  height: 36px;
-  text-align: center;
-  font-size: 15px !important;
-  font-weight: 900;
-  padding: 0 4px;
-  border-radius: var(--controlRadius);
-}
-
-.gsWizNinesSep {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--mutedText);
-}
-
-/* Points input grid — LowBall/LowTotal, LowBall/HighBall, Vegas */
-.gsWizPointsInputGrid {
-  display: grid;
+.scBrowserControls__group {
+  display: flex;
   gap: 8px;
-  margin-top: 4px;
+  flex-wrap: wrap;
 }
 
-.gsWizPointsInputRow {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 12px;
-  background: var(--surfaceApp);
+.scCtlBtn {
   border: 1px solid var(--borderSubtle);
-  border-radius: var(--radiusMd);
+  background: #fff;
+  border-radius: 999px;
   padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.gsWizPointsInputLabel {
-  font-size: 12px;
+.scCtlBtn.is-active {
+  background: var(--brandPrimary);
+  color: #fff;
+  border-color: var(--brandPrimary);
+}
+
+.ssHost {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cardsGap);
+  min-width: 0;
+}
+
+/* Shared matchup / leaderboard card shell */
+.ssMatchCell,
+.ssMatchCardTitle {
+  white-space: normal;
+}
+
+.ssMatchCell__top,
+.ssMatchCell__bottom {
+  display: block;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.ssMatchCell__top {
+  font-weight: 700;
+}
+
+.ssMatchCell__bottom {
+  margin-top: 2px;
+  font-weight: 700;
+}
+
+.ssMatchCell__sub{
+  font-size: 11px;
+  font-weight: 700;
+  opacity: .8;
+  margin-top: 2px;
+}
+
+.ssThruPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--pillBg);
+  color: var(--pillText);
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.ssThruPill--stacked {
+  min-width: 68px;
+  min-height: auto;
+  padding: 6px 10px;
+  border-radius: 16px;
+  flex-direction: column;
+  line-height: 1.05;
+  gap: 2px;
+  white-space: normal;
+}
+
+.ssMatchCard {
+  border-color: color-mix(in srgb, var(--borderSubtle) 82%, black);
+  box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  overflow: hidden;
+}
+
+.ssMatchCard__hdr {
+  background: var(--brandSecondary);
+  color: var(--brandSecondaryText);
+  padding: 10px 12px;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.ssMatchCard__hdr .ssMatchCardTitle,
+.ssMatchCard__hdr .ssMatchCell__top,
+.ssMatchCard__hdr .ssMatchCell__bottom {
+  color: var(--brandSecondaryText);
+}
+
+.ssMatchCard__hdr .ssThruPill {
+  background: #fff;
+}
+
+.ssMatchCard__body {
+  padding: 8px;
+}
+
+/* PairPair grid */
+.ssPairPairGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.ssSideGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.ssSideBox {
+  border: 1px solid var(--borderSubtle);
+  border-radius: 16px;
+  background: #fff;
+  padding: 8px 10px;
+}
+
+.ssSideBox.is-leading {
+  background: color-mix(in srgb, var(--success) 10%, white);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success) 34%, white);
+}
+
+.ssSideBox__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.ssSideBox__side,
+.ssSideBox__scores,
+.ssSideBox__label,
+.ssSideBox__value {
+  color: var(--ink);
+}
+
+.ssSideBox__side,
+.ssSideBox__scores {
+  font-weight: 700;
+}
+
+.ssSideBox__side {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.ssSideBox__values {
+  display: grid;
+  gap: 6px;
+  font-size: 16px;
+  line-height: 1.1;
+  font-weight: 700;
+}
+
+.ssSideBox__values > div {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.ssSideBox__label {
+  display: inline-block;
+  min-width: 58px;
+  font-weight: 700;
+}
+
+.ssSideBox__value {
+  font-weight: 700;
+}
+
+/* PairField grid */
+.ssPairFieldGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.ssFieldCard.is-leading {
+  border-color: color-mix(in srgb, var(--success) 42%, white);
+}
+
+.ssFieldCard__body {
+  padding: 8px;
+}
+
+.ssFieldSummaryBox {
+  border: 1px solid var(--borderSubtle);
+  border-radius: 16px;
+  background: #fff;
+  padding: 10px 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.ssFieldSummaryTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ssFieldMetric {
+  font-size: 15px;
   font-weight: 700;
   color: var(--ink);
-  line-height: 1.3;
+  line-height: 1.1;
 }
 
-.gsWizPointsInput {
-  width: 56px;
-  height: 36px;
+.ssFieldMetricValue {
+  margin-left: 4px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.ssFieldSection {
+  display: grid;
+  gap: 6px;
+}
+
+.ssFieldSection--split {
+  border-top: 1px solid var(--borderSubtle);
+  padding-top: 8px;
+}
+
+.ssFieldSection__title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+
+.ssFieldStatGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.ssFieldStatCell {
+  border-radius: 12px;
+  border: 1px solid var(--borderSubtle);
+  padding: 6px 4px;
   text-align: center;
-  font-size: 15px !important;
-  font-weight: 900;
-  padding: 0 4px;
-  border-radius: var(--controlRadius);
-  flex-shrink: 0;
 }
 
-/* Stableford grid — editable cells */
-.wizStableford__pts input {
-  width: 36px;
-  height: 28px;
-  text-align: center;
-  font-size: 15px;
-  font-weight: 900;
-  font-family: var(--fontFamilyBase);
-  color: var(--brandPrimary);
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid var(--borderSubtle);
-  border-radius: 0;
-  padding: 0;
-  outline: none;
-  cursor: text;
+.ssFieldStatCell--muted {
+  background: color-mix(in srgb, var(--cardBg) 92%, black);
 }
 
-.wizStableford__pts input:focus {
-  border-bottom-color: var(--brandSecondary);
-  background: var(--brandPrimaryBg);
+.ssFieldStatCell--plain {
+  background: #fff;
 }
 
-@media (max-width: 720px) {
-  .gsWizNinesRow {
-    grid-template-columns: 64px 1fr;
-    gap: 8px;
-    padding: 8px;
+.ssFieldStatCell__label {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.05;
+  color: var(--ink);
+}
+
+.ssFieldStatCell__value {
+  margin-top: 4px;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--ink);
+}
+
+@media (max-width: 820px) {
+  .scBrowserControls {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 420px) {
+  .ssFieldStatGrid {
+    gap: 4px;
   }
 
-  .gsWizPointsInputRow {
-    grid-template-columns: 1fr auto;
-    padding: 8px;
+  .ssFieldStatCell {
+    padding: 6px 2px;
+  }
+
+  .ssFieldStatCell__label {
+    font-size: 10px;
+  }
+
+  .ssFieldStatCell__value {
+    font-size: 16px;
+  }
+}
+
+@media (min-width: 761px) {
+  .ssPairPairGrid,
+  .ssPairFieldGrid {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+}
+/* ==========================================================================
+   Points hint — shown in controls bar for Points basis games
+   ========================================================================== */
+
+.ssPointsHint {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mutedText);
+  line-height: 1.3;
+  padding: 2px 0;
+}
+
+@media (min-width: 821px) {
+  /* Desktop — hint sits to the right of the toggle buttons */
+  .scBrowserControls {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+  .ssPointsHint {
+    margin-left: auto;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 420px;
+  }
+}
+
+@media (max-width: 820px) {
+  /* Mobile — hint sits below the toggle buttons */
+  .scBrowserControls {
+    flex-wrap: wrap;
+  }
+  .ssPointsHint {
+    width: 100%;
+    margin-top: 2px;
   }
 }
