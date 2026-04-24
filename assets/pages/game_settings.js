@@ -78,13 +78,30 @@
     { label: "Four Ball",     dbFormat: "MatchPlay",  basis: "Holes",   compLock: "PairPair", scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2",  bbCountLock: false },
     { label: "C-O-D",         dbFormat: "MatchPlay",  basis: "Holes",   compLock: "PairPair", scoringSystem: "BestBall",      scoringSystemLock: false, bbCount: "2",  bbCountLock: false },
     // ── Skins ──
-    { label: "Skins",         dbFormat: "Skins",      basis: "Skins",   compLock: "PairPair", scoringSystem: "AllScores",     scoringSystemLock: true,  bbCount: null, bbCountLock: true  },
+    { label: "Skins",         dbFormat: "Skins", basis: "Skins", compLock: "PairField", scoringSystem: "BestBall", scoringSystemLock: true, bbCount: "1", bbCountLock: true },
+    { label: "Skins Match",   dbFormat: "Skins", basis: "Skins", compLock: "PairPair",  scoringSystem: "BestBall", scoringSystemLock: true, bbCount: "1", bbCountLock: true },
     // ── Team formats ──
     { label: "Alt-Shot",      dbFormat: "AltShot",    basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
     { label: "Chapman",       dbFormat: "Chapman",    basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
     { label: "Scramble",      dbFormat: "Scramble",   basis: "Strokes", compLock: "PairPair", scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
     { label: "Shamble",       dbFormat: "Shamble",    basis: "Strokes", compLock: null,       scoringSystem: "BestBall",      scoringSystemLock: true,  bbCount: "1",  bbCountLock: true  },
   ];
+
+  const GAME_HINTS = {
+    "Stroke Play":        "Every player counts their own score on every hole. Low total wins.",
+    "Best Ball":          "Each team counts their lowest N scores per hole. Great for mixed-skill groups.",
+    "Declare 33/44":      "Players choose which nine holes count — front, back, or split — at their discretion.",
+    "Stableford":         "Points awarded per hole relative to par. More points wins. Rewards aggressive play.",
+    "Match Play":         "Hole by hole — win the hole, earn a point. Most holes won takes the match.",
+    "Four Ball":          "Two vs. two. Each player plays their own ball — best ball from each side counts per hole.",
+    "C-O-D":              "Cart, Opposite, Driver — partners rotate every six holes across three spins.",
+    "Traditional Skins":  "Every player competes for each hole. Ties carry the skin forward until someone wins it outright.",
+    "Skins Match":        "Two teams compete skin by skin. Ties carry forward within the matchup until won outright.",
+    "Alt-Shot":           "Partners alternate shots on the same ball throughout the round. One score per team per hole.",
+    "Chapman":            "Each player hits a tee shot, then switches — best second shot chosen, alternate shot to finish.",
+    "Scramble":           "All players hit every shot from the best lie. One team score per hole.",
+    "Shamble":            "All players hit tee shots, best drive chosen — each player finishes their own ball from there.",
+  };
 
   const WIZ_SYSTEMS = {
     AllScores:     { label: "Use All Scores",        desc: "Every player's score counts on every hole." },
@@ -527,6 +544,8 @@
       const sel = el.wizCarousel.querySelector(`[data-label="${CSS.escape(wiz.selectedLabel)}"]`);
       if (sel) sel.scrollIntoView({ block: "nearest", inline: "center" });
     }
+    const hintEl = document.getElementById("gsWizGameHint");
+    if (hintEl) hintEl.textContent = GAME_HINTS[wiz.selectedLabel] || "";
   }
 
 function wizSelectGame(label) {
@@ -548,6 +567,9 @@ function wizSelectGame(label) {
         wiz.rotation = "COD";
     }
     // ─────────────────────────────────────────────────────────────────────────
+
+    const hintEl = document.getElementById("gsWizGameHint");
+    if (hintEl) hintEl.textContent = GAME_HINTS[label] || "";
 
     if (el.wizCarousel) {
         el.wizCarousel.querySelectorAll(".wizGameCard").forEach(c =>
@@ -928,11 +950,15 @@ function wizSelectGame(label) {
 
   function wizSetStrokeDistHint(val) {
     if (!el.wizStrokeDistNote) return;
-    const seg = wiz.segments || "9";
+    const seg = parseInt(wiz.segments || "9", 10);
+    const holesVal = String(state.game?.dbGames_Holes || "All 18");
+    const totalHoles = (holesVal === "F9" || holesVal === "B9") ? 9 : 18;
+    const spinCount = seg > 0 ? Math.round(totalHoles / seg) : 3;
+
     const hints = {
       Standard:           "Use standard hole handicaps.",
-      Balanced:           "Strokes distributed evenly across segments.",
-      "Balanced-Rounded": `Player handicaps are rounded to nearest ${seg} and distributed evenly across segments.`,
+      Balanced:           "Strokes trimmed and distributed evenly across spins.",
+      "Balanced-Rounded": `Player handicaps are rounded to nearest multiple of ${spinCount} and distributed evenly across spins.`,
     };
     el.wizStrokeDistNote.textContent = hints[val] || "";
   }
