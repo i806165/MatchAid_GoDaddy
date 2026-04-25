@@ -63,8 +63,10 @@
           </div>
         </header>
 
-        <div class="maPanel__body maCards" id="gsCanvas">
-          <!-- Slot Cards Rendered Here -->
+        <div class="maPanel__body">
+          <div class="maCards" id="gsCanvas">
+            <!-- Slot Cards Rendered Here -->
+          </div>
         </div>
 
         <footer class="maPanel__ftr">
