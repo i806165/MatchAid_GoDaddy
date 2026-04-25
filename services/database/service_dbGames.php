@@ -7,7 +7,7 @@ declare(strict_types=1);
 
 require_once MA_API_LIB . "/Db.php";
 require_once MA_API_LIB . "/Logger.php";
-require_once MA_SERVICES . "/workflows/workFlow_CourseChange.php";
+require_once MA_SERVICES . "/workflows/workflow_CourseChange.php";
 
 final class ServiceDbGames
 {

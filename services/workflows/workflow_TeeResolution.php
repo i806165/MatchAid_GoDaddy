@@ -9,10 +9,10 @@ declare(strict_types=1);
 //
 // Consumers:
 //   - api/GHIN/getTeeSets.php          (single-player tee picker)
-//   - services/workflows/WorkFlow_CourseChange.php  (bulk course change)
+//   - services/workflows/workflow_CourseChange.php  (bulk course change)
 
-    Player Import Code Path is: JS loop → HTTP → getTeeSets.php → WorkFlow_TeeResolution.php
-    Course change Code Path is: WorkFlow_CourseChange.php → WorkFlow_TeeResolution.php directly
+    Player Import Code Path is: JS loop → HTTP → getTeeSets.php → workflow_TeeResolution.php
+    Course change Code Path is: workflow_CourseChange.php → workflow_TeeResolution.php directly
 */
 
 require_once MA_SERVICES . "/GHIN/GHIN_API_Handicaps.php";
