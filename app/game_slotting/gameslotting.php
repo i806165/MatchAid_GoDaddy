@@ -1,6 +1,7 @@
 <?php
-// /public_html/app/game_slotting/gameslotting.php
 declare(strict_types=1);
+// /public_html/app/game_slotting/gameslotting.php
+
 
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
