@@ -66,7 +66,7 @@ $maChromeLogoUrl = null;
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>MatchAid • Game Slotting</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -78,7 +78,13 @@ $maChromeLogoUrl = null;
 </head>
 <body>
   <?php include __DIR__ . "/../../includes/chromeHeader.php"; ?>
-  <?php include __DIR__ . "/gameslotting_view.php"; ?>
+
+  <div class="maControlArea" role="region" aria-label="Slotting controls"></div>
+
+  <main class="maPage maPage--multi maPage--slotting" role="main">
+    <?php include __DIR__ . "/gameslotting_view.php"; ?>
+  </main>
+
   <?php include __DIR__ . "/../../includes/chromeFooter.php"; ?>
 
   <script>

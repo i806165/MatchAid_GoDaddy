@@ -12,8 +12,6 @@
 /* Lock outer page scrolling; panels own their scroll bodies */
 .maPage--slotting {
   overflow: hidden;
-  display: flex;           /* ← add this */
-  flex-direction: column;  /* ← add this */
 }
 
 /* Height relay — mirrors .gpTabPanels / .gpTabPanel chain in game_pairings.css */
@@ -30,12 +28,6 @@
 
 .gpTabPanel.is-active {
   display: block;
-}
-
-.gsTrayPanel,
-.maPanel--primary {
-  height: 100%;
-  min-height: 0;
 }
 
 /* ==========================================================================
