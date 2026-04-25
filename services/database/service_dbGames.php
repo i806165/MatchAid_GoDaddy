@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 require_once MA_API_LIB . "/Db.php";
 require_once MA_API_LIB . "/Logger.php";
+require_once MA_SERVICES . "/workflows/workFlow_CourseChange.php";
 
 final class ServiceDbGames
 {
@@ -286,11 +287,33 @@ public static function queryGames(array $args): array {
       (int)($updated["dbGames_TeeTimeInterval"] ?? 9)
     );
 
-    // edit
+    // Capture old CourseID before the update for change detection.
+    $oldCourseId = trim((string)($existing["dbGames_CourseID"] ?? ""));
+    $newCourseId = trim((string)($updated["dbGames_CourseID"] ?? ""));
+
     self::updateGame($ggid, $updated);
     $saved = self::getGameByGGID($ggid) ?? $updated;
     $saved["dbGames_GGID"] = $ggid;
-    return ["ggid" => $ggid, "game" => $saved, "mode" => "edit"];
+
+    // Course change detection — only meaningful in edit mode with existing players.
+    $courseChanged    = ($oldCourseId !== "" && $oldCourseId !== $newCourseId);
+    $resolutionResult = null;
+
+    if ($courseChanged && isset($sessionCtx["adminToken"]) && $sessionCtx["adminToken"] !== "") {
+        $resolutionResult = be_resolveCourseChange(
+            (string)$ggid,
+            $saved,
+            (string)$sessionCtx["adminToken"]
+        );
+    }
+
+    return [
+        "ggid"             => $ggid,
+        "game"             => $saved,
+        "mode"             => "edit",
+        "courseChanged"    => $courseChanged,
+        "resolutionResult" => $resolutionResult,
+    ];
   }
 
   /**

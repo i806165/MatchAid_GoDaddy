@@ -28,6 +28,7 @@ try {
     "adminAssocName" => (string)($_SESSION["SessionAdminAssocName"] ?? ""),
     "adminClubId"    => (string)($_SESSION["SessionAdminClubID"] ?? ""),
     "adminClubName"  => (string)($_SESSION["SessionAdminClubName"] ?? ""),
+    "adminToken"     => (string)($auth["adminToken"] ?? ""),
   ];
 
   $result = ServiceDbGames::saveGame($mode, $patch, $sessionCtx);
@@ -39,11 +40,13 @@ try {
   }
 
   ma_respond(200, [
-    "ok" => true,
-    "mode" => (string)($result["mode"] ?? "edit"),
-    "ggid" => $newGGID,
-    "game" => $result["game"] ?? null
-  ]);
+      "ok"               => true,
+      "mode"             => (string)($result["mode"]  ?? "edit"),
+      "ggid"             => $newGGID,
+      "game"             => $result["game"]  ?? null,
+      "courseChanged"    => (bool)($result["courseChanged"]    ?? false),
+      "resolutionResult" => $result["resolutionResult"] ?? null,
+    ]);
 } catch (Throwable $e) {
-  ma_respond(500, ["ok" => false, "error" => $e->getMessage()]);
+    ma_respond(500, ["ok" => false, "error" => $e->getMessage()]);
 }

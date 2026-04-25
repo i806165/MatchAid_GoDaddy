@@ -87,6 +87,7 @@
     ggid: null,
     game: null,
     dirty: false,
+    playerCount: 0, 
     courseTab: "recent",
     recentCourses: [],
     searchCourses: [],
@@ -597,6 +598,9 @@ function applyChrome() {
       state.mode = init.mode || state.mode;
       state.ggid = init.ggid || null;
       state.game = init.game || null;
+      state.playerCount = typeof init.playerCount === "number"
+        ? init.playerCount
+        : 0;
 
       if (!state.game) throw new Error("Missing init.game in __INIT__.");
 
@@ -702,15 +706,40 @@ function buildPatchFromUI() {
   async function doSave() {
     if (state.busy) return;
 
-    // Basic validation
     const patch = buildPatchFromUI();
-    if (!patch.dbGames_Title) return setStatus("Title is required.", "error");
-    if (!patch.dbGames_PlayDate) return setStatus("Play date is required.", "error");
-    if (!patch.dbGames_CourseID || !patch.dbGames_FacilityID) return setStatus("Please select a course.", "error");
-    if (patch.dbGames_HCEffectivity === "Date" && !patch.dbGames_HCEffectivityDate) return setStatus("Select a handicap effectivity date.", "error");
+    if (!patch.dbGames_Title)      return setStatus("Title is required.", "error");
+    if (!patch.dbGames_PlayDate)   return setStatus("Play date is required.", "error");
+    if (!patch.dbGames_CourseID || !patch.dbGames_FacilityID)
+                                   return setStatus("Please select a course.", "error");
+    if (patch.dbGames_HCEffectivity === "Date" && !patch.dbGames_HCEffectivityDate)
+                                   return setStatus("Select a handicap effectivity date.", "error");
+
+    // Course change gate — only applies in edit mode with existing players.
+    // Compares the patch CourseID against the currently committed CourseID
+    // in state.game. If they differ and players exist, confirm before saving.
+    const courseChanging =
+        state.mode === "edit" &&
+        state.playerCount > 0 &&
+        patch.dbGames_CourseID !== (state.game?.dbGames_CourseID || "");
+
+    if (courseChanging) {
+      const ok = confirm(
+        `Course changed.\n\n` +
+        `${state.playerCount} player${state.playerCount !== 1 ? "s" : ""} ` +
+        `will have their tee assignments updated to the new course.\n\n` +
+        `Players whose tees cannot be resolved automatically will be ` +
+        `flagged for manual re-selection on the Game Players page.\n\n` +
+        `Continue?`
+      );
+      if (!ok) return;   // abort — nothing is saved
+    }
 
     setBusy(true);
-    showSavingOverlay("Saving...");
+    showSavingOverlay("Saving game...");
+    
+    if (courseChanging) {
+      showSavingOverlay("Saving game and updating player tees — please wait...");
+    }
     try {
       const res = await apiGM("saveGame.php", { mode: state.mode, patch });
       if (!res || !res.ok) throw new Error(res?.message || "Save failed.");
@@ -719,7 +748,6 @@ function buildPatchFromUI() {
       state.ggid = res.ggid || state.ggid;
       if (res.mode) state.mode = res.mode;
 
-      // If we were in Add, we are now editing the created game
       if (state.mode === "edit") {
         if (window.history && window.history.replaceState) {
           const url = new URL(window.location.href);
@@ -730,7 +758,30 @@ function buildPatchFromUI() {
 
       render();
       setDirty(false);
-      setStatus("Game saved.", "success");
+
+      // Build status message — include resolution summary if course changed.
+      if (res.courseChanged && res.resolutionResult) {
+        const r = res.resolutionResult;
+        const parts = ["Game saved."];
+        if (r.resolved > 0) {
+          parts.push(
+            `${r.resolved} player tee${r.resolved !== 1 ? "s" : ""} updated.`
+          );
+        }
+        if (r.reselect > 0) {
+          parts.push(
+            `${r.reselect} player${r.reselect !== 1 ? "s" : ""} require ` +
+            `manual tee selection on Game Players.`
+          );
+        }
+        if (r.skipped > 0) {
+          parts.push(`${r.skipped} non-rated player${r.skipped !== 1 ? "s" : ""} unchanged.`);
+        }
+        setStatus(parts.join(" "), r.reselect > 0 ? "warn" : "success");
+      } else {
+        setStatus("Game saved.", "success");
+      }
+
       applyChrome();
     } catch (e) {
       console.error(e);

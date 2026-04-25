@@ -1,6 +1,6 @@
 <?php
-// /public_html/workflows/WorkFlow_Handicaps.php
 declare(strict_types=1);
+// /public_html/workflows/workflow_Handicaps.php
 
 require_once __DIR__ . "/../database/service_dbPlayers.php";
 require_once __DIR__ . "/../GHIN/GHIN_API_Players.php";

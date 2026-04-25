@@ -7,7 +7,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
-require_once MA_SERVICES . "/workflows/WorkFlow_Handicaps.php";
+require_once MA_SERVICES . "/workflows/workflow_Handicaps.php";
 
 $auth = ma_api_require_auth();
 $in = ma_json_in();

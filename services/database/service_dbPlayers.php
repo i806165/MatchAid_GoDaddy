@@ -177,4 +177,22 @@ final class ServiceDbPlayers
     return $row ? (string)$row["dbPlayers_TeeSetID"] : null;
   }
 
+  /**
+   * Returns the number of players enrolled in a game.
+   * Used by gamemaint.php to hydrate __INIT__ playerCount
+   * so the JS can gate the course-change confirmation dialog.
+   */
+  public static function getPlayerCount(string $ggid): int
+  {
+    $ggid = trim($ggid);
+    if ($ggid === "") return 0;
+
+    $pdo = Db::pdo();
+    $st  = $pdo->prepare(
+      "SELECT COUNT(*) FROM db_Players WHERE dbPlayers_GGID = :ggid"
+    );
+    $st->execute([":ggid" => $ggid]);
+    return (int)$st->fetchColumn();
+  }
+
 }

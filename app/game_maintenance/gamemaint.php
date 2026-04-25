@@ -6,6 +6,7 @@ require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
+require_once MA_SERVICES . "/database/service_dbPlayers.php";
 
 Logger::info("GAMEMAINT_ENTRY", [
   "uri" => $_SERVER["REQUEST_URI"] ?? "",
@@ -36,6 +37,9 @@ try {
     $gc = ServiceContextGame::getGameContext();
     $game = $gc["game"];
     $ggid = $gc["ggid"];
+    $playerCount = ($mode === "edit" && $ggid)
+        ? ServiceDbPlayers::getPlayerCount((string)$ggid)
+        : 0;
   } else {
     $game = ServiceContextGame::defaultGameForAdd();
     $ggid = null;
@@ -50,6 +54,7 @@ try {
     "mode" => $mode,
     "ggid" => $ggid,
     "game" => $game,
+    "playerCount" => $playerCount,
     "authorizations" => ($mode === "edit") ? ($gc["authorizations"] ?? []) : ServiceContextGame::getGameAuthorizations(),
     "header" => [
       "subtitle" => $subtitle
