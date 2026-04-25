@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
   <title>MatchAid • Golf Game Management</title>
   <meta name="description" content="MatchAid helps golf games run smoothly — from game inception to score management." />
   <meta name="theme-color" content="#07432A" />
@@ -79,15 +79,15 @@
             <div class="ctaRow" role="group" aria-label="Portal navigation">
               <!-- Player Portal -->
               <a class="btn btn--primary"
-                 href="<?= htmlspecialchars($playerPortalHref) ?>">
-                <span aria-hidden="true">🏌️</span>
+                href="<?= htmlspecialchars($playerPortalHref) ?>"
+                style="font-size: 1.2rem;">
                 <span>Enter as Game Player</span>
               </a>
 
               <!-- Admin Portal -->
               <a class="btn btn--primary"
-                 href="<?= htmlspecialchars($adminPortalHref) ?>">
-                <span aria-hidden="true">🛠️</span>
+                href="<?= htmlspecialchars($adminPortalHref) ?>"
+                style="font-size: 1.2rem;">
                 <span>Enter as Game Admin</span>
               </a>
             </div>
