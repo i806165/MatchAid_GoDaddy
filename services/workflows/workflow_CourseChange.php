@@ -126,17 +126,27 @@ function be_resolveCourseChange(string $ggid, array $game, string $token): array
                 continue;
             }
 
-            // Resolution succeeded — write the new tee assignment and
-            // recalculate CH/PH from the resolved tee's course handicap value.
+            // Resolution succeeded — fetch the full GHIN tee detail object.
+            // IMPORTANT: $resolvedTee from be_buildTeeSetTags() is a compact
+            // UI picker object { label, value, teeSetID, playerCH, ... }.
+            // Scorecards expect dbPlayers_TeeSetDetails to contain the full
+            // GHIN tee payload beginning with {"Season":{"SeasonName":...}}.
+            // We must call be_getTeeSetByID() to get that full object,
+            // exactly as upsertGamePlayers.php does.
             $ch = (int)($resolvedTee["playerCH"] ?? 0);
             $ph = (int)round($ch * ($allowance / 100.0));
 
+            $teeSetId = (string)($resolvedTee["teeSetID"] ?? "");
+            $richTeeDetails = ($teeSetId !== "")
+                ? be_getTeeSetByID($teeSetId, $token)
+                : $resolvedTee;
+
             ServiceDbPlayers::upsertGamePlayer($ggid, $ghin, [
                 "dbPlayers_CourseID"      => $newCourseId,
-                "dbPlayers_TeeSetID"      => (string)($resolvedTee["teeSetID"] ?? ""),
+                "dbPlayers_TeeSetID"      => $teeSetId,
                 "dbPlayers_TeeSetName"    => (string)($resolvedTee["teeSetName"] ?? ""),
                 "dbPlayers_TeeSetSlope"   => (string)($resolvedTee["teeSetSlope"] ?? ""),
-                "dbPlayers_TeeSetDetails" => json_encode($resolvedTee),
+                "dbPlayers_TeeSetDetails" => json_encode($richTeeDetails),
                 "dbPlayers_HI"            => $effectiveHI,
                 "dbPlayers_CH"            => (string)$ch,
                 "dbPlayers_PH"            => (string)$ph,
