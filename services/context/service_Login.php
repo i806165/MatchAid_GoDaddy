@@ -114,7 +114,8 @@ final class ServiceLogin
             // based on user role or a 'returnAction' parameter if passed to this service.
             // For now, it defaults to the root.
 
-            return ["ok" => true];
+            $needsSettings = !ServiceUserContext::hasCompletedSettings($ghinId);
+            return ["ok" => true, "needsSettings" => $needsSettings];
 
         } catch (Throwable $e) {
             Logger::error("LOGIN_PROCESS_FAIL", [

@@ -19,9 +19,17 @@ if (!$ctx || empty($ctx["ok"])) {
   exit;
 }
 
+$portalLabel = strtoupper(trim((string)($_SESSION["SessionPortal"] ?? "")));
+$postSaveAction = match($portalLabel) {
+    "ADMIN PORTAL"  => "admin",
+    "PLAYER PORTAL" => "player",
+    default         => "home",
+};
+
 $initPayload = [
-  "ok" => true,
-  "header" => [
+  "ok"             => true,
+  "postSaveAction" => $postSaveAction,
+  "header"         => [
     "subtitle" => "Profile & Contact"
   ]
 ];

@@ -85,7 +85,7 @@
       if (out && out.ok) {
         showError("");
         if (routerGo) {
-          await routerGo(state.returnAction);
+          await routerGo(out.needsSettings ? "usersettings" : state.returnAction);
         } else {
           window.location.assign(out?.nextUrl || "/");
         }

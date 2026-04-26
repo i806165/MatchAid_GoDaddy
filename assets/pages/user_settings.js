@@ -311,6 +311,10 @@
       render();
       setDirty(false);
       setStatus("User settings saved.", "success");
+      const postSaveAction = (window.__MA_INIT__?.postSaveAction) || "home";
+      setTimeout(() => {
+            if (typeof MA.routerGo === "function") MA.routerGo(postSaveAction);
+          }, 800);
     } catch (e) {
       console.error(e);
       setStatus(String(e.message || e), "error");

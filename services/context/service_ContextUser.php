@@ -274,6 +274,26 @@ return [
 ];
 }
 
+// ADD after buildUserSettingsPayload()
+public static function hasCompletedSettings(string $ghinId): bool {
+    $row = self::retrieveGHINUser($ghinId);
+    if (!$row) return false;
+
+    $fName         = trim((string)($row["dbUser_FName"]         ?? ""));
+    $lName         = trim((string)($row["dbUser_LName"]         ?? ""));
+    $contactMethod = trim((string)($row["dbUser_ContactMethod"] ?? ""));
+    $email         = trim((string)($row["dbUser_EMail"]         ?? ""));
+    $phone         = trim((string)($row["dbUser_MobilePhone"]   ?? ""));
+    $carrier       = trim((string)($row["dbUser_MobileCarrier"] ?? ""));
+
+    if ($fName === "" || $lName === "" || $contactMethod === "") return false;
+
+    if ($contactMethod === "Email") return $email !== "";
+    if ($contactMethod === "SMS")   return $phone !== "" && $carrier !== "";
+
+    return false;
+}
+
 public static function saveUserSettings(string $ghinId, array $patch): array {
     $ghinId = trim($ghinId);
     if ($ghinId === "") {
