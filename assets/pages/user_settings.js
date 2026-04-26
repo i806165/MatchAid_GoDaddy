@@ -72,10 +72,15 @@
 
     if (chrome && typeof chrome.setActions === "function") {
       chrome.setActions({
-        left: { show: true, label: "Exit", onClick: onBack },
-        right: { show: true, label: "Save", onClick: doSave }
+        left:  { show: false },
+        right: { show: true, label: "Close", onClick: onBack },
+        footer: state.dirty
+          ? {
+              save:   { label: "Save",   onClick: doSave },
+              cancel: { label: "Cancel", onClick: onBack }
+            }
+          : null
       });
-      syncActionDisabled();
     }
 
     if (chrome && typeof chrome.setBottomNav === "function") {
@@ -89,25 +94,18 @@
     }
   }
 
-  function syncActionDisabled() {
-    const rightBtn = document.getElementById("chromeBtnRight");
-    if (rightBtn) {
-      const disabled = !!state.busy || !state.dirty;
-      rightBtn.disabled = disabled;
-      rightBtn.classList.toggle("is-disabled", disabled);
-    }
-  }
-
   function setBusy(on) {
     state.busy = !!on;
-    syncActionDisabled();
+    if (typeof MA.chrome.setFooterSaveDisabled === "function") {
+      MA.chrome.setFooterSaveDisabled(!!on);
+    }
   }
 
   function setDirty(on) {
     state.dirty = !!on;
     if (state.dirty) setStatus("Unsaved changes.", "warn");
     else setStatus("", "");
-    syncActionDisabled();
+    applyChrome();
   }
 
   function onBack() {
