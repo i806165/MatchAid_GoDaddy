@@ -23,14 +23,6 @@
     <button id="chromeFtrSave"   type="button" class="maFtrBtn maFtrBtn--save">Save</button>
   </div>
 
-  <!-- Mobile Navigate button (mobile only, hidden on desktop via CSS) -->
-  <div id="chromeNavHub" class="maChrome__navHub">
-    <button id="chromeNavHubBtn" type="button" class="maChrome__navHubBtn" aria-haspopup="true" aria-expanded="false" aria-controls="chromeHubTray">
-      <span class="maChrome__navHubIcon" aria-hidden="true">&#9776;</span>
-      <span class="maChrome__navHubLabel">Navigate</span>
-    </button>
-  </div>
-
   <!-- Hub tray overlay (mobile only, populated by MA.chrome.setBottomNav) -->
   <div id="chromeHubTray" class="maChrome__hubTray" role="dialog" aria-modal="true" aria-label="Navigation" hidden>
     <div class="maChrome__hubBackdrop" id="chromeHubBackdrop"></div>
@@ -47,7 +39,16 @@
   </div>
 
   <!-- iOS-like bottom navigation (catalog-driven; page activates items) -->
+  <!-- The Navigate button lives INSIDE the nav so it occupies exactly the
+       same space as the icon buttons. CSS swaps visibility via media query. -->
   <nav id="chromeBottomNav" class="maChrome__bottomNav" aria-label="Primary">
+
+    <div id="chromeNavHub" class="maChrome__navHub">
+      <button id="chromeNavHubBtn" type="button" class="maChrome__navHubBtn" aria-haspopup="true" aria-expanded="false" aria-controls="chromeHubTray">
+        <span class="maChrome__navHubIcon" aria-hidden="true">&#9776;</span>
+        <span class="maChrome__navHubLabel">Navigate</span>
+      </button>
+    </div>
 
     <button type="button" class="maNavBtn" data-nav="home" aria-label="Home">
       <span class="maNavIcon" aria-hidden="true">⌂</span>

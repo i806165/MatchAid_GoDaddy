@@ -1,43 +1,87 @@
-/* /assets/css/ma_shared.css
-    ==========================================================================
-   Chrome Footer (Status + iOS-like Bottom Nav)
+/* ==========================================================================
+   /assets/css/ma_shared.css
+   MatchAid — Shared Styles (GoDaddy)
+
+   SECTIONS
+   ─────────────────────────────────────────────────────────────────────────
+    1.  Design Tokens (:root)
+    2.  Base / Reset
+    3.  App Shell Layout
+    4.  Chrome — Header
+    5.  Chrome — Footer Shell & Status Line
+    6.  Chrome — Bottom Nav (Desktop Icon Bar)
+    7.  Chrome — Footer Action Bar (Save / Cancel)
+    8.  Chrome — Mobile Nav Hub (Navigate Button + Tray)
+    9.  Multi-Panel Layout
+   10.  Overlay Family (Drawer + Modal)
+   11.  Actions Menu (deprecated shell + active maModal variant)
+   12.  Cards
+   13.  Pills & Chips
+   14.  Buttons
+   15.  Form Fields
+   16.  Date Badge & Calendar
+   17.  List Rows
+   18.  Admin Picker
+   19.  Misc (Empty State, Tab Panels)
    ========================================================================== */
 
+
+/* ==========================================================================
+   1. DESIGN TOKENS
+   ========================================================================== */
 :root {
-  /* Typography */
+
+  /* --- Typography --- */
   --fontFamilyBase: "Montserrat", Arial, sans-serif;
   --inputTextSize: 16px;
   --labelTextSize: 15px;
-  
-  /* Brand */
+
+  /* --- Brand colors --- */
   --brandPrimary: #07432A;
   --brandSecondary: #3F7652;
   --brandColor3: #0066CC;
-  --brandAccent: #0b5fff; /*24a0ed or #0b5fff or 0066CC */
+  --brandAccent: #0b5fff; /* 24a0ed or #0b5fff or 0066CC */
   --brandPrimaryText: #ffffff;
   --brandPrimaryTextMuted: rgba(255,255,255,.78);
   --brandSecondaryText: #ffffff;
-  --datebadgeTopBg: #E6D39A;
-  --datebadgeTopText: #111111;
   --danger: #c62828;
   --warn: #f6d365;
   --success: #0aa45c;
 
-  /* Surfaces */
+  /* --- Surfaces --- */
   --brandPrimaryBg: rgba(7,67,42,.08);
   --brandSecondaryBg: #ffffff;
   --surfaceApp: #f7f7f7;
   --surfaceChrome: #ffffff;
 
-  /* Borders / shadows */
+  /* Common ink/surface aliases (so components don't hardcode colors) */
+  --bg: var(--surfaceChrome);
+  --surface: var(--surfaceChrome);
+  --ink: #111111;
+  --mutedText: rgba(17,17,17,.62);
+  --border: var(--borderSubtle);
+
+  /* --- Borders & shadows --- */
   --borderSubtle: rgba(0,0,0,.12);
   --shadowSubtle: 0 1px 0 rgba(0,0,0,.06);
-  
-  /* Spacing */
+
+  /* --- Spacing --- */
   --spaceSm: 6px;
   --spaceMd: 10px;
-  
-  /* Chrome Shape (Header/Footer) */
+
+  /* --- Interaction --- */
+  --pressedBg: rgba(0,0,0,.06);
+
+  /* --- Radii --- */
+  --controlRadius: 14px;
+  --radiusMd: 10px;
+  --radiusSq: 6px;
+  --radiusLg: 12px;
+
+  /* --- Controls --- */
+  --controlBorder: var(--borderSubtle);
+
+  /* --- Chrome Header --- */
   --chromePad: 10px;
   --chromeGap: 10px;
   --chromeHdrBg: #18422F;
@@ -52,11 +96,11 @@
   --chromeTitleSize: 18px;
   --chromeSubtitleSize: 12px;
   --chromeBtnFontSize: 18px;
+
+  /* --- Chrome Status Line --- */
   --chromeStatusHeight: 24px;
   --chromeStatusPadY: 2px;
   --chromeStatusFontSize: 13px;
-
-  /* Chrome status messages */
   --statusInfoBg: #ffffff;
   --statusInfoText: #1f2a37;
   --statusSuccessBg: var(--success);
@@ -64,36 +108,20 @@
   --statusWarnBg: var(--warn);
   --statusWarnText: #111111;
   --statusDangerBg: var(--danger);
-  --statusDangerText:  #ffffff;
+  --statusDangerText: #ffffff;
 
-   /* Page Control Area */
-  --ControlAreaBg: color-mix(in srgb, var(--panelBg) 88%, black);
-  --ControlAreaBorder: rgba(0,0,0,0.18);
-
-  /* Tab bar */
+  /* --- Bottom Nav (icon bar) --- */
   --tabBarHeight: 56px;
   --tabBarBg: #ffffff;
   --tabItemText: #4b5563;
   --tabItemActiveText: var(--brandAccent);
   --tabItemFontSize: 11px;
+  --navIconSize: 18px;
 
-  /* ==========================================================================
-     Segmented controls + Actions menu
-     ========================================================================== */
-
-  /* Common ink/surfaces (aliases so components don't hardcode colors) */
-  --bg: var(--surfaceChrome);
-  --surface: var(--surfaceChrome);
-  --ink: #111111;
-  --mutedText: rgba(17,17,17,.62);
-  --border: var(--borderSubtle);
-
-    /* ======================================================================
-     Buttons canonical tokens
-     ====================================================================== */
-  --btnHeight: 34px;                 /* maps to your legacy controlHeight */
-  --btnPadX: 12px;                   /* maps to legacy controlPadX */
-  --btnRadius: var(--controlRadius); /* consistent rounding */
+  /* --- Buttons --- */
+  --btnHeight: 34px;
+  --btnPadX: 12px;
+  --btnRadius: var(--controlRadius);
   --btnBorder: var(--controlBorder);
   --btnFontSize: var(--fieldValueSize);
   --btnFontWeight: 800;
@@ -102,50 +130,30 @@
   --btnPrimaryBg: var(--bg);
   --btnPrimaryText: var(--ink);
   --btnPrimaryBorder: var(--btnBorder);
-  --btnSecondaryBg: var(--brandColor3); /*var(--brandSecondary); */
+  --btnSecondaryBg: var(--brandColor3);
   --btnSecondaryText: var(--brandPrimaryText);
   --btnSecondaryBorder: color-mix(in srgb, var(--brandSecondary) 70%, black);
   --btnLinkText: var(--brandAccent);
   --btnHoverBg: rgba(0,0,0,.04);
   --btnPressedBg: var(--pressedBg);
 
-  --btnCancelBg:     #e5e7eb;
-  --btnCancelText:   var(--ink);
+  /* --- Footer action bar (Save / Cancel) --- */
+  --btnCancelBg: #e5e7eb;
+  --btnCancelText: var(--ink);
   --btnCancelBorder: rgba(0, 0, 0, .18);
-  --btnSaveBg:       var(--brandAccent);
-  --btnSaveText:     #ffffff;
-  --btnSaveBorder:   color-mix(in srgb, var(--brandAccent) 70%, black);
-  --ftrActionsPad:   10px;
-  --ftrActionsGap:   10px;
-  --ftrActionsBtnH:  44px;
-  --ftrActionsBtnW:  200px;
-  
-  /* Navigation ICONS */
-  --navIconSize: 18px;
+  --btnSaveBg: var(--brandAccent);
+  --btnSaveText: #ffffff;
+  --btnSaveBorder: color-mix(in srgb, var(--brandAccent) 70%, black);
+  --ftrActionsPad: 10px;
+  --ftrActionsGap: 10px;
+  --ftrActionsBtnH: 44px;
+  --ftrActionsBtnW: 200px;
 
-  /* Controls */
-  --controlBorder: var(--borderSubtle);
-  --controlRadius: 14px;
-  --radiusMd: 10px;
-  --radiusSq: 6px;
-  --radiusLg: 12px;
-
-  /* Segmented controls */
-  --chipHeight: 34px;
-  --chipLabelSize: 12px;
-  --chipLabelWeight: 800;
-  --segmentSelectedBg: #F1D7B7;
-  --segmentSelectedText: var(--ink);
-
-    /* ======================================================================
-     Chips / Pills / Segmented — canonical tokens
-     ====================================================================== */
-
-  /* Pills (informational chips) */
+  /* --- Pills / Chips --- */
   --pillRadius: 12px;
   --pillPadX: 10px;
   --pillPadY: 6px;
-  --pillBg: rgba(0,0,0,.06);            /* reuses your prior chip-bg intent */
+  --pillBg: rgba(0,0,0,.06);
   --pillText: var(--ink);
   --pillLabelText: var(--mutedText);
   --pillLabelSize: 10px;
@@ -154,7 +162,7 @@
   --pillMinHeight: 34px;
   --pillTitleSize: 11px;
 
-  /* Choice chips (enum selections / toggles) */
+  /* Choice chips */
   --choiceChipRadius: 12px;
   --choiceChipBorder: var(--controlBorder);
   --choiceChipBg: var(--surface);
@@ -163,7 +171,12 @@
   --choiceChipSelectedText: var(--segmentSelectedText);
   --choiceChipSelectedBorder: color-mix(in srgb, var(--segmentSelectedBg) 55%, black);
 
-  /* Segmented control (tabs) */
+  /* Segmented controls */
+  --chipHeight: 34px;
+  --chipLabelSize: 12px;
+  --chipLabelWeight: 800;
+  --segmentSelectedBg: #F1D7B7;
+  --segmentSelectedText: var(--ink);
   --segRadius: var(--controlRadius);
   --segBorder: var(--controlBorder);
   --segBg: var(--surface);
@@ -174,76 +187,52 @@
   --segActiveBg: var(--segmentSelectedBg);
   --segActiveText: var(--segmentSelectedText);
 
-
-  /* Actions menu (modal) */
+  /* --- Overlays & Modals --- */
   --overlayBg: rgba(0,0,0,.35);
+  --overlayZ: 99990;
+  --overlayBgDim: var(--overlayBg);
+  --overlayBlur: 2px;
   --modalSurface: var(--surfaceChrome);
-  --drawerRadius: var(--controlRadius);
+  --modalMaxW: 520px;
+  --modalMaxH: 88dvh;
+  --modalViewportGap: 40px;
+  --modalRadius: 18px;
+  --modalShadow: 0 14px 34px rgba(0,0,0,.18);
   --modalHeaderBg: var(--brandSecondary);
   --modalHeaderText: var(--brandSecondaryText);
+  --drawerRadius: var(--controlRadius);
+  --drawerMaxW: 720px;
+  --drawerTopRadius: 18px;
+  --drawerMaxH: var(--modalMaxH);
 
-  /* Menu typography */
-  --fieldValueSize: 12px;
-  --fieldValueSublineSize: 11px;
-
-  /* Interaction */
-  --pressedBg: rgba(0,0,0,.06);
-
-  /* Panel shell */
+  /* --- Panels --- */
   --panelGap: 8px;
   --panelPad: 8px;
   --panelBg: var(--bg);
   --panelBorder: var(--border);
   --panelRadius: 14px;
   --panelShadow: 0 1px 0 rgba(0,0,0,.02);
-
-  /* Panel regions */
   --panelHdrBg: var(--panelBg);
   --panelHdrText: var(--ink);
   --panelHdrBorder: var(--panelBorder);
-
   --panelControlsBg: color-mix(in srgb, var(--panelBg) 96%, black);
   --panelControlsBorder: var(--panelBorder);
-
   --panelFtrBg: var(--panelBg);
   --panelFtrBorder: var(--panelBorder);
 
-  /* Overlay family */
-  --overlayZ: 99990;
-  --overlayBgDim: var(--overlayBg);
-  --overlayBlur: 2px;
-
-  /* Modal shell */
-  --modalMaxW: 520px;
-  --modalMaxH: 88dvh;
-  --modalViewportGap: 40px;
-  --modalRadius: 18px;
-  --modalShadow: 0 14px 34px rgba(0,0,0,.18);
-
-  /* Drawer shell */
-  --drawerMaxW: 720px;
-  --drawerTopRadius: 18px;
-  --drawerMaxH: var(--modalMaxH);
-
-    /* Card shell */
+  /* --- Cards --- */
   --cardBg: var(--panelBg);
   --cardBorder: var(--panelBorder);
   --cardRadius: var(--panelRadius);
   --cardShadow: var(--panelShadow);
-
-    /* Card spacing (compact defaults) */
-  --cardsGap: 6px;        /* vertical space BETWEEN cards */
-  --cardPad: 8px;         /* padding inside card body */
-  --cardHdrPadY: 8px;     /* padding inside card header (Y) */
-  --cardHdrPadX: 10px;    /* padding inside card header (X) */
-
-  /* Card header */
+  --cardsGap: 6px;
+  --cardPad: 8px;
+  --cardHdrPadY: 8px;
+  --cardHdrPadX: 10px;
   --cardHdrBg: var(--cardBg);
   --cardHdrText: var(--ink);
   --cardHdrBorder: var(--cardBorder);
   --cardTitleSize: 13px;
-
-  /* Card header actions (icon buttons) */
   --cardActionSize: 34px;
   --cardActionRadius: 10px;
   --cardActionBg: transparent;
@@ -251,40 +240,53 @@
   --cardActionPressedBg: var(--pressedBg);
   --cardActionText: var(--btnLinkText);
   --cardActionGap: 6px;
+
+  /* --- Page control area --- */
+  --ControlAreaBg: color-mix(in srgb, var(--panelBg) 88%, black);
+  --ControlAreaBorder: rgba(0,0,0,0.18);
+
+  /* --- Misc typography tokens --- */
+  --fieldValueSize: 12px;
+  --fieldValueSublineSize: 11px;
+
+  /* --- Date badge --- */
+  --datebadgeTopBg: #E6D39A;
+  --datebadgeTopText: #111111;
 }
 
-html, body { 
+
+/* ==========================================================================
+   2. BASE / RESET
+   ========================================================================== */
+
+html, body {
   font-family: var(--fontFamilyBase);
-  height: 100%; 
-  margin: 0; 
+  height: 100%;
+  margin: 0;
 }
 
-/* Fix for iOS zoom on focus: inputs must be at least 16px */
+body {
+  display: flex;
+  flex-direction: column;
+  background: var(--surfaceApp);
+  overflow-x: hidden;
+}
+
+/* Fix for iOS zoom on focus — inputs must be at least 16px */
 input,
 select,
 textarea {
   font-size: var(--inputTextSize, 16px) !important;
 }
 
-body {
-  display: flex; 
-  flex-direction: column; 
-  background: var(--surfaceApp);
-  overflow-x: hidden; 
-}
 
-.maControlArea{
-  flex: 0 0 auto;            /* peer band, never scrolls */
-  padding: var(--spaceMd);   /* align with maPage horizontal padding */
-  margin: 0 var(--spaceMd) var(--spaceMd) var(--spaceMd); /* Indented sides/bottom */
-  background: var(--ControlAreaBg);
-  border: 1px solid var(--ControlAreaBorder);
-  border-radius: var(--radiusLg);
-}
+/* ==========================================================================
+   3. APP SHELL LAYOUT
+   ========================================================================== */
 
-.maPage{
+.maPage {
   flex: 1 1 auto;
-  overflow-y: auto; /* body scroll must be internal to page content */
+  overflow-y: auto;
   padding: var(--spaceMd);
   display: block;
   flex-direction: column;
@@ -292,45 +294,99 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-.maOverlayOpen .maPage{
-  /* This ensures the underlying page does not scroll when overlay opens */
+.maPage--multi {
+  padding: var(--spaceMd);
+}
+
+.maControlArea {
+  flex: 0 0 auto;
+  padding: var(--spaceMd);
+  margin: 0 var(--spaceMd) var(--spaceMd) var(--spaceMd);
+  background: var(--ControlAreaBg);
+  border: 1px solid var(--ControlAreaBorder);
+  border-radius: var(--radiusLg);
+}
+
+/* Prevent underlying page scroll when an overlay is open */
+.maOverlayOpen .maPage {
   overflow: hidden;
 }
 
-.maOverlayOpen body{
+.maOverlayOpen body {
   width: 100vw;
   overflow-x: hidden;
   position: relative;
 }
 
-.maChrome__hdr{
+
+/* ==========================================================================
+   4. CHROME — HEADER
+   ========================================================================== */
+
+.maChrome__hdr {
   background: var(--chromeHdrBg);
   border-bottom: 1px solid var(--chromeBorder);
   box-shadow: var(--chromeShadow);
   padding: var(--chromePad);
 }
-.maChrome__hdrRow{
-  display:flex;
-  align-items:center;
+
+.maChrome__hdrRow {
+  display: flex;
+  align-items: center;
   gap: var(--chromeGap);
 }
 
-.maChrome__brand{
-  width: 48px; height: 48px;
+.maChrome__hdrLeft,
+.maChrome__hdrRight {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.maChrome__hdrBtn {
+  height: 34px;
+  min-width: 72px;
+  padding: 0 10px;
+  border-radius: var(--radiusMd);
+  background: var(--chromeHdrBtnBg);
+  color: var(--chromeHdrBtnText);
+  border: 1px solid var(--chromeHdrBtnBorder);
+  font-family: var(--fontFamilyBase);
+  font-weight: 700;
+  font-size: var(--btnFontSize);
+  cursor: pointer;
+  user-select: none;
+}
+
+.maChrome__hdrBtn:active {
+  transform: scale(.98);
+}
+
+.maChrome__brand {
+  width: 48px;
+  height: 48px;
   border-radius: var(--radiusMd);
   background: var(--brandPrimaryBg);
-  display:none; align-items:center; justify-content:center;
-  overflow:hidden;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
   flex: 0 0 auto;
 }
-.maChrome__brand img{ width:100%; height:100%; object-fit:cover; }
-.maChrome__titles{
-  flex: 1 1 auto; 
-  min-width: 0; 
+
+.maChrome__brand img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.maChrome__titles {
+  flex: 1 1 auto;
+  min-width: 0;
   text-align: center;
 }
 
-.maChrome__title{
+.maChrome__title {
   font-family: var(--fontFamilyBase);
   font-weight: 700;
   color: var(--chromeTitleText);
@@ -338,7 +394,7 @@ body {
   line-height: 1.2;
 }
 
-.maChrome__subtitle{
+.maChrome__subtitle {
   font-family: var(--fontFamilyBase);
   color: var(--chromeSubtitleText);
   font-size: var(--chromeSubtitleSize);
@@ -347,339 +403,29 @@ body {
   text-overflow: ellipsis;
 }
 
-/* ======================================================================
-   SHARED FORM FIELDS & CALENDAR
-   (Moved from admin_games_list.css for reuse in Player Portal)
-   ====================================================================== */
-
-/* Field layout */
-.maFieldRow{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.maField{
-  flex: 1 1 240px;
-  min-width: 0;
-}
-
-.maLabel{
-  display: block;
-  margin: 0 0 6px 2px;
-  font-size: var(--labelTextSize);
-  font-weight: 900;
-  color: var(--mutedText);
-}
-
-.maLabelLg{
-  display: block;
-  margin: 0 0 6px 2px;
-  font-size: 18px;
-  font-weight: 900;
-  color: var(--ink);
-  line-height: 1.1;
-}
-
-.maValueLg{
-  display: block;
-  font-size: 20px;
-  font-weight: 950;
-  color: var(--ink);
-  line-height: 1;
-}
-
-.maInputWrap{
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  min-width: 0;
-}
-
-.maTextInput{
-  width: 100%;
-  min-height: var(--btnHeight);
-  padding: 0 12px;
-  border-radius: var(--controlRadius);
-  border: 1px solid var(--controlBorder);
-  background: #fff;
-  color: var(--ink);
+/* 3rd header line (matches subtitle feel) */
+.maChrome__subtitle2 {
   font-family: var(--fontFamilyBase);
-  font-size: var(--inputTextSize);
-  font-weight: 800;
-  outline: none;
-  min-width: 0;
-  box-sizing: border-box;
-}
-
-.maTextInput:focus{
-  border-color: var(--brandSecondary);
-  box-shadow: 0 0 0 3px rgba(0,0,0,.06);
-}
-
-/* ==========================================================================
-   Date Badge (shared)
-   ========================================================================== */
-.maDateBadge{
-  width: 62px;
-  flex: 0 0 auto;
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--radiusLg);
-  overflow: hidden;
-  background: var(--cardBg);
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: center;
-  padding: 0;
-  line-height: 1;
-}
-
-.maDateBadge__top{
-  background: var(--datebadgeTopBg);
-  color: var(--datebadgeTopText);
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: .3px;
-  text-align: center;
-  padding: 6px 0 5px;
-}
-
-.maDateBadge__mid{
-  color: var(--ink);
-  font-size: 22px;
-  font-weight: 950;
-  text-align: center;
-  padding: 8px 0 2px;
-}
-
-.maDateBadge__bot{
-  color: rgba(17,17,17,.72);
-  font-size: 12px;
-  font-weight: 900;
-  text-align: center;
-  padding: 0 0 8px;
-}
-
-/* Calendar */
-.maCalWrap{
-  display: none; /* opened by JS with .open */
-  margin-top: 12px;
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--radiusLg);
-  overflow: hidden;
-  background: #fff;
-}
-
-.maCalWrap.open{ display: block; }
-
-.maCalHeader{
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  background: var(--panelHdrBg);
-  color: var(--panelHdrText);
-  border-bottom: 1px solid var(--borderSubtle);
-}
-
-.maCalHint{
-  font-size: 12px;
-  font-weight: 900;
-  opacity: .95;
-}
-
-.maCalLeft{
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.maCalMonthLabel{
-  font-size: 14px;
-  font-weight: 900;
-  letter-spacing: .2px;
-  padding: 0 6px;
-}
-
-.maCalNavBtn{
-  min-width: 40px;
-}
-
-.maCalMiniBtn{
-  padding: 0 10px;
-}
-
-.maCalRight{ display: none; } /* legacy pills kept in DOM */
-
-.maCalDow{
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  padding: 10px 10px 0 10px;
-  color: var(--mutedText);
-  font-weight: 900;
-  font-size: 11px;
-}
-
-.maCalGrid{
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  padding: 10px;
-}
-
-.maCalDay{
-  min-height: 36px;
-  border-radius: 10px;
-  border: 1px solid var(--borderSubtle);
-  background: var(--cardBg);
-  color: var(--ink);
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.maCalDay:hover{
-  background: var(--pressedBg);
-}
-
-.maCalDay.muted{
-  opacity: .45;
-}
-
-.maCalDay.today{
-  border-color: var(--brandSecondary);
-}
-
-.maCalDay.selected{
-  background: var(--brandSecondary);
-  border-color: var(--brandSecondary);
-  color: #fff;
-}
-
-.maCalDay.inRange{
-  background: rgba(48, 110, 230, .10);
-  border-color: rgba(48, 110, 230, .10);
-}
-
-.maCalDay.from,
-.maCalDay.to{
-  background: var(--brandSecondary);
-  border-color: var(--brandSecondary);
-  color: #fff;
-}
-
-/* Modal footer actions */
-.maModal__ftrActions{
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  align-items: center;
-  width: 100%;
-}
-
-/* Admin picker list (in Filters modal) */
-.maAdminPick__top{
-  margin-top: 12px;
-}
-
-.maAdminPick{
-  margin-top: 10px;
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--radiusLg);
-  overflow: hidden;
-  background: #fff;
-}
-
-.maAdminPick__hdr{
-  display: grid;
-  grid-template-columns: 44px 1fr 44px;
-  gap: 8px;
-  align-items: center;
-  padding: 10px;
-  background: var(--panelHdrBg);
-  color: var(--panelHdrText);
-  border-bottom: 1px solid var(--borderSubtle);
-}
-
-.maAdminPick__hdrName{
-  font-weight: 900;
-  letter-spacing: .2px;
-}
-
-.maAdminPick__rows{
-  max-height: 360px;
-  overflow: auto;
-}
-
-.maAdminRow{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--borderSubtle);
-  cursor: pointer;
-  user-select: none;
-}
-
-.maAdminRow:hover{
-  background: var(--pressedBg);
-}
-
-.maAdminRow__left{
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.maAdminRow__check{
-  width: 22px;
-  height: 22px;
-  border-radius: 7px;
-  border: 1px solid var(--borderSubtle);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 900;
-  color: var(--mutedText);
-  flex: 0 0 auto;
-}
-
-.maAdminRow__check.on{
-  background: var(--brandSecondary);
-  border-color: var(--brandSecondary);
-  color: #fff;
-}
-
-.maAdminRow__name{
-  font-weight: 900;
-  color: var(--ink);
+  color: var(--chromeSubtitleText);
+  font-size: var(--chromeSubtitleSize);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.maAdminRow__right{
-  display: flex;
-  align-items: center;
-  flex: 0 0 auto;
+  opacity: .9;
 }
 
 
-/* Footer shell */
-.maChrome__ftr{
+/* ==========================================================================
+   5. CHROME — FOOTER SHELL & STATUS LINE
+   ========================================================================== */
+
+.maChrome__ftr {
   background: var(--chromeBg);
   border-top: 1px solid var(--chromeBorder);
   padding-bottom: 8px;
 }
 
-/* Status line */
-.maChrome__status{
+.maChrome__status {
   font-family: var(--fontFamilyBase);
   min-height: var(--chromeStatusHeight, 24px);
   display: flex;
@@ -693,27 +439,33 @@ body {
   user-select: none;
 }
 
-/* Status variants (driven by MA.setStatus -> status-* classes) */
-.maChrome__status.status-info{
+/* Status variants (driven by MA.setStatus → status-* classes) */
+.maChrome__status.status-info {
   background: var(--statusInfoBg, #e9eef5);
   color: var(--statusInfoText, #1f2a37);
 }
-.maChrome__status.status-success{
+
+.maChrome__status.status-success {
   background: var(--statusSuccessBg, #e7f7ee);
   color: var(--statusSuccessText, #0f5132);
 }
-.maChrome__status.status-warn{
+
+.maChrome__status.status-warn {
   background: var(--statusWarnBg, #fff7db);
   color: var(--statusWarnText, #664d03);
 }
-.maChrome__status.status-danger{
+
+.maChrome__status.status-danger {
   background: var(--statusDangerBg, #fde7ea);
   color: var(--statusDangerText, #842029);
 }
 
-/* iOS-like tab bar */
-.maChrome__bottomNav{
-  /* iOS tab bar feel */
+
+/* ==========================================================================
+   6. CHROME — BOTTOM NAV (DESKTOP ICON BAR)
+   ========================================================================== */
+
+.maChrome__bottomNav {
   height: var(--tabBarHeight, 56px);
   display: flex;
   align-items: stretch;
@@ -723,7 +475,7 @@ body {
 }
 
 /* Each nav button: icon stacked over label */
-.maNavBtn{
+.maNavBtn {
   flex: 1 1 0;
   display: flex;
   flex-direction: column;
@@ -739,47 +491,41 @@ body {
   color: var(--tabItemText);
 }
 
-/* Icon block */
-.maNavIcon{
-  /* size + alignment */
+.maNavIcon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 28px;
   height: 28px;
-  font-size: var(--navIconSize); /* for emoji placeholders */
+  font-size: var(--navIconSize);
   line-height: 1;
 }
 
-/* Label */
-.maNavLabel{
+.maNavLabel {
   font-size: var(--tabItemFontSize);
   line-height: 1.1;
   letter-spacing: .2px;
   white-space: nowrap;
 }
 
-/* Press feedback (mobile + desktop) */
-.maNavBtn:active{
+.maNavBtn:active {
   transform: scale(.98);
   background: rgba(0,0,0,.06);
 }
 
-/* Disabled state (including “current tab disabled”) */
-.maNavBtn:disabled{
+.maNavBtn:disabled {
   opacity: .55;
   transform: none;
   background: transparent;
   cursor: default;
 }
 
-/* Active tab: iOS-style “selected” */
-.maNavBtn.is-active{
+.maNavBtn.is-active {
   color: var(--tabItemActiveText);
 }
 
-/* Optional: subtle active indicator line */
-.maNavBtn.is-active::after{
+/* iOS-style active indicator line */
+.maNavBtn.is-active::after {
   content: "";
   width: 18px;
   height: 2px;
@@ -787,1101 +533,24 @@ body {
   margin-top: 2px;
   background: var(--tabItemActiveText);
 }
-/* ======================================================================
-   Bottom Nav: compact mode (1–2 visible items centered)
-   ====================================================================== */
-.maChrome__bottomNav.is-compact{
+
+/* Compact mode: 1–2 visible items centered */
+.maChrome__bottomNav.is-compact {
   justify-content: center;
   gap: 18px;
 }
 
-.maChrome__bottomNav.is-compact .maNavBtn{
+.maChrome__bottomNav.is-compact .maNavBtn {
   flex: 0 0 auto;
   min-width: 74px;
 }
-/* ======================================================================
-   Chrome Header: action button styling + 3rd line
-   ====================================================================== */
 
-.maChrome__hdrLeft,
-.maChrome__hdrRight{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-
-.maChrome__hdrBtn{
-  height: 34px;
-  min-width: 72px;
-  padding: 0 10px;
-  border-radius: var(--radiusMd);
-  background: var(--chromeHdrBtnBg);
-  color: var(--chromeHdrBtnText);
-  border: 1px solid var(--chromeHdrBtnBorder);
-  font-family: var(--fontFamilyBase);
-  font-weight: 700;
-  font-size: var(--btnFontSize);
-  cursor: pointer;
-  user-select: none;
-}
-
-.maChrome__hdrBtn:active{
-  transform: scale(.98);
-}
-
-/* 3rd header line (matches subtitle feel) */
-.maChrome__subtitle2{
-  font-family: var(--fontFamilyBase);
-  color: var(--chromeSubtitleText);
-  font-size: var(--chromeSubtitleSize);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  opacity: .9;
-}
-
-/* ========= Actions menu (modal overlay + panel)  DEPRECATED DO NOTE USE ============ */
-.actionMenuOverlay{
-  position: fixed;
-  inset: 0;
-  background: var(--overlayBg);
-  display: none;
-  z-index: 99999;
-  backdrop-filter: blur(2px);
-  touch-action: none;
-
-  align-items: center;
-  justify-content: center;
-  padding: 18px; /* breathing room so it never hits the edges */
-}
-
-.actionMenuOverlay.open{
-  display: flex; /* was block */
-}
-
-.actionMenu{
-  position: relative; /* was absolute */
-  min-width: 260px;
-  width: min(360px, 100%); /* ensures it fits smaller screens */
-  max-width: 360px;
-
-  background: var(--modalSurface);
-  border: 1px solid var(--controlBorder);
-  border-radius: var(--drawerRadius);
-  overflow: hidden;
-  box-shadow: 0 14px 34px rgba(0,0,0,.18);
-
-  padding: 0; /* remove bottom padding so list rows are flush */
-}
-
-.actionMenu_header{
-  position: sticky;
-  top: 0;
-  background: var(--modalHeaderBg);
-  color: var(--modalHeaderText);
-  padding: 12px 14px;
-  z-index: 2;
-}
-
-.actionMenu_headerRow{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.actionMenu_title{
-  font-weight: 900;
-  font-size: var(--chromeTitleSize);
-  line-height: 1.15;
-}
-
-.actionMenu_subtitle{
-  margin-top: 2px;
-  font-weight: 800;
-  font-size: var(--chromeSubtitleSize);
-  opacity: .9;
-}
-
-.actionMenu_closeBtn{
-  border: 0;
-  background: rgba(255,255,255,.20);
-  color: var(--bg);
-  border-radius: var(--radiusLg);
-  width: 30px;
-  height: 28px;
-  font-size: var(--btnFontSize);
-  line-height: 1;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.actionMenu_closeBtn:hover{
-  background: rgba(255,255,255,.28);
-}
-
-/* LIST ROWS (not pills) */
-.actionMenu_item{
-  width: 100%;
-  border: 0;
-  border-radius: 0;          /* kill pill rounding */
-  margin: 0;                 /* kill pill margins */
-  padding: 14px 16px;        /* list row padding */
-  background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-  font-weight: 900;
-  font-size: var(--fieldValueSize);
-  color: var(--ink);
-  cursor: pointer;
-  user-select: none;
-  border-bottom: 1px solid rgba(0,0,0,.10); /* subtle list separators */
-}
-
-.actionMenu_item:hover{
-  background: var(--pressedBg);
-}
-
-.actionMenu_item.disabled{
-  opacity: .50;
-  cursor: default;
-  color: var(--mutedText);
-}
-
-.actionMenu_item.danger{
-  color: var(--danger);
-}
-
-/* divider between groups (full width like a list separator) */
-.actionMenu_divider{
-  height: 8px;
-  background: #f0f0f0;
-  margin: 0; /* full width */
-}
-
-/* Mobile: keep centered but allow near-full width */
-@media (max-width: 520px){
-  .actionMenu{
-    width: 100%;
-    max-width: none;
-  }
-}
-
-/* ======================================================================
-   Pills (informational chips)
-   - Non-tab, informational display (e.g., Time / Players / Status)
-   ====================================================================== */
-.maPills{
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  min-width: 0;
-}
-
-.maPill{
-  background: var(--pillBg);
-  color: var(--pillText);
-  border-radius: var(--pillRadius);
-  padding: var(--pillPadY) var(--pillPadX);
-  font-size: var(--pillValueSize);
-  font-weight: 800;
-  line-height: 1.1;
-  white-space: nowrap;
-  flex: 0 0 auto;
-  min-height: var(--pillMinHeight);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
-/* Optional: 2-line label/value pill */
-.maPillKV{
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  min-height: var(--pillMinHeight);
-}
-
-.maPillLabel{
-  font-size: var(--pillLabelSize);
-  font-weight: 800;
-  color: var(--pillLabelText);
-  line-height: 1;
-}
-
-.maPillValue{
-  font-size: var(--pillValueSize);
-  font-weight: var(--pillValueWeight);
-  line-height: 1.1;
-  color: var(--pillText);
-}
-
-/* Status variants (optional) */
-.maPill--success{
-  color: var(--success);
-  background: color-mix(in srgb, var(--success) 14%, var(--cardBg));
-  border: 1px solid color-mix(in srgb, var(--success) 35%, var(--border));
-}
-.maPill--warn{ color: var(--warn); }
-.maPill--danger{ color: var(--danger); }
-
-/* ======================================================================
-   Choice chips (enum selection / toggle chips)
-   - Use for multi/single select chip groups (not panel tabs)
-   ====================================================================== */
-.maChoiceChips{
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  min-width: 0;
-}
-
-.maChoiceChip{
-  border: 1px solid var(--choiceChipBorder);
-  background: var(--choiceChipBg);
-  color: var(--choiceChipText);
-  border-radius: var(--choiceChipRadius);
-  padding: 8px 12px;
-  font-weight: 800;
-  font-size: var(--pillTitleSize);
-  line-height: 1;
-  cursor: pointer;
-  user-select: none;
-}
-
-.maChoiceChip.is-selected{
-  background: var(--choiceChipSelectedBg);
-  color: var(--choiceChipSelectedText);
-  border-color: var(--choiceChipSelectedBorder);
-}
-
-.maChoiceChip.is-disabled{
-  opacity: .55;
-  cursor: default;
-}
-
-/* ======================================================================
-   Segmented control (tabs)
-   - Use for switching panels (single select)
-   ====================================================================== */
-.maSeg{
-  display: flex;
-  width: 100%;
-  border: 1px solid var(--segBorder);
-  border-radius: var(--segRadius);
-  overflow: hidden;
-  background: var(--segBg);
-}
-
-.maSegBtn{
-  flex: 1;
-  min-height: var(--segBtnHeight);
-  border: 0;
-  border-right: 1px solid var(--segBorder);
-  background: transparent;
-  font-size: var(--segBtnFontSize);
-  font-weight: var(--segBtnWeight);
-  cursor: pointer;
-  color: var(--segBtnText);
-  padding: var(--spaceSm) calc(var(--spaceMd) + 2px);
-  user-select: none;
-}
-
-.maSegBtn:last-child{
-  border-right: 0;
-}
-
-.maSegBtn.is-active{
-  background: var(--segActiveBg);
-  color: var(--segActiveText);
-}
-
-.maSegBtn:disabled{
-  opacity: .55;
-  cursor: default;
-}
-
-/* ======================================================================
-   Buttons (shared)
-   - Supports legacy class names from gameslistview.php
-   ====================================================================== */
-
-/* Base button */
-.btn{
-  border: 1px solid var(--btnBorder);
-  background: var(--btnBg);
-  color: var(--btnText);
-  border-radius: var(--btnRadius);
-  min-height: var(--btnHeight);
-  padding: 0 var(--btnPadX);
-  font-family: var(--fontFamilyBase);
-  font-size: var(--btnFontSize);
-  font-weight: var(--btnFontWeight);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  white-space: nowrap;
-  user-select: none;
-}
-
-/* Square icon button (calendar, etc.) */
-.iconBtn{
-  width: var(--btnHeight);
-  height: var(--btnHeight);
-  flex: 0 0 var(--btnHeight);
-  padding: 0;
-  border-radius: var(--radiusSq);
-  border: 1px solid var(--btnBorder);
-  background: var(--btnBg);
-  color: var(--btnText);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  user-select: none;
-}
-
-.iconBtn:active{
-  background: var(--btnPressedBg);
-  transform: scale(.98);
-}
-
-.btn:active{
-  background: var(--btnPressedBg);
-  transform: scale(.98);
-}
-
-.btn:disabled,
-.btn.disabled{
-  opacity: .55;
-  cursor: default;
-  transform: none;
-}
-
-/* Primary = default (ink on light surface). Kept as semantic marker. */
-.btnPrimary{
-  background: var(--btnPrimaryBg);
-  color: var(--btnPrimaryText);
-  border-color: var(--btnPrimaryBorder);
-}
-
-/* Secondary = filled brand button (white on brandSecondary). */
-.btnSecondary{
-  background: var(--btnSecondaryBg);
-  color: var(--btnSecondaryText);
-  border-color: var(--btnSecondaryBorder);
-}
-
-.btnSecondary:active{
-  filter: brightness(.96);
-}
-
-/* Link button = text-only action (e.g., MANAGE). */
-.btnLink,
-.btn.btnLink{
-  border: 0;
-  background: transparent;
-  padding: 0;
-  min-height: 0;
-  height: auto;
-  min-width: 0;
-  justify-content: flex-start;
-  color: var(--btnLinkText);
-  font-weight: var(--btnFontWeight);
-}
-
-.btnLink:hover,
-.btn.btnLink:hover{
-  text-decoration: underline;
-}
-
-/* Close button (used in modals) */
-.closeBtn{
-  border: 1px solid var(--btnBorder);
-  background: var(--btnBg);
-  color: var(--btnText);
-  border-radius: var(--radiusMd);
-  padding: 7px 10px;
-  cursor: pointer;
-  font-weight: 700;
-  font-family: var(--fontFamilyBase);
-}
-
-/* Pill button (rounded action chip) */
-.pillBtn{
-  border: 1px solid var(--btnBorder);
-  background: var(--btnBg);
-  border-radius: 999px;
-  padding: 8px 12px;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: var(--fontFamilyBase);
-  font-size: var(--btnFontSize);
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;
-  user-select: none;
-}
-
-.pillBtn:active{
-  background: var(--btnPressedBg);
-  transform: scale(.98);
-}
 
 /* ==========================================================================
-   PAGE TYPES + PANELS + OVERLAY FAMILY
-   --------------------------------------------------------------------------
-   Coding terminology:
-     - Page types:
-         * Standard Page:      uses .maPage (already in ma_shared.css)
-         * Multi-Panel Page:   .maPage--multi + .maPanels + .maPanel (2/3/4)
-     - Panel:
-         * Desktop: Left/Right (or A/B/C/D)
-         * Mobile: Primary is inline; Secondary is presented as a Drawer overlay
-     - Overlay family:
-         * Action Menu: quick list of actions
-         * Modal: capture/edit filters/settings
-         * Drawer: “secondary panel” surface (mobile)
-
-    (maModal__overlay)
-      1)	(maModal__dialog)           ← flex column, constrained height
-        a)	(maModal__header)       ← title bar (pinned)
-            i)	(maModal__title)
-            ii)	Button
-        b)	(maModal__controls)     ← CONTROLS BAND (pinned) 
-            i)	control fields (i.e. filter, search)
-        c)	(maModal__body) ← RESULTS REGION (scroll container)
-            i)	results header row and results rows
-            ii)	cards and card contents
-        d)	(maModal__footer)       ← status/footer (pinned)
-            i)	message
-   ========================================================================== */
-/* ==========================================================================
-   MULTI-PANEL PAGE (2/3/4 panels)
-   Expected markup:
-     <main class="maPage maPage--multi">
-       <div class="maPanels maPanels--2"> (or --3 / --4)
-         <section class="maPanel maPanel--primary">...</section>
-         <section class="maPanel maPanel--secondary">...</section>
-       </div>
-     </main>
+   7. CHROME — FOOTER ACTION BAR (SAVE / CANCEL)
    ========================================================================== */
 
-.maPage--multi{
-  padding: var(--spaceMd);
-}
-
-
-@media (max-width: 600px) {
-  .maGameCard__manageBtn {
-    display: none !important;
-  }
-  .maModal .maField {
-    flex: 1 1 auto;
-  }
-  .maModal .maFieldRow {
-    flex-direction: column;
-  }
-  .maModal {
-    max-width: 100%;
-    box-sizing: border-box;
-  }
-}
-
-.maPanels{
-  height: 100%;
-  min-height: 0;
-  display: grid;
-  gap: var(--panelGap);
-  grid-template-columns: 1fr; /* mobile default */
-}
-
-@media (min-width: 900px){
-  .maPanels--2{ grid-template-columns: 1fr 1fr; }
-  .maPanels--3{ grid-template-columns: 1fr 1fr 1fr; }
-  .maPanels--4{ grid-template-columns: 1fr 1fr 1fr 1fr; }
-}
-
-/* Panel shell */
-.maPanel{
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-
-  background: var(--panelBg);
-  border: 1px solid var(--panelBorder);
-  border-radius: var(--panelRadius);
-  box-shadow: var(--panelShadow);
-  overflow: hidden;
-}
-
-/* Panel regions */
-.maPanel__hdr{
-  flex: 0 0 auto;
-  background: var(--panelHdrBg);
-  color: var(--panelHdrText);
-  padding: var(--panelPad);
-  border-bottom: 1px solid var(--panelHdrBorder);
-}
-
-.maPanel__controls{
-  flex: 0 0 auto;
-  background: var(--panelControlsBg);
-  padding: var(--panelPad);
-  border-bottom: 1px solid var(--panelControlsBorder);
-}
-
-.maPanel__body{
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
-  padding: var(--panelPad);
-  overscroll-behavior: contain;
-}
-
-.maPanel__ftr{
-  flex: 0 0 auto;
-  background: var(--panelFtrBg);
-  padding: var(--panelPad);
-  border-top: 1px solid var(--panelFtrBorder);
-}
-
-/* ==========================================================================
-   DRAWER (Secondary Panel on Mobile)
-   Expected markup:
-     <div class="maDrawerOverlay is-open">
-       <section class="maDrawer">
-         <header class="maPanel__hdr">...</header>
-         <div class="maPanel__controls">...</div> (optional)
-         <div class="maPanel__body">...</div>
-         <footer class="maPanel__ftr">...</footer>
-       </section>
-     </div>
-   ========================================================================== */
-
-.maDrawerOverlay{
-  position: fixed;
-  inset: 0;
-  display: none;
-  align-items: flex-end;
-  justify-content: center;
-  padding: 10px;
-  background: var(--overlayBgDim);
-  z-index: var(--overlayZ);
-  backdrop-filter: blur(var(--overlayBlur));
-}
-
-.maDrawerOverlay.is-open{ display: flex; }
-
-.maDrawer{
-  width: min(var(--drawerMaxW), 100%);
-  max-height: var(--drawerMaxH);
-
-  background: var(--panelBg);
-  border: 1px solid var(--panelBorder);
-  border-radius: var(--drawerTopRadius) var(--drawerTopRadius) 0 0;
-  box-shadow: var(--modalShadow);
-  overflow: hidden;
-
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-/* ==========================================================================
-   MODAL (capture/edit filters/settings)
-   Expected markup:
-     <div class="maModalOverlay is-open">
-       <section class="maModal" role="dialog" aria-modal="true">
-         <header class="maModal__hdr">...</header>
-         <div class="maModal__controls">...</div> (optional)
-         <div class="maModal__body">...</div>
-         <footer class="maModal__ftr">...</footer>
-       </section>
-     </div>
-   ========================================================================== */
-
-.maModalOverlay{
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100svh;
-  overflow: hidden;
-  overscroll-behavior: none;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding:
-        calc(20px + env(safe-area-inset-top))
-        16px
-        calc(20px + env(safe-area-inset-bottom))
-        16px;
-  background: var(--overlayBgDim);
-  z-index: var(--overlayZ);
-  backdrop-filter: blur(var(--overlayBlur));
-  touch-action: none;
-}
-
-.maModalOverlay.is-open{ display: flex; }
-
-.maModal{
-  width: 100%;
-  max-width: var(--modalMaxW);
-
-  /* Legacy Fallback for older browsers */
-  max-height: 88vh; 
-  /* 
-     Industry Standard: Use Dynamic Viewport Height (dvh) and Safe Area Insets 
-     to ensure the modal never expands past the visible screen or behind notches.
-  */
-  max-height: min(var(--modalMaxH), calc(100dvh - (var(--modalViewportGap) + env(safe-area-inset-top) + env(safe-area-inset-bottom))));
-
-  background: var(--modalSurface);
-  border: 1px solid var(--border);
-  border-radius: var(--modalRadius);
-  box-shadow: var(--modalShadow);
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  /* Shell should not scroll or have padding; internal body handles that to allow pinned headers/footers */
-  overflow: hidden;
-  padding: 0;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-}
-
-.maModal__hdr{
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-
-  padding: 12px 14px;
-  background: var(--modalHeaderBg);
-  color: var(--modalHeaderText);
-  border-bottom: 1px solid rgba(255,255,255,.18);
-}
-
-/* Optional controls strip inside modal */
-.maModal__controls{
-  flex: 0 0 auto;
-  padding: 12px 14px;
-  background: var(--panelControlsBg);
-  border-bottom: 1px solid var(--panelControlsBorder);
-  overflow: hidden;
-}
-
-.maModal__body{
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
-  padding: 14px;
-  overscroll-behavior: contain;  /* Prevents the underlying page from scrolling when modal reaches its limits */
-  -webkit-overflow-scrolling: touch;
-}
-
-.maModal__ftr{
-  flex: 0 0 auto;
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-
-  padding: 12px 14px;
-  border-top: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg) 96%, black);
-}
-/* ==========================================================================
-   ACTIONS MENU (maModal variant)
-   - Shell uses maModal / maModalOverlay
-   - Rows remain actionMenu_item for semantic reuse
-   ========================================================================== */
-
-.maModal .actionMenu_subtitle{
-  margin: 0 0 8px 0;
-  font-weight: 800;
-  font-size: var(--chromeSubtitleSize);
-  color: var(--mutedText);
-}
-
-.maModal .actionMenu_item{
-  width: 100%;
-  border: 0;
-  border-radius: 0;
-  margin: 0;
-  padding: 14px 16px;
-  background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
-  font-weight: 900;
-  font-size: var(--fieldValueSize);
-  color: var(--ink);
-  cursor: pointer;
-  user-select: none;
-  border-bottom: 1px solid rgba(0,0,0,.10);
-}
-
-.maModal .actionMenu_item:hover{
-  background: var(--pressedBg);
-}
-
-.maModal .actionMenu_item.disabled{
-  opacity: .50;
-  cursor: default;
-  color: var(--mutedText);
-}
-
-.maModal .actionMenu_item.danger{
-  color: var(--danger);
-}
-
-.maModal .actionMenu_divider{
-  height: 8px;
-  background: #f0f0f0;
-  margin: 0;
-}
-
-/* ==========================================================================
-   CARDS 
-   --------------------------------------------------------------------------
-   Use for repeatable surfaces inside a page/panel.
-   Regions:
-     - .maCard__hdr      optional (title left, actions right)
-     - .maCard__body     required
-   ========================================================================== */
-.maCards{
-  display: flex;
-  flex-direction: column;
-  gap: var(--cardsGap);
-  min-width: 0;
-}
-
-/* Optional: when the card list is the scroll region (common) */
-.maCards--scroll{
-  overflow: visible;
-  max-height: none;
-}
-
-.maCard{
-  background: var(--cardBg);
-  border: 1px solid var(--cardBorder);
-  border-radius: var(--cardRadius);
-  box-shadow: var(--cardShadow);
-  overflow: hidden;
-  min-width: 0;
-}
-
-/* Header: left title, right actions (0–3) */
-.maCard__hdr{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: var(--cardHdrPadY) var(--cardHdrPadX);
-  background: var(--cardHdrBg);
-  color: var(--cardHdrText);
-  border-bottom: 1px solid var(--cardHdrBorder);
-}
-
-/* Left title block (left-aligned, truncates) */
-.maCard__title{
-  min-width: 0;
-  flex: 1 1 auto;
-  font-family: var(--fontFamilyBase);
-  font-size: var(--cardTitleSize);
-  font-weight: 800;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Right actions area */
-.maCard__actions{
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--cardActionGap);
-}
-
-/* Icon action button (0–3) */
-.maCard__actionBtn{
-  width: var(--cardActionSize);
-  height: var(--cardActionSize);
-  border-radius: var(--cardActionRadius);
-
-  border: 0;
-  background: var(--cardActionBg);
-  color: var(--cardActionText);
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  cursor: pointer;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.maCard__actionBtn:active{
-  background: var(--cardActionPressedBg);
-  transform: scale(.98);
-}
-
-.maCard__actionBtn:disabled{
-  opacity: .55;
-  cursor: default;
-  transform: none;
-}
-
-/* Body */
-.maCard__body{
-  padding: var(--cardPad);
-  min-width: 0;
-}
-/* ==========================================================================
-   ADMIN GAMES LIST — PAGE COMPONENTS
-   (Used by /app/admin_games/gameslistview.php + /assets/pages/admin_games_list.js)
-   ========================================================================== */
-
-/* Empty state */
-.maEmptyState{
-  margin: 10px 0;
-  padding: 16px 14px;
-  text-align: center;
-  color: var(--mutedText);
-  font-weight: 800;
-  border: 1px dashed var(--borderSubtle);
-  border-radius: var(--radiusLg);
-  background: var(--cardBg);
-}
-
-/* Modal title + tab panels */
-.maModal__title{
-  font-size: var(--chromeSubtitleSize);
-  font-weight: 900;
-  letter-spacing: .2px;
-}
-
-.maModal__subtitle{
-  margin-top:2px;
-  font-size:16px;
-  color: rgba(255,255,255,.92);
-  line-height:1.1;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-.maTabPanel{ display: none; }
-.maTabPanel.is-active{ display: block; }
-
-/* Field layout */
-.maFieldRow{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.maField{
-  flex: 1 1 240px;
-  min-width: 0;
-}
-
-.maLabel{
-  display: block;
-  margin: 0 0 6px 2px;
-  font-size: var(--labelTextSize);
-  font-weight: 900;
-  color: var(--mutedText);
-}
-
-.maInputWrap{
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  min-width: 0;
-}
-
-.maTextInput{
-  width: 100%;
-  min-height: var(--btnHeight);
-  padding: 0 12px;
-  border-radius: var(--controlRadius);
-  border: 1px solid var(--controlBorder);
-  background: #fff;
-  color: var(--ink);
-  font-family: var(--fontFamilyBase);
-  font-size: var(--inputTextSize);
-  font-weight: 800;
-  outline: none;
-  min-width: 0;
-  box-sizing: border-box;
-}
-
-.maTextInput:focus{
-  border-color: var(--brandSecondary);
-  box-shadow: 0 0 0 3px rgba(0,0,0,.06);
-}
-
-.maCalMiniBtn{
-  padding: 0 10px;
-}
-
-/* ======================================================================
-   List Rows (shared)
-   - Lightweight rows for search/recent lists (course picker, etc.)
-   ====================================================================== */
-.maListRows{
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  min-width: 0;
-}
-
-.maListRow{
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  padding: 12px 12px;
-  background: #fff;
-  border-bottom: 1px solid var(--borderSubtle);
-  cursor: pointer;
-  user-select: none;
-}
-
-.maListRow:hover{
-  background: rgba(0,0,0,.02);
-}
-
-.maListRow:active{
-  background: rgba(0,0,0,.04);
-}
-
-.maListRow__col{
-  min-width: 0;
-  font-size: 13px;
-  font-weight: 900;
-  color: var(--ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.maListRow__col--muted{
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--mutedText);
-}
-
-.maListRow__col--right{
-  text-align: right;
-}
-
-.maListRow.is-selected{
-  border-color:#7ea489;
-  background:#f5faf6;
-  box-shadow:0 0 0 1px rgba(126,164,137,.45) inset;
-}
-
-.maListRow .maPill{
-  min-height:22px;
-  padding:0 10px;
-  font-size:12px;
-  font-weight:700;
-}
-/* ---------- Footer action bar shell ------------------------------------- */
-.maChrome__ftrActions {
-  display: none;              /* hidden until footer--actions mode active    */
-  align-items: center;
-  padding: var(--ftrActionsPad, 10px);
-  gap: var(--ftrActionsGap, 10px);
-  background: var(--chromeBg);
- 
-  /* Mobile default: full width, row, 50/50 */
-  flex-direction: row;
-  justify-content: stretch;
-}
- 
-/* Footer in actions mode: show bar, hide nav */
-.maChrome__ftr--actions .maChrome__ftrActions {
-  display: flex;
-}
- 
-.maChrome__ftr--actions .maChrome__bottomNav {
-  display: none;
-}
- 
-/* ---------- Shared footer button base ----------------------------------- */
-.maFtrBtn {
-  flex: 1 1 0;                /* 50/50 on mobile                            */
-  min-height: var(--ftrActionsBtnH, 44px);
-  border-radius: var(--controlRadius);
-  font-family: var(--fontFamilyBase);
-  font-size: 15px;
-  font-weight: 800;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid transparent;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-  transition: filter .15s ease, transform .1s ease;
-  white-space: nowrap;
-}
- 
-.maFtrBtn:active {
-  transform: scale(.98);
-  filter: brightness(.96);
-}
- 
-.maFtrBtn:disabled,
-.maFtrBtn.is-disabled {
-  opacity: .50;
-  cursor: default;
-  transform: none;
-  filter: none;
-}
- 
-/* ---------- Save button ------------------------------------------------- */
-.maFtrBtn--save {
-  background: var(--btnSaveBg, var(--brandAccent));
-  color: var(--btnSaveText, #ffffff);
-  border-color: var(--btnSaveBorder, color-mix(in srgb, var(--brandAccent) 70%, black));
-}
- 
-/* ---------- Cancel button ----------------------------------------------- */
-.maFtrBtn--cancel {
-  background: var(--btnCancelBg, #e5e7eb);
-  color: var(--btnCancelText, var(--ink));
-  border-color: var(--btnCancelBorder, rgba(0, 0, 0, .18));
-}
- 
-/* ---------- Tablet + Desktop (≥600px): right-justified, fixed width ----- */
-@media (min-width: 600px) {
-  .maChrome__ftrActions {
-    justify-content: flex-end;   /* right-justify the button group          */
-  }
- 
-  .maFtrBtn {
-    flex: 0 0 var(--ftrActionsBtnW, 200px);  /* fixed width, no stretch    */
-  }
-}
-
-/* Chrome footer — optional page action slot */
+/* Optional page action slot — hidden by default, shown by MA.chrome.setActions */
 .maChrome__pageAction {
   padding: 8px 10px;
   border-bottom: 1px solid var(--chromeBorder);
@@ -1918,27 +587,103 @@ body {
   }
 }
 
-/* ==========================================================================
-   MOBILE NAV HUB — append to ma_shared.css
-   Controls:
-     - Navigate button (.maChrome__navHub)
-     - Hub tray overlay (.maChrome__hubTray)
-   The existing icon nav (.maChrome__bottomNav) and Save/Cancel bar
-   (.maChrome__ftrActions) are untouched — hub slots into the same
-   visibility logic via media query and the existing --actions class toggle.
-   ========================================================================== */
+/* Footer action bar shell */
+.maChrome__ftrActions {
+  display: none;              /* hidden until footer--actions mode active */
+  align-items: center;
+  padding: var(--ftrActionsPad, 10px);
+  gap: var(--ftrActionsGap, 10px);
+  background: var(--chromeBg);
+  flex-direction: row;
+  justify-content: stretch;
+}
 
+/* Footer in actions mode: show bar, hide nav */
+.maChrome__ftr--actions .maChrome__ftrActions {
+  display: flex;
+}
 
-/* --------------------------------------------------------------------------
-   1. Navigate button container
-   Hidden on desktop, shown on mobile in place of the icon nav.
-   -------------------------------------------------------------------------- */
-.maChrome__navHub {
-  display: none;          /* hidden by default (desktop) */
+.maChrome__ftr--actions .maChrome__bottomNav {
+  display: none;
+}
+
+/* Shared footer button base */
+.maFtrBtn {
+  flex: 1 1 0;
+  min-height: var(--ftrActionsBtnH, 44px);
+  border-radius: var(--controlRadius);
+  font-family: var(--fontFamilyBase);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
+  border: 1px solid transparent;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: filter .15s ease, transform .1s ease;
+  white-space: nowrap;
+}
+
+.maFtrBtn:active {
+  transform: scale(.98);
+  filter: brightness(.96);
+}
+
+.maFtrBtn:disabled,
+.maFtrBtn.is-disabled {
+  opacity: .50;
+  cursor: default;
+  transform: none;
+  filter: none;
+}
+
+.maFtrBtn--save {
+  background: var(--btnSaveBg, var(--brandAccent));
+  color: var(--btnSaveText, #ffffff);
+  border-color: var(--btnSaveBorder, color-mix(in srgb, var(--brandAccent) 70%, black));
+}
+
+.maFtrBtn--cancel {
+  background: var(--btnCancelBg, #e5e7eb);
+  color: var(--btnCancelText, var(--ink));
+  border-color: var(--btnCancelBorder, rgba(0, 0, 0, .18));
+}
+
+/* Tablet + desktop (≥600px): right-justified, fixed width */
+@media (min-width: 600px) {
+  .maChrome__ftrActions {
+    justify-content: flex-end;
+  }
+
+  .maFtrBtn {
+    flex: 0 0 var(--ftrActionsBtnW, 200px);
+  }
+}
+
+
+/* ==========================================================================
+   8. CHROME — MOBILE NAV HUB (NAVIGATE BUTTON + TRAY)
+   Controls:
+     - Navigate button  (.maChrome__navHub)
+     - Hub tray overlay (.maChrome__hubTray)
+   On mobile (≤600px) the icon bar is hidden and the Navigate button takes
+   its place in the footer. Tapping it slides up the hub tray, which is
+   populated by MA.chrome.setBottomNav() at page boot.
+   The Save/Cancel overlay hides both the icon bar and Navigate button via
+   the existing .maChrome__ftr--actions class toggle.
+   ========================================================================== */
+
+/* Navigate button container — hidden by default (desktop).
+   Sits inside .maChrome__bottomNav as a flex child, so it stretches
+   to fill the full nav width and height on mobile. */
+.maChrome__navHub {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;      /* fill the nav's full width */
+  align-self: stretch; /* fill the nav's full height */
 }
 
 .maChrome__navHubBtn {
@@ -1946,7 +691,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: #1a73e8;
+  background: var(--brandAccent);
   color: #fff;
   border: none;
   border-radius: 10px;
@@ -1972,13 +717,7 @@ body {
   line-height: 1;
 }
 
-
-/* --------------------------------------------------------------------------
-   2. Hub tray overlay
-   Always in DOM, toggled via [hidden] attribute and .is-open class.
-   Uses fixed positioning so it overlays the full viewport regardless of
-   scroll position.
-   -------------------------------------------------------------------------- */
+/* Hub tray overlay — always in DOM, toggled via [hidden] + .is-open */
 .maChrome__hubTray {
   position: fixed;
   inset: 0;
@@ -1989,8 +728,8 @@ body {
   pointer-events: none;
 }
 
-/* Hidden state — [hidden] attribute keeps it out of the accessibility tree.
-   We remove [hidden] in JS before animating open so transitions fire. */
+/* [hidden] keeps it out of the accessibility tree.
+   JS removes [hidden] before animating open so transitions fire. */
 .maChrome__hubTray[hidden] {
   display: none;
 }
@@ -1998,7 +737,6 @@ body {
 .maChrome__hubTray.is-open {
   pointer-events: all;
 }
-
 
 /* Backdrop */
 .maChrome__hubBackdrop {
@@ -2012,7 +750,6 @@ body {
 .maChrome__hubTray.is-open .maChrome__hubBackdrop {
   background: rgba(0, 0, 0, 0.50);
 }
-
 
 /* Sheet */
 .maChrome__hubSheet {
@@ -2030,7 +767,6 @@ body {
   transform: translateY(0);
 }
 
-
 /* Drag handle */
 .maChrome__hubHandle {
   width: 36px;
@@ -2040,7 +776,6 @@ body {
   margin: 10px auto 6px;
   flex-shrink: 0;
 }
-
 
 /* Header row */
 .maChrome__hubHeader {
@@ -2079,7 +814,6 @@ body {
   opacity: 0.7;
 }
 
-
 /* Scrollable row area */
 .maChrome__hubScroll {
   overflow-y: auto;
@@ -2088,17 +822,13 @@ body {
   flex: 1;
 }
 
-/* Fade hint at bottom when content overflows */
 .maChrome__hubScroll::after {
   content: "";
   display: block;
   height: 8px;
 }
 
-
-/* --------------------------------------------------------------------------
-   3. Hub tray nav rows (injected by setBottomNav)
-   -------------------------------------------------------------------------- */
+/* Hub tray nav rows (injected by setBottomNav) */
 .maHubRow {
   display: flex;
   align-items: center;
@@ -2107,8 +837,8 @@ body {
   background: #f5f5f0;
   border: none;
   border-radius: 8px;
-  padding: 5px 12px;
-  margin-bottom: 4px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
   cursor: pointer;
   text-align: left;
   -webkit-tap-highlight-color: transparent;
@@ -2131,14 +861,14 @@ body {
 }
 
 .maHubRow__label {
-  font-size: 16px;
+  font-size: 20px;
   font-weight: 500;
   color: #222;
   flex: 1;
 }
 
 .maHubRow.is-active .maHubRow__label {
-  color: #1a73e8;
+  color: var(--brandAccent);
 }
 
 .maHubRow__arrow {
@@ -2148,7 +878,7 @@ body {
 }
 
 .maHubRow.is-active .maHubRow__arrow {
-  color: #1a73e8;
+  color: var(--brandAccent);
 }
 
 /* Section divider between row groups */
@@ -2158,15 +888,13 @@ body {
   margin: 4px 0;
 }
 
+/* --- Media queries: visibility swap --- */
 
-/* --------------------------------------------------------------------------
-   4. Media queries — the core visibility swap
-   -------------------------------------------------------------------------- */
-
-/* MOBILE: hide icon nav, show Navigate button */
+/* Mobile (≤600px): hide icon nav buttons, show Navigate button.
+   The nav element itself stays as display:flex — only its icon button
+   children are hidden. The navHub div fills the remaining space. */
 @media (max-width: 600px) {
-
-  .maChrome__bottomNav {
+  .maChrome__bottomNav .maNavBtn {
     display: none !important;
   }
 
@@ -2175,25 +903,1168 @@ body {
   }
 }
 
-/* DESKTOP: hide Navigate button (icon nav already visible by default) */
+/* Desktop (≥601px): hide Navigate button; belt-and-suspenders hide tray */
 @media (min-width: 601px) {
-
   .maChrome__navHub {
     display: none;
   }
 
-  /* Tray should never open on desktop — belt-and-suspenders */
   .maChrome__hubTray {
     display: none !important;
   }
 }
 
+/* Save/Cancel overlay hides the entire nav (including Navigate button
+   inside it) via the rule in section 7 above. No extra rule needed here. */
 
-/* --------------------------------------------------------------------------
-   5. Save/Cancel overlay — hide Navigate button too (mobile)
-   The existing .maChrome__ftr--actions class already hides the icon nav.
-   We extend it to also hide the Navigate button.
-   -------------------------------------------------------------------------- */
-.maChrome__ftr--actions .maChrome__navHub {
-  display: none !important;
+
+/* ==========================================================================
+   9. MULTI-PANEL LAYOUT
+   Expected markup:
+     <main class="maPage maPage--multi">
+       <div class="maPanels maPanels--2"> (or --3 / --4)
+         <section class="maPanel maPanel--primary">...</section>
+         <section class="maPanel maPanel--secondary">...</section>
+       </div>
+     </main>
+   ========================================================================== */
+
+.maPanels {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  gap: var(--panelGap);
+  grid-template-columns: 1fr; /* mobile default — stacked */
+}
+
+@media (min-width: 900px) {
+  .maPanels--2 { grid-template-columns: 1fr 1fr; }
+  .maPanels--3 { grid-template-columns: 1fr 1fr 1fr; }
+  .maPanels--4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+}
+
+/* Panel shell */
+.maPanel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--panelBg);
+  border: 1px solid var(--panelBorder);
+  border-radius: var(--panelRadius);
+  box-shadow: var(--panelShadow);
+  overflow: hidden;
+}
+
+/* Panel regions */
+.maPanel__hdr {
+  flex: 0 0 auto;
+  background: var(--panelHdrBg);
+  color: var(--panelHdrText);
+  padding: var(--panelPad);
+  border-bottom: 1px solid var(--panelHdrBorder);
+}
+
+.maPanel__controls {
+  flex: 0 0 auto;
+  background: var(--panelControlsBg);
+  padding: var(--panelPad);
+  border-bottom: 1px solid var(--panelControlsBorder);
+}
+
+.maPanel__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--panelPad);
+  overscroll-behavior: contain;
+}
+
+.maPanel__ftr {
+  flex: 0 0 auto;
+  background: var(--panelFtrBg);
+  padding: var(--panelPad);
+  border-top: 1px solid var(--panelFtrBorder);
+}
+
+
+/* ==========================================================================
+   10. OVERLAY FAMILY — DRAWER + MODAL
+   ========================================================================== */
+
+/* ---------- Drawer (secondary panel on mobile) --------------------------- */
+/*
+   Expected markup:
+     <div class="maDrawerOverlay is-open">
+       <section class="maDrawer">
+         <header class="maPanel__hdr">...</header>
+         <div class="maPanel__controls">...</div>  (optional)
+         <div class="maPanel__body">...</div>
+         <footer class="maPanel__ftr">...</footer>
+       </section>
+     </div>
+*/
+.maDrawerOverlay {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 10px;
+  background: var(--overlayBgDim);
+  z-index: var(--overlayZ);
+  backdrop-filter: blur(var(--overlayBlur));
+}
+
+.maDrawerOverlay.is-open { display: flex; }
+
+.maDrawer {
+  width: min(var(--drawerMaxW), 100%);
+  max-height: var(--drawerMaxH);
+  background: var(--panelBg);
+  border: 1px solid var(--panelBorder);
+  border-radius: var(--drawerTopRadius) var(--drawerTopRadius) 0 0;
+  box-shadow: var(--modalShadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ---------- Modal (capture / edit / filters / settings) ------------------ */
+/*
+   Expected markup:
+     <div class="maModalOverlay is-open">
+       <section class="maModal" role="dialog" aria-modal="true">
+         <header class="maModal__hdr">...</header>
+         <div class="maModal__controls">...</div>  (optional)
+         <div class="maModal__body">...</div>
+         <footer class="maModal__ftr">...</footer>
+       </section>
+     </div>
+*/
+.maModalOverlay {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100svh;
+  overflow: hidden;
+  overscroll-behavior: none;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding:
+    calc(20px + env(safe-area-inset-top))
+    16px
+    calc(20px + env(safe-area-inset-bottom))
+    16px;
+  background: var(--overlayBgDim);
+  z-index: var(--overlayZ);
+  backdrop-filter: blur(var(--overlayBlur));
+  touch-action: none;
+}
+
+.maModalOverlay.is-open { display: flex; }
+
+.maModal {
+  width: 100%;
+  max-width: var(--modalMaxW);
+  max-height: 88vh; /* legacy fallback */
+  max-height: min(var(--modalMaxH), calc(100dvh - (var(--modalViewportGap) + env(safe-area-inset-top) + env(safe-area-inset-bottom))));
+  background: var(--modalSurface);
+  border: 1px solid var(--border);
+  border-radius: var(--modalRadius);
+  box-shadow: var(--modalShadow);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.maModal__hdr {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--modalHeaderBg);
+  color: var(--modalHeaderText);
+  border-bottom: 1px solid rgba(255,255,255,.18);
+}
+
+.maModal__controls {
+  flex: 0 0 auto;
+  padding: 12px 14px;
+  background: var(--panelControlsBg);
+  border-bottom: 1px solid var(--panelControlsBorder);
+  overflow: hidden;
+}
+
+.maModal__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.maModal__ftr {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 96%, black);
+}
+
+.maModal__ftrActions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  align-items: center;
+  width: 100%;
+}
+
+.maModal__title {
+  font-size: var(--chromeSubtitleSize);
+  font-weight: 900;
+  letter-spacing: .2px;
+}
+
+.maModal__subtitle {
+  margin-top: 2px;
+  font-size: 16px;
+  color: rgba(255,255,255,.92);
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Mobile overrides for modal fields */
+@media (max-width: 600px) {
+  .maModal {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .maModal .maField {
+    flex: 1 1 auto;
+  }
+
+  .maModal .maFieldRow {
+    flex-direction: column;
+  }
+}
+
+
+/* ==========================================================================
+   11. ACTIONS MENU
+   ========================================================================== */
+
+/* ---------- DEPRECATED: actionMenuOverlay -------------------------------- */
+/* DO NOT USE — use maModalOverlay + maModal instead.
+   Kept for any legacy pages not yet migrated. */
+
+.actionMenuOverlay {
+  position: fixed;
+  inset: 0;
+  background: var(--overlayBg);
+  display: none;
+  z-index: 99999;
+  backdrop-filter: blur(2px);
+  touch-action: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.actionMenuOverlay.open { display: flex; }
+
+.actionMenu {
+  position: relative;
+  min-width: 260px;
+  width: min(360px, 100%);
+  max-width: 360px;
+  background: var(--modalSurface);
+  border: 1px solid var(--controlBorder);
+  border-radius: var(--drawerRadius);
+  overflow: hidden;
+  box-shadow: 0 14px 34px rgba(0,0,0,.18);
+  padding: 0;
+}
+
+.actionMenu_header {
+  position: sticky;
+  top: 0;
+  background: var(--modalHeaderBg);
+  color: var(--modalHeaderText);
+  padding: 12px 14px;
+  z-index: 2;
+}
+
+.actionMenu_headerRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.actionMenu_title {
+  font-weight: 900;
+  font-size: var(--chromeTitleSize);
+  line-height: 1.15;
+}
+
+.actionMenu_subtitle {
+  margin-top: 2px;
+  font-weight: 800;
+  font-size: var(--chromeSubtitleSize);
+  opacity: .9;
+}
+
+.actionMenu_closeBtn {
+  border: 0;
+  background: rgba(255,255,255,.20);
+  color: var(--bg);
+  border-radius: var(--radiusLg);
+  width: 30px;
+  height: 28px;
+  font-size: var(--btnFontSize);
+  line-height: 1;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.actionMenu_closeBtn:hover {
+  background: rgba(255,255,255,.28);
+}
+
+.actionMenu_item {
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+  padding: 14px 16px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  font-weight: 900;
+  font-size: var(--fieldValueSize);
+  color: var(--ink);
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid rgba(0,0,0,.10);
+}
+
+.actionMenu_item:hover { background: var(--pressedBg); }
+
+.actionMenu_item.disabled {
+  opacity: .50;
+  cursor: default;
+  color: var(--mutedText);
+}
+
+.actionMenu_item.danger { color: var(--danger); }
+
+.actionMenu_divider {
+  height: 8px;
+  background: #f0f0f0;
+  margin: 0;
+}
+
+@media (max-width: 520px) {
+  .actionMenu {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+/* ---------- Active: maModal variant of actions menu --------------------- */
+
+.maModal .actionMenu_subtitle {
+  margin: 0 0 8px 0;
+  font-weight: 800;
+  font-size: var(--chromeSubtitleSize);
+  color: var(--mutedText);
+}
+
+.maModal .actionMenu_item {
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+  padding: 14px 16px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  font-weight: 900;
+  font-size: var(--fieldValueSize);
+  color: var(--ink);
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid rgba(0,0,0,.10);
+}
+
+.maModal .actionMenu_item:hover { background: var(--pressedBg); }
+
+.maModal .actionMenu_item.disabled {
+  opacity: .50;
+  cursor: default;
+  color: var(--mutedText);
+}
+
+.maModal .actionMenu_item.danger { color: var(--danger); }
+
+.maModal .actionMenu_divider {
+  height: 8px;
+  background: #f0f0f0;
+  margin: 0;
+}
+
+
+/* ==========================================================================
+   12. CARDS
+   Use for repeatable surfaces inside a page/panel.
+   Regions: .maCard__hdr (optional), .maCard__body (required)
+   ========================================================================== */
+
+.maCards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cardsGap);
+  min-width: 0;
+}
+
+.maCards--scroll {
+  overflow: visible;
+  max-height: none;
+}
+
+.maCard {
+  background: var(--cardBg);
+  border: 1px solid var(--cardBorder);
+  border-radius: var(--cardRadius);
+  box-shadow: var(--cardShadow);
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* Header: left title, right actions (0–3) */
+.maCard__hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: var(--cardHdrPadY) var(--cardHdrPadX);
+  background: var(--cardHdrBg);
+  color: var(--cardHdrText);
+  border-bottom: 1px solid var(--cardHdrBorder);
+}
+
+.maCard__title {
+  min-width: 0;
+  flex: 1 1 auto;
+  font-family: var(--fontFamilyBase);
+  font-size: var(--cardTitleSize);
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.maCard__actions {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--cardActionGap);
+}
+
+.maCard__actionBtn {
+  width: var(--cardActionSize);
+  height: var(--cardActionSize);
+  border-radius: var(--cardActionRadius);
+  border: 0;
+  background: var(--cardActionBg);
+  color: var(--cardActionText);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.maCard__actionBtn:active {
+  background: var(--cardActionPressedBg);
+  transform: scale(.98);
+}
+
+.maCard__actionBtn:disabled {
+  opacity: .55;
+  cursor: default;
+  transform: none;
+}
+
+.maCard__body {
+  padding: var(--cardPad);
+  min-width: 0;
+}
+
+
+/* ==========================================================================
+   13. PILLS & CHIPS
+   ========================================================================== */
+
+/* ---------- Pills (informational) --------------------------------------- */
+.maPills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.maPill {
+  background: var(--pillBg);
+  color: var(--pillText);
+  border-radius: var(--pillRadius);
+  padding: var(--pillPadY) var(--pillPadX);
+  font-size: var(--pillValueSize);
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  min-height: var(--pillMinHeight);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* 2-line label/value pill */
+.maPillKV {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: var(--pillMinHeight);
+}
+
+.maPillLabel {
+  font-size: var(--pillLabelSize);
+  font-weight: 800;
+  color: var(--pillLabelText);
+  line-height: 1;
+}
+
+.maPillValue {
+  font-size: var(--pillValueSize);
+  font-weight: var(--pillValueWeight);
+  line-height: 1.1;
+  color: var(--pillText);
+}
+
+/* Status variants */
+.maPill--success {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 14%, var(--cardBg));
+  border: 1px solid color-mix(in srgb, var(--success) 35%, var(--border));
+}
+
+.maPill--warn  { color: var(--warn); }
+.maPill--danger { color: var(--danger); }
+
+/* ---------- Choice chips (enum selection / toggle) ---------------------- */
+.maChoiceChips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.maChoiceChip {
+  border: 1px solid var(--choiceChipBorder);
+  background: var(--choiceChipBg);
+  color: var(--choiceChipText);
+  border-radius: var(--choiceChipRadius);
+  padding: 8px 12px;
+  font-weight: 800;
+  font-size: var(--pillTitleSize);
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+}
+
+.maChoiceChip.is-selected {
+  background: var(--choiceChipSelectedBg);
+  color: var(--choiceChipSelectedText);
+  border-color: var(--choiceChipSelectedBorder);
+}
+
+.maChoiceChip.is-disabled {
+  opacity: .55;
+  cursor: default;
+}
+
+/* ---------- Segmented control (single-select tab switching) ------------- */
+.maSeg {
+  display: flex;
+  width: 100%;
+  border: 1px solid var(--segBorder);
+  border-radius: var(--segRadius);
+  overflow: hidden;
+  background: var(--segBg);
+}
+
+.maSegBtn {
+  flex: 1;
+  min-height: var(--segBtnHeight);
+  border: 0;
+  border-right: 1px solid var(--segBorder);
+  background: transparent;
+  font-size: var(--segBtnFontSize);
+  font-weight: var(--segBtnWeight);
+  cursor: pointer;
+  color: var(--segBtnText);
+  padding: var(--spaceSm) calc(var(--spaceMd) + 2px);
+  user-select: none;
+}
+
+.maSegBtn:last-child { border-right: 0; }
+
+.maSegBtn.is-active {
+  background: var(--segActiveBg);
+  color: var(--segActiveText);
+}
+
+.maSegBtn:disabled {
+  opacity: .55;
+  cursor: default;
+}
+
+
+/* ==========================================================================
+   14. BUTTONS
+   ========================================================================== */
+
+/* Base button */
+.btn {
+  border: 1px solid var(--btnBorder);
+  background: var(--btnBg);
+  color: var(--btnText);
+  border-radius: var(--btnRadius);
+  min-height: var(--btnHeight);
+  padding: 0 var(--btnPadX);
+  font-family: var(--fontFamilyBase);
+  font-size: var(--btnFontSize);
+  font-weight: var(--btnFontWeight);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.btn:active {
+  background: var(--btnPressedBg);
+  transform: scale(.98);
+}
+
+.btn:disabled,
+.btn.disabled {
+  opacity: .55;
+  cursor: default;
+  transform: none;
+}
+
+/* Primary = default (ink on light surface, semantic marker) */
+.btnPrimary {
+  background: var(--btnPrimaryBg);
+  color: var(--btnPrimaryText);
+  border-color: var(--btnPrimaryBorder);
+}
+
+/* Secondary = filled brand button (white on brandSecondary) */
+.btnSecondary {
+  background: var(--btnSecondaryBg);
+  color: var(--btnSecondaryText);
+  border-color: var(--btnSecondaryBorder);
+}
+
+.btnSecondary:active { filter: brightness(.96); }
+
+/* Link button = text-only action */
+.btnLink,
+.btn.btnLink {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  min-height: 0;
+  height: auto;
+  min-width: 0;
+  justify-content: flex-start;
+  color: var(--btnLinkText);
+  font-weight: var(--btnFontWeight);
+}
+
+.btnLink:hover,
+.btn.btnLink:hover {
+  text-decoration: underline;
+}
+
+/* Square icon button (calendar, etc.) */
+.iconBtn {
+  width: var(--btnHeight);
+  height: var(--btnHeight);
+  flex: 0 0 var(--btnHeight);
+  padding: 0;
+  border-radius: var(--radiusSq);
+  border: 1px solid var(--btnBorder);
+  background: var(--btnBg);
+  color: var(--btnText);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.iconBtn:active {
+  background: var(--btnPressedBg);
+  transform: scale(.98);
+}
+
+/* Close button (used in modals) */
+.closeBtn {
+  border: 1px solid var(--btnBorder);
+  background: var(--btnBg);
+  color: var(--btnText);
+  border-radius: var(--radiusMd);
+  padding: 7px 10px;
+  cursor: pointer;
+  font-weight: 700;
+  font-family: var(--fontFamilyBase);
+}
+
+/* Pill button (rounded action chip) */
+.pillBtn {
+  border: 1px solid var(--btnBorder);
+  background: var(--btnBg);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--fontFamilyBase);
+  font-size: var(--btnFontSize);
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  user-select: none;
+}
+
+.pillBtn:active {
+  background: var(--btnPressedBg);
+  transform: scale(.98);
+}
+
+
+/* ==========================================================================
+   15. FORM FIELDS
+   ========================================================================== */
+
+.maFieldRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.maField {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.maLabel {
+  display: block;
+  margin: 0 0 6px 2px;
+  font-size: var(--labelTextSize);
+  font-weight: 900;
+  color: var(--mutedText);
+}
+
+.maLabelLg {
+  display: block;
+  margin: 0 0 6px 2px;
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--ink);
+  line-height: 1.1;
+}
+
+.maValueLg {
+  display: block;
+  font-size: 20px;
+  font-weight: 950;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.maInputWrap {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.maTextInput {
+  width: 100%;
+  min-height: var(--btnHeight);
+  padding: 0 12px;
+  border-radius: var(--controlRadius);
+  border: 1px solid var(--controlBorder);
+  background: #fff;
+  color: var(--ink);
+  font-family: var(--fontFamilyBase);
+  font-size: var(--inputTextSize);
+  font-weight: 800;
+  outline: none;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.maTextInput:focus {
+  border-color: var(--brandSecondary);
+  box-shadow: 0 0 0 3px rgba(0,0,0,.06);
+}
+
+
+/* ==========================================================================
+   16. DATE BADGE & CALENDAR
+   ========================================================================== */
+
+.maDateBadge {
+  width: 62px;
+  flex: 0 0 auto;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--radiusLg);
+  overflow: hidden;
+  background: var(--cardBg);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+.maDateBadge__top {
+  background: var(--datebadgeTopBg);
+  color: var(--datebadgeTopText);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .3px;
+  text-align: center;
+  padding: 6px 0 5px;
+}
+
+.maDateBadge__mid {
+  color: var(--ink);
+  font-size: 22px;
+  font-weight: 950;
+  text-align: center;
+  padding: 8px 0 2px;
+}
+
+.maDateBadge__bot {
+  color: rgba(17,17,17,.72);
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+  padding: 0 0 8px;
+}
+
+/* Calendar */
+.maCalWrap {
+  display: none; /* opened by JS via .open */
+  margin-top: 12px;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--radiusLg);
+  overflow: hidden;
+  background: #fff;
+}
+
+.maCalWrap.open { display: block; }
+
+.maCalHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--panelHdrBg);
+  color: var(--panelHdrText);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+
+.maCalHint {
+  font-size: 12px;
+  font-weight: 900;
+  opacity: .95;
+}
+
+.maCalLeft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.maCalMonthLabel {
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  padding: 0 6px;
+}
+
+.maCalNavBtn { min-width: 40px; }
+
+.maCalMiniBtn { padding: 0 10px; }
+
+.maCalRight { display: none; } /* legacy pills kept in DOM */
+
+.maCalDow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  padding: 10px 10px 0 10px;
+  color: var(--mutedText);
+  font-weight: 900;
+  font-size: 11px;
+}
+
+.maCalGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  padding: 10px;
+}
+
+.maCalDay {
+  min-height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--borderSubtle);
+  background: var(--cardBg);
+  color: var(--ink);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.maCalDay:hover { background: var(--pressedBg); }
+.maCalDay.muted { opacity: .45; }
+.maCalDay.today { border-color: var(--brandSecondary); }
+
+.maCalDay.selected {
+  background: var(--brandSecondary);
+  border-color: var(--brandSecondary);
+  color: #fff;
+}
+
+.maCalDay.inRange {
+  background: rgba(48, 110, 230, .10);
+  border-color: rgba(48, 110, 230, .10);
+}
+
+.maCalDay.from,
+.maCalDay.to {
+  background: var(--brandSecondary);
+  border-color: var(--brandSecondary);
+  color: #fff;
+}
+
+
+/* ==========================================================================
+   17. LIST ROWS
+   Lightweight rows for search/recent lists (course picker, etc.)
+   ========================================================================== */
+
+.maListRows {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+.maListRow {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 12px;
+  background: #fff;
+  border-bottom: 1px solid var(--borderSubtle);
+  cursor: pointer;
+  user-select: none;
+}
+
+.maListRow:hover  { background: rgba(0,0,0,.02); }
+.maListRow:active { background: rgba(0,0,0,.04); }
+
+.maListRow__col {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.maListRow__col--muted {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--mutedText);
+}
+
+.maListRow__col--right { text-align: right; }
+
+.maListRow.is-selected {
+  border-color: #7ea489;
+  background: #f5faf6;
+  box-shadow: 0 0 0 1px rgba(126,164,137,.45) inset;
+}
+
+.maListRow .maPill {
+  min-height: 22px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+
+/* ==========================================================================
+   18. ADMIN PICKER
+   ========================================================================== */
+
+.maAdminPick__top { margin-top: 12px; }
+
+.maAdminPick {
+  margin-top: 10px;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--radiusLg);
+  overflow: hidden;
+  background: #fff;
+}
+
+.maAdminPick__hdr {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  gap: 8px;
+  align-items: center;
+  padding: 10px;
+  background: var(--panelHdrBg);
+  color: var(--panelHdrText);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+
+.maAdminPick__hdrName {
+  font-weight: 900;
+  letter-spacing: .2px;
+}
+
+.maAdminPick__rows {
+  max-height: 360px;
+  overflow: auto;
+}
+
+.maAdminRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--borderSubtle);
+  cursor: pointer;
+  user-select: none;
+}
+
+.maAdminRow:hover { background: var(--pressedBg); }
+
+.maAdminRow__left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.maAdminRow__check {
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  border: 1px solid var(--borderSubtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--mutedText);
+  flex: 0 0 auto;
+}
+
+.maAdminRow__check.on {
+  background: var(--brandSecondary);
+  border-color: var(--brandSecondary);
+  color: #fff;
+}
+
+.maAdminRow__name {
+  font-weight: 900;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.maAdminRow__right {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+
+/* ==========================================================================
+   19. MISC — EMPTY STATE, TAB PANELS, GAME CARD OVERRIDES
+   ========================================================================== */
+
+.maEmptyState {
+  margin: 10px 0;
+  padding: 16px 14px;
+  text-align: center;
+  color: var(--mutedText);
+  font-weight: 800;
+  border: 1px dashed var(--borderSubtle);
+  border-radius: var(--radiusLg);
+  background: var(--cardBg);
+}
+
+.maTabPanel { display: none; }
+.maTabPanel.is-active { display: block; }
+
+/* Hide game card manage button on mobile */
+@media (max-width: 600px) {
+  .maGameCard__manageBtn {
+    display: none !important;
+  }
 }
