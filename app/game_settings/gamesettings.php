@@ -30,7 +30,7 @@ try {
 
   // Fetch the roster for the blind player dropdown
   $roster = ServiceDbPlayers::getGamePlayers((string)$ggid);
-  
+
   // Fetch course pars
   $coursePars = [];
   $courseId = (string)($game["dbGames_CourseID"] ?? "");
@@ -39,7 +39,7 @@ try {
       if ($token) {
           try {
               $rawTeeSets = be_getCourseTeeSets($courseId, $token);
-              $coursePars = flattenCoursePars($rawTeeSets); // flattenCoursePars is available from the included service
+              $coursePars = flattenCoursePars($rawTeeSets);
           } catch (Throwable $e) {
               Logger::warning("GAMESETTINGS_PARS_FAIL", ["err" => $e->getMessage()]);
           }
@@ -66,8 +66,8 @@ try {
 
 // Provide path constants to JS
 $paths = [
-  "apiGameSettings" => "/api/game_settings", // Assuming MA_ROUTE_API_GAME_SETTINGS
-  "routerApi"     => MA_ROUTE_API_ROUTER,
+  "apiGameSettings" => "/api/game_settings",
+  "routerApi"       => MA_ROUTE_API_ROUTER,
 ];
 
 // Determine return route from query param (default to games list)
@@ -75,22 +75,21 @@ $returnToParam = trim((string)($_GET["returnTo"] ?? ""));
 $returnRoute = MA_ROUTE_ADMIN_GAMES;
 
 if ($returnToParam !== "") {
-    // If it looks like a path, use it; otherwise delegate to pageRouter
     $returnRoute = str_starts_with($returnToParam, "/")
         ? $returnToParam
         : (MA_ROUTE_API_ROUTER . "?action=" . urlencode($returnToParam) . "&redirect=1");
 }
 
 // Chrome values
-$maChromeTitle = "Game Settings";
+$maChromeTitle    = "Game Settings";
 $maChromeSubtitle = $initPayload["header"]["subtitle"] ?? "";
-$maChromeLogoUrl = null;
+$maChromeLogoUrl  = null;
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>MatchAid • Game Settings</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -102,6 +101,24 @@ $maChromeLogoUrl = null;
 </head>
 <body>
   <?php include __DIR__ . "/../../includes/chromeHeader.php"; ?>
+
+  <!-- Progress strip — fixed peer to maPage, outside the scroll container -->
+  <div class="maControlArea" id="gsControlArea">
+    <div class="gsWizProgress hidden" id="gsWizProgress">
+      <div class="gsWizStep active" onclick="window.gsWiz && window.gsWiz.goToStep(1)">
+        <div class="gsWizDot" id="gsWizDot1"></div>
+        <div class="gsWizStepLabel">Format</div>
+      </div>
+      <div class="gsWizStep" onclick="window.gsWiz && window.gsWiz.goToStep(2)">
+        <div class="gsWizDot" id="gsWizDot2"></div>
+        <div class="gsWizStepLabel">Scoring</div>
+      </div>
+      <div class="gsWizStep" onclick="window.gsWiz && window.gsWiz.goToStep(3)">
+        <div class="gsWizDot" id="gsWizDot3"></div>
+        <div class="gsWizStepLabel">Handicaps</div>
+      </div>
+    </div>
+  </div>
 
   <main class="maPage" role="main">
     <?php include __DIR__ . "/gamesettings_view.php"; ?>

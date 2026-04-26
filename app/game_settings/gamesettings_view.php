@@ -2,26 +2,6 @@
 // /public_html/app/game_settings/gamesettings_view.php
 ?>
 
-<div class="maControlArea">
-
-  <!-- Wizard progress strip — 3 steps -->
-  <div class="gsWizProgress hidden" id="gsWizProgress">
-    <div class="gsWizStep active" onclick="window.gsWiz && window.gsWiz.goToStep(1)">
-      <div class="gsWizDot" id="gsWizDot1"></div>
-      <div class="gsWizStepLabel">Format</div>
-    </div>
-    <div class="gsWizStep" onclick="window.gsWiz && window.gsWiz.goToStep(2)">
-      <div class="gsWizDot" id="gsWizDot2"></div>
-      <div class="gsWizStepLabel">Scoring</div>
-    </div>
-    <div class="gsWizStep" onclick="window.gsWiz && window.gsWiz.goToStep(3)">
-      <div class="gsWizDot" id="gsWizDot3"></div>
-      <div class="gsWizStepLabel">Handicaps</div>
-    </div>
-  </div>
-
-</div>
-
 <!-- ================================================================
      WIZARD CONTAINER
      ================================================================ -->
@@ -273,7 +253,7 @@
 
       <!-- Wizard nav buttons -->
       <div class="gsWizNav">
-        <button class="btn"          id="gsWizBtnBack" disabled>&#8592; Back</button>
+        <button class="btn"             id="gsWizBtnBack" disabled>&#8592; Back</button>
         <button class="btn btnSecondary" id="gsWizBtnNext" disabled>Next &#8594;</button>
       </div>
 
