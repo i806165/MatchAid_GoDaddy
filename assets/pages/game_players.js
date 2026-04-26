@@ -588,11 +588,12 @@
         left: { show:false }
       });
     }
+    
     if (MA.chrome && MA.chrome.setBottomNav) {
       const isPlayer = (state.portal === "PLAYER PORTAL");
       const visible = isPlayer 
         ? ["player", "roster", "summary"] 
-        : ["admin", "edit", "roster", "pairings", "teetimes", "summary"];
+        : ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"];
 
       MA.chrome.setBottomNav({ visible: visible, active:"roster", onNavigate:(id)=>MA.routerGo(id) });
     }
