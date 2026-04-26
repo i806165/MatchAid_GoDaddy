@@ -21,8 +21,6 @@
     const baseClean = String(base || "").replace(/\/$/, "");
     const fileClean = String(endpointFile || "").replace(/^\//, "");
     const url = `${baseClean}/${fileClean}`;
-
-    // Maintain the established contract: { payload: {...} }
     return postJson(url, { payload: payloadObj || {} });
   }
 
@@ -87,7 +85,7 @@
     ggid: null,
     game: null,
     dirty: false,
-    playerCount: 0, 
+    playerCount: 0,
     courseTab: "recent",
     recentCourses: [],
     searchCourses: [],
@@ -105,7 +103,6 @@
   }
 
   function isoToParts(iso) {
-    // "YYYY-MM-DD"
     if (!iso || typeof iso !== "string") return null;
     const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     if (!m) return null;
@@ -113,7 +110,6 @@
   }
 
   function hhmmFromDbTime(t) {
-    // Accept "HH:MM", "HH:MM:SS", "HH:MM:SS.000"
     if (!t) return "";
     const s = String(t).trim();
     const m = s.match(/^(\d{2}):(\d{2})/);
@@ -175,7 +171,11 @@
 
   function setBusy(on) {
     state.busy = !!on;
-    syncActionDisabled();
+    // Disable/enable the footer Save button during async operations.
+    // (Replaces the old syncActionDisabled that targeted chromeBtnRight.)
+    if (typeof MA.chrome.setFooterSaveDisabled === "function") {
+      MA.chrome.setFooterSaveDisabled(!!on);
+    }
   }
 
   function ensureSavingOverlay() {
@@ -227,12 +227,12 @@
   async function onDeleteGame() {
     if (!state.ggid) return;
     if (!confirm("Are you sure you want to delete this game? This cannot be undone.")) return;
-    
+
     setBusy(true);
     try {
       const res = await apiCall("/api/admin_games", "deleteGame.php", { ggid: state.ggid });
       if (!res || !res.ok) throw new Error(res?.message || "Delete failed.");
-      
+
       setStatus("Game deleted.", "success");
       if (typeof MA.routerGo === "function") MA.routerGo("admin");
       else window.location.assign("/app/admin_games/gameslist.php");
@@ -243,34 +243,58 @@
     }
   }
 
-function applyChrome() {
-  if (chrome && typeof chrome.setHeaderLines === "function") {
-    const modeText = (state.mode === "add") ? "Add Game" : "Edit Game";
-    chrome.setHeaderLines(["Game Maintenance", `${modeText}`, ""]);
+  // ----------------------------------------------------------------------------
+  // applyChrome
+  // ----------------------------------------------------------------------------
+  // Key behavior change:
+  //   - When isTransactional (add mode or dirty), Save + Cancel move to the
+  //     FOOTER action bar. Header buttons are hidden — footer owns that space.
+  //   - When clean in edit mode, footer is dismissed and the header right slot
+  //     shows the Actions menu as before.
+  //   - setBottomNav() runs unconditionally; CSS hides the nav when footer
+  //     actions are active (via .maChrome__ftr--actions on the footer element).
+  // ----------------------------------------------------------------------------
+  function applyChrome() {
+    if (chrome && typeof chrome.setHeaderLines === "function") {
+      const modeText = (state.mode === "add") ? "Add Game" : "Edit Game";
+      chrome.setHeaderLines(["Game Maintenance", modeText, ""]);
+    }
+
+    if (chrome && typeof chrome.setActions === "function") {
+      const isTransactional = (state.mode === "add" || state.dirty);
+
+      chrome.setActions({
+        // Header left: hidden when transactional (footer owns actions).
+        // When clean, also hide — Actions is on the right in edit mode.
+        left: { show: false },
+
+        // Header right: Actions menu when clean in edit mode; hidden when dirty
+        // (footer Save takes precedence and the header slot is freed up).
+        right: isTransactional
+          ? { show: false }
+          : { show: true, label: "Actions", onClick: openActionsMenu },
+
+        // Footer: Save + Cancel when transactional; null restores the nav.
+        footer: isTransactional
+          ? {
+              save:   { label: "Save",   onClick: () => doSave() },
+              cancel: { label: "Cancel", onClick: onBack }
+            }
+          : null
+      });
+    }
+
+    if (chrome && typeof chrome.setBottomNav === "function") {
+      chrome.setBottomNav({
+        visible: ["admin", "edit", "roster", "pairings", "teetimes", "summary"],
+        active: "edit",
+        disabled: (state.mode === "add") ? ["roster", "pairings", "teetimes", "summary"] : [],
+        onNavigate: (id) => MA.routerGo(id)
+      });
+    }
   }
 
-  if (chrome && typeof chrome.setActions === "function") {
-    const isTransactional = (state.mode === "add" || state.dirty);
-    chrome.setActions({
-      left: isTransactional 
-        ? { show: true, label: "Cancel", onClick: onBack }
-        : { show: true, label: "Actions", onClick: openActionsMenu },
-      right: { show: true, label: "Save", onClick: () => doSave() }
-    });
-    syncActionDisabled();
-  }
-
-  if (chrome && typeof chrome.setBottomNav === "function") {
-    chrome.setBottomNav({
-      visible: ["admin", "edit", "roster", "pairings", "teetimes", "summary"],
-      active: "edit",
-      disabled: (state.mode === "add") ? ["roster", "pairings", "teetimes", "summary"] : [],
-      onNavigate: (id) => MA.routerGo(id)
-    });
-  }
-}
-
-    function onBack() {
+  function onBack() {
     if (state.dirty) {
       const ok = confirm("Discard unsaved changes and go back?");
       if (!ok) return;
@@ -279,24 +303,11 @@ function applyChrome() {
       MA.routerGo("admin");
       return;
     }
-    // last resort (should not be hit if Admin-portal pattern is used)
     const router = MA.paths?.routerApi || "/api/session/pageRouter.php";
     window.location.assign(router + "?action=admin&redirect=1");
   }
 
-  function syncActionDisabled() {
-    // shared chrome.setActions may not implement disabled; enforce via DOM
-    const rightBtn = document.getElementById("chromeBtnRight");
-    if (rightBtn) {
-      const disabled = !!state.busy;
-      rightBtn.disabled = disabled;
-      rightBtn.classList.toggle("is-disabled", disabled);
-    }
-  }
-
-
   function populateTimeSelects() {
-    // hour: 1..12, minute: 00..59 (step 1)
     el.hour.innerHTML = "";
     for (let h = 1; h <= 12; h++) {
       const opt = document.createElement("option");
@@ -355,7 +366,7 @@ function applyChrome() {
       el.teeHint.textContent = "";
       return;
     }
-    
+
     const hhmm = getTimeHHMM();
     const list = buildTeeTimeList(hhmm, el.teeCount.value, el.teeInterval.value);
     if (!list.length) {
@@ -410,12 +421,9 @@ function applyChrome() {
     pickRowValue(el.hcEffRow, g.dbGames_HCEffectivity || "PlayDate");
     el.hcDate.value = g.dbGames_HCEffectivityDate || g.dbGames_PlayDate;
 
-    // Disable Hc refresh in Add
     el.hcRefreshBtn.disabled = (state.mode === "add");
-
-    // Effectivity date input only for Date
     el.hcDate.disabled = (readChoice(el.hcEffRow) !== "Date");
-    
+
     syncTOMethodUi();
     renderCourseSummary();
     renderTeeHint();
@@ -439,7 +447,6 @@ function applyChrome() {
         setDirty(true);
       });
     }
-    // time selects
     [el.hour, el.minute, el.ampm].forEach(sel => {
       sel.addEventListener("change", () => {
         state.game.playTimeText = getTimeHHMM();
@@ -453,7 +460,6 @@ function applyChrome() {
 
     bindFieldChange(el.comments, () => { state.game.dbGames_Comments = String(el.comments.value || ""); });
 
-    // choice rows
     function wireChoiceRow(row, key) {
       if (!row) return;
       row.addEventListener("click", (e) => {
@@ -478,7 +484,6 @@ function applyChrome() {
 
     bindFieldChange(el.hcDate, () => { state.game.dbGames_HCEffectivityDate = String(el.hcDate.value || "").trim(); renderHcHint(); });
 
-    // steppers
     document.querySelectorAll(".gmStepBtn").forEach(btn => {
       btn.addEventListener("click", () => {
         const targetId = btn.dataset.target;
@@ -494,24 +499,19 @@ function applyChrome() {
       });
     });
 
-    // Course picker
     el.pickCourseBtn.addEventListener("click", () => openCourseModal());
     el.modalClose.addEventListener("click", () => closeCourseModal());
     el.modal.addEventListener("click", (e) => {
       if (e.target === el.modal) closeCourseModal();
     });
 
-    // Tabs
     el.tabBar.addEventListener("click", (e) => {
       const btn = e.target && e.target.closest ? e.target.closest(".maSegBtn") : null;
       if (!btn) return;
       setCourseTab(btn.dataset.tab || "recent");
     });
 
-    // Search
     el.searchBtn.addEventListener("click", () => doCourseSearch());
-
-    // Handicap refresh
     el.hcRefreshBtn.addEventListener("click", () => doRefreshHandicaps());
   }
 
@@ -585,123 +585,32 @@ function applyChrome() {
       .replaceAll("'", "&#039;");
   }
 
-  function readInit() {
-    return window.__MA_INIT__ || window.__INIT__ || null;
+  function buildPatchFromUI() {
+    const playDate = String(el.playDate.value || "").trim();
+    const eff = readChoice(el.hcEffRow) || "PlayDate";
+    const rawHcDate = String(el.hcDate.value || "").trim();
+    const hcDate = (eff === "Date") ? (rawHcDate || playDate) : playDate;
+
+    return {
+      dbGames_Title: String(el.title.value || "").trim(),
+      dbGames_PlayDate: playDate,
+      dbGames_PlayTime: getTimeHHMM() + ":00",
+      dbGames_TOMethod: String(el.tomethod?.value || "TeeTimes"),
+      dbGames_TeeTimeCnt: String(el.teeCount.value || ""),
+      dbGames_TeeTimeInterval: String(el.teeInterval.value || ""),
+      dbGames_Holes: readChoice(el.holesRow) || "All 18",
+      dbGames_Privacy: readChoice(el.privacyRow) || "Club",
+      dbGames_Comments: String(el.comments.value || ""),
+      dbGames_HCEffectivity: eff,
+      dbGames_HCEffectivityDate: hcDate,
+      dbGames_FacilityID: state.game.dbGames_FacilityID || "",
+      dbGames_FacilityName: state.game.dbGames_FacilityName || "",
+      dbGames_FacilityCity: state.game.dbGames_FacilityCity || "",
+      dbGames_FacilityState: state.game.dbGames_FacilityState || "",
+      dbGames_CourseID: state.game.dbGames_CourseID || "",
+      dbGames_CourseName: state.game.dbGames_CourseName || ""
+    };
   }
-
-  async function loadContext() {
-    setBusy(true);
-    try {
-      const init = readInit();
-      if (!init || !init.ok) throw new Error("Missing or invalid __INIT__ payload (page must inject User+Game context).");
-
-      state.mode = init.mode || state.mode;
-      state.ggid = init.ggid || null;
-      state.game = init.game || null;
-      state.playerCount = typeof init.playerCount === "number"
-        ? init.playerCount
-        : 0;
-
-      if (!state.game) throw new Error("Missing init.game in __INIT__.");
-
-      // Default search state to user's state if available
-      if (el.searchState && !el.searchState.value) {
-        const ctx = init.context || {};
-        const us = ctx.userState || init.userState;
-        if (us) el.searchState.value = us;
-      }
-
-      // Mirror ISO helpers for UI where needed
-      if (!state.game.playDateISO && state.game.dbGames_PlayDate) {
-        state.game.playDateISO = state.game.dbGames_PlayDate;
-      }
-      if (!state.game.playTimeText && state.game.dbGames_PlayTime) {
-        state.game.playTimeText = String(state.game.dbGames_PlayTime).substring(0, 5);
-      }
-
-
-      render();
-      setDirty(false);
-
-      // If you want: preload recents when modal opens instead of at load (optional)
-      // (leave as-is if you already do it lazily)
-    } catch (e) {
-      console.error(e);
-      setStatus(String(e.message || e), "error");
-    } finally {
-      setBusy(false);
-      applyChrome();
-    }
-  }
-
-
-  /*
-  async function loadContext() {
-    setBusy(true);
-    try {
-      const res = await apiAdmin("getGameContext.php", { mode: state.mode });
-      if (!res || !res.ok) throw new Error(res?.message || "Could not load game context.");
-      const payload = res.payload || {};
-
-      state.mode = payload.mode || state.mode;
-      state.ggid = payload.ggid || null;
-      state.game = payload.game || {};
-
-      // Keep ISO date field mirrored for UI
-      if (!state.game.dbGames_PlayDateISO && state.game.dbGames_PlayDate) {
-        state.game.dbGames_PlayDateISO = state.game.dbGames_PlayDate;
-      }
-
-      render();
-      setDirty(false);
-
-      if (state.mode === "edit") {
-        // Opportunistically load recents so the modal is instant
-        loadRecentCourses();
-      }
-    } catch (e) {
-      console.error(e);
-      setStatus(String(e.message || e), "error");
-    } finally {
-      setBusy(false);
-      applyChrome();
-    }
-  }
-  */
-
-function buildPatchFromUI() {
-  const playDate = String(el.playDate.value || "").trim();
-  const eff = readChoice(el.hcEffRow) || "PlayDate";
-  const rawHcDate = String(el.hcDate.value || "").trim();
-  const hcDate = (eff === "Date") ? (rawHcDate || playDate) : playDate;
-
-  return {
-    dbGames_Title: String(el.title.value || "").trim(),
-    dbGames_PlayDate: playDate,
-    dbGames_PlayTime: getTimeHHMM() + ":00",
-    dbGames_TOMethod: String(el.tomethod?.value || "TeeTimes"),
-
-    // stored as text in your schema; keep as strings
-    dbGames_TeeTimeCnt: String(el.teeCount.value || ""),
-    dbGames_TeeTimeInterval: String(el.teeInterval.value || ""),
-
-    dbGames_Holes: readChoice(el.holesRow) || "All 18",
-    dbGames_Privacy: readChoice(el.privacyRow) || "Club",
-    dbGames_Comments: String(el.comments.value || ""),
-
-    dbGames_HCEffectivity: eff,
-    dbGames_HCEffectivityDate: hcDate,
-
-    // Course fields already in state.game
-    dbGames_FacilityID: state.game.dbGames_FacilityID || "",
-    dbGames_FacilityName: state.game.dbGames_FacilityName || "",
-    dbGames_FacilityCity: state.game.dbGames_FacilityCity || "",
-    dbGames_FacilityState: state.game.dbGames_FacilityState || "",
-    dbGames_CourseID: state.game.dbGames_CourseID || "",
-    dbGames_CourseName: state.game.dbGames_CourseName || ""
-  };
-}
-
 
   async function doSave() {
     if (state.busy) return;
@@ -714,9 +623,6 @@ function buildPatchFromUI() {
     if (patch.dbGames_HCEffectivity === "Date" && !patch.dbGames_HCEffectivityDate)
                                    return setStatus("Select a handicap effectivity date.", "error");
 
-    // Course change gate — only applies in edit mode with existing players.
-    // Compares the patch CourseID against the currently committed CourseID
-    // in state.game. If they differ and players exist, confirm before saving.
     const courseChanging =
         state.mode === "edit" &&
         state.playerCount > 0 &&
@@ -731,15 +637,14 @@ function buildPatchFromUI() {
         `flagged for manual re-selection on the Game Players page.\n\n` +
         `Continue?`
       );
-      if (!ok) return;   // abort — nothing is saved
+      if (!ok) return;
     }
 
     setBusy(true);
-    showSavingOverlay("Saving game...");
-    
-    if (courseChanging) {
-      showSavingOverlay("Saving game and updating player tees — please wait...");
-    }
+    showSavingOverlay(courseChanging
+      ? "Saving game and updating player tees — please wait..."
+      : "Saving game...");
+
     try {
       const res = await apiGM("saveGame.php", { mode: state.mode, patch });
       if (!res || !res.ok) throw new Error(res?.message || "Save failed.");
@@ -757,26 +662,14 @@ function buildPatchFromUI() {
       }
 
       render();
-      setDirty(false);
+      setDirty(false); // clears dirty → applyChrome() → footer nav restored
 
-      // Build status message — include resolution summary if course changed.
       if (res.courseChanged && res.resolutionResult) {
         const r = res.resolutionResult;
         const parts = ["Game saved."];
-        if (r.resolved > 0) {
-          parts.push(
-            `${r.resolved} player tee${r.resolved !== 1 ? "s" : ""} updated.`
-          );
-        }
-        if (r.reselect > 0) {
-          parts.push(
-            `${r.reselect} player${r.reselect !== 1 ? "s" : ""} require ` +
-            `manual tee selection on Game Players.`
-          );
-        }
-        if (r.skipped > 0) {
-          parts.push(`${r.skipped} non-rated player${r.skipped !== 1 ? "s" : ""} unchanged.`);
-        }
+        if (r.resolved > 0) parts.push(`${r.resolved} player tee${r.resolved !== 1 ? "s" : ""} updated.`);
+        if (r.reselect > 0) parts.push(`${r.reselect} player${r.reselect !== 1 ? "s" : ""} require manual tee selection on Game Players.`);
+        if (r.skipped  > 0) parts.push(`${r.skipped} non-rated player${r.skipped !== 1 ? "s" : ""} unchanged.`);
         setStatus(parts.join(" "), r.reselect > 0 ? "warn" : "success");
       } else {
         setStatus("Game saved.", "success");
@@ -800,7 +693,6 @@ function buildPatchFromUI() {
       if (state.courseTab === "recent") renderCourseRows();
     } catch (e) {
       console.error(e);
-      // Recent courses is a convenience; keep quiet unless modal open
       if (el.modal.classList.contains("is-open")) setStatus(String(e.message || e), "warn");
     }
   }
@@ -815,7 +707,7 @@ function buildPatchFromUI() {
       const res = await apiGHIN("searchCourses.php", { q, state: st });
       if (!res || !res.ok) throw new Error(res?.message || "Course search failed.");
       state.searchCourses = Array.isArray(res.rows) ? res.rows : [];
-      setCourseTab("search"); // updates pills + searchControls + renders rows
+      setCourseTab("search");
       setStatus(state.searchCourses.length ? "" : "No courses found.", state.searchCourses.length ? "" : "warn");
     } catch (e) {
       console.error(e);
@@ -851,6 +743,47 @@ function buildPatchFromUI() {
     else el.ggid.remove();
 
     el.ggid = span;
+  }
+
+  function readInit() {
+    return window.__MA_INIT__ || window.__INIT__ || null;
+  }
+
+  async function loadContext() {
+    setBusy(true);
+    try {
+      const init = readInit();
+      if (!init || !init.ok) throw new Error("Missing or invalid __INIT__ payload (page must inject User+Game context).");
+
+      state.mode = init.mode || state.mode;
+      state.ggid = init.ggid || null;
+      state.game = init.game || null;
+      state.playerCount = typeof init.playerCount === "number" ? init.playerCount : 0;
+
+      if (!state.game) throw new Error("Missing init.game in __INIT__.");
+
+      if (el.searchState && !el.searchState.value) {
+        const ctx = init.context || {};
+        const us = ctx.userState || init.userState;
+        if (us) el.searchState.value = us;
+      }
+
+      if (!state.game.playDateISO && state.game.dbGames_PlayDate) {
+        state.game.playDateISO = state.game.dbGames_PlayDate;
+      }
+      if (!state.game.playTimeText && state.game.dbGames_PlayTime) {
+        state.game.playTimeText = String(state.game.dbGames_PlayTime).substring(0, 5);
+      }
+
+      render();
+      setDirty(false);
+    } catch (e) {
+      console.error(e);
+      setStatus(String(e.message || e), "error");
+    } finally {
+      setBusy(false);
+      applyChrome();
+    }
   }
 
   // ---- Init ----

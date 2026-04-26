@@ -108,6 +108,17 @@
   --btnLinkText: var(--brandAccent);
   --btnHoverBg: rgba(0,0,0,.04);
   --btnPressedBg: var(--pressedBg);
+
+  --btnCancelBg:     #e5e7eb;
+  --btnCancelText:   var(--ink);
+  --btnCancelBorder: rgba(0, 0, 0, .18);
+  --btnSaveBg:       var(--brandAccent);
+  --btnSaveText:     #ffffff;
+  --btnSaveBorder:   color-mix(in srgb, var(--brandAccent) 70%, black);
+  --ftrActionsPad:   10px;
+  --ftrActionsGap:   10px;
+  --ftrActionsBtnH:  44px;
+  --ftrActionsBtnW:  200px;
   
   /* Navigation ICONS */
   --navIconSize: 18px;
@@ -1799,4 +1810,82 @@ body {
   padding:0 10px;
   font-size:12px;
   font-weight:700;
+}
+/* ---------- Footer action bar shell ------------------------------------- */
+.maChrome__ftrActions {
+  display: none;              /* hidden until footer--actions mode active    */
+  align-items: center;
+  padding: var(--ftrActionsPad, 10px);
+  gap: var(--ftrActionsGap, 10px);
+  background: var(--chromeBg);
+ 
+  /* Mobile default: full width, row, 50/50 */
+  flex-direction: row;
+  justify-content: stretch;
+}
+ 
+/* Footer in actions mode: show bar, hide nav */
+.maChrome__ftr--actions .maChrome__ftrActions {
+  display: flex;
+}
+ 
+.maChrome__ftr--actions .maChrome__bottomNav {
+  display: none;
+}
+ 
+/* ---------- Shared footer button base ----------------------------------- */
+.maFtrBtn {
+  flex: 1 1 0;                /* 50/50 on mobile                            */
+  min-height: var(--ftrActionsBtnH, 44px);
+  border-radius: var(--controlRadius);
+  font-family: var(--fontFamilyBase);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: filter .15s ease, transform .1s ease;
+  white-space: nowrap;
+}
+ 
+.maFtrBtn:active {
+  transform: scale(.98);
+  filter: brightness(.96);
+}
+ 
+.maFtrBtn:disabled,
+.maFtrBtn.is-disabled {
+  opacity: .50;
+  cursor: default;
+  transform: none;
+  filter: none;
+}
+ 
+/* ---------- Save button ------------------------------------------------- */
+.maFtrBtn--save {
+  background: var(--btnSaveBg, var(--brandAccent));
+  color: var(--btnSaveText, #ffffff);
+  border-color: var(--btnSaveBorder, color-mix(in srgb, var(--brandAccent) 70%, black));
+}
+ 
+/* ---------- Cancel button ----------------------------------------------- */
+.maFtrBtn--cancel {
+  background: var(--btnCancelBg, #e5e7eb);
+  color: var(--btnCancelText, var(--ink));
+  border-color: var(--btnCancelBorder, rgba(0, 0, 0, .18));
+}
+ 
+/* ---------- Tablet + Desktop (≥600px): right-justified, fixed width ----- */
+@media (min-width: 600px) {
+  .maChrome__ftrActions {
+    justify-content: flex-end;   /* right-justify the button group          */
+  }
+ 
+  .maFtrBtn {
+    flex: 0 0 var(--ftrActionsBtnW, 200px);  /* fixed width, no stretch    */
+  }
 }
