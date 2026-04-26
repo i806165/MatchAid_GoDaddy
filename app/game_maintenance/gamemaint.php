@@ -33,6 +33,7 @@ if ($modeParam === "" && trim((string)$storedGGID) === "") {
 }
 
 try {
+  $playerCount = 0;
   if ($mode === "edit") {
     $gc = ServiceContextGame::getGameContext();
     $game = $gc["game"];
