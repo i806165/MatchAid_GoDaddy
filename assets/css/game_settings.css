@@ -102,6 +102,7 @@
 }
 
 .gsWizStepPanel {
+  width: 100%;
   max-width: 100%;
   box-sizing: border-box;
   animation: gsWizIn 0.22s cubic-bezier(0.22,1,0.36,1) both;
@@ -187,14 +188,14 @@
   /* No overflow-x: hidden here — it would kill the carousel scroll on iOS Safari */
 }
 .gsWizCarouselWrap::before,
-.gsWizCarouselWrap::after { content: ''; position: absolute; top: 0; bottom: 14px; width: 20px; z-index: 2; pointer-events: none; }
-.gsWizCarouselWrap::before { left:  0; background: linear-gradient(to right, var(--bg), transparent); }
+.gsWizCarouselWrap::after { content: ''; position: absolute; top: 0; bottom: 14px; width: 12px; z-index: 2; pointer-events: none; }
+.gsWizCarouselWrap::before { left:  0; background: linear-gradient(to right, rgba(255,255,255,.4), transparent); }
 .gsWizCarouselWrap::after  { right: 0; background: linear-gradient(to left,  var(--bg), transparent); }
 
 .wizCarousel {
   display: flex; gap: 8px; overflow-x: auto;
   scroll-snap-type: x mandatory; scroll-behavior: smooth;
-  padding: 4px 2px 12px; -ms-overflow-style: none; scrollbar-width: none; cursor: grab;
+  padding: 4px 8px 12px 10px; -ms-overflow-style: none; scrollbar-width: none; cursor: grab;
   /* Contained by min-width: 0 on parent chain — no overflow-x: hidden needed */
   max-width: 100%;
   min-width: 0;
