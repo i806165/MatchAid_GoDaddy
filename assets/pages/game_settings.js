@@ -166,7 +166,7 @@
     AllScores:     { label: "Use All Scores",        desc: "Every player's score counts on every hole." },
     BestBall:      { label: "Best Ball",             desc: "The lowest N scores from the team count on each hole." },
     DeclareHole:   { label: "Declare per Hole",      desc: "The administrator sets how many scores count on each hole before the round." },
-    DeclareManual: { label: "Declare at Discretion", desc: "Players declare which scores count at their own discretion." },
+    DeclareManual: { label: "Declare Discretionally", desc: "Players declare which scores count at their own discretion." },
   };
 
   // =========================================================================
@@ -851,6 +851,10 @@
         }
       }
       sysSel.onchange = () => wizSelectSystem(sysSel.value);
+
+      // System hint — describe the selected system
+      const sysHintEl = document.getElementById("gsWizSystemHint");
+      if (sysHintEl) sysHintEl.textContent = WIZ_SYSTEMS[wiz.scoringSystemVal]?.desc || "";
     }
 
     // Best Ball
@@ -1359,6 +1363,8 @@
     wiz.scoringSystemVal = val;
     const sysSel = document.getElementById("gsWizSystemList");
     if (sysSel && !sysSel.disabled) sysSel.value = val;
+    const sysHintEl = document.getElementById("gsWizSystemHint");
+    if (sysHintEl) sysHintEl.textContent = WIZ_SYSTEMS[val]?.desc || "";
     if (el.wizGroupBB)       show(el.wizGroupBB,       val === "BestBall");
     if (el.wizGroupHoleDecl) {
       show(el.wizGroupHoleDecl, val === "DeclareHole");
@@ -1433,7 +1439,12 @@
 
   function wizSelectStrokeDist(val) {
     wiz.strokeDistribution = val;
-    if (el.wizStrokeDistChips) el.wizStrokeDistChips.querySelectorAll(".wizChip:not(.locked)").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
+    // Rebuild the chip set so selected state is always in sync with wiz state
+    if (el.wizStrokeDistChips) {
+      el.wizStrokeDistChips.querySelectorAll(".wizChip:not(.locked)").forEach(b =>
+        b.classList.toggle("selected", b.dataset.val === val)
+      );
+    }
     wizSetStrokeDistHint(val);
     setDirty(true); wizUpdateSummary(); wizCheckComplete();
   }
