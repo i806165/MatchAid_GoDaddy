@@ -61,11 +61,9 @@
   color: #ffffff;
   box-shadow: 0 0 0 3px rgba(0,102,204,.18);
 }
-
 .gsWizStep.active .gsWizStepLabel {
   color: var(--brandColor3);
 }
-
 .gsWizStepLabel {
   font-size: 9px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase;
   color: rgba(0,0,0,.35); white-space: nowrap; font-family: var(--fontFamilyBase);
@@ -73,27 +71,71 @@
 .gsWizStep.active .gsWizStepLabel { color: var(--brandPrimary); font-weight: 900; }
 
 /* ==========================================================================
-   WIZARD — Layout
+   WIZARD — Layout & containment
    ========================================================================== */
 
-.gsWizLayout { display: flex; gap: 10px; align-items: flex-start; }
-.gsWizMain   { flex: 1 1 0; min-width: 0; }
-.gsWizAside  { width: 240px; flex-shrink: 0; position: sticky; top: 10px; }
+.gsWizardContainer {
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
 
-.gsWizStepPanel { animation: gsWizIn 0.22s cubic-bezier(0.22,1,0.36,1) both; }
-@keyframes gsWizIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.gsWizLayout {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.gsWizMain {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.gsWizAside {
+  width: 240px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 10px;
+}
+
+.gsWizStepPanel {
+  max-width: 100%;
+  box-sizing: border-box;
+  animation: gsWizIn 0.22s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+@keyframes gsWizIn {
+  from { opacity:0; transform:translateY(8px); }
+  to   { opacity:1; transform:translateY(0); }
+}
 
 /* ==========================================================================
    WIZARD — Typography
    ========================================================================== */
 
-.gsWizEyebrow { font-size: 15px; font-weight: 900; color: var(--ink); margin-bottom: 4px; line-height: 1.2; }
-.gsWizHint    { font-size: 12px; font-weight: 700; color: var(--mutedText); margin-bottom: 14px; line-height: 1.4; }
+.gsWizEyebrow {
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--ink);
+  margin-bottom: 4px;
+  line-height: 1.2;
+}
+
+/* Single unified hint style — used for all contextual/helper text */
+.gsWizHint {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--mutedText);
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
 
 .gsWizFieldGroup  { display: flex; flex-direction: column; gap: 8px; }
 .gsWizFieldLabel  { font-size: 11px; font-weight: 900; letter-spacing: .3px; text-transform: uppercase; color: var(--mutedText); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .gsWizDivider     { height: 1px; background: var(--borderSubtle); margin: 4px 0; }
-.gsWizCascadeNote { font-size: 11px; font-weight: 700; color: var(--mutedText); line-height: 1.4; min-height: 16px; }
 
 .gsWizBasisInline { font-size: 13px; font-weight: 900; color: var(--brandPrimary); }
 
@@ -140,7 +182,10 @@
 }
 .gsWizCarouselArrow:hover { background: var(--btnHoverBg); }
 
-.gsWizCarouselWrap { position: relative; }
+.gsWizCarouselWrap {
+  position: relative;
+  /* No overflow-x: hidden here — it would kill the carousel scroll on iOS Safari */
+}
 .gsWizCarouselWrap::before,
 .gsWizCarouselWrap::after { content: ''; position: absolute; top: 0; bottom: 14px; width: 20px; z-index: 2; pointer-events: none; }
 .gsWizCarouselWrap::before { left:  0; background: linear-gradient(to right, var(--bg), transparent); }
@@ -150,6 +195,9 @@
   display: flex; gap: 8px; overflow-x: auto;
   scroll-snap-type: x mandatory; scroll-behavior: smooth;
   padding: 4px 2px 12px; -ms-overflow-style: none; scrollbar-width: none; cursor: grab;
+  /* Contained by min-width: 0 on parent chain — no overflow-x: hidden needed */
+  max-width: 100%;
+  min-width: 0;
 }
 .wizCarousel::-webkit-scrollbar { display: none; }
 .wizCarousel:active { cursor: grabbing; }
@@ -168,13 +216,10 @@
 .wizGameCard__name    { font-size: 12px; font-weight: 900; color: var(--ink); line-height: 1.25; }
 .wizGameCard__fmt     { font-size: 9px;  font-weight: 800; color: var(--mutedText); letter-spacing: .2px; }
 
-.gsWizHint { font-size: 12px; font-weight: 700; color: var(--mutedText); margin-bottom: 14px; line-height: 1.4; }
-
 /* ==========================================================================
    WIZARD — Hole declaration grid
    ========================================================================== */
 
-.gsWizHoleDeclHint { font-size: 11px; font-weight: 700; color: var(--mutedText); line-height: 1.4; }
 .gsWizSetAllRow    { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0; }
 .gsWizSetAllLabel  { font-size: 12px; font-weight: 800; color: var(--mutedText); white-space: nowrap; }
 .gsWizSetAllBtns   { display: flex; gap: 5px; }
@@ -187,14 +232,21 @@
 }
 .gsWizSetAllBtn:hover { background: var(--segmentSelectedBg); border-color: color-mix(in srgb, var(--segmentSelectedBg) 55%, black); color: var(--ink); }
 
-.gsWizHoleDeclGrid { display: grid; grid-template-columns: repeat(9, auto); gap: 5px; justify-content: start; }
+.gsWizHoleDeclGrid {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 5px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
 
 .wizHoleCell {
   background: var(--surfaceApp); border: 1px solid var(--borderSubtle);
   border-radius: var(--radiusMd); padding: 7px 4px 5px;
   display: flex; flex-direction: column; align-items: center; gap: 3px;
   transition: border-color 0.12s;
-  width: 36px;
+  min-width: 0;
+  box-sizing: border-box;
 }
 .wizHoleCell:focus-within { border-color: var(--brandSecondary); background: var(--brandPrimaryBg); }
 .wizHoleCellLabel         { font-size: 9px; font-weight: 900; color: var(--mutedText); text-align: center; line-height: 1.2; }
@@ -247,7 +299,7 @@
 @media (max-width: 720px) {
   .gsWizLayout           { flex-direction: column; }
   .gsWizAside            { width: 100%; position: static; }
-  .gsWizHoleDeclGrid     { grid-template-columns: repeat(6, auto); }
+  .gsWizHoleDeclGrid     { grid-template-columns: repeat(6, 1fr); }
   .gsWizStableford__grid { grid-template-columns: repeat(3, 1fr); }
   .wizGameCard           { flex: 0 0 96px; }
   .gsWizCarouselArrows   { display: none; }
@@ -257,7 +309,6 @@
    WIZARD — Points config UI
    ========================================================================== */
 
-/* Nines table — two-row labeled grid */
 .gsWizNinesTable {
   display: grid;
   gap: 8px;

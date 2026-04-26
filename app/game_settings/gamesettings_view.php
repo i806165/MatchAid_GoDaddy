@@ -61,7 +61,7 @@
             <div class="gsWizDivider"></div>
             <div class="gsWizFieldLabel">Rotation Method</div>
             <div class="wizChips" id="gsWizRotChips"></div>
-            <div class="gsWizCascadeNote" id="gsWizRotNote"></div>
+            <div class="gsWizHint" id="gsWizRotNote"></div>
           </div>
 
         </div>
@@ -105,7 +105,7 @@
           <div class="gsWizFieldGroup hidden" id="gsWizGroupHoleDecl">
             <div class="gsWizDivider"></div>
             <div class="gsWizFieldLabel">Scores Per Hole</div>
-            <div class="gsWizHoleDeclHint">Set how many scores count per hole. Use Set All to apply one value, then adjust individually.</div>
+            <div class="gsWizHint">Set how many scores count per hole. Use Set All to apply one value, then adjust individually.</div>
             <div class="gsWizSetAllRow">
               <span class="gsWizSetAllLabel">Set all holes to:</span>
               <div class="gsWizSetAllBtns">
@@ -136,7 +136,7 @@
               <div class="gsWizStableford__grid" id="gsWizStablefordGrid"></div>
             </div>
             <!-- Chicago quota note — shown only when strategy === 'Chicago' -->
-            <div class="gsWizCascadeNote hidden" id="gsWizChicagoNote">
+            <div class="gsWizHint hidden" id="gsWizChicagoNote">
               Each player's quota = 36 minus their course handicap. The player who most exceeds their quota wins.
             </div>
           </div>
@@ -200,7 +200,7 @@
       </div>
 
       <!-- ============================================================
-           STEP 3: Handicaps — unchanged from prior Step 4
+           STEP 3: Handicaps
            ============================================================ -->
       <div id="gsWizStep3" class="gsWizStepPanel maCard hidden">
         <header class="maCard__hdr">
@@ -253,7 +253,7 @@
 
       <!-- Wizard nav buttons -->
       <div class="gsWizNav">
-        <button class="btn"             id="gsWizBtnBack" disabled>&#8592; Back</button>
+        <button class="btn"              id="gsWizBtnBack" disabled>&#8592; Back</button>
         <button class="btn btnSecondary" id="gsWizBtnNext" disabled>Next &#8594;</button>
       </div>
 
