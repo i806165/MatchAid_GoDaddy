@@ -584,8 +584,8 @@
     if (MA.chrome && MA.chrome.setHeaderLines) MA.chrome.setHeaderLines(["Game Players", title, subTitle]);
     if (MA.chrome && MA.chrome.setActions) {
       MA.chrome.setActions({
-        left: { show: true, label: "Actions", onClick: openActionsMenu },
-        right: { show:false }
+        right: { show: true, label: "Actions", onClick: openActionsMenu },
+        left: { show:false }
       });
     }
     if (MA.chrome && MA.chrome.setBottomNav) {

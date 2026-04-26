@@ -1168,8 +1168,8 @@
 
     if (chrome && typeof chrome.setActions === "function") {
       chrome.setActions({
-        left: { show: true, label: "Actions", onClick: openActionsMenu },
-        right: { show: false }
+        right: { show: true, label: "Actions", onClick: openActionsMenu },
+        left: { show: false }
       });
     }
 
