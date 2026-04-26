@@ -275,34 +275,37 @@
 }
 
 /* Print contract */
-@media print{
-  /* Hide chrome + controls + footer/status */
-  header, footer, .maChromeFooter, .maControlArea { display:none !important; }
+@page {
+  size: letter landscape;
+  margin: 0.2in;
+}
 
-  /* Reset scroll containers so full content prints */
+@media print {
+  header, footer, .maChromeFooter, .maControlArea { display: none !important; }
+
   html, body, main.maPage {
     height: auto !important;
     overflow: visible !important;
     display: block !important;
   }
 
-  body{ background:#fff !important; }
-  main.maPage{ padding:0 !important; }
+  body { background: #fff !important; }
+  main.maPage { padding: 0 !important; }
 
-  .maCard{ border:none !important; box-shadow:none !important; }
-  .maCard__hdr{ display:none !important; }
-  .maCard__body{ padding:0 !important; }
+  .maCard { border: none !important; box-shadow: none !important; }
+  .maCard__hdr { display: none !important; }
+  .maCard__body { padding: 0 !important; }
 
-  .scHost{ gap: 0 !important; }
-  .scPage{
+  .scHost {
+    gap: 0 !important;
+    transform: scale(0.85);
+    transform-origin: top left;
+  }
+
+  .scPage {
     border: none !important;
     border-radius: 0 !important;
     page-break-after: always;
     break-after: page;
-  }
-
-  @page{
-    size: landscape;
-    margin: 0.35in;
   }
 }
