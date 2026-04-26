@@ -267,7 +267,7 @@ async function onConfirmCart() {
                       : (portal === "PLAYER PORTAL" ? "player" : "home");
 
       MA.chrome.setBottomNav({
-        visible: [homeRoute, 'scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoreskins'],
+        visible: [homeRoute],
         active: '',
         onNavigate: (id) => (typeof MA.routerGo === 'function' ? MA.routerGo(id) : null)
       });
