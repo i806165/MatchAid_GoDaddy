@@ -101,8 +101,8 @@ function isMobileLandscapeLike(){
 
     if (chrome.setActions) {
       chrome.setActions({
-        left: { show: state.mode === 'player', label: 'Actions', onClick: openActionsMenu },
-        right: { show: false }
+        right: { show: state.mode === 'player', label: 'Actions', onClick: openActionsMenu },
+        left: { show: false }
       });
     }
 

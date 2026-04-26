@@ -799,8 +799,8 @@ function markDirty(playerId, rawScore, declared) {
 
     if (chrome && typeof chrome.setActions === 'function') {
       chrome.setActions({
-        left: { show: !!state.payload, label: 'Actions', onClick: openActionsMenu },
-        right: { show: false }
+        right: { show: !!state.payload, label: 'Actions', onClick: openActionsMenu },
+        left: { show: false }
       });
     }
 
