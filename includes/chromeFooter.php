@@ -95,6 +95,13 @@
       <span class="maNavLabel">Roster</span>
     </button>
 
+    <button type="button" class="maNavBtn" data-nav="settings" aria-label="Game Settings">
+      <span class="maNavIcon" aria-hidden="true">
+        <img src="/assets/images/nav-settings.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
+      </span>
+      <span class="maNavLabel">Settings</span>
+    </button>
+
     <button type="button" class="maNavBtn" data-nav="pairings" aria-label="Pairings">
       <span class="maNavIcon" aria-hidden="true">🔗</span>
       <span class="maNavLabel">Pairings</span>
