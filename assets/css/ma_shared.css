@@ -1740,15 +1740,6 @@ body {
   padding: 0 10px;
 }
 
-/* Modal footer */
-.maModal__ftrActions{
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  align-items: center;
-  width: 100%;
-}
-
 /* ======================================================================
    List Rows (shared)
    - Lightweight rows for search/recent lists (course picker, etc.)
