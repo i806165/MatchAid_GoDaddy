@@ -1,3 +1,4 @@
+// REPLACE entire file WITH:
 <?php
 // /public_html/app/user_settings/usersettings_view.php
 ?>
@@ -32,44 +33,101 @@
         </div>
       </div>
 
-        <div class="maFieldRow">
+      <div class="maFieldRow">
         <div class="maField">
-            <label class="maLabel" for="usMobilePhone">Mobile Phone</label>
-            <input id="usMobilePhone" class="maTextInput" type="tel" maxlength="14" autocomplete="tel" placeholder="555-555-5555" />
+          <label class="maLabel" for="usMobilePhone">Mobile Phone</label>
+          <input id="usMobilePhone" class="maTextInput" type="tel" maxlength="14" autocomplete="tel" placeholder="555-555-5555" />
         </div>
+
+        <div class="maField">
+          <label class="maLabel" for="usMobileCarrier">Mobile Carrier</label>
+          <select id="usMobileCarrier" class="maTextInput">
+            <option value="">Select carrier</option>
+          </select>
+          <div class="usHint" id="usSmsHint"></div>
+        </div>
+      </div>
 
       <div class="maFieldRow">
         <div class="maField">
-            <label class="maLabel" for="usMobileCarrier">Mobile Carrier</label>
-            <select id="usMobileCarrier" class="maTextInput">
-            <option value="">Select carrier</option>
-            </select>
-            <div class="usHint" id="usSmsHint"></div>
-        </div>
-        </div>
-
-        <div class="maFieldRow">
-        <div class="maField">
-            <label class="maLabel" for="usContactMethod">Preferred Communications Method</label>
-            <select id="usContactMethod" class="maTextInput">
+          <label class="maLabel" for="usContactMethod">Preferred Communications Method</label>
+          <select id="usContactMethod" class="maTextInput">
             <option value="">Select method</option>
-            </select>
+          </select>
         </div>
-        </div>
+      </div>
 
-        <div class="maFieldRow">
-          <div class="maField">
-            <label class="maLabel" for="usPreferenceYards">Preferred Playing Yardage (18 holes)</label>
-            <select id="usPreferenceYards" class="maTextInput">
-              <option value="">Select yardage</option>
-            </select>
-            <div class="usHint" id="usYardsHint">
+      <div class="maFieldRow">
+        <div class="maField">
+          <label class="maLabel" for="usPreferenceYards">Preferred Playing Yardage (18 holes)</label>
+          <select id="usPreferenceYards" class="maTextInput">
+            <option value="">Select yardage</option>
+          </select>
+          <div class="usHint" id="usYardsHint">
               <strong>USGA Tee Selection Guidance:</strong>
               7-Iron Method— multiply your average 7-iron carry distance by 36 or
               Driver Method— multiply your average driver carry distance by 28.
-            </div>
           </div>
         </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="maCard" aria-label="Home Club">
+    <header class="maCard__hdr">
+      <div class="maCard__title">HOME CLUB</div>
+    </header>
+
+    <div class="maCard__body">
+
+      <div class="maFieldRow">
+        <div class="maField">
+          <div class="maLabel">Club</div>
+          <div class="usReadOnly" id="hcClubName">—</div>
+        </div>
+        <div class="maField">
+          <div class="maLabel">Association</div>
+          <div class="usReadOnly" id="hcAssocName">—</div>
+        </div>
+      </div>
+
+      <div class="maFieldRow">
+        <div class="maField">
+          <div class="maLabel">Location</div>
+          <div class="usReadOnly" id="hcLocation">—</div>
+        </div>
+        <div class="maField">
+          <div class="maLabel">Status</div>
+          <div class="usReadOnly" id="hcStatus">—</div>
+        </div>
+      </div>
+
+      <div class="maFieldRow">
+        <div class="maField">
+          <div class="maLabel">Handicap Index</div>
+          <div class="usReadOnly" id="hcHandicap">—</div>
+        </div>
+        <div class="maField">
+          <div class="maLabel">Low Handicap Index</div>
+          <div class="usReadOnly" id="hcLowHi">—</div>
+        </div>
+      </div>
+
+      <div class="maFieldRow">
+        <div class="maField">
+          <div class="maLabel">Revised</div>
+          <div class="usReadOnly" id="hcRevDate">—</div>
+        </div>
+      </div>
+
+      <div class="maFieldRow">
+        <div class="maField">
+          <div class="maLabel">Home Courses</div>
+          <div class="usReadOnly" id="hcCourses">—</div>
+        </div>
+      </div>
+
     </div>
   </section>
 

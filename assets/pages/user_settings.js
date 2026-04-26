@@ -38,14 +38,22 @@
       };
 
     const el = {
-    fName: document.getElementById("usFName"),
-    lName: document.getElementById("usLName"),
-    email: document.getElementById("usEMail"),
-    mobilePhone: document.getElementById("usMobilePhone"),
-    mobileCarrier: document.getElementById("usMobileCarrier"),
-    contactMethod: document.getElementById("usContactMethod"),
-    preferenceYards: document.getElementById("usPreferenceYards"),
-    smsHint: document.getElementById("usSmsHint"),
+      fName: document.getElementById("usFName"),
+      lName: document.getElementById("usLName"),
+      email: document.getElementById("usEMail"),
+      mobilePhone: document.getElementById("usMobilePhone"),
+      mobileCarrier: document.getElementById("usMobileCarrier"),
+      contactMethod: document.getElementById("usContactMethod"),
+      preferenceYards: document.getElementById("usPreferenceYards"),
+      smsHint: document.getElementById("usSmsHint"),
+      hcClubName:  document.getElementById("hcClubName"),
+      hcAssocName: document.getElementById("hcAssocName"),
+      hcLocation:  document.getElementById("hcLocation"),
+      hcStatus:    document.getElementById("hcStatus"),
+      hcHandicap:  document.getElementById("hcHandicap"),
+      hcLowHi:     document.getElementById("hcLowHi"),
+      hcRevDate:   document.getElementById("hcRevDate"),
+      hcCourses:   document.getElementById("hcCourses"),
     };
 
   const state = {
@@ -197,6 +205,47 @@
     }
   }
 
+    function renderHomeClub(profile) {
+      if (!profile) return;
+
+      const g0 = profile?.profileJson?.golfers?.[0] ?? profile?.golfers?.[0] ?? profile;
+      const facilities = profile?.facilityJson?.facilities ?? [];
+
+      const set = (node, val) => { if (node) node.textContent = val || "—"; };
+
+      set(el.hcClubName,  g0?.club_name);
+      set(el.hcAssocName, g0?.association_name);
+      set(el.hcStatus,    g0?.status);
+      set(el.hcHandicap,  g0?.handicap_index ? `${g0.handicap_index}` : null);
+      set(el.hcLowHi,     g0?.low_hi ? `${g0.low_hi}` : null);
+
+      // Location
+      const city  = g0?.city  ?? "";
+      const state = g0?.state ?? "";
+      set(el.hcLocation, [city, state].filter(Boolean).join(", "));
+
+      // Rev date — format YYYY-MM-DD to readable
+      const rev = g0?.rev_date ?? "";
+      if (rev && el.hcRevDate) {
+        const d = new Date(rev + "T00:00:00");
+        el.hcRevDate.textContent = isNaN(d) ? rev :
+          d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+      }
+
+      // Home courses — dedupe by course name across all facilities
+      const seen = new Set();
+      const courses = [];
+      facilities.forEach(f => {
+        (f.home_courses ?? []).forEach(c => {
+          if (c.name && !seen.has(c.name)) {
+            seen.add(c.name);
+            courses.push(c.name);
+          }
+        });
+      });
+      set(el.hcCourses, courses.length ? courses.join(", ") : null);
+    }
+
     function render() {
         el.fName.value = state.fields.dbUser_FName || "";
         el.lName.value = state.fields.dbUser_LName || "";
@@ -213,6 +262,7 @@
         el.preferenceYards.value = preferenceYardsValueFromObject(state.fields.dbUser_PreferenceYards);
 
         renderSmsHint();
+        renderHomeClub(state.sourceProfile?.profile ?? null);
     }
 
   function wireInputs() {

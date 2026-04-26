@@ -232,46 +232,47 @@ public static function buildUserSettingsPayload(string $ghinId): array {
     $ghinName  = trim((string)($row["dbUser_Name"] ?? ""));
     $storedPreferenceYards = self::decodePreferenceYards($row["dbUser_PreferenceYards"] ?? null);
 
-$effectiveEmail = trim((string)($row["dbUser_EMail"] ?? "")) ?: $ghinEmail;
-$effectivePhone = trim((string)($row["dbUser_MobilePhone"] ?? "")) ?: $ghinPhone;
-$effectiveCarrier = trim((string)($row["dbUser_MobileCarrier"] ?? ""));
-$storedMethod = trim((string)($row["dbUser_ContactMethod"] ?? ""));
+    $effectiveEmail = trim((string)($row["dbUser_EMail"] ?? "")) ?: $ghinEmail;
+    $effectivePhone = trim((string)($row["dbUser_MobilePhone"] ?? "")) ?: $ghinPhone;
+    $effectiveCarrier = trim((string)($row["dbUser_MobileCarrier"] ?? ""));
+    $storedMethod = trim((string)($row["dbUser_ContactMethod"] ?? ""));
 
-$effectiveMethod = $storedMethod;
-if ($effectiveMethod === "") {
-    $effectiveMethod = ($effectivePhone !== "" && $effectiveCarrier !== "") ? "SMS" : "Email";
-}
+    $effectiveMethod = $storedMethod;
+    if ($effectiveMethod === "") {
+        $effectiveMethod = ($effectivePhone !== "" && $effectiveCarrier !== "") ? "SMS" : "Email";
+    }
 
-return [
-    "ghin" => (string)($row["dbUser_GHIN"] ?? $ghinId),
-    "fields" => [
-        "dbUser_FName" => trim((string)($row["dbUser_FName"] ?? "")) ?: $ghinFName,
-        "dbUser_LName" => trim((string)($row["dbUser_LName"] ?? "")) ?: $ghinLName,
-        "dbUser_EMail" => $effectiveEmail,
-        "dbUser_MobilePhone" => $effectivePhone,
-        "dbUser_MobileCarrier" => $effectiveCarrier,
-        "dbUser_ContactMethod" => $effectiveMethod,
-        "dbUser_PreferenceYards" => $storedPreferenceYards,
-    ],
-    "sourceProfile" => [
-        "ghinName" => $ghinName,
-        "ghinFName" => $ghinFName,
-        "ghinLName" => $ghinLName,
-    ],
-    "carrierOptions" => array_map(
-        static fn(string $gateway, string $name): array => [
-            "value" => $name,
-            "label" => $name,
-            "gateway" => $gateway,
+    return [
+        "ghin" => (string)($row["dbUser_GHIN"] ?? $ghinId),
+        "fields" => [
+            "dbUser_FName" => trim((string)($row["dbUser_FName"] ?? "")) ?: $ghinFName,
+            "dbUser_LName" => trim((string)($row["dbUser_LName"] ?? "")) ?: $ghinLName,
+            "dbUser_EMail" => $effectiveEmail,
+            "dbUser_MobilePhone" => $effectivePhone,
+            "dbUser_MobileCarrier" => $effectiveCarrier,
+            "dbUser_ContactMethod" => $effectiveMethod,
+            "dbUser_PreferenceYards" => $storedPreferenceYards,
         ],
-        self::USER_SETTINGS_CARRIERS,
-        array_keys(self::USER_SETTINGS_CARRIERS)
-    ),
-    "contactMethodOptions" => [
-        [ "value" => "Email", "label" => "Email" ],
-        [ "value" => "SMS",   "label" => "SMS" ],
-    ],
-];
+        "sourceProfile" => [
+            "ghinName" => $ghinName,
+            "ghinFName" => $ghinFName,
+            "ghinLName" => $ghinLName,
+            "profile"   => $profile,
+        ],
+        "carrierOptions" => array_map(
+            static fn(string $gateway, string $name): array => [
+                "value" => $name,
+                "label" => $name,
+                "gateway" => $gateway,
+            ],
+            self::USER_SETTINGS_CARRIERS,
+            array_keys(self::USER_SETTINGS_CARRIERS)
+        ),
+        "contactMethodOptions" => [
+            [ "value" => "Email", "label" => "Email" ],
+            [ "value" => "SMS",   "label" => "SMS" ],
+        ],
+    ];
 }
 
 // ADD after buildUserSettingsPayload()
