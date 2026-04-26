@@ -57,7 +57,13 @@
   // ---- Helpers ----
   function isPairPair() { return state.competition === "PairPair"; }
   function isShotgun() { return state.toMethod === "ShotGun"; }
-  function setBusy(on) { state.busy = !!on; }
+  
+  function setBusy(on) {
+    state.busy = !!on;
+    if (typeof MA.chrome.setFooterSaveDisabled === "function") {
+      MA.chrome.setFooterSaveDisabled(!!on);
+    }
+  }
   
   function esc(s) {
     return String(s ?? "").replace(/[&<>"']/g, (c) => ({
@@ -147,8 +153,10 @@
 
   function markDirty(ghin) {
     if (!ghin) return;
+    const wasClean = state.dirty.size === 0;
     state.dirty.add(String(ghin));
     if (MA.setStatus) MA.setStatus("Unsaved changes.", "warn");
+    if (wasClean) applyChrome();
   }
 
   function getBlockIdForPlayer(p) {
@@ -1287,6 +1295,7 @@ function onResetChanges() {
       if (res.ok) {
         state.dirty.clear();
         if (MA.setStatus) MA.setStatus("Saved successfully.", "success");
+        applyChrome();
         render();
       } else {
         throw new Error(res.message || "Save failed.");
@@ -1448,9 +1457,16 @@ function onResetChanges() {
     }
 
     if (chrome.setActions) {
+      const isDirty = state.dirty.size > 0;
       chrome.setActions({
-        left: { show: true, label: "Actions", onClick: openActionsMenu },
-        right: { show: true, label: "Save", onClick: doSave }
+        left:  { show: false },
+        right: isDirty ? { show: false } : { show: true, label: "Actions", onClick: openActionsMenu },
+        footer: isDirty
+          ? {
+              save:   { label: "Save",   onClick: doSave },
+              cancel: { label: "Cancel", onClick: onResetChanges }
+            }
+          : null
       });
     }
 

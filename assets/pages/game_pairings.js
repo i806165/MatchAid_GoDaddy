@@ -100,8 +100,9 @@
 
   function setBusy(on) {
     state.busy = !!on;
-    const saveBtn = document.getElementById("chromeBtnRight");
-    if (saveBtn) saveBtn.disabled = state.busy;
+    if (typeof MA.chrome.setFooterSaveDisabled === "function") {
+      MA.chrome.setFooterSaveDisabled(!!on);
+    }
   }
 
   function isPairPair() {
@@ -149,13 +150,16 @@
 
   function markDirty(ghin) {
     if (!ghin) return;
+    const wasClean = state.dirty.size === 0;
     state.dirty.add(String(ghin));
     setStatus("Unsaved changes.", "warn");
+    if (wasClean) applyChrome();
   }
 
   function clearDirty() {
     state.dirty.clear();
     setStatus("", "");
+    applyChrome();
   }
 
   function getPlayerByGHIN(ghin) {
@@ -750,9 +754,16 @@
     }
 
     if (chrome && typeof chrome.setActions === "function") {
+      const isDirty = state.dirty.size > 0;
       chrome.setActions({
-        left: { show: true, label: "Actions", onClick: openActionsMenu },
-        right: { show: true, label: "Save", onClick: doSave }
+        left: { show: false },
+        right:  isDirty ? { show: false } : { show: true, label: "Actions", onClick: openActionsMenu },
+        footer: isDirty
+          ? {
+              save:   { label: "Save",   onClick: doSave },
+              cancel: { label: "Cancel", onClick: onResetPairings }
+            }
+          : null
       });
     }
 
