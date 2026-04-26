@@ -1917,3 +1917,283 @@ body {
     width: 280px;
   }
 }
+
+/* ==========================================================================
+   MOBILE NAV HUB — append to ma_shared.css
+   Controls:
+     - Navigate button (.maChrome__navHub)
+     - Hub tray overlay (.maChrome__hubTray)
+   The existing icon nav (.maChrome__bottomNav) and Save/Cancel bar
+   (.maChrome__ftrActions) are untouched — hub slots into the same
+   visibility logic via media query and the existing --actions class toggle.
+   ========================================================================== */
+
+
+/* --------------------------------------------------------------------------
+   1. Navigate button container
+   Hidden on desktop, shown on mobile in place of the icon nav.
+   -------------------------------------------------------------------------- */
+.maChrome__navHub {
+  display: none;          /* hidden by default (desktop) */
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.maChrome__navHubBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #1a73e8;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 9px 28px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s;
+}
+
+.maChrome__navHubBtn:active {
+  opacity: 0.85;
+}
+
+.maChrome__navHubIcon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.maChrome__navHubLabel {
+  font-size: 16px;
+  line-height: 1;
+}
+
+
+/* --------------------------------------------------------------------------
+   2. Hub tray overlay
+   Always in DOM, toggled via [hidden] attribute and .is-open class.
+   Uses fixed positioning so it overlays the full viewport regardless of
+   scroll position.
+   -------------------------------------------------------------------------- */
+.maChrome__hubTray {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+/* Hidden state — [hidden] attribute keeps it out of the accessibility tree.
+   We remove [hidden] in JS before animating open so transitions fire. */
+.maChrome__hubTray[hidden] {
+  display: none;
+}
+
+.maChrome__hubTray.is-open {
+  pointer-events: all;
+}
+
+
+/* Backdrop */
+.maChrome__hubBackdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0);
+  transition: background 0.25s ease;
+  cursor: pointer;
+}
+
+.maChrome__hubTray.is-open .maChrome__hubBackdrop {
+  background: rgba(0, 0, 0, 0.50);
+}
+
+
+/* Sheet */
+.maChrome__hubSheet {
+  position: relative;
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 88vh;
+  transform: translateY(100%);
+  transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.maChrome__hubTray.is-open .maChrome__hubSheet {
+  transform: translateY(0);
+}
+
+
+/* Drag handle */
+.maChrome__hubHandle {
+  width: 36px;
+  height: 4px;
+  background: #ddd;
+  border-radius: 2px;
+  margin: 10px auto 6px;
+  flex-shrink: 0;
+}
+
+
+/* Header row */
+.maChrome__hubHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 14px 8px;
+  border-bottom: 0.5px solid #eee;
+  flex-shrink: 0;
+}
+
+.maChrome__hubTitle {
+  font-size: 11px;
+  font-weight: 500;
+  color: #999;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+.maChrome__hubClose {
+  background: #f0efe8;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  font-size: 12px;
+  color: #555;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.maChrome__hubClose:active {
+  opacity: 0.7;
+}
+
+
+/* Scrollable row area */
+.maChrome__hubScroll {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 6px 10px 16px;
+  flex: 1;
+}
+
+/* Fade hint at bottom when content overflows */
+.maChrome__hubScroll::after {
+  content: "";
+  display: block;
+  height: 8px;
+}
+
+
+/* --------------------------------------------------------------------------
+   3. Hub tray nav rows (injected by setBottomNav)
+   -------------------------------------------------------------------------- */
+.maHubRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: #f5f5f0;
+  border: none;
+  border-radius: 8px;
+  padding: 5px 12px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s;
+}
+
+.maHubRow:active {
+  background: #e8e8e0;
+}
+
+.maHubRow.is-active {
+  background: #e8f0fe;
+}
+
+.maHubRow__icon {
+  font-size: 16px;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.maHubRow__label {
+  font-size: 16px;
+  font-weight: 500;
+  color: #222;
+  flex: 1;
+}
+
+.maHubRow.is-active .maHubRow__label {
+  color: #1a73e8;
+}
+
+.maHubRow__arrow {
+  font-size: 13px;
+  color: #ccc;
+  flex-shrink: 0;
+}
+
+.maHubRow.is-active .maHubRow__arrow {
+  color: #1a73e8;
+}
+
+/* Section divider between row groups */
+.maHubDivider {
+  border: none;
+  border-top: 0.5px solid #eee;
+  margin: 4px 0;
+}
+
+
+/* --------------------------------------------------------------------------
+   4. Media queries — the core visibility swap
+   -------------------------------------------------------------------------- */
+
+/* MOBILE: hide icon nav, show Navigate button */
+@media (max-width: 600px) {
+
+  .maChrome__bottomNav {
+    display: none !important;
+  }
+
+  .maChrome__navHub {
+    display: flex;
+  }
+}
+
+/* DESKTOP: hide Navigate button (icon nav already visible by default) */
+@media (min-width: 601px) {
+
+  .maChrome__navHub {
+    display: none;
+  }
+
+  /* Tray should never open on desktop — belt-and-suspenders */
+  .maChrome__hubTray {
+    display: none !important;
+  }
+}
+
+
+/* --------------------------------------------------------------------------
+   5. Save/Cancel overlay — hide Navigate button too (mobile)
+   The existing .maChrome__ftr--actions class already hides the icon nav.
+   We extend it to also hide the Navigate button.
+   -------------------------------------------------------------------------- */
+.maChrome__ftr--actions .maChrome__navHub {
+  display: none !important;
+}

@@ -213,6 +213,11 @@
       footer.classList.toggle("maChrome__ftr--actions", hasFooterActions);
     }
 
+  // If entering Save/Cancel mode, close the hub tray if it's open
+  if (hasFooterActions && typeof MA.chrome.closeHub === "function") {
+    MA.chrome.closeHub();
+  }
+
   if (hasFooterActions) {
       const saveDef   = cfg.footer.save   || {};
       const cancelDef = cfg.footer.cancel || {};
@@ -267,6 +272,7 @@
   };
 
   // Bottom nav: show/hide items + disabled/current-stage + compact centering when <=2 visible
+  // On mobile, also populates the hub tray rows from the same visible/active/onNavigate state.
   MA.chrome.setBottomNav = function (state) {
     const nav = document.getElementById("chromeBottomNav");
     if (!nav) return;
@@ -302,6 +308,143 @@
     });
 
     nav.classList.toggle("is-compact", visibleCount <= 2);
+
+    // ---- Populate hub tray rows (mobile) ----
+    // Reads label text from the existing icon nav buttons so there is a single
+    // source of truth — the nav markup in chromeFooter.php.
+    MA.chrome._hubNavigate = onNavigate;
+    MA.chrome._hubActive   = active;
+    MA.chrome._hubVisible  = visible;
+    MA.chrome._hubDisabled = disabled;
+    MA.chrome._buildHubRows();
   };
+
+  // --------------------------------------------------------------------------
+  // Hub tray controller
+  // Builds tray rows from the icon nav markup, wires open/close, and exposes
+  // MA.chrome.openHub() / MA.chrome.closeHub() for the Navigate button.
+  // --------------------------------------------------------------------------
+  MA.chrome._hubVisible  = new Set();
+  MA.chrome._hubDisabled = new Set();
+  MA.chrome._hubActive   = "";
+  MA.chrome._hubNavigate = null;
+
+  // Label map — nav id → human-readable label for the tray.
+  // Matches data-nav values in chromeFooter.php.
+  MA.chrome._hubLabels = {
+    home            : { label: "Home",            icon: "⌂"  },
+    admin           : { label: "Admin Home",       icon: "🔒" },
+    adminOld        : { label: "Admin",            icon: "🔒" },
+    player          : { label: "Player Home",      icon: "📋" },
+    edit            : { label: "Edit Game",        icon: "✎"  },
+    settings        : { label: "Settings",         icon: "⚙"  },
+    roster          : { label: "Roster",           icon: "👥" },
+    pairings        : { label: "Pairings",         icon: "🔗" },
+    teetimes        : { label: "Tee Times",        icon: "⏱" },
+    summary         : { label: "Summary",          icon: "📄" },
+    import          : { label: "Import Games",     icon: "⭳" },
+    scoreentry      : { label: "Enter Scores",     icon: "📝" },
+    scorecardPlayer : { label: "Player Card",      icon: "📋" },
+    scorecardGroup  : { label: "Group Card",       icon: "👥" },
+    scorecardGame   : { label: "Game Cards",       icon: "📄" },
+    scoreskins      : { label: "Skins",            icon: "💰" },
+    scoresummary    : { label: "Leaders",          icon: "📊" },
+    favorites       : { label: "Favorites",        icon: "★"  },
+    usersettings    : { label: "My Settings",      icon: "⚙"  },
+  };
+
+  MA.chrome._buildHubRows = function () {
+    const container = document.getElementById("chromeHubRows");
+    if (!container) return;
+
+    const visible  = MA.chrome._hubVisible;
+    const disabled = MA.chrome._hubDisabled;
+    const active   = MA.chrome._hubActive;
+    const labels   = MA.chrome._hubLabels;
+
+    // Collect visible ids in the order they appear in the icon nav markup
+    const nav = document.getElementById("chromeBottomNav");
+    if (!nav) return;
+
+    const orderedIds = [];
+    nav.querySelectorAll(".maNavBtn[data-nav]").forEach((btn) => {
+      const id = String(btn.getAttribute("data-nav") || "");
+      if (visible.size ? visible.has(id) : true) orderedIds.push(id);
+    });
+
+    container.innerHTML = "";
+
+    orderedIds.forEach((id, idx) => {
+      const meta       = labels[id] || { label: id, icon: "›" };
+      const isActive   = active && id === active;
+      const isDisabled = disabled.has(id) || isActive;
+
+      // Optional divider — insert before the first scoring-related item
+      // to mirror the grouping shown in our design mockups.
+      const scoringIds = new Set(["scoreentry","scorecardPlayer","scorecardGroup","scorecardGame","scoreskins","scoresummary","import","favorites"]);
+      if (idx > 0 && scoringIds.has(id) && !scoringIds.has(orderedIds[idx - 1])) {
+        const hr = document.createElement("hr");
+        hr.className = "maHubDivider";
+        container.appendChild(hr);
+      }
+
+      const btn = document.createElement("button");
+      btn.type      = "button";
+      btn.className = "maHubRow" + (isActive ? " is-active" : "");
+      btn.disabled  = isDisabled;
+      btn.setAttribute("data-nav", id);
+      btn.innerHTML =
+        `<span class="maHubRow__icon" aria-hidden="true">${meta.icon}</span>` +
+        `<span class="maHubRow__label">${meta.label}</span>` +
+        `<span class="maHubRow__arrow" aria-hidden="true">›</span>`;
+
+      btn.addEventListener("click", () => {
+        if (btn.disabled) return;
+        MA.chrome.closeHub();
+        if (MA.chrome._hubNavigate) MA.chrome._hubNavigate(id);
+      });
+
+      container.appendChild(btn);
+    });
+  };
+
+  MA.chrome.openHub = function () {
+    const tray = document.getElementById("chromeHubTray");
+    const btn  = document.getElementById("chromeNavHubBtn");
+    if (!tray) return;
+
+    tray.removeAttribute("hidden");
+
+    // rAF ensures display:flex is applied before transition fires
+    requestAnimationFrame(() => {
+      tray.classList.add("is-open");
+      if (btn) btn.setAttribute("aria-expanded", "true");
+    });
+  };
+
+  MA.chrome.closeHub = function () {
+    const tray = document.getElementById("chromeHubTray");
+    const btn  = document.getElementById("chromeNavHubBtn");
+    if (!tray) return;
+
+    tray.classList.remove("is-open");
+    if (btn) btn.setAttribute("aria-expanded", "false");
+
+    // Re-hide from accessibility tree after transition completes
+    tray.addEventListener("transitionend", () => {
+      if (!tray.classList.contains("is-open")) tray.setAttribute("hidden", "");
+    }, { once: true });
+  };
+
+  // Wire up Navigate button, backdrop, and close button once DOM is ready
+  document.addEventListener("DOMContentLoaded", function () {
+    const hubBtn   = document.getElementById("chromeNavHubBtn");
+    const closeBtn = document.getElementById("chromeHubClose");
+    const backdrop = document.getElementById("chromeHubBackdrop");
+
+    if (hubBtn)   hubBtn.addEventListener("click", MA.chrome.openHub);
+    if (closeBtn) closeBtn.addEventListener("click", MA.chrome.closeHub);
+    if (backdrop) backdrop.addEventListener("click", MA.chrome.closeHub);
+  });
 
 })();

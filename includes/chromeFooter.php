@@ -23,6 +23,29 @@
     <button id="chromeFtrSave"   type="button" class="maFtrBtn maFtrBtn--save">Save</button>
   </div>
 
+  <!-- Mobile Navigate button (mobile only, hidden on desktop via CSS) -->
+  <div id="chromeNavHub" class="maChrome__navHub">
+    <button id="chromeNavHubBtn" type="button" class="maChrome__navHubBtn" aria-haspopup="true" aria-expanded="false" aria-controls="chromeHubTray">
+      <span class="maChrome__navHubIcon" aria-hidden="true">&#9776;</span>
+      <span class="maChrome__navHubLabel">Navigate</span>
+    </button>
+  </div>
+
+  <!-- Hub tray overlay (mobile only, populated by MA.chrome.setBottomNav) -->
+  <div id="chromeHubTray" class="maChrome__hubTray" role="dialog" aria-modal="true" aria-label="Navigation" hidden>
+    <div class="maChrome__hubBackdrop" id="chromeHubBackdrop"></div>
+    <div class="maChrome__hubSheet" role="document">
+      <div class="maChrome__hubHandle" aria-hidden="true"></div>
+      <div class="maChrome__hubHeader">
+        <span class="maChrome__hubTitle">Go to</span>
+        <button id="chromeHubClose" type="button" class="maChrome__hubClose" aria-label="Close navigation">&#10005;</button>
+      </div>
+      <div class="maChrome__hubScroll" id="chromeHubRows">
+        <!-- Rows injected by MA.chrome.setBottomNav() -->
+      </div>
+    </div>
+  </div>
+
   <!-- iOS-like bottom navigation (catalog-driven; page activates items) -->
   <nav id="chromeBottomNav" class="maChrome__bottomNav" aria-label="Primary">
 
