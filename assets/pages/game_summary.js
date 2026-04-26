@@ -1157,8 +1157,8 @@
 
   function applyChrome() {
     const g = state.game || {};
-    const title = String(g.dbGames_Title);
-    const course = String(g.dbGames_CourseName);
+    const title = String(g.dbGames_Title || "");
+    const course = String(g.dbGames_CourseName || "");
     const date = formatDate(g.dbGames_PlayDate);
     const subTitle = [course, date].filter(Boolean).join(" • ");
 
@@ -1179,9 +1179,9 @@
       const homeRoute = isPlayerPortal ? "player" : "admin";
 
       // Define visibility based on portal context
-      const visible = isPlayerPortal 
-        ? [homeRoute, 'scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoreskins']
-        : ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"],
+      const visible = isPlayerPortal
+        ? [homeRoute, "scoreentry", "scorecardPlayer", "scorecardGame", "scoreskins"]
+        : ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"];
 
       chrome.setBottomNav({
         visible: visible,
