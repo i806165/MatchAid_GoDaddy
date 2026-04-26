@@ -286,7 +286,7 @@
 
     if (chrome && typeof chrome.setBottomNav === "function") {
       chrome.setBottomNav({
-        visible: ["admin", "edit", "roster", "pairings", "teetimes", "summary"],
+        visible: ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"],
         active: "edit",
         disabled: (state.mode === "add") ? ["roster", "pairings", "teetimes", "summary"] : [],
         onNavigate: (id) => MA.routerGo(id)

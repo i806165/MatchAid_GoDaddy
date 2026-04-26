@@ -769,7 +769,7 @@
 
     if (chrome && typeof chrome.setBottomNav === "function") {
       chrome.setBottomNav({
-        visible: ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary"],
+        visible: ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"],
         active: "pairings",
         onNavigate: (id) => {
           if (typeof MA.routerGo === "function") MA.routerGo(id);

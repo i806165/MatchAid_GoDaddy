@@ -1181,7 +1181,7 @@
       // Define visibility based on portal context
       const visible = isPlayerPortal 
         ? [homeRoute, 'scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoreskins']
-        : ["admin", "edit", "roster", "pairings", "teetimes", "summary"];
+        : ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"],
 
       chrome.setBottomNav({
         visible: visible,

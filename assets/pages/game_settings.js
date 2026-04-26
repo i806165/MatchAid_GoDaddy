@@ -305,13 +305,15 @@
 
   function setBusy(on) {
     state.busy = !!on;
-    const btn = document.getElementById("chromeBtnRight");
-    if (btn) btn.disabled = state.busy;
+    if (typeof MA.chrome.setFooterSaveDisabled === "function") {
+      MA.chrome.setFooterSaveDisabled(!!on);
+    }
   }
 
   function setDirty(on) {
     state.dirty = !!on;
     setStatus(on ? "Unsaved changes." : "", on ? "warn" : "");
+    applyChrome();
   }
 
   function esc(s) {
@@ -502,13 +504,19 @@
     }
     if (chrome && typeof chrome.setActions === "function") {
       chrome.setActions({
-        left:  { show: true, label: "Cancel", onClick: onCancel },
-        right: { show: true, label: "Save",   onClick: doSave  },
+        left:  { show: false },
+        right: { show: false },
+        footer: state.dirty
+          ? {
+              save:   { label: "Save",   onClick: doSave },
+              cancel: { label: "Cancel", onClick: () => { if (confirm("Discard unsaved changes?")) window.location.reload(); } }
+            }
+          : null
       });
     }
     if (chrome && typeof chrome.setBottomNav === "function") {
       chrome.setBottomNav({
-        visible: ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary"],
+        visible: ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"],
         active: "settings",
         onNavigate: id => (typeof MA.routerGo === "function" ? MA.routerGo(id) : null),
       });
@@ -567,7 +575,7 @@
 
   async function doSave() {
     if (state.busy) return;
-    if (!state.dirty) { window.location.assign(returnToUrl); return; }
+    if (!state.dirty) return; 
     setStatus("Saving...", "info");
     setBusy(true);
     try {
@@ -579,7 +587,6 @@
       setDirty(false);
       setStatus("Settings saved successfully.", "success");
       if (MA.recalculateHandicaps) await MA.recalculateHandicaps(apiGHIN);
-      window.location.assign(returnToUrl);
     } catch (e) {
       console.error(e);
       setStatus(String(e?.message || "An error occurred during save."), "error");
@@ -668,9 +675,10 @@
       el.wizBtnBack.textContent = "← Back";
     }
 
-    // Next/Save button
+    // Next button — hidden on final step (chrome footer Save owns that action)
     if (el.wizBtnNext) {
-        el.wizBtnNext.textContent = (step === totalSteps) ? "Save Settings" : "Next →";
+      el.wizBtnNext.style.display = (step === totalSteps) ? "none" : "";
+      el.wizBtnNext.textContent = "Next →";
     }
 
     switch (step) {
@@ -1508,11 +1516,7 @@
   // =========================================================================
 
   function wizGoNext() {
-    if (state.wizStep === 3) {
-      doSave();
-    } else {
-      wizRenderStep(state.wizStep + 1);
-    }
+    wizRenderStep(state.wizStep + 1);
   }
 
   function wizGoBack() {

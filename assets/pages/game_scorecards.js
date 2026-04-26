@@ -356,7 +356,7 @@ function renderGroup(group) {
     const subtitle = [game.dbGames_CourseName, formatDate(game.dbGames_PlayDate)].filter(Boolean).join(" • ");
     if (chrome.setHeaderLines) chrome.setHeaderLines(["Scorecard", game.dbGames_Title || "Game", subtitle]);
     if (chrome.setActions) chrome.setActions({ right: { show: true, label: "Print", onClick: onPrint } });
-    if (chrome.setBottomNav) chrome.setBottomNav({ visible: ["admin", "edit", "roster", "pairings", "teetimes", "summary"], active: "scorecard", onNavigate: (id) => MA.routerGo?.(id) });
+    if (chrome.setBottomNav) chrome.setBottomNav({ visible: ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"], active: "scorecard", onNavigate: (id) => MA.routerGo?.(id) });
   }
   function bindActions() {}
 
