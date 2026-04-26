@@ -1,4 +1,3 @@
-// REPLACE entire file WITH:
 <?php
 // /public_html/app/user_settings/usersettings_view.php
 ?>
