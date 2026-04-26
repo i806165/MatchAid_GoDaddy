@@ -213,7 +213,7 @@
       footer.classList.toggle("maChrome__ftr--actions", hasFooterActions);
     }
 
-    if (hasFooterActions) {
+  if (hasFooterActions) {
       const saveDef   = cfg.footer.save   || {};
       const cancelDef = cfg.footer.cancel || {};
 
@@ -234,6 +234,20 @@
       // Disarm footer buttons when returning to nav mode
       if (saveBtn)   { saveBtn.onclick   = null; saveBtn.disabled   = false; }
       if (cancelBtn) { cancelBtn.onclick = null; cancelBtn.disabled = false; }
+    }
+
+    // ---- Page action slot (optional, e.g. "Add New") ----
+    const pageSlot   = document.getElementById("chromePageAction");
+    const pageBtn    = document.getElementById("chromePageActionBtn");
+    const hasPageAction = !!(cfg.page && typeof cfg.page.onClick === "function");
+
+    if (pageSlot) pageSlot.style.display = hasPageAction ? "" : "none";
+    if (hasPageAction && pageBtn) {
+      pageBtn.textContent = String(cfg.page.label || "");
+      pageBtn.onclick     = cfg.page.onClick;
+    } else if (pageBtn) {
+      pageBtn.textContent = "";
+      pageBtn.onclick     = null;
     }
   };
 

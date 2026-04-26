@@ -1880,3 +1880,40 @@ body {
     flex: 0 0 var(--ftrActionsBtnW, 200px);  /* fixed width, no stretch    */
   }
 }
+
+/* Chrome footer — optional page action slot */
+.maChrome__pageAction {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--chromeBorder);
+  display: flex;
+  justify-content: center;
+  background: var(--chromeBg);
+}
+
+.maChrome__pageActionBtn {
+  width: 100%;
+  padding: 11px 14px;
+  background: transparent;
+  border: 1.5px dashed var(--borderSubtle);
+  border-radius: var(--controlRadius);
+  color: var(--mutedText);
+  font-family: var(--fontFamilyBase);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  text-align: center;
+  letter-spacing: .2px;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.maChrome__pageActionBtn:active {
+  background: var(--pressedBg);
+  transform: scale(.99);
+}
+
+@media (min-width: 600px) {
+  .maChrome__pageActionBtn {
+    width: 280px;
+  }
+}

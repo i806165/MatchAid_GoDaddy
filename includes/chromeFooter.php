@@ -9,6 +9,11 @@
 ?>
 <footer class="maChrome__ftr" role="contentinfo">
 
+  <!-- Page action slot — optional, hidden by default, shown by MA.chrome.setActions({ page: ... }) -->
+  <div id="chromePageAction" class="maChrome__pageAction" style="display:none;">
+    <button id="chromePageActionBtn" type="button" class="maChrome__pageActionBtn"></button>
+  </div>
+
   <!-- Status / message area — always visible, sits above nav or action bar -->
   <div id="chromeStatusLine" class="maChrome__status status-info" aria-live="polite"></div>
 

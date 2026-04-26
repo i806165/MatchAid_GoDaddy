@@ -73,18 +73,15 @@
       });
     }
 
-    function setHeaderActionsFor(mode) {
-      if (!MA.chrome || !MA.chrome.setActions) return;
+  function setHeaderActionsFor(mode) {
+    if (!MA.chrome || !MA.chrome.setActions) return;
 
-      // LIST: Add New in chrome header right slot
-      if (mode === "list") {
+    if (mode === "list") {
         MA.chrome.setActions({
-          left: { show: false },
-          right: {
-            show: true,
-            label: "Add New",
-            onClick: () => openAddNew()
-          }
+          left:  { show: false },
+          right: { show: false },
+          footer: null,
+          page: { label: "+ Add New Favorite", onClick: () => openAddNew() }
         });
         return;
       }
@@ -96,7 +93,8 @@
         footer: {
           save:   { label: "Save",   onClick: () => doSave() },
           cancel: { label: "Cancel", onClick: () => doCancel() }
-        }
+        },
+        page: null
       });
     }
 
