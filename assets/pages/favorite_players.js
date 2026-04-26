@@ -101,8 +101,8 @@
   function applyChromeHeader() {
     if (MA.chrome && typeof MA.chrome.setHeaderLines === "function") {
       MA.chrome.setHeaderLines([
-        "ADMIN PORTAL",
-        "Favorite Players",
+        "FAVORITE PLAYERS",
+        "",
         "" // no subtitle per your rule
       ]);
     }

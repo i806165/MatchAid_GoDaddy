@@ -171,11 +171,11 @@ function badgeParts(ymd) {
         MA.chrome.showBrand(true);
       }
 
-      // Chrome actions (hide left; show right as “Actions”)
       if (MA.chrome && typeof MA.chrome.setActions === "function") {
         MA.chrome.setActions({
           left:  { show: false },
-          right: { show: true, label: "Actions" } // 
+          right: { show: true, label: "Actions" },
+          page:  { label: "+ Add New Game", onClick: () => handleGameAction({ action: "addGame" }) }
         });
       }
 
