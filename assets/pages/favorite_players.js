@@ -89,17 +89,13 @@
         return;
       }
 
-      // FORM: Cancel/Save in chrome header
+      // FORM: Cancel/Save in chrome footer — header slots freed
       MA.chrome.setActions({
-        left: {
-          show: true,
-          label: "Cancel",
-          onClick: () => doCancel()
-        },
-        right: {
-          show: true,
-          label: "Save",
-          onClick: () => doSave()
+        left:  { show: false },
+        right: { show: false },
+        footer: {
+          save:   { label: "Save",   onClick: () => doSave() },
+          cancel: { label: "Cancel", onClick: () => doCancel() }
         }
       });
     }
