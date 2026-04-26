@@ -112,6 +112,13 @@
       <span class="maNavLabel">Summary</span>
     </button>
 
+    <button class="maNavBtn" data-nav="scorecard" aria-label="Scorecard">
+      <span class="maNavIcon" aria-hidden="true">
+        <img src="/assets/images/nav-scorecard.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
+      </span>
+      <span class="maNavLabel">Score Card</span>
+    </button>
+
     <button class="maNavBtn" data-nav="import" aria-label="Import Games">
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-import.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
