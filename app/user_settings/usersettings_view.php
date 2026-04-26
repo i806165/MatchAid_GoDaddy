@@ -64,8 +64,8 @@
           </select>
           <div class="usHint" id="usYardsHint">
               <strong>USGA Tee Selection Guidance:</strong>
-              7-Iron Method— multiply your average 7-iron carry distance by 36 or
-              Driver Method— multiply your average driver carry distance by 28.
+              7-IRON METHOD— multiply your average 7-iron carry distance by 36 —or—
+              DRIVER METHOD— multiply your average driver carry distance by 28.
           </div>
         </div>
       </div>
