@@ -38,11 +38,13 @@
             <input id="usMobilePhone" class="maTextInput" type="tel" maxlength="14" autocomplete="tel" placeholder="555-555-5555" />
         </div>
 
+      <div class="maFieldRow">
         <div class="maField">
             <label class="maLabel" for="usMobileCarrier">Mobile Carrier</label>
             <select id="usMobileCarrier" class="maTextInput">
             <option value="">Select carrier</option>
             </select>
+            <div class="usHint" id="usSmsHint"></div>
         </div>
         </div>
 
@@ -61,10 +63,13 @@
             <select id="usPreferenceYards" class="maTextInput">
               <option value="">Select yardage</option>
             </select>
+            <div class="usHint" id="usYardsHint">
+              <strong>USGA Tee Selection Guidance:</strong>
+              7-Iron Method— multiply your average 7-iron carry distance by 36 or
+              Driver Method— multiply your average driver carry distance by 28.
+            </div>
           </div>
         </div>
-
-        <div class="usHint" id="usSmsHint"></div>
     </div>
   </section>
 
