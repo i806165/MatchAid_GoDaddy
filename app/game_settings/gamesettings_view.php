@@ -82,7 +82,7 @@
             <div class="gsWizFieldLabel">Scoring Method</div>
             <div class="wizChips" id="gsWizMethodChips">
               <button class="wizChip" data-val="NET"       onclick="window.gsWiz.selectMethod('NET')">NET</button>
-              <button class="wizChip" data-val="GROSS" onclick="window.gsWiz.selectMethod('ADJ GROSS')">ADJ GROSS</button>
+              <button class="wizChip" data-val="ADJ GROSS" onclick="window.gsWiz.selectMethod('ADJ GROSS')">GROSS</button>
             </div>
           </div>
 
@@ -254,7 +254,7 @@
 
       <!-- Wizard nav buttons -->
       <div class="gsWizNav">
-        <button class="btn"              id="gsWizBtnBack" disabled>&#8592; Back</button>
+        <button class="btn btnSecondary" id="gsWizBtnBack" disabled>&#8592; Back</button>
         <button class="btn btnSecondary" id="gsWizBtnNext" disabled>Next &#8594;</button>
       </div>
 
