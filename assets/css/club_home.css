@@ -1,0 +1,86 @@
+/* /assets/css/club_home.css
+   Page-specific styles for Club Admin Home.
+   Keep minimal — prefer ma_shared.css tokens/classes.
+*/
+
+/* ===== Welcome card ===== */
+.chWelcomeCard {
+  margin-bottom: 10px;
+}
+
+.chWelcomeText {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mutedText);
+  line-height: 1.55;
+}
+
+/* ===== Tool tile grid ===== */
+.chTileGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ===== Individual tile ===== */
+.chTile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 14px;
+  background: var(--cardBg);
+  border: 1px solid var(--cardBorder);
+  border-radius: var(--cardRadius);
+  box-shadow: var(--cardShadow);
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  text-align: left;
+  font-family: var(--fontFamilyBase);
+  transition: background .12s ease;
+}
+
+.chTile:hover  { background: var(--brandPrimaryBg); }
+.chTile:active { background: var(--pressedBg); transform: scale(.99); }
+
+/* Disabled / coming-soon tiles */
+.chTile--disabled {
+  opacity: .45;
+  cursor: default;
+  pointer-events: none;
+}
+
+.chTile__icon {
+  font-size: 28px;
+  flex: 0 0 auto;
+  line-height: 1;
+}
+
+.chTile__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.chTile__title {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--ink);
+  letter-spacing: .1px;
+}
+
+.chTile__sub {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--mutedText);
+}
+
+.chTile__arrow {
+  flex: 0 0 auto;
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--mutedText);
+  line-height: 1;
+}

@@ -55,9 +55,6 @@
     pillGames:  document.getElementById("cdPillGames"),
     pillRounds: document.getElementById("cdPillRounds"),
 
-    // Acquire button
-    btnAcquire: document.getElementById("cdBtnAcquire"),
-
     // Views
     viewSummary:   document.getElementById("cdViewSummary"),
     viewPlayer:    document.getElementById("cdViewPlayer"),
@@ -442,8 +439,7 @@
     el.segPlayer?.addEventListener("click",    () => setView("player"));
     el.segDashboard?.addEventListener("click", () => setView("dashboard"));
 
-    // Acquire modal
-    el.btnAcquire?.addEventListener("click",   openModal);
+    // Acquire modal (opened via Actions menu)
     el.modalClose?.addEventListener("click",   closeModal);
     el.modalCancel?.addEventListener("click",  closeModal);
     el.modalExecute?.addEventListener("click", executeAcquire);
@@ -505,11 +501,31 @@
       chrome.setHeaderLines(["Club Demand", clubName, subLine]);
     }
     if (typeof chrome.setActions === "function") {
-      chrome.setActions({ right: { show: false }, left: { show: false } });
+      chrome.setActions({
+        right: {
+          show:  true,
+          label: "Actions",
+          onTap: () => {
+            const ui = window.MA?.ui;
+            if (typeof ui?.openActionsMenu !== "function") return;
+            ui.openActionsMenu(
+              "Club Demand",
+              [
+                {
+                  label:  "Get Data",
+                  action: () => openModal(),
+                },
+              ],
+              safeStr(state.context.clubName) || ""
+            );
+          },
+        },
+        left: { show: false },
+      });
     }
     if (typeof chrome.setBottomNav === "function") {
       chrome.setBottomNav({
-        visible:    ["admin", "demand"],
+        visible:    ["home", "demand"],
         active:     "demand",
         onNavigate: (id) => (typeof MA.routerGo === "function" ? MA.routerGo(id) : null),
       });
@@ -539,6 +555,10 @@
       applyChrome();
       renderContextPills();
       setView("summary");
+
+      // Fresh load — prompt user to confirm/adjust date range before exploring
+      // Return visit — session dates restored, render immediately
+      if (!init.isReturn) openModal();
 
       setStatus("Ready.", "ok");
     } catch (e) {

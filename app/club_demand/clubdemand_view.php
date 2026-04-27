@@ -21,7 +21,7 @@
             aria-selected="false" role="tab">Dashboard</button>
   </div>
 
-  <!-- Row 2: Context pills + data acquisition trigger -->
+  <!-- Row 2: Context pills -->
   <div class="cdContextRow">
     <div class="maPills cdContextPills" aria-label="Active data range">
       <div class="maPill maPillKV" role="group" aria-label="From date">
@@ -41,9 +41,6 @@
         <div class="maPillValue" id="cdPillRounds">—</div>
       </div>
     </div>
-    <button type="button" class="btn btnSecondary cdAcquireBtn" id="cdBtnAcquire">
-      Get Data
-    </button>
   </div>
 
   <!-- Row 3a: Summary view controls (group + sort) -->

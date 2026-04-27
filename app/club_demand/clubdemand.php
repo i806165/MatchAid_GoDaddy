@@ -59,6 +59,9 @@ try {
 $_SESSION["CD_FILTERDATEFROM"] = $filters["dateFrom"];
 $_SESSION["CD_FILTERDATETO"]   = $filters["dateTo"];
 
+// Tell JS whether this is a return visit (skip modal) or fresh load (open modal)
+$initPayload["isReturn"] = $isReturn;
+
 // ----------------------------------------------------------------
 // 4) Path constants for JS
 // ----------------------------------------------------------------
@@ -108,6 +111,7 @@ $maChromeLogoUrl  = null;
 </script>
 
   <script src="/assets/js/ma_shared.js"></script>
+  <script src="/assets/modules/actions_menu.js?v=1"></script>
   <script src="/assets/pages/club_demand.js?v=1"></script>
 </body>
 </html>

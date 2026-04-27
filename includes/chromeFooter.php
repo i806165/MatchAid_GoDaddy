@@ -57,6 +57,20 @@
       <span class="maNavLabel">MatchAid Home</span>
     </button>
 
+    <button type="button" class="maNavBtn" data-nav="clubhome" aria-label="Club Home">
+      <span class="maNavIcon" aria-hidden="true">
+        <img src="/assets/images/nav-club-home.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
+      </span>
+      <span class="maNavLabel">Club Home</span>
+    </button>
+
+    <button type="button" class="maNavBtn" data-nav="clubdemand" aria-label="Club Demand">
+      <span class="maNavIcon" aria-hidden="true">
+        <img src="/assets/images/nav-club-demand.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
+      </span>
+      <span class="maNavLabel">Club Demand</span>
+    </button>
+
     <button type="button" class="maNavBtn" data-nav="adminOld" aria-label="Admin">
       <span class="maNavIcon" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/><path d="M12 4.5c-1.8 0-3.3 1.3-3.5 3h7c-.2-1.7-1.7-3-3.5-3z" opacity=".3"/><path d="M12 2C9.5 2 7.3 3.3 6.2 5.3c.6-.2 1.3-.3 2-.3 2.8 0 5 2.2 5 5h2c0-4.4-3.6-8-8-8z" transform="translate(1.5, -1.5) scale(0.9)"/></svg>

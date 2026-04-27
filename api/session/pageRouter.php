@@ -74,7 +74,8 @@ $ROUTES = [
     "favorites"   => "/app/favorite_players/favoriteplayers.php",
     "usersettings"   => "/app/user_settings/usersettings.php",
 
-    "clubadmin" => "/app/club_demand/clubDemand.php",
+    "clubhome" => "/app/club_home/clubhome.php",
+    "clubdemand" => "/app/club_demand/clubdemand.php",
 ];
 
 

@@ -22,14 +22,14 @@ if (isset($_GET['portal'])) {
     } elseif ($portal === 'clubadmin') {
         $_SESSION['SessionPortal'] = 'CLUBADMIN PORTAL';
         session_write_close();
-        header('Location: ' . MA_ROUTE_CLUB_DEMAND);
+        header('Location: ' . MA_ROUTE_CLUB_HOME);
         exit;
     }
 }
 
 $adminPortalHref  = MA_ROUTE_HOME . "?portal=admin";
 $playerPortalHref = MA_ROUTE_HOME . "?portal=player";
-$clubAdminPortalHref = MA_ROUTE_HOME . "?portal=clubadmin";
+$clubAdminPortalHref = MA_ROUTE_HOME . "?portal=clubhome";
 /*
 |--------------------------------------------------------------------------
 | Home-page account state
