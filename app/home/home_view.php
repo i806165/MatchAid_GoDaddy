@@ -90,6 +90,13 @@
                 style="font-size: 1.2rem;">
                 <span>Enter as Game Admin</span>
               </a>
+              
+              <!-- Club Admin Portal -->
+              <a class="btn btn--primary"
+                href="<?= htmlspecialchars($clubAdminPortalHref) ?>"
+                style="font-size: 1.2rem;">
+                <span>Enter as Club Admin</span>
+              </a>
             </div>
 
             <p class="copy" style="margin-top: 0.2rem;">

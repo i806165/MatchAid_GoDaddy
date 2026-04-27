@@ -48,9 +48,13 @@ define('MA_ROUTE_API_SCORE_SUMMARY', '/api/score_summary');
 define('MA_ROUTE_SCORE_SUMMARY', '/app/score_summary/scoresummary.php');
 define('MA_ROUTE_API_USER_SETTINGS', '/api/user_settings');
 define('MA_ROUTE_USER_SETTINGS',     '/app/user_settings/usersettings.php');
+define('MA_ROUTE_CLUB_DEMAND', '/app/club_demand/clubDemand.php');
 
 // Global testing flag: Set to true to bypass game-day score entry gating
 define('MA_TESTING_MODE', true);
+// MatchAid session policy
+define('MA_SESSION_IDLE_SECONDS', 21600); // 6 hours
+define('MA_AUTH_TTL_MINUTES', 360);       // 6 hours
 
 ini_set("log_errors", "1");
 ini_set("error_log", MA_ROOT . "/logs/matchaid.log");
@@ -58,7 +62,7 @@ ini_set("error_log", MA_ROOT . "/logs/matchaid.log");
 $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
-  ini_set('session.gc_maxlifetime', '21600'); // 6 hours
+  ini_set('session.gc_maxlifetime', (string)MA_SESSION_IDLE_SECONDS);
 
   session_set_cookie_params([
     'lifetime' => 0,
@@ -70,6 +74,33 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 
   session_start();
 }
+
+// MatchAid inactivity timeout.
+// This controls your app's session variables, independent of PHP's garbage collection timing.
+$now = time();
+$lastActivity = (int)($_SESSION['SessionLastActivity'] ?? 0);
+
+if ($lastActivity > 0 && ($now - $lastActivity) > MA_SESSION_IDLE_SECONDS) {
+  $_SESSION = [];
+
+  if (ini_get('session.use_cookies')) {
+    $params = session_get_cookie_params();
+    setcookie(
+      session_name(),
+      '',
+      time() - 42000,
+      $params['path'],
+      $params['domain'] ?? '',
+      (bool)$params['secure'],
+      (bool)$params['httponly']
+    );
+  }
+
+  session_destroy();
+  session_start();
+}
+
+$_SESSION['SessionLastActivity'] = $now;
 
 
 // Load config once (your config is /public_html/api/config.php)
@@ -98,7 +129,7 @@ function ma_json_in(): array {
 }
 
 // Check Login Duration
-function ma_api_require_auth(int $ttlMinutes = 360): array
+function ma_api_require_auth(int $ttlMinutes = MA_AUTH_TTL_MINUTES): array
 {
   $ghinId = trim((string)($_SESSION["SessionGHINLogonID"] ?? ""));
   if ($ghinId === "") {

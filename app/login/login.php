@@ -2,7 +2,6 @@
 // /public_html/app/login/login.php
 declare(strict_types=1);
 
-session_start();
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";

@@ -1,0 +1,173 @@
+/* /assets/css/club_demand.css
+   Page-specific styles for Club Demand.
+   Keep minimal — prefer ma_shared.css tokens/classes.
+*/
+
+/* ===== View segmented control — full width ===== */
+.cdViewSeg {
+  width: 100%;
+}
+.cdViewSeg .maSegBtn {
+  flex: 1;
+  text-align: center;
+}
+
+/* ===== Context row (pills + acquire button) ===== */
+.cdContextRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.cdContextPills {
+  flex-wrap: wrap;
+  flex: 1 1 auto;
+}
+
+.cdAcquireBtn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+/* ===== Sort / group row ===== */
+.cdSortRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.cdSortGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cdSortLabel {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--inkMuted);
+  white-space: nowrap;
+}
+
+.cdSortSeg {
+  width: auto;
+}
+.cdSortSeg .maSegBtn {
+  flex: 0 0 auto;
+  font-size: 12px;
+}
+
+/* ===== Metric strip ===== */
+.cdMetricRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+@media (min-width: 600px) {
+  .cdMetricRow {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.cdMetric {
+  background: var(--surfaceChrome);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--controlRadius);
+  padding: 10px 12px;
+}
+
+.cdMetricLabel {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  color: var(--inkMuted);
+}
+
+.cdMetricValue {
+  margin-top: 4px;
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--ink);
+}
+
+/* ===== Table ===== */
+.cdTableWrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--controlRadius);
+  background: #fff;
+}
+
+.cdTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.cdTable th,
+.cdTable td {
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(0,0,0,.07);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.cdTable th {
+  text-align: left;
+  font-weight: 900;
+  position: sticky;
+  top: 0;
+  background: var(--brandSecondary);
+  color: var(--brandSecondaryText);
+  z-index: 1;
+  font-size: 12px;
+  letter-spacing: .2px;
+}
+
+.cdTable tbody tr:last-child td { border-bottom: none; }
+.cdTable tbody tr:hover td { background: var(--brandPrimaryBg); }
+
+.cdRight { text-align: right; }
+.cdMuted { color: var(--inkMuted); font-weight: 700; }
+
+/* Group header rows */
+.cdGroupHdr td {
+  background: var(--brandPrimaryBg);
+  color: var(--brandPrimary);
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: .2px;
+  padding: 5px 10px;
+}
+
+/* Course / admin badge */
+.cdBadge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 900;
+  background: var(--brandPrimaryBg);
+  color: var(--brandPrimary);
+  white-space: nowrap;
+  margin-right: 3px;
+}
+
+/* ===== Card subtitle ===== */
+.cdCardSub {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--brandSecondaryText);
+  opacity: .8;
+}
+
+/* ===== Views ===== */
+.cdView { display: block; }
