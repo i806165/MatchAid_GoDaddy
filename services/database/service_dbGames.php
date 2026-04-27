@@ -18,6 +18,7 @@ public static function queryGames(array $args): array {
   // New-contract inputs (preferred)
   $pdo = Db::pdo();
   $clubId   = trim((string)($args["clubId"] ?? ""));
+  $facilityId = trim((string)($args["facilityId"] ?? ""));
   $dateFrom = trim((string)($args["dateFrom"] ?? ""));
   $dateTo   = trim((string)($args["dateTo"] ?? ""));
   $adminScope = strtoupper(trim((string)($args["adminScope"] ?? "")));
@@ -34,7 +35,7 @@ public static function queryGames(array $args): array {
   $bucket    = trim((string)($args["bucket"] ?? "")); // current|past
 
   // Decide whether to run "new" logic:
-  $hasNew = ($clubId !== "" || $dateFrom !== "" || $dateTo !== "" || $adminScope !== "" || !empty($selectedKeys));
+  $hasNew = ($clubId !== "" || $facilityId !== "" || $dateFrom !== "" || $dateTo !== "" || $adminScope !== "" || !empty($selectedKeys));
 
   $today = (new DateTime("today", new DateTimeZone("America/New_York")))->format("Y-m-d");
 
@@ -47,8 +48,12 @@ public static function queryGames(array $args): array {
   }
 
   if ($hasNew) {
-    // Club constraint (recommended)
-    if ($clubId !== "") {
+    // Facility constraint for professional reporting / Club Demand.
+    // If facilityId is supplied, it takes precedence over admin-club constraint.
+    if ($facilityId !== "") {
+      $where[] = "dbGames_FacilityID = :facilityId";
+      $params[":facilityId"] = $facilityId;
+    } else if ($clubId !== "") {
       $where[] = "dbGames_AdminClubID = :clubId";
       $params[":clubId"] = $clubId;
     }

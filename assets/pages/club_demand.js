@@ -29,9 +29,14 @@
     pSortBy: "rounds",    // rounds | name | lastgame
     pFilter: "all",       // all | multicourse | singlegame
 
-    // Data (set once on load, replaced only on date range change)
-    filters:  { dateFrom: "", dateTo: "" },
-    context:  {},
+    // facility and Date (set once on load, replaced only on date range change)
+    filters:  { dateFrom: "", dateTo: "", facilityId: "" },
+    context:  {
+      facilityId: "",
+      facilityName: "",
+      facilityOptions: [],
+      canSelectFacility: false,
+    },
     summary:  {},
     games:    [],         // enriched game records from hydrateClubDemand
     players:  [],  
@@ -91,6 +96,7 @@
     modalClose:    document.getElementById("cdModalClose"),
     modalCancel:   document.getElementById("cdModalCancel"),
     modalExecute:  document.getElementById("cdModalExecute"),
+    inputFacility: document.getElementById("cdInputFacility"),
     inputFrom:     document.getElementById("cdInputFrom"),
     inputTo:       document.getElementById("cdInputTo"),
   };
@@ -490,10 +496,40 @@
     // Implemented in next iteration
   }
 
+  function renderFacilityOptions() {
+    if (!el.inputFacility) return;
+
+    const options = Array.isArray(state.context.facilityOptions)
+      ? state.context.facilityOptions
+      : [];
+
+    const selectedFacilityId = safeStr(state.filters.facilityId || state.context.facilityId);
+
+    el.inputFacility.innerHTML = options.map(f => {
+      const facilityId = safeStr(f.facilityId);
+      const facilityName = safeStr(f.facilityName) || `Facility ${facilityId}`;
+      const selected = facilityId === selectedFacilityId ? " selected" : "";
+
+      return `<option value="${esc(facilityId)}"${selected}>${esc(facilityName)}</option>`;
+    }).join("");
+
+    el.inputFacility.disabled = !state.context.canSelectFacility || options.length <= 1;
+
+    if (selectedFacilityId && el.inputFacility.value !== selectedFacilityId) {
+      el.inputFacility.value = selectedFacilityId;
+    }
+  }
+
   // ── Modal ──────────────────────────────────────────────────────
   function openModal() {
+    renderFacilityOptions();
+
+    if (el.inputFacility) {
+      el.inputFacility.value = state.filters.facilityId || state.context.facilityId || "";
+    }
     if (el.inputFrom) el.inputFrom.value = state.filters.dateFrom || "";
     if (el.inputTo)   el.inputTo.value   = state.filters.dateTo   || "";
+
     if (el.modalOverlay) {
       el.modalOverlay.removeAttribute("aria-hidden");
       el.modalOverlay.classList.add("is-open");
@@ -658,8 +694,9 @@
   }
 
   async function executeAcquire() {
-    const dateFrom = safeStr(el.inputFrom?.value);
-    const dateTo   = safeStr(el.inputTo?.value);
+    const facilityId = safeStr(el.inputFacility?.value || state.filters.facilityId || state.context.facilityId);
+    const dateFrom   = safeStr(el.inputFrom?.value);
+    const dateTo     = safeStr(el.inputTo?.value);
 
     if (!dateFrom || !dateTo) {
       setStatus("Please select both a From and To date.", "warn");
@@ -667,6 +704,10 @@
     }
     if (dateFrom > dateTo) {
       setStatus("From date must be before To date.", "warn");
+      return;
+    }
+    if (!facilityId) {
+      setStatus("Please select a facility.", "warn");
       return;
     }
 
@@ -684,7 +725,7 @@
 
       const res = await postJson(apiUrl, {
         payload: {
-          filters: { dateFrom, dateTo }
+          filters: { facilityId, dateFrom, dateTo }
         }
       });
 
@@ -693,6 +734,12 @@
       }
 
       applyInit(res.payload);
+
+      if (res.payload.authorized === false) {
+        setView(state.view);
+        setStatus(safeStr(res.payload.message) || "Club Demand is not configured for this user.", "warn");
+        return;
+      }
       setView(state.view);
       setStatus("Data loaded.", "ok");
 
@@ -768,7 +815,8 @@
 
   // ── Chrome ─────────────────────────────────────────────────────
   function applyChrome() {
-    const clubName = safeStr(state.context.clubName) || "Club Demand";
+    const facilityName = safeStr(state.context.facilityName);
+    const clubName     = facilityName || safeStr(state.context.clubName) || "Club Demand";
     const from     = fmtPill(state.filters.dateFrom);
     const to       = fmtPill(state.filters.dateTo);
     const subLine  = from && to ? `${from} – ${to}` : "";
@@ -794,8 +842,19 @@
   // ── Apply init payload ─────────────────────────────────────────
   function applyInit(init) {
     if (!init || !init.ok) throw new Error(init?.message || "Init payload invalid.");
-    state.filters = init.filters  || {};
-    state.context = init.context  || {};
+    state.filters = {
+      dateFrom:   safeStr(init.filters?.dateFrom),
+      dateTo:     safeStr(init.filters?.dateTo),
+      facilityId: safeStr(init.filters?.facilityId || init.context?.facilityId),
+    };
+
+    state.context = {
+      ...(init.context || {}),
+      facilityId:        safeStr(init.context?.facilityId || init.filters?.facilityId),
+      facilityName:      safeStr(init.context?.facilityName),
+      facilityOptions:   Array.isArray(init.context?.facilityOptions) ? init.context.facilityOptions : [],
+      canSelectFacility: Boolean(init.context?.canSelectFacility),
+    };
     state.summary = init.summary  || {};
     state.games   = Array.isArray(init.games) ? init.games : [];
     state.players = buildPlayerAggregates();
@@ -824,6 +883,10 @@
       wireEvents();
       applyChrome();
       setView("summary");
+      if (init.authorized === false) {
+        setStatus(safeStr(init.message) || "Club Demand is not configured for this user.", "warn");
+        return;
+      }
 
       // Fresh load — prompt user to confirm/adjust date range before exploring
       // Return visit — session dates restored, render immediately
