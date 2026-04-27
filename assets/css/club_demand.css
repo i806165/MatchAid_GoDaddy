@@ -95,7 +95,7 @@
   overflow-x: auto;
   border: 1px solid var(--borderSubtle);
   border-radius: var(--controlRadius);
-  background: #fff;
+  background: var(--cardBg);
 }
 
 .cdTable {

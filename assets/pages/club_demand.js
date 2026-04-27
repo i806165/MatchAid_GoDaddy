@@ -255,11 +255,58 @@
     return grp !== "None" ? `Grouped by ${grp} · Sorted by ${srt}` : `Sorted by ${srt}`;
   }
 
+    function buildGameSummaryRows() {
+    return state.games.map(g => {
+      const slots      = Number(g.slotCount ?? 0);
+      const registered = Number(g.playerCount ?? 0);
+      const unconsumed = Math.max(0, slots - registered);
+
+      return {
+        groupKey:       getGroupFn()(g),
+        playDateRaw:    safeStr(g.playDate),
+        playDate:       fmtDate(g.playDate),
+        playTime:       fmtTime(g.playTime),
+        administrator:  dash(g.adminName),
+        gameTitle:      dash(g.title),
+        course:         dash(g.courseName),
+        format:         fmtMethod(g.toMethod),
+        slots:          slots,
+        registered:     registered,
+        unconsumed:     unconsumed,
+
+        // Keep original object available for future drill-in/export extensions.
+        source:         g,
+      };
+    });
+  }
+
+  function buildPlayerDetailRows() {
+    return getFilteredPlayers().map(p => {
+      const courses = Array.from(p.courses || []);
+      const admins  = Array.from(p.admins || []);
+
+      return {
+        player:       dash(p.name),
+        rounds:       Number(p.rounds ?? 0),
+        courses:      courses.join(", ") || "—",
+        administrators: admins.join(", ") || "—",
+        firstGameRaw: safeStr(p.firstGame),
+        lastGameRaw:  safeStr(p.lastGame),
+        firstGame:    fmtDateShort(p.firstGame),
+        lastGame:     fmtDateShort(p.lastGame),
+
+        // Keep original object available for future drill-in/export extensions.
+        source:       p,
+      };
+    });
+  }
+
   function renderSummary() {
     renderSummaryMetrics();
 
-    const games = state.games;
-    if (!games.length) {
+    const rows = buildGameSummaryRows();
+
+    if (!rows.length) {
       if (el.summaryEmpty)   el.summaryEmpty.style.display = "";
       if (el.summaryTbody)   el.summaryTbody.innerHTML     = "";
       if (el.summaryCardSub) el.summaryCardSub.textContent = "";
@@ -268,31 +315,28 @@
 
     if (el.summaryEmpty) el.summaryEmpty.style.display = "none";
 
-    const sorted  = [...games].sort(getSummaryComparator());
-    const groupFn = getGroupFn();
+    const groupBy = state.groupBy;
     let lastGroup = null;
     let html      = "";
 
-    for (const g of sorted) {
-      const grp = groupFn(g);
+    for (const r of rows) {
+      const grp = groupBy === "none" ? null : r.groupKey;
+
       if (grp !== null && grp !== lastGroup) {
         lastGroup = grp;
         html += `<tr class="cdGroupHdr"><td colspan="9">${esc(grp)}</td></tr>`;
       }
-      const slots      = Number(g.slotCount ?? 0);
-      const registered = Number(g.playerCount ?? 0);
-      const unconsumed = Math.max(0, slots - registered);
 
       html += `<tr>
-        <td>${esc(fmtDate(g.playDate))}</td>
-        <td class="cdMuted">${esc(fmtTime(g.playTime))}</td>
-        <td class="cdMuted">${esc(dash(g.adminName))}</td>
-        <td>${esc(dash(g.title))}</td>
-        <td>${esc(dash(g.courseName))}</td>
-        <td class="cdMuted">${esc(fmtMethod(g.toMethod))}</td>
-        <td class="cdRight">${esc(String(g.slotCount ?? "—"))}</td>
-        <td class="cdRight">${esc(String(g.playerCount ?? "—"))}</td>
-        <td class="cdRight">${esc(String(unconsumed))}</td>
+        <td>${esc(r.playDate)}</td>
+        <td class="cdMuted">${esc(r.playTime)}</td>
+        <td class="cdMuted">${esc(r.administrator)}</td>
+        <td>${esc(r.gameTitle)}</td>
+        <td>${esc(r.course)}</td>
+        <td class="cdMuted">${esc(r.format)}</td>
+        <td class="cdRight">${esc(String(r.slots))}</td>
+        <td class="cdRight">${esc(String(r.registered))}</td>
+        <td class="cdRight">${esc(String(r.unconsumed))}</td>
       </tr>`;
     }
 
@@ -327,11 +371,11 @@
   }
 
   function renderPlayer() {
-    const players  = getFilteredPlayers();
-    const total    = state.players.length;
-    const rounds   = state.summary.totalRounds ?? 0;
-    const avg      = total > 0 ? (rounds / total).toFixed(1) : "—";
-    const peak     = state.players.length
+    const rows   = buildPlayerDetailRows();
+    const total  = state.players.length;
+    const rounds = state.summary.totalRounds ?? 0;
+    const avg    = total > 0 ? (rounds / total).toFixed(1) : "—";
+    const peak   = state.players.length
       ? Math.max(...state.players.map(p => p.rounds))
       : "—";
 
@@ -340,31 +384,27 @@
     if (el.mAvgRounds)     el.mAvgRounds.textContent     = String(avg);
     if (el.mMostActive)    el.mMostActive.textContent    = String(peak);
 
-    if (!players.length) {
-      if (el.playerEmpty)   el.playerEmpty.style.display   = "";
-      if (el.playerTbody)   el.playerTbody.innerHTML       = "";
-      if (el.playerCardSub) el.playerCardSub.textContent   = "";
+    if (!rows.length) {
+      if (el.playerEmpty)   el.playerEmpty.style.display = "";
+      if (el.playerTbody)   el.playerTbody.innerHTML     = "";
+      if (el.playerCardSub) el.playerCardSub.textContent = "";
       return;
     }
 
     if (el.playerEmpty) el.playerEmpty.style.display = "none";
 
-    const html = players.map(p => {
-      const courses = Array.from(p.courses).map(c => `<span class="cdBadge">${esc(c)}</span>`).join(" ");
-      const admins  = Array.from(p.admins).join(", ");
-      return `<tr>
-        <td style="font-weight:900">${esc(p.name || "—")}</td>
-        <td class="cdRight">${esc(String(p.rounds))}</td>
-        <td>${courses || "—"}</td>
-        <td class="cdMuted">${esc(admins || "—")}</td>
-        <td class="cdMuted">${esc(fmtDateShort(p.firstGame))}</td>
-        <td class="cdMuted">${esc(fmtDateShort(p.lastGame))}</td>
-      </tr>`;
-    }).join("");
+    const html = rows.map(r => `<tr>
+      <td style="font-weight:900">${esc(r.player)}</td>
+      <td class="cdRight">${esc(String(r.rounds))}</td>
+      <td>${esc(r.courses)}</td>
+      <td class="cdMuted">${esc(r.administrators)}</td>
+      <td class="cdMuted">${esc(r.firstGame)}</td>
+      <td class="cdMuted">${esc(r.lastGame)}</td>
+    </tr>`).join("");
 
-    if (el.playerTbody)   el.playerTbody.innerHTML     = html;
+    if (el.playerTbody)   el.playerTbody.innerHTML = html;
     if (el.playerCardSub) el.playerCardSub.textContent =
-      `${players.length} of ${total} players · Sorted by ${state.pSortBy}`;
+      `${rows.length} of ${total} players · Sorted by ${state.pSortBy}`;
   }
 
   // ── Dashboard (stub) ───────────────────────────────────────────
