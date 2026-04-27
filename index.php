@@ -19,7 +19,7 @@ if (isset($_GET['portal'])) {
         session_write_close();
         header('Location: ' . MA_ROUTE_PLAYER_HOME);
         exit;
-    } elseif ($portal === 'clubadmin') {
+    } elseif ($portal === 'clubhome') {
         $_SESSION['SessionPortal'] = 'CLUBADMIN PORTAL';
         session_write_close();
         header('Location: ' . MA_ROUTE_CLUB_HOME);
