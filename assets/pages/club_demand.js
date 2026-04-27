@@ -734,6 +734,7 @@
       }
 
       applyInit(res.payload);
+      applyChrome();
 
       if (res.payload.authorized === false) {
         setView(state.view);
