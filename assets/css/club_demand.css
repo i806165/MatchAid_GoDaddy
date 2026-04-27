@@ -21,7 +21,8 @@
   flex-wrap: wrap;
 }
 
-.cdSortRow[hidden] {
+.cdSortRow[hidden],
+.cdMetricRow[hidden] {
   display: none !important;
 }
 
@@ -51,6 +52,11 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+  margin: 10px 0;
+}
+
+.cdMetricRow--controls {
+  margin-top: 10px;
   margin-bottom: 10px;
 }
 
@@ -118,9 +124,24 @@
 
 .cdTable tbody tr:last-child td { border-bottom: none; }
 .cdTable tbody tr:hover td { background: var(--brandPrimaryBg); }
+.cdTable tbody td {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.cdTable td[data-cd-menu] {
+  cursor: pointer;
+}
+
+.cdTable td[data-cd-menu]:hover {
+  text-decoration: underline;
+}
 
 .cdRight { text-align: right; }
-.cdMuted { color: var(--inkMuted); font-weight: 700; }
+.cdMuted {
+  color: inherit;
+  font-weight: inherit;
+}
 
 /* Group header rows */
 .cdGroupHdr td {

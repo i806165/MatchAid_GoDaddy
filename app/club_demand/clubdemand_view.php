@@ -21,6 +21,46 @@
             aria-selected="false" role="tab">Dashboard</button>
   </div>
 
+    <!-- Row 2a: Active report metrics Summary Screen -->
+  <div class="cdMetricRow cdMetricRow--controls" id="cdMetricRowSummary">
+    <div class="cdMetric">
+      <div class="cdMetricLabel">TOTAL ROUNDS</div>
+      <div class="cdMetricValue" id="cdMTotalRounds">—</div>
+    </div>
+    <div class="cdMetric">
+      <div class="cdMetricLabel">TOTAL GAMES</div>
+      <div class="cdMetricValue" id="cdMTotalGames">—</div>
+    </div>
+    <div class="cdMetric">
+      <div class="cdMetricLabel">AVG PLAYERS / GAME</div>
+      <div class="cdMetricValue" id="cdMAvgPlayers">—</div>
+    </div>
+    <div class="cdMetric">
+      <div class="cdMetricLabel">TOTAL SLOTS</div>
+      <div class="cdMetricValue" id="cdMTotalSlots">—</div>
+    </div>
+  </div>
+
+   <!-- Row 2b: Active report metrics Player Screen -->
+    <div class="cdMetricRow cdMetricRow--controls" id="cdMetricRowPlayer" hidden>
+    <div class="cdMetric">
+      <div class="cdMetricLabel">UNIQUE PLAYERS</div>
+      <div class="cdMetricValue" id="cdMUniquePlayers">—</div>
+    </div>
+    <div class="cdMetric">
+      <div class="cdMetricLabel">TOTAL ROUNDS</div>
+      <div class="cdMetricValue" id="cdMPlayerRounds">—</div>
+    </div>
+    <div class="cdMetric">
+      <div class="cdMetricLabel">AVG ROUNDS / PLAYER</div>
+      <div class="cdMetricValue" id="cdMAvgRounds">—</div>
+    </div>
+    <div class="cdMetric">
+      <div class="cdMetricLabel">MOST ACTIVE</div>
+      <div class="cdMetricValue" id="cdMMostActive">—</div>
+    </div>
+  </div>
+
 
   <!-- Row 3a: Summary view controls (group + sort) -->
   <div class="cdSortRow" id="cdSortSummary" hidden>
@@ -75,25 +115,6 @@
   <!-- ── SUMMARY VIEW ─────────────────────────────────────────── -->
   <div id="cdViewSummary" class="cdView" role="tabpanel" aria-labelledby="cdSegSummary">
 
-    <div class="cdMetricRow">
-      <div class="cdMetric">
-        <div class="cdMetricLabel">TOTAL ROUNDS</div>
-        <div class="cdMetricValue" id="cdMTotalRounds">—</div>
-      </div>
-      <div class="cdMetric">
-        <div class="cdMetricLabel">TOTAL GAMES</div>
-        <div class="cdMetricValue" id="cdMTotalGames">—</div>
-      </div>
-      <div class="cdMetric">
-        <div class="cdMetricLabel">AVG PLAYERS / GAME</div>
-        <div class="cdMetricValue" id="cdMAvgPlayers">—</div>
-      </div>
-      <div class="cdMetric">
-        <div class="cdMetricLabel">TOTAL SLOTS</div>
-        <div class="cdMetricValue" id="cdMTotalSlots">—</div>
-      </div>
-    </div>
-
     <section class="maCard" aria-label="Game Summary">
       <header class="maCard__hdr">
         <div class="maCard__title">GAME SUMMARY</div>
@@ -130,25 +151,6 @@
   <!-- ── PLAYER DETAIL VIEW ───────────────────────────────────── -->
   <div id="cdViewPlayer" class="cdView" style="display:none;"
        role="tabpanel" aria-labelledby="cdSegPlayer">
-
-    <div class="cdMetricRow">
-      <div class="cdMetric">
-        <div class="cdMetricLabel">UNIQUE PLAYERS</div>
-        <div class="cdMetricValue" id="cdMUniquePlayers">—</div>
-      </div>
-      <div class="cdMetric">
-        <div class="cdMetricLabel">TOTAL ROUNDS</div>
-        <div class="cdMetricValue" id="cdMPlayerRounds">—</div>
-      </div>
-      <div class="cdMetric">
-        <div class="cdMetricLabel">AVG ROUNDS / PLAYER</div>
-        <div class="cdMetricValue" id="cdMAvgRounds">—</div>
-      </div>
-      <div class="cdMetric">
-        <div class="cdMetricLabel">MOST ACTIVE</div>
-        <div class="cdMetricValue" id="cdMMostActive">—</div>
-      </div>
-    </div>
 
     <section class="maCard" aria-label="Player Detail">
       <header class="maCard__hdr">

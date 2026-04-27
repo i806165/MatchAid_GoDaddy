@@ -35,7 +35,17 @@
     context:  {},
     summary:  {},
     games:    [],         // enriched game records from hydrateClubDemand
-    players:  [],         // derived client-side from state.games
+    players:  [],  
+    summaryFilters: {
+      playDate: "",
+      playTime: "",
+      administrator: "",
+      gameTitle: "",
+      course: "",
+      format: "",
+    },
+    summarySortKey: "playDateRaw",
+    summarySortDir: "asc",
   };
 
   // ── DOM map ────────────────────────────────────────────────────
@@ -48,6 +58,9 @@
     // Sort rows
     sortSummary:  document.getElementById("cdSortSummary"),
     sortPlayer:   document.getElementById("cdSortPlayer"),
+        // Metric rows
+    metricSummary: document.getElementById("cdMetricRowSummary"),
+    metricPlayer:  document.getElementById("cdMetricRowPlayer"),
 
     // Views
     viewSummary:   document.getElementById("cdViewSummary"),
@@ -200,8 +213,11 @@
       b.setAttribute("aria-selected", k === view ? "true" : "false");
     });
 
+    if (el.metricSummary) el.metricSummary.hidden = (view !== "summary");
+    if (el.metricPlayer)  el.metricPlayer.hidden  = (view !== "player");
+
     if (el.sortSummary) el.sortSummary.hidden = (view !== "summary");
-    if (el.sortPlayer)  el.sortPlayer.hidden  = (view !== "player");
+    if (el.sortPlayer)  el.sortPlayer.hidden  = (view !== "player");    
 
     if (view === "summary")   renderSummary();
     if (view === "player")    renderPlayer();
@@ -241,13 +257,36 @@
     }
   }
 
-  function buildSummarySubtitle() {
-    const grp = { month:"Month", course:"Course", admin:"Admin", none:"None" }[state.groupBy] || "";
-    const srt = { date:"Date", players:"Players", course:"Course", admin:"Admin" }[state.sortBy] || "";
-    return grp !== "None" ? `Grouped by ${grp} · Sorted by ${srt}` : `Sorted by ${srt}`;
+  function buildSummarySubtitle(visibleRows, allRows) {
+    const grp = { month:"Month", course:"Course", admin:"Admin", none:"None" }[state.groupBy] || "None";
+    const sortLabel = labelForSummaryKey(state.summarySortKey);
+    const sortDir = state.summarySortDir === "desc" ? "Desc" : "Asc";
+
+    const filters = [];
+    const f = state.summaryFilters || {};
+
+    if (f.playDate)       filters.push(`Date = ${fmtDateShort(f.playDate)}`);
+    if (f.playTime)       filters.push(`Time = ${fmtTime(f.playTime)}`);
+    if (f.administrator)  filters.push(`Admin = ${f.administrator}`);
+    if (f.gameTitle)      filters.push(`Game = ${f.gameTitle}`);
+    if (f.course)         filters.push(`Course = ${f.course}`);
+    if (f.format)         filters.push(`Format = ${f.format}`);
+
+    const shown = Array.isArray(visibleRows) ? visibleRows.length : 0;
+    const total = Array.isArray(allRows) ? allRows.length : shown;
+
+    const parts = [
+      grp !== "None" ? `Grouped by ${grp}` : "Ungrouped",
+      `Sorted by ${sortLabel} ${sortDir}`,
+      `${shown} of ${total} games shown`,
+    ];
+
+    if (filters.length) parts.push(`Filtered: ${filters.join(" · ")}`);
+
+    return parts.join(" · ");
   }
 
-    function buildGameSummaryRows() {
+  function buildGameSummaryRows() {
     return state.games.map(g => {
       const slots      = Number(g.slotCount ?? 0);
       const registered = Number(g.playerCount ?? 0);
@@ -257,6 +296,7 @@
         groupKey:       getGroupFn()(g),
         playDateRaw:    safeStr(g.playDate),
         playDate:       fmtDate(g.playDate),
+        playTimeRaw:    safeStr(g.playTime),
         playTime:       fmtTime(g.playTime),
         administrator:  dash(g.adminName),
         gameTitle:      dash(g.title),
@@ -293,46 +333,102 @@
     });
   }
 
+  function buildSummaryRowHtml(r) {
+  return `<tr>
+    <td data-cd-menu="summary"
+        data-sort-key="playDateRaw"
+        data-filter-key="playDate"
+        data-filter-value="${esc(r.playDateRaw)}"
+        data-display-value="${esc(r.playDate)}">${esc(r.playDate)}</td>
+
+    <td data-cd-menu="summary"
+        data-sort-key="playTimeRaw"
+        data-filter-key="playTime"
+        data-filter-value="${esc(r.playTimeRaw)}"
+        data-display-value="${esc(r.playTime)}">${esc(r.playTime)}</td>
+
+    <td data-cd-menu="summary"
+        data-sort-key="administrator"
+        data-filter-key="administrator"
+        data-filter-value="${esc(r.administrator)}"
+        data-display-value="${esc(r.administrator)}">${esc(r.administrator)}</td>
+
+    <td data-cd-menu="summary"
+        data-sort-key="gameTitle"
+        data-filter-key="gameTitle"
+        data-filter-value="${esc(r.gameTitle)}"
+        data-display-value="${esc(r.gameTitle)}">${esc(r.gameTitle)}</td>
+
+    <td data-cd-menu="summary"
+        data-sort-key="course"
+        data-filter-key="course"
+        data-filter-value="${esc(r.course)}"
+        data-display-value="${esc(r.course)}">${esc(r.course)}</td>
+
+    <td data-cd-menu="summary"
+        data-sort-key="format"
+        data-filter-key="format"
+        data-filter-value="${esc(r.format)}"
+        data-display-value="${esc(r.format)}">${esc(r.format)}</td>
+
+    <td class="cdRight"
+        data-cd-menu="summary"
+        data-sort-key="slots"
+        data-display-value="${esc(String(r.slots))}">${esc(String(r.slots))}</td>
+
+    <td class="cdRight"
+        data-cd-menu="summary"
+        data-sort-key="registered"
+        data-display-value="${esc(String(r.registered))}">${esc(String(r.registered))}</td>
+
+    <td class="cdRight"
+        data-cd-menu="summary"
+        data-sort-key="unconsumed"
+        data-display-value="${esc(String(r.unconsumed))}">${esc(String(r.unconsumed))}</td>
+  </tr>`;
+}
+
   function renderSummary() {
-    const rows = buildGameSummaryRows();
+    const allRows = buildGameSummaryRows();
+    const rows    = applySummarySort(applySummaryFilters(allRows));
+
     renderSummaryMetrics(rows);
 
     if (!rows.length) {
       if (el.summaryEmpty)   el.summaryEmpty.style.display = "";
       if (el.summaryTbody)   el.summaryTbody.innerHTML     = "";
-      if (el.summaryCardSub) el.summaryCardSub.textContent = "";
+      if (el.summaryCardSub) el.summaryCardSub.textContent = buildSummarySubtitle(rows, allRows);
       return;
     }
 
     if (el.summaryEmpty) el.summaryEmpty.style.display = "none";
 
     const groupBy = state.groupBy;
-    let lastGroup = null;
     let html      = "";
 
-    for (const r of rows) {
-      const grp = groupBy === "none" ? null : r.groupKey;
+    if (groupBy === "none") {
+      for (const r of rows) {
+        html += buildSummaryRowHtml(r);
+      }
+    } else {
+      const groups = new Map();
 
-      if (grp !== null && grp !== lastGroup) {
-        lastGroup = grp;
-        html += `<tr class="cdGroupHdr"><td colspan="9">${esc(grp)}</td></tr>`;
+      for (const r of rows) {
+        const key = r.groupKey || "—";
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(r);
       }
 
-      html += `<tr>
-        <td>${esc(r.playDate)}</td>
-        <td class="cdMuted">${esc(r.playTime)}</td>
-        <td class="cdMuted">${esc(r.administrator)}</td>
-        <td>${esc(r.gameTitle)}</td>
-        <td>${esc(r.course)}</td>
-        <td class="cdMuted">${esc(r.format)}</td>
-        <td class="cdRight">${esc(String(r.slots))}</td>
-        <td class="cdRight">${esc(String(r.registered))}</td>
-        <td class="cdRight">${esc(String(r.unconsumed))}</td>
-      </tr>`;
+      for (const [grp, groupRows] of groups.entries()) {
+        html += `<tr class="cdGroupHdr"><td colspan="9">${esc(grp)}</td></tr>`;
+        for (const r of groupRows) {
+          html += buildSummaryRowHtml(r);
+        }
+      }
     }
 
     if (el.summaryTbody)   el.summaryTbody.innerHTML     = html;
-    if (el.summaryCardSub) el.summaryCardSub.textContent = buildSummarySubtitle();
+    if (el.summaryCardSub) el.summaryCardSub.textContent = buildSummarySubtitle(rows, allRows);
   }
 
   // ── Player detail render ───────────────────────────────────────
@@ -423,6 +519,154 @@
     }
   }
 
+  function applySummaryFilters(rows) {
+    const f = state.summaryFilters || {};
+
+    return rows.filter(r => {
+      if (f.playDate      && r.playDateRaw   !== f.playDate)      return false;
+      if (f.playTime      && r.playTimeRaw   !== f.playTime)      return false;
+      if (f.administrator && r.administrator !== f.administrator) return false;
+      if (f.gameTitle     && r.gameTitle     !== f.gameTitle)     return false;
+      if (f.course        && r.course        !== f.course)        return false;
+      if (f.format        && r.format        !== f.format)        return false;
+      return true;
+    });
+  }
+
+  function applySummarySort(rows) {
+    const key = state.summarySortKey || "playDateRaw";
+    const dir = state.summarySortDir === "desc" ? -1 : 1;
+
+    return [...rows].sort((a, b) => {
+      const av = a[key];
+      const bv = b[key];
+
+      if (typeof av === "number" || typeof bv === "number") {
+        return (Number(av || 0) - Number(bv || 0)) * dir;
+      }
+
+      return safeStr(av).localeCompare(safeStr(bv)) * dir;
+    });
+  }
+
+  function labelForSummaryKey(key) {
+    return {
+      playDateRaw:  "Date",
+      playTimeRaw:  "Play Time",
+      administrator:"Administrator",
+      gameTitle:    "Game Title",
+      course:       "Course",
+      format:       "Format",
+      slots:        "Slots",
+      registered:   "Registered",
+      unconsumed:   "Unconsumed",
+    }[key] || "Value";
+  }
+
+  function setSummaryFilter(key, value) {
+    if (!state.summaryFilters || !key) return;
+    state.summaryFilters[key] = value;
+    renderSummary();
+  }
+
+  function clearSummaryFilters() {
+    state.summaryFilters = {
+      playDate: "",
+      playTime: "",
+      administrator: "",
+      gameTitle: "",
+      course: "",
+      format: "",
+    };
+    renderSummary();
+  }
+
+  function setSummarySort(key, dir) {
+    state.summarySortKey = key || "playDateRaw";
+    state.summarySortDir = dir === "desc" ? "desc" : "asc";
+    renderSummary();
+  }
+
+  function hasSummaryFilters() {
+    const f = state.summaryFilters || {};
+    return Boolean(
+      f.playDate ||
+      f.playTime ||
+      f.administrator ||
+      f.gameTitle ||
+      f.course ||
+      f.format
+    );
+  }
+
+  function isNumericSummaryKey(key) {
+    return key === "slots" || key === "registered" || key === "unconsumed";
+  }
+
+  function openSummaryCellMenu(cell) {
+    const ui = window.MA?.ui;
+    if (typeof ui?.openActionsMenu !== "function") {
+      setStatus("Actions menu is not available.", "warn");
+      return;
+    }
+
+    const sortKey    = safeStr(cell.dataset.sortKey);
+    const filterKey  = safeStr(cell.dataset.filterKey);
+    const filterVal  = safeStr(cell.dataset.filterValue);
+    const displayVal = safeStr(cell.dataset.displayValue) || safeStr(cell.textContent);
+    const label      = labelForSummaryKey(sortKey);
+
+    const actions = [];
+
+    if (filterKey && filterVal && displayVal !== "—") {
+      actions.push({
+        label: `Filter by ${label}`,
+        action: () => setSummaryFilter(filterKey, filterVal),
+      });
+    }
+
+    if (sortKey) {
+      if (isNumericSummaryKey(sortKey)) {
+        actions.push({
+          label: `Sort ${label} Low to High`,
+          action: () => setSummarySort(sortKey, "asc"),
+        });
+        actions.push({
+          label: `Sort ${label} High to Low`,
+          action: () => setSummarySort(sortKey, "desc"),
+        });
+      } else {
+        actions.push({
+          label: `Sort ${label} A to Z`,
+          action: () => setSummarySort(sortKey, "asc"),
+        });
+        actions.push({
+          label: `Sort ${label} Z to A`,
+          action: () => setSummarySort(sortKey, "desc"),
+        });
+      }
+    }
+
+    if (hasSummaryFilters()) {
+      actions.push({
+        label: "Clear Filters",
+        action: () => clearSummaryFilters(),
+      });
+    }
+
+    ui.openActionsMenu(
+      displayVal || label,
+      actions,
+      label
+    );
+  }
+
+  function onSummaryBodyClick(e) {
+    const cell = e.target.closest("[data-cd-menu='summary']");
+    if (!cell || !el.summaryTbody?.contains(cell)) return;
+    openSummaryCellMenu(cell);
+  }
+
   async function executeAcquire() {
     const dateFrom = safeStr(el.inputFrom?.value);
     const dateTo   = safeStr(el.inputTo?.value);
@@ -490,6 +734,7 @@
     el.modalOverlay?.addEventListener("click", (e) => {
       if (e.target === el.modalOverlay) closeModal();
     });
+    el.summaryTbody?.addEventListener("click", onSummaryBodyClick);
 
     // Summary: group buttons
     document.querySelectorAll("[data-group]").forEach(btn => {
@@ -506,8 +751,17 @@
       btn.addEventListener("click", () => {
         document.querySelectorAll("[data-sort]").forEach(b => b.classList.remove("is-active"));
         btn.classList.add("is-active");
-        state.sortBy = btn.dataset.sort;
-        renderSummary();
+
+        const sort = safeStr(btn.dataset.sort);
+        if (sort === "players") {
+          setSummarySort("registered", "desc");
+        } else if (sort === "course") {
+          setSummarySort("course", "asc");
+        } else if (sort === "admin") {
+          setSummarySort("administrator", "asc");
+        } else {
+          setSummarySort("playDateRaw", "asc");
+        }
       });
     });
 
@@ -567,8 +821,8 @@
     }
     if (typeof chrome.setBottomNav === "function") {
       chrome.setBottomNav({
-        visible:    ["home", "demand"],
-        active:     "demand",
+        visible:    ["home", "clubdemand"],
+        active:     "clubdemand",
         onNavigate: (id) => (typeof MA.routerGo === "function" ? MA.routerGo(id) : null),
       });
     }
@@ -582,6 +836,17 @@
     state.summary = init.summary  || {};
     state.games   = Array.isArray(init.games) ? init.games : [];
     state.players = buildPlayerAggregates();
+
+    state.summaryFilters = {
+      playDate: "",
+      playTime: "",
+      administrator: "",
+      gameTitle: "",
+      course: "",
+      format: "",
+    };
+    state.summarySortKey = "playDateRaw";
+    state.summarySortDir = "asc";
   }
 
   // ── Boot ───────────────────────────────────────────────────────
