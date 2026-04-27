@@ -142,7 +142,13 @@
 
   function fmtMethod(v) {
     if (!v) return "—";
-    return String(v).toLowerCase().includes("shotgun") ? "SG" : "TT";
+
+    const s = String(v).toLowerCase();
+
+    if (s.includes("shotgun")) return "Shotgun";
+    if (s.includes("tee")) return "TeeTimes";
+
+    return String(v);
   }
 
   // ── Player aggregation (client-side, no DB) ────────────────────
@@ -271,17 +277,22 @@
       const grp = groupFn(g);
       if (grp !== null && grp !== lastGroup) {
         lastGroup = grp;
-        html += `<tr class="cdGroupHdr"><td colspan="8">${esc(grp)}</td></tr>`;
+        html += `<tr class="cdGroupHdr"><td colspan="9">${esc(grp)}</td></tr>`;
       }
+      const slots      = Number(g.slotCount ?? 0);
+      const registered = Number(g.playerCount ?? 0);
+      const unconsumed = Math.max(0, slots - registered);
+
       html += `<tr>
         <td>${esc(fmtDate(g.playDate))}</td>
         <td class="cdMuted">${esc(fmtTime(g.playTime))}</td>
         <td class="cdMuted">${esc(dash(g.adminName))}</td>
         <td>${esc(dash(g.title))}</td>
-        <td><span class="cdBadge">${esc(dash(g.courseName))}</span></td>
+        <td>${esc(dash(g.courseName))}</td>
         <td class="cdMuted">${esc(fmtMethod(g.toMethod))}</td>
-        <td class="cdRight">${esc(String(g.slotCount   ?? "—"))}</td>
+        <td class="cdRight">${esc(String(g.slotCount ?? "—"))}</td>
         <td class="cdRight">${esc(String(g.playerCount ?? "—"))}</td>
+        <td class="cdRight">${esc(String(unconsumed))}</td>
       </tr>`;
     }
 
@@ -558,7 +569,7 @@
 
       // Fresh load — prompt user to confirm/adjust date range before exploring
       // Return visit — session dates restored, render immediately
-      if (!init.isReturn) openModal();
+      //if (!init.isReturn) openModal();
 
       setStatus("Ready.", "ok");
     } catch (e) {

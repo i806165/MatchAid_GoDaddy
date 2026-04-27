@@ -133,6 +133,7 @@
                 <th>Format</th>
                 <th class="cdRight">Slots</th>
                 <th class="cdRight">Registered</th>
+                <th class="cdRight">Unconsumed</th>
               </tr>
             </thead>
             <tbody id="cdSummaryTbody"></tbody>
