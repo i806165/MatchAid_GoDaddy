@@ -73,15 +73,6 @@
         <button type="button" class="maSegBtn"           data-group="none">None</button>
       </div>
     </div>
-    <div class="cdSortGroup">
-      <span class="cdSortLabel">Sort</span>
-      <div class="maSeg cdSortSeg" role="group" aria-label="Sort by">
-        <button type="button" class="maSegBtn is-active" data-sort="date">Date</button>
-        <button type="button" class="maSegBtn"           data-sort="players">Players</button>
-        <button type="button" class="maSegBtn"           data-sort="course">Course</button>
-        <button type="button" class="maSegBtn"           data-sort="admin">Admin</button>
-      </div>
-    </div>
   </div>
 
   <!-- Row 3b: Player detail view controls (sort + filter) -->

@@ -26,7 +26,6 @@
     // View
     view:    "summary",   // summary | player | dashboard
     groupBy: "month",     // month | course | admin | none
-    sortBy:  "date",      // date | players | course | admin
     pSortBy: "rounds",    // rounds | name | lastgame
     pFilter: "all",       // all | multicourse | singlegame
 
@@ -237,15 +236,6 @@
     if (el.mTotalGames)  el.mTotalGames.textContent  = String(totalGames);
     if (el.mAvgPlayers)  el.mAvgPlayers.textContent  = String(avgPlayers);
     if (el.mTotalSlots)  el.mTotalSlots.textContent  = String(totalSlots);
-  }
-
-  function getSummaryComparator() {
-    switch (state.sortBy) {
-      case "players": return (a, b) => (b.playerCount  - a.playerCount);
-      case "course":  return (a, b) => safeStr(a.courseName).localeCompare(safeStr(b.courseName));
-      case "admin":   return (a, b) => safeStr(a.adminName).localeCompare(safeStr(b.adminName));
-      default:        return (a, b) => safeStr(a.playDate).localeCompare(safeStr(b.playDate));
-    }
   }
 
   function getGroupFn() {
@@ -743,25 +733,6 @@
         btn.classList.add("is-active");
         state.groupBy = btn.dataset.group;
         renderSummary();
-      });
-    });
-
-    // Summary: sort buttons
-    document.querySelectorAll("[data-sort]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll("[data-sort]").forEach(b => b.classList.remove("is-active"));
-        btn.classList.add("is-active");
-
-        const sort = safeStr(btn.dataset.sort);
-        if (sort === "players") {
-          setSummarySort("registered", "desc");
-        } else if (sort === "course") {
-          setSummarySort("course", "asc");
-        } else if (sort === "admin") {
-          setSummarySort("administrator", "asc");
-        } else {
-          setSummarySort("playDateRaw", "asc");
-        }
       });
     });
 
