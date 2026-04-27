@@ -757,6 +757,15 @@
     });
   }
 
+  function openActionsMenu() {
+    if (!MA.ui || !MA.ui.openActionsMenu) return;
+
+    const items = [
+      { label: "Select New Date Range", action: openModal },
+    ];
+    MA.ui.openActionsMenu("Actions", items);
+  }
+
   // ── Chrome ─────────────────────────────────────────────────────
   function applyChrome() {
     const clubName = safeStr(state.context.clubName) || "Club Demand";
@@ -769,24 +778,7 @@
     }
     if (typeof chrome.setActions === "function") {
       chrome.setActions({
-        right: {
-          show:  true,
-          label: "Actions",
-          onTap: () => {
-            const ui = window.MA?.ui;
-            if (typeof ui?.openActionsMenu !== "function") return;
-            ui.openActionsMenu(
-              "Club Demand",
-              [
-                {
-                  label:  "Get Data",
-                  action: () => openModal(),
-                },
-              ],
-              safeStr(state.context.clubName) || ""
-            );
-          },
-        },
+        right: { show: true, label: "Actions", onClick: openActionsMenu },
         left: { show: false },
       });
     }
