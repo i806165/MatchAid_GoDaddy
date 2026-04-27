@@ -21,27 +21,6 @@
             aria-selected="false" role="tab">Dashboard</button>
   </div>
 
-  <!-- Row 2: Context pills -->
-  <div class="cdContextRow">
-    <div class="maPills cdContextPills" aria-label="Active data range">
-      <div class="maPill maPillKV" role="group" aria-label="From date">
-        <div class="maPillLabel">FROM</div>
-        <div class="maPillValue" id="cdPillFrom">—</div>
-      </div>
-      <div class="maPill maPillKV" role="group" aria-label="To date">
-        <div class="maPillLabel">TO</div>
-        <div class="maPillValue" id="cdPillTo">—</div>
-      </div>
-      <div class="maPill maPillKV" role="group" aria-label="Games loaded">
-        <div class="maPillLabel">GAMES</div>
-        <div class="maPillValue" id="cdPillGames">—</div>
-      </div>
-      <div class="maPill maPillKV" role="group" aria-label="Total rounds">
-        <div class="maPillLabel">ROUNDS</div>
-        <div class="maPillValue" id="cdPillRounds">—</div>
-      </div>
-    </div>
-  </div>
 
   <!-- Row 3a: Summary view controls (group + sort) -->
   <div class="cdSortRow" id="cdSortSummary" hidden>

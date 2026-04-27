@@ -49,12 +49,6 @@
     sortSummary:  document.getElementById("cdSortSummary"),
     sortPlayer:   document.getElementById("cdSortPlayer"),
 
-    // Context pills
-    pillFrom:   document.getElementById("cdPillFrom"),
-    pillTo:     document.getElementById("cdPillTo"),
-    pillGames:  document.getElementById("cdPillGames"),
-    pillRounds: document.getElementById("cdPillRounds"),
-
     // Views
     viewSummary:   document.getElementById("cdViewSummary"),
     viewPlayer:    document.getElementById("cdViewPlayer"),
@@ -214,21 +208,19 @@
     if (view === "dashboard") renderDashboard();
   }
 
-  // ── Context pills ──────────────────────────────────────────────
-  function renderContextPills() {
-    if (el.pillFrom)   el.pillFrom.textContent   = fmtPill(state.filters.dateFrom);
-    if (el.pillTo)     el.pillTo.textContent     = fmtPill(state.filters.dateTo);
-    if (el.pillGames)  el.pillGames.textContent  = String(state.games.length);
-    if (el.pillRounds) el.pillRounds.textContent = String(state.summary.totalRounds ?? 0);
-  }
-
   // ── Summary render ─────────────────────────────────────────────
-  function renderSummaryMetrics() {
-    const s = state.summary;
-    if (el.mTotalRounds) el.mTotalRounds.textContent = dash(s.totalRounds);
-    if (el.mTotalGames)  el.mTotalGames.textContent  = dash(s.gameCount);
-    if (el.mAvgPlayers)  el.mAvgPlayers.textContent  = dash(s.avgPerGame);
-    if (el.mTotalSlots)  el.mTotalSlots.textContent  = dash(s.totalSlots);
+  function renderSummaryMetrics(rows) {
+    const visibleRows = Array.isArray(rows) ? rows : buildGameSummaryRows();
+
+    const totalGames  = visibleRows.length;
+    const totalRounds = visibleRows.reduce((sum, r) => sum + Number(r.registered || 0), 0);
+    const totalSlots  = visibleRows.reduce((sum, r) => sum + Number(r.slots || 0), 0);
+    const avgPlayers  = totalGames > 0 ? (totalRounds / totalGames).toFixed(1) : "—";
+
+    if (el.mTotalRounds) el.mTotalRounds.textContent = String(totalRounds);
+    if (el.mTotalGames)  el.mTotalGames.textContent  = String(totalGames);
+    if (el.mAvgPlayers)  el.mAvgPlayers.textContent  = String(avgPlayers);
+    if (el.mTotalSlots)  el.mTotalSlots.textContent  = String(totalSlots);
   }
 
   function getSummaryComparator() {
@@ -302,9 +294,8 @@
   }
 
   function renderSummary() {
-    renderSummaryMetrics();
-
     const rows = buildGameSummaryRows();
+    renderSummaryMetrics(rows);
 
     if (!rows.length) {
       if (el.summaryEmpty)   el.summaryEmpty.style.display = "";
@@ -371,16 +362,17 @@
   }
 
   function renderPlayer() {
-    const rows   = buildPlayerDetailRows();
-    const total  = state.players.length;
-    const rounds = state.summary.totalRounds ?? 0;
-    const avg    = total > 0 ? (rounds / total).toFixed(1) : "—";
-    const peak   = state.players.length
-      ? Math.max(...state.players.map(p => p.rounds))
+    const rows        = buildPlayerDetailRows();
+    const total       = state.players.length;
+    const visibleCnt  = rows.length;
+    const visibleRnds = rows.reduce((sum, r) => sum + Number(r.rounds || 0), 0);
+    const avg         = visibleCnt > 0 ? (visibleRnds / visibleCnt).toFixed(1) : "—";
+    const peak        = visibleCnt > 0
+      ? Math.max(...rows.map(r => Number(r.rounds || 0)))
       : "—";
 
-    if (el.mUniquePlayers) el.mUniquePlayers.textContent = String(total);
-    if (el.mPlayerRounds)  el.mPlayerRounds.textContent  = String(rounds);
+    if (el.mUniquePlayers) el.mUniquePlayers.textContent = String(visibleCnt);
+    if (el.mPlayerRounds)  el.mPlayerRounds.textContent  = String(visibleRnds);
     if (el.mAvgRounds)     el.mAvgRounds.textContent     = String(avg);
     if (el.mMostActive)    el.mMostActive.textContent    = String(peak);
 
@@ -404,7 +396,7 @@
 
     if (el.playerTbody)   el.playerTbody.innerHTML = html;
     if (el.playerCardSub) el.playerCardSub.textContent =
-      `${rows.length} of ${total} players · Sorted by ${state.pSortBy}`;
+      `${visibleCnt} of ${total} players · Sorted by ${state.pSortBy}`;
   }
 
   // ── Dashboard (stub) ───────────────────────────────────────────
@@ -467,7 +459,6 @@
       }
 
       applyInit(res.payload);
-      renderContextPills();
       setView(state.view);
       setStatus("Data loaded.", "ok");
 
@@ -604,7 +595,6 @@
       applyInit(init);
       wireEvents();
       applyChrome();
-      renderContextPills();
       setView("summary");
 
       // Fresh load — prompt user to confirm/adjust date range before exploring
