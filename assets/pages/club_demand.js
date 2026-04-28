@@ -100,6 +100,40 @@
     inputFacility: document.getElementById("cdInputFacility"),
     inputFrom:     document.getElementById("cdInputFrom"),
     inputTo:       document.getElementById("cdInputTo"),
+
+    // Dashboard filter
+    dashFilterSub:   document.getElementById("cdDashboardFilterSub"),
+    dashInputFrom:   document.getElementById("cdDashInputFrom"),
+    dashInputTo:     document.getElementById("cdDashInputTo"),
+    dashApply:       document.getElementById("cdDashApply"),
+    dashReset:       document.getElementById("cdDashReset"),
+
+    // Dashboard KPIs
+    dashGames:       document.getElementById("cdDashGames"),
+    dashRegistered:  document.getElementById("cdDashRegistered"),
+    dashSlots:       document.getElementById("cdDashSlots"),
+    dashOpenSlots:   document.getElementById("cdDashOpenSlots"),
+    dashUtilization: document.getElementById("cdDashUtilization"),
+
+    // Dashboard — Demand by Date
+    dashDateTbody:   document.getElementById("cdDashDateTbody"),
+    dashDateSub:     document.getElementById("cdDashDateSub"),
+    dashDateEmpty:   document.getElementById("cdDashDateEmpty"),
+
+    // Dashboard — Demand by Course
+    dashCourseTbody: document.getElementById("cdDashCourseTbody"),
+    dashCourseSub:   document.getElementById("cdDashCourseSub"),
+    dashCourseEmpty: document.getElementById("cdDashCourseEmpty"),
+
+    // Dashboard — Capacity Flags
+    dashFlagsTbody:  document.getElementById("cdDashFlagsTbody"),
+    dashFlagsSub:    document.getElementById("cdDashFlagsSub"),
+    dashFlagsEmpty:  document.getElementById("cdDashFlagsEmpty"),
+
+    // Dashboard — Demand by Administrator
+    dashAdminTbody:  document.getElementById("cdDashAdminTbody"),
+    dashAdminSub:    document.getElementById("cdDashAdminSub"),
+    dashAdminEmpty:  document.getElementById("cdDashAdminEmpty"),
   };
 
   // ── Utility ────────────────────────────────────────────────────
@@ -612,9 +646,253 @@
     if (el.playerCardSub) el.playerCardSub.textContent = buildPlayerSubtitle(rows, allRows);
   }
 
-  // ── Dashboard (stub) ───────────────────────────────────────────
+  // ── Dashboard ──────────────────────────────────────────────────
+
+  function pct(registered, slots) {
+    if (slots <= 0) return "—";
+    return `${((registered / slots) * 100).toFixed(1)}%`;
+  }
+
+  function utilizationNumber(registered, slots) {
+    if (slots <= 0) return 0;
+    return registered / slots;
+  }
+
+  function dashboardRangeLabel() {
+    const from = fmtDateShort(state.dashboardFilters.dateFrom);
+    const to   = fmtDateShort(state.dashboardFilters.dateTo);
+    if (from && to) return `${from} – ${to}`;
+    if (from)       return `From ${from}`;
+    if (to)         return `To ${to}`;
+    return "All dates";
+  }
+
+  function getDashboardGames() {
+    const { dateFrom, dateTo } = state.dashboardFilters;
+    return state.games.filter(g => {
+      const d = safeStr(g.playDate).slice(0, 10);
+      if (dateFrom && d < dateFrom) return false;
+      if (dateTo   && d > dateTo)   return false;
+      return true;
+    });
+  }
+
+  function buildDashboardSnapshot(games) {
+    let registered = 0;
+    let slots      = 0;
+    for (const g of games) {
+      registered += Number(g.playerCount || 0);
+      slots      += Number(g.slotCount   || 0);
+    }
+    return {
+      games:       games.length,
+      registered,
+      slots,
+      openSlots:   Math.max(0, slots - registered),
+      utilization: pct(registered, slots),
+    };
+  }
+
+  function buildDemandByDateRows(games) {
+    const map = new Map();
+    for (const g of games) {
+      const key        = safeStr(g.playDate).slice(0, 10);
+      const registered = Number(g.playerCount || 0);
+      const slots      = Number(g.slotCount   || 0);
+      if (!map.has(key)) map.set(key, { playDateRaw: key, playDate: fmtDate(key), games: 0, registered: 0, slots: 0 });
+      const r = map.get(key);
+      r.games++;
+      r.registered += registered;
+      r.slots      += slots;
+    }
+    return [...map.values()]
+      .map(r => ({ ...r, openSlots: Math.max(0, r.slots - r.registered), utilization: pct(r.registered, r.slots) }))
+      .sort((a, b) => a.playDateRaw.localeCompare(b.playDateRaw));
+  }
+
+  function buildDemandByCourseRows(games) {
+    const map = new Map();
+    for (const g of games) {
+      const key        = safeStr(g.courseName) || "—";
+      const registered = Number(g.playerCount || 0);
+      const slots      = Number(g.slotCount   || 0);
+      if (!map.has(key)) map.set(key, { courseName: key, games: 0, registered: 0, slots: 0 });
+      const r = map.get(key);
+      r.games++;
+      r.registered += registered;
+      r.slots      += slots;
+    }
+    return [...map.values()]
+      .map(r => ({ ...r, openSlots: Math.max(0, r.slots - r.registered), utilization: pct(r.registered, r.slots) }))
+      .sort((a, b) => b.registered - a.registered || a.courseName.localeCompare(b.courseName));
+  }
+
+  function buildDemandByAdminRows(games) {
+    const map = new Map();
+    for (const g of games) {
+      const key        = safeStr(g.adminName) || "—";
+      const registered = Number(g.playerCount || 0);
+      const slots      = Number(g.slotCount   || 0);
+      if (!map.has(key)) map.set(key, { administrator: key, games: 0, registered: 0, slots: 0 });
+      const r = map.get(key);
+      r.games++;
+      r.registered += registered;
+      r.slots      += slots;
+    }
+    return [...map.values()]
+      .map(r => ({ ...r, openSlots: Math.max(0, r.slots - r.registered), utilization: pct(r.registered, r.slots) }))
+      .sort((a, b) => b.registered - a.registered || a.administrator.localeCompare(b.administrator));
+  }
+
+  const FLAG_ORDER      = { "Overfilled": 0, "Full": 1, "Near Full": 2, "Soft Demand": 3 };
+  const FLAG_PILL_CLASS = { "Overfilled": "cdStatusPill--overfilled", "Full": "cdStatusPill--full", "Near Full": "cdStatusPill--nearfull", "Soft Demand": "cdStatusPill--softdemand" };
+
+  function buildCapacityFlagRows(games) {
+    const rows = [];
+    for (const g of games) {
+      const registered = Number(g.playerCount || 0);
+      const slots      = Number(g.slotCount   || 0);
+      const openSlots  = Math.max(0, slots - registered);
+      const utilRaw    = utilizationNumber(registered, slots);
+      let status;
+      if      (registered > slots)                     status = "Overfilled";
+      else if (registered === slots && slots > 0)      status = "Full";
+      else if (utilRaw >= 0.75)                        status = "Near Full";
+      else if (utilRaw < 0.50)                         status = "Soft Demand";
+      else                                             continue;
+      const playDateRaw = safeStr(g.playDate).slice(0, 10);
+      rows.push({ status, gameTitle: dash(g.title), playDateRaw, playDate: fmtDateShort(playDateRaw), courseName: dash(g.courseName), administrator: dash(g.adminName), registered, slots, openSlots });
+    }
+    return rows.sort((a, b) => {
+      const od = (FLAG_ORDER[a.status] ?? 99) - (FLAG_ORDER[b.status] ?? 99);
+      return od !== 0 ? od : a.playDateRaw.localeCompare(b.playDateRaw);
+    });
+  }
+
+  function renderDashboardMetrics(snap) {
+    if (el.dashGames)       el.dashGames.textContent       = String(snap.games);
+    if (el.dashRegistered)  el.dashRegistered.textContent  = String(snap.registered);
+    if (el.dashSlots)       el.dashSlots.textContent       = String(snap.slots);
+    if (el.dashOpenSlots)   el.dashOpenSlots.textContent   = String(snap.openSlots);
+    if (el.dashUtilization) el.dashUtilization.textContent = snap.utilization;
+  }
+
+  function renderDashboardDateRows(rows) {
+    if (!rows.length) {
+      if (el.dashDateEmpty) el.dashDateEmpty.style.display = "";
+      if (el.dashDateTbody) el.dashDateTbody.innerHTML     = "";
+      return;
+    }
+    if (el.dashDateEmpty) el.dashDateEmpty.style.display = "none";
+    if (el.dashDateTbody) el.dashDateTbody.innerHTML = rows.map(r => `<tr>
+      <td>${esc(r.playDate)}</td>
+      <td class="cdRight">${esc(String(r.games))}</td>
+      <td class="cdRight">${esc(String(r.registered))}</td>
+      <td class="cdRight">${esc(String(r.slots))}</td>
+      <td class="cdRight">${esc(String(r.openSlots))}</td>
+      <td class="cdRight">${esc(r.utilization)}</td>
+    </tr>`).join("");
+  }
+
+  function renderDashboardCourseRows(rows) {
+    if (!rows.length) {
+      if (el.dashCourseEmpty) el.dashCourseEmpty.style.display = "";
+      if (el.dashCourseTbody) el.dashCourseTbody.innerHTML     = "";
+      return;
+    }
+    if (el.dashCourseEmpty) el.dashCourseEmpty.style.display = "none";
+    if (el.dashCourseTbody) el.dashCourseTbody.innerHTML = rows.map(r => `<tr>
+      <td>${esc(r.courseName)}</td>
+      <td class="cdRight">${esc(String(r.games))}</td>
+      <td class="cdRight">${esc(String(r.registered))}</td>
+      <td class="cdRight">${esc(String(r.slots))}</td>
+      <td class="cdRight">${esc(String(r.openSlots))}</td>
+      <td class="cdRight">${esc(r.utilization)}</td>
+    </tr>`).join("");
+  }
+
+  function renderDashboardAdminRows(rows) {
+    if (!rows.length) {
+      if (el.dashAdminEmpty) el.dashAdminEmpty.style.display = "";
+      if (el.dashAdminTbody) el.dashAdminTbody.innerHTML     = "";
+      return;
+    }
+    if (el.dashAdminEmpty) el.dashAdminEmpty.style.display = "none";
+    if (el.dashAdminTbody) el.dashAdminTbody.innerHTML = rows.map(r => `<tr>
+      <td>${esc(r.administrator)}</td>
+      <td class="cdRight">${esc(String(r.games))}</td>
+      <td class="cdRight">${esc(String(r.registered))}</td>
+      <td class="cdRight">${esc(String(r.slots))}</td>
+      <td class="cdRight">${esc(String(r.openSlots))}</td>
+      <td class="cdRight">${esc(r.utilization)}</td>
+    </tr>`).join("");
+  }
+
+  function renderDashboardFlagRows(rows) {
+    if (!rows.length) {
+      if (el.dashFlagsEmpty) el.dashFlagsEmpty.style.display = "";
+      if (el.dashFlagsTbody) el.dashFlagsTbody.innerHTML     = "";
+      return;
+    }
+    if (el.dashFlagsEmpty) el.dashFlagsEmpty.style.display = "none";
+    if (el.dashFlagsTbody) el.dashFlagsTbody.innerHTML = rows.map(r => {
+      const pillClass = FLAG_PILL_CLASS[r.status] || "";
+      return `<tr>
+        <td><span class="cdStatusPill ${esc(pillClass)}">${esc(r.status)}</span></td>
+        <td>${esc(r.gameTitle)}</td>
+        <td>${esc(r.playDate)}</td>
+        <td>${esc(r.courseName)}</td>
+        <td class="cdRight">${esc(String(r.registered))}</td>
+        <td class="cdRight">${esc(String(r.slots))}</td>
+        <td class="cdRight">${esc(String(r.openSlots))}</td>
+      </tr>`;
+    }).join("");
+  }
+
+  function syncDashboardInputs() {
+    if (el.dashInputFrom) el.dashInputFrom.value = state.dashboardFilters.dateFrom || "";
+    if (el.dashInputTo)   el.dashInputTo.value   = state.dashboardFilters.dateTo   || "";
+  }
+
+  function applyDashboardFilter() {
+    const dateFrom = safeStr(el.dashInputFrom?.value);
+    const dateTo   = safeStr(el.dashInputTo?.value);
+    if (!dateFrom || !dateTo) { setStatus("Please select both a From and To date for the dashboard filter.", "warn"); return; }
+    if (dateFrom > dateTo)    { setStatus("From date must be before To date.", "warn"); return; }
+    state.dashboardFilters.dateFrom = dateFrom;
+    state.dashboardFilters.dateTo   = dateTo;
+    renderDashboard();
+    setStatus("Dashboard filter applied.", "ok");
+  }
+
+  function resetDashboardFilter() {
+    state.dashboardFilters.dateFrom = state.filters.dateFrom;
+    state.dashboardFilters.dateTo   = state.filters.dateTo;
+    renderDashboard();
+    setStatus("Dashboard filter reset.", "ok");
+  }
+
   function renderDashboard() {
-    // Implemented in next iteration
+    syncDashboardInputs();
+    const games      = getDashboardGames();
+    const snapshot   = buildDashboardSnapshot(games);
+    const dateRows   = buildDemandByDateRows(games);
+    const courseRows = buildDemandByCourseRows(games);
+    const flagRows   = buildCapacityFlagRows(games);
+    const adminRows  = buildDemandByAdminRows(games);
+
+    renderDashboardMetrics(snapshot);
+    renderDashboardDateRows(dateRows);
+    renderDashboardCourseRows(courseRows);
+    renderDashboardFlagRows(flagRows);
+    renderDashboardAdminRows(adminRows);
+
+    const label = dashboardRangeLabel();
+    if (el.dashFilterSub)  el.dashFilterSub.textContent  = `Filtered to ${label}`;
+    if (el.dashDateSub)    el.dashDateSub.textContent    = label;
+    if (el.dashCourseSub)  el.dashCourseSub.textContent  = label;
+    if (el.dashFlagsSub)   el.dashFlagsSub.textContent   = label;
+    if (el.dashAdminSub)   el.dashAdminSub.textContent   = label;
   }
 
   function renderFacilityOptions() {
@@ -1063,6 +1341,10 @@
     el.summaryTbody?.addEventListener("click", onSummaryBodyClick);
     el.playerTbody?.addEventListener("click", onPlayerBodyClick);
 
+    // Dashboard filter
+    el.dashApply?.addEventListener("click", applyDashboardFilter);
+    el.dashReset?.addEventListener("click", resetDashboardFilter);
+
     // Summary: group buttons
     document.querySelectorAll("[data-group]").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -1149,6 +1431,11 @@
     state.playerFilters = { ghin: "", localId: "", playerName: "", ggid: "", gameTitle: "", playDate: "", playTime: "", teeTime: "", courseName: "", administrator: "", registered: "" };
     state.playerSortKey = "playDateRaw";
     state.playerSortDir = "asc";
+
+    state.dashboardFilters = {
+      dateFrom: state.filters.dateFrom,
+      dateTo:   state.filters.dateTo,
+    };
   }
 
   // ── Boot ───────────────────────────────────────────────────────

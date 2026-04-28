@@ -174,13 +174,173 @@
   </div><!-- /cdViewPlayer -->
 
 
-  <!-- ── DASHBOARD VIEW ───────────────────────────────────────── -->
+<!-- ── DASHBOARD VIEW ───────────────────────────────────────── -->
   <div id="cdViewDashboard" class="cdView" style="display:none;"
        role="tabpanel" aria-labelledby="cdSegDashboard">
-    <div class="maEmptyState" id="cdDashboardPlaceholder">
-      Dashboard — coming soon
+
+    <!-- Dashboard filter card -->
+    <section class="maCard" aria-label="Dashboard Filter">
+      <header class="maCard__hdr">
+        <div class="maCard__title">DASHBOARD FILTER</div>
+        <div class="cdCardSub" id="cdDashboardFilterSub"></div>
+      </header>
+      <div class="maCard__body">
+        <div class="maFieldRow">
+          <div class="maField maField--inlineLabel">
+            <label class="maLabel" for="cdDashInputFrom">From</label>
+            <div class="maInputWrap">
+              <input type="date" class="maTextInput" id="cdDashInputFrom" />
+            </div>
+          </div>
+          <div class="maField maField--inlineLabel">
+            <label class="maLabel" for="cdDashInputTo">To</label>
+            <div class="maInputWrap">
+              <input type="date" class="maTextInput" id="cdDashInputTo" />
+            </div>
+          </div>
+          <div class="maField cdDashboardFilterActions">
+            <button type="button" class="btn btnSecondary" id="cdDashApply">Apply</button>
+            <button type="button" class="btn btnPrimary"   id="cdDashReset">Reset</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- KPI metrics -->
+    <div class="cdMetricRow cdMetricRow--controls cdMetricRow--dash">
+      <div class="cdMetric">
+        <div class="cdMetricLabel">GAMES</div>
+        <div class="cdMetricValue" id="cdDashGames">—</div>
+      </div>
+      <div class="cdMetric">
+        <div class="cdMetricLabel">REGISTERED</div>
+        <div class="cdMetricValue" id="cdDashRegistered">—</div>
+      </div>
+      <div class="cdMetric">
+        <div class="cdMetricLabel">SLOTS</div>
+        <div class="cdMetricValue" id="cdDashSlots">—</div>
+      </div>
+      <div class="cdMetric">
+        <div class="cdMetricLabel">OPEN SLOTS</div>
+        <div class="cdMetricValue" id="cdDashOpenSlots">—</div>
+      </div>
+      <div class="cdMetric">
+        <div class="cdMetricLabel">UTILIZATION</div>
+        <div class="cdMetricValue" id="cdDashUtilization">—</div>
+      </div>
     </div>
-  </div>
+
+    <!-- Dashboard content grid -->
+    <div class="cdDashboardGrid">
+
+      <!-- A. Demand by Date -->
+      <section class="maCard" aria-label="Demand by Date">
+        <header class="maCard__hdr">
+          <div class="maCard__title">DEMAND BY DATE</div>
+          <div class="cdCardSub" id="cdDashDateSub"></div>
+        </header>
+        <div class="maCard__body">
+          <div class="cdTableWrap">
+            <table class="cdTable">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th class="cdRight">Games</th>
+                  <th class="cdRight">Registered</th>
+                  <th class="cdRight">Slots</th>
+                  <th class="cdRight">Open</th>
+                  <th class="cdRight">Utilization</th>
+                </tr>
+              </thead>
+              <tbody id="cdDashDateTbody"></tbody>
+            </table>
+          </div>
+          <div class="maHint" id="cdDashDateEmpty" style="display:none;">No games found for this date range.</div>
+        </div>
+      </section>
+
+      <!-- B. Demand by Course -->
+      <section class="maCard" aria-label="Demand by Course">
+        <header class="maCard__hdr">
+          <div class="maCard__title">DEMAND BY COURSE</div>
+          <div class="cdCardSub" id="cdDashCourseSub"></div>
+        </header>
+        <div class="maCard__body">
+          <div class="cdTableWrap">
+            <table class="cdTable">
+              <thead>
+                <tr>
+                  <th>Course</th>
+                  <th class="cdRight">Games</th>
+                  <th class="cdRight">Registered</th>
+                  <th class="cdRight">Slots</th>
+                  <th class="cdRight">Open</th>
+                  <th class="cdRight">Utilization</th>
+                </tr>
+              </thead>
+              <tbody id="cdDashCourseTbody"></tbody>
+            </table>
+          </div>
+          <div class="maHint" id="cdDashCourseEmpty" style="display:none;">No course data available.</div>
+        </div>
+      </section>
+
+      <!-- C. Capacity Flags -->
+      <section class="maCard" aria-label="Capacity Flags">
+        <header class="maCard__hdr">
+          <div class="maCard__title">CAPACITY FLAGS</div>
+          <div class="cdCardSub" id="cdDashFlagsSub"></div>
+        </header>
+        <div class="maCard__body">
+          <div class="cdTableWrap">
+            <table class="cdTable">
+              <thead>
+                <tr>
+                  <th>Status</th>
+                  <th>Game</th>
+                  <th>Date</th>
+                  <th>Course</th>
+                  <th class="cdRight">Registered</th>
+                  <th class="cdRight">Slots</th>
+                  <th class="cdRight">Open</th>
+                </tr>
+              </thead>
+              <tbody id="cdDashFlagsTbody"></tbody>
+            </table>
+          </div>
+          <div class="maHint" id="cdDashFlagsEmpty" style="display:none;">No capacity flags for this date range.</div>
+        </div>
+      </section>
+
+      <!-- D. Demand by Administrator -->
+      <section class="maCard" aria-label="Demand by Administrator">
+        <header class="maCard__hdr">
+          <div class="maCard__title">DEMAND BY ADMINISTRATOR</div>
+          <div class="cdCardSub" id="cdDashAdminSub"></div>
+        </header>
+        <div class="maCard__body">
+          <div class="cdTableWrap">
+            <table class="cdTable">
+              <thead>
+                <tr>
+                  <th>Administrator</th>
+                  <th class="cdRight">Games</th>
+                  <th class="cdRight">Registered</th>
+                  <th class="cdRight">Slots</th>
+                  <th class="cdRight">Open</th>
+                  <th class="cdRight">Utilization</th>
+                </tr>
+              </thead>
+              <tbody id="cdDashAdminTbody"></tbody>
+            </table>
+          </div>
+          <div class="maHint" id="cdDashAdminEmpty" style="display:none;">No administrator data available.</div>
+        </div>
+      </section>
+
+    </div><!-- /cdDashboardGrid -->
+
+  </div><!-- /cdViewDashboard -->
 
 </main><!-- /maPage -->
 

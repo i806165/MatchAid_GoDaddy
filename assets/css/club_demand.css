@@ -176,3 +176,70 @@
 
 /* ===== Views ===== */
 .cdView { display: block; }
+
+/* ===== Dashboard ===== */
+
+.cdDashboardGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+@media (max-width: 760px) {
+  .cdDashboardGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.cdDashboardFilterActions {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  justify-content: flex-end;
+  min-width: 180px;
+}
+
+/* Five-column KPI row override for dashboard */
+.cdMetricRow--dash {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+@media (max-width: 600px) {
+  .cdMetricRow--dash {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Status pills */
+.cdStatusPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.cdStatusPill--overfilled {
+  background: var(--dangerBg, #fde8e8);
+  color: var(--danger, #c0392b);
+}
+
+.cdStatusPill--full {
+  background: var(--brandPrimaryBg);
+  color: var(--brandPrimary);
+}
+
+.cdStatusPill--nearfull {
+  background: var(--warnBg, #fef3cd);
+  color: var(--warn, #856404);
+}
+
+.cdStatusPill--softdemand {
+  background: var(--surfaceChrome);
+  color: var(--inkMuted);
+}
