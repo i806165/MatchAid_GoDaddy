@@ -53,9 +53,11 @@ function hydrateClubDemand(array $context, array $filters): array {
     if ($dateTo   === "") $dateTo   = $plus30->format("Y-m-d");
   }
 
-  // ----------------------------------------------------------------
+  // Default to user's home facility from session if none explicitly selected
+  if (empty($filters["facilityId"])) {
+      $filters["facilityId"] = trim(strval($_SESSION["SessionFacilityID"] ?? ""));
+  }
   // Resolve facility access / selected facility
-  // ----------------------------------------------------------------
   $facilityCtx = cdResolveClubDemandFacilityContext($userGHIN, $filters);
 
   if (empty($facilityCtx["authorized"])) {
@@ -146,7 +148,7 @@ function hydrateClubDemand(array $context, array $filters): array {
           CAST(dbPlayers_GGID       AS CHAR) AS ggid,
           CAST(dbPlayers_PlayerGHIN AS CHAR) AS ghin,
           CAST(dbPlayers_LocalID    AS CHAR) AS localId,
-          dbPlayers_Name                      AS firstName,
+          dbPlayers_Name                      AS fullName,
           dbPlayers_LName                     AS lastName,
           dbPlayers_HI                        AS hi,
           dbPlayers_TeeTime AS teetime,
@@ -168,7 +170,7 @@ function hydrateClubDemand(array $context, array $filters): array {
         $playersByGGID[$g][] = [
           "ghin"      => strval($row["ghin"]      ?? ""),
           "localId"   => strval($row["localId"]   ?? ""),
-          "firstName" => strval($row["firstName"] ?? ""),
+          "fullName" => strval($row["fullName"] ?? ""),
           "lastName"  => strval($row["lastName"]  ?? ""),
           "registeredDate" => strval($row["registeredDate"] ?? ""),
           "teetime" => strval($row["teetime"] ?? ""),

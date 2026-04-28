@@ -184,43 +184,41 @@
   }
 
   // ── Player aggregation (client-side, no DB) ────────────────────
-  function buildPlayerAggregates() {
-    // Aggregate across all games in state.games
-    // Keyed by GHIN; each entry accumulates rounds, courses, admins, dates
-    const map = {};
+    function buildPlayerAggregates() {
+      const map = {};
 
-    for (const g of state.games) {
-      const courseName = safeStr(g.courseName) || "—";
-      const adminName  = safeStr(g.adminName)  || "—";
-      const playDate   = safeStr(g.playDate);
+      for (const g of state.games) {
+        const courseName = safeStr(g.courseName) || "—";
+        const adminName  = safeStr(g.adminName)  || "—";
+        const playDate   = safeStr(g.playDate);
 
-      for (const p of (g.players || [])) {
-        const ghin = safeStr(p.ghin);
-        if (!ghin) continue;
+        for (const p of (g.players || [])) {
+          const ghin = safeStr(p.ghin);
+          if (!ghin) continue;
 
-        if (!map[ghin]) {
-          map[ghin] = {
-            ghin,
-            name:      `${safeStr(p.lastName)}, ${safeStr(p.firstName)}`.replace(/^,\s*/, ""),
-            rounds:    0,
-            courses:   new Set(),
-            admins:    new Set(),
-            firstGame: playDate,
-            lastGame:  playDate,
-          };
+          if (!map[ghin]) {
+            map[ghin] = {
+              ghin,
+              name:      safeStr(p.fullName) || "—",
+              rounds:    0,
+              courses:   new Set(),
+              admins:    new Set(),
+              firstGame: playDate,
+              lastGame:  playDate,
+            };
+          }
+
+          const entry = map[ghin];
+          entry.rounds++;
+          if (courseName) entry.courses.add(courseName);
+          if (adminName)  entry.admins.add(adminName);
+          if (playDate && playDate < entry.firstGame) entry.firstGame = playDate;
+          if (playDate && playDate > entry.lastGame)  entry.lastGame  = playDate;
         }
-
-        const entry = map[ghin];
-        entry.rounds++;
-        if (courseName) entry.courses.add(courseName);
-        if (adminName)  entry.admins.add(adminName);
-        if (playDate && playDate < entry.firstGame) entry.firstGame = playDate;
-        if (playDate && playDate > entry.lastGame)  entry.lastGame  = playDate;
       }
-    }
 
-    return Object.values(map);
-  }
+      return Object.values(map);
+    }
 
   function setView(view) {
     state.view = view;
@@ -328,49 +326,45 @@
   }
 
   function buildPlayerDetailRows() {
-    const rows = [];
+      const rows = [];
 
-    for (const g of state.games) {
-      const playDateRaw = safeStr(g.playDate);
-      const playDateYMD = ymdOnly(playDateRaw) || playDateRaw;
+      for (const g of state.games) {
+        const playDateRaw = safeStr(g.playDate);
+        const playDateYMD = ymdOnly(playDateRaw) || playDateRaw;
 
-      for (const p of (g.players || [])) {
-        const firstName = safeStr(p.firstName);
-        const lastName  = safeStr(p.lastName);
-        const playerName = `${lastName}, ${firstName}`.replace(/^,\s*/, "") || "—";
+        for (const p of (g.players || [])) {
+          const playerName  = safeStr(p.fullName)  || "—";
+          const lastNameRaw = safeStr(p.lastName);
 
-        const registeredRaw = safeStr(p.registeredDate);
-        const registeredYMD = ymdOnly(registeredRaw);
-        const varianceDays  = diffDays(registeredRaw, playDateRaw);
+          const registeredRaw = safeStr(p.registeredDate);
+          const registeredYMD = ymdOnly(registeredRaw);
+          const varianceDays  = diffDays(registeredRaw, playDateRaw);
 
-        rows.push({
-          ghin:          dash(p.ghin),
-          localId:       dash(p.localId),
-          playerName:    playerName,
-          ggid:          dash(g.ggid),
-          gameTitle:     dash(g.title),
-          playDateRaw:   playDateYMD,
-          playDate:      fmtDateShort(playDateYMD),
-          playTimeRaw:   safeStr(g.playTime),
-          playTime:      fmtTime(g.playTime),
-          teeTimeRaw:    safeStr(p.teetime),
-          teeTime:       fmtTime(p.teetime),
-          courseName:    dash(g.courseName),
-          administrator: dash(g.adminName),
-          registeredRaw: registeredYMD,
-          registered:    registeredYMD ? fmtDateShort(registeredYMD) : "—",
-          varianceDays:  varianceDays === "" ? "—" : String(varianceDays),
-
-          source: {
-            game: g,
-            player: p,
-          },
-        });
+          rows.push({
+            ghin:          dash(p.ghin),
+            localId:       dash(p.localId),
+            playerName:    playerName,
+            lastNameRaw:   lastNameRaw,
+            ggid:          dash(g.ggid),
+            gameTitle:     dash(g.title),
+            playDateRaw:   playDateYMD,
+            playDate:      fmtDateShort(playDateYMD),
+            playTimeRaw:   safeStr(g.playTime),
+            playTime:      fmtTime(g.playTime),
+            teeTimeRaw:    safeStr(p.teetime),
+            teeTime:       fmtTime(p.teetime),
+            courseName:    dash(g.courseName),
+            administrator: dash(g.adminName),
+            registeredRaw: registeredYMD,
+            registered:    registeredYMD ? fmtDateShort(registeredYMD) : "—",
+            varianceDays:  varianceDays === "" ? "—" : String(varianceDays),
+            source: { game: g, player: p },
+          });
+        }
       }
-    }
 
-    return rows;
-}
+      return rows;
+    }
 
   function buildSummaryRowHtml(r) {
   return `<tr>
@@ -811,8 +805,9 @@
   }
 
   function applyPlayerSort(rows) {
-    const key = state.playerSortKey || "playDateRaw";
-    const dir = state.playerSortDir === "desc" ? -1 : 1;
+    const sortKey = state.playerSortKey || "playDateRaw";
+    const key     = sortKey === "playerName" ? "lastNameRaw" : sortKey;
+    const dir     = state.playerSortDir === "desc" ? -1 : 1;
 
     return [...rows].sort((a, b) => {
       const av = a[key];

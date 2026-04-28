@@ -148,6 +148,23 @@ public static function getUserContext(): ?array {
     if ($assocName !== "") $_SESSION["SessionAdminAssocName"] = $assocName;
     if ($clubId !== "")    $_SESSION["SessionAdminClubID"]    = $clubId;
     if ($clubName !== "")  $_SESSION["SessionAdminClubName"]  = $clubName;
+
+        // Extract default facility from profile
+    $facilityId   = "";
+    $facilityName = "";
+
+    $facilities = is_array($profile)
+        ? ($profile["profileJson"]["facilityJson"]["facilities"] ?? null)
+        : null;
+
+    if (is_array($facilities) && !empty($facilities)) {
+        $facilityId   = trim(strval($facilities[0]["facility_id"] ?? ""));
+        $facilityName = trim(strval($facilities[0]["name"]        ?? ""));
+    }
+
+    if ($facilityId !== "") $_SESSION["SessionFacilityID"]   = $facilityId;
+    if ($facilityName !== "") $_SESSION["SessionFacilityName"] = $facilityName;
+
     $prefYards = self::decodePreferenceYards($userRow["dbUser_PreferenceYards"] ?? null);
     if ($prefYards !== null) $_SESSION["SessionPreferenceYards"] = $prefYards;
     else unset($_SESSION["SessionPreferenceYards"]);
