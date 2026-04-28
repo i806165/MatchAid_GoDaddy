@@ -12,6 +12,8 @@ $auth     = ma_api_require_auth();
 $userGhin = $auth["ghinId"];
 $body     = ma_json_in();
 $ggid     = isset($body["ggid"]) ? (int)$body["ggid"] : 0;
+$config  = ma_config();
+$siteUrl = $config["app"]["site_url"];
 
 // ── Carrier gateway map ───────────────────────────────────────────────────────
 // Resolves dbUser_MobileCarrier → SMS-to-email gateway domain.
@@ -192,6 +194,7 @@ try {
     //   false → "Game players" tab suppressed entirely
     ma_respond(200, [
         "ok"             => true,
+        "siteUrl"        => $siteUrl, 
         "hasGameContext" => $game !== null,
         "game"           => $game !== null ? [
             "ggid"         => (int)($game["dbGames_GGID"]        ?? 0),

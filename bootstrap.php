@@ -112,6 +112,8 @@ function ma_config(): array {
   global $MA_CONFIG;
   return is_array($MA_CONFIG) ? $MA_CONFIG : [];
 }
+define('MA_SITE_URL', ma_config()['app']['site_url'] ?? 'https://www.matchaid.org');
+
 require_once MA_API_LIB . '/Db.php';
 Db::init(ma_config()['db'] ?? []);
 

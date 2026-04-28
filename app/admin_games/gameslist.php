@@ -108,6 +108,7 @@ $paths = [
   "apiSession"    => MA_ROUTE_API_SESSION,
   "routerApi"     => MA_ROUTE_API_ROUTER,
   "apiNotify"     => MA_ROUTE_API_MESSAGING, 
+  "siteUrl"       => MA_SITE_URL,
 ];
 
 // Chrome values
