@@ -75,22 +75,17 @@
     </div>
   </div>
 
-  <!-- Row 3b: Player detail view controls (sort + filter) -->
+  <!-- Row 3b: Player detail view controls (group by) -->
   <div class="cdSortRow" id="cdSortPlayer" hidden>
     <div class="cdSortGroup">
-      <span class="cdSortLabel">Sort</span>
-      <div class="maSeg cdSortSeg" role="group" aria-label="Sort players by">
-        <button type="button" class="maSegBtn is-active" data-psort="rounds">Rounds</button>
-        <button type="button" class="maSegBtn"           data-psort="name">Name</button>
-        <button type="button" class="maSegBtn"           data-psort="lastgame">Last Game</button>
-      </div>
-    </div>
-    <div class="cdSortGroup">
-      <span class="cdSortLabel">Filter</span>
-      <div class="maSeg cdSortSeg" role="group" aria-label="Filter players">
-        <button type="button" class="maSegBtn is-active" data-pfilter="all">All</button>
-        <button type="button" class="maSegBtn"           data-pfilter="multicourse">Multi-Course</button>
-        <button type="button" class="maSegBtn"           data-pfilter="singlegame">Single Game</button>
+      <span class="cdSortLabel">Group</span>
+      <div class="maSeg cdSortSeg" role="group" aria-label="Group player detail by">
+        <button type="button" class="maSegBtn is-active" data-pgroup="game">Game</button>
+        <button type="button" class="maSegBtn"           data-pgroup="date">Date</button>
+        <button type="button" class="maSegBtn"           data-pgroup="course">Course</button>
+        <button type="button" class="maSegBtn"           data-pgroup="admin">Admin</button>
+        <button type="button" class="maSegBtn"           data-pgroup="player">Player</button>
+        <button type="button" class="maSegBtn"           data-pgroup="none">None</button>
       </div>
     </div>
   </div>

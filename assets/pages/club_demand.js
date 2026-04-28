@@ -50,6 +50,7 @@
     },
     summarySortKey: "playDateRaw",
     summarySortDir: "asc",
+    playerGroupBy:  "game",  
   };
 
   // ── DOM map ────────────────────────────────────────────────────
@@ -270,6 +271,17 @@
     }
   }
 
+  function getPlayerGroupFn() {
+    switch (state.playerGroupBy) {
+      case "game":   return (r) => `${r.ggid} · ${r.gameTitle}`;
+      case "date":   return (r) => r.playDate;
+      case "course": return (r) => r.courseName;
+      case "admin":  return (r) => r.administrator;
+      case "player": return (r) => r.playerName;
+      default:       return ()  => null;
+    }
+  }
+
   function buildSummarySubtitle(visibleRows, allRows) {
     const grp = { month:"Month", course:"Course", admin:"Admin", none:"None" }[state.groupBy] || "None";
     const sortLabel = labelForSummaryKey(state.summarySortKey);
@@ -351,8 +363,8 @@
             playDate:      fmtDateShort(playDateYMD),
             playTimeRaw:   safeStr(g.playTime),
             playTime:      fmtTime(g.playTime),
-            teeTimeRaw:    safeStr(p.teetime),
-            teeTime:       fmtTime(p.teetime),
+            teeTimeRaw: safeStr(p.teetime),
+            teeTime:    dash(p.teetime),
             courseName:    dash(g.courseName),
             administrator: dash(g.adminName),
             registeredRaw: registeredYMD,
@@ -574,13 +586,30 @@
 
     if (el.playerEmpty) el.playerEmpty.style.display = "none";
 
-    const html = rows.map(r => buildPlayerRowHtml(r)).join("");
+    const groupFn = getPlayerGroupFn();
+    let html = "";
 
-    if (el.playerTbody) el.playerTbody.innerHTML = html;
-
-    if (el.playerCardSub) {
-      el.playerCardSub.textContent = buildPlayerSubtitle(rows, allRows);
+    if (state.playerGroupBy === "none") {
+      for (const r of rows) {
+        html += buildPlayerRowHtml(r);
+      }
+    } else {
+      const groups = new Map();
+      for (const r of rows) {
+        const key = groupFn(r) || "—";
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(r);
+      }
+      for (const [grp, groupRows] of groups.entries()) {
+        html += `<tr class="cdGroupHdr"><td colspan="12">${esc(grp)}</td></tr>`;
+        for (const r of groupRows) {
+          html += buildPlayerRowHtml(r);
+        }
+      }
     }
+
+    if (el.playerTbody)   el.playerTbody.innerHTML     = html;
+    if (el.playerCardSub) el.playerCardSub.textContent = buildPlayerSubtitle(rows, allRows);
   }
 
   // ── Dashboard (stub) ───────────────────────────────────────────
@@ -1041,6 +1070,16 @@
         btn.classList.add("is-active");
         state.groupBy = btn.dataset.group;
         renderSummary();
+      });
+    });
+
+    // Player: group buttons
+    document.querySelectorAll("[data-pgroup]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("[data-pgroup]").forEach(b => b.classList.remove("is-active"));
+        btn.classList.add("is-active");
+        state.playerGroupBy = btn.dataset.pgroup;
+        renderPlayer();
       });
     });
 
