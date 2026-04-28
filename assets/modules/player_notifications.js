@@ -38,11 +38,12 @@
 
   // ── State ────────────────────────────────────────────────────────────────────
   let _state = {
-    opts:      {},
-    data:      null,
-    activeTab: "game",
-    selected:  new Set(),
-    favFilter: "all",
+    opts:        {},
+    data:        null,
+    activeTab:   "game",
+    selected:    new Set(),
+    favFilter:   "all",
+    outlookMode: false,   // toggles recipient separator: false=comma, true=semicolon
   };
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -114,6 +115,7 @@
     _state.opts      = opts;
     _state.selected  = new Set();
     _state.favFilter = "all";
+    _state.outlookMode = false;
 
     _destroyOverlay();
     _renderOverlay(_html_skeleton());
@@ -153,8 +155,9 @@
 
   MA.notify.close = function () {
     _destroyOverlay();
-    _state.data     = null;
-    _state.selected = new Set();
+    _state.data        = null;
+    _state.selected    = new Set();
+    _state.outlookMode = false;
     document.documentElement.classList.remove("maOverlayOpen");
     if (typeof _state.opts.onClose === "function") _state.opts.onClose();
   };
@@ -263,18 +266,29 @@
         ${gamePanel}
         ${favsPanel}
       </div>
-      <footer class="maModal__ftr" style="flex-direction:column; gap:6px;">
-        <div id="ma-notify-summary"
-             style="font-size:12px; font-weight:800; color:var(--mutedText);"></div>
-        <div style="display:flex; gap:8px;">
-          <button type="button" id="ma-notify-btn-sms" class="maFtrBtn"
-                  style="flex:0 0 auto; min-width:110px; background:#fff;
-                         color:var(--brandSecondary); border:1px solid var(--brandSecondary);"
-                  disabled>
-            Send SMS
-          </button>
+      <footer class="maModal__ftr" style="flex-direction:column; gap:8px;">
+        <div style="font-size:10px; font-weight:800; color:var(--mutedText); opacity:.8;">
+          Use Outlook toggle to separate recipients with semicolons instead of commas.
+        </div>
+        <div style="display:flex; align-items:center; justify-content:flex-end; gap:12px;">
+          <div style="display:flex; align-items:center; gap:7px;">
+            <span style="font-size:12px; font-weight:800; color:var(--mutedText);">Outlook</span>
+            <div id="ma-notify-client-track"
+                 style="position:relative; width:40px; height:22px; border-radius:99px;
+                        background:var(--borderSubtle); cursor:pointer; flex-shrink:0;
+                        transition:background .2s;">
+              <div id="ma-notify-client-thumb"
+                   style="position:absolute; top:3px; left:3px; width:16px; height:16px;
+                          border-radius:50%; background:#fff; transition:left .2s;
+                          pointer-events:none; box-shadow:0 1px 3px rgba(0,0,0,.2);">
+              </div>
+            </div>
+            <span style="font-size:12px; font-weight:800; color:var(--mutedText);">Other</span>
+          </div>
           <button type="button" id="ma-notify-btn-email"
-                  class="maFtrBtn maFtrBtn--save" disabled>
+                  class="maFtrBtn maFtrBtn--save"
+                  style="flex:0 0 auto; min-width:120px;"
+                  disabled>
             Open email
           </button>
         </div>
@@ -369,14 +383,12 @@
     const selected    = _state.selected.has(player.ghin);
     const method      = safeStr(player.deliveryMethod);
 
-    // Badge colours using app tokens
     const badgeStyle = method === "SMS"
       ? "background:#E1F5EE; color:#085041;"
       : method === "Email"
         ? "background:var(--brandPrimaryBg); color:var(--brandPrimary);"
         : "background:var(--pressedBg); color:var(--mutedText);";
 
-    // Checkbox using brandSecondary when selected (matches maAdminRow__check.on)
     const checkStyle = selected
       ? "background:var(--brandSecondary); border-color:var(--brandSecondary); color:#fff;"
       : "background:#fff; border-color:var(--borderSubtle); color:var(--mutedText);";
@@ -445,16 +457,13 @@
       });
     });
 
-    // Row selection (event delegation on the body area)
+    // Row selection + select-all (event delegation)
     overlay.addEventListener("click", function (e) {
-      // Select all button
       const selAllBtn = e.target.closest("[data-selall]");
       if (selAllBtn) {
         _handleSelectAll(selAllBtn.dataset.selall);
         return;
       }
-
-      // Player row toggle
       const row = e.target.closest(".ma-notify-row");
       if (row && !row.classList.contains("ma-notify-unreachable")) {
         _toggleRow(row);
@@ -471,11 +480,24 @@
       });
     }
 
-    // Send buttons
+    // Outlook toggle
+    const track = overlay.querySelector("#ma-notify-client-track");
+    if (track) {
+      track.addEventListener("click", function () {
+        _state.outlookMode = !_state.outlookMode;
+        const thumb = overlay.querySelector("#ma-notify-client-thumb");
+        track.style.background = _state.outlookMode
+          ? "var(--brandSecondary)"
+          : "var(--borderSubtle)";
+        if (thumb) {
+          thumb.style.left = _state.outlookMode ? "21px" : "3px";
+        }
+      });
+    }
+
+    // Send button
     const btnEmail = overlay.querySelector("#ma-notify-btn-email");
-    const btnSms   = overlay.querySelector("#ma-notify-btn-sms");
-    if (btnEmail) btnEmail.addEventListener("click", function () { _send("email"); });
-    if (btnSms)   btnSms.addEventListener("click",   function () { _send("sms"); });
+    if (btnEmail) btnEmail.addEventListener("click", function () { _send(); });
   }
 
   function _toggleRow(row) {
@@ -522,7 +544,6 @@
     });
   }
 
-  // Re-render a single row in place after selection changes
   function _refreshRow(row, ghin) {
     const allPlayers = [
       ...(_state.data.gamePlayers || []),
@@ -546,33 +567,14 @@
       ...(_state.data.favorites   || []),
     ];
 
-    let emailCount = 0;
-    let smsCount   = 0;
+    let total = 0;
     _state.selected.forEach(function (ghin) {
       const p = allPlayers.find(function (x) { return x.ghin === ghin; });
-      if (!p) return;
-      if (p.deliveryMethod === "SMS")   smsCount++;
-      if (p.deliveryMethod === "Email") emailCount++;
+      if (p && p.deliveryMethod) total++;
     });
 
-    const total   = emailCount + smsCount;
-    const summary = overlay.querySelector("#ma-notify-summary");
-    if (summary) {
-      if (total === 0) {
-        summary.textContent = "No recipients selected";
-      } else {
-        const parts = [];
-        if (emailCount > 0) parts.push(emailCount + " email");
-        if (smsCount   > 0) parts.push(smsCount   + " SMS");
-        summary.textContent = total + " recipient" + (total === 1 ? "" : "s") +
-                              " \u2014 " + parts.join(", ");
-      }
-    }
-
     const btnEmail = overlay.querySelector("#ma-notify-btn-email");
-    const btnSms   = overlay.querySelector("#ma-notify-btn-sms");
     if (btnEmail) btnEmail.disabled = (total === 0);
-    if (btnSms)   btnSms.disabled   = (smsCount === 0);
   }
 
   function _updateCounts() {
@@ -589,7 +591,7 @@
 
   // ── Send ──────────────────────────────────────────────────────────────────────
 
-function _send(mode) {
+  function _send() {
     const allPlayers = [
       ...(_state.data.gamePlayers || []),
       ...(_state.data.favorites   || []),
@@ -601,8 +603,6 @@ function _send(mode) {
     _state.selected.forEach(function (ghin) {
       const p = allPlayers.find(function (x) { return x.ghin === ghin; });
       if (!p || !p.deliveryEmail || !p.deliveryMethod) return;
-      if (mode === "sms"   && p.deliveryMethod !== "SMS")  return;
-      if (mode === "email" && !p.deliveryMethod)            return;
       if (seen.has(p.deliveryEmail)) return;
       seen.add(p.deliveryEmail);
       recipients.push({ name: p.name, email: p.deliveryEmail });
@@ -610,7 +610,7 @@ function _send(mode) {
 
     if (!recipients.length) return;
 
-    // Build subject and body from game context if available
+    // Build subject and body
     let subject = "";
     let body    = "";
     const game    = _state.data.game;
@@ -627,7 +627,13 @@ function _send(mode) {
     }
 
     if (MA.email && typeof MA.email.compose === "function") {
-      MA.email.compose({ bcc: recipients, subject: subject, body: body, bodyIsHtml: false });
+      MA.email.compose({
+        bcc:                recipients,
+        subject:            subject,
+        body:               body,
+        bodyIsHtml:         false,
+        recipientSeparator: _state.outlookMode ? ";" : ",",
+      });
       MA.notify.close();
     } else {
       console.error("[MA.notify] MA.email.compose not available.");
@@ -635,7 +641,6 @@ function _send(mode) {
   }
 
   // ── Minimal scoped CSS ────────────────────────────────────────────────────────
-  // Only structural rules not provided by ma_shared.css
 
   (function _injectStyles() {
     if (document.getElementById("ma-notify-styles")) return;
