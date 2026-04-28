@@ -43,7 +43,7 @@
     activeTab:   "game",
     selected:    new Set(),
     favFilter:   "all",
-    outlookMode: false,   // toggles recipient separator: false=comma, true=semicolon
+    outlookMode: false,   // false = commas, true = semicolons
   };
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -262,6 +262,10 @@
     return `
       ${_html_hdr("Send message", subtitle)}
       ${tabBar}
+      <div class="maModal__body" style="padding:0; background:var(--surfaceApp);">
+        ${gamePanel}
+        ${favsPanel}
+      </div>
       <footer class="maModal__ftr" style="flex-direction:column; gap:10px;">
         <div style="font-size:12px; font-weight:800; color:var(--mutedText);">
           Separate recipients with:
@@ -271,9 +275,9 @@
             <label style="display:flex; align-items:center; gap:8px;
                           font-size:12px; font-weight:800; color:var(--ink); cursor:pointer;">
               <input type="radio" id="ma-notify-sep-comma" name="ma-notify-sep"
-                    value="," checked
-                    style="width:16px; height:16px; accent-color:var(--brandSecondary); cursor:pointer;">
-              Commas &nbsp;
+                     value="," checked
+                     style="width:16px; height:16px; accent-color:var(--brandSecondary); cursor:pointer;">
+              Commas
               <span style="font-weight:800; color:var(--mutedText); font-size:11px;">
                 Gmail, Apple Mail, most clients
               </span>
@@ -281,9 +285,9 @@
             <label style="display:flex; align-items:center; gap:8px;
                           font-size:12px; font-weight:800; color:var(--ink); cursor:pointer;">
               <input type="radio" id="ma-notify-sep-semi" name="ma-notify-sep"
-                    value=";"
-                    style="width:16px; height:16px; accent-color:var(--brandSecondary); cursor:pointer;">
-              Semicolons &nbsp;
+                     value=";"
+                     style="width:16px; height:16px; accent-color:var(--brandSecondary); cursor:pointer;">
+              Semicolons
               <span style="font-weight:800; color:var(--mutedText); font-size:11px;">
                 Outlook
               </span>
@@ -445,7 +449,7 @@
     const overlay = document.getElementById(OVERLAY_ID);
     if (!overlay) return;
 
-    // Tab switching
+    // Tab switching — updates button styles AND toggles panel visibility
     overlay.querySelectorAll(".ma-notify-tab").forEach(function (tab) {
       tab.addEventListener("click", function () {
         _state.activeTab = tab.dataset.tab;
@@ -454,13 +458,17 @@
           t.style.borderBottomColor = on ? "var(--brandAccent)" : "transparent";
           t.style.color             = on ? "var(--brandAccent)" : "var(--mutedText)";
         });
-        // Separator radio buttons
-        overlay.querySelectorAll("input[name='ma-notify-sep']").forEach(function (radio) {
-          radio.addEventListener("change", function () {
-            _state.outlookMode = (radio.value === ";");
-          });
+        overlay.querySelectorAll(".ma-notify-panel").forEach(function (p) {
+          p.classList.toggle("is-active", p.dataset.panel === _state.activeTab);
         });
         _updateCounts();
+      });
+    });
+
+    // Separator radio buttons — wired at top level so they work immediately on open
+    overlay.querySelectorAll("input[name='ma-notify-sep']").forEach(function (radio) {
+      radio.addEventListener("change", function () {
+        _state.outlookMode = (radio.value === ";");
       });
     });
 
@@ -484,21 +492,6 @@
         _state.favFilter = groupSel.value;
         _applyGroupFilter();
         _updateFooter();
-      });
-    }
-
-    // Outlook toggle
-    const track = overlay.querySelector("#ma-notify-client-track");
-    if (track) {
-      track.addEventListener("click", function () {
-        _state.outlookMode = !_state.outlookMode;
-        const thumb = overlay.querySelector("#ma-notify-client-thumb");
-        track.style.background = _state.outlookMode
-          ? "var(--brandSecondary)"
-          : "var(--borderSubtle)";
-        if (thumb) {
-          thumb.style.left = _state.outlookMode ? "21px" : "3px";
-        }
       });
     }
 
@@ -629,7 +622,6 @@
       subject     = [game.title, venue, when].filter(Boolean).join(" \u2014 ");
       body        = siteUrl + "/game/" + game.ggid;
     } else {
-      subject     = "Subject:";
       body        = "Attention players;";
     }
 
@@ -648,6 +640,7 @@
   }
 
   // ── Minimal scoped CSS ────────────────────────────────────────────────────────
+  // Only structural rules not provided by ma_shared.css
 
   (function _injectStyles() {
     if (document.getElementById("ma-notify-styles")) return;
