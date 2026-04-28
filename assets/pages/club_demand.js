@@ -126,6 +126,26 @@
     return m ? `${m[2]}/${m[3]}/${String(m[1]).slice(-2)}` : ymd;
   }
 
+  function ymdOnly(v) {
+    const s = safeStr(v);
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? `${m[1]}-${m[2]}-${m[3]}` : "";
+  }
+
+  function diffDays(fromDate, toDate) {
+    const fromYMD = ymdOnly(fromDate);
+    const toYMD   = ymdOnly(toDate);
+
+    if (!fromYMD || !toYMD) return "";
+
+    const from = new Date(`${fromYMD}T00:00:00`);
+    const to   = new Date(`${toYMD}T00:00:00`);
+
+    if (isNaN(from.getTime()) || isNaN(to.getTime())) return "";
+
+    return Math.round((to.getTime() - from.getTime()) / 86400000);
+  }
+
   function fmtPill(ymd) {
     if (!ymd) return "—";
     const m = String(ymd).match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -202,7 +222,6 @@
     return Object.values(map);
   }
 
-  // ── View switching ─────────────────────────────────────────────
   function setView(view) {
     state.view = view;
 
@@ -222,7 +241,7 @@
     if (el.metricPlayer)  el.metricPlayer.hidden  = (view !== "player");
 
     if (el.sortSummary) el.sortSummary.hidden = (view !== "summary");
-    if (el.sortPlayer)  el.sortPlayer.hidden  = (view !== "player");    
+    if (el.sortPlayer)  el.sortPlayer.hidden  = (view !== "player");
 
     if (view === "summary")   renderSummary();
     if (view === "player")    renderPlayer();
@@ -309,25 +328,49 @@
   }
 
   function buildPlayerDetailRows() {
-    return getFilteredPlayers().map(p => {
-      const courses = Array.from(p.courses || []);
-      const admins  = Array.from(p.admins || []);
+    const rows = [];
 
-      return {
-        player:       dash(p.name),
-        rounds:       Number(p.rounds ?? 0),
-        courses:      courses.join(", ") || "—",
-        administrators: admins.join(", ") || "—",
-        firstGameRaw: safeStr(p.firstGame),
-        lastGameRaw:  safeStr(p.lastGame),
-        firstGame:    fmtDateShort(p.firstGame),
-        lastGame:     fmtDateShort(p.lastGame),
+    for (const g of state.games) {
+      const playDateRaw = safeStr(g.playDate);
+      const playDateYMD = ymdOnly(playDateRaw) || playDateRaw;
 
-        // Keep original object available for future drill-in/export extensions.
-        source:       p,
-      };
-    });
-  }
+      for (const p of (g.players || [])) {
+        const firstName = safeStr(p.firstName);
+        const lastName  = safeStr(p.lastName);
+        const playerName = `${lastName}, ${firstName}`.replace(/^,\s*/, "") || "—";
+
+        const registeredRaw = safeStr(p.registeredDate);
+        const registeredYMD = ymdOnly(registeredRaw);
+        const varianceDays  = diffDays(registeredRaw, playDateRaw);
+
+        rows.push({
+          ghin:          dash(p.ghin),
+          localId:       dash(p.localId),
+          playerName:    playerName,
+          ggid:          dash(g.ggid),
+          gameTitle:     dash(g.title),
+          playDateRaw:   playDateYMD,
+          playDate:      fmtDateShort(playDateYMD),
+          playTimeRaw:   safeStr(g.playTime),
+          playTime:      fmtTime(g.playTime),
+          teeTimeRaw:    safeStr(p.teetime),
+          teeTime:       fmtTime(p.teetime),
+          courseName:    dash(g.courseName),
+          administrator: dash(g.adminName),
+          registeredRaw: registeredYMD,
+          registered:    registeredYMD ? fmtDateShort(registeredYMD) : "—",
+          varianceDays:  varianceDays === "" ? "—" : String(varianceDays),
+
+          source: {
+            game: g,
+            player: p,
+          },
+        });
+      }
+    }
+
+    return rows;
+}
 
   function buildSummaryRowHtml(r) {
   return `<tr>
@@ -427,68 +470,123 @@
     if (el.summaryCardSub) el.summaryCardSub.textContent = buildSummarySubtitle(rows, allRows);
   }
 
-  // ── Player detail render ───────────────────────────────────────
-  function getFilteredPlayers() {
-    let players = [...state.players];
+  function buildPlayerRowHtml(r) {
+    return `<tr>
+      <td data-cd-menu="player"
+          data-sort-key="ghin"
+          data-filter-key="ghin"
+          data-filter-value="${esc(r.ghin)}"
+          data-display-value="${esc(r.ghin)}">${esc(r.ghin)}</td>
 
-    // Apply front-end filter
-    if (state.pFilter === "multicourse") {
-      players = players.filter(p => p.courses.size > 1);
-    } else if (state.pFilter === "singlegame") {
-      players = players.filter(p => p.rounds === 1);
-    }
+      <td data-cd-menu="player"
+          data-sort-key="localId"
+          data-filter-key="localId"
+          data-filter-value="${esc(r.localId)}"
+          data-display-value="${esc(r.localId)}">${esc(r.localId)}</td>
 
-    // Apply sort
-    switch (state.pSortBy) {
-      case "name":
-        players.sort((a, b) => safeStr(a.name).localeCompare(safeStr(b.name)));
-        break;
-      case "lastgame":
-        players.sort((a, b) => safeStr(b.lastGame).localeCompare(safeStr(a.lastGame)));
-        break;
-      default: // rounds
-        players.sort((a, b) => b.rounds - a.rounds);
-    }
+      <td data-cd-menu="player"
+          data-sort-key="playerName"
+          data-filter-key="playerName"
+          data-filter-value="${esc(r.playerName)}"
+          data-display-value="${esc(r.playerName)}">${esc(r.playerName)}</td>
 
-    return players;
+      <td data-cd-menu="player"
+          data-sort-key="ggid"
+          data-filter-key="ggid"
+          data-filter-value="${esc(r.ggid)}"
+          data-display-value="${esc(r.ggid)}">${esc(r.ggid)}</td>
+
+      <td data-cd-menu="player"
+          data-sort-key="gameTitle"
+          data-filter-key="gameTitle"
+          data-filter-value="${esc(r.gameTitle)}"
+          data-display-value="${esc(r.gameTitle)}">${esc(r.gameTitle)}</td>
+
+      <td data-cd-menu="player"
+          data-sort-key="playDateRaw"
+          data-filter-key="playDate"
+          data-filter-value="${esc(r.playDateRaw)}"
+          data-display-value="${esc(r.playDate)}">${esc(r.playDate)}</td>
+
+      <td data-cd-menu="player"
+          data-sort-key="playTimeRaw"
+          data-filter-key="playTime"
+          data-filter-value="${esc(r.playTimeRaw)}"
+          data-display-value="${esc(r.playTime)}">${esc(r.playTime)}</td>
+
+      <td data-cd-menu="player"
+          data-sort-key="teeTimeRaw"
+          data-filter-key="teeTime"
+          data-filter-value="${esc(r.teeTimeRaw)}"
+          data-display-value="${esc(r.teeTime)}">${esc(r.teeTime)}</td>
+
+      <td data-cd-menu="player"
+          data-sort-key="courseName"
+          data-filter-key="courseName"
+          data-filter-value="${esc(r.courseName)}"
+          data-display-value="${esc(r.courseName)}">${esc(r.courseName)}</td>
+
+      <td data-cd-menu="player"
+          data-sort-key="administrator"
+          data-filter-key="administrator"
+          data-filter-value="${esc(r.administrator)}"
+          data-display-value="${esc(r.administrator)}">${esc(r.administrator)}</td>
+
+      <td data-cd-menu="player"
+          data-sort-key="registeredRaw"
+          data-filter-key="registered"
+          data-filter-value="${esc(r.registeredRaw)}"
+          data-display-value="${esc(r.registered)}">${esc(r.registered)}</td>
+
+      <td class="cdRight"
+          data-cd-menu="player"
+          data-sort-key="varianceDays"
+          data-display-value="${esc(String(r.varianceDays))}">${esc(String(r.varianceDays))}</td>
+    </tr>`;
   }
 
   function renderPlayer() {
-    const rows        = buildPlayerDetailRows();
-    const total       = state.players.length;
-    const visibleCnt  = rows.length;
-    const visibleRnds = rows.reduce((sum, r) => sum + Number(r.rounds || 0), 0);
-    const avg         = visibleCnt > 0 ? (visibleRnds / visibleCnt).toFixed(1) : "—";
-    const peak        = visibleCnt > 0
-      ? Math.max(...rows.map(r => Number(r.rounds || 0)))
-      : "—";
+    const allRows = buildPlayerDetailRows();
+    const rows    = applyPlayerSort(applyPlayerFilters(allRows));
 
-    if (el.mUniquePlayers) el.mUniquePlayers.textContent = String(visibleCnt);
-    if (el.mPlayerRounds)  el.mPlayerRounds.textContent  = String(visibleRnds);
-    if (el.mAvgRounds)     el.mAvgRounds.textContent     = String(avg);
-    if (el.mMostActive)    el.mMostActive.textContent    = String(peak);
+    const totalRegistrations = rows.length;
+    const uniquePlayers = new Set(
+      rows.map(r => r.ghin).filter(v => v && v !== "—")
+    ).size;
+
+    const varianceValues = rows
+      .map(r => Number(r.varianceDays))
+      .filter(v => !isNaN(v));
+
+    const avgVariance = varianceValues.length
+      ? varianceValues.reduce((sum, v) => sum + v, 0) / varianceValues.length
+      : null;
+
+    const maxVariance = varianceValues.length
+      ? Math.max(...varianceValues)
+      : null;
+
+    if (el.mUniquePlayers) el.mUniquePlayers.textContent = String(uniquePlayers);
+    if (el.mPlayerRounds)  el.mPlayerRounds.textContent  = String(totalRegistrations);
+    if (el.mAvgRounds)     el.mAvgRounds.textContent     = avgVariance === null ? "—" : avgVariance.toFixed(1);
+    if (el.mMostActive)    el.mMostActive.textContent    = maxVariance === null ? "—" : String(maxVariance);
 
     if (!rows.length) {
       if (el.playerEmpty)   el.playerEmpty.style.display = "";
       if (el.playerTbody)   el.playerTbody.innerHTML     = "";
-      if (el.playerCardSub) el.playerCardSub.textContent = "";
+      if (el.playerCardSub) el.playerCardSub.textContent = buildPlayerSubtitle(rows, allRows);
       return;
     }
 
     if (el.playerEmpty) el.playerEmpty.style.display = "none";
 
-    const html = rows.map(r => `<tr>
-      <td style="font-weight:900">${esc(r.player)}</td>
-      <td class="cdRight">${esc(String(r.rounds))}</td>
-      <td>${esc(r.courses)}</td>
-      <td class="cdMuted">${esc(r.administrators)}</td>
-      <td class="cdMuted">${esc(r.firstGame)}</td>
-      <td class="cdMuted">${esc(r.lastGame)}</td>
-    </tr>`).join("");
+    const html = rows.map(r => buildPlayerRowHtml(r)).join("");
 
-    if (el.playerTbody)   el.playerTbody.innerHTML = html;
-    if (el.playerCardSub) el.playerCardSub.textContent =
-      `${visibleCnt} of ${total} players · Sorted by ${state.pSortBy}`;
+    if (el.playerTbody) el.playerTbody.innerHTML = html;
+
+    if (el.playerCardSub) {
+      el.playerCardSub.textContent = buildPlayerSubtitle(rows, allRows);
+    }
   }
 
   // ── Dashboard (stub) ───────────────────────────────────────────
@@ -693,6 +791,172 @@
     openSummaryCellMenu(cell);
   }
 
+  function applyPlayerFilters(rows) {
+    const f = state.playerFilters || {};
+
+    return rows.filter(r => {
+      if (f.ghin          && r.ghin          !== f.ghin)          return false;
+      if (f.localId       && r.localId       !== f.localId)       return false;
+      if (f.playerName    && r.playerName    !== f.playerName)    return false;
+      if (f.ggid          && r.ggid          !== f.ggid)          return false;
+      if (f.gameTitle     && r.gameTitle     !== f.gameTitle)     return false;
+      if (f.playDate      && r.playDateRaw   !== f.playDate)      return false;
+      if (f.playTime      && r.playTimeRaw   !== f.playTime)      return false;
+      if (f.teeTime       && r.teeTimeRaw    !== f.teeTime)       return false;
+      if (f.courseName    && r.courseName    !== f.courseName)    return false;
+      if (f.administrator && r.administrator !== f.administrator) return false;
+      if (f.registered    && r.registeredRaw !== f.registered)    return false;
+      return true;
+    });
+  }
+
+  function applyPlayerSort(rows) {
+    const key = state.playerSortKey || "playDateRaw";
+    const dir = state.playerSortDir === "desc" ? -1 : 1;
+
+    return [...rows].sort((a, b) => {
+      const av = a[key];
+      const bv = b[key];
+
+      if (typeof av === "number" || typeof bv === "number") {
+        return (Number(av || 0) - Number(bv || 0)) * dir;
+      }
+
+      return safeStr(av).localeCompare(safeStr(bv)) * dir;
+    });
+  }
+
+  function labelForPlayerKey(key) {
+    return {
+      ghin:          "GHIN",
+      localId:       "Local ID",
+      playerName:    "Player Name",
+      ggid:          "GGID",
+      gameTitle:     "Game Title",
+      playDateRaw:   "Play Date",
+      playTimeRaw:   "Play Time",
+      teeTimeRaw:    "Tee Time",
+      courseName:    "Course Name",
+      administrator: "Administrator",
+      registeredRaw: "Registered",
+      varianceDays:  "Variance Days",
+    }[key] || "Value";
+  }
+
+  function setPlayerFilter(key, value) {
+    if (!state.playerFilters || !key) return;
+    state.playerFilters[key] = value;
+    renderPlayer();
+  }
+
+  function clearPlayerFilters() {
+    state.playerFilters = {
+      ghin: "",
+      localId: "",
+      playerName: "",
+      ggid: "",
+      gameTitle: "",
+      playDate: "",
+      playTime: "",
+      teeTime: "",
+      courseName: "",
+      administrator: "",
+      registered: "",
+    };
+    renderPlayer();
+  }
+
+  function setPlayerSort(key, dir) {
+    state.playerSortKey = key || "playDateRaw";
+    state.playerSortDir = dir === "desc" ? "desc" : "asc";
+    renderPlayer();
+  }
+
+  function hasPlayerFilters() {
+    const f = state.playerFilters || {};
+    return Boolean(
+      f.ghin ||
+      f.localId ||
+      f.playerName ||
+      f.ggid ||
+      f.gameTitle ||
+      f.playDate ||
+      f.playTime ||
+      f.teeTime ||
+      f.courseName ||
+      f.administrator ||
+      f.registered
+    );
+  }
+
+  function isNumericPlayerKey(key) {
+    return key === "varianceDays";
+  }
+
+  function openPlayerCellMenu(cell) {
+    const ui = window.MA?.ui;
+    if (typeof ui?.openActionsMenu !== "function") {
+      setStatus("Actions menu is not available.", "warn");
+      return;
+    }
+
+    const sortKey    = safeStr(cell.dataset.sortKey);
+    const filterKey  = safeStr(cell.dataset.filterKey);
+    const filterVal  = safeStr(cell.dataset.filterValue);
+    const displayVal = safeStr(cell.dataset.displayValue) || safeStr(cell.textContent);
+    const label      = labelForPlayerKey(sortKey);
+
+    const actions = [];
+
+    if (filterKey && filterVal && displayVal !== "—") {
+      actions.push({
+        label: `Filter by ${label}`,
+        action: () => setPlayerFilter(filterKey, filterVal),
+      });
+    }
+
+    if (sortKey) {
+      if (isNumericPlayerKey(sortKey)) {
+        actions.push({
+          label: `Sort ${label} Low to High`,
+          action: () => setPlayerSort(sortKey, "asc"),
+        });
+        actions.push({
+          label: `Sort ${label} High to Low`,
+          action: () => setPlayerSort(sortKey, "desc"),
+        });
+      } else {
+        actions.push({
+          label: `Sort ${label} A to Z`,
+          action: () => setPlayerSort(sortKey, "asc"),
+        });
+        actions.push({
+          label: `Sort ${label} Z to A`,
+          action: () => setPlayerSort(sortKey, "desc"),
+        });
+      }
+    }
+
+    if (hasPlayerFilters()) {
+      actions.push({
+        label: "Clear Filters",
+        action: () => clearPlayerFilters(),
+      });
+    }
+
+    ui.openActionsMenu(
+      displayVal || label,
+      actions,
+      label
+    );
+  }
+
+  function onPlayerBodyClick(e) {
+    const cell = e.target.closest("[data-cd-menu='player']");
+    if (!cell || !el.playerTbody?.contains(cell)) return;
+    openPlayerCellMenu(cell);
+  }
+
   async function executeAcquire() {
     const facilityId = safeStr(el.inputFacility?.value || state.filters.facilityId || state.context.facilityId);
     const dateFrom   = safeStr(el.inputFrom?.value);
@@ -773,6 +1037,7 @@
       if (e.target === el.modalOverlay) closeModal();
     });
     el.summaryTbody?.addEventListener("click", onSummaryBodyClick);
+    el.playerTbody?.addEventListener("click", onPlayerBodyClick);
 
     // Summary: group buttons
     document.querySelectorAll("[data-group]").forEach(btn => {
@@ -784,25 +1049,6 @@
       });
     });
 
-    // Player: sort buttons
-    document.querySelectorAll("[data-psort]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll("[data-psort]").forEach(b => b.classList.remove("is-active"));
-        btn.classList.add("is-active");
-        state.pSortBy = btn.dataset.psort;
-        renderPlayer();
-      });
-    });
-
-    // Player: filter buttons
-    document.querySelectorAll("[data-pfilter]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll("[data-pfilter]").forEach(b => b.classList.remove("is-active"));
-        btn.classList.add("is-active");
-        state.pFilter = btn.dataset.pfilter;
-        renderPlayer();
-      });
-    });
   }
 
   function openActionsMenu() {
@@ -843,6 +1089,7 @@
   // ── Apply init payload ─────────────────────────────────────────
   function applyInit(init) {
     if (!init || !init.ok) throw new Error(init?.message || "Init payload invalid.");
+
     state.filters = {
       dateFrom:   safeStr(init.filters?.dateFrom),
       dateTo:     safeStr(init.filters?.dateTo),
@@ -856,20 +1103,18 @@
       facilityOptions:   Array.isArray(init.context?.facilityOptions) ? init.context.facilityOptions : [],
       canSelectFacility: Boolean(init.context?.canSelectFacility),
     };
-    state.summary = init.summary  || {};
+
+    state.summary = init.summary || {};
     state.games   = Array.isArray(init.games) ? init.games : [];
     state.players = buildPlayerAggregates();
 
-    state.summaryFilters = {
-      playDate: "",
-      playTime: "",
-      administrator: "",
-      gameTitle: "",
-      course: "",
-      format: "",
-    };
-    state.summarySortKey = "playDateRaw";
-    state.summarySortDir = "asc";
+    state.summaryFilters  = { playDate: "", playTime: "", administrator: "", gameTitle: "", course: "", format: "" };
+    state.summarySortKey  = "playDateRaw";
+    state.summarySortDir  = "asc";
+
+    state.playerFilters = { ghin: "", localId: "", playerName: "", ggid: "", gameTitle: "", playDate: "", playTime: "", teeTime: "", courseName: "", administrator: "", registered: "" };
+    state.playerSortKey = "playDateRaw";
+    state.playerSortDir = "asc";
   }
 
   // ── Boot ───────────────────────────────────────────────────────

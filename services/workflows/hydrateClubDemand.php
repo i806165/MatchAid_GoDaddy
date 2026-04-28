@@ -148,7 +148,9 @@ function hydrateClubDemand(array $context, array $filters): array {
           CAST(dbPlayers_LocalID    AS CHAR) AS localId,
           dbPlayers_Name                      AS firstName,
           dbPlayers_LName                     AS lastName,
-          dbPlayers_HI                        AS hi
+          dbPlayers_HI                        AS hi,
+          dbPlayers_TeeTime AS teetime,
+          _createdDate                        AS registeredDate
         FROM db_Players
         WHERE CAST(dbPlayers_GGID AS CHAR) IN ({$inClause})
         ORDER BY dbPlayers_LName ASC, dbPlayers_Name ASC
@@ -168,6 +170,8 @@ function hydrateClubDemand(array $context, array $filters): array {
           "localId"   => strval($row["localId"]   ?? ""),
           "firstName" => strval($row["firstName"] ?? ""),
           "lastName"  => strval($row["lastName"]  ?? ""),
+          "registeredDate" => strval($row["registeredDate"] ?? ""),
+          "teetime" => strval($row["teetime"] ?? ""),
           "hi"        => strval($row["hi"]        ?? ""),
         ];
       }

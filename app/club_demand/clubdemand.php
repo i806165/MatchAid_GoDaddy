@@ -27,7 +27,7 @@ if (!$ctx || empty($ctx["ok"])) {
 //    - Fresh visit:  default today-30 → today
 // ----------------------------------------------------------------
 $today   = new DateTimeImmutable("today");
-$minus30 = $today->modify("-30 days");
+$plus30  = $today->modify("+30 days");
 
 $sessFrom = trim(strval($_SESSION["CD_FILTERDATEFROM"] ?? ""));
 $sessTo   = trim(strval($_SESSION["CD_FILTERDATETO"]   ?? ""));
@@ -35,8 +35,8 @@ $sessTo   = trim(strval($_SESSION["CD_FILTERDATETO"]   ?? ""));
 $isReturn = ($sessFrom !== "" && $sessTo !== "");
 
 $filters = [
-  "dateFrom" => $isReturn ? $sessFrom : $minus30->format("Y-m-d"),
-  "dateTo"   => $isReturn ? $sessTo   : $today->format("Y-m-d"),
+  "dateFrom" => $isReturn ? $sessFrom : $today->format("Y-m-d"),
+  "dateTo"   => $isReturn ? $sessTo   : $plus30->format("Y-m-d"),
 ];
 
 // ----------------------------------------------------------------

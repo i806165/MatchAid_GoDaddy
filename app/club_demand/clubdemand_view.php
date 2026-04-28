@@ -48,15 +48,15 @@
       <div class="cdMetricValue" id="cdMUniquePlayers">—</div>
     </div>
     <div class="cdMetric">
-      <div class="cdMetricLabel">TOTAL ROUNDS</div>
+      <div class="cdMetricLabel">REGISTRATIONS</div>
       <div class="cdMetricValue" id="cdMPlayerRounds">—</div>
     </div>
     <div class="cdMetric">
-      <div class="cdMetricLabel">AVG ROUNDS / PLAYER</div>
+      <div class="cdMetricLabel">AVG VARIANCE DAYS</div>
       <div class="cdMetricValue" id="cdMAvgRounds">—</div>
     </div>
     <div class="cdMetric">
-      <div class="cdMetricLabel">MOST ACTIVE</div>
+      <div class="cdMetricLabel">MAX VARIANCE DAYS</div>
       <div class="cdMetricValue" id="cdMMostActive">—</div>
     </div>
   </div>
@@ -153,12 +153,18 @@
           <table class="cdTable" id="cdPlayerTable">
             <thead>
               <tr>
-                <th>Player</th>
-                <th class="cdRight">Rounds</th>
-                <th>Courses Played</th>
-                <th>Administrators</th>
-                <th>First Game</th>
-                <th>Last Game</th>
+                <th>GHIN</th>
+                <th>Local ID</th>
+                <th>Player Name</th>
+                <th>GGID</th>
+                <th>Game Title</th>
+                <th>Play Date</th>
+                <th>Play Time</th>
+                <th>Tee Time</th>
+                <th>Course Name</th>
+                <th>Administrator</th>
+                <th>Registered</th>
+                <th class="cdRight">Variance Days</th>
               </tr>
             </thead>
             <tbody id="cdPlayerTbody"></tbody>
