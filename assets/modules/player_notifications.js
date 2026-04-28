@@ -6,26 +6,25 @@
  * to select recipients and launch a mailto: or SMS-gateway email via
  * the existing MA.email.compose() module.
  *
+ * Markup uses ma_shared.css classes exclusively:
+ *   maModalOverlay / maModal / maModal__hdr / maModal__body / maModal__ftr
+ *   maListRow / maPill / iconBtn btnPrimary / maFtrBtn maFtrBtn--save
+ *
  * Public API:
  *   MA.notify.open(options)
+ *   MA.notify.close()
  *
  * Options:
  *   {
- *     ggid      : string|number|null  — game ID; omit or null for favorites-only mode
+ *     ggid      : string|number|null  — game ID; omit or null for favorites-only
  *     apiPath   : string              — URL to initPlayerNotifications.php
  *     onClose   : function()          — optional callback when panel is dismissed
  *   }
  *
  * Dependencies:
+ *   ma_shared.css        — all visual styles
  *   MA.email.compose()   — composeEmail.js must be loaded
- *   MA.postJson()        — or falls back to native fetch
- *
- * Calling examples:
- *   // From a game page (both tabs)
- *   MA.notify.open({ ggid: state.game.dbGames_GGID, apiPath: MA.paths.apiNotify });
- *
- *   // From favorites page or any non-game context (favorites tab only)
- *   MA.notify.open({ apiPath: MA.paths.apiNotify });
+ *   MA.postJson()        — provided by ma_shared.js
  */
 (function () {
   "use strict";
@@ -34,12 +33,19 @@
   window.MA = MA;
   MA.notify = MA.notify || {};
 
-  // ── Constants ───────────────────────────────────────────────────────────────
+  // ── Constants ────────────────────────────────────────────────────────────────
+  const OVERLAY_ID = "maNotifyOverlay";
 
-  const PANEL_ID   = "ma-notify-panel";
-  const OVERLAY_ID = "ma-notify-overlay";
+  // ── State ────────────────────────────────────────────────────────────────────
+  let _state = {
+    opts:      {},
+    data:      null,
+    activeTab: "game",
+    selected:  new Set(),
+    favFilter: "all",
+  };
 
-  // ── Helpers ─────────────────────────────────────────────────────────────────
+  // ── Helpers ──────────────────────────────────────────────────────────────────
 
   function esc(s) {
     return String(s ?? "").replace(/[&<>"']/g, (c) => ({
@@ -47,15 +53,13 @@
     }[c]));
   }
 
-  function safeStr(v) {
-    return String(v ?? "").trim();
-  }
+  function safeStr(v) { return String(v ?? "").trim(); }
 
   function initials(name) {
     const parts = safeStr(name).split(" ").filter(Boolean);
     if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
     if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-    return "??";
+    return "?";
   }
 
   function formatContactLine(player) {
@@ -64,18 +68,18 @@
     if (email && mobile) return esc(email) + " &middot; " + esc(mobile);
     if (email)           return esc(email);
     if (mobile)          return esc(mobile);
-    return "<em>No contact on file</em>";
+    return "No contact on file";
   }
 
   function formatDateShort(dateStr, timeStr) {
     const d = safeStr(dateStr);
-    const t = safeStr(timeStr);
     if (!d) return "";
     const [y, m, day] = d.split("-").map(Number);
     const dt = new Date(y, m - 1, day);
     if (isNaN(dt.getTime())) return d;
-    const dow = dt.toLocaleDateString("en-US", { weekday: "short" });
-    const mmdd = String(m).padStart(2, "0") + "/" + String(day).padStart(2, "0");
+    const dow      = dt.toLocaleDateString("en-US", { weekday: "short" });
+    const mmdd     = String(m).padStart(2, "0") + "/" + String(day).padStart(2, "0");
+    const t        = safeStr(timeStr);
     const timePart = t ? " at " + formatTime(t) : "";
     return dow + " " + mmdd + timePart;
   }
@@ -90,8 +94,6 @@
     return h + ":" + m + " " + ampm;
   }
 
-  // ── Post helper — uses MA.postJson if available, falls back to fetch ────────
-
   async function apiPost(url, payload) {
     if (typeof MA.postJson === "function") {
       return MA.postJson(url, payload);
@@ -99,356 +101,446 @@
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
       body: JSON.stringify(payload),
     });
     return res.json();
   }
 
-  // ── State ────────────────────────────────────────────────────────────────────
-
-  let _state = {
-    opts: {},
-    data: null,          // API response payload
-    activeTab: "game",   // "game" | "favs"
-    selected: new Set(), // Set of ghin strings
-    favFilter: "all",    // "all" or a group name
-  };
-
-  // ── Core: open ───────────────────────────────────────────────────────────────
+  // ── Public: open ─────────────────────────────────────────────────────────────
 
   MA.notify.open = async function (options) {
-    const opts = options || {};
-    _state.opts     = opts;
-    _state.selected = new Set();
+    const opts       = options || {};
+    _state.opts      = opts;
+    _state.selected  = new Set();
     _state.favFilter = "all";
 
-    _destroyPanel();
-    _renderSkeleton();
+    _destroyOverlay();
+    _renderOverlay(_html_skeleton());
 
     try {
       const payload = {};
       if (opts.ggid) payload.ggid = opts.ggid;
 
       const apiPath = opts.apiPath || (MA.paths && MA.paths.apiNotify) || "";
-      if (!apiPath) {
-        _renderError("apiPath not configured for MA.notify.");
-        return;
-      }
+      if (!apiPath) { _setModalHtml(_html_error("apiPath not configured.")); return; }
 
       const data = await apiPost(apiPath, payload);
-
       if (!data || !data.ok) {
-        _renderError(data?.message || "Failed to load recipients.");
+        _setModalHtml(_html_error(data?.message || "Failed to load recipients."));
         return;
       }
 
-      _state.data = data;
-
-      // Default starting tab: game if context available, else favs
+      _state.data      = data;
       _state.activeTab = data.hasGameContext ? "game" : "favs";
 
-      // Pre-select all reachable game players when opening from a game context
+      // Pre-select all reachable game players when a game context is present
       if (data.hasGameContext && Array.isArray(data.gamePlayers)) {
         data.gamePlayers.forEach(function (p) {
           if (p.deliveryMethod !== null) _state.selected.add(p.ghin);
         });
       }
 
-      _renderPanel();
+      _setModalHtml(_html_panel());
+      _wireEvents();
+      _updateFooter();
 
     } catch (e) {
       console.error("[MA.notify]", e);
-      _renderError("Unexpected error loading recipients.");
+      _setModalHtml(_html_error("Unexpected error loading recipients."));
     }
   };
 
-  // ── Skeleton (loading state shown immediately while API call is in flight) ───
+  MA.notify.close = function () {
+    _destroyOverlay();
+    _state.data     = null;
+    _state.selected = new Set();
+    document.documentElement.classList.remove("maOverlayOpen");
+    if (typeof _state.opts.onClose === "function") _state.opts.onClose();
+  };
 
-  function _renderSkeleton() {
-    _ensureOverlay();
-    const panel = _ensurePanel();
-    panel.innerHTML = _html_skeleton();
+  // ── DOM management ────────────────────────────────────────────────────────────
+
+  function _renderOverlay(modalHtml) {
+    let overlay = document.getElementById(OVERLAY_ID);
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = OVERLAY_ID;
+      overlay.addEventListener("click", function (e) {
+        if (e.target === overlay) MA.notify.close();
+      });
+      document.body.appendChild(overlay);
+    }
+    overlay.className = "maModalOverlay is-open";
+    overlay.innerHTML = `
+      <section class="maModal" role="dialog" aria-modal="true" aria-label="Send message">
+        ${modalHtml}
+      </section>`;
+    document.documentElement.classList.add("maOverlayOpen");
   }
 
-  function _renderError(msg) {
-    const panel = document.getElementById(PANEL_ID);
-    if (!panel) return;
-    panel.innerHTML = _html_error(msg);
+  function _setModalHtml(html) {
+    const modal = document.querySelector("#" + OVERLAY_ID + " .maModal");
+    if (modal) modal.innerHTML = html;
   }
 
-  // ── Full panel render ────────────────────────────────────────────────────────
-
-  function _renderPanel() {
-    const panel = document.getElementById(PANEL_ID);
-    if (!panel) return;
-    panel.innerHTML = _html_panel();
-    _wireEvents(panel);
-    _updateFooter();
+  function _destroyOverlay() {
+    const el = document.getElementById(OVERLAY_ID);
+    if (el) el.remove();
   }
 
-  // ── HTML builders ────────────────────────────────────────────────────────────
+  // ── Skeleton ──────────────────────────────────────────────────────────────────
 
   function _html_skeleton() {
-    return `
-      <div class="ma-notify-topbar">
-        <div class="ma-notify-topbar-title">Send message</div>
-        <button class="ma-notify-cancel" onclick="MA.notify.close()">Cancel</button>
-      </div>
-      <div class="ma-notify-loading">Loading recipients&hellip;</div>`;
+    return _html_hdr("Send message", "") + `
+      <div class="maModal__body">
+        <div class="maEmptyState">Loading recipients&hellip;</div>
+      </div>`;
   }
 
   function _html_error(msg) {
-    return `
-      <div class="ma-notify-topbar">
-        <div class="ma-notify-topbar-title">Send message</div>
-        <button class="ma-notify-cancel" onclick="MA.notify.close()">Cancel</button>
-      </div>
-      <div class="ma-notify-error">${esc(msg)}</div>`;
-  }
-
-  function _html_panel() {
-    const d    = _state.data;
-    const game = d.game;
-    const hasGame = d.hasGameContext;
-
-    // Context subtitle: game title + date, or generic
-    let subtitle = "Your favorites";
-    if (hasGame && game) {
-      const venue = [game.facilityName, game.courseName].filter(Boolean).join(" &middot; ");
-      const when  = formatDateShort(game.playDate, game.playTime);
-      subtitle    = [venue, when].filter(Boolean).join(" &middot; ");
-    }
-
-    const tabs = hasGame
-      ? `<div class="ma-notify-tab ${_state.activeTab === "game" ? "active" : ""}" data-tab="game">Game players</div>
-         <div class="ma-notify-tab ${_state.activeTab === "favs" ? "active" : ""}" data-tab="favs">Favorites</div>`
-      : "";
-
-    const gamePanel  = hasGame ? _html_gamePanel()  : "";
-    const favsPanel  = _html_favsPanel();
-
-    return `
-      <div class="ma-notify-topbar">
-        <div>
-          <div class="ma-notify-topbar-title">Send message</div>
-          <div class="ma-notify-topbar-sub">${subtitle}</div>
-        </div>
-        <button class="ma-notify-cancel" onclick="MA.notify.close()">Cancel</button>
-      </div>
-      ${hasGame ? `<div class="ma-notify-tabbar">${tabs}</div>` : ""}
-      <div class="ma-notify-body">
-        ${hasGame ? `<div class="ma-notify-tabpanel${_state.activeTab === "game" ? " active" : ""}" data-panel="game">${gamePanel}</div>` : ""}
-        <div class="ma-notify-tabpanel${_state.activeTab === "favs" ? " active" : ""}${!hasGame ? " active" : ""}" data-panel="favs">${favsPanel}</div>
-      </div>
-      <div class="ma-notify-footer">
-        <div class="ma-notify-summary" id="ma-notify-summary"></div>
-        <div class="ma-notify-actions">
-          <button class="ma-notify-btn-sms"   id="ma-notify-btn-sms"   disabled>Send SMS</button>
-          <button class="ma-notify-btn-email" id="ma-notify-btn-email" disabled>Open email</button>
-        </div>
+    return _html_hdr("Send message", "") + `
+      <div class="maModal__body">
+        <div class="maEmptyState" style="color:var(--danger);">${esc(msg)}</div>
       </div>`;
   }
+
+  // ── Shared header ─────────────────────────────────────────────────────────────
+
+  function _html_hdr(title, subtitle) {
+    return `
+      <header class="maModal__hdr">
+        <div class="maModal__titles">
+          <div class="maModal__title">${esc(title)}</div>
+          ${subtitle ? `<div class="maModal__subtitle">${esc(subtitle)}</div>` : ""}
+        </div>
+        <button type="button" class="iconBtn btnPrimary"
+                onclick="MA.notify.close()" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+               stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </header>`;
+  }
+
+  // ── Full panel ────────────────────────────────────────────────────────────────
+
+  function _html_panel() {
+    const d       = _state.data;
+    const game    = d.game;
+    const hasGame = d.hasGameContext;
+
+    let subtitle = "Your favorites";
+    if (hasGame && game) {
+      const venue = [game.facilityName, game.courseName].filter(Boolean).join(" \u2022 ");
+      const when  = formatDateShort(game.playDate, game.playTime);
+      subtitle    = [venue, when].filter(Boolean).join(" \u2022 ");
+    }
+
+    const tabBar = hasGame ? `
+      <div class="maModal__controls"
+           style="padding:0; display:flex; border-bottom:1px solid var(--borderSubtle);">
+        ${_html_tabBtn("game", "Game players")}
+        ${_html_tabBtn("favs", "Favorites")}
+      </div>` : "";
+
+    const gamePanel = hasGame
+      ? `<div class="ma-notify-panel${_state.activeTab === "game" ? " is-active" : ""}"
+              data-panel="game">${_html_gamePanel()}</div>`
+      : "";
+
+    const favsActive = _state.activeTab === "favs" || !hasGame;
+    const favsPanel  = `
+      <div class="ma-notify-panel${favsActive ? " is-active" : ""}" data-panel="favs">
+        ${_html_favsPanel()}
+      </div>`;
+
+    return `
+      ${_html_hdr("Send message", subtitle)}
+      ${tabBar}
+      <div class="maModal__body" style="padding:0; background:var(--surfaceApp);">
+        ${gamePanel}
+        ${favsPanel}
+      </div>
+      <footer class="maModal__ftr" style="flex-direction:column; gap:6px;">
+        <div id="ma-notify-summary"
+             style="font-size:12px; font-weight:800; color:var(--mutedText);"></div>
+        <div style="display:flex; gap:8px;">
+          <button type="button" id="ma-notify-btn-sms" class="maFtrBtn"
+                  style="flex:0 0 auto; min-width:110px; background:#fff;
+                         color:var(--brandSecondary); border:1px solid var(--brandSecondary);"
+                  disabled>
+            Send SMS
+          </button>
+          <button type="button" id="ma-notify-btn-email"
+                  class="maFtrBtn maFtrBtn--save" disabled>
+            Open email
+          </button>
+        </div>
+      </footer>`;
+  }
+
+  function _html_tabBtn(tab, label) {
+    const active = _state.activeTab === tab;
+    return `
+      <button type="button" class="ma-notify-tab" data-tab="${esc(tab)}"
+              style="flex:1; padding:10px 0; font-family:var(--fontFamilyBase);
+                     font-size:13px; font-weight:800; border:none; cursor:pointer;
+                     background:transparent;
+                     border-bottom:2px solid ${active ? "var(--brandAccent)" : "transparent"};
+                     color:${active ? "var(--brandAccent)" : "var(--mutedText)"};">
+        ${esc(label)}
+      </button>`;
+  }
+
+  // ── Game players panel ────────────────────────────────────────────────────────
 
   function _html_gamePanel() {
     const players = _state.data.gamePlayers || [];
     if (!players.length) {
-      return `<div class="ma-notify-empty">No players in this game.</div>`;
+      return `<div class="maEmptyState" style="margin:14px;">No players in this game.</div>`;
     }
-    const rows = players.map(_html_playerRow).join("");
     return `
-      <div class="ma-notify-toolbar">
-        <span class="ma-notify-count" data-count-for="game"></span>
-        <button class="ma-notify-selall" data-selall="game">Select all</button>
-      </div>
-      <div class="ma-notify-list" data-list="game">${rows}</div>`;
+      ${_html_toolbar("game")}
+      <div class="ma-notify-list" data-list="game">
+        ${players.map(function (p) { return _html_playerRow(p, false); }).join("")}
+      </div>`;
   }
 
+  // ── Favorites panel ───────────────────────────────────────────────────────────
+
   function _html_favsPanel() {
-    const favs   = _state.data.favorites  || [];
+    const favs   = _state.data.favorites || [];
     const groups = _state.data.favGroups  || [];
 
-    const groupOptions = [`<option value="all">All favorites</option>`];
-    groups.forEach(function (g) {
-      const sel = _state.favFilter === g ? " selected" : "";
-      groupOptions.push(`<option value="${esc(g)}"${sel}>${esc(g)}</option>`);
-    });
+    const groupBar = groups.length ? `
+      <div style="display:flex; align-items:center; gap:8px; padding:10px 14px 6px;
+                  background:var(--panelControlsBg);
+                  border-bottom:1px solid var(--borderSubtle);">
+        <label style="font-size:12px; font-weight:800; color:var(--mutedText);
+                      white-space:nowrap;">Group</label>
+        <select id="ma-notify-groupsel"
+                style="flex:1; height:34px; padding:0 10px;
+                       font-family:var(--fontFamilyBase); font-size:13px; font-weight:800;
+                       border:1px solid var(--borderSubtle); border-radius:var(--controlRadius);
+                       background:#fff; color:var(--ink);">
+          <option value="all">All favorites</option>
+          ${groups.map(function (g) {
+            return `<option value="${esc(g)}"${_state.favFilter === g ? " selected" : ""}>${esc(g)}</option>`;
+          }).join("")}
+        </select>
+      </div>` : "";
 
-    const groupBar = groups.length
-      ? `<div class="ma-notify-grouprow">
-           <label class="ma-notify-grouplabel">Group</label>
-           <select class="ma-notify-groupselect" id="ma-notify-groupsel">${groupOptions.join("")}</select>
-         </div>`
-      : "";
-
-    const rows = favs.map(function (p) {
-      // Visibility: hidden when a group filter is active and player isn't in that group
-      const hidden = (_state.favFilter !== "all") &&
-                     !((p.groups || []).includes(_state.favFilter));
-      return _html_playerRow(p, hidden);
-    }).join("");
-
-    const empty = !favs.length
-      ? `<div class="ma-notify-empty">No favorites saved yet.</div>`
-      : "";
+    const rows = favs.length
+      ? favs.map(function (p) {
+          const hidden = (_state.favFilter !== "all") &&
+                         !((p.groups || []).includes(_state.favFilter));
+          return _html_playerRow(p, hidden);
+        }).join("")
+      : `<div class="maEmptyState" style="margin:14px;">No favorites saved yet.</div>`;
 
     return `
       ${groupBar}
-      <div class="ma-notify-toolbar">
-        <span class="ma-notify-count" data-count-for="favs"></span>
-        <button class="ma-notify-selall" data-selall="favs">Select all</button>
-      </div>
-      <div class="ma-notify-list" data-list="favs">${empty}${rows}</div>`;
+      ${_html_toolbar("favs")}
+      <div class="ma-notify-list" data-list="favs">${rows}</div>`;
   }
+
+  // ── Toolbar ───────────────────────────────────────────────────────────────────
+
+  function _html_toolbar(section) {
+    return `
+      <div style="display:flex; justify-content:space-between; align-items:center;
+                  padding:6px 14px 4px; background:var(--surfaceApp);">
+        <span style="font-size:12px; font-weight:800; color:var(--mutedText);"
+              data-count-for="${esc(section)}">0 selected</span>
+        <button type="button" data-selall="${esc(section)}"
+                style="font-size:12px; font-weight:800; color:var(--brandAccent);
+                       background:none; border:none; cursor:pointer; padding:0;">
+          Select all
+        </button>
+      </div>`;
+  }
+
+  // ── Player row ────────────────────────────────────────────────────────────────
 
   function _html_playerRow(player, hidden) {
     const unreachable = !player.deliveryMethod;
     const selected    = _state.selected.has(player.ghin);
     const method      = safeStr(player.deliveryMethod);
 
-    const badgeClass = method === "SMS"   ? "ma-notify-badge-sms"
-                     : method === "Email" ? "ma-notify-badge-email"
-                     :                     "ma-notify-badge-none";
-    const badgeLabel = method || "—";
+    // Badge colours using app tokens
+    const badgeStyle = method === "SMS"
+      ? "background:#E1F5EE; color:#085041;"
+      : method === "Email"
+        ? "background:var(--brandPrimaryBg); color:var(--brandPrimary);"
+        : "background:var(--pressedBg); color:var(--mutedText);";
 
-    const checkmark = selected
-      ? `<svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-           <path d="M1.5 5l2.5 2.5 4.5-5" stroke="#fff" stroke-width="1.5"
-                 stroke-linecap="round" stroke-linejoin="round"/>
+    // Checkbox using brandSecondary when selected (matches maAdminRow__check.on)
+    const checkStyle = selected
+      ? "background:var(--brandSecondary); border-color:var(--brandSecondary); color:#fff;"
+      : "background:#fff; border-color:var(--borderSubtle); color:var(--mutedText);";
+
+    const checkIcon = selected
+      ? `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+              stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+           <polyline points="20 6 9 17 4 12"/>
          </svg>`
       : "";
 
-    const classes = [
-      "ma-notify-row",
-      selected    ? "selected"    : "",
-      unreachable ? "unreachable" : "",
-      hidden      ? "ma-hidden"   : "",
+    const rowClasses = [
+      "maListRow ma-notify-row",
+      selected    ? "is-selected"          : "",
+      unreachable ? "ma-notify-unreachable" : "",
+      hidden      ? "ma-hidden"             : "",
     ].filter(Boolean).join(" ");
 
     return `
-      <div class="${classes}"
+      <div class="${rowClasses}"
            data-ghin="${esc(player.ghin)}"
-           data-method="${esc(method)}">
-        <div class="ma-notify-check">${checkmark}</div>
-        <div class="ma-notify-avatar">${esc(initials(player.name))}</div>
-        <div class="ma-notify-info">
-          <div class="ma-notify-name">${esc(player.name)}</div>
-          <div class="ma-notify-contact">${formatContactLine(player)}</div>
+           data-method="${esc(method)}"
+           style="${unreachable ? "opacity:.4; cursor:default;" : ""}">
+        <div style="width:22px; height:22px; border-radius:7px; border:1px solid;
+                    flex-shrink:0; display:flex; align-items:center; justify-content:center;
+                    ${checkStyle}">
+          ${checkIcon}
         </div>
-        <span class="ma-notify-badge ${badgeClass}">${esc(badgeLabel)}</span>
+        <div style="width:32px; height:32px; border-radius:50%;
+                    background:var(--pressedBg); border:1px solid var(--borderSubtle);
+                    flex-shrink:0; display:flex; align-items:center; justify-content:center;
+                    font-size:11px; font-weight:900; color:var(--mutedText);">
+          ${esc(initials(player.name))}
+        </div>
+        <div style="flex:1; min-width:0;">
+          <div class="maListRow__col">${esc(player.name)}</div>
+          <div class="maListRow__col maListRow__col--muted"
+               style="font-size:11px;">${formatContactLine(player)}</div>
+        </div>
+        <span class="maPill" style="flex-shrink:0; min-height:22px; padding:0 8px;
+                                    font-size:10px; font-weight:800; ${badgeStyle}">
+          ${esc(method || "\u2014")}
+        </span>
       </div>`;
   }
 
-  // ── Event wiring ─────────────────────────────────────────────────────────────
+  // ── Event wiring ──────────────────────────────────────────────────────────────
 
-  function _wireEvents(panel) {
+  function _wireEvents() {
+    const overlay = document.getElementById(OVERLAY_ID);
+    if (!overlay) return;
+
     // Tab switching
-    panel.querySelectorAll(".ma-notify-tab").forEach(function (tab) {
+    overlay.querySelectorAll(".ma-notify-tab").forEach(function (tab) {
       tab.addEventListener("click", function () {
         _state.activeTab = tab.dataset.tab;
-        panel.querySelectorAll(".ma-notify-tab").forEach(function (t) {
-          t.classList.toggle("active", t.dataset.tab === _state.activeTab);
+        overlay.querySelectorAll(".ma-notify-tab").forEach(function (t) {
+          const on = t.dataset.tab === _state.activeTab;
+          t.style.borderBottomColor = on ? "var(--brandAccent)" : "transparent";
+          t.style.color             = on ? "var(--brandAccent)" : "var(--mutedText)";
         });
-        panel.querySelectorAll(".ma-notify-tabpanel").forEach(function (p) {
-          p.classList.toggle("active", p.dataset.panel === _state.activeTab);
+        overlay.querySelectorAll(".ma-notify-panel").forEach(function (p) {
+          p.classList.toggle("is-active", p.dataset.panel === _state.activeTab);
         });
         _updateCounts();
       });
     });
 
-    // Player row selection
-    panel.addEventListener("click", function (e) {
-      const row = e.target.closest(".ma-notify-row");
-      if (!row || row.classList.contains("unreachable")) return;
-      const ghin = row.dataset.ghin;
-      if (_state.selected.has(ghin)) {
-        _state.selected.delete(ghin);
-        row.classList.remove("selected");
-        row.querySelector(".ma-notify-check").innerHTML = "";
-      } else {
-        _state.selected.add(ghin);
-        row.classList.add("selected");
-        row.querySelector(".ma-notify-check").innerHTML =
-          `<svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-             <path d="M1.5 5l2.5 2.5 4.5-5" stroke="#fff" stroke-width="1.5"
-                   stroke-linecap="round" stroke-linejoin="round"/>
-           </svg>`;
+    // Row selection (event delegation on the body area)
+    overlay.addEventListener("click", function (e) {
+      // Select all button
+      const selAllBtn = e.target.closest("[data-selall]");
+      if (selAllBtn) {
+        _handleSelectAll(selAllBtn.dataset.selall);
+        return;
       }
-      _updateFooter();
-    });
 
-    // Select all buttons
-    panel.querySelectorAll(".ma-notify-selall").forEach(function (btn) {
-      btn.addEventListener("click", function () {
-        const listKey = btn.dataset.selall;
-        const list    = panel.querySelector(`[data-list="${listKey}"]`);
-        if (!list) return;
-        const rows    = list.querySelectorAll(".ma-notify-row:not(.unreachable):not(.ma-hidden)");
-        const allSel  = Array.from(rows).every(function (r) {
-          return _state.selected.has(r.dataset.ghin);
-        });
-        rows.forEach(function (r) {
-          const ghin = r.dataset.ghin;
-          if (allSel) {
-            _state.selected.delete(ghin);
-            r.classList.remove("selected");
-            r.querySelector(".ma-notify-check").innerHTML = "";
-          } else {
-            _state.selected.add(ghin);
-            r.classList.add("selected");
-            r.querySelector(".ma-notify-check").innerHTML =
-              `<svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                 <path d="M1.5 5l2.5 2.5 4.5-5" stroke="#fff" stroke-width="1.5"
-                       stroke-linecap="round" stroke-linejoin="round"/>
-               </svg>`;
-          }
-        });
-        _updateFooter();
-      });
+      // Player row toggle
+      const row = e.target.closest(".ma-notify-row");
+      if (row && !row.classList.contains("ma-notify-unreachable")) {
+        _toggleRow(row);
+      }
     });
 
     // Group filter dropdown
-    const groupSel = panel.querySelector("#ma-notify-groupsel");
+    const groupSel = overlay.querySelector("#ma-notify-groupsel");
     if (groupSel) {
       groupSel.addEventListener("change", function () {
         _state.favFilter = groupSel.value;
-        const list = panel.querySelector("[data-list='favs']");
-        if (!list) return;
-        list.querySelectorAll(".ma-notify-row").forEach(function (row) {
-          const ghin   = row.dataset.ghin;
-          const fav    = (_state.data.favorites || []).find(function (f) {
-            return f.ghin === ghin;
-          });
-          const groups = fav ? (fav.groups || []) : [];
-          const hide   = (_state.favFilter !== "all") &&
-                         !groups.includes(_state.favFilter);
-          row.classList.toggle("ma-hidden", hide);
-          // Deselect hidden players so they don't end up in the mailto list
-          if (hide && _state.selected.has(ghin)) {
-            _state.selected.delete(ghin);
-            row.classList.remove("selected");
-            row.querySelector(".ma-notify-check").innerHTML = "";
-          }
-        });
+        _applyGroupFilter();
         _updateFooter();
       });
     }
 
     // Send buttons
-    const btnEmail = panel.querySelector("#ma-notify-btn-email");
-    const btnSms   = panel.querySelector("#ma-notify-btn-sms");
+    const btnEmail = overlay.querySelector("#ma-notify-btn-email");
+    const btnSms   = overlay.querySelector("#ma-notify-btn-sms");
     if (btnEmail) btnEmail.addEventListener("click", function () { _send("email"); });
     if (btnSms)   btnSms.addEventListener("click",   function () { _send("sms"); });
   }
 
-  // ── Footer: count summary + button state ─────────────────────────────────────
+  function _toggleRow(row) {
+    const ghin = row.dataset.ghin;
+    if (_state.selected.has(ghin)) {
+      _state.selected.delete(ghin);
+    } else {
+      _state.selected.add(ghin);
+    }
+    _refreshRow(row, ghin);
+    _updateFooter();
+  }
+
+  function _handleSelectAll(listKey) {
+    const overlay = document.getElementById(OVERLAY_ID);
+    if (!overlay) return;
+    const list = overlay.querySelector(`[data-list="${listKey}"]`);
+    if (!list) return;
+    const rows   = list.querySelectorAll(".ma-notify-row:not(.ma-notify-unreachable):not(.ma-hidden)");
+    const allSel = Array.from(rows).every(function (r) { return _state.selected.has(r.dataset.ghin); });
+    rows.forEach(function (r) {
+      const ghin = r.dataset.ghin;
+      if (allSel) { _state.selected.delete(ghin); } else { _state.selected.add(ghin); }
+      _refreshRow(r, ghin);
+    });
+    _updateFooter();
+  }
+
+  function _applyGroupFilter() {
+    const overlay = document.getElementById(OVERLAY_ID);
+    if (!overlay) return;
+    const list = overlay.querySelector("[data-list='favs']");
+    if (!list) return;
+    list.querySelectorAll(".ma-notify-row").forEach(function (row) {
+      const ghin   = row.dataset.ghin;
+      const fav    = (_state.data.favorites || []).find(function (f) { return f.ghin === ghin; });
+      const groups = fav ? (fav.groups || []) : [];
+      const hide   = (_state.favFilter !== "all") && !groups.includes(_state.favFilter);
+      row.classList.toggle("ma-hidden", hide);
+      if (hide && _state.selected.has(ghin)) {
+        _state.selected.delete(ghin);
+        _refreshRow(row, ghin);
+      }
+    });
+  }
+
+  // Re-render a single row in place after selection changes
+  function _refreshRow(row, ghin) {
+    const allPlayers = [
+      ...(_state.data.gamePlayers || []),
+      ...(_state.data.favorites   || []),
+    ];
+    const player = allPlayers.find(function (p) { return p.ghin === ghin; });
+    if (!player) return;
+    const hidden = row.classList.contains("ma-hidden");
+    row.outerHTML = _html_playerRow(player, hidden);
+  }
+
+  // ── Footer ────────────────────────────────────────────────────────────────────
 
   function _updateFooter() {
     _updateCounts();
+    const overlay = document.getElementById(OVERLAY_ID);
+    if (!overlay) return;
 
-    const panel = document.getElementById(PANEL_ID);
-    if (!panel) return;
-
-    // Gather all selected players from both data sets
     const allPlayers = [
       ...(_state.data.gamePlayers || []),
       ...(_state.data.favorites   || []),
@@ -456,7 +548,6 @@
 
     let emailCount = 0;
     let smsCount   = 0;
-
     _state.selected.forEach(function (ghin) {
       const p = allPlayers.find(function (x) { return x.ghin === ghin; });
       if (!p) return;
@@ -464,52 +555,39 @@
       if (p.deliveryMethod === "Email") emailCount++;
     });
 
-    const total = emailCount + smsCount;
-    const summaryEl = panel.querySelector("#ma-notify-summary");
-    if (summaryEl) {
+    const total   = emailCount + smsCount;
+    const summary = overlay.querySelector("#ma-notify-summary");
+    if (summary) {
       if (total === 0) {
-        summaryEl.textContent = "No recipients selected";
+        summary.textContent = "No recipients selected";
       } else {
         const parts = [];
         if (emailCount > 0) parts.push(emailCount + " email");
         if (smsCount   > 0) parts.push(smsCount   + " SMS");
-        summaryEl.textContent = total + " recipient" + (total === 1 ? "" : "s") +
-                                " \u2014 " + parts.join(", ");
+        summary.textContent = total + " recipient" + (total === 1 ? "" : "s") +
+                              " \u2014 " + parts.join(", ");
       }
     }
 
-    const btnEmail = panel.querySelector("#ma-notify-btn-email");
-    const btnSms   = panel.querySelector("#ma-notify-btn-sms");
+    const btnEmail = overlay.querySelector("#ma-notify-btn-email");
+    const btnSms   = overlay.querySelector("#ma-notify-btn-sms");
     if (btnEmail) btnEmail.disabled = (total === 0);
     if (btnSms)   btnSms.disabled   = (smsCount === 0);
   }
 
   function _updateCounts() {
-    const panel = document.getElementById(PANEL_ID);
-    if (!panel) return;
+    const overlay = document.getElementById(OVERLAY_ID);
+    if (!overlay) return;
     ["game", "favs"].forEach(function (key) {
-      const el = panel.querySelector(`[data-count-for="${key}"]`);
-      if (!el) return;
-      const list = panel.querySelector(`[data-list="${key}"]`);
-      if (!list) return;
-      const visibleSelected = list.querySelectorAll(
-        ".ma-notify-row.selected:not(.ma-hidden)"
-      ).length;
-      el.textContent = visibleSelected + " selected";
+      const el   = overlay.querySelector(`[data-count-for="${key}"]`);
+      const list = overlay.querySelector(`[data-list="${key}"]`);
+      if (!el || !list) return;
+      const n = list.querySelectorAll(".ma-notify-row.is-selected:not(.ma-hidden)").length;
+      el.textContent = n + " selected";
     });
   }
 
-  // ── Send ─────────────────────────────────────────────────────────────────────
-  // Builds the recipient list from selected GHINs, splits by deliveryMethod,
-  // and dispatches to MA.email.compose().
-  //
-  // mode "email" → all Email-method recipients go to BCC; SMS recipients are
-  //                included as their gateway address in the same BCC block
-  //                (carrier gateway address IS an email address).
-  // mode "sms"   → only SMS-method recipients, sent via gateway addresses.
-  //
-  // MA.email.compose() opens the user's default mail client via mailto:.
-  // The user writes their own message body; we pre-fill subject from game context.
+  // ── Send ──────────────────────────────────────────────────────────────────────
 
   function _send(mode) {
     const allPlayers = [
@@ -517,15 +595,14 @@
       ...(_state.data.favorites   || []),
     ];
 
-    // Deduplicate by deliveryEmail in case a player appears in both lists
-    const seen = new Set();
+    const seen       = new Set();
     const recipients = [];
 
     _state.selected.forEach(function (ghin) {
       const p = allPlayers.find(function (x) { return x.ghin === ghin; });
       if (!p || !p.deliveryEmail || !p.deliveryMethod) return;
-      if (mode === "sms"   && p.deliveryMethod !== "SMS")   return;
-      if (mode === "email" && !p.deliveryMethod)             return;
+      if (mode === "sms"   && p.deliveryMethod !== "SMS")  return;
+      if (mode === "email" && !p.deliveryMethod)            return;
       if (seen.has(p.deliveryEmail)) return;
       seen.add(p.deliveryEmail);
       recipients.push({ name: p.name, email: p.deliveryEmail });
@@ -533,208 +610,38 @@
 
     if (!recipients.length) return;
 
-    // Build subject from game context if available
     let subject = "";
     const game = _state.data.game;
     if (game) {
       const venue = game.facilityName || game.courseName || "";
       const when  = formatDateShort(game.playDate, game.playTime);
-      subject = [game.title, venue, when].filter(Boolean).join(" \u2014 ");
+      subject     = [game.title, venue, when].filter(Boolean).join(" \u2014 ");
     }
 
     if (MA.email && typeof MA.email.compose === "function") {
-      MA.email.compose({
-        bcc:         recipients,
-        subject:     subject,
-        body:        "",
-        bodyIsHtml:  false,
-      });
+      MA.email.compose({ bcc: recipients, subject: subject, body: "", bodyIsHtml: false });
       MA.notify.close();
     } else {
       console.error("[MA.notify] MA.email.compose not available.");
     }
   }
 
-  // ── Panel DOM management ──────────────────────────────────────────────────────
-
-  function _ensureOverlay() {
-    let overlay = document.getElementById(OVERLAY_ID);
-    if (!overlay) {
-      overlay = document.createElement("div");
-      overlay.id = OVERLAY_ID;
-      overlay.className = "ma-notify-overlay";
-      overlay.addEventListener("click", function (e) {
-        if (e.target === overlay) MA.notify.close();
-      });
-      document.body.appendChild(overlay);
-    }
-    overlay.style.display = "flex";
-    return overlay;
-  }
-
-  function _ensurePanel() {
-    let panel = document.getElementById(PANEL_ID);
-    if (!panel) {
-      panel = document.createElement("div");
-      panel.id = PANEL_ID;
-      panel.className = "ma-notify-panel";
-      const overlay = document.getElementById(OVERLAY_ID);
-      if (overlay) overlay.appendChild(panel);
-      else document.body.appendChild(panel);
-    }
-    return panel;
-  }
-
-  function _destroyPanel() {
-    const overlay = document.getElementById(OVERLAY_ID);
-    if (overlay) {
-      overlay.style.display = "none";
-      overlay.innerHTML = "";
-    }
-  }
-
-  MA.notify.close = function () {
-    _destroyPanel();
-    _state.data     = null;
-    _state.selected = new Set();
-    if (typeof _state.opts.onClose === "function") {
-      _state.opts.onClose();
-    }
-  };
-
-  // ── Styles ────────────────────────────────────────────────────────────────────
-  // Injected once into <head>. Scoped with ma-notify- prefix to avoid collisions.
+  // ── Minimal scoped CSS ────────────────────────────────────────────────────────
+  // Only structural rules not provided by ma_shared.css
 
   (function _injectStyles() {
     if (document.getElementById("ma-notify-styles")) return;
-    const style = document.createElement("style");
-    style.id = "ma-notify-styles";
-    style.textContent = `
-      .ma-notify-overlay {
-        position: fixed; inset: 0; z-index: 9000;
-        background: rgba(0,0,0,0.45);
-        display: none; align-items: flex-end; justify-content: center;
-      }
-      .ma-notify-panel {
-        background: #fff; width: 100%; max-width: 520px;
-        border-radius: 16px 16px 0 0;
-        max-height: 88vh; display: flex; flex-direction: column;
-        overflow: hidden; font-family: sans-serif; font-size: 14px;
-      }
-      .ma-notify-topbar {
-        display: flex; align-items: flex-start; justify-content: space-between;
-        padding: 14px 16px 10px; border-bottom: 0.5px solid #e5e5e5;
-        flex-shrink: 0;
-      }
-      .ma-notify-topbar-title { font-size: 16px; font-weight: 500; color: #1a1a1a; }
-      .ma-notify-topbar-sub   { font-size: 12px; color: #888; margin-top: 2px; }
-      .ma-notify-cancel {
-        font-size: 13px; color: #888; background: none; border: none;
-        cursor: pointer; padding: 2px 0; line-height: 1;
-      }
-      .ma-notify-tabbar {
-        display: flex; border-bottom: 0.5px solid #e5e5e5; flex-shrink: 0;
-      }
-      .ma-notify-tab {
-        flex: 1; padding: 10px 0; text-align: center; font-size: 13px;
-        font-weight: 500; color: #888; cursor: pointer;
-        border-bottom: 2px solid transparent; transition: color .15s, border-color .15s;
-      }
-      .ma-notify-tab.active { color: #185FA5; border-bottom-color: #185FA5; }
-      .ma-notify-body { flex: 1; overflow-y: auto; background: #f5f5f3; }
-      .ma-notify-tabpanel { display: none; }
-      .ma-notify-tabpanel.active { display: block; }
-      .ma-notify-grouprow {
-        display: flex; align-items: center; gap: 8px;
-        padding: 10px 16px 4px; background: #f5f5f3;
-      }
-      .ma-notify-grouplabel { font-size: 12px; color: #888; white-space: nowrap; }
-      .ma-notify-groupselect {
-        flex: 1; height: 32px; padding: 0 8px; font-size: 13px;
-        border: 0.5px solid #ccc; border-radius: 8px;
-        background: #fff; color: #1a1a1a;
-      }
-      .ma-notify-toolbar {
-        display: flex; justify-content: space-between; align-items: center;
-        padding: 8px 16px 4px;
-      }
-      .ma-notify-count   { font-size: 12px; color: #888; }
-      .ma-notify-selall  {
-        font-size: 12px; color: #185FA5; background: none;
-        border: none; cursor: pointer; padding: 0;
-      }
-      .ma-notify-list {
-        background: #fff;
-        border-top: 0.5px solid #e5e5e5;
-        border-bottom: 0.5px solid #e5e5e5;
-      }
-      .ma-notify-row {
-        display: flex; align-items: center; gap: 10px;
-        padding: 9px 16px; border-bottom: 0.5px solid #f0f0f0; cursor: pointer;
-        transition: background .1s;
-      }
-      .ma-notify-row:last-child { border-bottom: none; }
-      .ma-notify-row:hover:not(.unreachable) { background: #f5f8fc; }
-      .ma-notify-row.selected   { background: #EBF4FF; }
-      .ma-notify-row.unreachable { opacity: 0.4; cursor: default; }
-      .ma-notify-row.ma-hidden  { display: none; }
-      .ma-notify-check {
-        width: 20px; height: 20px; border-radius: 50%;
-        border: 1.5px solid #ccc; flex-shrink: 0;
-        display: flex; align-items: center; justify-content: center;
-        transition: all .15s; background: transparent;
-      }
-      .ma-notify-row.selected .ma-notify-check {
-        background: #185FA5; border-color: #185FA5;
-      }
-      .ma-notify-avatar {
-        width: 32px; height: 32px; border-radius: 50%;
-        background: #f0f0ee; border: 0.5px solid #e0e0e0;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 11px; font-weight: 500; color: #666; flex-shrink: 0;
-      }
-      .ma-notify-info   { flex: 1; min-width: 0; }
-      .ma-notify-name   {
-        font-size: 13px; font-weight: 500; color: #1a1a1a;
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      }
-      .ma-notify-contact {
-        font-size: 11px; color: #888; margin-top: 1px;
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      }
-      .ma-notify-badge {
-        flex-shrink: 0; font-size: 10px; font-weight: 500;
-        padding: 2px 6px; border-radius: 20px; letter-spacing: .02em;
-      }
-      .ma-notify-badge-sms   { background: #E1F5EE; color: #085041; }
-      .ma-notify-badge-email { background: #E6F1FB; color: #0C447C; }
-      .ma-notify-badge-none  { background: #f0f0ee; color: #aaa; }
-      .ma-notify-footer {
-        padding: 12px 16px; border-top: 0.5px solid #e5e5e5;
-        background: #fff; flex-shrink: 0;
-      }
-      .ma-notify-summary {
-        font-size: 12px; color: #888; margin-bottom: 8px; min-height: 16px;
-      }
-      .ma-notify-actions { display: flex; gap: 8px; }
-      .ma-notify-btn-email {
-        flex: 1; padding: 10px; font-size: 13px; font-weight: 500;
-        background: #185FA5; color: #fff; border: none;
-        border-radius: 8px; cursor: pointer; transition: opacity .15s;
-      }
-      .ma-notify-btn-email:disabled { opacity: 0.35; cursor: default; }
-      .ma-notify-btn-sms {
-        padding: 10px 14px; font-size: 13px; font-weight: 500;
-        background: transparent; color: #085041;
-        border: 0.5px solid #5DCAA5; border-radius: 8px; cursor: pointer;
-      }
-      .ma-notify-btn-sms:disabled { opacity: 0.35; cursor: default; }
-      .ma-notify-loading, .ma-notify-error, .ma-notify-empty {
-        padding: 32px 16px; text-align: center; color: #888; font-size: 14px;
-      }
-      .ma-notify-error { color: #c0392b; }
-    `;
-    document.head.appendChild(style);
+    const s = document.createElement("style");
+    s.id = "ma-notify-styles";
+    s.textContent = [
+      ".ma-notify-panel { display:none; }",
+      ".ma-notify-panel.is-active { display:block; }",
+      ".ma-hidden { display:none !important; }",
+      ".ma-notify-list { background:#fff; border-top:1px solid var(--borderSubtle); border-bottom:1px solid var(--borderSubtle); }",
+      ".ma-notify-row { border-bottom:1px solid var(--borderSubtle); }",
+      ".ma-notify-row:last-child { border-bottom:none; }",
+    ].join("\n");
+    document.head.appendChild(s);
   })();
 
   window.MA = MA;
