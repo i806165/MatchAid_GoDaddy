@@ -590,19 +590,31 @@
   // ── Send ──────────────────────────────────────────────────────────────────────
 
 function _send(mode) {
-    const allPlayers = [ ...];  // unchanged
+    const allPlayers = [
+      ...(_state.data.gamePlayers || []),
+      ...(_state.data.favorites   || []),
+    ];
 
     const seen       = new Set();
     const recipients = [];
-    // ... recipient building unchanged ...
+
+    _state.selected.forEach(function (ghin) {
+      const p = allPlayers.find(function (x) { return x.ghin === ghin; });
+      if (!p || !p.deliveryEmail || !p.deliveryMethod) return;
+      if (mode === "sms"   && p.deliveryMethod !== "SMS")  return;
+      if (mode === "email" && !p.deliveryMethod)            return;
+      if (seen.has(p.deliveryEmail)) return;
+      seen.add(p.deliveryEmail);
+      recipients.push({ name: p.name, email: p.deliveryEmail });
+    });
 
     if (!recipients.length) return;
 
-    // Build subject from game context
+    // Build subject and body from game context if available
     let subject = "";
     let body    = "";
-    const game = _state.data.game;
-    const siteUrl = safeStr(_state.data.siteUrl)
+    const game    = _state.data.game;
+    const siteUrl = safeStr(_state.data.siteUrl) || "https://www.matchaid.org";
 
     if (game) {
       const venue = game.facilityName || game.courseName || "";
@@ -610,15 +622,17 @@ function _send(mode) {
       subject     = [game.title, venue, when].filter(Boolean).join(" \u2014 ");
       body        = siteUrl + "/game/" + game.ggid;
     } else {
-      subject     = "Subject:"
-      body        = "Attention players";
+      subject     = "Subject:";
+      body        = "Attention players;";
     }
 
     if (MA.email && typeof MA.email.compose === "function") {
       MA.email.compose({ bcc: recipients, subject: subject, body: body, bodyIsHtml: false });
       MA.notify.close();
+    } else {
+      console.error("[MA.notify] MA.email.compose not available.");
     }
-}
+  }
 
   // ── Minimal scoped CSS ────────────────────────────────────────────────────────
   // Only structural rules not provided by ma_shared.css
