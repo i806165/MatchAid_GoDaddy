@@ -745,12 +745,17 @@ function markDirty(playerId, rawScore, declared) {
       {
         label: 'Restart Scoring Session',
         danger: true,
-        action: async () => {
-          if (window.confirm('Clear session and restart?')) {
-            await fetch(apiUrls.clearContext);
-            window.location.href = apiUrls.scoreHome;
+          action: async () => {
+            if (window.confirm('Clear session and restart?')) {
+              await fetch(apiUrls.clearContext);
+              const key = getBaselinePlayerKey();
+              if (typeof MA.routerGo === 'function') {
+                MA.routerGo('scorehome', { scoreId: key });
+              } else {
+                window.location.href = apiUrls.scoreHome;
+              }
+            }
           }
-        }
       }
     ];
 
