@@ -262,32 +262,36 @@
     return `
       ${_html_hdr("Send message", subtitle)}
       ${tabBar}
-      <div class="maModal__body" style="padding:0; background:var(--surfaceApp);">
-        ${gamePanel}
-        ${favsPanel}
-      </div>
-      <footer class="maModal__ftr" style="flex-direction:column; gap:8px;">
-        <div style="font-size:10px; font-weight:800; color:var(--mutedText); opacity:.8;">
-          Use Outlook toggle to separate recipients with semicolons instead of commas.
+      <footer class="maModal__ftr" style="flex-direction:column; gap:10px;">
+        <div style="font-size:12px; font-weight:800; color:var(--mutedText);">
+          Separate recipients with:
         </div>
-        <div style="display:flex; align-items:center; justify-content:flex-end; gap:12px;">
-          <div style="display:flex; align-items:center; gap:7px;">
-            <span style="font-size:12px; font-weight:800; color:var(--mutedText);">Outlook</span>
-            <div id="ma-notify-client-track"
-                 style="position:relative; width:40px; height:22px; border-radius:99px;
-                        background:var(--borderSubtle); cursor:pointer; flex-shrink:0;
-                        transition:background .2s;">
-              <div id="ma-notify-client-thumb"
-                   style="position:absolute; top:3px; left:3px; width:16px; height:16px;
-                          border-radius:50%; background:#fff; transition:left .2s;
-                          pointer-events:none; box-shadow:0 1px 3px rgba(0,0,0,.2);">
-              </div>
-            </div>
-            <span style="font-size:12px; font-weight:800; color:var(--mutedText);">Other</span>
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <label style="display:flex; align-items:center; gap:8px;
+                          font-size:12px; font-weight:800; color:var(--ink); cursor:pointer;">
+              <input type="radio" id="ma-notify-sep-comma" name="ma-notify-sep"
+                    value="," checked
+                    style="width:16px; height:16px; accent-color:var(--brandSecondary); cursor:pointer;">
+              Commas &nbsp;
+              <span style="font-weight:800; color:var(--mutedText); font-size:11px;">
+                Gmail, Apple Mail, most clients
+              </span>
+            </label>
+            <label style="display:flex; align-items:center; gap:8px;
+                          font-size:12px; font-weight:800; color:var(--ink); cursor:pointer;">
+              <input type="radio" id="ma-notify-sep-semi" name="ma-notify-sep"
+                    value=";"
+                    style="width:16px; height:16px; accent-color:var(--brandSecondary); cursor:pointer;">
+              Semicolons &nbsp;
+              <span style="font-weight:800; color:var(--mutedText); font-size:11px;">
+                Outlook
+              </span>
+            </label>
           </div>
           <button type="button" id="ma-notify-btn-email"
                   class="maFtrBtn maFtrBtn--save"
-                  style="flex:0 0 auto; min-width:120px;"
+                  style="flex:0 0 auto; min-width:120px; align-self:flex-end;"
                   disabled>
             Open email
           </button>
@@ -450,8 +454,11 @@
           t.style.borderBottomColor = on ? "var(--brandAccent)" : "transparent";
           t.style.color             = on ? "var(--brandAccent)" : "var(--mutedText)";
         });
-        overlay.querySelectorAll(".ma-notify-panel").forEach(function (p) {
-          p.classList.toggle("is-active", p.dataset.panel === _state.activeTab);
+        // Separator radio buttons
+        overlay.querySelectorAll("input[name='ma-notify-sep']").forEach(function (radio) {
+          radio.addEventListener("change", function () {
+            _state.outlookMode = (radio.value === ";");
+          });
         });
         _updateCounts();
       });
