@@ -25,7 +25,10 @@ if (!is_array($in)) $in = [];
 // Session-driven auth (your standard)
 $userToken  = (string)($_SESSION["SessionUserToken"]  ?? "");
 $adminToken = (string)($_SESSION["SessionAdminToken"] ?? "");
-$token = $adminToken !== "" ? $adminToken : $userToken;
+//$token = $adminToken !== "" ? $adminToken : $userToken;
+$token = $useUserToken
+  ? $userToken
+  : ($adminToken !== "" ? $adminToken : $userToken);
 
 if ($token === "") {
   http_response_code(401);
@@ -37,6 +40,7 @@ if ($token === "") {
 $clubId = $_SESSION["SessionClubID"] ?? "";
 
 // Inputs
+$useUserToken = !empty($in["useUserToken"]);
 $mode = strtolower(trim((string)($in["mode"] ?? "")));
 
 try {

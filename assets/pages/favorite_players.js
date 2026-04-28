@@ -172,7 +172,8 @@
     const id = String(ghin || "").trim();
     if (!id) return null;
 
-    const res = await MA.postJson(MA.paths.ghinPlayerSearch, { mode: "id", ghin: id });
+    const res = await MA.postJson(MA.paths.ghinPlayerSearch, { mode: "id", ghin: id, useUserToken: true });
+    //const res = await MA.postJson(MA.paths.ghinPlayerSearch, { mode: "id", ghin: id });
     
     if (!res || !res.ok) throw new Error(res?.message || "GHIN lookup failed.");
 
