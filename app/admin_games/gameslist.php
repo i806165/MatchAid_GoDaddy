@@ -107,6 +107,7 @@ $paths = [
   "apiAdminGames" => MA_ROUTE_API_ADMIN_GAMES,
   "apiSession"    => MA_ROUTE_API_SESSION,
   "routerApi"     => MA_ROUTE_API_ROUTER,
+  "apiNotify"     => MA_ROUTE_API_MESSAGING, 
 ];
 
 // Chrome values
@@ -158,6 +159,7 @@ $maChromeLogoUrl = null; // reserve slot; set later if desired
   <script src="/assets/js/ma_shared.js"></script>
   <script src="/assets/modules/actions_menu.js?v=1"></script>
   <script src="/assets/modules/addCalendar.js?v=1"></script>
+  <script src="/assets/modules/player_notifications.js?v=1"></script> <!-- ADD -->
   <script src="/assets/pages/admin_games_list.js"></script>
 </body>
 </html>

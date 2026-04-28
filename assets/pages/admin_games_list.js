@@ -481,7 +481,7 @@ cardsEl.innerHTML = state.games.dbRows
     }
 
     // 1) authorization for actions (server decides OK/NotOK)
-    const requiresAuth = new Set(["editGame", "deleteGame", "roster", "pairings", "teetimes", "settings", "summary", "scorecard", "calendar"]);
+    const requiresAuth = new Set(["editGame", "deleteGame", "roster", "pairings", "teetimes", "settings", "summary", "scorecard", "calendar", "notify"]);
     if (requiresAuth.has(action)) {
       const auth = await apiSession("getGameAuthorizations.php", { ggid, action });
       const ok = auth?.payload?.status === "Authorized" || auth?.payload?.status === "OK" || auth?.status === "OK";
@@ -514,6 +514,18 @@ cardsEl.innerHTML = state.games.dbRows
       }
       return
     };
+
+    if (action === "notify") {
+      if (MA.notify && typeof MA.notify.open === "function") {
+        MA.notify.open({
+          ggid:    ggid,
+          apiPath: MA.paths.apiNotify,
+        });
+      } else {
+        setStatus("Messaging module not loaded.", "error");
+      }
+      return;
+    }
 
     if (action === "deleteGame") {
       if (!confirm("Are you sure you want to delete this game?")) return;
@@ -706,6 +718,8 @@ function applyPreset(presetKey) {
         <div class="actionMenu_divider"></div>
         <div class="actionMenu_divider"></div>
         <button class="actionMenu_item" type="button" data-menuclick="calendar">Add Game to Calendar</button>
+        <button class="actionMenu_item" type="button" data-menuclick="notify">Send Message to Players</button>  <!-- ADD -->
+        <div class="actionMenu_divider"></div>
         <div class="actionMenu_divider"></div>
         <div class="actionMenu_divider"></div>
         <button class="actionMenu_item danger" type="button" data-menuclick="deleteGame">Delete the Game</button>
