@@ -63,3 +63,15 @@ textarea {
 .igChoiceBtn:active {
   transform: scale(.98);
 }
+
+.igChoiceBtn.is-on[data-value="1"] {
+  background: var(--success);
+  color: #ffffff;
+  border-color: color-mix(in srgb, var(--success) 70%, black);
+}
+
+.igChoiceBtn.is-on[data-value="0"] {
+  background: var(--warn);
+  color: #111111;
+  border-color: color-mix(in srgb, var(--warn) 70%, black);
+}
