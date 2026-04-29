@@ -1,5 +1,5 @@
 <?php
-// /public_html/app/game_import/import_games_view.php
+// /public_html/app/game_import/gameimport_view.php
 ?>
 <div class="maCards" id="igCards">
 

@@ -1,5 +1,5 @@
 <?php
-// /public_html/api/import_games/initImport.php
+// /public_html/api/game_import/initImport.php
 declare(strict_types=1);
 
 require_once __DIR__ . "/../../bootstrap.php";
