@@ -1724,6 +1724,7 @@ async function beginBatchTeeFlow(){
         player: state.pendingPlayer,
         currentTeeSetId: safe(state.pendingPlayer.selectedTeeSetId || ""),
         recentTeeSetId: safe(state.pendingPlayer.recentTeeSetId || ""),
+        courseConfirmed: !!(state.game?.dbGames_CourseConfirmed == 1 || state.game?.dbGames_CourseConfirmed === true),
         onSave: async (selectedTee) => {
           state.selectedTee = selectedTee || null;
           await commitPending();

@@ -51,6 +51,7 @@
     privacyRow: document.getElementById("gmPrivacyRow"),
 
     pickCourseBtn: document.getElementById("gmPickCourseBtn"),
+    confirmBtn: document.getElementById("gmCourseConfirmBtn"),
     courseLine1: document.getElementById("gmCourseLine1"),
     courseLine2: document.getElementById("gmCourseLine2"),
 
@@ -354,10 +355,18 @@
     if (!fac && !course) {
       el.courseLine1.textContent = "No course selected.";
       el.courseLine2.textContent = "";
-      return;
+    } else {
+      el.courseLine1.textContent = course ? course : fac;
+      el.courseLine2.textContent = [fac, city, st].filter(Boolean).join(" • ");
     }
-    el.courseLine1.textContent = course ? course : fac;
-    el.courseLine2.textContent = [fac, city, st].filter(Boolean).join(" • ");
+
+    // Render confirmation toggle button
+    if (el.confirmBtn) {
+      const confirmed = !!(g.dbGames_CourseConfirmed == 1 || g.dbGames_CourseConfirmed === true);
+      el.confirmBtn.textContent = confirmed ? "Confirmed" : "Tentative";
+      el.confirmBtn.className = "btn " + (confirmed ? "btnConfirmed" : "btnTentative");
+      el.confirmBtn.dataset.confirmed = confirmed ? "1" : "0";
+    }
   }
 
   function renderTeeHint() {
@@ -500,6 +509,15 @@
     });
 
     el.pickCourseBtn.addEventListener("click", () => openCourseModal());
+
+    if (el.confirmBtn) {
+      el.confirmBtn.addEventListener("click", () => {
+        const current = !!(state.game.dbGames_CourseConfirmed == 1 || state.game.dbGames_CourseConfirmed === true);
+        state.game.dbGames_CourseConfirmed = current ? 0 : 1;
+        renderCourseSummary();
+        setDirty(true);
+      });
+    }
     el.modalClose.addEventListener("click", () => closeCourseModal());
     el.modal.addEventListener("click", (e) => {
       if (e.target === el.modal) closeCourseModal();
@@ -608,7 +626,8 @@
       dbGames_FacilityCity: state.game.dbGames_FacilityCity || "",
       dbGames_FacilityState: state.game.dbGames_FacilityState || "",
       dbGames_CourseID: state.game.dbGames_CourseID || "",
-      dbGames_CourseName: state.game.dbGames_CourseName || ""
+      dbGames_CourseName: state.game.dbGames_CourseName || "",
+      dbGames_CourseConfirmed: state.game.dbGames_CourseConfirmed ? 1 : 0
     };
   }
 

@@ -413,8 +413,11 @@ public static function queryGames(array $args): array {
       "dbGames_HCEffectivityDate",
       "dbGames_FacilityID",
       "dbGames_FacilityName",
+      "dbGames_FacilityCity",
+      "dbGames_FacilityState",
       "dbGames_CourseID",
       "dbGames_CourseName",
+      "dbGames_CourseConfirmed",
     ];
 
     foreach ($allow as $k) {
@@ -481,6 +484,11 @@ public static function queryGames(array $args): array {
     // Visibility / holes defaults
     $g["dbGames_Privacy"] = $g["dbGames_Privacy"] ?? "Club";
     $g["dbGames_Holes"] = $g["dbGames_Holes"] ?? "All 18";
+
+    // New games start as tentative unless explicitly confirmed
+    if (!array_key_exists("dbGames_CourseConfirmed", $g)) {
+      $g["dbGames_CourseConfirmed"] = 0;
+    }
 
     // Comments should exist (avoid null surprises downstream)
     if (!array_key_exists("dbGames_Comments", $g) || $g["dbGames_Comments"] === null) {

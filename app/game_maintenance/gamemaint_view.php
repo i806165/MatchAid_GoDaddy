@@ -31,6 +31,7 @@
             <div class="gmCourseLine2" id="gmCourseLine2"></div>
           </div>
 
+          <button type="button" class="btn btnTentative" id="gmCourseConfirmBtn">Tentative</button>
           <button type="button" class="btn btnSecondary" id="gmPickCourseBtn">Change course</button>
         </div>
 
@@ -221,4 +222,3 @@
       </div>
     </div>
   </div>
-

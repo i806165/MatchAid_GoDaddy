@@ -16,7 +16,7 @@
 
   // API base injected by PHP
   const routes = MA.routes || {};
-  const igApiBase = routes.apiImportGames || MA.paths?.apiImportGames || "/api/admin_games/import";
+const igApiBase = routes.apiImportGames || MA.paths?.apiImportGames || "/api/game_import";
 
   function apiIG(endpointFile, payloadObj) {
     const baseClean = String(igApiBase || "").replace(/\/$/, "");

@@ -21,7 +21,7 @@ if (!$ctx || empty($ctx["ok"])) {
 }
 
 $paths = [
-  "apiImportGames" => "/api/import_games",
+  "apiImportGames" => "/api/game_import",
   "routerApi"      => MA_ROUTE_API_ROUTER,
   "apiSession"     => MA_ROUTE_API_SESSION,
 ];
