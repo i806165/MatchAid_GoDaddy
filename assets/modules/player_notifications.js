@@ -164,7 +164,7 @@
 
   // ── DOM management ────────────────────────────────────────────────────────────
 
-  function _renderOverlay(modalHtml) {
+function _renderOverlay(modalHtml) {
     let overlay = document.getElementById(OVERLAY_ID);
     if (!overlay) {
       overlay = document.createElement("div");
@@ -175,8 +175,10 @@
       document.body.appendChild(overlay);
     }
     overlay.className = "maModalOverlay is-open";
+    overlay.style.boxSizing = "border-box";
     overlay.innerHTML = `
-      <section class="maModal" role="dialog" aria-modal="true" aria-label="Send message">
+      <section class="maModal" role="dialog" aria-modal="true" aria-label="Send message"
+               style="box-sizing:border-box; max-width:calc(100vw - 32px);">
         ${modalHtml}
       </section>`;
     document.documentElement.classList.add("maOverlayOpen");
@@ -235,9 +237,8 @@
 
     let subtitle = "Your favorites";
     if (hasGame && game) {
-      const venue = [game.facilityName, game.courseName].filter(Boolean).join(" \u2022 ");
-      const when  = formatDateShort(game.playDate, game.playTime);
-      subtitle    = [venue, when].filter(Boolean).join(" \u2022 ");
+      const when = formatDateShort(game.playDate, game.playTime);
+      subtitle   = [game.title, when].filter(Boolean).join(" \u2022 ");
     }
 
     const tabBar = hasGame ? `
