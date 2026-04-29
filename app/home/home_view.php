@@ -99,14 +99,37 @@
               </a>
             </div>
 
-            <p class="copy" style="margin-top: 0.75rem;">
-              <a href="/assets/downloads/matchaid_guide.pdf"
-                 target="_blank"
-                 rel="noopener noreferrer"
-                 style="color: rgba(205,178,120,0.92); font-weight: 600; text-decoration: underline;">
-                📄 MatchAid Guide (PDF)
-              </a>
-            </p>
+            <a href="/assets/downloads/matchaid_guide.pdf"
+               target="_blank"
+               rel="noopener noreferrer"
+               style="
+                 display: flex;
+                 align-items: center;
+                 gap: 12px;
+                 margin-top: 0.75rem;
+                 padding: 11px 14px;
+                 background: rgba(205,178,120,0.10);
+                 border: 1px solid rgba(205,178,120,0.35);
+                 border-radius: var(--radiusMd, 10px);
+                 text-decoration: none;
+                 color: inherit;
+               ">
+              <!-- PDF / download icon -->
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                   aria-hidden="true"
+                   style="width:24px; height:24px; flex:0 0 auto; color:rgba(205,178,120,0.92);">
+                <path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Zm1 1.5L18.5 9H15V3.5ZM12 17.5l-3.5-3.5 1.06-1.06L11 14.38V11h2v3.38l1.44-1.44L15.5 14 12 17.5Z"/>
+              </svg>
+              <span style="display:flex; flex-direction:column; gap:2px; min-width:0;">
+                <span style="font-size:0.75rem; font-weight:700; color:rgba(205,178,120,0.85); letter-spacing:0.05em; text-transform:uppercase;">Free Resource</span>
+                <span style="font-size:0.95rem; font-weight:700; color:#fff;">Download the MatchAid Guide</span>
+              </span>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                   aria-hidden="true"
+                   style="width:16px; height:16px; flex:0 0 auto; margin-left:auto; opacity:0.45; color:#fff;">
+                <path fill="currentColor" d="M8.59 16.58 13.17 12 8.59 7.41 10 6l6 6-6 6z"/>
+              </svg>
+            </a>
 
             <p class="copy" style="margin-top: 0.2rem;">
               <span style="color: rgba(205,178,120,0.92); font-weight: 600;">Tip:</span>
