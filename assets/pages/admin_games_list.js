@@ -282,6 +282,10 @@ cardsEl.innerHTML = state.games.dbRows
 
     const title = String(r.dbGames_Title || "").trim();
     const ggid = String(r.dbGames_GGID ?? "").trim();
+    const courseConfirmed = r.dbGames_CourseConfirmed == 1 || r.dbGames_CourseConfirmed === true;
+    const provisionalHtml = !courseConfirmed
+      ? `<div class="maGameCard__provisional">⚠ Course is not yet confirmed</div>`
+      : ``;
 
     return `
       <div class="maCard maGameCard" data-ggid="${esc(ggid)}">
@@ -320,6 +324,8 @@ cardsEl.innerHTML = state.games.dbRows
                     aria-label="Manage"
                   >MANAGE</button>
                 </div>
+
+                ${provisionalHtml}
 
                 <div class="maGameCard__line2">
                   <div class="maGameCard__facts" title="${esc(line2)}">${esc(line2)}</div>
