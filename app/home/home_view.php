@@ -76,28 +76,37 @@
           </div>
           <div class="card__body">
 
-            <div class="ctaRow" role="group" aria-label="Portal navigation">
+            <div class="ctaCol" role="group" aria-label="Portal navigation" style="display:flex; flex-direction:column; gap:10px;">
               <!-- Player Portal -->
               <a class="btn btn--primary"
                 href="<?= htmlspecialchars($playerPortalHref) ?>"
-                style="font-size: 1.2rem;">
+                style="font-size: 1.2rem; width:100%; text-align:center; justify-content:center; box-sizing:border-box;">
                 <span>Enter as Game Player</span>
               </a>
 
               <!-- Admin Portal -->
               <a class="btn btn--primary"
                 href="<?= htmlspecialchars($adminPortalHref) ?>"
-                style="font-size: 1.2rem;">
+                style="font-size: 1.2rem; width:100%; text-align:center; justify-content:center; box-sizing:border-box;">
                 <span>Enter as Game Admin</span>
               </a>
-              
+
               <!-- Club Admin Portal -->
               <a class="btn btn--primary"
                 href="<?= htmlspecialchars($clubAdminPortalHref) ?>"
-                style="font-size: 1.2rem;">
+                style="font-size: 1.2rem; width:100%; text-align:center; justify-content:center; box-sizing:border-box;">
                 <span>Enter as Club Admin</span>
               </a>
             </div>
+
+            <p class="copy" style="margin-top: 0.75rem;">
+              <a href="/assets/downloads/matchaid_guide.pdf"
+                 target="_blank"
+                 rel="noopener noreferrer"
+                 style="color: rgba(205,178,120,0.92); font-weight: 600; text-decoration: underline;">
+                📄 MatchAid Guide (PDF)
+              </a>
+            </p>
 
             <p class="copy" style="margin-top: 0.2rem;">
               <span style="color: rgba(205,178,120,0.92); font-weight: 600;">Tip:</span>
