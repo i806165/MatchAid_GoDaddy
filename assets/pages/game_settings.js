@@ -628,7 +628,12 @@
     wiz.scoringMethod    = String(g.dbGames_ScoringMethod  || "NET");
     wiz.scoringSystemVal = String(g.dbGames_ScoringSystem  || match.scoringSystem || "BestBall");
     wiz.bestBall         = String(g.dbGames_BestBall        ?? "2");
-    wiz.holeDecls        = [];
+    const savedDecls = (() => {
+        let d = g.dbGames_HoleDeclaration;
+        if (typeof d === "string") { try { d = JSON.parse(d); } catch (e) { d = null; } }
+        return Array.isArray(d) ? d.map(r => ({ hole: Number(r.hole), count: String(r.count ?? "1") })) : [];
+      })();
+    wiz.holeDecls = savedDecls;
 
     // Points config — support both new field and legacy field
     const rawConfig = g.dbGames_PointsConfig ?? g.dbGames_StablefordPoints ?? null;
@@ -1387,7 +1392,7 @@
     let hStart = 1, hEnd = 18;
     if (holesVal === "F9") { hStart = 1;  hEnd = 9;  }
     if (holesVal === "B9") { hStart = 10; hEnd = 18; }
-    if (!wiz.holeDecls.length || wiz.holeDecls[0].hole !== hStart) {
+    if (!wiz.holeDecls.length || wiz.holeDecls[0].hole !== hStart || wiz.holeDecls[wiz.holeDecls.length - 1].hole !== hEnd) {
       const defCount = wiz.bestBall || "2";
       wiz.holeDecls = [];
       for (let h = hStart; h <= hEnd; h++) wiz.holeDecls.push({ hole: h, count: defCount });
