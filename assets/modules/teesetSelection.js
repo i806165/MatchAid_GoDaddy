@@ -91,10 +91,8 @@
 
       const player = _config.player || {};
       const playerName = (player.name || (player.first_name + " " + player.last_name)).trim();
-      const isTentative = !_config.courseConfirmed && _config.courseConfirmed !== undefined;
-      elSub.textContent = isTentative
-        ? "Select a PROVISIONAL tee set — course has yet to be confirmed"
-        : (_config.subtitle || playerName || "Player");
+      elSub.textContent = _config.subtitle || playerName || "Player";
+
       elRows.innerHTML = '<div class="maEmptyState">Loading tee sets.</div>';
 
       // Render the controls strip for batch-setup mode; hide it for single-player mode
@@ -270,15 +268,28 @@
   function renderControls() {
     if (!elControls) return;
 
-    // Controls strip only appears in batch-setup mode (paths 2, 3, 4).
-    // Single-player mode (path 1) keeps it hidden — no behaviour change.
     const isBatchSetup = (_config.mode === "batch" || _config.mode === "batch-setup");
+    const isTentative = !_config.courseConfirmed && _config.courseConfirmed !== undefined;
+
+    // Single-player tentative notice
     if (!isBatchSetup) {
-      elControls.style.display = "none";
-      elControls.innerHTML = "";
+      if (isTentative) {
+        elControls.style.display = "";
+        elControls.innerHTML = `
+          <div style="background:#FFF3CD; border:1px solid #E8C87A;
+            border-radius:var(--radiusSq,6px); padding:7px 10px;
+            font-size:11px; font-weight:700; color:#7A5A10; line-height:1.4;">
+            Course and tee times are not yet confirmed and subject to change.
+          </div>
+        `;
+      } else {
+        elControls.style.display = "none";
+        elControls.innerHTML = "";
+      }
       return;
     }
 
+    // Batch-setup mode: force-assign toggle (unchanged)
     elControls.style.display = "";
     elControls.innerHTML = `
       <div style="display:flex; align-items:flex-start; gap:10px;">
