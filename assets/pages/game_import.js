@@ -422,7 +422,7 @@
   }
 
   function readConfirmed() {
-    const on = el.confirmedRow ? el.confirmedRow.querySelector(".gmChoiceBtn.is-on") : null;
+    const on = el.confirmedRow ? el.confirmedRow.querySelector(".igChoiceBtn.is-on") : null;
     return on ? parseInt(on.dataset.value, 10) : 1; // default Confirmed
   }
 
@@ -430,9 +430,9 @@
     // Wire confirmation toggle
     if (el.confirmedRow) {
       el.confirmedRow.addEventListener("click", (e) => {
-        const btn = e.target.closest(".gmChoiceBtn");
+        const btn = e.target.closest(".igChoiceBtn");
         if (!btn) return;
-        el.confirmedRow.querySelectorAll(".gmChoiceBtn").forEach(b => b.classList.remove("is-on"));
+        el.confirmedRow.querySelectorAll(".igChoiceBtn").forEach(b => b.classList.remove("is-on"));
         btn.classList.add("is-on");
       });
     }

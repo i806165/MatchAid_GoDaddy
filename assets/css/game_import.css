@@ -1,20 +1,65 @@
-.maCard__hdr{
+/* ==========================================================================
+   game_import.css
+   ========================================================================== */
+
+/* Card header branding */
+.maCard__hdr {
   color: var(--brandSecondaryText);
   background: var(--brandSecondary);
 }
-/* Make the paste area open full width */
+
+/* Textarea full width */
 #rowsText,
 textarea.maTextArea,
 textarea.maTextInput,
-textarea{
+textarea {
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
-  min-height: 220px; /* adjust to taste */
+  min-height: 220px;
 }
 
-/* If your fields sit in a 2-col row, force the rows field to span full width */
-.maIG__rows,
-.maField--rows{
-  grid-column: 1 / -1;
+/* ==========================================================================
+   Control Area field sizing
+   Desktop: Title takes most space, Admin fixed, toggle compact.
+   Mobile: all fields stack naturally via flex-wrap.
+   ========================================================================== */
+
+.igField--title   { flex: 2 1 240px; }
+.igField--admin   { flex: 1 1 180px; }
+.igField--confirmed { flex: 0 0 auto; }
+
+/* ==========================================================================
+   Choice buttons (mirrors gmChoiceBtn / gmChoiceRow from game_maintenance.css)
+   ========================================================================== */
+
+.igChoiceRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.igChoiceBtn {
+  height: var(--btnHeight, 34px);
+  padding: 0 var(--btnPadX, 12px);
+  border: 1px solid var(--choiceChipBorder, var(--borderSubtle));
+  border-radius: var(--choiceChipRadius, 12px);
+  background: var(--choiceChipBg, var(--surface));
+  color: var(--choiceChipText, var(--ink));
+  font-family: var(--fontFamilyBase);
+  font-size: var(--fieldValueSize, 12px);
+  font-weight: 800;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.igChoiceBtn.is-on {
+  background: var(--segmentSelectedBg, #F1D7B7);
+  color: var(--segmentSelectedText, var(--ink));
+  border-color: color-mix(in srgb, var(--segmentSelectedBg, #F1D7B7) 55%, black);
+}
+
+.igChoiceBtn:active {
+  transform: scale(.98);
 }

@@ -1,6 +1,33 @@
 <?php
 // /public_html/app/game_import/gameimport_view.php
 ?>
+
+<!-- Control Area: Title, Administrator, Confirmation toggle -->
+<div class="maControlArea">
+  <div class="maFieldRow" style="margin-top:0;">
+
+    <div class="maField igField--title">
+      <label class="maLabel" for="igTitle">Title (applied to all imported games)</label>
+      <input id="igTitle" class="maTextInput" type="text" maxlength="120" autocomplete="off" />
+    </div>
+
+    <div class="maField igField--admin">
+      <label class="maLabel" for="igAdminSel">Administrator</label>
+      <select id="igAdminSel" class="maTextInput" aria-label="Administrator"></select>
+    </div>
+
+    <div class="maField igField--confirmed">
+      <label class="maLabel">Imported games are</label>
+      <div class="igChoiceRow" id="igConfirmedRow" role="group" aria-label="Course Confirmation">
+        <button type="button" class="igChoiceBtn is-on" data-value="1">Confirmed</button>
+        <button type="button" class="igChoiceBtn" data-value="0">Tentative</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Cards -->
 <div class="maCards" id="igCards">
 
   <!-- CARD — IMPORT -->
@@ -12,33 +39,11 @@
 
     <div class="maCard__body">
 
-      <div class="maFieldRow">
-        <div class="maField">
-          <label class="maLabel" for="igTitle">Title (applied to all imported games)</label>
-          <input id="igTitle" class="maTextInput" type="text" maxlength="120" autocomplete="off" />
-        </div>
-
-        <div class="maField" style="flex:0 0 320px;">
-          <label class="maLabel" for="igAdminSel">Administrator</label>
-          <select id="igAdminSel" class="maTextInput" aria-label="Administrator"></select>
-        </div>
-      </div>
-
-      <div class="maField" style="margin-top:12px;">
+      <div class="maField">
         <label class="maLabel" for="igRows">
           Paste games (one per line): MM/DD/YYYY, HH:MM AM, Course Name, TeeTimeCnt
         </label>
         <textarea id="igRows" class="maTextArea" rows="8" placeholder="02/15/2026, 08:00 AM, Bethpage Black, 18"></textarea>
-      </div>
-
-      <div class="maFieldRow" style="margin-top:12px;">
-        <div class="maField">
-          <label class="maLabel">Imported games are</label>
-          <div class="gmChoiceRow" id="igConfirmedRow" role="group" aria-label="Course Confirmation">
-            <button type="button" class="gmChoiceBtn is-on" data-value="1">Confirmed</button>
-            <button type="button" class="gmChoiceBtn" data-value="0">Tentative</button>
-          </div>
-        </div>
       </div>
 
       <!-- Review/Import Mode -->
