@@ -413,8 +413,6 @@ public static function queryGames(array $args): array {
       "dbGames_HCEffectivityDate",
       "dbGames_FacilityID",
       "dbGames_FacilityName",
-      "dbGames_FacilityCity",
-      "dbGames_FacilityState",
       "dbGames_CourseID",
       "dbGames_CourseName",
       "dbGames_CourseConfirmed",
