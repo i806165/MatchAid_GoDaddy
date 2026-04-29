@@ -1,5 +1,5 @@
 <?php
-// /public_html/api/game_import/executeImportWorkflow.php
+// /public_html/api/import_games/executeImportWorkflow.php
 declare(strict_types=1);
 
 require_once __DIR__ . "/../../bootstrap.php";
@@ -28,6 +28,7 @@ try {
     $admin    = $payload["admin"]    ?? [];
     $rows     = $payload["rows"]     ?? [];
     $defaults = $payload["defaults"] ?? [];
+    $courseConfirmed = isset($payload["courseConfirmed"]) ? (int)$payload["courseConfirmed"] : 1;
 
     if ($title === "")                      throw new RuntimeException("Missing title.");
     if (!is_array($admin))                  $admin = [];
@@ -65,7 +66,7 @@ try {
     ]);
 
     // 4) Delegate to workflow
-    $result = be_importGames($title, $admin, $defaults, $rows, $sessionCtx);
+    $result = be_importGames($title, $admin, $defaults, $rows, $sessionCtx, $courseConfirmed);
 
     echo json_encode($result, JSON_UNESCAPED_SLASHES);
 

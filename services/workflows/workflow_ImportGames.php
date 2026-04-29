@@ -24,7 +24,8 @@ function be_importGames(
     array  $admin,
     array  $defaults,
     array  $rows,
-    array  $sessionCtx
+    array  $sessionCtx,
+    int    $courseConfirmed = 1
 ): array {
     $teeInterval = (int)($defaults["teeTimeInterval"] ?? 9);
     if ($teeInterval < 1 || $teeInterval > 60) $teeInterval = 9;
@@ -82,7 +83,7 @@ function be_importGames(
                 "dbGames_CourseName"         => $courseName,
                 "dbGames_HCEffectivity"      => "PlayDate",
                 "dbGames_HCEffectivityDate"  => $playDateISO,
-                "dbGames_CourseConfirmed"    => 1,
+                "dbGames_CourseConfirmed"    => $courseConfirmed,
             ];
 
             Logger::info("IMPORT_ROW_SAVE_BEGIN", [

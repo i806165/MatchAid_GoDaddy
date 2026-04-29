@@ -31,6 +31,16 @@
         <textarea id="igRows" class="maTextArea" rows="8" placeholder="02/15/2026, 08:00 AM, Bethpage Black, 18"></textarea>
       </div>
 
+      <div class="maFieldRow" style="margin-top:12px;">
+        <div class="maField">
+          <label class="maLabel">Imported games are</label>
+          <div class="gmChoiceRow" id="igConfirmedRow" role="group" aria-label="Course Confirmation">
+            <button type="button" class="gmChoiceBtn is-on" data-value="1">Confirmed</button>
+            <button type="button" class="gmChoiceBtn" data-value="0">Tentative</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Review/Import Mode -->
       <div id="igReviewPanel" style="display:none; margin-top:16px;">
         <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; margin-bottom:10px;">

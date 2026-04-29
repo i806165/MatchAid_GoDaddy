@@ -16,7 +16,7 @@
 
   // API base injected by PHP
   const routes = MA.routes || {};
-const igApiBase = routes.apiImportGames || MA.paths?.apiImportGames || "/api/game_import";
+  const igApiBase = routes.apiImportGames || MA.paths?.apiImportGames || "/api/admin_games/import";
 
   function apiIG(endpointFile, payloadObj) {
     const baseClean = String(igApiBase || "").replace(/\/$/, "");
@@ -30,6 +30,7 @@ const igApiBase = routes.apiImportGames || MA.paths?.apiImportGames || "/api/gam
     title: document.getElementById("igTitle"),
     adminSel: document.getElementById("igAdminSel"),
     rows: document.getElementById("igRows"),
+    confirmedRow: document.getElementById("igConfirmedRow"),
 
     reviewPanel: document.getElementById("igReviewPanel"),
     btnRetry: document.getElementById("igBtnRetry"),
@@ -387,6 +388,7 @@ const igApiBase = routes.apiImportGames || MA.paths?.apiImportGames || "/api/gam
         title,
         admin,
         defaults: state.defaults,
+        courseConfirmed: readConfirmed(),
         rows: state.preview.map(r => ({
           idx: r.idx,
           playDateISO: r.playDateISO,
@@ -419,7 +421,21 @@ const igApiBase = routes.apiImportGames || MA.paths?.apiImportGames || "/api/gam
     }
   }
 
+  function readConfirmed() {
+    const on = el.confirmedRow ? el.confirmedRow.querySelector(".gmChoiceBtn.is-on") : null;
+    return on ? parseInt(on.dataset.value, 10) : 1; // default Confirmed
+  }
+
   function bind() {
+    // Wire confirmation toggle
+    if (el.confirmedRow) {
+      el.confirmedRow.addEventListener("click", (e) => {
+        const btn = e.target.closest(".gmChoiceBtn");
+        if (!btn) return;
+        el.confirmedRow.querySelectorAll(".gmChoiceBtn").forEach(b => b.classList.remove("is-on"));
+        btn.classList.add("is-on");
+      });
+    }
 
     el.btnRetry?.addEventListener("click", () => {
       // Retry keeps inputs intact; returns to Evaluate mode
