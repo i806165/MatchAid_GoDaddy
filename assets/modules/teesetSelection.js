@@ -279,7 +279,7 @@
           <div style="background:#FFF3CD; border:1px solid #E8C87A;
             border-radius:var(--radiusSq,6px); padding:7px 10px;
             font-size:11px; font-weight:700; color:#7A5A10; line-height:1.4;">
-            Course and tee times are not yet confirmed and subject to change.
+            Select a PROVISIONAL tee set — Course has yet to be confirmed
           </div>
         `;
       } else {
