@@ -290,7 +290,9 @@
       if (scoringSystem === 'AllScores') {
         n = validRows.length;
       } else if (scoringSystem === 'DeclareHole') {
-        const holeDecls = Array.isArray(g.dbGames_HoleDeclaration) ? g.dbGames_HoleDeclaration : [];
+        let holeDecls = g.dbGames_HoleDeclaration ?? [];
+        if (typeof holeDecls === 'string') { try { holeDecls = JSON.parse(holeDecls); } catch(e) { holeDecls = []; } }
+        if (!Array.isArray(holeDecls)) holeDecls = [];
         const found = holeDecls.find(h => parseInt(h.hole, 10) === state.currentHole);
         n = parseInt(found?.count || '1', 10);
       } else if (scoringSystem === 'BestBall') {
