@@ -209,18 +209,17 @@
   }
 
   // ── Shared header ─────────────────────────────────────────────────────────────
-
   function _html_hdr(title, subtitle) {
     return `
       <header class="maModal__hdr">
-        <div class="maModal__titles">
+        <div class="maModal__titles" style="min-width:0; overflow:hidden; flex:1 1 auto;">
           <div class="maModal__title">${esc(title)}</div>
           ${subtitle ? `<div class="maModal__subtitle">${esc(subtitle)}</div>` : ""}
         </div>
         <button type="button" class="iconBtn btnPrimary"
                 onclick="MA.notify.close()" aria-label="Close">
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
-               stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </button>
