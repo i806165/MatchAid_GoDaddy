@@ -91,7 +91,10 @@
 
       const player = _config.player || {};
       const playerName = (player.name || (player.first_name + " " + player.last_name)).trim();
-      elSub.textContent = _config.subtitle || playerName || "Player";
+      const isTentative = !_config.courseConfirmed && _config.courseConfirmed !== undefined;
+      elSub.textContent = isTentative
+        ? "Select a PROVISIONAL tee set — course has yet to be confirmed"
+        : (_config.subtitle || playerName || "Player");
       elRows.innerHTML = '<div class="maEmptyState">Loading tee sets.</div>';
 
       // Render the controls strip for batch-setup mode; hide it for single-player mode
