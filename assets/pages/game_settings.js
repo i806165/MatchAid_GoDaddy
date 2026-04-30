@@ -1410,6 +1410,10 @@
     }
   }
 
+  function setOverlayLock(on) {
+    document.documentElement.classList.toggle("maOverlayOpen", !!on);
+  }
+
   function wizOpenHoleDeclModal() {
     wizEnsureHoleDecls();
     // Deep-copy current state into working copy
@@ -1419,7 +1423,7 @@
     if (!overlay) return;
     overlay.classList.add("is-open");
     overlay.setAttribute("aria-hidden", "false");
-    document.body.style.overflow = "hidden";
+    setOverlayLock(true);
 
     wizRenderHoleDeclModalRows();
   }
@@ -1439,7 +1443,7 @@
       overlay.classList.remove("is-open");
       overlay.setAttribute("aria-hidden", "true");
     }
-    document.body.style.overflow = "";
+    setOverlayLock(false);
   }
 
   function wizRenderHoleDeclModalRows() {

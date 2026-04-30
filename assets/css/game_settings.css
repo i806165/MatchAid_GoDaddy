@@ -421,8 +421,7 @@
 
 @media (max-width: 720px) {
   .gsWizLayout           { flex-direction: column; }
-  .gsWizAside            { width: 100%; position: static; }
-  .gsWizHoleDeclGrid     { grid-template-columns: repeat(6, 1fr); }
+  .gsWizAside            { display: none; }
   .gsWizStableford__grid { grid-template-columns: repeat(3, 1fr); }
   .wizGameCard           { flex: 0 0 96px; }
   .gsWizCarouselArrows   { display: none; }
