@@ -1054,6 +1054,7 @@ textarea {
   display: none;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;  /* NEW */
   padding:
     calc(20px + env(safe-area-inset-top))
     16px
@@ -1069,7 +1070,7 @@ textarea {
 
 .maModal {
   width: 100%;
-  max-width: var(--modalMaxW);
+  max-width: min(var(--modalMaxW), calc(100vw - 32px));  /* NEW */
   max-height: 88vh; /* legacy fallback */
   max-height: min(var(--modalMaxH), calc(100dvh - (var(--modalViewportGap) + env(safe-area-inset-top) + env(safe-area-inset-bottom))));
   background: var(--modalSurface);
