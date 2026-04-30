@@ -221,44 +221,166 @@
    WIZARD — Hole declaration grid
    ========================================================================== */
 
-.gsWizSetAllRow    { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0; }
-.gsWizSetAllLabel  { font-size: 12px; font-weight: 800; color: var(--mutedText); white-space: nowrap; }
-.gsWizSetAllBtns   { display: flex; gap: 5px; }
-.gsWizSetAllBtn {
-  width: 34px; height: 34px; border-radius: var(--controlRadius);
-  border: 1px solid var(--controlBorder); background: var(--bg);
-  font-size: 13px; font-weight: 900; font-family: var(--fontFamilyBase);
-  color: var(--mutedText); cursor: pointer;
-  display: flex; align-items: center; justify-content: center; transition: background 0.12s;
-}
-.gsWizSetAllBtn:hover { background: var(--segmentSelectedBg); border-color: color-mix(in srgb, var(--segmentSelectedBg) 55%, black); color: var(--ink); }
+/* ==========================================================================
+   WIZARD — Hole declaration edit button (inline, next to dropdown)
+   ========================================================================== */
 
-.gsWizHoleDeclGrid {
+.gsWizHoleDeclEditBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 6px;
+  padding: 5px 10px 5px 8px;
+  border: 1px solid var(--controlBorder);
+  border-radius: var(--controlRadius);
+  background: var(--bg);
+  color: var(--mutedText);
+  font-family: var(--fontFamilyBase);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  user-select: none;
+}
+.gsWizHoleDeclEditBtn img {
+  opacity: 0.55;
+  display: block;
+  flex-shrink: 0;
+  transition: opacity 0.12s;
+}
+.gsWizHoleDeclEditBtn:hover {
+  background: var(--btnHoverBg);
+  border-color: rgba(0,0,0,.2);
+}
+.gsWizHoleDeclEditBtn:hover img { opacity: 1; }
+
+/* ==========================================================================
+   HOLE DECLARATION MODAL — interior layout
+   ========================================================================== */
+
+.gsHoleDeclModal {
+  --modalMaxW: 680px;
+}
+
+.gsHoleDeclModal__body {
+  padding: 0;
+}
+
+.gsHoleDeclCols {
   display: grid;
-  grid-template-columns: repeat(9, 1fr);
-  gap: 5px;
-  max-width: 100%;
-  box-sizing: border-box;
+  grid-template-columns: 1fr 1px 1fr;
+  min-height: 100%;
 }
 
-.wizHoleCell {
-  background: var(--surfaceApp); border: 1px solid var(--borderSubtle);
-  border-radius: var(--radiusMd); padding: 7px 4px 5px;
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  transition: border-color 0.12s;
-  min-width: 0;
-  box-sizing: border-box;
+.gsHoleDeclCol {
+  display: flex;
+  flex-direction: column;
 }
-.wizHoleCell:focus-within { border-color: var(--brandSecondary); background: var(--brandPrimaryBg); }
-.wizHoleCellLabel         { font-size: 9px; font-weight: 900; color: var(--mutedText); text-align: center; line-height: 1.2; }
-.wizHoleCellLabel .par-text { display: block; font-size: 8px; color: var(--brandSecondary); margin-top: 1px; }
-.wizHoleCellSelect {
-  width: 100%; border: none; background: transparent;
-  font-size: 15px; font-weight: 900; font-family: var(--fontFamilyBase);
-  color: var(--brandPrimary); text-align: center; text-align-last: center; cursor: pointer;
-  appearance: none; -webkit-appearance: none; padding: 0; display: block; margin: 0 auto;
+
+.gsHoleDeclColHdr {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 7px 16px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  color: var(--mutedText);
+  background: var(--surfaceApp);
+  border-bottom: 1px solid var(--borderSubtle);
 }
-.wizHoleCellSelect:focus { outline: none; }
+
+.gsHoleDeclDivider {
+  background: var(--borderSubtle);
+  width: 1px;
+}
+
+.gsHoleDeclRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--borderSubtle);
+}
+.gsHoleDeclRow:last-child { border-bottom: none; }
+
+.gsHoleDeclRowInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.gsHoleDeclRowHole {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+  min-width: 52px;
+}
+
+.gsHoleDeclRowPar {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--mutedText);
+}
+
+/* Stepper */
+.gsHoleDeclStepper {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.gsHoleDeclStepBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--controlRadius);
+  border: 1px solid var(--controlBorder);
+  background: var(--bg);
+  font-size: 16px;
+  font-family: var(--fontFamilyBase);
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background 0.1s;
+  user-select: none;
+}
+.gsHoleDeclStepBtn:hover { background: var(--btnHoverBg); }
+
+.gsHoleDeclStepVal {
+  width: 40px;
+  height: 28px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 900;
+  font-family: var(--fontFamilyBase);
+  color: var(--brandPrimary);
+  border: 1px solid var(--controlBorder);
+  border-radius: var(--controlRadius);
+  background: var(--bg);
+  padding: 0;
+  -moz-appearance: textfield;
+}
+.gsHoleDeclStepVal::-webkit-inner-spin-button,
+.gsHoleDeclStepVal::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.gsHoleDeclStepVal:focus { outline: none; border-color: var(--brandSecondary); }
+
+@media (max-width: 520px) {
+  .gsHoleDeclCols {
+    grid-template-columns: 1fr;
+  }
+  .gsHoleDeclDivider {
+    width: 100%;
+    height: 6px;
+    background: var(--surfaceApp);
+    border-top: 1px solid var(--borderSubtle);
+    border-bottom: 1px solid var(--borderSubtle);
+  }
+}
 
 /* ==========================================================================
    WIZARD — Stableford preview

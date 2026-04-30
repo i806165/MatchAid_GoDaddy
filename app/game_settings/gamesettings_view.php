@@ -102,22 +102,13 @@
             <div class="wizChips" id="gsWizBBChips"></div>
           </div>
 
-          <!-- Hole Declaration — conditional -->
+          <!-- Hole Declaration — edit icon shown after dropdown when DeclareHole is selected -->
           <div class="gsWizFieldGroup hidden" id="gsWizGroupHoleDecl">
             <div class="gsWizDivider"></div>
-            <div class="gsWizFieldLabel">Scores Per Hole</div>
-            <div class="gsWizHint">Set how many scores count per hole. Use Set All to apply one value, then adjust individually.</div>
-            <div class="gsWizSetAllRow">
-              <span class="gsWizSetAllLabel">Set all holes to:</span>
-              <div class="gsWizSetAllBtns">
-                <button class="gsWizSetAllBtn" onclick="window.gsWiz.setAllHoles('0')">0</button>
-                <button class="gsWizSetAllBtn" onclick="window.gsWiz.setAllHoles('1')">1</button>
-                <button class="gsWizSetAllBtn" onclick="window.gsWiz.setAllHoles('2')">2</button>
-                <button class="gsWizSetAllBtn" onclick="window.gsWiz.setAllHoles('3')">3</button>
-                <button class="gsWizSetAllBtn" onclick="window.gsWiz.setAllHoles('4')">4</button>
-              </div>
-            </div>
-            <div class="gsWizHoleDeclGrid" id="gsWizHoleDeclGrid"></div>
+            <button class="gsWizHoleDeclEditBtn" id="gsWizHoleDeclEditBtn" onclick="window.gsWiz.openHoleDeclModal()" aria-label="Edit hole declarations">
+              <img src="/assets/images/nav-edit.png" alt="" width="18" height="18">
+              <span>Edit scores per hole</span>
+            </button>
           </div>
 
           <!-- ── Points Strategy — conditional on basis === 'Points' ── -->
@@ -294,3 +285,53 @@
 
   </div><!-- /gsWizLayout -->
 </div><!-- /gsWizardContainer -->
+<!-- ================================================================
+     HOLE DECLARATION MODAL
+     ================================================================ -->
+<div class="maModalOverlay" id="gsHoleDeclOverlay" aria-hidden="true">
+  <section class="maModal gsHoleDeclModal" role="dialog" aria-modal="true" aria-labelledby="gsHoleDeclModalTitle">
+
+    <header class="maModal__hdr">
+      <div>
+        <div class="maModal__title" id="gsHoleDeclModalTitle">Scores Per Hole</div>
+        <div class="maModal__subtitle">Declare how many scores count on each hole</div>
+      </div>
+    </header>
+
+    <div class="maModal__controls">
+      <div class="gsWizHint" style="margin-bottom:10px;">Set how many scores count per hole. Use Set All to apply one value, then adjust individually.</div>
+      <div class="gsWizSetAllRow">
+        <span class="gsWizSetAllLabel">Set all holes to:</span>
+        <div class="gsWizSetAllBtns">
+          <button class="gsWizSetAllBtn" onclick="window.gsWiz.modalSetAllHoles('0')">0</button>
+          <button class="gsWizSetAllBtn" onclick="window.gsWiz.modalSetAllHoles('1')">1</button>
+          <button class="gsWizSetAllBtn" onclick="window.gsWiz.modalSetAllHoles('2')">2</button>
+          <button class="gsWizSetAllBtn" onclick="window.gsWiz.modalSetAllHoles('3')">3</button>
+          <button class="gsWizSetAllBtn" onclick="window.gsWiz.modalSetAllHoles('4')">4</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="maModal__body gsHoleDeclModal__body" id="gsHoleDeclModalBody">
+      <div class="gsHoleDeclCols">
+        <div class="gsHoleDeclCol">
+          <div class="gsHoleDeclColHdr">Front 9</div>
+          <div id="gsHoleDeclFront"></div>
+        </div>
+        <div class="gsHoleDeclDivider"></div>
+        <div class="gsHoleDeclCol">
+          <div class="gsHoleDeclColHdr">Back 9</div>
+          <div id="gsHoleDeclBack"></div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="maModal__ftr">
+      <div class="maModal__ftrActions">
+        <button class="btn btnSecondary" id="gsHoleDeclCancel" onclick="window.gsWiz.closeHoleDeclModal(false)">Cancel</button>
+        <button class="btn btnPrimary"   id="gsHoleDeclSave"   onclick="window.gsWiz.closeHoleDeclModal(true)">Apply</button>
+      </div>
+    </footer>
+
+  </section>
+</div>

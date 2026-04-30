@@ -893,7 +893,8 @@
     if (el.wizGroupHoleDecl) {
       const showHD = (wiz.scoringSystemVal === "DeclareHole");
       show(el.wizGroupHoleDecl, showHD);
-      if (showHD) wizRenderHoleDeclGrid();
+      // Auto-open only on first-time selection (no existing decls)
+      if (showHD && !wiz.holeDecls.length) wizOpenHoleDeclModal();
     }
 
     // Points Strategy section — only when basis === 'Points'
@@ -1372,8 +1373,10 @@
     if (sysHintEl) sysHintEl.textContent = WIZ_SYSTEMS[val]?.desc || "";
     if (el.wizGroupBB)       show(el.wizGroupBB,       val === "BestBall");
     if (el.wizGroupHoleDecl) {
-      show(el.wizGroupHoleDecl, val === "DeclareHole");
-      if (val === "DeclareHole") wizRenderHoleDeclGrid();
+      const isDeclare = (val === "DeclareHole");
+      show(el.wizGroupHoleDecl, isDeclare);
+      // Auto-open modal on first selection; subsequent edits use the edit icon
+      if (isDeclare && !wiz.holeDecls.length) wizOpenHoleDeclModal();
     }
     setDirty(true); wizUpdateSummary(); wizCheckComplete();
   }
@@ -1384,51 +1387,144 @@
     setDirty(true); wizUpdateSummary(); wizCheckComplete();
   }
 
-  function wizRenderHoleDeclGrid() {
-    if (!el.wizHoleDeclGrid) return;
-    el.wizHoleDeclGrid.innerHTML = "";
+  // =========================================================================
+  // HOLE DECLARATION MODAL
+  // =========================================================================
+
+  // Working copy used while the modal is open — committed on Save, discarded on Cancel
+  let _modalDecls = [];
+
+  function wizEnsureHoleDecls() {
     const g = state.game || {};
     const holesVal = String(g.dbGames_Holes || "All 18");
     let hStart = 1, hEnd = 18;
     if (holesVal === "F9") { hStart = 1;  hEnd = 9;  }
     if (holesVal === "B9") { hStart = 10; hEnd = 18; }
-    if (!wiz.holeDecls.length || wiz.holeDecls[0].hole !== hStart || wiz.holeDecls[wiz.holeDecls.length - 1].hole !== hEnd) {
+    const valid = wiz.holeDecls.length &&
+                  wiz.holeDecls[0].hole === hStart &&
+                  wiz.holeDecls[wiz.holeDecls.length - 1].hole === hEnd;
+    if (!valid) {
       const defCount = wiz.bestBall || "2";
       wiz.holeDecls = [];
       for (let h = hStart; h <= hEnd; h++) wiz.holeDecls.push({ hole: h, count: defCount });
     }
-    wiz.holeDecls.forEach(row => {
-      const cell = document.createElement("div");
-      cell.className = "wizHoleCell";
-      const lbl = document.createElement("div");
-      lbl.className = "wizHoleCellLabel";
+  }
+
+  function wizOpenHoleDeclModal() {
+    wizEnsureHoleDecls();
+    // Deep-copy current state into working copy
+    _modalDecls = wiz.holeDecls.map(r => ({ hole: r.hole, count: r.count }));
+
+    const overlay = document.getElementById("gsHoleDeclOverlay");
+    if (!overlay) return;
+    overlay.classList.add("is-open");
+    overlay.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+
+    wizRenderHoleDeclModalRows();
+  }
+
+  function wizCloseHoleDeclModal(save) {
+    if (save) {
+      // Commit working copy back to wiz state
+      wiz.holeDecls = _modalDecls.map(r => ({ hole: r.hole, count: r.count }));
+      setDirty(true);
+      wizUpdateSummary();
+      wizCheckComplete();
+    }
+    _modalDecls = [];
+
+    const overlay = document.getElementById("gsHoleDeclOverlay");
+    if (overlay) {
+      overlay.classList.remove("is-open");
+      overlay.setAttribute("aria-hidden", "true");
+    }
+    document.body.style.overflow = "";
+  }
+
+  function wizRenderHoleDeclModalRows() {
+    const frontEl = document.getElementById("gsHoleDeclFront");
+    const backEl  = document.getElementById("gsHoleDeclBack");
+    if (!frontEl || !backEl) return;
+    frontEl.innerHTML = "";
+    backEl.innerHTML  = "";
+
+    _modalDecls.forEach(row => {
       const parText = getParTextForHole(row.hole);
-      lbl.textContent = "H" + row.hole;
-      if (parText) {
-        const sub = document.createElement("span");
-        sub.className = "par-text";
-        sub.textContent = parText;
-        lbl.appendChild(sub);
-      }
-      const sel = document.createElement("select");
-      sel.className = "wizHoleCellSelect";
-      sel.setAttribute("aria-label", `Count for Hole ${row.hole}${parText ? " " + parText : ""}`);
-      [0,1,2,3,4].forEach(v => {
-        const o = document.createElement("option");
-        o.value = String(v); o.textContent = String(v);
-        sel.appendChild(o);
+      const isFront = row.hole <= 9;
+      const container = isFront ? frontEl : backEl;
+
+      const rowEl = document.createElement("div");
+      rowEl.className = "gsHoleDeclRow";
+
+      const infoEl = document.createElement("div");
+      infoEl.className = "gsHoleDeclRowInfo";
+
+      const holeSpan = document.createElement("span");
+      holeSpan.className = "gsHoleDeclRowHole";
+      holeSpan.textContent = "Hole " + row.hole;
+
+      const parSpan = document.createElement("span");
+      parSpan.className = "gsHoleDeclRowPar";
+      parSpan.textContent = parText || "";
+
+      infoEl.appendChild(holeSpan);
+      if (parText) infoEl.appendChild(parSpan);
+
+      // Stepper
+      const stepperEl = document.createElement("div");
+      stepperEl.className = "gsHoleDeclStepper";
+
+      const minusBtn = document.createElement("button");
+      minusBtn.className = "gsHoleDeclStepBtn";
+      minusBtn.textContent = "−";
+      minusBtn.setAttribute("aria-label", `Decrease count for Hole ${row.hole}`);
+
+      const valInput = document.createElement("input");
+      valInput.type = "number";
+      valInput.min  = "0";
+      valInput.max  = "4";
+      valInput.value = String(row.count);
+      valInput.className = "gsHoleDeclStepVal";
+      valInput.setAttribute("aria-label", `Score count for Hole ${row.hole}`);
+
+      const plusBtn = document.createElement("button");
+      plusBtn.className = "gsHoleDeclStepBtn";
+      plusBtn.textContent = "+";
+      plusBtn.setAttribute("aria-label", `Increase count for Hole ${row.hole}`);
+
+      minusBtn.addEventListener("click", () => {
+        const v = parseInt(valInput.value, 10);
+        if (v > 0) { valInput.value = String(v - 1); row.count = valInput.value; }
       });
-      sel.value = String(row.count);
-      sel.addEventListener("change", () => { row.count = sel.value; wizUpdateSummary(); });
-      cell.appendChild(lbl);
-      cell.appendChild(sel);
-      el.wizHoleDeclGrid.appendChild(cell);
+      plusBtn.addEventListener("click", () => {
+        const v = parseInt(valInput.value, 10);
+        if (v < 4) { valInput.value = String(v + 1); row.count = valInput.value; }
+      });
+      valInput.addEventListener("change", () => {
+        const v = Math.min(4, Math.max(0, parseInt(valInput.value, 10) || 0));
+        valInput.value = String(v);
+        row.count = valInput.value;
+      });
+
+      stepperEl.appendChild(minusBtn);
+      stepperEl.appendChild(valInput);
+      stepperEl.appendChild(plusBtn);
+
+      rowEl.appendChild(infoEl);
+      rowEl.appendChild(stepperEl);
+      container.appendChild(rowEl);
     });
   }
 
+  function wizModalSetAllHoles(val) {
+    _modalDecls.forEach(r => r.count = val);
+    wizRenderHoleDeclModalRows();
+  }
+
+  // Legacy inline set-all — kept for any external callers
   function wizSetAllHoles(val) {
     wiz.holeDecls.forEach(r => r.count = val);
-    wizRenderHoleDeclGrid();
   }
 
   function wizSelectHCMethod(val) {
@@ -1590,6 +1686,9 @@
       selectSystem:          wizSelectSystem,
       selectBB:              wizSelectBB,
       setAllHoles:           wizSetAllHoles,
+      openHoleDeclModal:     wizOpenHoleDeclModal,
+      closeHoleDeclModal:    wizCloseHoleDeclModal,
+      modalSetAllHoles:      wizModalSetAllHoles,
       selectPointsStrategy:  wizSelectPointsStrategy,
       onPointsInputChange:   onPointsInputChange,
       selectHCMethod:        wizSelectHCMethod,
