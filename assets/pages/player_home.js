@@ -1,6 +1,6 @@
 /* /assets/pages/player_home.js
    Player Portal Games List (GoDaddy refactor scaffold)
-   - Follows admin_games_list.js page pattern
+   - Follows admin page pattern
    - Preserves many Wix HTML IDs in the PHP view
    - First pass: init + filters + card render + action menu hooks
 */

@@ -159,6 +159,6 @@ $maChromeLogoUrl = null; // reserve slot; set later if desired
   <script src="/assets/modules/addCalendar.js?v=1"></script>
   <script src="/assets/modules/composeEmail.js?v=1"></script>
   <script src="/assets/modules/player_notifications.js?v=1"></script> <!-- ADD -->
-  <script src="/assets/pages/admin_games_list.js"></script>
+  <script src="/assets/pages/admin_home.js"></script>
 </body>
 </html>

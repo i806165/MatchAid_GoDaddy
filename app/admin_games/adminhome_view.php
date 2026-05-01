@@ -1,8 +1,6 @@
 <!-- /app/admin_games/adminhome_view.php
           Notes:
      - Styles preserved.
-     - Inline scripts removed; logic moved to /assets/pages/admin_games_list.js.
--->
 <!-- Empty state -->
 <div id="emptyState" class="maEmptyState" style="display:none;">
   No games match your current filters.
