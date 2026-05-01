@@ -58,7 +58,7 @@
   --bg: var(--surfaceChrome);
   --surface: var(--surfaceChrome);
   --ink: #111111;
-  --mutedText: rgba(17,17,17,.62);
+  --mutedText: #3a3a3a;
   --border: var(--borderSubtle);
 
   /* --- Borders & shadows --- */
@@ -246,8 +246,8 @@
   --ControlAreaBorder: rgba(0,0,0,0.18);
 
   /* --- Misc typography tokens --- */
-  --fieldValueSize: 12px;
-  --fieldValueSublineSize: 11px;
+  --fieldValueSize: 13px;
+  --fieldValueSublineSize: 12px;
 
   /* --- Date badge --- */
   --datebadgeTopBg: #E6D39A;

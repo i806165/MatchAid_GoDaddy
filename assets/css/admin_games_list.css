@@ -131,7 +131,7 @@
   flex: 1 1 auto;
   min-width: 0;
   color: var(--mutedText);
-  font-weight: 900;
+  font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

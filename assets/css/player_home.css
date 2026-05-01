@@ -84,7 +84,7 @@
 .maPill--warn{ background: rgba(246,211,101,.18); border-color: rgba(0,0,0,.12); }
 .maPill--danger{ background: rgba(198,40,40,.08); border-color: rgba(198,40,40,.22); }
 
-.maPillLabel{ font-weight: 400; color: var(--mutedText); margin-right: 4px; font-size: 11px; }
+.maPillLabel{ font-weight: 400; color: var(--mutedText); margin-right: 4px; font-size: 12px; }
 .maPillValue{ font-weight: 800; }
 
 
