@@ -102,6 +102,18 @@
   text-transform: uppercase;
 }
 
+/* Provisional notice — shown when course is not yet confirmed */
+.maGameCard__provisional {
+  font-size: 11px;
+  font-weight: 800;
+  color: #7A5A10;
+  background: #FFF3CD;
+  border: 1px solid #E8C87A;
+  border-radius: var(--radiusSq, 6px);
+  padding: 2px 8px;
+  display: inline-block;
+}
+
 @media (max-width: 520px){
   .maGameCard__manageBtn { display: none; }
   .maGameCard__line2,

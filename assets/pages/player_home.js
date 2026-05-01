@@ -178,6 +178,7 @@ function getGameAdminMeta(g){
   const facilityName = String(rawGame?.dbGames_FacilityName || g?.facilityName || g?.dbGames_FacilityName || '').trim();
   const adminAssocId = String(rawGame?.dbGames_AssocID || '').trim();
   const adminAssocName = String(rawGame?.dbGames_AssocName || '').trim();
+  const courseConfirmed = !!(rawGame?.dbGames_CourseConfirmed == 1 || rawGame?.dbGames_CourseConfirmed === true);
 
   const adminRow = (state.admins || []).find(a =>
     String(a.key || a.adminKey || '').trim() === adminKey
@@ -191,6 +192,7 @@ function getGameAdminMeta(g){
     facilityName,
     adminAssocId,
     adminAssocName,
+    courseConfirmed,
     isFavorite: !!(adminRow && adminRow.isFavorite)
   };
 }
@@ -305,6 +307,11 @@ function getGameAdminMeta(g){
       const holes = rowText(g, ['holes','dbGames_Holes']);
       const { enrollmentStatus, registrationStatus } = inferStatuses(g);
       const isRegistered = enrollmentStatus === 'Registered';
+      const adminMeta = getGameAdminMeta(g);
+      const courseConfirmed = adminMeta.courseConfirmed;
+      const provisionalHtml = !courseConfirmed
+        ? `<div class="maGameCard__provisional">⚠ Course is not yet confirmed</div>`
+        : ``;
 
       const teeCnt = Number(g.dbGames_TeeTimeCnt ?? g.teeTimeCnt ?? 0);
       const totalSlots = teeCnt > 0 ? teeCnt * 4 : 0;
@@ -357,6 +364,7 @@ function getGameAdminMeta(g){
                 </div>
                 <button type="button" class="maCard__actionBtn maGameCard__manageBtn" data-role="menu" aria-label="Manage">MANAGE</button>
               </div>
+              ${provisionalHtml} 
               <div class="maGameCard__line2">
                 <div class="maGameCard__facts" title="${esc(line2)}">${esc(line2)}</div>
               </div>
@@ -630,6 +638,7 @@ function getGameAdminMeta(g){
           gameId: ggid,
           player,
           currentTeeSetId: getCurrentTeeSetIdForGame(ggid),
+          courseConfirmed: !!(getGameAdminMeta(g).courseConfirmed),
           onSave: async (selectedTee) => {
             setStatus("Registering...", "info");
             try {
