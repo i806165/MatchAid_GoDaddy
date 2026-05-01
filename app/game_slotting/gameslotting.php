@@ -23,7 +23,7 @@ if (!$ctx || empty($ctx["ok"])) {
 
 $ggid = ServiceContextGame::getStoredGGID();
 if (!$ggid) {
-  header("Location: /app/admin_games/gameslist.php");
+  header("Location: " . MA_ROUTE_ADMIN_GAMES);
   exit;
 }
 
@@ -41,7 +41,7 @@ try {
       "teeTimeInterval" => (int)($gameCtx["game"]["dbGames_TeeTimeInterval"] ?? 9),
       "availableSuffixes" => ["A", "B", "C", "D"]
     ],
-    "returnTo" => "/app/admin_games/gameslist.php",
+    "returnTo" => MA_ROUTE_ADMIN_GAMES,
     "header" => [
       "subtitle" => (string)($gameCtx["game"]["dbGames_Title"] ?? "") . " - GGID " . (string)$ggid
     ]

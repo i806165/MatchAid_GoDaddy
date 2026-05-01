@@ -49,7 +49,7 @@ $ROUTES = [
     "home"  => "/",
     "login" => "/app/login/login.php",
 
-    "admin"    => "/app/admin_games/gameslist.php",
+    "admin"    => "/app/admin_games/adminhome.php",
     "edit"     => "/app/game_maintenance/gamemaint.php",   // expects mode=add|edit (if your router appends it)
     "settings"    => "/app/game_settings/gamesettings.php",
     "roster"   => "/app/game_players/gameplayers.php",

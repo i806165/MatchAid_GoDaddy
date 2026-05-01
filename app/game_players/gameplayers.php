@@ -19,7 +19,7 @@ if ($queryGGID > 0) {
 
 $returnTo = trim((string)($_GET["returnTo"] ?? ""));
 if ($returnTo === "" || strpos($returnTo, "/") !== 0) {
-  $returnTo = "/app/admin_games/gameslist.php";
+  $returnTo = MA_ROUTE_ADMIN_GAMES;
 }
 
 $uc = ServiceUserContext::getUserContext();

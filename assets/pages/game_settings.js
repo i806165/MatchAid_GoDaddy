@@ -16,7 +16,7 @@
   const routes = MA.routes || {};
   const gsApiBase = routes.apiGameSettings || MA.paths?.apiGameSettings || "/api/game_settings";
   const apiGHIN = MA.paths?.apiGHIN || "/api/GHIN";
-  const returnToUrl = init.returnTo || routes.returnTo || "/app/admin_games/gameslist.php";
+  const returnToUrl = init.returnTo || routes.returnTo || (MA.paths?.routerApi + "?action=admin&redirect=1");
 
   // =========================================================================
   // CONSTANTS

@@ -23,10 +23,12 @@ define('MA_APP',       MA_ROOT . '/app');
 define('MA_INCLUDES',  MA_ROOT . '/includes');
 define('MA_API_SESSION', MA_API . '/session');
 define('MA_ROUTE_LOGIN', '/app/login/login.php');
+define('MA_API_LOGIN', '/api/login/login.php');
+define('MA_API_LOGOUT', '/api/login/logout.php');
 
 define('MA_ROUTE_HOME',  '/');
 define('MA_ROUTE_API_ADMIN_GAMES', '/api/admin_games');
-define('MA_ROUTE_ADMIN_GAMES',     '/app/admin_games/gameslist.php');
+define('MA_ROUTE_ADMIN_GAMES',     '/app/admin_games/adminhome.php');
 define('MA_ROUTE_PLAYER_HOME',    '/app/player_home/playerhome.php');
 define('MA_ROUTE_API_SESSION',     '/api/session');
 define('MA_ROUTE_API_ROUTER',      '/api/session/pageRouter.php');

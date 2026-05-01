@@ -14,8 +14,9 @@
 
   // API bases injected by PHP (preferred). Fallbacks are last-resort.
   const routes = MA.routes || {};
-  const gmApiBase   = routes.apiGameMaint || MA.paths?.apiGameMaint || "/api/game_maintenance";
-  const ghinApiBase = routes.apiGHIN      || MA.paths?.apiGHIN      || "/api/GHIN";
+  const gmApiBase    = routes.apiGameMaint || MA.paths?.apiGameMaint || "/api/game_maintenance";
+  const adminApiBase = routes.apiAdminGames || MA.paths?.apiAdminGames || "/api/admin_games";
+  const ghinApiBase  = routes.apiGHIN      || MA.paths?.apiGHIN      || "/api/GHIN";
 
   function apiCall(base, endpointFile, payloadObj) {
     const baseClean = String(base || "").replace(/\/$/, "");
@@ -231,12 +232,12 @@
 
     setBusy(true);
     try {
-      const res = await apiCall("/api/admin_games", "deleteGame.php", { ggid: state.ggid });
+      const res = await apiCall(adminApiBase, "deleteGame.php", { ggid: state.ggid });
       if (!res || !res.ok) throw new Error(res?.message || "Delete failed.");
 
       setStatus("Game deleted.", "success");
       if (typeof MA.routerGo === "function") MA.routerGo("admin");
-      else window.location.assign("/app/admin_games/gameslist.php");
+      else window.location.assign((MA.paths?.routerApi || "/api/session/pageRouter.php") + "?action=admin&redirect=1");
     } catch (e) {
       console.error(e);
       setStatus(String(e.message || e), "error");

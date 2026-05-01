@@ -58,7 +58,7 @@ try {
   ];
 } catch (Throwable $e) {
   Logger::error("SCORESKINS_INIT_FAIL", ["err" => $e->getMessage()]);
-  header("Location: /app/admin_games/gameslist.php");
+  header("Location: " . MA_ROUTE_ADMIN_GAMES);
   exit;
 }
 
@@ -79,7 +79,7 @@ $maChromeSubtitle = $initPayload["header"]["subtitle"];
 <?php require_once MA_INCLUDES . '/chromeFooter.php'; ?>
 <script>
   window.MA = window.MA || {};
-  window.MA.paths = { routerApi: "/api/session/pageRouter.php" };
+  window.MA.paths = { routerApi: "<?= MA_ROUTE_API_ROUTER ?>" };
   window.__INIT__ = <?= json_encode($initPayload, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
   window.MA.routes = { router: window.MA.paths.routerApi };
 </script>

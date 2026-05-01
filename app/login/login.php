@@ -10,9 +10,9 @@ require_once MA_SERVICES . "/context/service_ContextUser.php";
  * Keep these as absolute-from-domain-root URLs.
  */
 $ROUTES = [
-  "home"   => "/",
-  "player" => "/app/player_home/playerhome.php",
-  "admin" => "/app/admin_games/gameslist.php",
+  "home"   => MA_ROUTE_HOME,
+  "player" => MA_ROUTE_PLAYER_HOME,
+  "admin"  => MA_ROUTE_ADMIN_GAMES,
 ];
 
 header("Content-Type: text/html; charset=utf-8");
@@ -81,8 +81,8 @@ $initPayload = [
 
 // Provide path constants to JS (no hard-coded paths in JS)
 $paths = [
-    "apiLogin"  => "/api/auth/login.php",
-    "apiLogout" => "/api/auth/logout.php",
+    "apiLogin"  => MA_ROUTE_API_LOGIN,
+    "apiLogout" => MA_ROUTE_API_LOGOUT,
     "routerApi" => MA_ROUTE_API_ROUTER,
 ];
 ?>
