@@ -23,8 +23,8 @@ define('MA_APP',       MA_ROOT . '/app');
 define('MA_INCLUDES',  MA_ROOT . '/includes');
 define('MA_API_SESSION', MA_API . '/session');
 define('MA_ROUTE_LOGIN', '/app/login/login.php');
-define('MA_API_LOGIN', '/api/login/login.php');
-define('MA_API_LOGOUT', '/api/login/logout.php');
+define('MA_ROUTE_API_LOGIN',  '/api/auth/processLogin.php');
+define('MA_ROUTE_API_LOGOUT', '/api/auth/logout.php');
 
 define('MA_ROUTE_HOME',  '/');
 define('MA_ROUTE_API_ADMIN_GAMES', '/api/admin_games');

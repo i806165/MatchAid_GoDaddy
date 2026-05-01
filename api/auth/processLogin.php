@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-// /public_html/api/auth/login.php
+// /public_html/api/auth/processLogin.php
 
 ini_set('display_errors', '0');
 ini_set('display_startup_errors', '0');
