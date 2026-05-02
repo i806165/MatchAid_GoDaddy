@@ -72,7 +72,7 @@
       }
 
       // Determine setup branch: Cart config (COD) vs direct Scorer selection
-      if (state.game.dbGames_RotationMethod === 'COD' && res.payload.canSave) { // Only show cart if COD and scoring is allowed
+      if (state.game.dbGames_RotationMethod !== 'None' && res.payload.canSave) {
         renderCartOptions();
         el.launchCard.classList.add('isHidden');
         el.cartCard.classList.remove('isHidden');

@@ -114,6 +114,8 @@
   const rotation1324 = { label: "1324", value: "1324" };
   const rotation1423 = { label: "1423", value: "1423" };
 
+  const TOTAL_STEPS = 4;
+
   // compFilter: null = both, "PairField" = field only, "PairPair" = pair only
   const GAME_LABELS = [
     // ── Stroke Play / Field ──
@@ -200,7 +202,12 @@
     bbCountLock:        false,
     segments:           null,
     rotation:           null,
-    // Step 2 — Scoring
+    // Step 2 — Setup (blind player)
+    useBlind:           false,
+    blindGHIN:          "",
+    blindName:          "",
+    blindTarget:        null,
+    // Step 3 — Scoring
     scoringMethod:      null,
     scoringSystemVal:   null,
     bestBall:           null,
@@ -225,24 +232,32 @@
       s1: document.getElementById("gsWizStep1"),
       s2: document.getElementById("gsWizStep2"),
       s3: document.getElementById("gsWizStep3"),
+      s4: document.getElementById("gsWizStep4"),
     },
     wizDots: [
       document.getElementById("gsWizDot1"),
       document.getElementById("gsWizDot2"),
       document.getElementById("gsWizDot3"),
+      document.getElementById("gsWizDot4"),
     ],
 
     // Step 1
     wizPairingChips:  document.getElementById("gsWizPairingChips"),
     wizPairingHint:   document.getElementById("gsWizPairingHint"),
     wizCarousel:      document.getElementById("gsWizCarousel"),
-    wizGroupSegments: document.getElementById("gsWizGroupSegments"),
-    wizGroupRotation: document.getElementById("gsWizGroupRotation"),
-    wizSegChips:      document.getElementById("gsWizSegChips"),
-    wizRotChips:      document.getElementById("gsWizRotChips"),
-    wizRotNote:       document.getElementById("gsWizRotNote"),
 
-    // Step 2
+    // Step 2 — Setup
+    wizGroupSegments:    document.getElementById("gsWizGroupSegments"),
+    wizGroupRotation:    document.getElementById("gsWizGroupRotation"),
+    wizSegChips:         document.getElementById("gsWizSegChips"),
+    wizRotChips:         document.getElementById("gsWizRotChips"),
+    wizRotNote:          document.getElementById("gsWizRotNote"),
+    wizUseBlind:         document.getElementById("gsWizUseBlind"),
+    wizBlindConfig:      document.getElementById("gsWizBlindConfig"),
+    wizBlindSelect:      document.getElementById("gsWizBlindSelect"),
+    wizBlindTargetChips: document.getElementById("gsWizBlindTargetChips"),
+
+    // Step 3 — Scoring
     wizMethodChips:          document.getElementById("gsWizMethodChips"),
     wizGroupBB:              document.getElementById("gsWizGroupBB"),
     wizBBChips:              document.getElementById("gsWizBBChips"),
@@ -258,7 +273,7 @@
     wizGroupLBHB:            document.getElementById("gsWizGroupLBHB"),
     wizGroupVegas:           document.getElementById("gsWizGroupVegas"),
 
-    // Step 3
+    // Step 4 — Handicaps
     wizHCMethodChips:   document.getElementById("gsWizHCMethodChips"),
     wizAllowanceSelect: document.getElementById("gsWizAllowanceSelect"),
     wizStrokeDistChips: document.getElementById("gsWizStrokeDistChips"),
@@ -274,6 +289,7 @@
       competition:    document.getElementById("gsWizSvCompetition"),
       segments:       document.getElementById("gsWizSvSegments"),
       rotation:       document.getElementById("gsWizSvRotation"),
+      blind:          document.getElementById("gsWizSvBlind"),
       basis:          document.getElementById("gsWizSvBasis"),
       method:         document.getElementById("gsWizSvMethod"),
       system:         document.getElementById("gsWizSvSystem"),
@@ -557,7 +573,12 @@
       dbGames_Competition:        wiz.pairing                || "PairField",
       dbGames_Segments:           wiz.segments               || "9",
       dbGames_RotationMethod:     wiz.rotation               || "None",
-      dbGames_BlindPlayers:       Array.isArray(g.dbGames_BlindPlayers) ? g.dbGames_BlindPlayers : [],
+      dbGames_BlindPlayers:       (() => {
+        if (!wiz.useBlind || !wiz.blindGHIN) return [];
+        const arr = [{ ghin: wiz.blindGHIN, name: wiz.blindName }];
+        if (wiz.blindTarget !== null) arr.push({ target: wiz.blindTarget });
+        return arr;
+      })(),
       dbGames_ScoringMethod:      wiz.scoringMethod          || "NET",
       dbGames_ScoringSystem:      wiz.scoringSystemVal       || "BestBall",
       dbGames_BestBall:           wiz.bestBall               || "4",
@@ -624,6 +645,23 @@
     wiz.segments = String(g.dbGames_Segments       || "9");
     wiz.rotation = String(g.dbGames_RotationMethod || "None");
 
+    // Blind player — parse dbGames_BlindPlayers array
+    // Structure: [{ ghin, name }, ..., { target }]
+    const blindArr = (() => {
+      let raw = g.dbGames_BlindPlayers;
+      if (typeof raw === "string") { try { raw = JSON.parse(raw); } catch (e) { raw = []; } }
+      return Array.isArray(raw) ? raw : [];
+    })();
+    wiz.blindGHIN   = "";
+    wiz.blindName   = "";
+    wiz.blindTarget = null;
+    for (const item of blindArr) {
+      if (!item || typeof item !== "object") continue;
+      if (item.target !== undefined) { wiz.blindTarget = Number(item.target) || null; }
+      else if (item.ghin)            { wiz.blindGHIN = String(item.ghin); wiz.blindName = String(item.name || ""); }
+    }
+    wiz.useBlind = !!wiz.blindGHIN;
+
     // Step 2
     wiz.scoringMethod    = String(g.dbGames_ScoringMethod  || "NET");
     wiz.scoringSystemVal = String(g.dbGames_ScoringSystem  || match.scoringSystem || "BestBall");
@@ -655,7 +693,7 @@
 
   function wizRenderStep(step) {
     state.wizStep = step;
-    const totalSteps = 3;
+    const totalSteps = TOTAL_STEPS;
 
     // Progress dots
     el.wizDots.forEach((dot, i) => {
@@ -682,7 +720,7 @@
 
     // Next button — hidden on final step (chrome footer Save owns that action)
     if (el.wizBtnNext) {
-      el.wizBtnNext.style.display = (step === totalSteps) ? "none" : "";
+      el.wizBtnNext.style.display = (step === TOTAL_STEPS) ? "none" : "";
       el.wizBtnNext.textContent = "Next →";
     }
 
@@ -690,6 +728,7 @@
       case 1: wizRenderStep1(); break;
       case 2: wizRenderStep2(); break;
       case 3: wizRenderStep3(); break;
+      case 4: wizRenderStep4(); break;
     }
 
     wizUpdateSummary();
@@ -732,45 +771,6 @@
 
     const hintEl = document.getElementById("gsWizGameHint");
     if (hintEl) hintEl.textContent = GAME_HINTS[wiz.selectedLabel] || "";
-
-    // Segments + Rotation — PairPair only
-    const isPairPair = (wiz.pairing === "PairPair");
-    show(el.wizGroupSegments, isPairPair);
-    show(el.wizGroupRotation, isPairPair);
-
-    if (isPairPair) {
-      // Segments chips
-      if (el.wizSegChips) {
-        const opts = buildSegmentsOptionsFromHoles();
-        el.wizSegChips.innerHTML = "";
-        const holesVal = String(state.game?.dbGames_Holes || "All 18");
-        const defSeg = defaultSegmentsForLabel(wiz.selectedLabel, holesVal);
-        const validVals = opts.map(o => o.value);
-        if (!validVals.includes(wiz.segments)) {
-          wiz.segments = validVals.includes(defSeg) ? defSeg : validVals[0];
-        }
-        const isCOD = (wiz.selectedLabel === "C-O-D");
-        if (isCOD) wiz.segments = defSeg;
-
-        opts.forEach(opt => {
-          const b = document.createElement("button");
-          b.dataset.val = opt.value;
-          b.textContent = opt.label;
-          if (isCOD && opt.value === defSeg) {
-            b.className = "wizChip locked";
-          } else if (isCOD) {
-            b.className = "wizChip disabled";
-          } else {
-            b.className = "wizChip" + (wiz.segments === opt.value ? " selected" : "");
-            b.addEventListener("click", () => wizSelectSegments(opt.value));
-          }
-          el.wizSegChips.appendChild(b);
-        });
-      }
-
-      // Rotation chips
-      wizRenderRotChips();
-    }
   }
 
   function wizRenderRotChips() {
@@ -811,8 +811,83 @@
     }
   }
 
-  // ---- Step 2: Scoring ----
+  // ---- Step 2: Setup — Segments + Rotation + Blind Player ----
   function wizRenderStep2() {
+    const isPairPair = (wiz.pairing === "PairPair");
+
+    // Segments + Rotation — PairPair only
+    show(el.wizGroupSegments, isPairPair);
+    show(el.wizGroupRotation, isPairPair);
+
+    if (isPairPair) {
+      if (el.wizSegChips) {
+        const opts = buildSegmentsOptionsFromHoles();
+        el.wizSegChips.innerHTML = "";
+        const holesVal = String(state.game?.dbGames_Holes || "All 18");
+        const defSeg = defaultSegmentsForLabel(wiz.selectedLabel, holesVal);
+        const validVals = opts.map(o => o.value);
+        if (!validVals.includes(wiz.segments)) {
+          wiz.segments = validVals.includes(defSeg) ? defSeg : validVals[0];
+        }
+        const isCOD = (wiz.selectedLabel === "C-O-D");
+        if (isCOD) wiz.segments = defSeg;
+        opts.forEach(opt => {
+          const b = document.createElement("button");
+          b.dataset.val = opt.value;
+          b.textContent = opt.label;
+          if (isCOD && opt.value === defSeg) {
+            b.className = "wizChip locked";
+          } else if (isCOD) {
+            b.className = "wizChip disabled";
+          } else {
+            b.className = "wizChip" + (wiz.segments === opt.value ? " selected" : "");
+            b.addEventListener("click", () => wizSelectSegments(opt.value));
+          }
+          el.wizSegChips.appendChild(b);
+        });
+      }
+      wizRenderRotChips();
+    }
+
+    // Blind player
+    if (el.wizUseBlind) el.wizUseBlind.checked = wiz.useBlind;
+    show(el.wizBlindConfig, wiz.useBlind);
+    wizRenderBlindSelect();
+    wizRenderBlindTargetChips();
+  }
+
+  function wizRenderBlindSelect() {
+    if (!el.wizBlindSelect) return;
+    // Populate roster once only
+    if (el.wizBlindSelect.options.length <= 1) {
+      const roster = Array.isArray(state.roster) ? state.roster.slice() : [];
+      roster.sort((a, b) =>
+        String(a.dbPlayers_LName || "").toLowerCase()
+          .localeCompare(String(b.dbPlayers_LName || "").toLowerCase())
+      );
+      roster.forEach(p => {
+        const ghin = String(p.dbPlayers_PlayerGHIN || "").trim();
+        const name = String(p.dbPlayers_Name || "").trim() ||
+          `${String(p.dbPlayers_FName || "").trim()} ${String(p.dbPlayers_LName || "").trim()}`.trim();
+        if (!ghin) return;
+        const opt = document.createElement("option");
+        opt.value = ghin;
+        opt.textContent = name || ghin;
+        el.wizBlindSelect.appendChild(opt);
+      });
+    }
+    el.wizBlindSelect.value = wiz.blindGHIN || "";
+  }
+
+  function wizRenderBlindTargetChips() {
+    if (!el.wizBlindTargetChips) return;
+    el.wizBlindTargetChips.querySelectorAll(".wizChip").forEach(b =>
+      b.classList.toggle("selected", Number(b.dataset.val) === wiz.blindTarget)
+    );
+  }
+
+  // ---- Step 3: Scoring ----
+  function wizRenderStep3() {
     const fmt = wiz.selectedFormat || "StrokePlay";
 
     // Method chips
@@ -1171,8 +1246,8 @@
     setDirty(true); wizCheckComplete();
   }
 
-  // ---- Step 3: Handicaps ----
-  function wizRenderStep3() {
+  // ---- Step 4: Handicaps ----
+  function wizRenderStep4() {
     const isAdjGross = (wiz.scoringMethod === "ADJ GROSS");
 
     // HC Method chips
@@ -1356,6 +1431,34 @@
     wiz.rotation = val;
     if (el.wizRotChips) el.wizRotChips.querySelectorAll(".wizChip").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
     wizUpdateRotNote();
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
+  }
+
+  function wizToggleBlind(checked) {
+    wiz.useBlind = checked;
+    show(el.wizBlindConfig, checked);
+    if (!checked) {
+      wiz.blindGHIN   = "";
+      wiz.blindName   = "";
+      wiz.blindTarget = null;
+      if (el.wizBlindSelect) el.wizBlindSelect.value = "";
+      wizRenderBlindTargetChips();
+    }
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
+  }
+
+  function wizSelectBlind(ghin) {
+    wiz.blindGHIN = ghin;
+    const opt = el.wizBlindSelect
+      ? Array.from(el.wizBlindSelect.options).find(o => o.value === ghin)
+      : null;
+    wiz.blindName = opt ? opt.textContent.trim() : "";
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
+  }
+
+  function wizSelectBlindTarget(target) {
+    wiz.blindTarget = Number(target);
+    wizRenderBlindTargetChips();
     setDirty(true); wizUpdateSummary(); wizCheckComplete();
   }
 
@@ -1584,6 +1687,12 @@
     sv(s.competition,    wiz.pairing,           true);
     sv(s.segments,       wiz.pairing === "PairPair" && wiz.segments ? wiz.segments + "'s" : null, true);
     sv(s.rotation,       wiz.pairing === "PairPair" ? wiz.rotation : null, true);
+    let blindLabel = null;
+    if (wiz.useBlind && wiz.blindGHIN) {
+      blindLabel = wiz.blindName || wiz.blindGHIN;
+      if (wiz.blindTarget) blindLabel += ` (target ${wiz.blindTarget})`;
+    }
+    sv(s.blind,          blindLabel, true);
     sv(s.basis,          wiz.selectedBasis,     false);
     sv(s.method,         wiz.scoringMethod,     true);
     sv(s.system,         wiz.scoringSystemVal ? (WIZ_SYSTEMS[wiz.scoringSystemVal]?.label || wiz.scoringSystemVal) : null, true);
@@ -1606,23 +1715,28 @@
     switch (state.wizStep) {
       case 1:
         ok = !!(wiz.pairing && wiz.selectedLabel);
-        // PairPair also needs segments and rotation
-        if (ok && wiz.pairing === "PairPair") {
-          ok = !!(wiz.segments && wiz.rotation !== null);
-        }
         break;
       case 2: {
+        // PairPair requires segments + rotation
+        ok = wiz.pairing === "PairPair"
+          ? !!(wiz.segments && wiz.rotation !== null)
+          : true;
+        // If blind is enabled, player and target must both be set
+        if (ok && wiz.useBlind) {
+          ok = !!(wiz.blindGHIN && wiz.blindTarget !== null);
+        }
+        break;
+      }
+      case 3: {
         const bbOk    = wiz.scoringSystemVal !== "BestBall"    || !!wiz.bestBall;
         const hdOk    = wiz.scoringSystemVal !== "DeclareHole" || wiz.holeDecls.length > 0;
         const ptsOk   = wiz.selectedBasis !== "Points"         || !!wiz.pointsStrategy;
         ok = !!(wiz.scoringMethod && wiz.scoringSystemVal && bbOk && hdOk && ptsOk);
         break;
       }
-      case 3: {
-        const dateOk = wiz.hcEffectivity !== "Date" || !!wiz.hcEffectivityDate;
-        ok = !!(wiz.hcMethod && wiz.allowance && wiz.strokeDistribution && wiz.hcEffectivity && dateOk);
+      case 4:
+        ok = true; // final step — Save button handled by chrome footer
         break;
-      }
     }
     el.wizBtnNext.disabled = !ok;
   }
@@ -1640,7 +1754,7 @@
   }
 
   function wizGoToStep(n) {
-    if (n >= 1 && n <= 3) wizRenderStep(n);
+    if (n >= 1 && n <= TOTAL_STEPS) wizRenderStep(n);
   }
 
   // =========================================================================
@@ -1686,6 +1800,9 @@
       selectGame:            wizSelectGame,
       selectSegments:        wizSelectSegments,
       selectRotation:        wizSelectRotation,
+      toggleBlind:           wizToggleBlind,
+      selectBlind:           wizSelectBlind,
+      selectBlindTarget:     wizSelectBlindTarget,
       selectMethod:          wizSelectMethod,
       selectSystem:          wizSelectSystem,
       selectBB:              wizSelectBB,

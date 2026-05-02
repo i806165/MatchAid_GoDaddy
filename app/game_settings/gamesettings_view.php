@@ -2,6 +2,28 @@
 // /public_html/app/game_settings/gamesettings_view.php
 ?>
 
+<!-- Progress strip — fixed peer to maPage, outside the scroll container -->
+<div class="maControlArea" id="gsControlArea">
+  <div class="gsWizProgress hidden" id="gsWizProgress">
+    <div class="gsWizStep active" onclick="window.gsWiz && window.gsWiz.goToStep(1)">
+      <div class="gsWizDot" id="gsWizDot1"></div>
+      <div class="gsWizStepLabel">Format</div>
+    </div>
+    <div class="gsWizStep" onclick="window.gsWiz && window.gsWiz.goToStep(2)">
+      <div class="gsWizDot" id="gsWizDot2"></div>
+      <div class="gsWizStepLabel">Setup</div>
+    </div>
+    <div class="gsWizStep" onclick="window.gsWiz && window.gsWiz.goToStep(3)">
+      <div class="gsWizDot" id="gsWizDot3"></div>
+      <div class="gsWizStepLabel">Scoring</div>
+    </div>
+    <div class="gsWizStep" onclick="window.gsWiz && window.gsWiz.goToStep(4)">
+      <div class="gsWizDot" id="gsWizDot4"></div>
+      <div class="gsWizStepLabel">Handicaps</div>
+    </div>
+  </div>
+</div>
+
 <!-- ================================================================
      WIZARD CONTAINER
      ================================================================ -->
@@ -13,11 +35,10 @@
 
       <!-- ============================================================
            STEP 1: Format — Pairing Strategy + Game Carousel
-                   + Segments + Rotation (PairPair only)
            ============================================================ -->
       <div id="gsWizStep1" class="gsWizStepPanel maCard">
         <header class="maCard__hdr">
-          <div class="maCard__title">STEP 1 OF 3 &nbsp;·&nbsp; GAME FORMAT</div>
+          <div class="maCard__title">STEP 1 OF 4 &nbsp;·&nbsp; GAME FORMAT</div>
         </header>
         <div class="maCard__body">
 
@@ -45,12 +66,23 @@
           <div class="gsWizCarouselWrap">
             <div class="wizCarousel" id="gsWizCarousel"></div>
           </div>
-          <!-- Game format hint — populated by wizSelectGame() -->
           <div id="gsWizGameHint" class="gsWizHint"></div>
+
+        </div>
+      </div>
+
+      <!-- ============================================================
+           STEP 2: Setup — Segments + Rotation + Blind Player
+           ============================================================ -->
+      <div id="gsWizStep2" class="gsWizStepPanel maCard hidden">
+        <header class="maCard__hdr">
+          <div class="maCard__title">STEP 2 OF 4 &nbsp;·&nbsp; SETUP</div>
+        </header>
+        <div class="maCard__body">
 
           <!-- Segments — PairPair only -->
           <div class="gsWizFieldGroup hidden" id="gsWizGroupSegments">
-            <div class="gsWizDivider"></div>
+            <div class="gsWizEyebrow">How is the round segmented?</div>
             <div class="gsWizFieldLabel">Segments</div>
             <div class="wizChips" id="gsWizSegChips"></div>
             <div class="gsWizHint">Segments split the round into independent scoring periods. 3's play three 3-hole segments (9-hole games only). 6's plays three 6-hole segments and 9's plays as two 9-hole segments (18 hole games).</div>
@@ -64,15 +96,49 @@
             <div class="gsWizHint" id="gsWizRotNote"></div>
           </div>
 
+          <!-- Blind Player — PairField and PairPair -->
+          <div class="gsWizFieldGroup">
+            <div class="gsWizDivider"></div>
+            <div class="gsWizEyebrow">Does this game need a blind player?</div>
+            <div class="gsWizToggleRow">
+              <label class="gsWizToggleLabel" for="gsWizUseBlind">Use a blind player</label>
+              <input type="checkbox" id="gsWizUseBlind" class="gsWizToggle"
+                     onchange="window.gsWiz.toggleBlind(this.checked)">
+            </div>
+
+            <!-- Revealed when checkbox is on -->
+            <div id="gsWizBlindConfig" class="hidden">
+
+              <div class="gsWizFieldGroup">
+                <div class="gsWizFieldLabel">Blind Player</div>
+                <select class="maTextInput gsWizSelect" id="gsWizBlindSelect"
+                        onchange="window.gsWiz.selectBlind(this.value)">
+                  <option value="">Select player…</option>
+                </select>
+              </div>
+
+              <div class="gsWizFieldGroup">
+                <div class="gsWizFieldLabel">Target Group Size</div>
+                <div class="gsWizHint">The total number of scoring players the blind fills up to.</div>
+                <div class="wizChips" id="gsWizBlindTargetChips">
+                  <button class="wizChip" data-val="2" onclick="window.gsWiz.selectBlindTarget(2)">2</button>
+                  <button class="wizChip" data-val="3" onclick="window.gsWiz.selectBlindTarget(3)">3</button>
+                  <button class="wizChip" data-val="4" onclick="window.gsWiz.selectBlindTarget(4)">4</button>
+                </div>
+              </div>
+
+            </div><!-- /gsWizBlindConfig -->
+          </div>
+
         </div>
       </div>
 
       <!-- ============================================================
-           STEP 2: Scoring — Method, System, Best Ball, Points Strategy
+           STEP 3: Scoring — Method, System, Best Ball, Points Strategy
            ============================================================ -->
-      <div id="gsWizStep2" class="gsWizStepPanel maCard hidden">
+      <div id="gsWizStep3" class="gsWizStepPanel maCard hidden">
         <header class="maCard__hdr">
-          <div class="maCard__title">STEP 2 OF 3 &nbsp;·&nbsp; SCORING</div>
+          <div class="maCard__title">STEP 3 OF 4 &nbsp;·&nbsp; SCORING</div>
         </header>
         <div class="maCard__body">
           <div class="gsWizEyebrow">How is the game scored?</div>
@@ -102,16 +168,17 @@
             <div class="wizChips" id="gsWizBBChips"></div>
           </div>
 
-          <!-- Hole Declaration — edit icon shown after dropdown when DeclareHole is selected -->
+          <!-- Hole Declaration -->
           <div class="gsWizFieldGroup hidden" id="gsWizGroupHoleDecl">
             <div class="gsWizDivider"></div>
-            <button class="gsWizHoleDeclEditBtn" id="gsWizHoleDeclEditBtn" onclick="window.gsWiz.openHoleDeclModal()" aria-label="Edit hole declarations">
+            <button class="gsWizHoleDeclEditBtn" id="gsWizHoleDeclEditBtn"
+                    onclick="window.gsWiz.openHoleDeclModal()" aria-label="Edit hole declarations">
               <img src="/assets/images/nav-edit.png" alt="" width="18" height="18">
               <span>Edit scores per hole</span>
             </button>
           </div>
 
-          <!-- ── Points Strategy — conditional on basis === 'Points' ── -->
+          <!-- Points Strategy — conditional on basis === 'Points' -->
           <div class="gsWizFieldGroup hidden" id="gsWizGroupPoints">
             <div class="gsWizDivider"></div>
             <div class="gsWizFieldLabel">Points Strategy</div>
@@ -119,7 +186,7 @@
             <div class="gsWizHint" id="gsWizPointsStrategyHint"></div>
           </div>
 
-          <!-- Stableford points grid — shown when strategy === 'Stableford' or 'Chicago' -->
+          <!-- Stableford points grid -->
           <div class="gsWizFieldGroup hidden" id="gsWizGroupStableford">
             <div class="gsWizDivider"></div>
             <div class="gsWizFieldLabel" id="gsWizStablefordLabel">Points per Score</div>
@@ -127,13 +194,12 @@
               <div class="gsWizStableford__hdr">Points awarded per score relative to par — click any value to edit</div>
               <div class="gsWizStableford__grid" id="gsWizStablefordGrid"></div>
             </div>
-            <!-- Chicago quota note — shown only when strategy === 'Chicago' -->
             <div class="gsWizHint hidden" id="gsWizChicagoNote">
               Each player's quota = 36 minus their course handicap. The player who most exceeds their quota wins.
             </div>
           </div>
 
-          <!-- Nines distribution — shown when strategy === 'Nines' -->
+          <!-- Nines distribution -->
           <div class="gsWizFieldGroup hidden" id="gsWizGroupNines">
             <div class="gsWizDivider"></div>
             <div class="gsWizFieldLabel">Nines Distribution</div>
@@ -141,7 +207,7 @@
             <div class="gsWizNinesTable" id="gsWizNinesTable"></div>
           </div>
 
-          <!-- LowBall / LowTotal config — shown when strategy === 'LowBallLowTotal' -->
+          <!-- LowBall / LowTotal -->
           <div class="gsWizFieldGroup hidden" id="gsWizGroupLBLT">
             <div class="gsWizDivider"></div>
             <div class="gsWizFieldLabel">Points Per Category</div>
@@ -149,16 +215,18 @@
             <div class="gsWizPointsInputGrid">
               <div class="gsWizPointsInputRow">
                 <span class="gsWizPointsInputLabel">Low Ball — lowest individual score</span>
-                <input class="gsWizPointsInput maTextInput" type="number" id="gsWizLBLT_LowBall" min="0" max="9" step="1" value="1" onchange="window.gsWiz.onPointsInputChange()">
+                <input class="gsWizPointsInput maTextInput" type="number" id="gsWizLBLT_LowBall"
+                       min="0" max="9" step="1" value="1" onchange="window.gsWiz.onPointsInputChange()">
               </div>
               <div class="gsWizPointsInputRow">
                 <span class="gsWizPointsInputLabel">Low Total — lowest combined team score</span>
-                <input class="gsWizPointsInput maTextInput" type="number" id="gsWizLBLT_LowTotal" min="0" max="9" step="1" value="1" onchange="window.gsWiz.onPointsInputChange()">
+                <input class="gsWizPointsInput maTextInput" type="number" id="gsWizLBLT_LowTotal"
+                       min="0" max="9" step="1" value="1" onchange="window.gsWiz.onPointsInputChange()">
               </div>
             </div>
           </div>
 
-          <!-- LowBall / HighBall config — shown when strategy === 'LowBallHighBall' -->
+          <!-- LowBall / HighBall -->
           <div class="gsWizFieldGroup hidden" id="gsWizGroupLBHB">
             <div class="gsWizDivider"></div>
             <div class="gsWizFieldLabel">Points Per Category</div>
@@ -166,16 +234,18 @@
             <div class="gsWizPointsInputGrid">
               <div class="gsWizPointsInputRow">
                 <span class="gsWizPointsInputLabel">Low Ball — lowest individual score</span>
-                <input class="gsWizPointsInput maTextInput" type="number" id="gsWizLBHB_LowBall" min="0" max="9" step="1" value="1" onchange="window.gsWiz.onPointsInputChange()">
+                <input class="gsWizPointsInput maTextInput" type="number" id="gsWizLBHB_LowBall"
+                       min="0" max="9" step="1" value="1" onchange="window.gsWiz.onPointsInputChange()">
               </div>
               <div class="gsWizPointsInputRow">
                 <span class="gsWizPointsInputLabel">High Ball — lower of the two high scores</span>
-                <input class="gsWizPointsInput maTextInput" type="number" id="gsWizLBHB_HighBall" min="0" max="9" step="1" value="1" onchange="window.gsWiz.onPointsInputChange()">
+                <input class="gsWizPointsInput maTextInput" type="number" id="gsWizLBHB_HighBall"
+                       min="0" max="9" step="1" value="1" onchange="window.gsWiz.onPointsInputChange()">
               </div>
             </div>
           </div>
 
-          <!-- Vegas config — shown when strategy === 'Vegas' -->
+          <!-- Vegas -->
           <div class="gsWizFieldGroup hidden" id="gsWizGroupVegas">
             <div class="gsWizDivider"></div>
             <div class="gsWizFieldLabel">Vegas Points</div>
@@ -183,7 +253,8 @@
             <div class="gsWizPointsInputGrid">
               <div class="gsWizPointsInputRow">
                 <span class="gsWizPointsInputLabel">Points per unit of difference</span>
-                <input class="gsWizPointsInput maTextInput" type="number" id="gsWizVegas_PointsPerUnit" min="1" max="99" step="1" value="1" onchange="window.gsWiz.onPointsInputChange()">
+                <input class="gsWizPointsInput maTextInput" type="number" id="gsWizVegas_PointsPerUnit"
+                       min="1" max="99" step="1" value="1" onchange="window.gsWiz.onPointsInputChange()">
               </div>
             </div>
           </div>
@@ -192,11 +263,11 @@
       </div>
 
       <!-- ============================================================
-           STEP 3: Handicaps
+           STEP 4: Handicaps
            ============================================================ -->
-      <div id="gsWizStep3" class="gsWizStepPanel maCard hidden">
+      <div id="gsWizStep4" class="gsWizStepPanel maCard hidden">
         <header class="maCard__hdr">
-          <div class="maCard__title">STEP 3 OF 3 &nbsp;·&nbsp; HANDICAPS</div>
+          <div class="maCard__title">STEP 4 OF 4 &nbsp;·&nbsp; HANDICAPS</div>
         </header>
         <div class="maCard__body">
           <div class="gsWizEyebrow">How are handicaps applied?</div>
@@ -214,7 +285,8 @@
           <div class="gsWizFieldGroup">
             <div class="gsWizFieldLabel">Allowance</div>
             <div class="gsWizSelectWrap">
-              <select class="maTextInput gsWizSelect" id="gsWizAllowanceSelect" onchange="window.gsWiz.selectAllowance(this.value)"></select>
+              <select class="maTextInput gsWizSelect" id="gsWizAllowanceSelect"
+                      onchange="window.gsWiz.selectAllowance(this.value)"></select>
             </div>
           </div>
 
@@ -231,13 +303,15 @@
           <div class="gsWizFieldGroup">
             <div class="gsWizFieldLabel">HC Effectivity</div>
             <div class="gsWizSelectWrap">
-              <select class="maTextInput gsWizSelect" id="gsWizEffSelect" onchange="window.gsWiz.selectEffectivity(this.value)"></select>
+              <select class="maTextInput gsWizSelect" id="gsWizEffSelect"
+                      onchange="window.gsWiz.selectEffectivity(this.value)"></select>
             </div>
           </div>
 
           <div class="gsWizFieldGroup hidden" id="gsWizEffDateWrap">
             <div class="gsWizFieldLabel">Effectivity Date</div>
-            <input type="date" class="maTextInput" id="gsWizEffDateInput" onchange="window.gsWiz.onEffDateChange(this.value)">
+            <input type="date" class="maTextInput" id="gsWizEffDateInput"
+                   onchange="window.gsWiz.onEffDateChange(this.value)">
           </div>
 
         </div>
@@ -265,6 +339,7 @@
           <div class="gsWizSummary__row"><span class="gsWizSummary__key">Competition</span>  <span class="wizSummary__val empty" id="gsWizSvCompetition">—</span></div>
           <div class="gsWizSummary__row"><span class="gsWizSummary__key">Segments</span>     <span class="wizSummary__val empty" id="gsWizSvSegments">—</span></div>
           <div class="gsWizSummary__row"><span class="gsWizSummary__key">Rotation</span>     <span class="wizSummary__val empty" id="gsWizSvRotation">—</span></div>
+          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Blind Player</span> <span class="wizSummary__val empty" id="gsWizSvBlind">—</span></div>
 
           <div class="gsWizSummary__section">Scoring</div>
           <div class="gsWizSummary__row"><span class="gsWizSummary__key">Basis</span>        <span class="wizSummary__val empty" id="gsWizSvBasis">—</span></div>
@@ -285,6 +360,7 @@
 
   </div><!-- /gsWizLayout -->
 </div><!-- /gsWizardContainer -->
+
 <!-- ================================================================
      HOLE DECLARATION MODAL
      ================================================================ -->

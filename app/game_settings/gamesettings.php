@@ -47,40 +47,38 @@ try {
   }
 
   $initPayload = [
-    "ok" => true,
-    "ggid" => $ggid,
-    "game" => $game,
-    "roster" => $roster,
-    "coursePars" => $coursePars,
-    "recallTemplates"=> [],   // Custom Points — future feature
-    "header" => [
+    "ok"              => true,
+    "ggid"            => $ggid,
+    "game"            => $game,
+    "roster"          => $roster,
+    "coursePars"      => $coursePars,
+    "recallTemplates" => [],
+    "header"          => [
       "subtitle" => $game["dbGames_Title"] ?? ("GGID " . (string)$ggid)
     ]
   ];
 } catch (Throwable $e) {
   Logger::error("GAMESETTINGS_INIT_FAIL", ["err" => $e->getMessage()]);
-  // If no game is selected, we can't do anything. Go back to the list.
   header("Location: " . MA_ROUTE_ADMIN_GAMES);
   exit;
 }
 
-// Provide path constants to JS
+// 3) Path constants for JS
 $paths = [
   "apiGameSettings" => "/api/game_settings",
   "routerApi"       => MA_ROUTE_API_ROUTER,
 ];
 
-// Determine return route from query param (default to games list)
+// 4) Return route
 $returnToParam = trim((string)($_GET["returnTo"] ?? ""));
-$returnRoute = MA_ROUTE_ADMIN_GAMES;
-
+$returnRoute   = MA_ROUTE_ADMIN_GAMES;
 if ($returnToParam !== "") {
     $returnRoute = str_starts_with($returnToParam, "/")
         ? $returnToParam
         : (MA_ROUTE_API_ROUTER . "?action=" . urlencode($returnToParam) . "&redirect=1");
 }
 
-// Chrome values
+// 5) Chrome values consumed by chromeHeader.php
 $maChromeTitle    = "Game Settings";
 $maChromeSubtitle = $initPayload["header"]["subtitle"] ?? "";
 $maChromeLogoUrl  = null;
@@ -102,41 +100,23 @@ $maChromeLogoUrl  = null;
 <body>
   <?php include __DIR__ . "/../../includes/chromeHeader.php"; ?>
 
-  <!-- Progress strip — fixed peer to maPage, outside the scroll container -->
-  <div class="maControlArea" id="gsControlArea">
-    <div class="gsWizProgress hidden" id="gsWizProgress">
-      <div class="gsWizStep active" onclick="window.gsWiz && window.gsWiz.goToStep(1)">
-        <div class="gsWizDot" id="gsWizDot1"></div>
-        <div class="gsWizStepLabel">Format</div>
-      </div>
-      <div class="gsWizStep" onclick="window.gsWiz && window.gsWiz.goToStep(2)">
-        <div class="gsWizDot" id="gsWizDot2"></div>
-        <div class="gsWizStepLabel">Scoring</div>
-      </div>
-      <div class="gsWizStep" onclick="window.gsWiz && window.gsWiz.goToStep(3)">
-        <div class="gsWizDot" id="gsWizDot3"></div>
-        <div class="gsWizStepLabel">Handicaps</div>
-      </div>
-    </div>
-  </div>
-
   <main class="maPage" role="main">
     <?php include __DIR__ . "/gamesettings_view.php"; ?>
   </main>
 
   <?php include __DIR__ . "/../../includes/chromeFooter.php"; ?>
 
-<script>
-  window.MA = window.MA || {};
-  window.MA.paths = <?= json_encode($paths, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-  window.__INIT__ = <?= json_encode($initPayload, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-  window.__MA_INIT__ = window.__INIT__;
-  window.MA.routes = {
-    router: window.MA.paths.routerApi,
-    apiGameSettings: window.MA.paths.apiGameSettings,
-    returnTo: <?= json_encode($returnRoute) ?>
-  };
-</script>
+  <script>
+    window.MA = window.MA || {};
+    window.MA.paths = <?= json_encode($paths, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    window.__INIT__ = <?= json_encode($initPayload, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    window.__MA_INIT__ = window.__INIT__;
+    window.MA.routes = {
+      router: window.MA.paths.routerApi,
+      apiGameSettings: window.MA.paths.apiGameSettings,
+      returnTo: <?= json_encode($returnRoute) ?>
+    };
+  </script>
 
   <script src="/assets/js/ma_shared.js"></script>
   <script src="/assets/modules/recalculate_handicaps.js"></script>
