@@ -117,6 +117,7 @@ function ma_config(): array {
 define('MA_SITE_URL', ma_config()['app']['site_url'] ?? 'https://www.matchaid.org');
 
 require_once MA_API_LIB . '/Db.php';
+require_once MA_API_LIB . '/Logger.php';
 Db::init(ma_config()['db'] ?? []);
 
 // Optional helper: JSON response
