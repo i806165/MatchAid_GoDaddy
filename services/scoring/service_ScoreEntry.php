@@ -63,7 +63,6 @@ final class ServiceScoreEntry
     {
         $players = [];
         $groupPlayers = self::sortLaunchPlayers($gameRow, $groupPlayers);
-        $groupPlayers = self::injectBlindPlayers($gameRow, $groupPlayers);
         $launchedPlayer = $groupPlayers[0] ?? [];
         $ggid = (string)($launchedPlayer['dbPlayers_GGID'] ?? $gameRow['dbGames_GGID'] ?? '');
 
@@ -755,12 +754,6 @@ final class ServiceScoreEntry
         $savedPlayers = [];
         foreach ($players as $submittedWrapper) {
             $submittedPlayerRow = is_array($submittedWrapper['playerRow'] ?? null) ? $submittedWrapper['playerRow'] : [];
-
-            // Blind player rows are never persisted — scores come from their home group
-            if (!empty($submittedPlayerRow['isBlind'])) {
-                continue;
-            }
-
             $playerGHIN = trim((string)($submittedPlayerRow['dbPlayers_PlayerGHIN'] ?? ''));
             if ($playerGHIN === '') {
                 return ['ok' => false, 'conflict' => false, 'message' => 'One or more players are missing GHIN IDs.'];
@@ -822,12 +815,6 @@ final class ServiceScoreEntry
         $conflicts = [];
         foreach ($submittedPlayers as $wrapper) {
             $playerRow = is_array($wrapper['playerRow'] ?? null) ? $wrapper['playerRow'] : [];
-
-            // Blind player rows are never checked for conflicts
-            if (!empty($playerRow['isBlind'])) {
-                continue;
-            }
-
             $ggid = (string)($playerRow['dbPlayers_GGID'] ?? '');
             $ghin = (string)($playerRow['dbPlayers_PlayerGHIN'] ?? '');
 
@@ -980,118 +967,6 @@ final class ServiceScoreEntry
             }
         }
         return $row;
-    }
-
-    // ==========================================================================
-    // 9. Blind Player Injection
-    // ==========================================================================
-
-    /**
-     * Inject blind player clone(s) into groups that are short of the target size.
-     *
-     * Rules:
-     *   - Only applies to PairField competition — returns unchanged for all others
-     *   - Reads dbGames_BlindPlayers: [{ ghin, name }, ..., { target }]
-     *   - Groups players by pairingId and compares count against target
-     *   - For each short pairing, fetches the blind player's real dbPlayers record,
-     *     clones it with dbPlayers_Name masked as '* BLIND *', assigns correct
-     *     pairingId and pairingPos, and sets isBlind = true
-     *   - The real GHIN is preserved so resolveDeclaredScores() can pull live scores
-     */
-    private static function injectBlindPlayers(array $gameRow, array $groupPlayers): array
-    {
-        // Only PairField games use blind players
-        if (trim((string)($gameRow['dbGames_Competition'] ?? '')) !== 'PairField') {
-            return $groupPlayers;
-        }
-
-        // Parse dbGames_BlindPlayers array
-        $rawBlind = $gameRow['dbGames_BlindPlayers'] ?? null;
-        if (is_string($rawBlind)) {
-            $rawBlind = json_decode($rawBlind, true);
-        }
-        if (!is_array($rawBlind) || empty($rawBlind)) {
-            return $groupPlayers;
-        }
-
-        // Extract blind player GHINs and target from the array
-        $blindGHINs = [];
-        $target     = null;
-        foreach ($rawBlind as $item) {
-            if (!is_array($item)) continue;
-            if (isset($item['target'])) {
-                $target = (int)$item['target'];
-            } elseif (!empty($item['ghin'])) {
-                $blindGHINs[] = trim((string)$item['ghin']);
-            }
-        }
-
-        if (empty($blindGHINs) || $target === null || $target < 2) {
-            return $groupPlayers;
-        }
-
-        // Group existing players by PairingID
-        $pairingGroups = [];
-        foreach ($groupPlayers as $player) {
-            $pairingId = trim((string)($player['dbPlayers_PairingID'] ?? ''));
-            if ($pairingId === '') {
-                $pairingId = trim((string)($player['dbPlayers_PlayerKey'] ?? ''));
-            }
-            if ($pairingId === '') continue;
-            $pairingGroups[$pairingId][] = $player;
-        }
-
-        if (empty($pairingGroups)) {
-            return $groupPlayers;
-        }
-
-        // Fetch the blind player's real record
-        $blindGHIN   = $blindGHINs[0];
-        $ggid        = (string)($gameRow['dbGames_GGID'] ?? '');
-        $blindRecord = ServiceDbPlayers::getPlayerByGGIDGHIN($ggid, $blindGHIN);
-
-        if (!$blindRecord) {
-            return $groupPlayers;
-        }
-
-        // Hydrate JSON fields on the blind record
-        $blindRecord = self::hydratePlayerFields($blindRecord);
-
-        // Inject a clone into each pairing that is short of target
-        $injected = $groupPlayers;
-        foreach ($pairingGroups as $pairingId => $members) {
-            $shortBy = $target - count($members);
-            if ($shortBy <= 0) continue;
-
-            $usedPositions = array_map(
-                fn($p) => (int)($p['dbPlayers_PairingPos'] ?? 0),
-                $members
-            );
-
-            $realPairingId = trim((string)($members[0]['dbPlayers_PairingID'] ?? ''));
-
-            for ($i = 0; $i < $shortBy; $i++) {
-                $nextPos = 1;
-                while (in_array($nextPos, $usedPositions, true)) {
-                    $nextPos++;
-                }
-                $usedPositions[] = $nextPos;
-
-                $clone = $blindRecord;
-                $clone['dbPlayers_Name']       = '* BLIND *';
-                $clone['dbPlayers_FName']      = '*';
-                $clone['dbPlayers_LName']      = 'BLIND *';
-                $clone['dbPlayers_PairingID']  = $realPairingId !== '' ? $realPairingId : $pairingId;
-                $clone['dbPlayers_PlayerKey']  = trim((string)($members[0]['dbPlayers_PlayerKey'] ?? ''));
-                $clone['dbPlayers_PairingPos'] = (string)$nextPos;
-                $clone['isBlind']              = true;
-
-                $injected[] = $clone;
-            }
-        }
-
-        // Re-sort so blind clones land in the correct position
-        return self::sortLaunchPlayers($gameRow, $injected);
     }
 
     private static function sortLaunchPlayers(array $gameRow, array $players): array
