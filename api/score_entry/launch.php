@@ -56,16 +56,23 @@ try {
     }
 
     // Step 4: Build the baseline payload exactly as score entry expects today
+    // Note: buildLaunchPayload injects blind player clones into $groupPlayers internally
     $baselinePayload = ServiceScoreEntry::buildLaunchPayload($gameRow, $groupPlayers, $holeNumber, $playerKey);
 
     // Step 5: Normalize baseline into virtual contexts (pass-through for non-spin games)
+    // Extract injected player rows from the payload — includes any blind clones
+    $injectedPlayerRows = array_map(
+        fn($w) => $w['playerRow'],
+        $baselinePayload['players'] ?? []
+    );
+
     $seatOverrides = method_exists('ServiceScoreEntry', 'getSeatOverrides')
         ? ServiceScoreEntry::getSeatOverrides()
         : [];
 
     $rotationContext = ServiceScoreRotation::buildNormalizedContexts(
         $gameRow,
-        $groupPlayers,
+        $injectedPlayerRows,
         $holeNumber,
         $seatOverrides
     );

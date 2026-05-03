@@ -1030,10 +1030,13 @@ final class ServiceScoreEntry
             return $groupPlayers;
         }
 
-        // Group existing players by pairingId
+        // Group existing players by PairingID
         $pairingGroups = [];
         foreach ($groupPlayers as $player) {
             $pairingId = trim((string)($player['dbPlayers_PairingID'] ?? ''));
+            if ($pairingId === '') {
+                $pairingId = trim((string)($player['dbPlayers_PlayerKey'] ?? ''));
+            }
             if ($pairingId === '') continue;
             $pairingGroups[$pairingId][] = $player;
         }
@@ -1042,7 +1045,7 @@ final class ServiceScoreEntry
             return $groupPlayers;
         }
 
-        // Fetch the blind player's real record (use first GHIN — future: support multiple)
+        // Fetch the blind player's real record
         $blindGHIN   = $blindGHINs[0];
         $ggid        = (string)($gameRow['dbGames_GGID'] ?? '');
         $blindRecord = ServiceDbPlayers::getPlayerByGGIDGHIN($ggid, $blindGHIN);
@@ -1060,11 +1063,12 @@ final class ServiceScoreEntry
             $shortBy = $target - count($members);
             if ($shortBy <= 0) continue;
 
-            // Determine the next available pairingPos
             $usedPositions = array_map(
                 fn($p) => (int)($p['dbPlayers_PairingPos'] ?? 0),
                 $members
             );
+
+            $realPairingId = trim((string)($members[0]['dbPlayers_PairingID'] ?? ''));
 
             for ($i = 0; $i < $shortBy; $i++) {
                 $nextPos = 1;
@@ -1073,14 +1077,14 @@ final class ServiceScoreEntry
                 }
                 $usedPositions[] = $nextPos;
 
-                // Clone the blind record and apply overrides
                 $clone = $blindRecord;
-                $clone['dbPlayers_Name']      = '* BLIND *';
-                $clone['dbPlayers_FName']     = '*';
-                $clone['dbPlayers_LName']     = 'BLIND *';
-                $clone['dbPlayers_PairingID'] = $pairingId;
-                $clone['dbPlayers_PairingPos']= (string)$nextPos;
-                $clone['isBlind']             = true;
+                $clone['dbPlayers_Name']       = '* BLIND *';
+                $clone['dbPlayers_FName']      = '*';
+                $clone['dbPlayers_LName']      = 'BLIND *';
+                $clone['dbPlayers_PairingID']  = $realPairingId !== '' ? $realPairingId : $pairingId;
+                $clone['dbPlayers_PlayerKey']  = trim((string)($members[0]['dbPlayers_PlayerKey'] ?? ''));
+                $clone['dbPlayers_PairingPos'] = (string)$nextPos;
+                $clone['isBlind']              = true;
 
                 $injected[] = $clone;
             }
