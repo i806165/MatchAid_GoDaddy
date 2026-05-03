@@ -1,21 +1,37 @@
 /* /assets/css/score_skins.css */
 
-/* Standardize Skins Table alignment and typography */
-.scTable {
-  table-layout: fixed;
-  font-family: var(--fontFamilyBase);
-  font-size: 12px;
+/* ==========================================================================
+   Hole Champions / Skins Grid
+   Resilient table layout for iOS Safari text-size changes.
+   ========================================================================== */
+
+.maCards,
+.maCard,
+.maCard__body,
+.scGroup {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
-/* Hole / Par Column */
-.scTable th.scName, 
-.scTable td.scName {
-  width: 140px;
-  font-weight: 800;
-  color: var(--ink);
-  text-align: left;
-  padding-left: 12px;
-  padding-right: 12px;
+.maCard {
+  overflow: hidden;
+}
+
+.scGroup {
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Standardize Skins Table alignment and typography */
+.scTable {
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-family: var(--fontFamilyBase);
+  font-size: 12px;
+  box-sizing: border-box;
 }
 
 /* Header standard: Match dashboard style */
@@ -26,8 +42,12 @@
   font-size: 10px;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  padding: 12px 4px;
+  padding: 12px 6px;
   border-bottom: 2px solid var(--borderSubtle);
+  line-height: 1.15;
+  vertical-align: middle;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 
 /* Table Body standard */
@@ -35,13 +55,31 @@
   height: 48px;
   vertical-align: middle;
   border-bottom: 1px solid var(--borderSubtle);
+  box-sizing: border-box;
+  line-height: 1.15;
 }
 
-/* Score Columns: Center aligned, override default scMeta width */
+/* Hole / Par Column */
+.scTable th.scName,
+.scTable td.scName {
+  width: 128px;
+  max-width: 128px;
+  font-weight: 800;
+  color: var(--ink);
+  text-align: left;
+  padding-left: 10px;
+  padding-right: 8px;
+  overflow-wrap: anywhere;
+}
+
+/* Score Columns */
 .scTable th.scMeta,
 .scTable td.scMetaCol {
   width: auto;
   text-align: center;
+  padding-left: 6px;
+  padding-right: 6px;
+  overflow-wrap: anywhere;
 }
 
 /* Style the Par detail within the Name column */
@@ -56,6 +94,7 @@
 .scMetaCol strong {
   font-weight: 800;
   color: var(--brandAccent);
+  overflow-wrap: anywhere;
 }
 
 /* Muted tie state */
@@ -63,17 +102,31 @@
   opacity: 0.5;
   font-size: 0.9em;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
+
+/* Hole label */
+.scHoleLabel {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.scName .scPHC {
+  float: right;
+}
+
 /* Multi-card layout */
 .scCardsGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   align-items: start;
+  min-width: 0;
 }
 
 .scSplitCard {
   min-width: 0;
+  overflow: hidden;
 }
 
 .scSplitCard .maCard__hdr {
@@ -85,29 +138,19 @@
 
 .scSplitCard .maCard__title {
   font-weight: 800;
+  min-width: 0;
 }
 
 .scCardNote {
   color: var(--ink);
   font-size: 12px;
   text-align: right;
+  overflow-wrap: anywhere;
 }
 
 .scSplitCard .maCard__body {
   padding: 0;
-}
-
-.scTable {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.scHoleLabel {
-  display: inline-block;
-}
-
-.scName .scPHC {
-  float: right;
+  overflow: hidden;
 }
 
 @media (max-width: 768px) {
@@ -122,5 +165,63 @@
 
   .scCardNote {
     text-align: left;
+  }
+
+  .scTable {
+    font-size: 12px;
+  }
+
+  .scTable th.scName,
+  .scTable td.scName {
+    width: 104px;
+    max-width: 104px;
+    padding-left: 8px;
+    padding-right: 6px;
+  }
+
+  .scTable thead th {
+    font-size: 9px;
+    padding: 10px 4px;
+    letter-spacing: 0.35px;
+  }
+
+  .scTable th.scMeta,
+  .scTable td.scMetaCol {
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  .scName .scPHC {
+    float: none;
+    display: block;
+    margin-top: 2px;
+  }
+}
+
+@media (max-width: 380px) {
+  .scTable {
+    font-size: 11px;
+  }
+
+  .scTable th.scName,
+  .scTable td.scName {
+    width: 92px;
+    max-width: 92px;
+    padding-left: 6px;
+    padding-right: 4px;
+  }
+
+  .scTable thead th {
+    font-size: 8px;
+    padding: 8px 3px;
+    letter-spacing: 0.25px;
+  }
+
+  .scTable td {
+    height: 44px;
+  }
+
+  .scName .scPHC {
+    font-size: 10px;
   }
 }
