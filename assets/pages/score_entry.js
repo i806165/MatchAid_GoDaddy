@@ -887,8 +887,10 @@ function markDirty(playerId, rawScore, declared) {
   }
 
   function activePlayers() {
-  return Array.isArray(state.payload?.players) ? state.payload.players : [];
-}
+    return Array.isArray(state.payload?.players)
+      ? state.payload.players.filter(w => !w?.playerRow?.isBlind)
+      : [];
+  }
 
 function getEffectivePairingId(wrapper) {
   const row = wrapper?.scoreEntryRow || {};

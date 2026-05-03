@@ -256,6 +256,7 @@
     wizBlindConfig:      document.getElementById("gsWizBlindConfig"),
     wizBlindSelect:      document.getElementById("gsWizBlindSelect"),
     wizBlindTargetChips: document.getElementById("gsWizBlindTargetChips"),
+    wizGroupBlind:       document.getElementById("gsWizGroupBlind"),
 
     // Step 3 — Scoring
     wizMethodChips:          document.getElementById("gsWizMethodChips"),
@@ -849,7 +850,18 @@
       wizRenderRotChips();
     }
 
-    // Blind player
+    // Blind player — PairField only
+    const isPairField = (wiz.pairing === "PairField");
+    show(el.wizGroupBlind, isPairField);
+
+    // If switched to PairPair, clear any previously saved blind state
+    if (!isPairField && wiz.useBlind) {
+      wiz.useBlind    = false;
+      wiz.blindGHIN   = "";
+      wiz.blindName   = "";
+      wiz.blindTarget = null;
+    }
+
     if (el.wizUseBlind) el.wizUseBlind.checked = wiz.useBlind;
     show(el.wizBlindConfig, wiz.useBlind);
     wizRenderBlindSelect();
@@ -1371,6 +1383,14 @@
         wiz.pointsStrategy = null;
         wiz.pointsConfig   = null;
       }
+    }
+
+    // Blind player is PairField only — clear if switching away
+    if (val !== "PairField" && wiz.useBlind) {
+      wiz.useBlind    = false;
+      wiz.blindGHIN   = "";
+      wiz.blindName   = "";
+      wiz.blindTarget = null;
     }
 
     // Re-render Step 1 in place

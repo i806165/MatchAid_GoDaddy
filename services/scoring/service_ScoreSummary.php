@@ -878,6 +878,10 @@ final class ServiceScoreSummary
                     $netDiffSum   = null;
 
                     foreach ($pairPlayers as $player) {
+                        // Blind players are excluded from skins — they must never
+                        // nullify a valid hole champion by creating a false tie
+                        if (!empty($player['isBlind'])) continue;
+
                         $cell = $player['holes'][$holeKey] ?? null;
                         if (!is_array($cell) || empty($cell['declared'])) continue;
 

@@ -96,8 +96,8 @@
             <div class="gsWizHint" id="gsWizRotNote"></div>
           </div>
 
-          <!-- Blind Player — PairField and PairPair -->
-          <div class="gsWizFieldGroup">
+          <!-- Blind Player — PairField only -->
+          <div class="gsWizFieldGroup" id="gsWizGroupBlind">
             <div class="gsWizDivider"></div>
             <div class="gsWizEyebrow">Does this game need a blind player?</div>
             <div class="gsWizToggleRow">
