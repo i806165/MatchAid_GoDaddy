@@ -387,6 +387,41 @@ final class ServiceScoreEntry
     // 3.5 Declaration Engine
     // ==========================================================================
 
+    /**
+     * Resolve declared flags for a single hole across a set of player scores.
+     * Used by both resolveDeclaredScores() and ServiceBlindPlayer::recalculateDeclaredFlags().
+     *
+     * @param array  $scoreRows     Flat array of ['ghin' => string, 'raw' => float|null,
+     *                               'net' => float|null, 'pos' => int]
+     * @param int    $n             BestBall count — number of scores to declare
+     * @param string $scoringMethod 'NET' or 'ADJ GROSS'
+     * @return array                Keyed by GHIN => bool (true = declared)
+     */
+    public static function resolveDeclaredForHole(
+        array  $scoreRows,
+        int    $n,
+        string $scoringMethod
+    ): array {
+        $validRows = array_values(array_filter($scoreRows, static fn($r) => is_numeric($r['raw'])));
+
+        usort($validRows, static function ($a, $b) use ($scoringMethod) {
+            $metricA = ($scoringMethod === 'ADJ GROSS') ? $a['raw'] : $a['net'];
+            $metricB = ($scoringMethod === 'ADJ GROSS') ? $b['raw'] : $b['net'];
+
+            if ($metricA != $metricB) return $metricA <=> $metricB;
+            if ($a['raw'] != $b['raw']) return $a['raw'] <=> $b['raw'];
+            return $a['pos'] <=> $b['pos'];
+        });
+
+        $declaredGHINs = array_column(array_slice($validRows, 0, $n), 'ghin');
+
+        $result = [];
+        foreach ($scoreRows as $row) {
+            $result[$row['ghin']] = in_array($row['ghin'], $declaredGHINs, true);
+        }
+        return $result;
+    }
+
     public static function resolveDeclaredScores(array $gameRow, array &$players, int $holeNumber): void
     {
         $scoringSystem = (string)($gameRow['dbGames_ScoringSystem'] ?? 'BestBall');
@@ -405,10 +440,11 @@ final class ServiceScoreEntry
             $playerRow = is_array($wrapper['playerRow'] ?? null) ? $wrapper['playerRow'] : [];
 
             $partitions[$pairingId][] = [
-                'idx' => $idx,
-                'raw' => $scoreEntryRow['rawScore'] ?? null,
-                'net' => $scoreEntryRow['netScore'] ?? null,
-                'pos' => (int)($scoreEntryRow['pairingPos'] ?? $playerRow['dbPlayers_PairingPos'] ?? 99),
+                'idx'  => $idx,
+                'ghin' => (string)($playerRow['dbPlayers_PlayerGHIN'] ?? ''),
+                'raw'  => $scoreEntryRow['rawScore'] ?? null,
+                'net'  => $scoreEntryRow['netScore'] ?? null,
+                'pos'  => (int)($scoreEntryRow['pairingPos'] ?? $playerRow['dbPlayers_PairingPos'] ?? 99),
             ];
         }
 
@@ -432,22 +468,13 @@ final class ServiceScoreEntry
                 $n = (int)($gameRow['dbGames_BestBall'] ?? 1);
             }
 
-            usort($validRows, static function ($a, $b) use ($scoringMethod) {
-                $metricA = ($scoringMethod === 'ADJ GROSS') ? $a['raw'] : $a['net'];
-                $metricB = ($scoringMethod === 'ADJ GROSS') ? $b['raw'] : $b['net'];
-
-                if ($metricA != $metricB) return $metricA <=> $metricB;
-                if ($a['raw'] != $b['raw']) return $a['raw'] <=> $b['raw'];
-                return $a['pos'] <=> $b['pos'];
-            });
-
-            $declaredIndices = array_column(array_slice($validRows, 0, $n), 'idx');
+            $declared = self::resolveDeclaredForHole($rows, $n, $scoringMethod);
 
             foreach ($rows as $row) {
-                $pIdx = $row['idx'];
-                $isDeclared = in_array($pIdx, $declaredIndices, true);
+                $pIdx       = $row['idx'];
+                $isDeclared = $declared[$row['ghin']] ?? false;
 
-                $players[$pIdx]['scoreEntryRow']['declared'] = $isDeclared;
+                $players[$pIdx]['scoreEntryRow']['declared']       = $isDeclared;
                 $players[$pIdx]['scoreEntryRow']['declaredSource'] = 'system';
 
                 self::syncHoleDetailDeclaration($players[$pIdx], $holeNumber, $isDeclared);

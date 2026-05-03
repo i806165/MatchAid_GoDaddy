@@ -21,6 +21,30 @@ if ($playerGHIN === "") {
   exit;
 }
 
+// Blind player guard — prevent deletion of player designated as blind
+try {
+  $gc       = ServiceContextGame::getGameContext();
+  $gameRow  = $gc['game'] ?? [];
+  $rawBlind = $gameRow['dbGames_BlindPlayers'] ?? '[]';
+  $blindArr = is_string($rawBlind) ? json_decode($rawBlind, true) : $rawBlind;
+  $blindGHINs = array_column(
+    array_filter(is_array($blindArr) ? $blindArr : [], fn($b) => isset($b['ghin'])),
+    'ghin'
+  );
+  if (in_array($playerGHIN, $blindGHINs, true)) {
+    http_response_code(409);
+    echo json_encode([
+      'ok'      => false,
+      'message' => 'This player is designated as the blind player for this game. '
+                 . 'Remove the blind player assignment in Game Settings before deleting.'
+    ]);
+    exit;
+  }
+} catch (Throwable $e) {
+  // Non-fatal — proceed with delete if guard check fails
+  Logger::info('BLIND_GUARD_SKIP', ['err' => $e->getMessage()]);
+}
+
 try {
   $gc = ServiceContextGame::getGameContext();
   $ggid = (string)($gc["ggid"] ?? "");

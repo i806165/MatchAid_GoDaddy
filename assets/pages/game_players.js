@@ -1786,6 +1786,24 @@ async function beginBatchTeeFlow(){
       wasPaired = (comp === "PairPair") ? (pid !== "000" && fid !== "" && fid !== "0") : (pid !== "000");
     }
 
+    // Blind player guard — immediate client-side feedback
+    try {
+      const rawBlind = state.game?.dbGames_BlindPlayers || '[]';
+      const blindArr = typeof rawBlind === 'string' ? JSON.parse(rawBlind) : rawBlind;
+      const blindGHINs = (Array.isArray(blindArr) ? blindArr : [])
+        .filter(b => b.ghin)
+        .map(b => String(b.ghin));
+      if (blindGHINs.includes(String(ghin))) {
+        return MA.setStatus(
+          'This player is the blind player for this game. ' +
+          'Remove the blind assignment in Game Settings before deleting.',
+          'warn'
+        );
+      }
+    } catch (e) {
+      // Non-fatal — let server-side guard handle it
+    }
+
     const res = await MA.postJson(MA.paths.gamePlayersDelete, { playerGHIN: ghin });
     if (!res?.ok) return MA.setStatus("Unable to delete player", "danger");
 

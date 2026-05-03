@@ -127,6 +127,21 @@
                 </div>
               </div>
 
+              <!-- Apply Blind Player — shown after blind is fully configured -->
+              <div id="gsWizBlindApplyWrap" class="gsWizFieldGroup hidden">
+                <div class="gsWizDivider"></div>
+                <div class="gsWizFieldLabel">Apply Blind Player</div>
+                <div class="gsWizHint">
+                  Run this after all scores have been entered to add the blind player
+                  and recalculate scores.
+                </div>
+                <button class="btn btnSecondary" id="gsWizBtnApplyBlind"
+                        onclick="window.gsWiz.applyBlind()">
+                  Apply Blind Player
+                </button>
+                <div id="gsWizBlindApplyStatus" class="gsWizHint" style="margin-top:8px;"></div>
+              </div>
+
             </div><!-- /gsWizBlindConfig -->
           </div>
 

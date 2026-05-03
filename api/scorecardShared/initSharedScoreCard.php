@@ -45,6 +45,20 @@ function hydrateSharedScoreCardContext(string $ggid): array {
   }
   unset($p);
 
+  // Merge blind player records into player pool if any exist
+  require_once MA_SERVICES . '/scoring/service_BlindPlayer.php';
+  $blindScores = ServiceBlindPlayer::getBlindScoresForGame((int)$ggid);
+  if (!empty($blindScores)) {
+    foreach ($blindScores as &$bs) {
+      if (isset($bs['dbScores_Scores']) && is_string($bs['dbScores_Scores'])) {
+        $decoded = json_decode($bs['dbScores_Scores'], true);
+        if (is_array($decoded)) $bs['dbScores_Scores'] = $decoded;
+      }
+    }
+    unset($bs);
+    $players = ServiceBlindPlayer::mergeBlindScoresIntoPlayers($players, $blindScores, $game);
+  }
+
   return [
     "ok" => true,
     "game" => $game,

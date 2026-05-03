@@ -56,25 +56,48 @@ function buildScoreSummaryInit(array $ctx, array $gc): array
 
 function loadScoreSummaryPlayers(array $gc, string $ggid): array
 {
+    $players = null;
+
     if (is_array($gc['players'] ?? null) && !empty($gc['players'])) {
-        return hydrateScoreSummaryPlayerRows($gc['players']);
+        $players = hydrateScoreSummaryPlayerRows($gc['players']);
     }
 
-    if (method_exists('ServiceDbPlayers', 'getScorecardPlayersByGGID')) {
+    if ($players === null && method_exists('ServiceDbPlayers', 'getScorecardPlayersByGGID')) {
         $rows = ServiceDbPlayers::getScorecardPlayersByGGID($ggid);
         if (is_array($rows) && !empty($rows)) {
-            return hydrateScoreSummaryPlayerRows($rows);
+            $players = hydrateScoreSummaryPlayerRows($rows);
         }
     }
 
-    if (method_exists('ServiceDbPlayers', 'getGamePlayers')) {
+    if ($players === null && method_exists('ServiceDbPlayers', 'getGamePlayers')) {
         $rows = ServiceDbPlayers::getGamePlayers($ggid);
         if (is_array($rows) && !empty($rows)) {
-            return hydrateScoreSummaryPlayerRows($rows);
+            $players = hydrateScoreSummaryPlayerRows($rows);
         }
     }
 
-    return [];
+    $players = $players ?? [];
+
+    // Merge blind player records into player pool if any exist
+    return mergeBlindScoresIntoSummaryPlayers($players, $ggid, $gc);
+}
+
+function mergeBlindScoresIntoSummaryPlayers(array $players, string $ggid, array $gc): array
+{
+    require_once MA_SERVICES . '/scoring/service_BlindPlayer.php';
+    $blindScores = ServiceBlindPlayer::getBlindScoresForGame((int)$ggid);
+    if (empty($blindScores)) return $players;
+
+    foreach ($blindScores as &$bs) {
+        if (isset($bs['dbScores_Scores']) && is_string($bs['dbScores_Scores'])) {
+            $decoded = json_decode($bs['dbScores_Scores'], true);
+            if (is_array($decoded)) $bs['dbScores_Scores'] = $decoded;
+        }
+    }
+    unset($bs);
+
+    $gameRow = $gc['game'] ?? [];
+    return ServiceBlindPlayer::mergeBlindScoresIntoPlayers($players, $blindScores, $gameRow);
 }
 
 function hydrateScoreSummaryPlayerRows(array $players): array

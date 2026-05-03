@@ -257,6 +257,9 @@
     wizBlindSelect:      document.getElementById("gsWizBlindSelect"),
     wizBlindTargetChips: document.getElementById("gsWizBlindTargetChips"),
     wizGroupBlind:       document.getElementById("gsWizGroupBlind"),
+    wizBlindApplyWrap:   document.getElementById("gsWizBlindApplyWrap"),
+    wizBtnApplyBlind:    document.getElementById("gsWizBtnApplyBlind"),
+    wizBlindApplyStatus: document.getElementById("gsWizBlindApplyStatus"),
 
     // Step 3 — Scoring
     wizMethodChips:          document.getElementById("gsWizMethodChips"),
@@ -866,6 +869,11 @@
     show(el.wizBlindConfig, wiz.useBlind);
     wizRenderBlindSelect();
     wizRenderBlindTargetChips();
+
+    // Show apply button only when blind is fully configured
+    const blindComplete = wiz.useBlind && !!wiz.blindGHIN && wiz.blindTarget !== null;
+    show(el.wizBlindApplyWrap, blindComplete);
+    if (el.wizBlindApplyStatus) el.wizBlindApplyStatus.textContent = '';
   }
 
   function wizRenderBlindSelect() {
@@ -1815,6 +1823,29 @@
     if (carouselLeft)  carouselLeft.addEventListener("click",  () => wizScrollCarousel(-1));
     if (carouselRight) carouselRight.addEventListener("click", () => wizScrollCarousel(1));
 
+    async function wizApplyBlind() {
+      if (!state.ggid) return;
+      const statusEl = el.wizBlindApplyStatus;
+      const btn      = el.wizBtnApplyBlind;
+      if (statusEl) statusEl.textContent = 'Applying blind player...';
+      if (btn)      btn.disabled = true;
+      try {
+        const url = `${String(gsApiBase).replace(/\/$/, '')}/applyBlindPlayer.php`;
+        const res = await postJson(url, { ggid: state.ggid });
+        if (statusEl) {
+          statusEl.textContent = res?.message || (res?.ok ? 'Applied successfully.' : 'Failed.');
+          statusEl.style.color = res?.ok ? 'var(--color-success, green)' : 'var(--color-error, red)';
+        }
+      } catch (e) {
+        if (statusEl) {
+          statusEl.textContent = 'An error occurred.';
+          statusEl.style.color = 'var(--color-error, red)';
+        }
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
     window.gsWiz = {
       selectPairing:         wizSelectPairing,
       selectGame:            wizSelectGame,
@@ -1839,6 +1870,7 @@
       onEffDateChange:       wizOnEffDateChange,
       scrollCarousel:        wizScrollCarousel,
       goToStep:              wizGoToStep,
+      applyBlind:            wizApplyBlind,
     };
   }
 
