@@ -58,7 +58,7 @@
             </button>
             <div class="gpPanelHdr__title">ASSIGNED GROUPS</div>
             <div class="gpPanelHdr__actions">
-              <button class="btn btnSecondary gpMobileAddBtn" id="gsBtnTrayOpen" type="button">Add Slot</button>
+            <div class="gpPanelHdr__actions"></div>
             </div>
           </div>
         </header>
@@ -70,8 +70,12 @@
         </div>
 
         <footer class="maPanel__ftr">
-          <div class="gpFooter">
+          <div class="gpFooter gpFooter--canvas">
             <div class="gpFooter__left" id="gsCanvasFooterLeft"></div>
+
+            <button class="gsMobileAddPlayingGroupBtn" id="gsBtnTrayOpen" type="button">
+              + Add Playing Group
+            </button>
           </div>
         </footer>
       </section>

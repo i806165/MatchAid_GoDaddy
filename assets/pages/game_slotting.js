@@ -148,7 +148,7 @@
 
   function toggleMobileTray() {
     const isOpen = el.panelsWrap.classList.toggle("is-tray-open");
-    if (el.btnTrayOpen) el.btnTrayOpen.textContent = isOpen ? "Show Slots" : "Add Slot";
+    if (el.btnTrayOpen) el.btnTrayOpen.textContent = isOpen ? "Show Slots" : "+ Add Playing Group";
   }
 
   function markDirty(ghin) {

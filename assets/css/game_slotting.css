@@ -72,6 +72,12 @@
   left: 10px;
 }
 
+.gpPanelHdr__right {
+  display: none;
+  position: absolute;
+  right: 10px;
+}
+
 .gpCount {
   font-size: 12px;
   font-weight: 900;
@@ -208,6 +214,26 @@
 .gpGroupCard.is-target {
   border: 2px solid var(--brandAccent);
   box-shadow: 0 0 8px rgba(11, 95, 255, 0.2);
+}
+
+.gsMobileAddPlayingGroupBtn {
+  display: none;
+  width: 100%;
+  min-height: var(--btnHeight);
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--borderSubtle);
+  border-radius: var(--radiusMd);
+  background: transparent;
+  color: var(--brandPrimary);
+  font-family: var(--fontFamilyBase);
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.gsMobileAddPlayingGroupBtn:active {
+  transform: translateY(1px);
 }
 
 /* ==========================================================================
@@ -361,12 +387,46 @@
     display: none;
   }
 
+  /*
+     Mobile Assigned Groups canvas:
+     Replace header Add Slot with fixed footer-style action.
+  */
   .gpMobileAddBtn {
+    display: none;
+  }
+
+  .gsMobileAddPlayingGroupBtn {
     display: inline-flex;
   }
 
-  .gpPanelHdr__left {
+  .gpFooter--canvas {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  /*
+     Mobile Tray header:
+     Count on left, title centered, close X on right.
+     This preserves the existing tray header markup.
+  */
+  .gsTrayPanel .gpPanelHdr__actions {
+    left: 10px;
+    right: auto;
+  }
+
+  .gsTrayPanel .gpPanelHdr__actions .btn {
+    display: none;
+  }
+
+  .gsTrayPanel .gpPanelHdr__left {
     display: flex;
+    left: auto;
+    right: 10px;
+  }
+
+  .gsTrayPanel .gpCount {
+    display: block;
   }
 }
 
