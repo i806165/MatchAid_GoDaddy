@@ -2,7 +2,7 @@
 declare(strict_types=1);
 // /public_html/app/score_entry/scoreentry_view.php
 ?>
-<main class="maPage scoreEntryShell" id="scoreEntryRoot">
+<div class="scoreEntryShell" id="scoreEntryRoot">
   <section class="scoreEntryWork" id="scoreEntryWork">
     <div class="maCard scoreHoleNav">
       <div class="maCard__body scoreHoleNavBody">
@@ -33,4 +33,4 @@ declare(strict_types=1);
     </form>
   </dialog>
 
-</main>
+</div>
