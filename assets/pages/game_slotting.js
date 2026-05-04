@@ -1530,13 +1530,16 @@ function onResetChanges() {
     applyChrome();
     wireEvents();
 
-    // Move Assign button to the controls area and apply standard classes
-    const trayPanel = el.trayList.closest('.maPanel');
-    if (trayPanel) {
-      const controlsArea = trayPanel.querySelector('.maPanel__controls');
-      if (controlsArea && el.btnAssign) {
-        controlsArea.appendChild(el.btnAssign);
-        el.btnAssign.classList.add('btn', 'btnSecondary');
+    // Move Assign button to controls area on desktop only.
+    // On mobile the chrome footer Assign button owns this action.
+    if (!isMobile()) {
+      const trayPanel = el.trayList.closest('.maPanel');
+      if (trayPanel) {
+        const controlsArea = trayPanel.querySelector('.maPanel__controls');
+        if (controlsArea && el.btnAssign) {
+          controlsArea.appendChild(el.btnAssign);
+          el.btnAssign.classList.add('btn', 'btnSecondary');
+        }
       }
     }
 
