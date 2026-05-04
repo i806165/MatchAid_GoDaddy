@@ -53,6 +53,27 @@
   display: none;
 }
 
+/* Footer tray-open button — hidden on desktop, shown on mobile */
+.gsMobileAddPlayingGroupBtn {
+  display: none;
+  width: 100%;
+  min-height: var(--btnHeight);
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--borderSubtle);
+  border-radius: var(--radiusMd);
+  background: transparent;
+  color: var(--brandPrimary);
+  font-family: var(--fontFamilyBase);
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.gsMobileAddPlayingGroupBtn:active {
+  transform: translateY(1px);
+}
+
 /* Panel header row */
 .maPage--pairings .maPanel__hdr {
   background: var(--brandSecondary);
@@ -374,14 +395,13 @@
   color: var(--ink);
 }
 
-/* Desktop tray panels visible; mobile uses drawer */
-@media (max-width: 900px){
-  .gpTrayPanel{
+/* Mobile: inline tray toggle (mirrors game_slotting.css pattern) */
+@media (max-width: 900px) {
+  .gpTrayPanel {
     display: none;
-    flex: 1 1 auto; /* Fill available space */
-    min-height: 0;  /* Allow scrolling */
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
-    
     border-left: none;
     border-bottom: none;
     margin-bottom: 0;
@@ -391,14 +411,43 @@
     display: flex;
     flex-direction: column;
   }
+
   .gpTabPanel.is-tray-open .maPanel--primary {
     display: none;
   }
-  .gpMobileAddBtn {
+
+  /* Footer add button — shown on mobile only */
+  .gsMobileAddPlayingGroupBtn {
     display: inline-flex;
   }
 
-  .gpPanelHdr__left {
-    display: flex; /* Show on mobile */
+  .gpFooter--canvas {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  /*
+    Mobile tray header repositioning:
+    Count + Assign on LEFT (absolute), title centered, X close on RIGHT.
+    Mirrors game_slotting.css: .gsTrayPanel .gpPanelHdr__actions / __left swap.
+  */
+  .gpTrayPanel .gpPanelHdr__actions {
+    left: 10px;
+    right: auto;
+  }
+
+  .gpTrayPanel .gpPanelHdr__actions .maBtn--sm {
+    display: none;
+  }
+
+  .gpTrayPanel .gpPanelHdr__left {
+    display: flex;
+    left: auto;
+    right: 10px;
+  }
+
+  .gpTrayPanel .gpCount {
+    display: block;
   }
 }

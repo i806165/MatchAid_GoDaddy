@@ -14,13 +14,18 @@
       <section class="maPanel maPanel--secondary gpTrayPanel" aria-label="Unpaired players tray">
         <header class="maPanel__hdr">
           <div class="gpPanelHdr">
-            <div class="gpPanelHdr__left">
-              <button class="maBtn maBtn--ghost gpMobileCloseBtn" type="button" aria-label="Close Tray">✕</button>
-            </div>
-            <div class="gpPanelHdr__title">Unpaired</div>
             <div class="gpPanelHdr__actions">
               <span class="gpCount" id="gpUnpairedCount"></span>
               <button class="maBtn maBtn--sm" type="button" id="gpBtnAssignToPairing">Assign &gt;&gt;</button>
+            </div>
+            <div class="gpPanelHdr__title">Unpaired</div>
+            <div class="gpPanelHdr__left gpMobileCloseBtn">
+              <button class="iconBtn btnSecondary" type="button" aria-label="Close Tray">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
             </div>
           </div>
         </header>
@@ -60,9 +65,7 @@
               </button>
             </div>
             <div class="gpPanelHdr__title">Pairings</div>
-            <div class="gpPanelHdr__actions">
-              <button class="maBtn maBtn--sm gpMobileAddBtn" type="button" id="gpBtnTrayPair">Add Pairing</button>
-            </div>
+            <div class="gpPanelHdr__actions"></div>
           </div>
         </header>
         <div class="maPanel__controls">
@@ -72,10 +75,11 @@
           <div class="maCards" id="gpPairingsCanvas"></div>
         </div>
         <footer class="maPanel__ftr">
-          <div class="gpFooter">
+          <div class="gpFooter gpFooter--canvas">
             <div class="gpFooter__left" id="gpPairFooterLeft"></div>
-            <div class="gpFooter__right">
-            </div>
+            <button class="gsMobileAddPlayingGroupBtn" id="gpBtnTrayPair" type="button">
+              + Add Player Pairings
+            </button>
           </div>
         </footer>
       </section>
@@ -91,13 +95,18 @@
       <section class="maPanel maPanel--secondary gpTrayPanel" aria-label="Unmatched pairings tray">
         <header class="maPanel__hdr">
           <div class="gpPanelHdr">
-            <div class="gpPanelHdr__left">
-              <button class="maBtn maBtn--ghost gpMobileCloseBtn" type="button" aria-label="Close Tray">✕</button>
-            </div>
-            <div class="gpPanelHdr__title">Unmatched</div>
             <div class="gpPanelHdr__actions">
               <span class="gpCount" id="gpUnmatchedCount"></span>
               <button class="maBtn maBtn--sm" type="button" id="gpBtnAssignToFlight">Assign &gt;&gt;</button>
+            </div>
+            <div class="gpPanelHdr__title">Unmatched</div>
+            <div class="gpPanelHdr__left gpMobileCloseBtn">
+              <button class="iconBtn btnSecondary" type="button" aria-label="Close Tray">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
             </div>
           </div>
         </header>
@@ -130,9 +139,7 @@
               </button>
             </div>
             <div class="gpPanelHdr__title">Matches</div>
-            <div class="gpPanelHdr__actions">
-              <button class="maBtn maBtn--sm gpMobileAddBtn" type="button" id="gpBtnTrayMatch">Add Match</button>
-            </div>
+            <div class="gpPanelHdr__actions"></div>
           </div>
         </header>
         <div class="maPanel__controls">
@@ -142,10 +149,11 @@
           <div class="maCards" id="gpFlightsCanvas"></div>
         </div>
         <footer class="maPanel__ftr">
-          <div class="gpFooter">
+          <div class="gpFooter gpFooter--canvas">
             <div class="gpFooter__left" id="gpMatchFooterLeft"></div>
-            <div class="gpFooter__right">
-            </div>
+            <button class="gsMobileAddPlayingGroupBtn" id="gpBtnTrayMatch" type="button">
+              + Add Match
+            </button>
           </div>
         </footer>
       </section>
@@ -153,31 +161,4 @@
     </div>
   </section>
 
-</div>
-
-<!-- Mobile Drawer (Tray) -->
-<div class="maDrawerOverlay" id="gpDrawerOverlay" aria-hidden="true">
-  <section class="maDrawer" role="dialog" aria-modal="true" aria-label="Tray">
-    <header class="maPanel__hdr">
-      <div class="gpPanelHdr">
-        <div class="gpPanelHdr__left">
-          <button class="maBtn maBtn--ghost" type="button" id="gpBtnCloseDrawer">Close</button>
-        </div>
-        <div class="gpPanelHdr__title" id="gpDrawerTitle">Tray</div>
-        <div class="gpPanelHdr__actions">
-          <button class="maBtn maBtn--ghost" type="button" id="gpBtnDrawerAssign">Assign</button>
-        </div>
-      </div>
-    </header>
-    <div class="maPanel__controls">
-      <div class="maInputWrap gpInputClearWrap" style="align-items: center;">
-        <div class="gpMasterCheck" id="gpDrawerMasterCheck" title="Clear selection"></div>
-        <input class="maTextInput" id="gpDrawerSearch" type="text" placeholder="Search" autocomplete="off" />
-        <button id="gpDrawerSearchClear" class="clearBtn isHidden" type="button" aria-label="Clear search">×</button>
-      </div>
-    </div>
-    <div class="maPanel__body">
-      <div class="maListRows" id="gpDrawerList"></div>
-    </div>
-  </section>
 </div>

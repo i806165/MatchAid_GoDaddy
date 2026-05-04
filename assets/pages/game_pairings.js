@@ -45,7 +45,6 @@
     // Drawer
     btnTrayPair: document.getElementById("gpBtnTrayPair"),
     btnTrayMatch: document.getElementById("gpBtnTrayMatch"),
-    btnDrawerAssign: document.getElementById("gpBtnDrawerAssign"),
     mobileCloseBtns: document.querySelectorAll(".gpMobileCloseBtn"),
   };
 
@@ -128,9 +127,6 @@
   }
 
   function toggleMobileTray() {
-    // Find the tray panel associated with the active tab
-    // Pair tab -> gpUnpairedList's parent panel
-    // Match tab -> gpUnmatchedList's parent panel
     const listEl = (state.activeTab === "pair") ? el.unpairedList : el.unmatchedList;
     if (!listEl) return;
     
@@ -138,13 +134,11 @@
     if (!panel) return;
     const isOpen = panel.classList.toggle("is-tray-open");
     
-    // Update button text
     const btn = (state.activeTab === "pair") ? el.btnTrayPair : el.btnTrayMatch;
     if (btn) {
-      // Toggle between "Add Players" (default) and "Show Pairings"
-      // We assume the default HTML text is "Add Players" or similar.
-      // We can store original text if needed, but simple toggle is fine.
-      btn.textContent = isOpen ? "Show Pairings" : (state.activeTab === "pair" ? "Add Players" : "Add Matches");
+      btn.textContent = isOpen
+        ? (state.activeTab === "pair" ? "Show Pairings" : "Show Matches")
+        : (state.activeTab === "pair" ? "+ Add Player Pairings" : "+ Add Match");
     }
   }
 
@@ -1610,14 +1604,6 @@
 
     if (el.mobileCloseBtns) {
       el.mobileCloseBtns.forEach(btn => btn.addEventListener("click", toggleMobileTray));
-    }
-
-    if (el.btnDrawerAssign) {
-      el.btnDrawerAssign.addEventListener("click", () => {
-        // Dispatch to correct handler based on active tab
-        if (state.activeTab === "pair") assignSelectedPlayerToPairing();
-        else assignSelectedPairingToFlight();
-      });
     }
 
     // Search fields
