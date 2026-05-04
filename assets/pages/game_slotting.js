@@ -481,7 +481,9 @@ const AutoSlotEngine = {
   function getNextAvailableSlot(afterSlotId) {
     if (!afterSlotId) {
       if (isShotgun()) {
-        return "08:00 AM|1|A";
+        // Start at the first hole in the allowed range, suffix A.
+        const range = getAllowedHoleRange();
+        return `${getDefaultStartTime()}|${range.min}|A`;
       }
 
       const assignedSlotIds = Array.from(new Set(
@@ -509,9 +511,21 @@ const AutoSlotEngine = {
     const meta = parseSlotId(afterSlotId);
 
     if (isShotgun()) {
-      const nextSuffix = String.fromCharCode((meta.suffix || "A").charCodeAt(0) + 1);
-      if (nextSuffix <= "D") return `${meta.time}|${meta.hole}|${nextSuffix}`;
-      return `${meta.time}|${parseInt(meta.hole, 10) + 1}|A`;
+      // Shotgun manual traversal: walk all holes at current suffix first,
+      // then increment suffix and wrap back to range.min.
+      // e.g. 1A→2A→...→18A→1B→2B→...→18B→1C...
+      const range = getAllowedHoleRange();
+      const currentHole = parseInt(meta.hole, 10);
+      const currentSuffix = String(meta.suffix || "A").toUpperCase();
+
+      if (currentHole < range.max) {
+        // Advance to next hole, same suffix
+        return `${meta.time}|${currentHole + 1}|${currentSuffix}`;
+      }
+
+      // Exhausted all holes at this suffix — bump suffix, wrap to first hole
+      const nextSuffix = String.fromCharCode(currentSuffix.charCodeAt(0) + 1);
+      return `${meta.time}|${range.min}|${nextSuffix}`;
     }
 
     const startMinutes = parseTimeToMinutes(meta.time);
