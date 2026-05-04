@@ -146,9 +146,40 @@
     return { min: 1, max: 18 };
   }
 
+  function isTrayOpen() {
+    return el.panelsWrap ? el.panelsWrap.classList.contains("is-tray-open") : false;
+  }
+
   function toggleMobileTray() {
     const isOpen = el.panelsWrap.classList.toggle("is-tray-open");
     if (el.btnTrayOpen) el.btnTrayOpen.textContent = isOpen ? "Show Slots" : "+ Add Playing Group";
+
+    if (isOpen) {
+      applyTrayChrome();
+    } else {
+      applyChrome();
+    }
+  }
+
+  // Set chrome footer to ASSIGN/CANCEL when tray is open on mobile.
+  // Called on tray open and whenever selection changes while tray is open.
+  function applyTrayChrome() {
+    if (!chrome || typeof chrome.setActions !== "function") return;
+
+    const hasSelection = state.selectedBlockIds.size > 0;
+
+    chrome.setActions({
+      left:   { show: false },
+      right:  { show: false },
+      footer: {
+        save:   { label: "Assign", onClick: assignSelection },
+        cancel: { label: "Cancel", onClick: toggleMobileTray }
+      }
+    });
+
+    if (typeof chrome.setFooterSaveDisabled === "function") {
+      chrome.setFooterSaveDisabled(!hasSelection);
+    }
   }
 
   function markDirty(ghin) {
@@ -1364,6 +1395,7 @@ function onResetChanges() {
       if (state.selectedBlockIds.size > 0) {
         state.selectedBlockIds.clear();
         render();
+        if (isMobile() && isTrayOpen()) applyTrayChrome();
       }
     };
 
@@ -1377,6 +1409,7 @@ function onResetChanges() {
         if (state.selectedBlockIds.has(id)) state.selectedBlockIds.delete(id);
         else state.selectedBlockIds.add(id);
         render();
+        if (isMobile() && isTrayOpen()) applyTrayChrome();
         }
 
       if (action === "toggle-collapse") {

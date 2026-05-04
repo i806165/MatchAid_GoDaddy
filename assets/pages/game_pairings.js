@@ -126,19 +126,59 @@
     return window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
   }
 
+  function isTrayOpen() {
+    const listEl = (state.activeTab === "pair") ? el.unpairedList : el.unmatchedList;
+    if (!listEl) return false;
+    const panel = listEl.closest(".gpTabPanel");
+    return panel ? panel.classList.contains("is-tray-open") : false;
+  }
+
   function toggleMobileTray() {
     const listEl = (state.activeTab === "pair") ? el.unpairedList : el.unmatchedList;
     if (!listEl) return;
-    
+
     const panel = listEl.closest(".gpTabPanel");
     if (!panel) return;
     const isOpen = panel.classList.toggle("is-tray-open");
-    
+
     const btn = (state.activeTab === "pair") ? el.btnTrayPair : el.btnTrayMatch;
     if (btn) {
       btn.textContent = isOpen
         ? (state.activeTab === "pair" ? "Show Pairings" : "Show Matches")
         : (state.activeTab === "pair" ? "+ Add Player Pairings" : "+ Add Match");
+    }
+
+    if (isOpen) {
+      applyTrayChrome();
+    } else {
+      applyChrome();
+    }
+  }
+
+  // Set chrome footer to ASSIGN/CANCEL when tray is open on mobile.
+  // Called on tray open and whenever selection changes while tray is open.
+  function applyTrayChrome() {
+    if (!chrome || typeof chrome.setActions !== "function") return;
+
+    const hasSelection = state.activeTab === "pair"
+      ? state.selectedPlayerGHINs.size > 0
+      : state.selectedPairingIds.size > 0;
+
+    const assignHandler = state.activeTab === "pair"
+      ? assignSelectedPlayerToPairing
+      : assignSelectedPairingToFlight;
+
+    chrome.setActions({
+      left:   { show: false },
+      right:  { show: false },
+      footer: {
+        save:   { label: "Assign", onClick: assignHandler },
+        cancel: { label: "Cancel", onClick: toggleMobileTray }
+      }
+    });
+
+    if (typeof chrome.setFooterSaveDisabled === "function") {
+      chrome.setFooterSaveDisabled(!hasSelection);
     }
   }
 
@@ -1198,6 +1238,7 @@
     }
     renderUnpairedList();
     setHints();
+    if (isMobile() && isTrayOpen()) applyTrayChrome();
   }
 
   function toggleEditMode(pid) {
@@ -1380,6 +1421,7 @@
     }
     renderUnmatchedList();
     setHints();
+    if (isMobile() && isTrayOpen()) applyTrayChrome();
   }
 
   function selectFlightSlot(flightId, flightPos) {
@@ -1639,6 +1681,7 @@
       if (state.activeTab === "pair") state.selectedPlayerGHINs.clear();
       else state.selectedPairingIds.clear();
       render();
+      if (isMobile() && isTrayOpen()) applyTrayChrome();
     };
     if (el.unpairedMasterCheck) el.unpairedMasterCheck.addEventListener("click", clearSelection);
     if (el.unmatchedMasterCheck) el.unmatchedMasterCheck.addEventListener("click", clearSelection);
