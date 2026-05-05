@@ -2119,8 +2119,9 @@ textarea {
 }
 
 /* Ensure right slot has correct gap and alignment when help button is present */
+/* Gap tripled (30px) to give breathing room between ? and Actions button */
 .maChrome__hdrRight {
-  gap: var(--chromeGap);
+  gap: calc(var(--chromeGap) * 3);
   justify-content: flex-end;
 }
 
@@ -2128,18 +2129,6 @@ textarea {
 .maHelpModal {
   max-width: 620px;
   width: min(620px, calc(100vw - 32px));
-}
-
-/* --- Help modal close button — sits in green header, needs white treatment --- */
-.maHelpCloseBtn {
-  background: rgba(255,255,255,.18);
-  border-color: transparent;
-  color: #ffffff;
-  flex-shrink: 0;
-}
-
-.maHelpCloseBtn:active {
-  background: rgba(255,255,255,.28);
 }
 
 /* --- Help modal body layout --- */

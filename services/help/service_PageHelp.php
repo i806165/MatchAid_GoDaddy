@@ -72,7 +72,12 @@ final class ServicePageHelp
                   <div class="maModal__subtitle"><?= $intro ?></div>
                 <?php endif; ?>
               </div>
-              <button type="button" class="iconBtn maHelpCloseBtn" data-help-close aria-label="Close help">&#10005;</button>
+              <button type="button" class="iconBtn btnPrimary" data-help-close aria-label="Close help">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
             </header>
 
             <div class="maModal__body maHelpBody">
