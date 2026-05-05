@@ -2071,3 +2071,159 @@ textarea {
     display: none !important;
   }
 }
+
+/* ============================================================
+   PATCH: ma_shared.css additions for PageHelp system
+   ============================================================
+   Add this entire block to /public_html/assets/css/ma_shared.css
+   at the end of the file, after section 19.
+   ============================================================ */
+
+
+/* ==========================================================================
+   20. PAGE HELP — Modal + Header Button
+   ========================================================================== */
+
+/* --- Help button in chrome header --- */
+.maHelpBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.maHelpBtn:active {
+  transform: scale(.93);
+}
+
+.maHelpBtn img {
+  width: 26px;
+  height: 26px;
+  display: block;
+  border-radius: 50%;
+}
+
+/* Hidden on mobile — help is a desktop affordance */
+@media (max-width: 600px) {
+  .maHelpBtn {
+    display: none;
+  }
+}
+
+/* Ensure right slot has correct gap and alignment when help button is present */
+.maChrome__hdrRight {
+  gap: var(--chromeGap);
+  justify-content: flex-end;
+}
+
+/* --- Help modal sizing --- */
+.maHelpModal {
+  max-width: 620px;
+  width: min(620px, calc(100vw - 32px));
+}
+
+/* --- Help modal close button — sits in green header, needs white treatment --- */
+.maHelpCloseBtn {
+  background: rgba(255,255,255,.18);
+  border-color: transparent;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.maHelpCloseBtn:active {
+  background: rgba(255,255,255,.28);
+}
+
+/* --- Help modal body layout --- */
+.maHelpBody {
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Individual help section --- */
+.maHelpSection {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: var(--spaceMd);
+  padding: var(--spaceMd) 0;
+  border-top: 1px solid var(--borderSubtle);
+}
+
+.maHelpSection:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+/* --- Icon circle --- */
+.maHelpIcon {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--brandPrimary) 10%, transparent);
+  color: var(--brandPrimary);
+  flex-shrink: 0;
+}
+
+/* --- Section text --- */
+.maHelpSection__content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spaceSm);
+}
+
+.maHelpSection__title {
+  margin: 0;
+  font-size: var(--labelTextSize);
+  font-weight: 900;
+  color: var(--brandPrimary);
+}
+
+.maHelpSection__body {
+  margin: 0;
+  font-size: var(--fieldValueSize);
+  color: var(--ink);
+  line-height: 1.45;
+}
+
+.maHelpList {
+  margin: 0;
+  padding-left: 1.1rem;
+  color: var(--ink);
+  font-size: var(--fieldValueSize);
+}
+
+.maHelpList li {
+  margin-bottom: var(--spaceSm);
+  line-height: 1.4;
+}
+
+.maHelpList li:last-child {
+  margin-bottom: 0;
+}
+
+/* --- Mobile adjustments (modal still usable if somehow reached) --- */
+@media (max-width: 640px) {
+  .maHelpModal {
+    width: calc(100vw - 20px);
+  }
+
+  .maHelpSection {
+    grid-template-columns: 36px 1fr;
+  }
+
+  .maHelpIcon {
+    width: 34px;
+    height: 34px;
+  }
+}

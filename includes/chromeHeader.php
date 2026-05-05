@@ -23,6 +23,17 @@
 
     <!-- Right page action -->
     <div class="maChrome__hdrRight">
+      <?php if (!empty($pageHelpKey) && ServicePageHelp::hasHelp($pageHelpKey)): ?>
+        <button
+          type="button"
+          class="maHelpBtn"
+          data-help-open
+          aria-label="Open page help"
+          title="Help"
+        >
+          <img src="/assets/images/question_mark.png" alt="Help" width="26" height="26" />
+        </button>
+      <?php endif; ?>
       <button id="chromeBtnRight" type="button" class="maChrome__hdrBtn" style="display:none;"></button>
     </div>
 

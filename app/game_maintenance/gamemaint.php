@@ -8,13 +8,6 @@ require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_SERVICES . "/database/service_dbPlayers.php";
 
-Logger::info("GAMEMAINT_ENTRY", [
-  "uri" => $_SERVER["REQUEST_URI"] ?? "",
-  "ghin" => $_SESSION["SessionGHINLogonID"] ?? "",
-  "ggid" => $_SESSION["SessionStoredGGID"] ?? "",
-  "loginTime" => $_SESSION["SessionLoginTime"] ?? "",
-]);
-
 // 1) USER context hydration (Rule-2)
 $ctx = ServiceUserContext::getUserContext();
 if (!$ctx || empty($ctx["ok"])) {
@@ -28,7 +21,6 @@ $storedGGID = $_SESSION["SessionStoredGGID"] ?? "";
 
 $mode = ($modeParam === "add") ? "add" : "edit";
 if ($modeParam === "" && trim((string)$storedGGID) === "") {
-  // If no explicit mode and no GGID in session, treat as Add
   $mode = "add";
 }
 
@@ -76,15 +68,18 @@ $paths = [
 ];
 
 // Chrome values
-$maChromeTitle = "Game Maintenance";
+$maChromeTitle    = "Game Maintenance";
 $maChromeSubtitle = $initPayload["header"]["subtitle"] ?? "";
-$maChromeLogoUrl = null;
+$maChromeLogoUrl  = null;
+
+// Page help — key derived from this controller's filename
+$pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>MatchAid • Game Maintenance</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -103,6 +98,13 @@ $maChromeLogoUrl = null;
 
   <?php include __DIR__ . "/../../includes/chromeFooter.php"; ?>
 
+  <?php
+  // Render help modal into the DOM (hidden until ? button is clicked)
+  if (!empty($pageHelpKey)) {
+      ServicePageHelp::renderByKey($pageHelpKey);
+  }
+  ?>
+
 <script>
   window.MA = window.MA || {};
 
@@ -112,15 +114,16 @@ $maChromeLogoUrl = null;
   // Canonical aliases/pattern
   window.__MA_INIT__ = window.__INIT__;
   window.MA.routes = {
-    router: window.MA.paths.routerApi,
-    login: <?= json_encode(MA_ROUTE_LOGIN) ?>,
-    apiGHIN: window.MA.paths.apiGHIN,
+    router:      window.MA.paths.routerApi,
+    login:       <?= json_encode(MA_ROUTE_LOGIN) ?>,
+    apiGHIN:     window.MA.paths.apiGHIN,
     apiGameMaint: window.MA.paths.apiGameMaint
   };
 </script>
 
   <script src="/assets/js/ma_shared.js"></script>
   <script src="/assets/modules/actions_menu.js?v=1"></script>
+  <script src="/assets/modules/pageHelp.js?v=1"></script>
   <script src="/assets/modules/recalculate_handicaps.js"></script>
   <script src="/assets/pages/game_maintenance.js"></script>
 </body>

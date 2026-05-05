@@ -21,6 +21,11 @@ define('MA_SVC_DB',    MA_SERVICES . '/database');
 define('MA_SVC_GHIN',  MA_SERVICES . '/GHIN');
 define('MA_APP',       MA_ROOT . '/app');
 define('MA_INCLUDES',  MA_ROOT . '/includes');
+
+// Help system
+define('MA_HELP_INCLUDES', MA_INCLUDES . '/help');
+define('MA_SVC_HELP',      MA_SERVICES . '/help');
+
 define('MA_API_SESSION', MA_API . '/session');
 define('MA_ROUTE_LOGIN', '/app/login/login.php');
 define('MA_ROUTE_API_LOGIN',  '/api/auth/processLogin.php');
@@ -119,6 +124,9 @@ define('MA_SITE_URL', ma_config()['app']['site_url'] ?? 'https://www.matchaid.or
 require_once MA_API_LIB . '/Db.php';
 require_once MA_API_LIB . '/Logger.php';
 Db::init(ma_config()['db'] ?? []);
+
+// Help service — available globally on all pages
+require_once MA_SVC_HELP . '/service_PageHelp.php';
 
 // Optional helper: JSON response
 function ma_respond(int $code, array $body): void {
