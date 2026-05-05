@@ -9,12 +9,6 @@ require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_SVC_DB . '/service_dbPlayers.php';
 require_once MA_SERVICES . "/GHIN/GHIN_API_Courses.php";
 
-Logger::info("GAMESETTINGS_ENTRY", [
-  "uri" => $_SERVER["REQUEST_URI"] ?? "",
-  "ghin" => $_SESSION["SessionGHINLogonID"] ?? "",
-  "ggid" => $_SESSION["SessionStoredGGID"] ?? "",
-]);
-
 // 1) USER context hydration
 $ctx = ServiceUserContext::getUserContext();
 if (!$ctx || empty($ctx["ok"])) {
@@ -82,6 +76,9 @@ if ($returnToParam !== "") {
 $maChromeTitle    = "Game Settings";
 $maChromeSubtitle = $initPayload["header"]["subtitle"] ?? "";
 $maChromeLogoUrl  = null;
+
+// Page help — key derived from this controller's filename
+$pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -106,6 +103,13 @@ $maChromeLogoUrl  = null;
 
   <?php include __DIR__ . "/../../includes/chromeFooter.php"; ?>
 
+  <?php
+  // Render help modal into the DOM (hidden until ? button is clicked)
+  if (!empty($pageHelpKey)) {
+      ServicePageHelp::renderByKey($pageHelpKey);
+  }
+  ?>
+
   <script>
     window.MA = window.MA || {};
     window.MA.paths = <?= json_encode($paths, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
@@ -121,6 +125,7 @@ $maChromeLogoUrl  = null;
   <script src="/assets/js/ma_shared.js"></script>
   <script src="/assets/modules/recalculate_handicaps.js"></script>
   <script src="/assets/modules/addCalendar.js"></script>
+  <script src="/assets/modules/pageHelp.js?v=1"></script>
   <script src="/assets/pages/game_settings.js"></script>
 </body>
 </html>

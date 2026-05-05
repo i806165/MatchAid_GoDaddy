@@ -55,11 +55,15 @@ final class ServicePageHelp
         return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
     }
 
+    // -------------------------------------------------------------------------
+    // Top-level render — detects layout and dispatches
+    // -------------------------------------------------------------------------
+
     private static function render(array $help): void
     {
-        $title    = self::e((string)($help['title'] ?? 'Help'));
-        $intro    = self::e((string)($help['intro'] ?? ''));
-        $sections = $help['sections'] ?? [];
+        $title   = self::e((string)($help['title'] ?? 'Help'));
+        $intro   = self::e((string)($help['intro'] ?? ''));
+        $hasTabs = !empty($help['tabs']) && is_array($help['tabs']);
 
         ?>
         <div id="maHelpOverlay" class="maModalOverlay" aria-hidden="true">
@@ -80,53 +84,133 @@ final class ServicePageHelp
               </button>
             </header>
 
+            <?php if ($hasTabs): ?>
+              <?= self::renderTabControls($help['tabs']) ?>
+            <?php endif; ?>
+
             <div class="maModal__body maHelpBody">
-              <?php foreach ($sections as $section): ?>
-                <?php if (!is_array($section)) { continue; } ?>
-                <section class="maHelpSection">
-                  <div class="maHelpIcon" aria-hidden="true">
-                    <?= self::renderIcon((string)($section['icon'] ?? 'info')) ?>
-                  </div>
-                  <div class="maHelpSection__content">
-                    <?php if (!empty($section['heading'])): ?>
-                      <h3 class="maHelpSection__title">
-                        <?= self::e((string)$section['heading']) ?>
-                      </h3>
-                    <?php endif; ?>
-                    <?php if (!empty($section['body'])): ?>
-                      <p class="maHelpSection__body">
-                        <?= self::e((string)$section['body']) ?>
-                      </p>
-                    <?php endif; ?>
-                    <?php if (!empty($section['bullets']) && is_array($section['bullets'])): ?>
-                      <ul class="maHelpList">
-                        <?php foreach ($section['bullets'] as $bullet): ?>
-                          <?php if (is_array($bullet)): ?>
-                            <li>
-                              <?= self::e((string)($bullet['bullet'] ?? '')) ?>
-                              <?php if (!empty($bullet['subbullets']) && is_array($bullet['subbullets'])): ?>
-                                <ul class="maHelpSubList">
-                                  <?php foreach ($bullet['subbullets'] as $sub): ?>
-                                    <li><?= self::e((string)$sub) ?></li>
-                                  <?php endforeach; ?>
-                                </ul>
-                              <?php endif; ?>
-                            </li>
-                          <?php else: ?>
-                            <li><?= self::e((string)$bullet) ?></li>
-                          <?php endif; ?>
-                        <?php endforeach; ?>
-                      </ul>
-                    <?php endif; ?>
-                  </div>
-                </section>
-              <?php endforeach; ?>
+              <?php if ($hasTabs): ?>
+                <?= self::renderTabPanels($help['tabs']) ?>
+              <?php else: ?>
+                <?= self::renderSections($help['sections'] ?? []) ?>
+              <?php endif; ?>
             </div>
 
           </div>
         </div>
         <?php
     }
+
+    // -------------------------------------------------------------------------
+    // Tab layout — segmented control in maModal__controls
+    // -------------------------------------------------------------------------
+
+    private static function renderTabControls(array $tabs): string
+    {
+        $html  = '<div class="maModal__controls">';
+        $html .= '<div class="maSeg maHelpSeg" role="tablist" aria-label="Help sections">';
+
+        foreach ($tabs as $i => $tab) {
+            if (!is_array($tab)) { continue; }
+            $label   = self::e((string)($tab['label'] ?? 'Tab'));
+            $panelId = 'maHelpPanel-' . $i;
+            $active  = ($i === 0) ? ' is-active' : '';
+            $selected = ($i === 0) ? 'true' : 'false';
+            $html .= sprintf(
+                '<button type="button" class="maSegBtn%s" role="tab" aria-selected="%s" aria-controls="%s" data-help-tab="%d">%s</button>',
+                $active, $selected, $panelId, $i, $label
+            );
+        }
+
+        $html .= '</div></div>';
+        return $html;
+    }
+
+    private static function renderTabPanels(array $tabs): string
+    {
+        $html = '';
+
+        foreach ($tabs as $i => $tab) {
+            if (!is_array($tab)) { continue; }
+            $panelId = 'maHelpPanel-' . $i;
+            $active  = ($i === 0) ? ' is-active' : '';
+            $html .= sprintf(
+                '<div id="%s" class="maHelpTabPanel%s" role="tabpanel">',
+                $panelId, $active
+            );
+            $html .= self::renderSections($tab['sections'] ?? []);
+            $html .= '</div>';
+        }
+
+        return $html;
+    }
+
+    // -------------------------------------------------------------------------
+    // Section renderer — shared by both single-pane and tabbed layouts
+    // -------------------------------------------------------------------------
+
+    private static function renderSections(array $sections): string
+    {
+        $html = '';
+
+        foreach ($sections as $section) {
+            if (!is_array($section)) { continue; }
+
+            $html .= '<section class="maHelpSection">';
+            $html .= '<div class="maHelpIcon" aria-hidden="true">';
+            $html .= self::renderIcon((string)($section['icon'] ?? 'default'));
+            $html .= '</div>';
+            $html .= '<div class="maHelpSection__content">';
+
+            if (!empty($section['heading'])) {
+                $html .= '<h3 class="maHelpSection__title">' . self::e((string)$section['heading']) . '</h3>';
+            }
+
+            if (!empty($section['body'])) {
+                $html .= '<p class="maHelpSection__body">' . self::e((string)$section['body']) . '</p>';
+            }
+
+            if (!empty($section['bullets']) && is_array($section['bullets'])) {
+                $html .= self::renderBullets($section['bullets']);
+            }
+
+            $html .= '</div></section>';
+        }
+
+        return $html;
+    }
+
+    // -------------------------------------------------------------------------
+    // Bullet renderer — handles plain strings and array bullets with subbullets
+    // -------------------------------------------------------------------------
+
+    private static function renderBullets(array $bullets): string
+    {
+        $html = '<ul class="maHelpList">';
+
+        foreach ($bullets as $bullet) {
+            if (is_array($bullet)) {
+                $html .= '<li>' . self::e((string)($bullet['bullet'] ?? ''));
+                if (!empty($bullet['subbullets']) && is_array($bullet['subbullets'])) {
+                    $html .= '<ul class="maHelpSubList">';
+                    foreach ($bullet['subbullets'] as $sub) {
+                        $html .= '<li>' . self::e((string)$sub) . '</li>';
+                    }
+                    $html .= '</ul>';
+                }
+                $html .= '</li>';
+            } else {
+                $html .= '<li>' . self::e((string)$bullet) . '</li>';
+            }
+        }
+
+        $html .= '</ul>';
+        return $html;
+    }
+
+    // -------------------------------------------------------------------------
+    // Icon renderer — inline SVG by named key
+    // -------------------------------------------------------------------------
 
     private static function renderIcon(string $icon): string
     {
