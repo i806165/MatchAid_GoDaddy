@@ -9,13 +9,6 @@ require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_SVC_DB . "/service_dbPlayers.php";
 
-Logger::info("GAMEPAIRINGS_ENTRY", [
-  "uri" => $_SERVER["REQUEST_URI"] ?? "",
-  "ghin" => $_SESSION["SessionGHINLogonID"] ?? "",
-  "ggid" => $_SESSION["SessionStoredGGID"] ?? "",
-  "loginTime" => $_SESSION["SessionLoginTime"] ?? "",
-]);
-
 // 1) USER context hydration (Rule-2)
 $ctx = ServiceUserContext::getUserContext();
 if (!$ctx || empty($ctx["ok"])) {
@@ -58,9 +51,12 @@ $paths = [
 ];
 
 // Chrome values
-$maChromeTitle = "Game Pairings";
+$maChromeTitle    = "Game Pairings";
 $maChromeSubtitle = $initPayload["header"]["subtitle"] ?? "";
-$maChromeLogoUrl = null;
+$maChromeLogoUrl  = null;
+
+// Page help — key derived from this controller's filename
+$pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -96,6 +92,13 @@ $maChromeLogoUrl = null;
 
   <?php include __DIR__ . "/../../includes/chromeFooter.php"; ?>
 
+  <?php
+  // Render help modal into the DOM (hidden until ? button is clicked)
+  if (!empty($pageHelpKey)) {
+      ServicePageHelp::renderByKey($pageHelpKey);
+  }
+  ?>
+
   <script>
     window.MA = window.MA || {};
     window.MA.paths = <?= json_encode($paths, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
@@ -112,6 +115,7 @@ $maChromeLogoUrl = null;
   <script src="/assets/js/ma_shared.js?v=1"></script>
   <script src="/assets/modules/actions_menu.js?v=1"></script>
   <script src="/assets/modules/recalculate_handicaps.js"></script>
+  <script src="/assets/modules/pageHelp.js?v=1"></script>
   <script src="/assets/pages/game_pairings.js?v=1"></script>
 </body>
 </html>
