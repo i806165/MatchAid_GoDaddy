@@ -67,7 +67,7 @@ return [
             'icon'    => 'tip',
             'heading' => 'Tips',
             'bullets' => [
-                'Add all players before building pairings — removing a paired player triggers recalculation but may leave incomplete groups.',
+                'Must add all players before building pairings and matches.',
                 'Use the Favorites tab for regular playing groups; use GHIN search for one-off additions.',
                 'When importing from an existing game, the tee hierarchy attempts to carry over each player\'s previous tee assignment. Use Force Assign in the tee picker to override the hierarchy and apply one tee to everyone.',
                 'The Import tab is only available on wider screens (tablet and desktop).',

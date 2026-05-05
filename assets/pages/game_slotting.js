@@ -1352,6 +1352,10 @@ function onResetChanges() {
     }
   }
 
+  function isMobile() {
+    return window.matchMedia("(max-width: 900px)").matches;
+  }
+
   function unslotBlock(blockId) {
     const block = getBlockPlayers(blockId);
     block.forEach(p => {
