@@ -101,7 +101,20 @@ final class ServicePageHelp
                     <?php if (!empty($section['bullets']) && is_array($section['bullets'])): ?>
                       <ul class="maHelpList">
                         <?php foreach ($section['bullets'] as $bullet): ?>
-                          <li><?= self::e((string)$bullet) ?></li>
+                          <?php if (is_array($bullet)): ?>
+                            <li>
+                              <?= self::e((string)($bullet['bullet'] ?? '')) ?>
+                              <?php if (!empty($bullet['subbullets']) && is_array($bullet['subbullets'])): ?>
+                                <ul class="maHelpSubList">
+                                  <?php foreach ($bullet['subbullets'] as $sub): ?>
+                                    <li><?= self::e((string)$sub) ?></li>
+                                  <?php endforeach; ?>
+                                </ul>
+                              <?php endif; ?>
+                            </li>
+                          <?php else: ?>
+                            <li><?= self::e((string)$bullet) ?></li>
+                          <?php endif; ?>
                         <?php endforeach; ?>
                       </ul>
                     <?php endif; ?>

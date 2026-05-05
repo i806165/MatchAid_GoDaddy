@@ -79,9 +79,12 @@ $paths = [
   "ghinGetTeeSets" => MA_ROUTE_API_GHIN . "/getTeeSets.php",
 ];
 
-$maChromeTitle = "Game Players";
+$maChromeTitle    = "Game Players";
 $maChromeSubtitle = "GGID " . (string)$ggid;
-$maChromeLogoUrl = null;
+$maChromeLogoUrl  = null;
+
+// Page help — key derived from this controller's filename
+$pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -113,6 +116,13 @@ $maChromeLogoUrl = null;
 
   <?php include __DIR__ . "/../../includes/chromeFooter.php"; ?>
 
+  <?php
+  // Render help modal into the DOM (hidden until ? button is clicked)
+  if (!empty($pageHelpKey)) {
+      ServicePageHelp::renderByKey($pageHelpKey);
+  }
+  ?>
+
   <script>
     window.MA = window.MA || {};
     window.MA.paths = <?= json_encode($paths, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
@@ -128,6 +138,7 @@ $maChromeLogoUrl = null;
   <script src="/assets/js/ma_shared.js"></script>
   <script src="/assets/modules/ghin_player_search.js"></script>
   <script src="/assets/modules/actions_menu.js?v=1"></script>
+  <script src="/assets/modules/pageHelp.js?v=1"></script>
   <script src="/assets/modules/teesetSelection.js?v=1"></script>
   <script src="/assets/pages/game_players.js"></script>
 </body>

@@ -2201,6 +2201,21 @@ textarea {
   margin-bottom: 0;
 }
 
+.maHelpSubList {
+  margin: var(--spaceSm) 0 0 0;
+  padding-left: 1rem;
+  list-style-type: circle;
+  color: var(--mutedText);
+  font-size: var(--fieldValueSize);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.maHelpSubList li {
+  line-height: 1.35;
+}
+
 /* --- Mobile adjustments (modal still usable if somehow reached) --- */
 @media (max-width: 640px) {
   .maHelpModal {
