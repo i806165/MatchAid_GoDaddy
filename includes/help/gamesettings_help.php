@@ -12,15 +12,17 @@ return [
                 [
                     'icon'    => 'target',
                     'heading' => 'Purpose',
-                    'body'    => 'This page controls how the game is scored and how handicaps are applied. Settings are organized into a 4-step wizard. A live Current Settings panel on the right shows your selections at all times. Complete all four steps and save before entering scores.',
+                    'body'    => 'This page controls the game format, game setup, handicapping and scoring. The settings page is organized into a 4-step wizard. A live Current Settings panel on the right shows your selections at all times. Complete all four steps and save before entering scores.',
                 ],
                 [
                     'icon'    => 'people',
                     'heading' => 'Prerequisites',
                     'bullets' => [
                         'The game shell must be saved in Game Maintenance before settings can be configured.',
-                        'Settings can be configured before or after building the roster — however, having the roster in place first is recommended for Best Ball and points-based games.',
-                        'If scores have already been entered, changing scoring settings will trigger a full recalculation on save.',
+                        'Settings should be established BEFORE competitive pairings/matches are defined in the pairings page.',
+                        'Games can be set to where player pairings compete aganst the field of all players, or set to compete against one another in head to head match ups',
+                        'Scoring can be set to calculate winners based on strokes, holes won, skins or points',
+                        'Settings can be configured before or after player enrollment, however setting the game handicap rules make player enrollment more accurate',
                     ],
                 ],
             ],
@@ -35,15 +37,15 @@ return [
                         [
                             'bullet'     => 'Pairing Strategy — how players compete against each other.',
                             'subbullets' => [
-                                'Pair vs. Field: each pair competes against the entire field. Most common for casual games.',
-                                'Pair vs. Pair: pairs compete directly against each other across segments.',
+                                'Pair vs. Field: Pairings of 1-4 players compete against the entire field. Most common for casual games.',
+                                'Pair vs. Pair: Pairings of 1-2 players compete head to head in match style play. This form of play can also be configured with segments where players rotate partners every 3 holes, 6 holes or 9 holes.',
                             ],
                         ],
                         [
-                            'bullet'     => 'Game Format — the type of game being played.',
+                            'bullet'     => 'The type of game being played is driven by the Pairing Strategy.',
                             'subbullets' => [
                                 'Stroke Play, Stableford, Match Play, Skins, Scramble, Shamble, Alt-Shot, or Chapman.',
-                                'The format determines the scoring basis (Strokes, Points, Holes, or Skins) used in subsequent steps.',
+                                'Compete in terms of Strokes, Points, Holes, or Skins.',
                             ],
                         ],
                     ],
@@ -68,14 +70,14 @@ return [
                             'bullet'     => 'Rotation Method (Pair vs. Pair only) — controls how pairs rotate opponents across segments.',
                             'subbullets' => [
                                 'None: pairs play the same opponents throughout.',
-                                'COD, 1-3-2-4, or 1-4-2-3: pairs rotate by position each segment.',
+                                'Carts-Opposites-Drivers (COD), 1-3-2-4, or 1-4-2-3: pairs rotate by position each segment.',
                             ],
                         ],
                         [
                             'bullet'     => 'Blind Player (Pair vs. Field only) — designates an enrolled player whose score fills an incomplete group.',
                             'subbullets' => [
                                 'Configure the blind player and target group size here.',
-                                'Use Apply Blind Player only after all scores have been entered.',
+                                'Use Apply Blind Player only after all scores have been entered in order to merge the blind players final scores into incomplete group(s).',
                             ],
                         ],
                     ],
@@ -90,19 +92,19 @@ return [
                     'heading' => 'Step 3 — Scoring',
                     'bullets' => [
                         [
-                            'bullet'     => 'Scoring Method — whether handicaps are applied to scores.',
+                            'bullet'     => 'Scoring Method — whether handicaps are applied to scores.  Refer to Step-4',
                             'subbullets' => [
-                                'NET: handicap-adjusted scores.',
-                                'GROSS: unadjusted scores.',
+                                'NET: handicap-adjusted scores using Course handicap, or shots off, and handicap allowances.',
+                                'GROSS: Raw scores, no handicap adjustments.',
                             ],
                         ],
                         [
-                            'bullet'     => 'Scoring System — what is counted per hole or per round.',
+                            'bullet'     => 'Scoring System — what scores are to be counted.',
                             'subbullets' => [
-                                'Best Ball, Total Score, Individual, or Points-based systems.',
+                                'All scores, Best N Balls on every hole, Best N Balls varied per hole',
+                                'Balls counted discretionally, usually to achieve Best N balls per game',
                             ],
                         ],
-                        'Best Ball Count — how many scores count per group per hole (Best Ball systems only).',
                         [
                             'bullet'     => 'Points Strategy — available for Points-based scoring systems.',
                             'subbullets' => [
@@ -113,7 +115,6 @@ return [
                                 'Chicago: each player has a quota based on handicap; the winner most exceeds their quota (Pair vs. Field only).',
                             ],
                         ],
-                        'Scores Per Hole — declare how many scores count on each hole individually. Use Set All to apply one value, then adjust specific holes as needed (select systems only).',
                     ],
                 ],
             ],
@@ -126,19 +127,19 @@ return [
                     'heading' => 'Step 4 — Handicaps',
                     'bullets' => [
                         [
-                            'bullet'     => 'HC Method — how handicap strokes are applied.',
+                            'bullet'     => 'Handicap Method — how handicap strokes are applied.',
                             'subbullets' => [
-                                'CH with Allowance: strokes distributed hole-by-hole based on difficulty rating.',
-                                'Shots-Off: strokes deducted from the total score.',
+                                'CH with Allowance: Course handicap with allowance.',
+                                'Shots-Off: handicap strokes given to players relative to the best player in the group.',
                             ],
                         ],
                         'Allowance — percentage of full handicap applied (100% down to 0% in 5% increments).',
                         [
-                            'bullet'     => 'Stroke Distribution — how strokes are assigned across holes.',
+                            'bullet'     => 'Stroke Distribution — how strokes are assigned for games set with segment rotations.',
                             'subbullets' => [
-                                'Standard: strokes assigned by hole difficulty ranking.',
-                                'Balanced: strokes trimmed and redistributed to spin holes.',
-                                'Balanced-Rounded: same as Balanced with rounding applied.',
+                                'Standard: strokes assigned as per the course scorecard.',
+                                'Balanced: player strokes are redistributed evenly across rotational segments. ',
+                                'Balanced-Rounded: player strokes are rounded up/down and redistributed across rotational segments.',
                             ],
                         ],
                         [
@@ -146,7 +147,7 @@ return [
                             'subbullets' => [
                                 'Play Date: the index active on the day of the game.',
                                 '3-Month Low, 6-Month Low, or 12-Month Low: the lowest index over the period.',
-                                'Choose Date: a specific date you select.',
+                                'Choose Date: the index active on the specific date selected.',
                             ],
                         ],
                     ],
