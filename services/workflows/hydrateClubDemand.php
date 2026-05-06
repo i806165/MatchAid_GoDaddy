@@ -333,7 +333,7 @@ function cdResolveClubDemandFacilityContext(string $userGHIN, array $filters): a
     $requestedId = cdNormalizeFacilityId($filters["facilityId"] ?? "");
     $selected    = cdFindFacilityOption($realOptions, $requestedId);
 
-    Logger::debug("CLUB_DEMAND_FACILITY_MATCH", [
+    Logger::info("CLUB_DEMAND_FACILITY_MATCH", [
       "requestedId"    => $requestedId,
       "matched"        => $selected ? $selected["facilityId"] : null,
       "fallback"       => $selected ? null : ($realOptions[0]["facilityId"] ?? null),

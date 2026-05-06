@@ -62,8 +62,9 @@ if ($isDirect) {
     $filters = is_array($payload["filters"] ?? null) ? $payload["filters"] : $payload;
 
     // ── Persist date filter to session (restore on page return) ──
-    $_SESSION["CD_FILTERDATEFROM"] = trim(strval($filters["dateFrom"] ?? ""));
-    $_SESSION["CD_FILTERDATETO"]   = trim(strval($filters["dateTo"]   ?? ""));
+    $_SESSION["CD_FILTERFACILITYID"] = trim(strval($filters["facilityId"] ?? ""));
+    $_SESSION["CD_FILTERDATEFROM"]   = trim(strval($filters["dateFrom"]   ?? ""));
+    $_SESSION["CD_FILTERDATETO"]     = trim(strval($filters["dateTo"]     ?? ""));
 
     // ── Hydrate ───────────────────────────────────────────────────
     $out = buildClubDemandInit($ctx, $filters);
