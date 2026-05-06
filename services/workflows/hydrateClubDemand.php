@@ -54,17 +54,9 @@ function hydrateClubDemand(array $context, array $filters): array {
   }
 
   // Default to user's home facility from session if none explicitly selected
-  $facilityIdFromFilter  = trim(strval($filters["facilityId"] ?? ""));
   if (empty($filters["facilityId"])) {
       $filters["facilityId"] = trim(strval($_SESSION["SessionFacilityID"] ?? ""));
   }
-
-  Logger::debug("CLUB_DEMAND_FACILITY_RESOLVE_INPUT", [
-    "facilityId_from_filter"  => $facilityIdFromFilter,
-    "facilityId_from_session" => trim(strval($_SESSION["SessionFacilityID"] ?? "")),
-    "facilityId_resolved"     => $filters["facilityId"],
-    "userGHIN"                => $userGHIN,
-  ]);
 
   // Resolve facility access / selected facility
   $facilityCtx = cdResolveClubDemandFacilityContext($userGHIN, $filters);
@@ -332,13 +324,6 @@ function cdResolveClubDemandFacilityContext(string $userGHIN, array $filters): a
 
     $requestedId = cdNormalizeFacilityId($filters["facilityId"] ?? "");
     $selected    = cdFindFacilityOption($realOptions, $requestedId);
-
-    Logger::info("CLUB_DEMAND_FACILITY_MATCH", [
-      "requestedId"    => $requestedId,
-      "matched"        => $selected ? $selected["facilityId"] : null,
-      "fallback"       => $selected ? null : ($realOptions[0]["facilityId"] ?? null),
-      "availableIds"   => array_column($realOptions, "facilityId"),
-    ]);
 
     // Never allow blank or 00000 to drive this report. Default to first real facility.
     if (!$selected) {
