@@ -112,9 +112,12 @@ $paths = [
 ];
 
 // Chrome values
-$maChromeTitle = "Administrators Portal";
+$maChromeTitle    = "Administrators Portal";
 $maChromeSubtitle = $initPayload["header"]["subtitle"] ?? "";
-$maChromeLogoUrl = null; // reserve slot; set later if desired
+$maChromeLogoUrl  = null; // reserve slot; set later if desired
+
+// Page help — key derived from this controller's filename
+$pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -138,6 +141,13 @@ $maChromeLogoUrl = null; // reserve slot; set later if desired
   </main>
 
   <?php include __DIR__ . '/../../includes/chromeFooter.php'; ?>
+
+  <?php
+  // Render help modal into the DOM (hidden until ? button is clicked)
+  if (!empty($pageHelpKey)) {
+      ServicePageHelp::renderByKey($pageHelpKey);
+  }
+  ?>
   
 <script>
   window.MA = window.MA || {};
@@ -158,7 +168,8 @@ $maChromeLogoUrl = null; // reserve slot; set later if desired
   <script src="/assets/modules/actions_menu.js?v=1"></script>
   <script src="/assets/modules/addCalendar.js?v=1"></script>
   <script src="/assets/modules/composeEmail.js?v=1"></script>
-  <script src="/assets/modules/player_notifications.js?v=1"></script> <!-- ADD -->
+  <script src="/assets/modules/player_notifications.js?v=1"></script>
+  <script src="/assets/modules/pageHelp.js?v=1"></script>
   <script src="/assets/pages/admin_home.js"></script>
 </body>
 </html>
