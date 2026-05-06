@@ -6,6 +6,7 @@
   "use strict";
   const MA = window.MA || {};
   const init = window.__MA_INIT__ || {};
+  const ggid = String(init.ggid || "");
   const apiGHIN = MA.paths?.apiGHIN || "/api/GHIN";
 
   const state = {
@@ -570,8 +571,26 @@
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     MA.ui.openActionsMenu("Actions", [
-      { label: "Game Settings", action: "settings", params: { returnTo: "roster" } }
+      { label: "Recalculate Handicaps",   action: onRecalcHandicaps },
+      { label: "Send Message to Players", action: onNotify },
     ]);
+  }
+
+  function onRecalcHandicaps() {
+    if (!ggid) return;
+    MA.recalculateHandicaps(MA.paths?.apiGHIN);
+  }
+
+  function onNotify() {
+    if (!ggid) return;
+    if (MA.notify && typeof MA.notify.open === "function") {
+      MA.notify.open({
+        ggid:    ggid,
+        apiPath: MA.paths?.apiNotify,
+      });
+    } else {
+      if (typeof MA.setStatus === "function") MA.setStatus("Messaging module not loaded.", "error");
+    }
   }
 
   function applyChrome(){

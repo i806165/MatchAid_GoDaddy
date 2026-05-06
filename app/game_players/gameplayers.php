@@ -77,6 +77,7 @@ $paths = [
   "favPlayersInit" => MA_ROUTE_API_FAVORITE_PLAYERS . "/initFavPlayers.php",
   "ghinPlayerSearch" => MA_ROUTE_API_GHIN . "/searchPlayers.php",
   "ghinGetTeeSets" => MA_ROUTE_API_GHIN . "/getTeeSets.php",
+  "apiNotify" => MA_ROUTE_API_MESSAGING,
 ];
 
 $maChromeTitle    = "Game Players";
@@ -138,6 +139,8 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   <script src="/assets/js/ma_shared.js"></script>
   <script src="/assets/modules/ghin_player_search.js"></script>
   <script src="/assets/modules/actions_menu.js?v=1"></script>
+  <script src="/assets/modules/recalculate_handicaps.js"></script>
+  <script src="/assets/modules/player_notifications.js?v=1"></script>
   <script src="/assets/modules/pageHelp.js?v=1"></script>
   <script src="/assets/modules/teesetSelection.js?v=1"></script>
   <script src="/assets/pages/game_players.js"></script>
