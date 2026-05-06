@@ -11,6 +11,20 @@
     var overlay = getOverlay();
     if (!overlay) return;
 
+    // maOverlayOpen on <html> sets body { position: relative } which can
+    // offset fixed-positioned overlays in some browsers. Remove it before
+    // opening the help modal so fixed positioning resolves to the viewport.
+    // Store whether it was set so we can restore it if help is closed without
+    // the page clearing it (edge case: help opened while another modal is open).
+    var html = document.documentElement;
+    var hadOverlayOpen = html.classList.contains("maOverlayOpen");
+    if (hadOverlayOpen) {
+      html.classList.remove("maOverlayOpen");
+      overlay._restoreOverlayOpen = true;
+    } else {
+      overlay._restoreOverlayOpen = false;
+    }
+
     overlay.classList.add("is-open");
     overlay.setAttribute("aria-hidden", "false");
 
@@ -26,6 +40,12 @@
 
     overlay.classList.remove("is-open");
     overlay.setAttribute("aria-hidden", "true");
+
+    // Restore maOverlayOpen if it was active when help was opened
+    if (overlay._restoreOverlayOpen) {
+      document.documentElement.classList.add("maOverlayOpen");
+      overlay._restoreOverlayOpen = false;
+    }
 
     var openBtn = document.querySelector("[data-help-open]");
     if (openBtn) {
