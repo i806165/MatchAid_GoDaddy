@@ -99,7 +99,7 @@ return [
                     'heading' => 'Tips',
                     'bullets' => [
                         'The Manage button on each card (desktop) is a shortcut to the same game action menu as tapping the card.',
-                        'A course not confirmed warning on a card means the game\'s course has not been locked in — return to Game Maintenance to confirm it before adding players.',
+                        'A course not confirmed warning on a card means the game\'s course has not been locked in — return to Game Maintenance to confirm it.',
                         'The registered count (e.g. 8/16) helps you see at a glance whether a game still has capacity.',
                         'Delete Game requires confirmation — it cannot be undone and will remove all associated players, pairings, and scores.',
                     ],
@@ -109,7 +109,7 @@ return [
 
         // ── FILTERS ───────────────────────────────────────────────────────────
         [
-            'label'    => 'Filters',
+            'label'    => 'List Filters',
             'sections' => [
                 [
                     'icon'    => 'target',
@@ -121,12 +121,12 @@ return [
                     'heading' => 'Key Fields',
                     'bullets' => [
                         [
-                            'bullet'     => 'Filter presets (Actions menu) — one-tap shortcuts to common game views.',
+                            'bullet'     => 'Filter presets — one-tap shortcuts to common game views.',
                             'subbullets' => [
                                 'My Current Games: your games from today forward.',
                                 'My Past Games: your games from the past 30 days.',
-                                'All Current Games: all admins\' upcoming games at your facility.',
-                                'All Past Games: all admins\' past games at your facility.',
+                                'All Current Games: All upcoming games at your facility - all administrators.',
+                                'All Past Games: All past games at your facility - all administrators.',
                             ],
                         ],
                         [
