@@ -360,6 +360,7 @@
         administrator:  dash(g.adminName),
         gameTitle:      dash(g.title),
         course:         dash(g.courseName),
+        courseStatus:   safeStr(g.courseStatus) || "Confirmed",
         format:         fmtMethod(g.toMethod),
         slots:          slots,
         registered:     registered,
@@ -400,6 +401,7 @@
             teeTimeRaw: safeStr(p.teetime),
             teeTime:    dash(p.teetime),
             courseName:    dash(g.courseName),
+            courseStatus:  safeStr(g.courseStatus) || "Confirmed",
             administrator: dash(g.adminName),
             registeredRaw: registeredYMD,
             registered:    registeredYMD ? fmtDateShort(registeredYMD) : "—",
@@ -443,6 +445,12 @@
         data-filter-key="course"
         data-filter-value="${esc(r.course)}"
         data-display-value="${esc(r.course)}">${esc(r.course)}</td>
+
+    <td data-cd-menu="summary"
+        data-sort-key="courseStatus"
+        data-filter-key="courseStatus"
+        data-filter-value="${esc(r.courseStatus)}"
+        data-display-value="${esc(r.courseStatus)}">${esc(r.courseStatus)}</td>
 
     <td data-cd-menu="summary"
         data-sort-key="format"
@@ -499,7 +507,7 @@
       }
 
       for (const [grp, groupRows] of groups.entries()) {
-        html += `<tr class="cdGroupHdr"><td colspan="9">${esc(grp)}</td></tr>`;
+        html += `<tr class="cdGroupHdr"><td colspan="10">${esc(grp)}</td></tr>`;
         for (const r of groupRows) {
           html += buildSummaryRowHtml(r);
         }
@@ -565,6 +573,12 @@
           data-filter-key="courseName"
           data-filter-value="${esc(r.courseName)}"
           data-display-value="${esc(r.courseName)}">${esc(r.courseName)}</td>
+
+      <td data-cd-menu="player"
+          data-sort-key="courseStatus"
+          data-filter-key="courseStatus"
+          data-filter-value="${esc(r.courseStatus)}"
+          data-display-value="${esc(r.courseStatus)}">${esc(r.courseStatus)}</td>
 
       <td data-cd-menu="player"
           data-sort-key="administrator"
@@ -635,7 +649,7 @@
         groups.get(key).push(r);
       }
       for (const [grp, groupRows] of groups.entries()) {
-        html += `<tr class="cdGroupHdr"><td colspan="12">${esc(grp)}</td></tr>`;
+        html += `<tr class="cdGroupHdr"><td colspan="13">${esc(grp)}</td></tr>`;
         for (const r of groupRows) {
           html += buildPlayerRowHtml(r);
         }
@@ -953,6 +967,7 @@
       if (f.administrator && r.administrator !== f.administrator) return false;
       if (f.gameTitle     && r.gameTitle     !== f.gameTitle)     return false;
       if (f.course        && r.course        !== f.course)        return false;
+      if (f.courseStatus  && r.courseStatus  !== f.courseStatus)  return false;
       if (f.format        && r.format        !== f.format)        return false;
       return true;
     });
@@ -981,6 +996,7 @@
       administrator:"Administrator",
       gameTitle:    "Game Title",
       course:       "Course",
+      courseStatus: "Course Status",
       format:       "Format",
       slots:        "Slots",
       registered:   "Registered",
@@ -1001,6 +1017,7 @@
       administrator: "",
       gameTitle: "",
       course: "",
+      courseStatus: "",
       format: "",
     };
     renderSummary();
@@ -1020,6 +1037,7 @@
       f.administrator ||
       f.gameTitle ||
       f.course ||
+      f.courseStatus ||
       f.format
     );
   }
@@ -1105,6 +1123,7 @@
       if (f.playTime      && r.playTimeRaw   !== f.playTime)      return false;
       if (f.teeTime       && r.teeTimeRaw    !== f.teeTime)       return false;
       if (f.courseName    && r.courseName    !== f.courseName)    return false;
+      if (f.courseStatus  && r.courseStatus  !== f.courseStatus)  return false;
       if (f.administrator && r.administrator !== f.administrator) return false;
       if (f.registered    && r.registeredRaw !== f.registered)    return false;
       return true;
@@ -1139,6 +1158,7 @@
       playTimeRaw:   "Play Time",
       teeTimeRaw:    "Tee Time",
       courseName:    "Course Name",
+      courseStatus:  "Course Status",
       administrator: "Administrator",
       registeredRaw: "Registered",
       varianceDays:  "Variance Days",
@@ -1162,6 +1182,7 @@
       playTime: "",
       teeTime: "",
       courseName: "",
+      courseStatus: "",
       administrator: "",
       registered: "",
     };
@@ -1186,6 +1207,7 @@
       f.playTime ||
       f.teeTime ||
       f.courseName ||
+      f.courseStatus ||
       f.administrator ||
       f.registered
     );
@@ -1424,11 +1446,11 @@
     state.games   = Array.isArray(init.games) ? init.games : [];
     state.players = buildPlayerAggregates();
 
-    state.summaryFilters  = { playDate: "", playTime: "", administrator: "", gameTitle: "", course: "", format: "" };
+    state.summaryFilters  = { playDate: "", playTime: "", administrator: "", gameTitle: "", course: "", courseStatus: "", format: "" };
     state.summarySortKey  = "playDateRaw";
     state.summarySortDir  = "asc";
 
-    state.playerFilters = { ghin: "", localId: "", playerName: "", ggid: "", gameTitle: "", playDate: "", playTime: "", teeTime: "", courseName: "", administrator: "", registered: "" };
+    state.playerFilters = { ghin: "", localId: "", playerName: "", ggid: "", gameTitle: "", playDate: "", playTime: "", teeTime: "", courseName: "", courseStatus: "", administrator: "", registered: "" };
     state.playerSortKey = "playDateRaw";
     state.playerSortDir = "asc";
 
