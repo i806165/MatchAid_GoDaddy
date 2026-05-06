@@ -7,12 +7,6 @@ require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 
-Logger::info("USERSETTINGS_ENTRY", [
-  "uri" => $_SERVER["REQUEST_URI"] ?? "",
-  "ghin" => $_SESSION["SessionGHINLogonID"] ?? "",
-  "loginTime" => $_SESSION["SessionLoginTime"] ?? "",
-]);
-
 $ctx = ServiceUserContext::getUserContext();
 if (!$ctx || empty($ctx["ok"])) {
   header("Location: " . MA_ROUTE_LOGIN);
@@ -43,6 +37,7 @@ $paths = [
 $maChromeTitle = "User Settings";
 $maChromeSubtitle = $initPayload["header"]["subtitle"] ?? "";
 $maChromeLogoUrl = null;
+$pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -66,6 +61,13 @@ $maChromeLogoUrl = null;
   </main>
 
   <?php include __DIR__ . "/../../includes/chromeFooter.php"; ?>
+  
+  <?php
+  // Render help modal into the DOM (hidden until ? button is clicked)
+  if (!empty($pageHelpKey)) {
+      ServicePageHelp::renderByKey($pageHelpKey);
+  }
+  ?>
 
 <script>
   window.MA = window.MA || {};
@@ -80,6 +82,7 @@ $maChromeLogoUrl = null;
 </script>
 
   <script src="/assets/js/ma_shared.js"></script>
+  <script src="/assets/modules/pageHelp.js?v=1"></script>
   <script src="/assets/pages/user_settings.js"></script>
 </body>
 </html>
