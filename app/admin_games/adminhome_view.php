@@ -100,8 +100,3 @@
     </footer>
   </section>
 </div>
-
-<!-- Actions Menu Overlay -->
-<div id="menuOverlay" class="actionMenuOverlay" aria-hidden="true">
-  <div id="menuHost"></div>
-</div>

@@ -45,9 +45,9 @@
   }
 
   function updateOverlayLock() {
-    const menuOpen = !!document.getElementById("menuOverlay")?.classList.contains("open");
-    const modalOpen = !!document.getElementById("modalOverlay")?.classList.contains("is-open");
-    setOverlayLock(menuOpen || modalOpen);
+    const modalOpen  = !!document.getElementById("modalOverlay")?.classList.contains("is-open");
+    const actionOpen = !!document.getElementById("maActionMenuOverlay")?.classList.contains("is-open");
+    setOverlayLock(modalOpen || actionOpen);
   }
 
 function badgeParts(ymd) {
@@ -550,45 +550,6 @@ cardsEl.innerHTML = state.games.dbRows
     setStatus("Unknown action: " + action, "warn");
   }
 
-  // ---- Menus (Overlay) ----
-  function openMenu(html) {
-    const overlay = document.getElementById("menuOverlay");
-    const host = document.getElementById("menuHost");
-    if (!overlay || !host) return null;
-
-    host.innerHTML = html;
-    overlay.classList.add("open");
-    overlay.setAttribute("aria-hidden", "false");
-    updateOverlayLock();   ///Scrolling
-
-    const close = () => {
-      overlay.classList.remove("open");
-      overlay.setAttribute("aria-hidden", "true");
-      host.innerHTML = "";
-      updateOverlayLock(); ///Scrolling
-    };
-
-    overlay.addEventListener(
-      "click",
-      (e) => {
-        if (e.target === overlay) close();
-      },
-      { once: true }
-    );
-
-    host.querySelectorAll("[data-closemenu='1']").forEach((b) => b.addEventListener("click", close));
-    host.querySelectorAll("[data-menuclick]").forEach((el) => {
-      el.addEventListener("click", async () => {
-        const action = el.getAttribute("data-menuclick");
-        close();
-        const fn = el._onMenuClick;
-        if (typeof fn === "function") await fn(action);
-      });
-    });
-
-    return close;
-  }
-
 function applyPreset(presetKey) {
   const key = String(presetKey || "").toLowerCase().trim();
 
@@ -695,53 +656,24 @@ function applyPreset(presetKey) {
   function openGameMenu(g) {
     const dt = parseYmd(g.dbGames_PlayDate);
     const dateLine = dt ? dt.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "2-digit", year: "numeric" }) : "";
+    const subtitle = [dateLine, g.dbGames_PlayTime || ""].filter(Boolean).join(" ");
 
-    const html = `
-      <div class="actionMenu">
-        <div class="actionMenu_header">
-          <div class="actionMenu_headerRow">
-            <div>
-              <div class="actionMenu_title">${esc(g.dbGames_Title || "Game")}</div>
-              <div class="actionMenu_subtitle">${esc(dateLine)} ${esc(g.dbGames_PlayTime || "")}</div>
-            </div>
-            <button class="iconBtn btnPrimary" type="button" data-closemenu="1">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
-          </div>
-        </div>
-
-        <button class="actionMenu_item" type="button" data-menuclick="editGame">Edit Game</button>
-        <button class="actionMenu_item" type="button" data-menuclick="settings">Adjust Settings</button>
-        <div class="actionMenu_divider"></div>
-        <div class="actionMenu_divider"></div>
-        <button class="actionMenu_item" type="button" data-menuclick="roster">Select Players</button>
-        <button class="actionMenu_item" type="button" data-menuclick="pairings">Pair Players</button>
-        <button class="actionMenu_item" type="button" data-menuclick="teetimes">Assign TeeTimes</button>
-        <button class="actionMenu_item" type="button" data-menuclick="summary">View Game Summary</button>
-        <div class="actionMenu_divider"></div>
-        <div class="actionMenu_divider"></div>
-        <button class="actionMenu_item" type="button" data-menuclick="scorecard">Pre-Game Scorecards</button>
-        <div class="actionMenu_divider"></div>
-        <div class="actionMenu_divider"></div>
-        <button class="actionMenu_item" type="button" data-menuclick="calendar">Add Game to Calendar</button>
-        <button class="actionMenu_item" type="button" data-menuclick="notify">Send Message to Players</button>  <!-- ADD -->
-        <div class="actionMenu_divider"></div>
-        <div class="actionMenu_divider"></div>
-        <div class="actionMenu_divider"></div>
-        <button class="actionMenu_item danger" type="button" data-menuclick="deleteGame">Delete the Game</button>
-      </div>
-    `;
-
-    openMenu(html);
-
-    const host = document.getElementById("menuHost");
-    if (!host) return;
-
-    host.querySelectorAll("[data-menuclick]").forEach((el) => {
-      el._onMenuClick = async (action) => {
-        await handleGameAction({ action, ggid: g.dbGames_GGID });
-      };
-    });
+    MA.ui.openActionsMenu(g.dbGames_Title || "Game", [
+      { label: "Edit Game",               action: () => handleGameAction({ action: "editGame",   ggid: g.dbGames_GGID }) },
+      { label: "Adjust Settings",         action: () => handleGameAction({ action: "settings",   ggid: g.dbGames_GGID }) },
+      { separator: true },
+      { label: "Select Players",          action: () => handleGameAction({ action: "roster",     ggid: g.dbGames_GGID }) },
+      { label: "Pair Players",            action: () => handleGameAction({ action: "pairings",   ggid: g.dbGames_GGID }) },
+      { label: "Assign Tee Times",        action: () => handleGameAction({ action: "teetimes",   ggid: g.dbGames_GGID }) },
+      { label: "View Game Summary",       action: () => handleGameAction({ action: "summary",    ggid: g.dbGames_GGID }) },
+      { separator: true },
+      { label: "Pre-Game Scorecards",     action: () => handleGameAction({ action: "scorecard",  ggid: g.dbGames_GGID }) },
+      { separator: true },
+      { label: "Add Game to Calendar",    action: () => handleGameAction({ action: "calendar",   ggid: g.dbGames_GGID }) },
+      { label: "Send Message to Players", action: () => handleGameAction({ action: "notify",     ggid: g.dbGames_GGID }) },
+      { separator: true },
+      { label: "Delete the Game", danger: true, action: () => handleGameAction({ action: "deleteGame", ggid: g.dbGames_GGID }) },
+    ], subtitle);
   }
 
   // ---- Filters modal wiring ----
