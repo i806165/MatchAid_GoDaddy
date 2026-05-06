@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'title' => 'Player Portal Help',
-    'intro' => 'Find games, register to play, manage your tee set, and access scoring tools.',
+    'intro' => 'Find games, register to play, and access game scoring tools.',
     'tabs'  => [
 
         // ── OVERVIEW ──────────────────────────────────────────────────────────
