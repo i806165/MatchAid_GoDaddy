@@ -220,9 +220,9 @@
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     MA.ui.openActionsMenu("Actions", [
-      { label: "Game Settings", action: "settings", params: { returnTo: "edit" } },
+      { label: "Send Message to Players", action: onNotify },
       { separator: true },
-      { label: "Delete Game", action: onDeleteGame, danger: true }
+      { label: "Delete Game",             action: onDeleteGame, danger: true }
     ]);
   }
 
@@ -242,6 +242,18 @@
       console.error(e);
       setStatus(String(e.message || e), "error");
       setBusy(false);
+    }
+  }
+
+  function onNotify() {
+    if (!state.ggid) return;
+    if (MA.notify && typeof MA.notify.open === "function") {
+      MA.notify.open({
+        ggid:    state.ggid,
+        apiPath: MA.paths?.apiNotify,
+      });
+    } else {
+      setStatus("Messaging module not loaded.", "error");
     }
   }
 
