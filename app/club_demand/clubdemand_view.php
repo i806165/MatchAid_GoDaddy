@@ -116,6 +116,7 @@
                 <th>Administrator</th>
                 <th>Game Title</th>
                 <th>Course</th>
+                <th>Status</th>
                 <th>Format</th>
                 <th class="cdRight">Slots</th>
                 <th class="cdRight">Registered</th>
@@ -157,6 +158,7 @@
                 <th>Play Time</th>
                 <th>Tee Time</th>
                 <th>Course Name</th>
+                <th>Status</th>
                 <th>Administrator</th>
                 <th>Registered</th>
                 <th class="cdRight">Variance Days</th>
