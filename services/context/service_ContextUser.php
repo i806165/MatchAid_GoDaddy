@@ -227,12 +227,6 @@ public static function retrieveGHINUser(string $ghinId): ?array {
         return (json_last_error()===JSON_ERROR_NONE) ? $decoded : $val;
     }
 
-    public const USER_SETTINGS_CARRIERS = [
-    "AT&T"    => "@txt.att.net",
-    "Verizon" => "@vtext.com",
-    "T-Mobile"=> "@tmomail.net",
-];
-
 public static function buildUserSettingsPayload(string $ghinId): array {
     $row = self::retrieveGHINUser($ghinId);
     if (!$row) {
@@ -278,12 +272,12 @@ public static function buildUserSettingsPayload(string $ghinId): array {
         ],
         "carrierOptions" => array_map(
             static fn(string $gateway, string $name): array => [
-                "value" => $name,
-                "label" => $name,
+                "value"   => $name,
+                "label"   => $name,
                 "gateway" => $gateway,
             ],
-            self::USER_SETTINGS_CARRIERS,
-            array_keys(self::USER_SETTINGS_CARRIERS)
+            self::getMobileCarrierGateways(),
+            array_keys(self::getMobileCarrierGateways())
         ),
         "contactMethodOptions" => [
             [ "value" => "Email", "label" => "Email" ],
@@ -347,7 +341,7 @@ public static function saveUserSettings(string $ghinId, array $patch): array {
         throw new RuntimeException("Select a mobile carrier.");
     }
 
-    if ($carrier !== "" && !array_key_exists($carrier, self::USER_SETTINGS_CARRIERS)) {
+    if ($carrier !== "" && !self::isValidMobileCarrier($carrier)) {
         throw new RuntimeException("Invalid mobile carrier.");
     }
 
@@ -457,4 +451,24 @@ private static function extractPrimaryGolfer($profile): array {
 private static function normalizePhone(string $raw): string {
     return preg_replace('/\D+/', '', trim($raw)) ?? "";
 }
+
+private static function getMobileCarrierGateways(): array {
+    $path = MA_INCLUDES . "/mobile_carriers.php";
+
+    if (!is_file($path)) {
+        return [];
+    }
+
+    $carriers = require $path;
+
+    return is_array($carriers) ? $carriers : [];
+}
+
+private static function isValidMobileCarrier(string $carrier): bool {
+    $carrier = trim($carrier);
+    if ($carrier === "") return false;
+
+    return array_key_exists($carrier, self::getMobileCarrierGateways());
+}
+
 }
