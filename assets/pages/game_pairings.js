@@ -287,8 +287,8 @@
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     
     const items = [
-      { label: "Game Settings", action: "settings", params: { returnTo: "pairings" } },
-      { label: "AutoPair", action: onAutoPair },
+      { label: "Open Automated Pairing", action: onAutoPair },
+      { separator: true },
       { separator: true },
       { label: "Reset Pairings and Matches to last Save", action: onResetPairings, danger: true }
     ];

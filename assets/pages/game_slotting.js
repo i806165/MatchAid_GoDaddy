@@ -1533,10 +1533,7 @@ function onResetChanges() {
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     MA.ui.openActionsMenu("Actions", [
-      { label: "Open Auto Slotting", action: () => openAutoSlotModal() },
-      { separator: true },
-      { separator: true },
-      { label: "Game Settings", action: () => MA.routerGo("settings") },
+      { label: "Open Automated Slotting", action: () => openAutoSlotModal() },
       { separator: true },
       { separator: true },
       { label: "Reset Changes to Last Save", action: () => onResetChanges(), danger: true }
