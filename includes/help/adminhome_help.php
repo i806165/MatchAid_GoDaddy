@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 return [
     'title' => 'Admin Portal Help',
-    'intro' => 'Manage your games — create, configure, and navigate to any part of a game from one place.',
+    'intro' => 'The entry point to create and manage your games.',
     'tabs'  => [
 
         // ── OVERVIEW ──────────────────────────────────────────────────────────
