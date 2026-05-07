@@ -18,7 +18,16 @@ $siteUrl = $config["app"]["site_url"];
 // ── Carrier gateway map ───────────────────────────────────────────────────────
 // Resolves dbUser_MobileCarrier → SMS-to-email gateway domain.
 // Source of truth: ServiceUserContext::USER_SETTINGS_CARRIERS
-$carriers = require_once __DIR__ . "/../../includes/mobile_carriers.php";
+$carrierPath = MA_INCLUDES . "/mobile_carriers.php";
+if (!is_file($carrierPath)) {
+    throw new RuntimeException("Mobile carrier include not found: " . $carrierPath);
+}
+
+$carriers = require $carrierPath;
+
+if (!is_array($carriers)) {
+    throw new RuntimeException("Mobile carrier include did not return an array.");
+}
 
 // ── Contact resolver ──────────────────────────────────────────────────────────
 // Priority:
