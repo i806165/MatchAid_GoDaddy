@@ -65,9 +65,9 @@
    Logistics — Play Date / Play Time row
    ========================================================================== */
 
-.gmDateTimeRow{
+.gmDateTimeRow {
   display: grid;
-  grid-template-columns: 170px minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 16px;
   align-items: end;
 }
@@ -304,7 +304,7 @@
    ========================================================================== */
 
 @media (max-width: 560px){
-  .gmDateTimeRow{
+  .gmDateTimeRow {
     grid-template-columns: 1fr;
     gap: 10px;
   }
