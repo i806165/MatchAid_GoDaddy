@@ -59,6 +59,7 @@ $maChromeLogoUrl = "/assets/images/MatchAidLogoSquare.jpeg";
 $maChromeTitleLine1 = "Favorite Players";
 $maChromeTitleLine2 = "";
 $maChromeTitleLine3 = "";
+$pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
 
 // Allow chromeFooter.php to read this if your footer supports it
 $maChromeFooterMode = $footerMode;
@@ -103,6 +104,12 @@ $maChromeFooterMode = $footerMode;
 </main>
 
 <?php include __DIR__ . "/../../includes/chromeFooter.php"; ?>
+<?php
+// Render help modal into the DOM (hidden until ? button is clicked)
+if (!empty($pageHelpKey)) {
+    ServicePageHelp::renderByKey($pageHelpKey);
+}
+?>
 
 <script>
   window.MA = window.MA || {};
