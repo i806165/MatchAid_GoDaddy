@@ -16,17 +16,22 @@
    Game card / course summary
    ========================================================================== */
 
-.gmCourseRow{
+.gmCourseRow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.gmCourseRow .gmCourseSummary{
+.gmCourseRow .gmCourseSummary {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+.gmCourseBtns {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 8px;
 }
 
 .gmCourseSummary{
