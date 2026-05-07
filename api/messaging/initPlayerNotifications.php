@@ -18,7 +18,7 @@ $siteUrl = $config["app"]["site_url"];
 // ── Carrier gateway map ───────────────────────────────────────────────────────
 // Resolves dbUser_MobileCarrier → SMS-to-email gateway domain.
 // Source of truth: ServiceUserContext::USER_SETTINGS_CARRIERS
-$carriers = ServiceUserContext::USER_SETTINGS_CARRIERS;
+$carriers = require_once __DIR__ . "/../../includes/mobile_carriers.php";
 
 // ── Contact resolver ──────────────────────────────────────────────────────────
 // Priority:
