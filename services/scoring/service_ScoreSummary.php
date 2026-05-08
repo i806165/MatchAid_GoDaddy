@@ -371,9 +371,11 @@ final class ServiceScoreSummary
                             ?? ''
                         ));
                         if ($playerId === '') continue;
-                        $playerPairings[$playerId] = $pairingId;
-                        if (!isset($playerEntries[$playerId])) {
-                            $playerEntries[$playerId] = ['pairingId' => $playerId, 'holes' => []];
+                        $keyPairingGHIN = $pairingId . '_' . $playerId;
+
+                        $playerPairings[$keyPairingGHIN] = $pairingId;
+                        if (!isset($playerEntries[$keyPairingGHIN])) {
+                            $playerEntries[$keyPairingGHIN] = ['pairingId' => $keyPairingGHIN, 'holes' => []];
                         }
                         foreach ($scopedHoles as $holeNumber) {
                             $holeKey = 'h' . $holeNumber;
@@ -400,8 +402,8 @@ final class ServiceScoreSummary
                         array_values($playerEntries), $scopedHoles, $pointsConfig
                     );
                     foreach (['gross', 'net'] as $metric) {
-                        foreach ($perPlayer[$metric] as $playerId => $pts) {
-                            $pid = $playerPairings[$playerId] ?? null;
+                        foreach ($perPlayer[$metric] as $keyPairingGHIN => $pts) {
+                            $pid = $playerPairings[$keyPairingGHIN] ?? null;
                             if (!$pid) continue;
                             if (!isset($pairPairPoints[$metric][$pid])) {
                                 $pairPairPoints[$metric][$pid] = ['front' => 0.0, 'back' => 0.0, 'total' => 0.0];
@@ -993,11 +995,13 @@ final class ServiceScoreSummary
                 ));
                 if ($playerId === '') continue;
 
-                $playerPairings[$playerId] = $pairingId;
+                $keyPairingGHIN = $pairingId . '_' . $playerId;
 
-                if (!isset($playerEntries[$playerId])) {
-                    $playerEntries[$playerId] = [
-                        'pairingId' => $playerId,
+                $playerPairings[$keyPairingGHIN] = $pairingId;
+
+                if (!isset($playerEntries[$keyPairingGHIN])) {
+                    $playerEntries[$keyPairingGHIN] = [
+                        'pairingId' => $keyPairingGHIN,
                         'holes'     => [],
                     ];
                 }
@@ -1041,8 +1045,8 @@ final class ServiceScoreSummary
         // Sum player points up to pairing level
         $pairingTotals = ['gross' => [], 'net' => []];
         foreach (['gross', 'net'] as $metric) {
-            foreach ($perPlayerResult[$metric] as $playerId => $pts) {
-                $pairingId = $playerPairings[$playerId] ?? null;
+            foreach ($perPlayerResult[$metric] as $keyPairingGHIN => $pts) {
+                $pairingId = $playerPairings[$keyPairingGHIN] ?? null;
                 if ($pairingId === null) continue;
                 if (!isset($pairingTotals[$metric][$pairingId])) {
                     $pairingTotals[$metric][$pairingId] = ['front' => 0.0, 'back' => 0.0, 'total' => 0.0];

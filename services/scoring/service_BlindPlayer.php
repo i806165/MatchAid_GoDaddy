@@ -352,18 +352,32 @@ final class ServiceBlindPlayer
             if ($ghin !== '') $byGHIN[$ghin] = $p;
         }
 
+        // Build PairingID → PlayerKey map from real players so the blind clone
+        // inherits the correct walking group (scorecard slot), not the donor's.
+        $pairingKeyMap = [];
+        foreach ($players as $p) {
+            $pid = (string)($p['dbPlayers_PairingID'] ?? '');
+            $key = (string)($p['dbPlayers_PlayerKey'] ?? '');
+            if ($pid !== '' && $key !== '') {
+                $pairingKeyMap[$pid] = $key;
+            }
+        }
+
         foreach ($blindScores as $bs) {
-            $ghin = (string)($bs['dbScores_GHIN'] ?? '');
-            $real = $byGHIN[$ghin] ?? null;
+            $ghin      = (string)($bs['dbScores_GHIN'] ?? '');
+            $pairingId = (string)($bs['dbScores_PairingID'] ?? '');
+            $pos       = (int)($bs['dbScores_PairingPos'] ?? 1);
+            $real      = $byGHIN[$ghin] ?? null;
             if (!$real) continue;
 
             $synthetic                         = $real;
             $synthetic['dbPlayers_Name']       = '* BLIND *';
             $synthetic['dbPlayers_FName']      = '*';
             $synthetic['dbPlayers_LName']      = 'BLIND *';
-            $synthetic['dbPlayers_PairingID']  = (string)($bs['dbScores_PairingID'] ?? '');
-            $synthetic['dbPlayers_PairingPos'] = (int)($bs['dbScores_PairingPos'] ?? 1);
+            $synthetic['dbPlayers_PairingID']  = $pairingId;
+            $synthetic['dbPlayers_PairingPos'] = $pos;
             $synthetic['dbPlayers_Scores']     = $bs['dbScores_Scores'];
+            $synthetic['dbPlayers_PlayerKey']  = $pairingKeyMap[$pairingId] ?? $pairingId;
             $synthetic['isBlind']              = true;
 
             $players[] = $synthetic;
