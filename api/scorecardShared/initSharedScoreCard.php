@@ -104,6 +104,24 @@ function initSharedScoreCard(string $ggid, string $mode = "game", string $scope 
     $scope
   );
 
+  Logger::info('SCORECARD_PLAYERS_PAYLOAD', [
+    'rows' => array_map(fn($row) => [
+        'groupId'  => $row['groupId'] ?? '',
+        'pairingIDs' => $row['pairingIDs'] ?? [],
+        'players'  => array_map(fn($p) => [
+            'name'                => $p['playerName'] ?? $p['dbPlayers_Name'] ?? '',
+            'dbPlayers_PairingID' => $p['dbPlayers_PairingID'] ?? 'NOT SET',
+            'pairingID'           => $p['pairingID'] ?? 'NOT SET',
+            'effectivePairingID'  => $p['effectivePairingID'] ?? 'NOT SET',
+            'isBlind'             => $p['isBlind'] ?? false,
+        ], $row['players'] ?? []),
+        'columnTotals' => array_map(fn($t) => [
+            'label'    => $t['label'] ?? '',
+            'pairingID'=> $t['pairingID'] ?? 'NOT SET',
+        ], $row['columnTotals'] ?? []),
+    ], $scorecards['rows'] ?? []),
+]);
+
   return [
     "ok" => true,
     "mode" => $mode,
