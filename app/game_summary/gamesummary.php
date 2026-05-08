@@ -7,13 +7,6 @@ require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
 
-Logger::info("GAMESUMMARY_ENTRY", [
-  "uri" => $_SERVER["REQUEST_URI"] ?? "",
-  "ghin" => $_SESSION["SessionGHINLogonID"] ?? "",
-  "ggid" => $_SESSION["SessionStoredGGID"] ?? "",
-  "loginTime" => $_SESSION["SessionLoginTime"] ?? "",
-]);
-
 // 1) USER context hydration (Rule-2)
 $ctx = ServiceUserContext::getUserContext();
 if (!$ctx || empty($ctx["ok"])) {
@@ -22,30 +15,33 @@ if (!$ctx || empty($ctx["ok"])) {
 }
 
 // 2) GAME context hydration (Rule-2 for pages)
-$gc = ServiceContextGame::getGameContext();
-
-Logger::info("GAMESUMMARY_CTX_DEBUG", [
-  "ok" => !empty($gc["game"]),
-  "ggid" => $gc["ggid"] ?? "missing",
-  "hasGame" => !empty($gc["game"])
-]);
-
-if (!$gc || empty($gc["game"])) {
-  header("Location: " . MA_ROUTE_LOGIN);
-  exit;
-}
-
 try {
+  $gc = ServiceContextGame::getGameContext();
+  if (!$gc || empty($gc["game"])) {
+    throw new RuntimeException("Missing game context.");
+  }
+
   require_once MA_API . "/game_summary/initGameSummary.php";
   $initPayload = buildGameSummaryInit($ctx, $gc);
   if (empty($initPayload["ok"])) {
-    header("Location: " . MA_ROUTE_LOGIN);
-    exit;
+    throw new RuntimeException("buildGameSummaryInit returned not-ok.");
   }
 
   $initPayload["portal"] = $_SESSION["SessionPortal"] ?? "ADMIN PORTAL";
+
+  Logger::info("GAMESUMMARY_CTX_DEBUG", [
+    "ggid"    => $gc["ggid"] ?? "missing",
+    "hasGame" => !empty($gc["game"])
+  ]);
+
 } catch (Throwable $e) {
-  Logger::error("GAMESUMMARY_INIT_FAIL", ["err" => $e->getMessage()]);
+  Logger::error("GAMESUMMARY_INIT_FAIL", [
+    "err"       => $e->getMessage(),
+    "ghin"      => $_SESSION["SessionGHINLogonID"] ?? "",
+    "ggid"      => $_SESSION["SessionStoredGGID"] ?? "",
+    "loginTime" => $_SESSION["SessionLoginTime"] ?? "",
+    "uri"       => $_SERVER["REQUEST_URI"] ?? "",
+  ]);
   header("Location: " . MA_ROUTE_LOGIN);
   exit;
 }
@@ -59,15 +55,15 @@ $paths = [
 ];
 
 // Chrome values
-$maChromeTitle = "Game Summary";
+$maChromeTitle    = "Game Summary";
 $maChromeSubtitle = $initPayload["header"]["subtitle"] ?? "";
-$maChromeLogoUrl = null;
+$maChromeLogoUrl  = null;
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>MatchAid - Game Summary</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -92,9 +88,9 @@ $maChromeLogoUrl = null;
 
   window.__MA_INIT__ = window.__INIT__;
   window.MA.routes = {
-    router: window.MA.paths.routerApi,
-    login: <?= json_encode(MA_ROUTE_LOGIN) ?>,
-    apiGHIN: window.MA.paths.apiGHIN,
+    router:         window.MA.paths.routerApi,
+    login:          <?= json_encode(MA_ROUTE_LOGIN) ?>,
+    apiGHIN:        window.MA.paths.apiGHIN,
     apiGameSummary: window.MA.paths.apiGameSummary
   };
 </script>
