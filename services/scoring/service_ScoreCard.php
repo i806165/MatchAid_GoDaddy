@@ -709,6 +709,16 @@ final class ServiceScoreCard {
         "teeSetId" => trim((string)($player["dbPlayers_TeeSetID"] ?? "")),
         "strokes" => $strokes,
       ]);
+
+      Logger::info('BUILD_PLAYERS_ARRAY_ENTRY', [
+        'name'      => $player['dbPlayers_Name'] ?? '',
+        'ghin'      => $player['dbPlayers_PlayerGHIN'] ?? '',
+        'pairingId' => $player['dbPlayers_PairingID'] ?? '',
+        'playerKey' => $player['dbPlayers_PlayerKey'] ?? '',
+        'pairingID_lc' => $player['pairingID'] ?? 'NOT SET',  // lowercase — what JS reads first
+        'effectivePairingID' => $player['effectivePairingID'] ?? 'NOT SET',
+        'isBlind'   => $player['isBlind'] ?? false,
+      ]);
     }
 
     return $out;
