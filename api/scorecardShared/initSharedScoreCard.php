@@ -129,6 +129,21 @@ if (php_sapi_name() !== "cli" && basename($_SERVER["SCRIPT_NAME"] ?? "") === "in
     $scope = (string)($_GET["scope"] ?? "");
 
     $out = initSharedScoreCard($ggid, $mode, $scope);
+
+      Logger::info('SCORECARD_PLAYERS_PAYLOAD', [
+    'rows' => array_map(fn($row) => [
+        'groupId' => $row['groupId'] ?? '',
+        'players' => array_map(fn($p) => [
+            'name'               => $p['playerName'] ?? $p['dbPlayers_Name'] ?? '',
+            'dbPlayers_PairingID'=> $p['dbPlayers_PairingID'] ?? 'NOT SET',
+            'pairingID'          => $p['pairingID'] ?? 'NOT SET',
+            'effectivePairingID' => $p['effectivePairingID'] ?? 'NOT SET',
+            'isBlind'            => $p['isBlind'] ?? false,
+        ], $row['players'] ?? []),
+    ], $out['scorecards']['rows'] ?? []),
+]);
+
+
     echo json_encode($out, JSON_UNESCAPED_SLASHES);
 
   } catch (Throwable $e) {
