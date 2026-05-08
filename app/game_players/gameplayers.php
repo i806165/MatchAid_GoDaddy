@@ -12,10 +12,10 @@ $_SESSION["SessionFavLaunchMode"] = "registrations";
 $_SESSION["SessionFavReturnAction"] = "roster";
 $_SESSION["SessionFavPlayerGHIN"] = "";
 
-$queryGGID = (int)($_GET["ggid"] ?? 0);
-if ($queryGGID > 0) {
-  ServiceContextGame::setGameContext($queryGGID);
-}
+//$queryGGID = (int)($_GET["ggid"] ?? 0);
+//if ($queryGGID > 0) {
+//  ServiceContextGame::setGameContext($queryGGID);
+//}
 
 $returnTo = trim((string)($_GET["returnTo"] ?? ""));
 if ($returnTo === "" || strpos($returnTo, "/") !== 0) {
