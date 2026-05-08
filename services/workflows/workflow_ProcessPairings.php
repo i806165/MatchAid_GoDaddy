@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-// /public_html/services/workflows/service_ProcessPairings.php
+// /public_html/services/workflows/workflow_ProcessPairings.php
 // Pairing normalization, schedule inheritance, and two-pass save orchestration.
 // Called by savePairings.php and any future pairing-related API.
 

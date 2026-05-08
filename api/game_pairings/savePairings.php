@@ -5,7 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
-require_once MA_SERVICES . "/workflows/service_ProcessPairings.php";
+require_once MA_SERVICES . "/workflows/workflow_ProcessPairings.php";
 require_once MA_SVC_DB . "/service_dbGames.php";
 
 header("Content-Type: application/json; charset=utf-8");
