@@ -19,9 +19,7 @@ if ($userGHIN === "") {
 }
 
 // Input
-$raw = file_get_contents("php://input");
-$in = json_decode($raw ?: "{}", true);
-if (!is_array($in)) $in = [];
+$in = ma_json_in();
 
 $playerGHIN = (string)($in["playerGHIN"] ?? "");
 if ($playerGHIN === "") {

@@ -35,8 +35,10 @@ try {
     if (!is_array($rows) || !count($rows))  throw new RuntimeException("No rows to import.");
 
     $adminGhin = trim((string)($admin["ghin"] ?? ""));
-    $adminName = trim((string)($admin["name"] ?? $adminGhin));
     if ($adminGhin === "") throw new RuntimeException("Missing admin.");
+
+    // Name is sourced from the verified favorites record, not the request
+    $adminName = trim((string)($match["name"] ?? $adminGhin));
 
     // 3) Resolve admin assoc metadata from favorites
     $favs  = ServiceDbFavAdmins::getFavoriteAdmins([

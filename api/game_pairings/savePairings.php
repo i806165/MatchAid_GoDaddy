@@ -3,209 +3,51 @@
 declare(strict_types=1);
 
 require_once __DIR__ . "/../../bootstrap.php";
-require_once MA_API_LIB . "/Db.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
-require_once MA_SVC_DB . "/service_dbPlayers.php";
+require_once MA_SERVICES . "/workflows/service_ProcessPairings.php";
 require_once MA_SVC_DB . "/service_dbGames.php";
 
 header("Content-Type: application/json; charset=utf-8");
 
-function ma_pad3($v): string {
-  $s = preg_replace('/\D+/', '', strval($v ?? ''));
-  if ($s === '') $s = '0';
-  return str_pad($s, 3, '0', STR_PAD_LEFT);
-}
-
-function ma_normFlightPos($v): string {
-  $s = strtoupper(trim(strval($v ?? '')));
-  if ($s === '1') return 'A';
-  if ($s === '2') return 'B';
-  return ($s === 'A' || $s === 'B') ? $s : '';
-}
-
 try {
+  // 1) Auth
   $uc = ServiceUserContext::getUserContext();
   if (!$uc || empty($uc['ok'])) {
+    http_response_code(401);
     echo json_encode(['ok' => false, 'message' => 'Not signed in.']);
     exit;
   }
 
-  $raw = file_get_contents('php://input');
-  $in = json_decode($raw ?: '{}', true);
-  if (!is_array($in)) $in = [];
-
-  $ggid = strval($in['ggid'] ?? ($_SESSION['SessionStoredGGID'] ?? ''));
+  // 2) GGID always from session — never trust request body for game identity
+  $ggid = strval($_SESSION['SessionStoredGGID'] ?? '');
   if ($ggid === '') {
     Logger::error('PAIRINGS_SAVE_FAIL', ['err' => 'missing ggid']);
-    echo json_encode(['ok' => false, 'message' => 'Missing GGID.']);
+    echo json_encode(['ok' => false, 'message' => 'No game selected.']);
     exit;
   }
 
-  // Guard: prevent saving to a different GGID than the session context (non-destructive)
-  $sessionGGID = strval($_SESSION['SessionStoredGGID'] ?? '');
-  if ($sessionGGID !== '' && $sessionGGID !== $ggid) {
-    Logger::warn('PAIRINGS_SAVE_GGID_MISMATCH', ['ggid' => $ggid, 'sessionGGID' => $sessionGGID, 'userGHIN' => $uc['userGHIN'] ?? '']);
-    echo json_encode(['ok' => false, 'message' => 'Game context mismatch (GGID).']);
-    exit;
-  }
-
+  // 3) Input
+  $in          = ma_json_in();
   $assignments = $in['assignments'] ?? [];
   if (!is_array($assignments)) $assignments = [];
 
-  // Load game (for competition rule)
-  $game = ServiceDbGames::getGameByGGID((int)$ggid);
-  $competition = strval($game['dbGames_Competition'] ?? '');
-  $isPairPair = ($competition === 'PairPair');
+  // 4) Resolve competition type
+  $game       = ServiceDbGames::getGameByGGID((int)$ggid);
+  $isPairPair = (strval($game['dbGames_Competition'] ?? '') === 'PairPair');
 
-  // Map current player rows by GHIN so we can upsert full rows without losing fields.
-  $rows = ServiceDbPlayers::getGamePlayers((string)$ggid);
-  $byGHIN = [];
-  foreach ($rows as $r) {
-    $k = strval($r['dbPlayers_PlayerGHIN'] ?? '');
-    if ($k !== '') $byGHIN[$k] = $r;
-  }
+  // 5) Delegate to service — full two-pass normalize + inherit + persist
+  $final = ServiceProcessPairings::savePairings($ggid, $assignments, $isPairPair);
 
-  $updated = 0;
-  foreach ($assignments as $a) {
-    if (!is_array($a)) continue;
-    $playerGHIN = strval($a['playerGHIN'] ?? '');
-    if ($playerGHIN === '' || empty($byGHIN[$playerGHIN])) continue;
+  Logger::info('PAIRINGS_SAVE_OK', [
+    'ggid'        => $ggid,
+    'assigned'    => count($assignments),
+    'competition' => $game['dbGames_Competition'] ?? '',
+    'userGHIN'    => $_SESSION['SessionGHINLogonID'] ?? ''
+  ]);
 
-    $row = $byGHIN[$playerGHIN];
-
-    $pairingId  = ma_pad3($a['pairingId'] ?? ($row['dbPlayers_PairingID'] ?? '000'));
-    $pairingPos = strval($a['pairingPos'] ?? ($row['dbPlayers_PairingPos'] ?? ''));
-
-    $flightId   = trim(strval($a['flightId'] ?? ($row['dbPlayers_FlightID'] ?? '')));
-    $flightPos  = ma_normFlightPos($a['flightPos'] ?? ($row['dbPlayers_FlightPos'] ?? ''));
-
-    $teeTime    = trim(strval($a['teeTime'] ?? ($row['dbPlayers_TeeTime'] ?? '')));
-    $startHole  = trim(strval($a['startHole'] ?? ($row['dbPlayers_StartHole'] ?? '')));
-    $startHoleS = trim(strval($a['startHoleSuffix'] ?? ($row['dbPlayers_StartHoleSuffix'] ?? '')));
-    $playerKey  = trim(strval($a['playerKey'] ?? ($row['dbPlayers_PlayerKey'] ?? '')));
-
-    // Canonical normalization rules
-    if ($pairingId === '000') {
-      $pairingPos = '';
-      $flightId = '';
-      $flightPos = '';
-      $teeTime = '';
-      $startHole = '';
-      $startHoleS = '';
-      $playerKey = '';
-    } else {
-      if ($isPairPair) {
-        // PairPair: schedule & PlayerKey are flight-scoped; unmatched pairings are unscheduled.
-        if ($flightId === '') {
-          $flightPos = '';
-          $teeTime = '';
-          $startHole = '';
-          $startHoleS = '';
-          $playerKey = '';
-        }
-      } else {
-        // PairField: flight is ignored.
-        $flightId = '';
-        $flightPos = '';
-      }
-    }
-
-    $row['dbPlayers_PairingID'] = $pairingId;
-    $row['dbPlayers_PairingPos'] = $pairingPos;
-    $row['dbPlayers_FlightID'] = $flightId;
-    $row['dbPlayers_FlightPos'] = $flightPos;
-    $row['dbPlayers_TeeTime'] = $teeTime;
-    $row['dbPlayers_StartHole'] = $startHole;
-    $row['dbPlayers_StartHoleSuffix'] = $startHoleS;
-    $row['dbPlayers_PlayerKey'] = $playerKey;
-
-    ServiceDbPlayers::upsertGamePlayer((string)$ggid, $playerGHIN, $row);
-    $updated++;
-  }
-
-  // Reload and enforce post-normalization inheritance (schedule + PlayerKey)
-  $rows2 = ServiceDbPlayers::getGamePlayers((string)$ggid);
-
-  // Helper maps for schedule resolution
-  $pairingSched = [];
-  $flightSched = [];
-  $pairingKey = [];
-  $flightKey = [];
-
-  foreach ($rows2 as $r) {
-    $pid = ma_pad3($r['dbPlayers_PairingID'] ?? '000');
-    $fid = trim(strval($r['dbPlayers_FlightID'] ?? ''));
-    $k = trim(strval($r['dbPlayers_PlayerKey'] ?? ''));
-
-    if ($pid !== '000' && !isset($pairingSched[$pid])) {
-      $tt = trim(strval($r['dbPlayers_TeeTime'] ?? ''));
-      $sh = trim(strval($r['dbPlayers_StartHole'] ?? ''));
-      $ss = trim(strval($r['dbPlayers_StartHoleSuffix'] ?? ''));
-      if ($tt !== '' || $sh !== '' || $ss !== '') $pairingSched[$pid] = [$tt, $sh, $ss];
-    }
-    if ($fid !== '' && !isset($flightSched[$fid])) {
-      $tt = trim(strval($r['dbPlayers_TeeTime'] ?? ''));
-      $sh = trim(strval($r['dbPlayers_StartHole'] ?? ''));
-      $ss = trim(strval($r['dbPlayers_StartHoleSuffix'] ?? ''));
-      if ($tt !== '' || $sh !== '' || $ss !== '') $flightSched[$fid] = [$tt, $sh, $ss];
-    }
-
-    if ($pid !== '000' && $k !== '' && !isset($pairingKey[$pid])) $pairingKey[$pid] = $k;
-    if ($fid !== '' && $k !== '' && !isset($flightKey[$fid])) $flightKey[$fid] = $k;
-  }
-
-  // Enforce schedule and key inheritance (passive persistence)
-  if ($isPairPair) {
-    foreach ($rows2 as &$r) {
-      $fid = trim(strval($r['dbPlayers_FlightID'] ?? ''));
-      // Flight-scoped schedule (unmatched => blank)
-      if ($fid === '') {
-        $r['dbPlayers_TeeTime'] = '';
-        $r['dbPlayers_StartHole'] = '';
-        $r['dbPlayers_StartHoleSuffix'] = '';
-        $r['dbPlayers_PlayerKey'] = '';
-      } else {
-        $sched = $flightSched[$fid] ?? ['', '', ''];
-        $r['dbPlayers_TeeTime'] = $sched[0];
-        $r['dbPlayers_StartHole'] = $sched[1];
-        $r['dbPlayers_StartHoleSuffix'] = $sched[2];
-        $r['dbPlayers_PlayerKey'] = $flightKey[$fid] ?? '';
-      }
-    }
-    unset($r);
-  } else {
-    foreach ($rows2 as &$r) {
-      $pid = ma_pad3($r['dbPlayers_PairingID'] ?? '000');
-      if ($pid === '000') {
-        $r['dbPlayers_TeeTime'] = '';
-        $r['dbPlayers_StartHole'] = '';
-        $r['dbPlayers_StartHoleSuffix'] = '';
-        $r['dbPlayers_PlayerKey'] = '';
-      } else {
-        $sched = $pairingSched[$pid] ?? ['', '', ''];
-        $r['dbPlayers_TeeTime'] = $sched[0];
-        $r['dbPlayers_StartHole'] = $sched[1];
-        $r['dbPlayers_StartHoleSuffix'] = $sched[2];
-        $r['dbPlayers_PlayerKey'] = $pairingKey[$pid] ?? '';
-      }
-      // Flight fields ignored in PairField
-      $r['dbPlayers_FlightID'] = '';
-      $r['dbPlayers_FlightPos'] = '';
-    }
-    unset($r);
-  }
-
-  // Persist inheritance changes (only where needed)
-  $final = [];
-  foreach ($rows2 as $r) {
-    $rGhin = strval($r['dbPlayers_PlayerGHIN'] ?? '');
-    ServiceDbPlayers::upsertGamePlayer((string)$ggid, $rGhin, $r);
-    $final[] = $r;
-  }
-
-  Logger::info('PAIRINGS_SAVE_OK', ['ggid' => $ggid, 'updated' => $updated, 'competition' => $competition, 'userGHIN' => $uc['userGHIN'] ?? '']);
   echo json_encode(['ok' => true, 'payload' => ['players' => $final]]);
+
 } catch (Throwable $e) {
   Logger::error('PAIRINGS_SAVE_EXCEPTION', ['err' => $e->getMessage()]);
   echo json_encode(['ok' => false, 'message' => 'Server error saving pairings.']);

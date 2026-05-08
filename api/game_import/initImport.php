@@ -61,13 +61,8 @@ $adminOptions = array_values(array_filter($adminOptions, function($a) use (&$see
 
   // --- Load user profile JSON (db_Users.dbUser_Profile) ---
   $profileJson = null;
-  $pdo = Db::pdo();
-  $stmt = $pdo->prepare("SELECT dbUser_Profile FROM db_Users WHERE dbUser_GHIN = :u LIMIT 1");
-  $stmt->execute([":u" => $userGhin]);
-  $row = $stmt->fetch(PDO::FETCH_ASSOC);
-  if ($row && !empty($row["dbUser_Profile"])) {
-    $profileJson = json_decode((string)$row["dbUser_Profile"], true);
-  }
+  $userRow = ServiceUserContext::retrieveGHINUser($userGhin);
+  $profileJson = json_decode((string)($userRow["dbUser_Profile"] ?? ""), true);
 
   // Build courseMap: lowercase courseName -> {facilityId, facilityName, courseId, courseName}
   $courseMap = buildCourseMapFromProfile($profileJson);
