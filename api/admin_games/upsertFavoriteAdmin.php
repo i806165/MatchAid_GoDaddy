@@ -2,9 +2,7 @@
 // /public_html/api/admin_games/upsertFavoriteAdmin.php
 declare(strict_types=1);
 
-//session_start;
 require_once __DIR__ . "/../../bootstrap.php";
-require_once MA_API_LIB . "/Db.php";
 require_once MA_SERVICES . "/database/service_dbFavAdmins.php";
 
 header("Content-Type: application/json; charset=utf-8");
@@ -26,18 +24,15 @@ if ($adminKey === "") {
   exit;
 }
 
-$pdo = Db::pdo();
-
-$res = ServiceDbFavAdmins::upsertFavoriteAdmin($pdo, [
-  "userGHIN" => $userGHIN,
-  "adminKey" => $adminKey,
-  // Optional fields if provided:
-  "adminLName" => strval($payload["adminLName"] ?? ""),
-  "facilityId" => strval($payload["facilityId"] ?? ""),
-  "facilityName" => strval($payload["facilityName"] ?? "")
+$res = ServiceDbFavAdmins::upsertFavoriteAdmin([
+  "userGHIN"    => $userGHIN,
+  "adminKey"    => $adminKey,
+  "adminLName"  => strval($payload["adminLName"] ?? ""),
+  "facilityId"  => strval($payload["facilityId"] ?? ""),
+  "facilityName"=> strval($payload["facilityName"] ?? "")
 ]);
 
 echo json_encode([
-  "ok" => true,
+  "ok"      => true,
   "payload" => $res
 ], JSON_UNESCAPED_SLASHES);

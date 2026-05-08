@@ -27,9 +27,9 @@ if (!is_array($selected)) $selected = [];
 
 $pdo = Db::pdo();
 
-$data = ServiceDbFavAdmins::queryFavoriteAdmins($pdo, [
+$data = ServiceDbFavAdmins::queryFavoriteAdmins([
   "userGHIN" => $userGHIN,
-  "clubId" => $clubId,
+  "clubId"   => $clubId,
   "selectedAdminKeys" => $selected
 ]);
 

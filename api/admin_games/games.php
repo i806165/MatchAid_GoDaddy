@@ -10,8 +10,10 @@ require_once MA_SERVICES . "/database/service_dbGames.php";
 header("Content-Type: application/json; charset=utf-8");
 
 // Session-provided context (set by getUserContext on page load)
+$ghinId = trim((string)($_SESSION["SessionGHINLogonID"] ?? ""));
 $clubId = trim((string)($_SESSION["SessionClubID"] ?? ""));
-if ($clubId === "") {
+
+if ($ghinId === "" || $clubId === "") {
   http_response_code(401);
   echo json_encode(["error" => "AUTH_REQUIRED", "redirectUrl" => MA_ROUTE_LOGIN]);
   exit;

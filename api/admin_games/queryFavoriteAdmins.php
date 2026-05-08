@@ -24,9 +24,6 @@ $payload = is_array($body["payload"] ?? null) ? $body["payload"] : $body;
 $selected = $payload["selectedAdminKeys"] ?? [];
 if (!is_array($selected)) $selected = [];
 
-// New PDO usage (bootstrap already Db::init()'d)
-$pdo = Db::pdo();
-
 $data = ServiceDbFavAdmins::queryFavoriteAdmins([
   "userGHIN" => $user,
   "clubId" => $clubId,
