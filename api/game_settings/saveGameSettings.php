@@ -15,10 +15,7 @@ $payload = is_array($in["payload"] ?? null) ? $in["payload"] : [];
 $patch   = is_array($payload["patch"] ?? null) ? $payload["patch"] : [];
 
 // 3) Determine GGID (prefer patch, fallback to session)
-$ggid = (int)($patch["dbGames_GGID"] ?? 0);
-if ($ggid <= 0) {
-    $ggid = (int)($_SESSION["SessionStoredGGID"] ?? 0);
-}
+$ggid = (int)($_SESSION["SessionStoredGGID"] ?? 0);
 
 try {
     if ($ggid <= 0) {

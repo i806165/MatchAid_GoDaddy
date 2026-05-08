@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../bootstrap.php';
 require_once MA_SERVICES . '/scoring/service_BlindPlayer.php';
+require_once MA_SERVICES . '/context/service_ContextGame.php';
 require_once MA_API_LIB . '/Logger.php';
 
 $auth = ma_api_require_auth();
@@ -13,11 +14,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
 }
 
 $in     = ma_json_in();
-$ggid   = (int)($in['ggid'] ?? 0);
 $action = trim((string)($in['action'] ?? 'apply'));
 
+// GGID always from session — never trust request body for game identity
+$ggid = (int)(ServiceContextGame::getStoredGGID() ?? 0);
 if ($ggid <= 0) {
-    ma_respond(400, ['ok' => false, 'message' => 'Missing or invalid GGID.']);
+    ma_respond(400, ['ok' => false, 'message' => 'No game selected.']);
 }
 
 try {

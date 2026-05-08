@@ -1,15 +1,26 @@
 <?php
 declare(strict_types=1);
+// /api/game_players/deleteGamePlayers.php
 
 require_once __DIR__ . "/../../bootstrap.php";
-header("Content-Type: application/json; charset=utf-8");
-
+require_once MA_API_LIB . "/Logger.php";
+require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_SERVICES . "/database/service_dbPlayers.php";
+
+header("Content-Type: application/json; charset=utf-8");
 
 if (($_SERVER["REQUEST_METHOD"] ?? "") !== "POST") {
   http_response_code(405);
   echo json_encode(["ok" => false, "message" => "Method not allowed."]);
+  exit;
+}
+
+// Login guard
+$uc = ServiceUserContext::getUserContext();
+if (!$uc || empty($uc["ok"])) {
+  http_response_code(401);
+  echo json_encode(["ok" => false, "message" => "Session expired."]);
   exit;
 }
 
@@ -21,36 +32,35 @@ if ($playerGHIN === "") {
   exit;
 }
 
-// Blind player guard — prevent deletion of player designated as blind
 try {
-  $gc       = ServiceContextGame::getGameContext();
-  $gameRow  = $gc['game'] ?? [];
-  $rawBlind = $gameRow['dbGames_BlindPlayers'] ?? '[]';
-  $blindArr = is_string($rawBlind) ? json_decode($rawBlind, true) : $rawBlind;
+  // Single getGameContext() call — reused for both blind guard and delete
+  $gc      = ServiceContextGame::getGameContext();
+  $ggid    = (string)($gc["ggid"] ?? "");
+  $gameRow = $gc["game"] ?? [];
+
+  // Blind player guard — prevent deletion of player designated as blind
+  $rawBlind   = $gameRow["dbGames_BlindPlayers"] ?? "[]";
+  $blindArr   = is_string($rawBlind) ? json_decode($rawBlind, true) : $rawBlind;
   $blindGHINs = array_column(
-    array_filter(is_array($blindArr) ? $blindArr : [], fn($b) => isset($b['ghin'])),
-    'ghin'
+    array_filter(is_array($blindArr) ? $blindArr : [], fn($b) => isset($b["ghin"])),
+    "ghin"
   );
+
   if (in_array($playerGHIN, $blindGHINs, true)) {
     http_response_code(409);
     echo json_encode([
-      'ok'      => false,
-      'message' => 'This player is designated as the blind player for this game. '
-                 . 'Remove the blind player assignment in Game Settings before deleting.'
+      "ok"      => false,
+      "message" => "This player is designated as the blind player for this game. "
+                 . "Remove the blind player assignment in Game Settings before deleting."
     ]);
     exit;
   }
-} catch (Throwable $e) {
-  // Non-fatal — proceed with delete if guard check fails
-  Logger::info('BLIND_GUARD_SKIP', ['err' => $e->getMessage()]);
-}
 
-try {
-  $gc = ServiceContextGame::getGameContext();
-  $ggid = (string)($gc["ggid"] ?? "");
   $ok = ServiceDbPlayers::deleteGamePlayer($ggid, $playerGHIN);
   echo json_encode(["ok" => $ok]);
+
 } catch (Throwable $e) {
+  Logger::error("GAMEPLAYERS_DELETE_FAIL", ["err" => $e->getMessage()]);
   http_response_code(500);
   echo json_encode(["ok" => false, "message" => "Unable to delete player."]);
 }
