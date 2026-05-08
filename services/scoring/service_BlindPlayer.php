@@ -344,47 +344,89 @@ final class ServiceBlindPlayer
      * Blind records inherit all tee/HC/course data from the real player record;
      * name fields and pairing placement are overridden.
      */
-    public static function mergeBlindScoresIntoPlayers(array $players, array $blindScores, array $gameRow): array
-    {
-        $byGHIN = [];
-        foreach ($players as $p) {
-            $ghin = (string)($p['dbPlayers_PlayerGHIN'] ?? '');
-            if ($ghin !== '') $byGHIN[$ghin] = $p;
-        }
-
-        // Build PairingID → PlayerKey map from real players so the blind clone
-        // inherits the correct walking group (scorecard slot), not the donor's.
-        $pairingKeyMap = [];
-        foreach ($players as $p) {
-            $pid = (string)($p['dbPlayers_PairingID'] ?? '');
-            $key = (string)($p['dbPlayers_PlayerKey'] ?? '');
-            if ($pid !== '' && $key !== '') {
-                $pairingKeyMap[$pid] = $key;
-            }
-        }
-
-        foreach ($blindScores as $bs) {
-            $ghin      = (string)($bs['dbScores_GHIN'] ?? '');
-            $pairingId = (string)($bs['dbScores_PairingID'] ?? '');
-            $pos       = (int)($bs['dbScores_PairingPos'] ?? 1);
-            $real      = $byGHIN[$ghin] ?? null;
-            if (!$real) continue;
-
-            $synthetic                         = $real;
-            $synthetic['dbPlayers_Name']       = '* BLIND *';
-            $synthetic['dbPlayers_FName']      = '*';
-            $synthetic['dbPlayers_LName']      = 'BLIND *';
-            $synthetic['dbPlayers_PairingID']  = $pairingId;
-            $synthetic['dbPlayers_PairingPos'] = $pos;
-            $synthetic['dbPlayers_Scores']     = $bs['dbScores_Scores'];
-            $synthetic['dbPlayers_PlayerKey']  = $pairingKeyMap[$pairingId] ?? $pairingId;
-            $synthetic['isBlind']              = true;
-
-            $players[] = $synthetic;
-        }
-
-        return $players;
+public static function mergeBlindScoresIntoPlayers(array $players, array $blindScores, array $gameRow): array
+{
+    $byGHIN = [];
+    foreach ($players as $p) {
+        $ghin = (string)($p['dbPlayers_PlayerGHIN'] ?? '');
+        if ($ghin !== '') $byGHIN[$ghin] = $p;
     }
+
+    $pairingKeyMap = [];
+    foreach ($players as $p) {
+        $pid = (string)($p['dbPlayers_PairingID'] ?? '');
+        $key = (string)($p['dbPlayers_PlayerKey'] ?? '');
+        if ($pid !== '' && $key !== '') {
+            $pairingKeyMap[$pid] = $key;
+        }
+    }
+
+    Logger::info('BLIND_MERGE_START', [
+        'playerCount'   => count($players),
+        'blindCount'    => count($blindScores),
+        'pairingKeyMap' => $pairingKeyMap,
+        'realPlayers'   => array_map(fn($p) => [
+            'ghin'      => $p['dbPlayers_PlayerGHIN'] ?? '',
+            'name'      => $p['dbPlayers_Name'] ?? '',
+            'pairingId' => $p['dbPlayers_PairingID'] ?? '',
+            'playerKey' => $p['dbPlayers_PlayerKey'] ?? '',
+            'pairingPos'=> $p['dbPlayers_PairingPos'] ?? '',
+        ], $players),
+    ]);
+
+    foreach ($blindScores as $bs) {
+        $ghin      = (string)($bs['dbScores_GHIN'] ?? '');
+        $pairingId = (string)($bs['dbScores_PairingID'] ?? '');
+        $pos       = (int)($bs['dbScores_PairingPos'] ?? 1);
+        $real      = $byGHIN[$ghin] ?? null;
+
+        Logger::info('BLIND_MERGE_BS', [
+            'ghin'          => $ghin,
+            'pairingId'     => $pairingId,
+            'pos'           => $pos,
+            'donorFound'    => $real !== null,
+            'donorPairingId'=> $real['dbPlayers_PairingID'] ?? 'n/a',
+            'donorPlayerKey'=> $real['dbPlayers_PlayerKey'] ?? 'n/a',
+            'resolvedKey'   => $pairingKeyMap[$pairingId] ?? ('FALLBACK:' . $pairingId),
+        ]);
+
+        if (!$real) continue;
+
+        $synthetic                         = $real;
+        $synthetic['dbPlayers_Name']       = '* BLIND *';
+        $synthetic['dbPlayers_FName']      = '*';
+        $synthetic['dbPlayers_LName']      = 'BLIND *';
+        $synthetic['dbPlayers_PairingID']  = $pairingId;
+        $synthetic['dbPlayers_PairingPos'] = $pos;
+        $synthetic['dbPlayers_Scores']     = $bs['dbScores_Scores'];
+        $synthetic['dbPlayers_PlayerKey']  = $pairingKeyMap[$pairingId] ?? $pairingId;
+        $synthetic['isBlind']              = true;
+
+        Logger::info('BLIND_MERGE_SYNTHETIC', [
+            'name'      => $synthetic['dbPlayers_Name'],
+            'ghin'      => $synthetic['dbPlayers_PlayerGHIN'],
+            'pairingId' => $synthetic['dbPlayers_PairingID'],
+            'playerKey' => $synthetic['dbPlayers_PlayerKey'],
+            'pairingPos'=> $synthetic['dbPlayers_PairingPos'],
+        ]);
+
+        $players[] = $synthetic;
+    }
+
+    Logger::info('BLIND_MERGE_END', [
+        'totalPlayerCount' => count($players),
+        'finalPlayers' => array_map(fn($p) => [
+            'ghin'      => $p['dbPlayers_PlayerGHIN'] ?? '',
+            'name'      => $p['dbPlayers_Name'] ?? '',
+            'pairingId' => $p['dbPlayers_PairingID'] ?? '',
+            'playerKey' => $p['dbPlayers_PlayerKey'] ?? '',
+            'pairingPos'=> $p['dbPlayers_PairingPos'] ?? '',
+            'isBlind'   => $p['isBlind'] ?? false,
+        ], $players),
+    ]);
+
+    return $players;
+}
 
     // =========================================================================
     // Private helpers
