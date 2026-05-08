@@ -104,24 +104,6 @@ function initSharedScoreCard(string $ggid, string $mode = "game", string $scope 
     $scope
   );
 
-  Logger::info('SCORECARD_PLAYERS_PAYLOAD', [
-    'rows' => array_map(fn($row) => [
-        'groupId'  => $row['groupId'] ?? '',
-        'pairingIDs' => $row['pairingIDs'] ?? [],
-        'players'  => array_map(fn($p) => [
-            'name'                => $p['playerName'] ?? $p['dbPlayers_Name'] ?? '',
-            'dbPlayers_PairingID' => $p['dbPlayers_PairingID'] ?? 'NOT SET',
-            'pairingID'           => $p['pairingID'] ?? 'NOT SET',
-            'effectivePairingID'  => $p['effectivePairingID'] ?? 'NOT SET',
-            'isBlind'             => $p['isBlind'] ?? false,
-        ], $row['players'] ?? []),
-        'columnTotals' => array_map(fn($t) => [
-            'label'    => $t['label'] ?? '',
-            'pairingID'=> $t['pairingID'] ?? 'NOT SET',
-        ], $row['columnTotals'] ?? []),
-    ], $scorecards['rows'] ?? []),
-]);
-
   return [
     "ok" => true,
     "mode" => $mode,
@@ -147,20 +129,6 @@ if (php_sapi_name() !== "cli" && basename($_SERVER["SCRIPT_NAME"] ?? "") === "in
     $scope = (string)($_GET["scope"] ?? "");
 
     $out = initSharedScoreCard($ggid, $mode, $scope);
-
-      Logger::info('SCORECARD_PLAYERS_PAYLOAD', [
-    'rows' => array_map(fn($row) => [
-        'groupId' => $row['groupId'] ?? '',
-        'players' => array_map(fn($p) => [
-            'name'               => $p['playerName'] ?? $p['dbPlayers_Name'] ?? '',
-            'dbPlayers_PairingID'=> $p['dbPlayers_PairingID'] ?? 'NOT SET',
-            'pairingID'          => $p['pairingID'] ?? 'NOT SET',
-            'effectivePairingID' => $p['effectivePairingID'] ?? 'NOT SET',
-            'isBlind'            => $p['isBlind'] ?? false,
-        ], $row['players'] ?? []),
-    ], $out['scorecards']['rows'] ?? []),
-]);
-
 
     echo json_encode($out, JSON_UNESCAPED_SLASHES);
 

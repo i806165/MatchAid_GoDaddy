@@ -128,7 +128,7 @@ final class ServiceScoreSummary
                     'pointsDisplay' => $points['display'],
                     'thru' => self::deriveThru($pairPlayers, $scopedHoles),
 
-                    // New stat buckets for PairField leaderboard cards
+                    // Stat buckets for PairField leaderboard cards
                     'countedGrossStats' => $shapeStats['countedGrossStats'],
                     'countedNetStats' => $shapeStats['countedNetStats'],
                     'notCountedGrossStats' => $shapeStats['notCountedGrossStats'],
@@ -351,12 +351,14 @@ final class ServiceScoreSummary
             // ─────────────────────────────────────────────────────────────────────
 
             // ── Points Match resolution ───────────────────────────────────────────
+            // Points are player-specific — build one entry per player keyed by
+            // pairingId_playerId_pos (three-part composite) so blind clones sharing
+            // the same GHIN, including two clones of the same donor in the same
+            // pairing, each resolve independently.
             $pairPairPoints = ['gross' => [], 'net' => []];
             $isPoints = (strtolower($scoringBasis) === 'points');
             if ($isPoints) {
                 $pointsConfig = self::parsePointsConfig($gameRow);
-                // Points are player-specific — build one entry per player,
-                // resolve individually, then sum back to pairing level.
                 $playerEntries  = [];
                 $playerPairings = [];
                 foreach ([
@@ -371,7 +373,8 @@ final class ServiceScoreSummary
                             ?? ''
                         ));
                         if ($playerId === '') continue;
-                        $keyPairingGHIN = $pairingId . '_' . $playerId;
+                        $pos = (int)($player['dbPlayers_PairingPos'] ?? 0);
+                        $keyPairingGHIN = $pairingId . '_' . $playerId . '_' . $pos;
 
                         $playerPairings[$keyPairingGHIN] = $pairingId;
                         if (!isset($playerEntries[$keyPairingGHIN])) {
@@ -387,7 +390,7 @@ final class ServiceScoreSummary
                             $netDiff   = (is_numeric($net) && is_numeric($par))
                                 ? (float)$net - (float)$par : null;
                             if ($grossDiff === null && $netDiff === null) continue;
-                            $playerEntries[$playerId]['holes'][$holeKey] = [
+                            $playerEntries[$keyPairingGHIN]['holes'][$holeKey] = [
                                 'gross'     => $cell['gross'] ?? null,
                                 'net'       => $net,
                                 'grossDiff' => is_numeric($grossDiff) ? (float)$grossDiff : null,
@@ -900,8 +903,8 @@ final class ServiceScoreSummary
 
                     if ($grossDiffSum !== null || $netDiffSum !== null) {
                         $pairings[$pairingId]['holes'][$holeKey] = [
-                            'gross'    => $grossDiffSum, // CalcSkins uses 'gross' key for gross pass
-                            'net'      => $netDiffSum,   // CalcSkins uses 'net' key for net pass
+                            'gross'    => $grossDiffSum,
+                            'net'      => $netDiffSum,
                             'declared' => true,
                         ];
                     }
@@ -947,7 +950,7 @@ final class ServiceScoreSummary
 
             if ($grossDiffSum !== null || $netDiffSum !== null) {
                 $holes[$holeKey] = [
-                    'gross'    => $grossDiffSum, // skins compares on diff, not raw score
+                    'gross'    => $grossDiffSum,
                     'net'      => $netDiffSum,
                     'declared' => true,
                 ];
@@ -964,6 +967,10 @@ final class ServiceScoreSummary
      * points lookup, then results are summed to the pairing level.
      * The declare flag is the only truth — this service is intentionally
      * dumb about BestBall/N settings.
+     *
+     * Keys by pairingId_playerId_pos (three-part composite) so blind clones
+     * sharing the same GHIN, including two clones of the same donor in the
+     * same pairing, each resolve independently.
      */
     private static function resolvePairFieldPoints(
         array $builtRows,
@@ -973,8 +980,8 @@ final class ServiceScoreSummary
         $holes        = self::holesForGame($gameRow);
         $pointsConfig = self::parsePointsConfig($gameRow);
 
-        $playerEntries  = []; // playerId => ['pairingId' => string, 'holes' => [...]]
-        $playerPairings = []; // playerId => pairingId
+        $playerEntries  = [];
+        $playerPairings = [];
 
         foreach ($scorecardRows as $scoreRow) {
             $players = is_array($scoreRow['players'] ?? null) ? $scoreRow['players'] : [];
@@ -995,7 +1002,8 @@ final class ServiceScoreSummary
                 ));
                 if ($playerId === '') continue;
 
-                $keyPairingGHIN = $pairingId . '_' . $playerId;
+                $pos = (int)($player['dbPlayers_PairingPos'] ?? 0);
+                $keyPairingGHIN = $pairingId . '_' . $playerId . '_' . $pos;
 
                 $playerPairings[$keyPairingGHIN] = $pairingId;
 
@@ -1020,7 +1028,7 @@ final class ServiceScoreSummary
 
                     if ($grossDiff === null && $netDiff === null) continue;
 
-                    $playerEntries[$playerId]['holes'][$holeKey] = [
+                    $playerEntries[$keyPairingGHIN]['holes'][$holeKey] = [
                         'gross'     => $cell['gross'] ?? null,
                         'net'       => $net,
                         'grossDiff' => is_numeric($grossDiff) ? (float)$grossDiff : null,
@@ -1035,14 +1043,12 @@ final class ServiceScoreSummary
             return ['gross' => [], 'net' => []];
         }
 
-        // Resolve points per player individually
         $perPlayerResult = ServiceCalcPoints::resolvePoints(
             array_values($playerEntries),
             $holes,
             $pointsConfig
         );
 
-        // Sum player points up to pairing level
         $pairingTotals = ['gross' => [], 'net' => []];
         foreach (['gross', 'net'] as $metric) {
             foreach ($perPlayerResult[$metric] as $keyPairingGHIN => $pts) {
@@ -1088,5 +1094,4 @@ final class ServiceScoreSummary
 
         return $default;
     }
-
 }

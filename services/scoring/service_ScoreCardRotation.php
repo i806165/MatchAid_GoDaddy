@@ -228,6 +228,14 @@ final class ServiceScoreCardRotation
         ];
     }
 
+    /**
+     * Stamp effective pairing/flight context fields onto each baseline player.
+     *
+     * Keys the context lookup by pairingId_ghin_pos (three-part composite) so that
+     * blind clones sharing the same GHIN — including two clones of the same donor in
+     * the same pairing — each resolve to their own independent context entry and never
+     * overwrite the real player or each other.
+     */
     private static function stampPlayersForContext(array $baselinePlayers, array $context): array
     {
         $contextPlayers = is_array($context['players'] ?? null) ? $context['players'] : [];
@@ -235,9 +243,9 @@ final class ServiceScoreCardRotation
             return $baselinePlayers;
         }
 
-        // Key by pairingId_ghin composite so blind clones (same GHIN,
-        // different pairing) do not overwrite the real player's context.
-        $byPairingGHIN = [];
+        // Build lookup keyed by pairingId_ghin_pos so blind clones (same GHIN,
+        // same pairing, different pos) each get their own independent entry.
+        $byKey = [];
         foreach ($contextPlayers as $contextPlayer) {
             $ghin      = self::normStr($contextPlayer['dbPlayers_PlayerGHIN'] ?? '', '');
             $pairingId = self::normStr(
@@ -245,9 +253,10 @@ final class ServiceScoreCardRotation
                 ?? $contextPlayer['dbPlayers_PairingID']
                 ?? '', ''
             );
+            $pos = (int)($contextPlayer['dbPlayers_PairingPos'] ?? 0);
             if ($ghin !== '') {
-                $keyPairingGHIN = $pairingId . '_' . $ghin;
-                $byPairingGHIN[$keyPairingGHIN] = $contextPlayer;
+                $keyPairingGHIN = $pairingId . '_' . $ghin . '_' . $pos;
+                $byKey[$keyPairingGHIN] = $contextPlayer;
             }
         }
 
@@ -255,14 +264,13 @@ final class ServiceScoreCardRotation
         foreach ($baselinePlayers as $player) {
             $row       = $player;
             $ghin      = self::normStr($player['dbPlayers_PlayerGHIN'] ?? '', '');
-            $pairingId = self::normStr(
-                $player['dbPlayers_PairingID'] ?? '', ''
-            );
+            $pairingId = self::normStr($player['dbPlayers_PairingID'] ?? '', '');
+            $pos       = (int)($player['dbPlayers_PairingPos'] ?? 0);
 
-            $keyPairingGHIN = $pairingId . '_' . $ghin;
+            $keyPairingGHIN = $pairingId . '_' . $ghin . '_' . $pos;
 
-            if ($ghin !== '' && isset($byPairingGHIN[$keyPairingGHIN])) {
-                $contextPlayer = $byPairingGHIN[$keyPairingGHIN];
+            if ($ghin !== '' && isset($byKey[$keyPairingGHIN])) {
+                $contextPlayer = $byKey[$keyPairingGHIN];
 
                 $row['baselinePlayerKey'] = (string)($contextPlayer['baselinePlayerKey'] ?? '');
                 $row['baselineFlightID']  = (string)($contextPlayer['baselineFlightID']  ?? '');
@@ -284,6 +292,7 @@ final class ServiceScoreCardRotation
 
         return $players;
     }
+
     private static function sortPlayersForContext(array $players): array
     {
         usort($players, static function (array $a, array $b): int {
@@ -437,7 +446,6 @@ final class ServiceScoreCardRotation
         };
 
         $out = [];
-        $segStr = (count($holes) === 18) ? '6' : (count($holes) === 9 ? '9' : '6');
 
         if (count($holes) === 18) {
             $chunks = array_chunk($holes, 6);
@@ -529,6 +537,14 @@ final class ServiceScoreCardRotation
         }
 
         return self::normStr($player['dbPlayers_PlayerKey'] ?? '');
+    }
+
+    private static function holesForGame(array $gameRow): array
+    {
+        $holesLabel = trim((string)($gameRow['dbGames_Holes'] ?? 'All 18'));
+        if ($holesLabel === 'F9') return range(1, 9);
+        if ($holesLabel === 'B9') return range(10, 18);
+        return range(1, 18);
     }
 
     private static function normStr($value, string $fallback = ''): string
