@@ -235,34 +235,47 @@ final class ServiceScoreCardRotation
             return $baselinePlayers;
         }
 
-        $byGHIN = [];
+        // Key by pairingId_ghin composite so blind clones (same GHIN,
+        // different pairing) do not overwrite the real player's context.
+        $byPairingGHIN = [];
         foreach ($contextPlayers as $contextPlayer) {
-            $ghin = self::normStr($contextPlayer['dbPlayers_PlayerGHIN'] ?? '', '');
+            $ghin      = self::normStr($contextPlayer['dbPlayers_PlayerGHIN'] ?? '', '');
+            $pairingId = self::normStr(
+                $contextPlayer['effectivePairingID']
+                ?? $contextPlayer['dbPlayers_PairingID']
+                ?? '', ''
+            );
             if ($ghin !== '') {
-                $byGHIN[$ghin] = $contextPlayer;
+                $keyPairingGHIN = $pairingId . '_' . $ghin;
+                $byPairingGHIN[$keyPairingGHIN] = $contextPlayer;
             }
         }
 
         $players = [];
         foreach ($baselinePlayers as $player) {
-            $row = $player;
-            $ghin = self::normStr($player['dbPlayers_PlayerGHIN'] ?? '', '');
+            $row       = $player;
+            $ghin      = self::normStr($player['dbPlayers_PlayerGHIN'] ?? '', '');
+            $pairingId = self::normStr(
+                $player['dbPlayers_PairingID'] ?? '', ''
+            );
 
-            if ($ghin !== '' && isset($byGHIN[$ghin])) {
-                $contextPlayer = $byGHIN[$ghin];
+            $keyPairingGHIN = $pairingId . '_' . $ghin;
+
+            if ($ghin !== '' && isset($byPairingGHIN[$keyPairingGHIN])) {
+                $contextPlayer = $byPairingGHIN[$keyPairingGHIN];
 
                 $row['baselinePlayerKey'] = (string)($contextPlayer['baselinePlayerKey'] ?? '');
-                $row['baselineFlightID'] = (string)($contextPlayer['baselineFlightID'] ?? '');
+                $row['baselineFlightID']  = (string)($contextPlayer['baselineFlightID']  ?? '');
                 $row['baselinePairingID'] = (string)($contextPlayer['baselinePairingID'] ?? '');
 
                 $row['effectivePlayerKey'] = (string)($contextPlayer['effectivePlayerKey'] ?? '');
-                $row['effectiveFlightID'] = (string)($contextPlayer['effectiveFlightID'] ?? '');
+                $row['effectiveFlightID']  = (string)($contextPlayer['effectiveFlightID']  ?? '');
                 $row['effectivePairingID'] = (string)($contextPlayer['effectivePairingID'] ?? '');
-                $row['virtualFlightPos'] = (string)($contextPlayer['virtualFlightPos'] ?? '');
+                $row['virtualFlightPos']   = (string)($contextPlayer['virtualFlightPos']   ?? '');
 
                 // outward-friendly aliases for renderers
                 $row['pairingID'] = $row['effectivePairingID'];
-                $row['flightID'] = $row['effectiveFlightID'];
+                $row['flightID']  = $row['effectiveFlightID'];
                 $row['flightPos'] = $row['virtualFlightPos'];
             }
 
@@ -271,7 +284,6 @@ final class ServiceScoreCardRotation
 
         return $players;
     }
-
     private static function sortPlayersForContext(array $players): array
     {
         usort($players, static function (array $a, array $b): int {
