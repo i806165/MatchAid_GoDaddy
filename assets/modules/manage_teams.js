@@ -210,7 +210,6 @@
   // State B — full assignment view
   function _renderStateB() {
     const u = unassignedCount();
-    const summaryText = u > 0 ? `${u} unassigned` : "All players assigned";
     return `
       <div class="maModal__controls" id="mtTeamCfgStrip">
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
@@ -253,10 +252,7 @@
       </div>
       <footer class="maModal__ftr">
         <button type="button" class="maFtrBtn maFtrBtn--cancel" id="mtBtnCancel">Cancel</button>
-        <div class="maModal__ftrActions" style="flex:0 0 auto;">
-          <span id="mtSummaryText" class="gpSub">${esc(summaryText)}</span>
-          <button type="button" class="maFtrBtn maFtrBtn--save" id="mtBtnApply">Apply</button>
-        </div>
+        <button type="button" class="maFtrBtn maFtrBtn--save" id="mtBtnApply">Apply</button>
       </footer>`;
   }
 
@@ -449,8 +445,6 @@
     const subtitle = u > 0 ? `${n} Players — ${u} unassigned` : `${n} Players — All assigned`;
     const el = document.querySelector("#mtSubtitle");
     if (el) el.textContent = subtitle;
-    const summary = document.querySelector("#mtSummaryText");
-    if (summary) summary.textContent = u > 0 ? `${u} unassigned` : "All players assigned";
   }
 
   // ── Bulk actions ─────────────────────────────────────────────────────────────
