@@ -50,6 +50,7 @@
     ghinRows: [],
     ghinTruncated: false,
     ghinStatus: "",
+    rosterSort: "name",  // name | team | hi | ch
   };
 
   function isImportDesktopEnabled(){
@@ -571,9 +572,33 @@
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     MA.ui.openActionsMenu("Actions", [
+      { label: "Manage Teams",            action: onManageTeams },
       { label: "Recalculate Handicaps",   action: onRecalcHandicaps },
       { label: "Send Message to Players", action: onNotify },
     ]);
+  }
+
+  function onManageTeams() {
+    if (!MA.manageTeams || typeof MA.manageTeams.open !== "function") {
+      MA.setStatus("Manage Teams module not loaded.", "warn");
+      return;
+    }
+    MA.manageTeams.open({
+      players:    state.players,
+      teamConfig: (window.__MA_INIT__ || {}).teamConfig || null,
+      apiBase:    MA.paths?.apiGamePlayers || "/api/game_players",
+      onApply: ({ players, teamConfig }) => {
+        if (Array.isArray(players) && players.length) {
+          players.forEach(saved => {
+            const ghin = String(saved.dbPlayers_PlayerGHIN || saved.ghin || "");
+            const p = state.players.find(x => String(x.dbPlayers_PlayerGHIN || "") === ghin);
+            if (p) p.dbPlayers_TeamKey = String(saved.dbPlayers_TeamKey || saved.team || "");
+          });
+        }
+        if (window.__MA_INIT__) window.__MA_INIT__.teamConfig = teamConfig;
+        renderBody();
+      }
+    });
   }
 
   function onRecalcHandicaps() {
@@ -871,7 +896,28 @@
       const d = state.game?.dbGames_HCEffectivityDate || "Date";
       hcLabel = `HCP as of ${d}`;
     }
-    el.controls.innerHTML = `<div class="maFieldRow"><div class="maField"><div class="maHelpText">${esc(hcLabel)} • Tap ♥ to manage favorites.</div></div></div>`;
+
+    const sorts = [
+      { id: "name", label: "Name" },
+      { id: "team", label: "Team" },
+      { id: "hi",   label: "HI"   },
+      { id: "ch",   label: "CH"   },
+    ];
+    el.controls.innerHTML = `
+      <div class="maFieldRow" style="align-items:center; gap:10px;">
+        <div class="maSeg" style="flex:1;" role="group" aria-label="Sort roster by">
+          ${sorts.map(s => `<button class="maSegBtn ${state.rosterSort === s.id ? "is-active" : ""}" type="button" data-roster-sort="${esc(s.id)}">${esc(s.label)}</button>`).join("")}
+        </div>
+        <div class="maHelpText" style="flex:0 0 auto; white-space:nowrap;">${esc(hcLabel)}</div>
+      </div>`;
+
+    el.controls.querySelectorAll("[data-roster-sort]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        state.rosterSort = btn.dataset.rosterSort;
+        renderControls();
+        renderBody();
+      });
+    });
   }
 
   function renderBody(){
@@ -1230,7 +1276,23 @@ if (isExisting) {
     }
 
     const favoriteSet = new Set((state.favorites || []).map((f) => safe(f.playerGHIN)));
-    const rows = state.players.map((p) => {
+    const teamConfig = (window.__MA_INIT__ || {}).teamConfig || null;
+
+    const sortedPlayers = [...state.players].sort((a, b) => {
+      const s = state.rosterSort;
+      if (s === "hi") return (parseFloat(a.dbPlayers_HI) || 999) - (parseFloat(b.dbPlayers_HI) || 999);
+      if (s === "ch") return (parseFloat(a.dbPlayers_CH) || 999) - (parseFloat(b.dbPlayers_CH) || 999);
+      if (s === "team") {
+        const teamA = teamConfig ? ((teamConfig.teams || []).find(t => t.id === safe(a.dbPlayers_TeamKey))?.name || "zzz") : "zzz";
+        const teamB = teamConfig ? ((teamConfig.teams || []).find(t => t.id === safe(b.dbPlayers_TeamKey))?.name || "zzz") : "zzz";
+        const cmp = teamA.localeCompare(teamB);
+        if (cmp !== 0) return cmp;
+      }
+      // name — default and tiebreak for team sort
+      return safe(a.dbPlayers_LName + a.dbPlayers_Name).localeCompare(safe(b.dbPlayers_LName + b.dbPlayers_Name));
+    });
+
+    const rows = sortedPlayers.map((p) => {
       const ghin = safe(p.dbPlayers_PlayerGHIN);
       const isFav = favoriteSet.has(ghin);
       const hi = safe(p.dbPlayers_HI || "");
@@ -1238,7 +1300,9 @@ if (isExisting) {
       const ph = safe(p.dbPlayers_PH || "");
       const so = safe(p.dbPlayers_SO);
       const pairing = safe(p.dbPlayers_PairingID || "");
-      const meta = [hi && `HI ${hi}`, ch && `CH ${ch}`, ph && `PH ${ph}`, so && `SO ${so}`, pairing].filter(Boolean).join(" · ");
+      const teamKey  = safe(p.dbPlayers_TeamKey || "");
+      const teamName = teamKey && teamConfig ? (teamConfig.teams || []).find(t => t.id === teamKey)?.name || "" : "";
+      const meta = [hi && `HI ${hi}`, ch && `CH ${ch}`, ph && `PH ${ph}`, so && `SO ${so}`, pairing, teamName].filter(Boolean).join(" · ");
       const teeName = safe(p.dbPlayers_TeeSetName || "");
       const nameLine = teeName ? `${safe(p.dbPlayers_Name)} · ${teeName}` : safe(p.dbPlayers_Name);
 

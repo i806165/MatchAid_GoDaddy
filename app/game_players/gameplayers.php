@@ -44,6 +44,7 @@ try {
     "ggid" => $ggid,
     "game" => $game,
     "courseTeePayload" => $courseTeePayload,
+    "teamConfig" => !empty($game["dbGames_TeamConfig"]) ? json_decode((string)$game["dbGames_TeamConfig"], true) : null,
     "context" => [
       "userState" => (string)($_SESSION["SessionUserState"] ?? ""),
       "userGHIN" => (string)($_SESSION["SessionGHINLogonID"] ?? ""),
@@ -139,6 +140,7 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   <script src="/assets/js/ma_shared.js"></script>
   <script src="/assets/modules/ghin_player_search.js"></script>
   <script src="/assets/modules/actions_menu.js?v=1"></script>
+  <script src="/assets/modules/manage_teams.js?v=1"></script>
   <script src="/assets/modules/recalculate_handicaps.js"></script>
   <script src="/assets/modules/player_notifications.js?v=1"></script>
   <script src="/assets/modules/pageHelp.js?v=1"></script>
