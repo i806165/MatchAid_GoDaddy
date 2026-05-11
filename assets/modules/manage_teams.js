@@ -253,10 +253,8 @@
       </div>
       <footer class="maModal__ftr">
         <button type="button" class="maFtrBtn maFtrBtn--cancel" id="mtBtnCancel">Cancel</button>
-        <div style="display:flex; align-items:center; gap:10px;">
-          <span id="mtSummaryText" class="gpSub" style="white-space:nowrap;">
-            ${esc(summaryText)}
-          </span>
+        <div class="maModal__ftrActions" style="flex:0 0 auto;">
+          <span id="mtSummaryText" class="gpSub">${esc(summaryText)}</span>
           <button type="button" class="maFtrBtn maFtrBtn--save" id="mtBtnApply">Apply</button>
         </div>
       </footer>`;
@@ -354,6 +352,7 @@
     };
     inp1?.addEventListener("input", validate);
     inp2?.addEventListener("input", validate);
+    validate(); // run immediately — inputs already have default values on open
 
     btnCreate?.addEventListener("click", async () => {
       const n1 = safe(inp1?.value);
