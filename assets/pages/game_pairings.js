@@ -3,7 +3,7 @@
    - Hydrates from window.__MA_INIT__
    - Desktop: 2-panel (canvas + tray)
    - Mobile: 1-panel + inline tray toggle
-   - Persists to db_Players via /api/game_pairings/savePairings.php
+   - Persists to db_Players via api/game_pairings/savePairings.php
 */
 (function () {
   "use strict";
