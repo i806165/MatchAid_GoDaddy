@@ -904,11 +904,12 @@
       { id: "ch",   label: "CH"   },
     ];
     el.controls.innerHTML = `
-      <div class="maFieldRow" style="align-items:center; gap:10px;">
-        <div class="maSeg" style="flex:1;" role="group" aria-label="Sort roster by">
-          ${sorts.map(s => `<button class="maSegBtn ${state.rosterSort === s.id ? "is-active" : ""}" type="button" data-roster-sort="${esc(s.id)}">${esc(s.label)}</button>`).join("")}
+      <div class="maFieldRow" style="align-items:center; gap:8px;">
+        <span style="font-size:11px; font-weight:500; color:var(--mutedText); white-space:nowrap;">Sort:</span>
+        <div style="display:flex; gap:4px; background:var(--surfaceApp); border-radius:var(--radiusMd); padding:2px;" role="group" aria-label="Sort roster by">
+          ${sorts.map(s => `<button class="maSeg--sortBtn ${state.rosterSort === s.id ? "is-active" : ""}" type="button" data-roster-sort="${esc(s.id)}">${esc(s.label)}</button>`).join("")}
         </div>
-        <div class="maHelpText" style="flex:0 0 auto; white-space:nowrap;">${esc(hcLabel)}</div>
+        <div class="maHelpText" style="flex:0 0 auto; white-space:nowrap; margin-left:auto;">${esc(hcLabel)}</div>
       </div>`;
 
     el.controls.querySelectorAll("[data-roster-sort]").forEach(btn => {

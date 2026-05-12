@@ -687,3 +687,119 @@
   border-color: color-mix(in srgb, var(--brandColor3) 35%, transparent);
   background: color-mix(in srgb, var(--brandColor3) 8%, white);
 }
+
+/* ==========================================================================
+   ADDITIONS TO game_players.css
+   Add after the existing .gpRow--ghin block (around line 83).
+   ========================================================================== */
+
+
+/* ---------- Teams roster row ---------------------------------------------
+   Three-column grid matching the module's layout:
+     [avatar 30px] | [name + subline, fluid] | [badge group, auto]
+   Follows the same grid + gap + padding conventions as gpRow--roster/favs.
+   ------------------------------------------------------------------------- */
+
+.gpRow--teams {
+  display: grid;
+  grid-template-columns: 30px minmax(0,1fr) auto;
+  align-items: center;
+  column-gap: 8px;
+  padding: 8px;
+}
+
+
+/* ---------- Avatar circle -----------------------------------------------
+   Initials circle shown in the teams roster row.
+   Page-scoped (gp prefix) since it only appears on the game players page.
+   ------------------------------------------------------------------------- */
+
+.gpAvatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--brandPrimary) 10%, white);
+  color: var(--brandPrimary);
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+
+/* ---------- gpSub modifier — indented past swatch -----------------------
+   Used under team name inputs to indent the player count label
+   past the 10px swatch + 8px gap = 18px total.
+   ------------------------------------------------------------------------- */
+
+.gpSub--indented {
+  padding-left: 18px;
+}
+
+
+/* ---------- Read-only team badge — Roster tab display -------------------
+   Small pill shown on each player row on the main Roster tab.
+   Clicking it opens the Manage Teams module (v1; mini-modal deferred).
+   Color variants parallel .maTeamBadge but at a smaller size since
+   this is display-only, not interactive in the same way.
+   ------------------------------------------------------------------------- */
+
+.gpTeamBadge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: var(--pillRadius);
+  border: 1px solid;
+  line-height: 1.4;
+  white-space: nowrap;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+.gpTeamBadge--red {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
+  background: color-mix(in srgb, var(--danger) 8%, white);
+}
+
+.gpTeamBadge--blue {
+  color: var(--brandColor3);
+  border-color: color-mix(in srgb, var(--brandColor3) 35%, transparent);
+  background: color-mix(in srgb, var(--brandColor3) 8%, white);
+}
+
+
+/* ---------- Sort strip button — Option C secondary sort control ----------
+   Lighter, smaller variant used on the roster sort strip.
+   Sits inside a surfaceApp-coloured container for visual separation
+   from the primary maSeg tab strip above it.
+   --------------------------------------------------------------------- */
+
+.maSeg--sortBtn {
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--mutedText);
+  background: transparent;
+  border: none;
+  border-radius: var(--radiusMd);
+  cursor: pointer;
+  font-family: var(--fontFamilyBase);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.maSeg--sortBtn.is-active {
+  background: var(--surface);
+  color: var(--ink);
+  border: 0.5px solid var(--borderSubtle);
+}
+
+.maSeg--sortBtn:hover:not(.is-active) {
+  color: var(--ink);
+}
