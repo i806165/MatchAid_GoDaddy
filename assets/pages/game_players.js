@@ -379,7 +379,11 @@
             last_name:  safe(nm.last),
             name:       safe(r.playerName || ""),
             gender:     safe(r.gender || ""),
-            hi:         safe(r.hi || "")
+            hi:         safe(r.hi || ""),
+            // Team key — stable slot ID ('T1'/'T2'/'') carried from source game.
+            // Display name resolves at render time from destination game's teamConfig.
+            // Dormant if destination game has no teamConfig; never causes harm.
+            teamKey:    safe(r.dbPlayers_TeamKey || "")
           },
           sourceTeeId:       safe(r.sourceTeeId || ""),
           sourceTeeText:     safe(r.sourceTeeText || ""),
@@ -1646,11 +1650,13 @@ async function evaluateImportRows(){
 
         const p = row.player || buildEmptyImportPlayer();
         const player = {
-          ghin: safe(p.ghin),
+          ghin:       safe(p.ghin),
           first_name: safe(p.first_name),
-          last_name: safe(p.last_name),
-          gender: safe(p.gender),
-          hi: safe(p.hi)
+          last_name:  safe(p.last_name),
+          gender:     safe(p.gender),
+          hi:         safe(p.hi),
+          // teamKey carried from source game for existing-game imports; empty for all other paths.
+          teamKey:    safe(p.teamKey || "")
         };
 
         const res = await MA.postJson(MA.paths.gamePlayersUpsert, { player, selectedTee });

@@ -106,6 +106,10 @@ final class WorkflowProcessPlayers
       "dbPlayers_FlightID"     => (string)($existing["dbPlayers_FlightID"]   ?? ""),
       "dbPlayers_FlightPos"    => (string)($existing["dbPlayers_FlightPos"]  ?? ""),
       "dbPlayers_PlayerKey"    => (string)($existing["dbPlayers_PlayerKey"]  ?? ""),
+      // Team key: caller-supplied value takes priority (copy-from-game carries source team assignment).
+      // Falls back to existing row value on re-enrollment so team is never overwritten by a tee update.
+      // Empty string = unassigned — safe default if neither source is present.
+      "dbPlayers_TeamKey"      => trim((string)($playerInput["teamKey"] ?? $existing["dbPlayers_TeamKey"] ?? "")),
       "dbPlayers_Gender"       => $gender,
       "dbPlayers_CreatorID"    => $creatorGHIN,
       "dbPlayers_CreatorName"  => $creatorName,
