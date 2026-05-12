@@ -1,5 +1,5 @@
 /* /assets/pages/game_players.js
-   Game Players page controller (GoDaddy).
+   Game Players page controller
    - Hydrates from window.__MA_INIT__
 */
 (function(){
