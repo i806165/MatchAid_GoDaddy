@@ -1447,7 +1447,7 @@
 
     if (allSame && teamNames[0]) {
       const names = players.map(p => p.lname || p.name).join(", ");
-      return `${prefix} • ${names} ${teamNames[0]}`;
+      return `${prefix} • ${teamNames[0]} • ${names}`;
     }
 
     const parts = players.map((p, i) => {
@@ -1471,7 +1471,7 @@
       const sumPH = phVals.reduce((a, b) => a + b, 0);
       const avgPH = phVals.length ? (sumPH / phVals.length).toFixed(1) : "0.0";
       const pairingLabel = formatPairingLabel(team.pairingId, rows);
-      info = `${label} • Sum ${sumPH} • Avg ${avgPH} • ${pairingLabel}`;
+      info = `${label} • Avg ${avgPH} • ${pairingLabel}`;
     } else {
       info = `${label} (Empty)`;
     }
