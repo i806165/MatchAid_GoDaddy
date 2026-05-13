@@ -34,8 +34,14 @@ function be_importGames(
     $privacy = trim((string)($defaults["privacy"] ?? "Club"))   ?: "Club";
 
     $pdo = \Db::pdo();
+    // Merge selected admin identity into sessionCtx so applyDefaultsForAdd
+    // stamps the correct admin on every imported game, not the session user.
+    $sessionCtx["adminGhin"]      = trim((string)($admin["ghin"]      ?? ""));
+    $sessionCtx["adminName"]      = trim((string)($admin["name"]      ?? ""));
+    $sessionCtx["adminAssocId"]   = trim((string)($admin["assocId"]   ?? ""));
+    $sessionCtx["adminAssocName"] = trim((string)($admin["assocName"] ?? ""));
+    
     $pdo->beginTransaction();
-
     $results  = [];
     $inserted = 0;
 
