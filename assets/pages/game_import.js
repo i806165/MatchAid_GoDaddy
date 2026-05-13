@@ -157,7 +157,6 @@
     document.getElementById("igPasteCard").style.display  = isEval ? "" : "none";
     document.getElementById("igReviewCard").style.display = isEval ? "none" : "";
     
-    el.reviewPanel.style.display = isEval ? "none" : "";
     // Chrome buttons
     chrome.setActions({
       left: {
