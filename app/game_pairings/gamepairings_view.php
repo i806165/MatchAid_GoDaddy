@@ -18,7 +18,7 @@
               <span class="gpCount" id="gpUnpairedCount"></span>
               <button class="maBtn maBtn--sm" type="button" id="gpBtnAssignToPairing">Assign &gt;&gt;</button>
             </div>
-            <div class="gpPanelHdr__title">Unpaired</div>
+            <div class="gpPanelHdr__title">Unpaired Players</div>
             <div class="gpPanelHdr__left gpMobileCloseBtn">
               <button class="iconBtn btnSecondary" type="button" aria-label="Close Tray">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -64,7 +64,7 @@
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
               </button>
             </div>
-            <div class="gpPanelHdr__title">Pairings</div>
+            <div class="gpPanelHdr__title">Paired Players</div>
             <div class="gpPanelHdr__actions"></div>
           </div>
         </header>
@@ -99,7 +99,7 @@
               <span class="gpCount" id="gpUnmatchedCount"></span>
               <button class="maBtn maBtn--sm" type="button" id="gpBtnAssignToFlight">Assign &gt;&gt;</button>
             </div>
-            <div class="gpPanelHdr__title">Unmatched</div>
+            <div class="gpPanelHdr__title">Un-Matched Pairings</div>
             <div class="gpPanelHdr__left gpMobileCloseBtn">
               <button class="iconBtn btnSecondary" type="button" aria-label="Close Tray">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -138,7 +138,7 @@
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
               </button>
             </div>
-            <div class="gpPanelHdr__title">Matches</div>
+            <div class="gpPanelHdr__title">Match-Ups</div>
             <div class="gpPanelHdr__actions"></div>
           </div>
         </header>
