@@ -30,43 +30,44 @@
 <!-- Cards -->
 <div class="maCards" id="igCards">
 
-  <!-- CARD — IMPORT -->
-  <section class="maCard" aria-label="Import Games">
-    <header class="maCard__hdr">
-      <div class="maCard__title">IMPORT GAMES</div>
-      <div class="maCard__actions"></div>
+  <!-- CARD — PASTE (shown on load) -->
+  <section class="maCard" id="igPasteCard" aria-label="Game Meta Data">
+    <header class="maCard__hdr igCard__hdr--tall">
+      <div class="igCard__hdrLeft">
+        <div class="maCard__title">GAME META DATA</div>
+        <div class="igCard__hint">MM/DD/YYYY, HH:MM AM, Course Name, No. of Tee Times &mdash; one line per game, comma separated</div>
+      </div>
+      <div class="maCard__actions">
+        <button type="button" class="btn btnSecondary" id="igBtnEvaluate">Evaluate</button>
+      </div>
     </header>
 
     <div class="maCard__body">
-
-      <div class="maField">
-        <label class="maLabel" for="igRows">
-          Paste games (one per line): MM/DD/YYYY, HH:MM AM, Course Name, TeeTimeCnt
-        </label>
-        <textarea id="igRows" class="maTextArea" rows="8" placeholder="02/15/2026, 08:00 AM, Bethpage Black, 18"></textarea>
-      </div>
-
-      <!-- Review/Import Mode -->
-      <div id="igReviewPanel" style="display:none; margin-top:16px;">
-        <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; margin-bottom:10px;">
-          <div class="maLabel" style="margin:0;">Review &amp; Import</div>
-          <div style="display:flex; gap:10px;">
-            <button type="button" class="btn btnSecondary" id="igBtnRetry">Retry</button>
-            <button type="button" class="btn btnPrimary" id="igBtnImport">Import</button>
-          </div>
-        </div>
-
-        <div class="maListRows" style="border:1px solid var(--cardBorder); border-radius:12px; overflow:hidden;">
-          <div style="display:grid; grid-template-columns:56px 120px 100px 1fr 90px 90px; gap:10px;
-                      padding:10px 12px; background:var(--cardHdrBg); font-weight:600; font-size:12px;">
-            <div>#</div><div>Date</div><div>Time</div><div>Course</div><div>Tee Cnt</div><div>Status</div>
-          </div>
-          <div id="igPreviewRows"></div>
-        </div>
-
-        <div class="gmHint" id="igImportHint" style="margin-top:10px;"></div>
-      </div>
-
+      <textarea id="igRows" class="maTextArea" rows="8" placeholder="02/15/2026, 08:00 AM, Bethpage Black, 18"></textarea>
     </div>
   </section>
+
+  <!-- CARD — REVIEW (shown after Evaluate) -->
+  <section class="maCard" id="igReviewCard" aria-label="Review and Import" style="display:none;">
+    <header class="maCard__hdr">
+      <div class="maCard__title">REVIEW &amp; IMPORT</div>
+      <div class="maCard__actions">
+        <button type="button" class="btn btnPrimary" id="igBtnRetry">Retry</button>
+        <button type="button" class="btn btnSecondary" id="igBtnImport">Import</button>
+      </div>
+    </header>
+
+    <div class="maCard__body">
+      <div class="maListRows" style="border:1px solid var(--cardBorder); border-radius:12px; overflow:hidden;">
+        <div style="display:grid; grid-template-columns:56px 120px 100px 1fr 90px 90px; gap:10px;
+                    padding:10px 12px; background:var(--cardHdrBg); font-weight:600; font-size:12px;">
+          <div>#</div><div>Date</div><div>Time</div><div>Course</div><div>Tee Cnt</div><div>Status</div>
+        </div>
+        <div id="igPreviewRows"></div>
+      </div>
+
+      <div class="gmHint" id="igImportHint" style="margin-top:10px;"></div>
+    </div>
+  </section>
+
 </div>

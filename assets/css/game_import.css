@@ -2,11 +2,12 @@
    game_import.css
    ========================================================================== */
 
-/* Card header branding */
+/* Card header branding (Removed)
 .maCard__hdr {
   color: var(--brandSecondaryText);
   background: var(--brandSecondary);
 }
+*/
 
 /* Textarea full width */
 #rowsText,

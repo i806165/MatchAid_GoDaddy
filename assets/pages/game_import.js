@@ -27,16 +27,15 @@
 
   // ---- DOM ----
   const el = {
-    title: document.getElementById("igTitle"),
-    adminSel: document.getElementById("igAdminSel"),
-    rows: document.getElementById("igRows"),
+    title:        document.getElementById("igTitle"),
+    adminSel:     document.getElementById("igAdminSel"),
+    rows:         document.getElementById("igRows"),
     confirmedRow: document.getElementById("igConfirmedRow"),
-
-    reviewPanel: document.getElementById("igReviewPanel"),
-    btnRetry: document.getElementById("igBtnRetry"),
-    btnImport: document.getElementById("igBtnImport"),
-    previewRows: document.getElementById("igPreviewRows"),
-    importHint: document.getElementById("igImportHint"),
+    btnEvaluate:  document.getElementById("igBtnEvaluate"),
+    btnRetry:     document.getElementById("igBtnRetry"),
+    btnImport:    document.getElementById("igBtnImport"),
+    previewRows:  document.getElementById("igPreviewRows"),
+    importHint:   document.getElementById("igImportHint"),
   };
 
   // ---- State ----
@@ -153,10 +152,12 @@
   // ---- UI mode ----
   function setMode(mode) {
     state.mode = mode;
-
     const isEval = mode === "evaluate";
+    // Swap cards
+    document.getElementById("igPasteCard").style.display  = isEval ? "" : "none";
+    document.getElementById("igReviewCard").style.display = isEval ? "none" : "";
+    
     el.reviewPanel.style.display = isEval ? "none" : "";
-
     // Chrome buttons
     chrome.setActions({
       left: {
@@ -427,7 +428,7 @@
   }
 
   function bind() {
-    // Wire confirmation toggle
+    // Confirmed/Tentative toggle
     if (el.confirmedRow) {
       el.confirmedRow.addEventListener("click", (e) => {
         const btn = e.target.closest(".igChoiceBtn");
@@ -437,12 +438,16 @@
       });
     }
 
-    el.btnRetry?.addEventListener("click", () => {
-      // Retry keeps inputs intact; returns to Evaluate mode
+    document.getElementById("igBtnEvaluate")?.addEventListener("click", () => {
+      if (!state.busy) onEvaluate();
+    });
+
+    document.getElementById("igBtnRetry")?.addEventListener("click", () => {
       setMode("evaluate");
       setStatus("Edit rows and evaluate again.", "info");
     });
-    el.btnImport?.addEventListener("click", onImport);
+
+    document.getElementById("igBtnImport")?.addEventListener("click", onImport);
   }
 
   // ---- boot ----
