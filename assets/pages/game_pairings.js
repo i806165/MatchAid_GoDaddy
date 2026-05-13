@@ -1215,9 +1215,11 @@
 
       const body = rows.map(p => {
         const safeGHIN = esc(p.playerGHIN);
-        // Row Info: TeeSet Name, HI:#, CH:#, PH:# SO:#
+        // Row Info: Name, Team (if teamConfig), TeeSet, HI:#, CH:#, PH:#, SO:#
+        const teamName = state.teamConfig ? resolveTeamName(p.team, state.teamConfig) : "";
         const info = [
           p.name,
+          teamName,
           p.teeSetName,
           p.hi ? `HI:${p.hi}` : "",
           p.ch ? `CH:${p.ch}` : "",
@@ -1270,27 +1272,29 @@
     const q = String(el.unpairedSearch?.value || "").trim().toLowerCase();
 
     if (!host) return;
-    const rows = state.players
+
+    const unpaired = state.players
       .filter(p => String(p.pairingId || "000") === "000")
-      .filter(p => !q || String(p.name || "").toLowerCase().includes(q) || String(p.playerGHIN).includes(q))
-      .sort((a, b) => {
-        if (state.sortMode === "hi") return (parseFloat(a.hi) - parseFloat(b.hi)) || a.name.localeCompare(b.name);
-        if (state.sortMode === "ch") return (parseInt(a.ch) - parseInt(b.ch)) || a.name.localeCompare(b.name);
-        if (state.sortMode === "so") return (parseInt(a.so) - parseInt(b.so)) || a.name.localeCompare(b.name);
-        return String(a.lname).localeCompare(String(b.lname)) || String(a.name).localeCompare(String(b.name));
-      });
+      .filter(p => !q || String(p.name || "").toLowerCase().includes(q) || String(p.playerGHIN).includes(q));
 
-    if (countEl) countEl.textContent = `${rows.length}`;
+    if (countEl) countEl.textContent = `${unpaired.length}`;
 
-    host.innerHTML = rows.map(p => {
+    // Sort comparator — used within each group
+    const sortCmp = (a, b) => {
+      if (state.sortMode === "hi") return (parseFloat(a.hi) - parseFloat(b.hi)) || a.name.localeCompare(b.name);
+      if (state.sortMode === "ch") return (parseInt(a.ch) - parseInt(b.ch)) || a.name.localeCompare(b.name);
+      if (state.sortMode === "so") return (parseInt(a.so) - parseInt(b.so)) || a.name.localeCompare(b.name);
+      return String(a.lname).localeCompare(String(b.lname)) || String(a.name).localeCompare(String(b.name));
+    };
+
+    // Row renderer — shared by grouped and flat paths
+    const renderRow = (p) => {
       const sel = state.selectedPlayerGHINs.has(String(p.playerGHIN));
       const cls = sel ? "maListRow is-selected" : "maListRow";
-      const checkHtml = sel 
+      const checkHtml = sel
         ? `<div class="gpRowCheck is-selected"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>`
         : `<div class="gpRowCheck"></div>`;
-      
-      // Unpaired List: TeeSet Name, HI:#, CH:#, PH:# SO:# separated by dot
-      // Desktop: All on 1 line. Mobile: Player+TeeSet line 1, rest line 2.
+
       const stats = [
         p.hi ? `HI:${p.hi}` : "",
         p.ch ? `CH:${p.ch}` : "",
@@ -1298,19 +1302,56 @@
         p.so ? `SO:${p.so}` : ""
       ].filter(Boolean).join(" • ");
 
+      // Team name: inserted between player name and tee set name when teamConfig is active
+      const teamName = state.teamConfig ? resolveTeamName(p.team, state.teamConfig) : "";
+      const primaryParts = [esc(p.name), teamName ? esc(teamName) : "", esc(p.teeSetName)].filter(Boolean).join(" • ");
+
       return `
         <div class="${cls}" data-action="selectUnpaired" data-ghin="${esc(p.playerGHIN)}">
           ${checkHtml}
           <div class="gpUnpairedItem">
-            <div class="gpUnpairedItem__primary">
-              ${esc(p.name)} • ${esc(p.teeSetName)}
-            </div>
+            <div class="gpUnpairedItem__primary">${primaryParts}</div>
             <div class="gpUnpairedItem__secondary">
               <span class="gpUnpairedSep">•</span> ${esc(stats)}
             </div>
           </div>
         </div>`;
-    }).join("");
+    };
+
+    // Group header renderer
+    const renderGroupHeader = (label, count) =>
+      `<div style="padding:4px 10px; font-size:11px; font-weight:800; color:var(--mutedText); background:var(--surfaceApp); border-bottom:1px solid var(--borderSubtle);">${esc(label)} — ${count} player${count !== 1 ? "s" : ""}</div>`;
+
+    if (!state.teamConfig) {
+      // No teams — flat sorted list, same as before
+      host.innerHTML = [...unpaired].sort(sortCmp).map(renderRow).join("");
+      return;
+    }
+
+    // Teams active — group: Unassigned first, then teams sorted by name
+    const unassigned = unpaired.filter(p => !p.team).sort(sortCmp);
+
+    const teamGroups = [...state.teamConfig.teams]
+      .sort((a, b) => String(a.name).localeCompare(String(b.name)))
+      .map(t => ({
+        label: t.name,
+        players: unpaired.filter(p => p.team === t.id).sort(sortCmp)
+      }));
+
+    let html = "";
+
+    if (unassigned.length) {
+      html += renderGroupHeader("Unassigned", unassigned.length);
+      html += unassigned.map(renderRow).join("");
+    }
+
+    teamGroups.forEach(g => {
+      if (!g.players.length) return;
+      html += renderGroupHeader(g.label, g.players.length);
+      html += g.players.map(renderRow).join("");
+    });
+
+    host.innerHTML = html || `<div class="maEmpty">No unpaired players.</div>`;
   }
 
   // ---- Matches tab UI ----

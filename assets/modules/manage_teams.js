@@ -474,7 +474,7 @@
 
   async function _saveTeamConfig(teams) {
     if (_busy) return;
-    _busy = true; _setBusy(true);
+    _busy = true; _showBusy("Saving team configuration...");
     try {
       const res = await MA.postJson(apiPath("saveTeamConfig.php"), { teams });
       if (!res?.ok) { MA.setStatus(res?.message || "Unable to save team configuration.", "danger"); return; }
@@ -484,12 +484,12 @@
     } catch (e) {
       console.error("[MA.manageTeams]", e);
       MA.setStatus("Error saving team configuration.", "danger");
-    } finally { _busy = false; _setBusy(false); }
+    } finally { _busy = false; _hideBusy(); }
   }
 
   async function _applyChanges() {
     if (_busy) return;
-    _busy = true; _setBusy(true);
+    _busy = true; _showBusy("Saving teams...");
     try {
       const configRes = await MA.postJson(apiPath("saveTeamConfig.php"), { teams: _teamConfig?.teams || [] });
       if (!configRes?.ok) { MA.setStatus(configRes?.message || "Unable to save team names.", "danger"); return; }
@@ -507,7 +507,7 @@
     } catch (e) {
       console.error("[MA.manageTeams]", e);
       MA.setStatus("Error saving teams.", "danger");
-    } finally { _busy = false; _setBusy(false); }
+    } finally { _busy = false; _hideBusy(); }
   }
 
   function _confirmResetTeams() {
@@ -518,7 +518,7 @@
 
   async function _resetTeams() {
     if (_busy) return;
-    _busy = true; _setBusy(true);
+    _busy = true; _showBusy("Resetting teams...");
     try {
       const configRes = await MA.postJson(apiPath("saveTeamConfig.php"), { teams: [] });
       if (!configRes?.ok) { MA.setStatus(configRes?.message || "Unable to reset teams.", "danger"); return; }
@@ -538,16 +538,37 @@
     } catch (e) {
       console.error("[MA.manageTeams]", e);
       MA.setStatus("Error resetting teams.", "danger");
-    } finally { _busy = false; _setBusy(false); }
+    } finally { _busy = false; _hideBusy(); }
   }
 
-  function _setBusy(on) {
-    const overlay = document.getElementById(OVERLAY_ID);
-    if (!overlay) return;
-    ["#mtBtnApply", "#mtBtnCreate", "#mtBtnSplitHC", "#mtBtnRandom"].forEach(sel => {
-      const btn = overlay.querySelector(sel);
-      if (btn) btn.disabled = !!on;
-    });
+  const BUSY_ID = "maManageTeamsBusy";
+
+  function _showBusy(message) {
+    let el = document.getElementById(BUSY_ID);
+    if (!el) {
+      el = document.createElement("div");
+      el.id = BUSY_ID;
+      el.className = "maModalOverlay is-open";
+      el.innerHTML = `
+        <section class="maModal" role="dialog" aria-modal="true" aria-labelledby="mtBusyTitle">
+          <header class="maModal__hdr">
+            <div id="mtBusyTitle" class="maModal__title">Working</div>
+          </header>
+          <div class="maModal__body">
+            <div id="mtBusyMessage" class="maHelpText" style="padding:16px 0;"></div>
+          </div>
+        </section>`;
+      document.body.appendChild(el);
+    } else {
+      el.className = "maModalOverlay is-open";
+    }
+    const msg = document.getElementById("mtBusyMessage");
+    if (msg) msg.textContent = message || "Processing...";
+  }
+
+  function _hideBusy() {
+    const el = document.getElementById(BUSY_ID);
+    if (el) el.className = "maModalOverlay";
   }
 
   window.MA = MA;
