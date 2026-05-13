@@ -1382,12 +1382,12 @@
       ].filter(Boolean).join(" • ");
 
       // New summary title for collapsed view
-      const teamANames = teamA.names.join(", ");
-      const teamBNames = teamB.names.join(", ");
+      const teamANames = teamA.pairingId ? formatPairingLabel(teamA.pairingId, playersInPairing(teamA.pairingId)) : "";
+      const teamBNames = teamB.pairingId ? formatPairingLabel(teamB.pairingId, playersInPairing(teamB.pairingId)) : "";
       let summaryTitle = `Match ${esc(fid)}: `;
-      if (teamANames) summaryTitle += `Team A: ${esc(teamANames)}`;
+      if (teamANames) summaryTitle += `Side A: ${esc(teamANames)}`;
       if (teamANames && teamBNames) summaryTitle += " vs. ";
-      if (teamBNames) summaryTitle += `Team B: ${esc(teamBNames)}`;
+      if (teamBNames) summaryTitle += `Side B: ${esc(teamBNames)}`;
 
       // SVG Icons
       const iconMinus = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
@@ -1430,10 +1430,37 @@
     return { pairingId: pid, count: list.length, names: list.map(p => p.name) };
   }
 
+  // Formats: "Pair-3 • Smith, Jones Eagles" (all same team) or
+  //          "Pair-3 • Smith Eagles, Jones Hawks" (mixed)
+  // Falls back to no team suffix when teamConfig is null.
+  function formatPairingLabel(pairingId, players) {
+    const pid = parseInt(pairingId, 10);
+    const prefix = `Pair-${pid}`;
+    if (!players.length) return prefix;
+
+    if (!state.teamConfig) {
+      return `${prefix} • ${players.map(p => p.lname || p.name).join(", ")}`;
+    }
+
+    const teamNames = players.map(p => resolveTeamName(p.team, state.teamConfig));
+    const allSame = teamNames.every(t => t && t === teamNames[0]);
+
+    if (allSame && teamNames[0]) {
+      const names = players.map(p => p.lname || p.name).join(", ");
+      return `${prefix} • ${names} ${teamNames[0]}`;
+    }
+
+    const parts = players.map((p, i) => {
+      const name = p.lname || p.name;
+      return teamNames[i] ? `${name} ${teamNames[i]}` : name;
+    });
+    return `${prefix} • ${parts.join(", ")}`;
+  }
+
   function renderTeamSlot(flightId, flightPos, team) {
     const isTarget = (state.targetFlightId === String(flightId) && state.targetFlightPos === String(flightPos));
-    const label = flightPos === "A" ? "Team A" : "Team B";
-    
+    const label = flightPos === "A" ? "Side A" : "Side B";
+
     let info = label;
     let hasPairing = false;
 
@@ -1443,8 +1470,8 @@
       const phVals = rows.map(p => parseInt(p.ph || "0", 10)).filter(n => !isNaN(n));
       const sumPH = phVals.reduce((a, b) => a + b, 0);
       const avgPH = phVals.length ? (sumPH / phVals.length).toFixed(1) : "0.0";
-      const names = rows.map(p => p.lname).join(", ");
-      info = `${label} • Group ${team.pairingId} • Sum ${sumPH} • Avg ${avgPH} • ${names}`;
+      const pairingLabel = formatPairingLabel(team.pairingId, rows);
+      info = `${label} • Sum ${sumPH} • Avg ${avgPH} • ${pairingLabel}`;
     } else {
       info = `${label} (Empty)`;
     }
@@ -1467,11 +1494,8 @@
 
     const unmatchedPairingIds = getUnmatchedPairingIds();
     const rows = unmatchedPairingIds
-      .map(pid => ({
-        pairingId: pid,
-        names: playersInPairing(pid).map(p => p.name)
-      }))
-      .filter(r => !q || String(r.pairingId).includes(q) || r.names.join(" ").toLowerCase().includes(q))
+      .map(pid => ({ pairingId: pid, players: playersInPairing(pid) }))
+      .filter(r => !q || String(r.pairingId).includes(q) || r.players.map(p => p.name + " " + p.lname).join(" ").toLowerCase().includes(q))
       .sort((a, b) => parseInt(a.pairingId, 10) - parseInt(b.pairingId, 10));
 
     if (countEl) countEl.textContent = `${rows.length}`;
@@ -1479,14 +1503,14 @@
     host.innerHTML = rows.map(r => {
       const sel = state.selectedPairingIds.has(String(r.pairingId));
       const cls = sel ? "maListRow is-selected" : "maListRow";
-      const checkHtml = sel 
+      const checkHtml = sel
         ? `<div class="gpRowCheck is-selected"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></div>`
         : `<div class="gpRowCheck"></div>`;
+      const label = formatPairingLabel(r.pairingId, r.players);
       return `
         <div class="${cls}" data-action="selectUnmatched" data-pairing-id="${esc(r.pairingId)}">
           ${checkHtml}
-          <div class="maListRow__col">Pairing ${esc(r.pairingId)}</div>
-          <div class="maListRow__col maListRow__col--muted">${esc(r.names.slice(0, 2).join(", "))}${r.names.length > 2 ? "…" : ""}</div>
+          <div class="maListRow__col">${esc(label)}</div>
         </div>`;
     }).join("");
   }
@@ -1722,7 +1746,7 @@
       isNew = true;
     }
 
-    if (!isNew && !fp) return setStatus("Tap a match slot (Team A/B) first.", "warn");
+    if (!isNew && !fp) return setStatus("Tap a match slot (Side A/B) first.", "warn");
 
     // If targeting specific slot, enforce single selection
     if (!isNew && state.selectedPairingIds.size > 1) {
@@ -1769,7 +1793,7 @@
       // Single assignment
       doAssign(pids[0], fp);
       if (isNew) {
-        setStatus(`Created Match ${fid}. Assigned Pairing ${pids[0]} to Team A.`, "success");
+        setStatus(`Created Match ${fid}. Assigned Pairing ${pids[0]} to Side A.`, "success");
         // Auto-advance to B for convenience
         state.targetFlightId = fid;
         state.targetFlightPos = "B";
