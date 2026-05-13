@@ -156,8 +156,9 @@
     // Swap cards
     document.getElementById("igPasteCard").style.display  = isEval ? "" : "none";
     document.getElementById("igReviewCard").style.display = isEval ? "none" : "";
-    
-    // Chrome buttons
+
+    /*    
+    // Chrome buttons removed on this page
     chrome.setActions({
       left: {
         show: false,
@@ -181,7 +182,8 @@
         }
       }
     });
-
+    */
+    
     // optional header lines
     chrome.setHeaderLines(["Import Games", isEval ? "Evaluate" : "Review & Import", ""]);
     applyBottomNav();
