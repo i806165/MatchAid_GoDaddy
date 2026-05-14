@@ -71,7 +71,8 @@
                 <th class="gsCenter">Time</th>
                 <th class="gsCenter">Start</th>
                 <th class="gsCenter col-match">Match</th>
-                <th class="gsCenter col-flightpos">Team</th>
+                <th class="gsCenter col-flightpos">Side</th>
+                <th class="gsCenter col-team">Team</th>
                 <th class="gsCenter">Pair</th>
                 <th class="gsCenter">Pos</th>
                 <th class="gsCenter gsMono" id="gsScoreIdHeader">GroupID</th>

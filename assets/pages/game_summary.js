@@ -345,7 +345,7 @@
     const stats = `Avg HI: ${avgHI} · CH: ${avgCH} · PH: ${avgPH}`;
 
     if (isPairPairCompetition()) {
-      return `<strong>Match ${esc(group.flightId)} · Team ${esc(group.flightPos)} · Pair ${esc(group.pairingId)}</strong> <span class="gsHdrMeta">· ${stats}</span>`;
+      return `<strong>Match ${esc(group.flightId)} · Side ${esc(group.flightPos)} · Pair ${esc(group.pairingId)}</strong> <span class="gsHdrMeta">· ${stats}</span>`;
     }
     return `<strong>Pairing ${esc(group.pairingId)}</strong> <span class="gsHdrMeta">· ${stats}</span>`;
   }
@@ -461,6 +461,7 @@
         const start = valueOrDash(getFormattedStartHole(p));
         const flight = valueOrDash(p.dbPlayers_FlightID);
         const fPos = valueOrDash(p.dbPlayers_FlightPos);
+        const teamKey = valueOrDash(p.dbPlayers_TeamKey);
         const pair = valueOrDash(p.dbPlayers_PairingID);
         const pos = valueOrDash(p.dbPlayers_PairingPos);
         const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
@@ -477,6 +478,7 @@
             "<td class=\"gsCenter gsMono\">" + esc(start) + "</td>" +
             "<td class=\"gsCenter gsMono col-match\">" + esc(flight) + "</td>" +
             "<td class=\"gsCenter gsMono col-flightpos\">" + esc(fPos) + "</td>" +
+            "<td class=\"gsCenter gsMono col-team\">" + esc(teamKey) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(pair) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(pos) + "</td>" +
             "<td class=\"gsCenter gsMono\"><a class=\"gsScoreLink\" href=\"#\" data-scoreid=\"" + esc(scoreId) + "\">" + esc(scoreId) + "</a></td>" +
@@ -501,6 +503,7 @@
 
         const flight = valueOrDash(p.dbPlayers_FlightID);
         const fPos = valueOrDash(p.dbPlayers_FlightPos);
+        const teamKey = valueOrDash(p.dbPlayers_TeamKey);
         const pair = valueOrDash(p.dbPlayers_PairingID);
         const pos = valueOrDash(p.dbPlayers_PairingPos);
 
@@ -523,7 +526,8 @@
             '</div>' +
             '<div class="gsLine4">' +
               '<div class="gsMetaItem col-match">Match ' + esc(flight) + '</div>' +
-              '<div class="gsMetaItem col-flightpos">Team ' + esc(fPos) + '</div>' +
+              '<div class="gsMetaItem col-flightpos">Side ' + esc(fPos) + '</div>' +
+              '<div class="gsMetaItem col-team">Team ' + esc(teamKey) + '</div>' +
               '<div class="gsMetaItem">Pair ' + esc(pair) + '</div>' +
               '<div class="gsMetaItem">Pos ' + esc(pos) + '</div>' +
             '</div>' +
@@ -541,7 +545,7 @@
     const desktopParts = [];
 
     groups.forEach((group) => {
-      const colspan = isPairPair ? 13 : 11;
+      const colspan = isPairPair ? 14 : 12;
       desktopParts.push(
         '<tr class="gsGroupHdr"><td colspan="' + colspan + '">' + buildPairingHeader(group) + '</td></tr>'
       );
@@ -557,6 +561,7 @@
         const start = valueOrDash(getFormattedStartHole(p));
         const match = valueOrDash(p.dbPlayers_FlightID);
         const team = valueOrDash(p.dbPlayers_FlightPos);
+        const teamKey = valueOrDash(p.dbPlayers_TeamKey);
         const pair = valueOrDash(p.dbPlayers_PairingID);
         const pos = valueOrDash(p.dbPlayers_PairingPos);
         const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
@@ -573,6 +578,7 @@
             "<td class=\"gsCenter gsMono\">" + esc(start) + "</td>" +
             "<td class=\"gsCenter gsMono col-match\">" + esc(match) + "</td>" +
             "<td class=\"gsCenter gsMono col-flightpos\">" + esc(team) + "</td>" +
+            "<td class=\"gsCenter gsMono col-team\">" + esc(teamKey) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(pair) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(pos) + "</td>" +
             "<td class=\"gsCenter gsMono\"><a class=\"gsScoreLink\" href=\"#\" data-scoreid=\"" + esc(scoreId) + "\">" + esc(scoreId) + "</a></td>" +
@@ -600,6 +606,7 @@
           const so = numberOrDash(p.dbPlayers_SO);
           const match = valueOrDash(p.dbPlayers_FlightID);
           const team = valueOrDash(p.dbPlayers_FlightPos);
+          const teamKey = valueOrDash(p.dbPlayers_TeamKey);
           const pair = valueOrDash(p.dbPlayers_PairingID);
           const pos = valueOrDash(p.dbPlayers_PairingPos);
 
@@ -622,7 +629,8 @@
               '</div>' +
               '<div class="gsLine4">' +
                 '<div class="gsMetaItem col-match">Match ' + esc(match) + '</div>' +
-                '<div class="gsMetaItem col-flightpos">Team ' + esc(team) + '</div>' +
+                '<div class="gsMetaItem col-flightpos">Side ' + esc(team) + '</div>' +
+                '<div class="gsMetaItem col-team">Team ' + esc(teamKey) + '</div>' +
                 '<div class="gsMetaItem">Pair ' + esc(pair) + '</div>' +
                 '<div class="gsMetaItem">Pos ' + esc(pos) + '</div>' +
               '</div>' +
@@ -642,7 +650,7 @@
     const desktopParts = [];
 
     groups.forEach((group) => {
-      const colspan = isPairPair ? 13 : 11;
+      const colspan = isPairPair ? 14 : 12;
       desktopParts.push(
         '<tr class="gsGroupHdr"><td colspan="' + colspan + '">' + buildPlayingGroupHeader(group) + '</td></tr>'
       );
@@ -658,6 +666,7 @@
         const start = valueOrDash(getFormattedStartHole(p));
         const match = valueOrDash(p.dbPlayers_FlightID);
         const team = valueOrDash(p.dbPlayers_FlightPos);
+        const teamKey = valueOrDash(p.dbPlayers_TeamKey);
         const pair = valueOrDash(p.dbPlayers_PairingID);
         const pos = valueOrDash(p.dbPlayers_PairingPos);
         const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
@@ -674,6 +683,7 @@
             "<td class=\"gsCenter gsMono\">" + esc(start) + "</td>" +
             "<td class=\"gsCenter gsMono col-match\">" + esc(match) + "</td>" +
             "<td class=\"gsCenter gsMono col-flightpos\">" + esc(team) + "</td>" +
+            "<td class=\"gsCenter gsMono col-team\">" + esc(teamKey) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(pair) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(pos) + "</td>" +
             "<td class=\"gsCenter gsMono\"><a class=\"gsScoreLink\" href=\"#\" data-scoreid=\"" + esc(scoreId) + "\">" + esc(scoreId) + "</a></td>" +
@@ -701,6 +711,7 @@
           const so = numberOrDash(p.dbPlayers_SO);
           const match = valueOrDash(p.dbPlayers_FlightID);
           const team = valueOrDash(p.dbPlayers_FlightPos);
+          const teamKey = valueOrDash(p.dbPlayers_TeamKey);
           const pair = valueOrDash(p.dbPlayers_PairingID);
           const pos = valueOrDash(p.dbPlayers_PairingPos);
 
@@ -723,7 +734,8 @@
               '</div>' +
               '<div class="gsLine4">' +
                 '<div class="gsMetaItem col-match">Match ' + esc(match) + '</div>' +
-                '<div class="gsMetaItem col-flightpos">Team ' + esc(team) + '</div>' +
+                '<div class="gsMetaItem col-flightpos">Side ' + esc(team) + '</div>' +
+                '<div class="gsMetaItem col-team">Team ' + esc(teamKey) + '</div>' +
                 '<div class="gsMetaItem">Pair ' + esc(pair) + '</div>' +
                 '<div class="gsMetaItem">Pos ' + esc(pos) + '</div>' +
               '</div>' +
@@ -775,7 +787,7 @@
     ? normalizeRosterForPairingDisplay(state.roster || [])
     : normalizeRosterForPlayingGroupDisplay(state.roster || []);
 
-    const header = ["Name","Tee","HI","CH","PH","SO","Time","Start","Match","Team","Pair","Pos","GroupID"];
+    const header = ["Name","Tee","HI","CH","PH","SO","Time","Start","Match","Side","Team","Pair","Pos","GroupID"];
     const lines = [header.join(",")];
 
     rows.forEach(p => {
@@ -792,6 +804,7 @@
         `"` + safeString(getFormattedStartHole(p)).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_FlightID).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_FlightPos).replace(/"/g, '""') + `"`,
+        `"` + safeString(p.dbPlayers_TeamKey).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_PairingID).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_PairingPos).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_PlayerKey).replace(/"/g, '""') + `"`,
@@ -845,7 +858,7 @@
         <thead style="background-color: #f2f2f2;">
           <tr>
             <th>Name</th><th>Tee</th><th>HI</th><th>CH</th><th>PH</th><th>SO</th>
-            <th>Time</th><th>Start</th><th>Match</th><th>Team</th><th>Pair</th><th>Pos</th><th>GroupID</th>
+            <th>Time</th><th>Start</th><th>Match</th><th>Side</th><th>Team</th><th>Pair</th><th>Pos</th><th>GroupID</th>
           </tr>
         </thead>
         <tbody>`;
@@ -863,6 +876,7 @@
         <td align="center">${esc(startHole)}</td>
         <td align="center">${esc(p.dbPlayers_FlightID)}</td>
         <td align="center">${esc(p.dbPlayers_FlightPos)}</td>
+        <td align="center">${esc(p.dbPlayers_TeamKey)}</td>
         <td align="center">${esc(p.dbPlayers_PairingID)}</td>
         <td align="center">${esc(p.dbPlayers_PairingPos)}</td>
         <td align="center">${esc(p.dbPlayers_PlayerKey)}</td>
@@ -872,13 +886,13 @@
     if (state.scope === "byPairing") {
       const groups = groupRosterForPairing(rows);
       groups.forEach((group) => {
-        html += `<tr style="background-color:#f9f9f9;"><td colspan="13">${buildPairingHeader(group)}</td></tr>`;
+        html += `<tr style="background-color:#f9f9f9;"><td colspan="14">${buildPairingHeader(group)}</td></tr>`;
         group.players.forEach((p) => { html += buildRow(p); });
       });
     } else if (state.scope === "byPlayingGroup") {
       const groups = groupRosterForPlayingGroup(rows);
       groups.forEach((group) => {
-        html += `<tr style="background-color:#f9f9f9;"><td colspan="13">${buildPlayingGroupHeader(group)}</td></tr>`;
+        html += `<tr style="background-color:#f9f9f9;"><td colspan="14">${buildPlayingGroupHeader(group)}</td></tr>`;
         group.players.forEach((p) => { html += buildRow(p); });
       });
     } else {
