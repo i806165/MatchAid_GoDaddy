@@ -64,17 +64,17 @@
               <tr>
                 <th>Name</th>
                 <th>Tee</th>
+                <th class="gsCenter col-team">Team</th>
+                <th class="gsCenter col-match">Match</th>
+                <th class="gsCenter col-flightpos">Side</th>
+                <th class="gsCenter">Pair</th>
+                <th class="gsCenter">Pos</th>
                 <th class="gsCenter">HI</th>
                 <th class="gsCenter">CH</th>
                 <th class="gsCenter">PH</th>
                 <th class="gsCenter">SO</th>
                 <th class="gsCenter">Time</th>
                 <th class="gsCenter">Start</th>
-                <th class="gsCenter col-match">Match</th>
-                <th class="gsCenter col-flightpos">Side</th>
-                <th class="gsCenter col-team">Team</th>
-                <th class="gsCenter">Pair</th>
-                <th class="gsCenter">Pos</th>
                 <th class="gsCenter gsMono" id="gsScoreIdHeader">GroupID</th>
               </tr>
             </thead>

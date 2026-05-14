@@ -170,6 +170,11 @@
     return String(state.game?.dbGames_Competition || "").trim() === "PairPair";
   }
 
+  function hasTeamConfig() {
+    const v = state.game?.dbGames_TeamConfig;
+    return v !== null && v !== undefined && String(v).trim() !== "";
+  }
+
   function pairingSortValue(v) {
     return safeString(v).trim();
   }
@@ -428,12 +433,17 @@
     if (el.scoreIdHeader) el.scoreIdHeader.textContent = "GroupID";
 
     const isPairPair = isPairPairCompetition();
+    const hasTeams = hasTeamConfig();
     if (el.rosterTbody) {
       const table = el.rosterTbody.closest("table");
-      if (table) table.classList.toggle("is-match-play", isPairPair);
+      if (table) {
+        table.classList.toggle("is-match-play", isPairPair);
+        table.classList.toggle("is-has-teams", hasTeams);
+      }
     }
     if (el.mobileList) {
       el.mobileList.classList.toggle("is-match-play", isPairPair);
+      el.mobileList.classList.toggle("is-has-teams", hasTeams);
     }
 
     if (state.scope === "byPlayer") {
@@ -470,17 +480,17 @@
           "<tr>" +
             "<td title=\"" + esc(name) + "\">" + esc(name) + "</td>" +
             "<td title=\"" + esc(tee) + "\">" + esc(tee) + "</td>" +
+            "<td class=\"gsCenter gsMono col-team\">" + esc(teamKey) + "</td>" +
+            "<td class=\"gsCenter gsMono col-match\">" + esc(flight) + "</td>" +
+            "<td class=\"gsCenter gsMono col-flightpos\">" + esc(fPos) + "</td>" +
+            "<td class=\"gsCenter gsMono\">" + esc(pair) + "</td>" +
+            "<td class=\"gsCenter gsMono\">" + esc(pos) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(hi) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(ch) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(ph) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(so) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(time) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(start) + "</td>" +
-            "<td class=\"gsCenter gsMono col-match\">" + esc(flight) + "</td>" +
-            "<td class=\"gsCenter gsMono col-flightpos\">" + esc(fPos) + "</td>" +
-            "<td class=\"gsCenter gsMono col-team\">" + esc(teamKey) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(pair) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(pos) + "</td>" +
             "<td class=\"gsCenter gsMono\"><a class=\"gsScoreLink\" href=\"#\" data-scoreid=\"" + esc(scoreId) + "\">" + esc(scoreId) + "</a></td>" +
           "</tr>"
         );
@@ -525,9 +535,9 @@
               '<div class="gsMetaItem">SO ' + esc(so) + '</div>' +
             '</div>' +
             '<div class="gsLine4">' +
+              '<div class="gsMetaItem col-team">Team ' + esc(teamKey) + '</div>' +
               '<div class="gsMetaItem col-match">Match ' + esc(flight) + '</div>' +
               '<div class="gsMetaItem col-flightpos">Side ' + esc(fPos) + '</div>' +
-              '<div class="gsMetaItem col-team">Team ' + esc(teamKey) + '</div>' +
               '<div class="gsMetaItem">Pair ' + esc(pair) + '</div>' +
               '<div class="gsMetaItem">Pos ' + esc(pos) + '</div>' +
             '</div>' +
@@ -570,17 +580,17 @@
           "<tr>" +
             "<td>" + esc(name) + "</td>" +
             "<td>" + esc(tee) + "</td>" +
+            "<td class=\"gsCenter gsMono col-team\">" + esc(teamKey) + "</td>" +
+            "<td class=\"gsCenter gsMono col-match\">" + esc(match) + "</td>" +
+            "<td class=\"gsCenter gsMono col-flightpos\">" + esc(team) + "</td>" +
+            "<td class=\"gsCenter gsMono\">" + esc(pair) + "</td>" +
+            "<td class=\"gsCenter gsMono\">" + esc(pos) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(hi) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(ch) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(ph) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(so) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(time) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(start) + "</td>" +
-            "<td class=\"gsCenter gsMono col-match\">" + esc(match) + "</td>" +
-            "<td class=\"gsCenter gsMono col-flightpos\">" + esc(team) + "</td>" +
-            "<td class=\"gsCenter gsMono col-team\">" + esc(teamKey) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(pair) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(pos) + "</td>" +
             "<td class=\"gsCenter gsMono\"><a class=\"gsScoreLink\" href=\"#\" data-scoreid=\"" + esc(scoreId) + "\">" + esc(scoreId) + "</a></td>" +
           "</tr>"
         );
@@ -628,9 +638,9 @@
                 '<div class="gsMetaItem">SO ' + esc(so) + '</div>' +
               '</div>' +
               '<div class="gsLine4">' +
+                '<div class="gsMetaItem col-team">Team ' + esc(teamKey) + '</div>' +
                 '<div class="gsMetaItem col-match">Match ' + esc(match) + '</div>' +
                 '<div class="gsMetaItem col-flightpos">Side ' + esc(team) + '</div>' +
-                '<div class="gsMetaItem col-team">Team ' + esc(teamKey) + '</div>' +
                 '<div class="gsMetaItem">Pair ' + esc(pair) + '</div>' +
                 '<div class="gsMetaItem">Pos ' + esc(pos) + '</div>' +
               '</div>' +
@@ -675,17 +685,17 @@
           "<tr>" +
             "<td>" + esc(name) + "</td>" +
             "<td>" + esc(tee) + "</td>" +
+            "<td class=\"gsCenter gsMono col-team\">" + esc(teamKey) + "</td>" +
+            "<td class=\"gsCenter gsMono col-match\">" + esc(match) + "</td>" +
+            "<td class=\"gsCenter gsMono col-flightpos\">" + esc(team) + "</td>" +
+            "<td class=\"gsCenter gsMono\">" + esc(pair) + "</td>" +
+            "<td class=\"gsCenter gsMono\">" + esc(pos) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(hi) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(ch) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(ph) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(so) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(time) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(start) + "</td>" +
-            "<td class=\"gsCenter gsMono col-match\">" + esc(match) + "</td>" +
-            "<td class=\"gsCenter gsMono col-flightpos\">" + esc(team) + "</td>" +
-            "<td class=\"gsCenter gsMono col-team\">" + esc(teamKey) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(pair) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(pos) + "</td>" +
             "<td class=\"gsCenter gsMono\"><a class=\"gsScoreLink\" href=\"#\" data-scoreid=\"" + esc(scoreId) + "\">" + esc(scoreId) + "</a></td>" +
           "</tr>"
         );
@@ -733,9 +743,9 @@
                 '<div class="gsMetaItem">SO ' + esc(so) + '</div>' +
               '</div>' +
               '<div class="gsLine4">' +
+                '<div class="gsMetaItem col-team">Team ' + esc(teamKey) + '</div>' +
                 '<div class="gsMetaItem col-match">Match ' + esc(match) + '</div>' +
                 '<div class="gsMetaItem col-flightpos">Side ' + esc(team) + '</div>' +
-                '<div class="gsMetaItem col-team">Team ' + esc(teamKey) + '</div>' +
                 '<div class="gsMetaItem">Pair ' + esc(pair) + '</div>' +
                 '<div class="gsMetaItem">Pos ' + esc(pos) + '</div>' +
               '</div>' +
@@ -787,26 +797,25 @@
     ? normalizeRosterForPairingDisplay(state.roster || [])
     : normalizeRosterForPlayingGroupDisplay(state.roster || []);
 
-    const header = ["Name","Tee","HI","CH","PH","SO","Time","Start","Match","Side","Team","Pair","Pos","GroupID"];
+    const header = ["Name","Tee","Team","Match","Side","Pair","Pos","HI","CH","PH","SO","Time","Start","GroupID"];
     const lines = [header.join(",")];
 
     rows.forEach(p => {
       const teeName = safeString(p.dbPlayers_TeeSetName);
       const vals = [
         `"` + safeString(p.dbPlayers_Name).replace(/"/g, '""') + `"`,
-        // Special format for Tee Name to prevent Excel from converting "2/3" to a date
         teeName.includes('/') ? `="` + teeName.replace(/"/g, '""') + `"` : `"` + teeName.replace(/"/g, '""') + `"`,
+        `"` + safeString(p.dbPlayers_TeamKey).replace(/"/g, '""') + `"`,
+        `"` + safeString(p.dbPlayers_FlightID).replace(/"/g, '""') + `"`,
+        `"` + safeString(p.dbPlayers_FlightPos).replace(/"/g, '""') + `"`,
+        `"` + safeString(p.dbPlayers_PairingID).replace(/"/g, '""') + `"`,
+        `"` + safeString(p.dbPlayers_PairingPos).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_HI).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_CH).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_PH).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_SO).replace(/"/g, '""') + `"`,
         `"` + formatTimeAmPm(safeString(p.dbPlayers_TeeTime)).replace(/"/g, '""') + `"`,
         `"` + safeString(getFormattedStartHole(p)).replace(/"/g, '""') + `"`,
-        `"` + safeString(p.dbPlayers_FlightID).replace(/"/g, '""') + `"`,
-        `"` + safeString(p.dbPlayers_FlightPos).replace(/"/g, '""') + `"`,
-        `"` + safeString(p.dbPlayers_TeamKey).replace(/"/g, '""') + `"`,
-        `"` + safeString(p.dbPlayers_PairingID).replace(/"/g, '""') + `"`,
-        `"` + safeString(p.dbPlayers_PairingPos).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_PlayerKey).replace(/"/g, '""') + `"`,
       ];
 
@@ -857,8 +866,9 @@
       <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; font-family: sans-serif; font-size: 10pt; width: 100%;">
         <thead style="background-color: #f2f2f2;">
           <tr>
-            <th>Name</th><th>Tee</th><th>HI</th><th>CH</th><th>PH</th><th>SO</th>
-            <th>Time</th><th>Start</th><th>Match</th><th>Side</th><th>Team</th><th>Pair</th><th>Pos</th><th>GroupID</th>
+            <th>Name</th><th>Tee</th><th>Team</th><th>Match</th><th>Side</th>
+            <th>Pair</th><th>Pos</th><th>HI</th><th>CH</th><th>PH</th><th>SO</th>
+            <th>Time</th><th>Start</th><th>GroupID</th>
           </tr>
         </thead>
         <tbody>`;
@@ -868,17 +878,17 @@
       return `<tr>
         <td>${esc(p.dbPlayers_Name)}</td>
         <td>${esc(p.dbPlayers_TeeSetName)}</td>
+        <td align="center">${esc(p.dbPlayers_TeamKey)}</td>
+        <td align="center">${esc(p.dbPlayers_FlightID)}</td>
+        <td align="center">${esc(p.dbPlayers_FlightPos)}</td>
+        <td align="center">${esc(p.dbPlayers_PairingID)}</td>
+        <td align="center">${esc(p.dbPlayers_PairingPos)}</td>
         <td align="center">${esc(p.dbPlayers_HI)}</td>
         <td align="center">${esc(p.dbPlayers_CH)}</td>
         <td align="center">${esc(p.dbPlayers_PH)}</td>
         <td align="center">${esc(p.dbPlayers_SO)}</td>
         <td align="center">${esc(formatTimeAmPm(p.dbPlayers_TeeTime))}</td>
         <td align="center">${esc(startHole)}</td>
-        <td align="center">${esc(p.dbPlayers_FlightID)}</td>
-        <td align="center">${esc(p.dbPlayers_FlightPos)}</td>
-        <td align="center">${esc(p.dbPlayers_TeamKey)}</td>
-        <td align="center">${esc(p.dbPlayers_PairingID)}</td>
-        <td align="center">${esc(p.dbPlayers_PairingPos)}</td>
         <td align="center">${esc(p.dbPlayers_PlayerKey)}</td>
       </tr>`;
     };
@@ -1153,7 +1163,6 @@
     if (!MA.ui || !MA.ui.openActionsMenu) return;
 
     const items = [
-      { label: "Game Settings", action: "settings", params: { returnTo: "summary" } },
       { label: "Print Scorecards", action: printScorecards },
       { label: "Add Game to Calendar", action: downloadIcsForGame },
       { separator: true }, 
