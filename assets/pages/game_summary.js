@@ -175,6 +175,19 @@
     return v !== null && v !== undefined && String(v).trim() !== "";
   }
 
+  function resolveTeamName(teamKey) {
+    if (!teamKey || teamKey === "—") return teamKey;
+    try {
+      const raw = state.game?.dbGames_TeamConfig;
+      if (!raw) return teamKey;
+      const config = typeof raw === "string" ? JSON.parse(raw) : raw;
+      const match = (config.teams || []).find(t => t.id === teamKey);
+      return match?.name || teamKey;
+    } catch (e) {
+      return teamKey;
+    }
+  }
+
   function pairingSortValue(v) {
     return safeString(v).trim();
   }
@@ -471,7 +484,7 @@
         const start = valueOrDash(getFormattedStartHole(p));
         const flight = valueOrDash(p.dbPlayers_FlightID);
         const fPos = valueOrDash(p.dbPlayers_FlightPos);
-        const teamKey = valueOrDash(p.dbPlayers_TeamKey);
+        const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
         const pair = valueOrDash(p.dbPlayers_PairingID);
         const pos = valueOrDash(p.dbPlayers_PairingPos);
         const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
@@ -513,7 +526,7 @@
 
         const flight = valueOrDash(p.dbPlayers_FlightID);
         const fPos = valueOrDash(p.dbPlayers_FlightPos);
-        const teamKey = valueOrDash(p.dbPlayers_TeamKey);
+        const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
         const pair = valueOrDash(p.dbPlayers_PairingID);
         const pos = valueOrDash(p.dbPlayers_PairingPos);
 
@@ -571,7 +584,7 @@
         const start = valueOrDash(getFormattedStartHole(p));
         const match = valueOrDash(p.dbPlayers_FlightID);
         const team = valueOrDash(p.dbPlayers_FlightPos);
-        const teamKey = valueOrDash(p.dbPlayers_TeamKey);
+        const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
         const pair = valueOrDash(p.dbPlayers_PairingID);
         const pos = valueOrDash(p.dbPlayers_PairingPos);
         const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
@@ -616,7 +629,7 @@
           const so = numberOrDash(p.dbPlayers_SO);
           const match = valueOrDash(p.dbPlayers_FlightID);
           const team = valueOrDash(p.dbPlayers_FlightPos);
-          const teamKey = valueOrDash(p.dbPlayers_TeamKey);
+          const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
           const pair = valueOrDash(p.dbPlayers_PairingID);
           const pos = valueOrDash(p.dbPlayers_PairingPos);
 
@@ -676,7 +689,7 @@
         const start = valueOrDash(getFormattedStartHole(p));
         const match = valueOrDash(p.dbPlayers_FlightID);
         const team = valueOrDash(p.dbPlayers_FlightPos);
-        const teamKey = valueOrDash(p.dbPlayers_TeamKey);
+        const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
         const pair = valueOrDash(p.dbPlayers_PairingID);
         const pos = valueOrDash(p.dbPlayers_PairingPos);
         const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
@@ -721,7 +734,7 @@
           const so = numberOrDash(p.dbPlayers_SO);
           const match = valueOrDash(p.dbPlayers_FlightID);
           const team = valueOrDash(p.dbPlayers_FlightPos);
-          const teamKey = valueOrDash(p.dbPlayers_TeamKey);
+          const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
           const pair = valueOrDash(p.dbPlayers_PairingID);
           const pos = valueOrDash(p.dbPlayers_PairingPos);
 
@@ -805,7 +818,7 @@
       const vals = [
         `"` + safeString(p.dbPlayers_Name).replace(/"/g, '""') + `"`,
         teeName.includes('/') ? `="` + teeName.replace(/"/g, '""') + `"` : `"` + teeName.replace(/"/g, '""') + `"`,
-        `"` + safeString(p.dbPlayers_TeamKey).replace(/"/g, '""') + `"`,
+        `"` + safeString(resolveTeamName(p.dbPlayers_TeamKey)).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_FlightID).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_FlightPos).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_PairingID).replace(/"/g, '""') + `"`,
@@ -878,7 +891,7 @@
       return `<tr>
         <td>${esc(p.dbPlayers_Name)}</td>
         <td>${esc(p.dbPlayers_TeeSetName)}</td>
-        <td align="center">${esc(p.dbPlayers_TeamKey)}</td>
+        <td align="center">${esc(resolveTeamName(p.dbPlayers_TeamKey))}</td>
         <td align="center">${esc(p.dbPlayers_FlightID)}</td>
         <td align="center">${esc(p.dbPlayers_FlightPos)}</td>
         <td align="center">${esc(p.dbPlayers_PairingID)}</td>
