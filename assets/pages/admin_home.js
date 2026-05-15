@@ -681,7 +681,7 @@ function applyPreset(presetKey) {
     const subtitle = [dateLine, g.dbGames_PlayTime || ""].filter(Boolean).join(" ");
 
     MA.ui.openActionsMenu(g.dbGames_Title || "Game", [
-      { label: "Quick View Players",      action: () => handleGameAction({ action: "rosterView", ggid: g.dbGames_GGID }) },
+      { label: "Player Quick View",      action: () => handleGameAction({ action: "rosterView", ggid: g.dbGames_GGID }) },
       { separator: true },
       { label: "Edit Game",               action: () => handleGameAction({ action: "editGame",   ggid: g.dbGames_GGID }) },
       { label: "Adjust Settings",         action: () => handleGameAction({ action: "settings",   ggid: g.dbGames_GGID }) },
