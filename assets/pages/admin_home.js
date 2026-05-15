@@ -511,6 +511,28 @@ cardsEl.innerHTML = state.games.dbRows
     if (action === "pairings") return routerGo("pairings", {});
     if (action === "teetimes") return routerGo("teetimes", {});
     
+    if (action === "rosterView") {
+      if (MA.rosterView && typeof MA.rosterView.open === "function") {
+        const g = (state.games.dbRows || []).find(r => String(r.dbGames_GGID) === String(ggid));
+        const dt       = parseYmd(g?.dbGames_PlayDate);
+        const dateLine = dt
+          ? dt.toLocaleDateString(undefined, { weekday:"short", month:"short", day:"2-digit", year:"numeric" })
+          : "";
+        const subtitle = [dateLine, g?.dbGames_PlayTime || ""].filter(Boolean).join(" ");
+
+        MA.rosterView.open({
+          ggid:     ggid,
+          title:    g?.dbGames_Title || "Game Roster",
+          subtitle: subtitle,
+          apiPath:  MA.paths.apiRosterView,
+          game:     g || {},                           // ← full raw row, not cherry-picked fields
+        });
+      } else {
+        setStatus("Roster view module not loaded.", "error");
+      }
+      return;
+    }
+
     if (action === "calendar") {      
       const g = (state.games.dbRows || []).find(r => String(r.dbGames_GGID) === String(ggid));
       if (MA.calendar && MA.calendar.addCalendarEventFromGame) {
@@ -659,6 +681,8 @@ function applyPreset(presetKey) {
     const subtitle = [dateLine, g.dbGames_PlayTime || ""].filter(Boolean).join(" ");
 
     MA.ui.openActionsMenu(g.dbGames_Title || "Game", [
+      { label: "Quick View Players",      action: () => handleGameAction({ action: "rosterView", ggid: g.dbGames_GGID }) },
+      { separator: true },
       { label: "Edit Game",               action: () => handleGameAction({ action: "editGame",   ggid: g.dbGames_GGID }) },
       { label: "Adjust Settings",         action: () => handleGameAction({ action: "settings",   ggid: g.dbGames_GGID }) },
       { separator: true },

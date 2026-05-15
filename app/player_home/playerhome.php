@@ -116,6 +116,7 @@ $paths = [
   'routerApi'      => MA_ROUTE_API_ROUTER ?? '/api/router',
   'apiGHIN'        => MA_ROUTE_API_GHIN ?? '/api/GHIN',
   'apiGamePlayers' => MA_ROUTE_API_GAME_PLAYERS ?? '/api/game_players',
+  'apiRosterView'     => MA_ROUTE_API_ROSTER_VIEW ?? '/api/game_players/getRosterView.php',
   'upsertGamePlayers' => (MA_ROUTE_API_GAME_PLAYERS ?? '/api/game_players') . '/upsertGamePlayers.php',
   'deleteGamePlayers' => (MA_ROUTE_API_GAME_PLAYERS ?? '/api/game_players') . '/deleteGamePlayers.php',
 
@@ -172,6 +173,7 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   <script src="/assets/modules/teesetSelection.js?v=1"></script>
   <script src="/assets/modules/ghin_post_scores.js?v=1"></script>
   <script src="/assets/modules/pageHelp.js?v=1"></script>
+  <script src="/assets/modules/game_players_display.js?v=1"></script>
   <script src="/assets/pages/player_home.js?v=1"></script>
 </body>
 </html>

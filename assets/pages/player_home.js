@@ -219,7 +219,7 @@ function getGameAdminMeta(g){
       // Participation Group
       { label: regLabel, action: 'register', enabled: true },
       isRegistered ? { label: 'Unregister yourself', action: 'unregister', enabled: !regClosedish } : null,
-
+      { label: 'Player Quick View',    action: 'rosterView',  enabled: true },
       { separator: true }, { separator: true },
 
       // Information Group
@@ -713,6 +713,24 @@ function getGameAdminMeta(g){
 
     if (action === 'calendar') {
       downloadIcsForGame(g);
+      return;
+    }
+
+    if (action === 'rosterView') {
+      if (MA.rosterView && typeof MA.rosterView.open === "function") {
+        const raw = (state.rawGames || []).find(r =>
+          String(r.dbGames_GGID || r.ggid || "").trim() === String(ggid).trim()
+        ) || null;
+        MA.rosterView.open({
+          ggid:    ggid,
+          title:   rowText(g, ['title', 'dbGames_Title']) || 'Game Roster',
+          subtitle: rowText(g, ['playDate', 'dbGames_PlayDate']),
+          apiPath: (MA.paths && MA.paths.apiRosterView) || "",
+          game:    raw || {},
+        });
+      } else {
+        setStatus('Roster view module not loaded.', 'error');
+      }
       return;
     }
   }

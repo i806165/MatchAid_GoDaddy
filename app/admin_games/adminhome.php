@@ -107,7 +107,8 @@ $paths = [
   "apiAdminGames" => MA_ROUTE_API_ADMIN_GAMES,
   "apiSession"    => MA_ROUTE_API_SESSION,
   "routerApi"     => MA_ROUTE_API_ROUTER,
-  "apiNotify"     => MA_ROUTE_API_MESSAGING, 
+  "apiNotify"     => MA_ROUTE_API_MESSAGING,
+  "apiRosterView" => MA_ROUTE_API_ROSTER_VIEW,
   "siteUrl"       => MA_SITE_URL,
 ];
 
@@ -169,6 +170,7 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   <script src="/assets/modules/addCalendar.js?v=1"></script>
   <script src="/assets/modules/composeEmail.js?v=1"></script>
   <script src="/assets/modules/player_notifications.js?v=1"></script>
+  <script src="/assets/modules/game_players_display.js?v=1"></script>
   <script src="/assets/modules/pageHelp.js?v=1"></script>
   <script src="/assets/pages/admin_home.js"></script>
 </body>
