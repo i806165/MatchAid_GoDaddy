@@ -20,7 +20,7 @@
  *     apiPath      : string      — URL to getGamePlayers endpoint
  *     teamConfig   : obj|string  — dbGames_TeamConfig value (optional pre-pass;
  *                                  also resolved from payload.game if absent)
- *     pairingMode  : string      — dbGames_PairingMode value (same)
+ *     pairingMode  : string      — dbGames_Competition value (same)
  *     onClose      : function()  — optional callback when panel is dismissed
  *   }
  *
@@ -29,34 +29,34 @@
  *       players:     [...],   // db_Players rows
  *       playerCount: n,       // enrolled count
  *       totalSlots:  n,       // 0 = no tee times
- *       game:        { dbGames_TeamConfig, dbGames_PairingMode, ... }
+ *       game:        { dbGames_TeamConfig, dbGames_Competition, ... }
  *   }}
  *
  * Player row fields consumed:
- *   dbPlayers_Name       first name
- *   dbPlayers_LName      last name
+ *   dbPlayers_Name       full display name
+ *   dbPlayers_LName      last name (sort and avatar initials only — not displayed)
  *   dbPlayers_TeeSetName tee set display name
  *   dbPlayers_HI         handicap index
- *   dbPlayers_TeamID     team key → resolved via dbGames_TeamConfig.teams[].id
+ *   dbPlayers_TeamKey     team key → resolved via dbGames_TeamConfig.teams[].id
  *   dbPlayers_PlayerKey  play-group key (grouping field for "Play Group" sort)
  *   dbPlayers_PairingID  pairing group number
  *   dbPlayers_PairingPos position within pairing
- *   dbPlayers_FlightID   flight/match group (PairPair mode only)
- *   dbPlayers_FlightPos  position within flight (PairPair mode only)
+ *   dbPlayers_FlightID   flight/match group (PairPair competition only)
+ *   dbPlayers_FlightPos  position within flight (PairPair competition only)
  *
  * Sort tab rules:
  *   "Name"       always shown   — alpha by LName/Name, letter dividers
  *   "Team"       shown when dbGames_TeamConfig is not null
  *                               — grouped by team (team.sort order), LName within
- *   "Pairing"    shown when dbGames_PairingMode === "PairField"
+ *   "Pairing"    shown when dbGames_Competition === "PairField"
  *                               — grouped by PairingID, subsort PairingPos
- *   "Match"      shown when dbGames_PairingMode === "PairPair"
+ *   "Match"      shown when dbGames_Competition === "PairPair"
  *                               — grouped by FlightID, subsort FlightPos→PairingID→PairingPos
  *   "Play Group" always shown   — grouped by PlayerKey, subsort PairingID→PairingPos
  *
  * Badge (right side of row):
  *   Resolved team name when TeamConfig is present; nothing otherwise.
- *   Team name is looked up: player.dbPlayers_TeamID → teamConfig.teams[].id → team.name
+ *   Team name is looked up: player.dbPlayers_TeamKey → teamConfig.teams[].id → team.name
  *   Badge background/color uses team.color from the config shape.
  *
  * Sub-line (below player name):
@@ -142,7 +142,7 @@
     _s.activeSort   = "name";
     const gameRow   = opts.game || {};
     _s.teamConfig   = parseTeamConfig(gameRow.dbGames_TeamConfig  || null);
-    _s.pairingMode  = safeStr(gameRow.dbGames_PairingMode || "");
+    _s.pairingMode  = safeStr(gameRow.dbGames_Competition || "");
 
     _destroyOverlay();
     _renderOverlay(_html_skeleton());
@@ -173,8 +173,8 @@
       if (!_s.teamConfig && _s.data.game.dbGames_TeamConfig) {
         _s.teamConfig = parseTeamConfig(_s.data.game.dbGames_TeamConfig);
       }
-      if (!_s.pairingMode && _s.data.game.dbGames_PairingMode) {
-        _s.pairingMode = safeStr(_s.data.game.dbGames_PairingMode);
+      if (!_s.pairingMode && _s.data.game.dbGames_Competition) {
+        _s.pairingMode = safeStr(_s.data.game.dbGames_Competition);
       }
 
       _setHtml(_html_panel());
@@ -380,12 +380,12 @@
     if (!_s.teamConfig) return _byName(players);
     const order = Object.fromEntries(_s.teamConfig.teams.map(t => [t.id, t.sort]));
     const sorted = players.slice().sort((a, b) =>
-      (order[safeStr(a.dbPlayers_TeamID)] || 999) - (order[safeStr(b.dbPlayers_TeamID)] || 999) ||
+      (order[safeStr(a.dbPlayers_TeamKey)] || 999) - (order[safeStr(b.dbPlayers_TeamKey)] || 999) ||
       safeStr(a.dbPlayers_LName).localeCompare(safeStr(b.dbPlayers_LName))
     );
     let html = "", lastId = null;
     for (const p of sorted) {
-      const id = safeStr(p.dbPlayers_TeamID);
+      const id = safeStr(p.dbPlayers_TeamKey);
       if (id !== lastId) {
         const team = resolveTeam(id);
         html += _groupLabel(team ? `Team: ${team.name}` : id || "No Team", team?.color || null);
