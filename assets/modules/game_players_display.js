@@ -3,8 +3,10 @@
  * MA.rosterView — Read-only player roster modal for Admin & Player home pages.
  *
  * Markup uses ma_shared.css classes exclusively:
- *   maModalOverlay / maModal / maModal__hdr / maModal__body
- *   maModal__controls / maPill / iconBtn btnPrimary / maEmptyState
+ *   maModalOverlay / maModal / maModal__hdr / maModal__body / maModal__controls
+ *   maSeg / maSegBtn / maListRow / maListRow__col / maListRow__col--muted
+ *   maListRow__group / maListRow__avatar / maSwatch / maTeamBadge
+ *   maPill / maTextInput / iconBtn / btnPrimary / maEmptyState
  *
  * Public API:
  *   MA.rosterView.open(options)
@@ -128,79 +130,6 @@
       body: JSON.stringify(payload),
     });
     return res.json();
-  }
-
-  // ── Scoped CSS (structural only — visual from ma_shared.css) ─────────────────
-  (function _injectStyles() {
-    if (document.getElementById("ma-roster-styles")) return;
-    const s = document.createElement("style");
-    s.id = "ma-roster-styles";
-    s.textContent = `
-      .ma-rst-sortbar {
-        display:flex; flex-shrink:0;
-        border-bottom:1px solid var(--borderSubtle);
-        background:var(--panelControlsBg, #f7f7f7);
-        overflow-x:auto;
-      }
-      .ma-rst-tab {
-        flex:1; padding:8px 4px; text-align:center;
-        font-size:10px; font-weight:800; font-family:inherit;
-        border:none; border-bottom:2px solid transparent;
-        background:transparent; cursor:pointer;
-        color:var(--mutedText); white-space:nowrap;
-        transition:color 0.12s, border-color 0.12s;
-      }
-      .ma-rst-tab.is-active {
-        color:var(--brandAccent);
-        border-bottom-color:var(--brandAccent);
-      }
-      .ma-rst-group {
-        display:flex; align-items:center; gap:6px;
-        font-size:10px; font-weight:800; letter-spacing:0.5px; text-transform:uppercase;
-        color:var(--mutedText);
-        padding:7px 12px 3px;
-        background:var(--panelControlsBg, #ececea);
-        border-top:0.5px solid var(--borderSubtle);
-        border-bottom:0.5px solid var(--borderSubtle);
-      }
-      .ma-rst-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
-      .ma-rst-row {
-        display:flex; align-items:center; gap:10px;
-        padding:10px 12px;
-        background:var(--surfaceCard, #fff);
-        border-bottom:0.5px solid var(--borderSubtle);
-      }
-      .ma-rst-avatar {
-        width:32px; height:32px; border-radius:50%;
-        display:flex; align-items:center; justify-content:center;
-        font-size:11px; font-weight:800; flex-shrink:0;
-      }
-      .ma-rst-info { flex:1; min-width:0; }
-      .ma-rst-name {
-        font-size:13px; font-weight:800; color:var(--textPrimary);
-        white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-      }
-      .ma-rst-sub { font-size:11px; font-weight:700; color:var(--mutedText); margin-top:1px; }
-      .ma-rst-badge {
-        font-size:10px; font-weight:800; padding:2px 8px; border-radius:10px;
-        flex-shrink:0; max-width:80px;
-        overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-      }
-      /* deterministic avatar palette */
-      .ma-av0 { background:#E6F1FB; color:#0C447C; }
-      .ma-av1 { background:#EAF3DE; color:#27500A; }
-      .ma-av2 { background:#FAEEDA; color:#633806; }
-      .ma-av3 { background:#E1F5EE; color:#085041; }
-      .ma-av4 { background:#FAECE7; color:#4A1B0C; }
-    `;
-    document.head.appendChild(s);
-  })();
-
-  const _AV = ["ma-av0","ma-av1","ma-av2","ma-av3","ma-av4"];
-  function _avClass(p) {
-    const n = (safeStr(p.dbPlayers_LName).charCodeAt(0) || 0)
-            + (safeStr(p.dbPlayers_Name).charCodeAt(0)  || 0);
-    return _AV[n % _AV.length];
   }
 
   // ── Public: open ──────────────────────────────────────────────────────────────
@@ -387,10 +316,10 @@
     const tabs = _buildTabs();
     if (!tabs.find(t => t.key === _s.activeSort)) _s.activeSort = "name";
     return `
-      <div class="ma-rst-sortbar" id="ma-rst-sortbar">
+      <div class="maSeg" id="ma-rst-sortbar" style="flex-shrink:0; border-radius:0; border-left:0; border-right:0; border-top:0;">
         ${tabs.map(t => `
           <button type="button"
-                  class="ma-rst-tab${t.key === _s.activeSort ? " is-active" : ""}"
+                  class="maSegBtn${t.key === _s.activeSort ? " is-active" : ""}"
                   data-sort="${esc(t.key)}">
             ${esc(t.label)}
           </button>`).join("")}
@@ -518,14 +447,14 @@
 
   function _groupLabel(text, dotColor) {
     const dot = dotColor
-      ? `<span class="ma-rst-dot" style="background:${esc(dotColor)};"></span>`
+      ? `<span class="maSwatch" style="background:${esc(dotColor)};"></span>`
       : "";
-    return `<div class="ma-rst-group">${dot}${esc(text)}</div>`;
+    return `<div class="maListRow__group">${dot}${esc(text)}</div>`;
   }
 
   function _row(p) {
-    const first = safeStr(p.dbPlayers_Name);
-    const last  = safeStr(p.dbPlayers_LName);
+    const name  = safeStr(p.dbPlayers_Name);   // full display name
+    const last  = safeStr(p.dbPlayers_LName);  // sort/avatar only — not displayed
     const tee   = safeStr(p.dbPlayers_TeeSetName);
     const hi    = safeStr(p.dbPlayers_HI);
 
@@ -535,25 +464,23 @@
     if (hi)  parts.push(`HI: ${hi}`);
     const sub = parts.join(" &middot; ") || "&nbsp;";
 
+    // Avatar initials: first char of LName + first char of Name
+    const avatarText = ((last[0] || name[0] || "?") + (last[0] ? name[0] || "" : name[1] || "")).toUpperCase();
+
     // Right badge: resolved team name only when teams configured
-    const team = resolveTeam(safeStr(p.dbPlayers_TeamID));
+    const team  = resolveTeam(safeStr(p.dbPlayers_TeamKey));
     const badge = team
-      ? `<span class="ma-rst-badge"
+      ? `<span class="maTeamBadge"
                style="background:${esc(team.color)}22; color:${esc(team.color)};
-                      border:1px solid ${esc(team.color)}55;">${esc(team.name)}</span>`
+                      border-color:${esc(team.color)}55;">${esc(team.name)}</span>`
       : "";
 
-    // Name displayed as "Last, First"
-    const displayName = last
-      ? `${last}${first ? ", " + first : ""}`
-      : first || "—";
-
     return `
-      <div class="ma-rst-row">
-        <div class="ma-rst-avatar ${_avClass(p)}">${esc((first[0] || "") + (last[0] || "") || "?")}</div>
-        <div class="ma-rst-info">
-          <div class="ma-rst-name">${esc(displayName)}</div>
-          <div class="ma-rst-sub">${sub}</div>
+      <div class="maListRow" style="cursor:default;">
+        <div class="maListRow__avatar">${esc(avatarText)}</div>
+        <div class="maListRow__col" style="flex:1; min-width:0;">
+          <div class="maListRow__col">${esc(name || "—")}</div>
+          <div class="maListRow__col--muted" style="font-size:11px; margin-top:1px;">${sub}</div>
         </div>
         ${badge}
       </div>`;
@@ -566,11 +493,10 @@
     if (!overlay) return;
 
     // Sort tabs
-    overlay.querySelectorAll(".ma-rst-tab").forEach(function (btn) {
+    overlay.querySelectorAll(".maSegBtn").forEach(function (btn) {
       btn.addEventListener("click", function () {
         _s.activeSort = btn.dataset.sort || "name";
-        // Update active class on tabs
-        overlay.querySelectorAll(".ma-rst-tab").forEach(function (t) {
+        overlay.querySelectorAll(".maSegBtn").forEach(function (t) {
           t.classList.toggle("is-active", t.dataset.sort === _s.activeSort);
         });
         _refreshBody();

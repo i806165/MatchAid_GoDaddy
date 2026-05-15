@@ -1956,6 +1956,37 @@ textarea {
   font-weight: 700;
 }
 
+/* Group divider label — section header within a scrollable list */
+.maListRow__group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--mutedText);
+  padding: 7px 12px 3px;
+  background: var(--panelControlsBg);
+  border-top: 0.5px solid var(--borderSubtle);
+  border-bottom: 0.5px solid var(--borderSubtle);
+}
+
+/* Avatar circle — circular initials badge used as left slot in a list row */
+.maListRow__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  flex-shrink: 0;
+  background: rgba(0,0,0,.07);
+  color: var(--mutedText);
+}
+
 
 /* ==========================================================================
    18. ADMIN PICKER
