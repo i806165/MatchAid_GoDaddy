@@ -41,6 +41,7 @@ define('MA_ROUTE_API_GHIN',          '/api/GHIN');
 define('MA_ROUTE_API_GAME_MAINT',    '/api/game_maintenance');
 define('MA_ROUTE_API_GAME_SETTINGS', '/api/game_settings');
 define('MA_ROUTE_API_GAME_PLAYERS',  '/api/game_players');
+define('MA_ROUTE_API_ROSTER_VIEW',   '/api/game_players/getRosterView.php');  // ← ADD THIS
 define('MA_ROUTE_API_GAME_TIMES',  '/api/game_times');
 define('MA_ROUTE_API_GAME_SUMMARY', '/api/game_summary');
 define('MA_ROUTE_GAME_SLOTTING',    '/app/game_slotting/gameslotting.php');
