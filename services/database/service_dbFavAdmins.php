@@ -168,14 +168,7 @@ if ($row) {
   return ["ok" => true, "isFavorite" => false, "message" => "Removed from Favorites."];
 }
 
-
-    // Need admin name for insert (best effort via db_Games)
-    $name = "";
-    $nq = $pdo->prepare("SELECT dbGames_AdminName AS adminName FROM db_Games WHERE dbGames_AdminGHIN=:a LIMIT 1");
-    $nq->execute([":a"=>$adminKey]);
-    $nr = $nq->fetch(PDO::FETCH_ASSOC);
-    if ($nr) $name = strval($nr["adminName"] ?? "");
-
+$name         = "";
 $adminLName   = strval($args["adminLName"] ?? "");
 $facilityId   = strval($args["facilityId"] ?? "");
 $facilityName = strval($args["facilityName"] ?? "");
@@ -190,8 +183,8 @@ if ($name === "" || $adminLName === "" || $facilityId === "" || $facilityName ==
       dbGames_AdminLName     AS adminLName,
       dbGames_FacilityID     AS facilityId,
       dbGames_FacilityName   AS facilityName,
-      dbGames_AssocID        AS adminAssocId,
-      dbGames_AssocName      AS adminAssocName
+      dbGames_AdminAssocID   AS adminAssocId,
+      dbGames_AdminAssocName AS adminAssocName
     FROM db_Games
     WHERE dbGames_AdminGHIN = :a
     LIMIT 1
@@ -199,12 +192,12 @@ if ($name === "" || $adminLName === "" || $facilityId === "" || $facilityName ==
   $nq->execute([":a" => $adminKey]);
   $nr = $nq->fetch(PDO::FETCH_ASSOC) ?: [];
 
-  if ($name === "")         $name = strval($nr["adminName"] ?? "");
-  if ($adminLName === "")   $adminLName = strval($nr["adminLName"] ?? "");
-  if ($facilityId === "")   $facilityId = strval($nr["facilityId"] ?? "");
+  if ($name === "")         $name         = strval($nr["adminName"]    ?? "");
+  if ($adminLName === "")   $adminLName   = strval($nr["adminLName"]   ?? "");
+  if ($facilityId === "")   $facilityId   = strval($nr["facilityId"]   ?? "");
   if ($facilityName === "") $facilityName = strval($nr["facilityName"] ?? "");
-  if ($assocId === "")      $assocId = strval($nr["adminAssocId"] ?? "");
-  if ($assocName === "")    $assocName = strval($nr["adminAssocName"] ?? "");
+  if ($assocId === "")      $assocId      = strval($nr["adminAssocId"] ?? "");
+  if ($assocName === "")    $assocName    = strval($nr["adminAssocName"] ?? "");
 }
 
 // last-resort: satisfy NOT NULL columns (empty string ok, NULL not ok)
