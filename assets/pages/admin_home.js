@@ -445,7 +445,7 @@ cardsEl.innerHTML = state.games.dbRows
   // ---- Favorites ----
   async function toggleFavoriteAdmin(adminKey) {
     try {
-      await apiAdmin("upsertFavoriteAdmin.php", { adminKey });
+      await apiAdmin("toggleFavoriteAdmin.php", { adminKey });
       setStatus("Favorites updated.", "success");
       // refresh admins + games with current state
       await refreshGamesAndAdmins({
