@@ -209,7 +209,7 @@ function getGameAdminMeta(g){
 //      ? (adminMeta.isFavorite ? 'Remove this Admin from Favorites' : 'Add Admin to Favorites')
 //      : 'Admin Favorite Unavailable';
     const favoriteAdminLabel = adminMeta.adminKey
-      ? (adminMeta.isFavorite ? `Remove ${adminMeta.adminName} from Favorites` : `Add ${adminMeta.adminName} to Favorites`)
+      ? (adminMeta.isFavorite ? `UnFollow ${adminMeta.adminName}'s Games` : `Follow Games from ${adminMeta.adminName}`)
       : 'Admin Favorite Unavailable';
     const favoriteAdminDanger = !!adminMeta.isFavorite;
 
@@ -426,7 +426,7 @@ function getGameAdminMeta(g){
       { label: "My Past Games Played", action: () => applyQuickPreset("HISTORY") },
       { separator: true },
       { separator: true },
-      { label: "Games from my Favorite Admins", action: () => applyQuickPreset("FAVORITES") },
+      { label: "Games from Admins I Follow", action: () => applyQuickPreset("FAVORITES") },
       { label: "All Available Games", action: () => applyQuickPreset("OPEN") },
       { separator: true },
       { separator: true },
