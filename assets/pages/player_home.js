@@ -203,9 +203,13 @@ function getGameAdminMeta(g){
     const regClosedish = ['Closed','Locked','Full'].includes(registrationStatus);
     const scoreId = rowText(g, ['yourPlayerKey', 'scoreId', 'playerKey', 'dbPlayers_PlayerKey']);
     const postedId = rowText(g, ['ghinPostId']);
+
     const adminMeta = getGameAdminMeta(g);
+//    const favoriteAdminLabel = adminMeta.adminKey
+//      ? (adminMeta.isFavorite ? 'Remove this Admin from Favorites' : 'Add Admin to Favorites')
+//      : 'Admin Favorite Unavailable';
     const favoriteAdminLabel = adminMeta.adminKey
-      ? (adminMeta.isFavorite ? 'Remove Admin from Favorites' : 'Add Admin to Favorites')
+      ? (adminMeta.isFavorite ? `Remove ${adminMeta.adminName} from Favorites` : `Add ${adminMeta.adminName} to Favorites`)
       : 'Admin Favorite Unavailable';
     const favoriteAdminDanger = !!adminMeta.isFavorite;
 
@@ -219,12 +223,12 @@ function getGameAdminMeta(g){
       // Participation Group
       { label: regLabel, action: 'register', enabled: true },
       isRegistered ? { label: 'Unregister yourself', action: 'unregister', enabled: !regClosedish } : null,
-      { label: 'Player Quick View',    action: 'rosterView',  enabled: true },
-      { separator: true }, { separator: true },
-
-      // Information Group
       { label: 'Add a Player or Guest', action: 'viewRoster', enabled: true },
-      { label: 'Review Game Players', action: 'viewGame', enabled: true },
+
+      { separator: true }, { separator: true },
+      
+      { label: 'Player Quick View',    action: 'rosterView',  enabled: true },
+      { label: 'Review Game Details', action: 'viewGame', enabled: true },
 
       { separator: true }, { separator: true },
 
@@ -236,7 +240,7 @@ function getGameAdminMeta(g){
       { separator: true }, { separator: true },
 
       // Utility Group
-      { label: 'Add Game to your Calendar', action: 'calendar', enabled: true },
+      { label: 'Add this Game to your Calendar', action: 'calendar', enabled: true },
       { separator: true }, { separator: true },
       { label: favoriteAdminLabel, action: 'toggleFavoriteAdmin', enabled: !!adminMeta.adminKey, danger: favoriteAdminDanger }
     ];
