@@ -437,6 +437,7 @@ public static function queryGames(array $args): array {
 
     $g["dbGames_AdminGHIN"] = (string)($ctx["adminGhin"] ?? "");
     $g["dbGames_AdminName"] = (string)($ctx["adminName"] ?? "");
+    $g["dbGames_AdminLName"] = (string)($ctx["adminLName"] ?? "");
 
     // Stamp assoc/club identity (Wix parity)
     if (empty($g["dbGames_AdminAssocID"]) && !empty($ctx["adminAssocId"])) $g["dbGames_AdminAssocID"] = (string)$ctx["adminAssocId"];

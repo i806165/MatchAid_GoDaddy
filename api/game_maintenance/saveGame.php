@@ -23,7 +23,7 @@ try {
     "ggid" => (int)(ServiceContextGame::getStoredGGID() ?? 0),
     "adminGhin" => (string)($auth["ghinId"] ?? ""),
     "adminName" => (string)($_SESSION["SessionUserName"] ?? $_SESSION["SessionGHINUserName"] ?? ""),
-    // NEW: assoc + club from session (server-trusted)
+    "adminLName"     => (string)($_SESSION["SessionUserLName"] ?? ""), 
     "adminAssocId"   => (string)($_SESSION["SessionAdminAssocID"] ?? ""),
     "adminAssocName" => (string)($_SESSION["SessionAdminAssocName"] ?? ""),
     "adminClubId"    => (string)($_SESSION["SessionAdminClubID"] ?? ""),
