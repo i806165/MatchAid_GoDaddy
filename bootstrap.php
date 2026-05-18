@@ -39,6 +39,7 @@ define('MA_ROUTE_API_SESSION',     '/api/session');
 define('MA_ROUTE_API_ROUTER',      '/api/session/pageRouter.php');
 define('MA_ROUTE_API_GHIN',          '/api/GHIN');
 define('MA_ROUTE_API_GAME_MAINT',    '/api/game_maintenance');
+define('MA_ROUTE_API_GAME_PAIRINGS', '/api/game_pairings');
 define('MA_ROUTE_API_GAME_SETTINGS', '/api/game_settings');
 define('MA_ROUTE_API_GAME_PLAYERS',  '/api/game_players');
 define('MA_ROUTE_API_ROSTER_VIEW',   '/api/game_players/getGamePlayers.php');

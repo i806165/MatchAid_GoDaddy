@@ -195,4 +195,75 @@ final class ServiceDbPlayers
     return (int)$st->fetchColumn();
   }
 
+  /**
+ * Returns co-play history for all pairs within today's unpaired GHIN pool.
+ * Used by the Auto-Pair 'Least Played Together' outcome.
+ *
+ * NH-prefix GHINs are stripped before the query — they have no persistent
+ * identity across games (same NH number may be a different person each round).
+ * This mirrors the existing NH guard in getLastPlayedTeeForCourse().
+ *
+ * @param  string[] $ghins  GHINs of unpaired players in today's round.
+ * @return array            Flat map keyed 'LOWER_GHIN|HIGHER_GHIN'.
+ *                          Each value: ['count' => int, 'last' => string|null]
+ *                          Pairs with no shared history are absent from the map.
+ *                          Absence = implicitly count 0, last null (best score).
+ */
+  public static function getCoPlayMatrix(array $ghins): array
+  {
+    // Strip NH players and blank values — no persistent identity
+    $ghins = array_values(array_filter($ghins, function (string $g): bool {
+      $g = strtoupper(trim($g));
+      return $g !== '' && !str_starts_with($g, 'NH');
+    }));
+
+    if (count($ghins) < 2) return [];
+
+    $pdo = Db::pdo();
+
+    // PDO named parameters must be unique within a single query.
+    // Build two independent placeholder sets for the two IN clauses.
+    $phA = []; $phB = []; $params = [];
+    foreach ($ghins as $i => $ghin) {
+      $phA[] = ':a' . $i;
+      $phB[] = ':b' . $i;
+      $params[':a' . $i] = trim($ghin);
+      $params[':b' . $i] = trim($ghin);
+    }
+    $inA = implode(',', $phA);
+    $inB = implode(',', $phB);
+
+    $sql = "
+      SELECT
+        p1.dbPlayers_PlayerGHIN   AS ghin_a,
+        p2.dbPlayers_PlayerGHIN   AS ghin_b,
+        COUNT(*)                  AS times_paired,
+        MAX(g.dbGames_PlayDate)   AS last_played_together
+      FROM db_Players p1
+      JOIN db_Players p2
+        ON  p1.dbPlayers_GGID      = p2.dbPlayers_GGID
+        AND p1.dbPlayers_PairingID = p2.dbPlayers_PairingID
+        AND p1.dbPlayers_PairingID != '000'
+        AND p1.dbPlayers_PlayerGHIN < p2.dbPlayers_PlayerGHIN
+      JOIN db_Games g
+        ON  g.dbGames_GGID = p1.dbPlayers_GGID
+      WHERE p1.dbPlayers_PlayerGHIN IN ($inA)
+        AND p2.dbPlayers_PlayerGHIN IN ($inB)
+      GROUP BY p1.dbPlayers_PlayerGHIN, p2.dbPlayers_PlayerGHIN";
+
+    $st = $pdo->prepare($sql);
+    $st->execute($params);
+
+    $matrix = [];
+    foreach ($st->fetchAll() as $row) {
+      // Key already sorted — query enforces p1.GHIN < p2.GHIN
+      $key = $row['ghin_a'] . '|' . $row['ghin_b'];
+      $matrix[$key] = [
+        'count' => (int)$row['times_paired'],
+        'last'  => $row['last_played_together'] ?? null,
+      ];
+    }
+    return $matrix;
+  }
+
 }

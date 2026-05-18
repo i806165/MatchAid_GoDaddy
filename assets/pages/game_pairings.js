@@ -333,6 +333,10 @@
     return t ? (t.name || "") : "";
   }
 
+  function isNH(ghin) {
+    return String(ghin || '').toUpperCase().startsWith('NH');
+  }
+
   function openAutoPairModal(defaults, allUnpairedPlayers, teamConfig, hasTeams) {
     // ---- Session state ----
     // allUnpairedPlayers is frozen at modal open — never re-read from state.players mid-session.
@@ -425,6 +429,7 @@
             <option value="inOrder">Ranked — pair strongest players together</option>
             <option value="stackedHighFirst">Stacked — pair highest handicaps together</option>
             <option value="random">Random — ignore handicaps entirely</option>
+            <option value="leastPlayed">Least Played Together — prioritize players with least shared history</option>
           </select>
         </div>
       </div>
@@ -633,7 +638,7 @@
     updateMixOptions();           // populates Pairing Size
 
     // ---- RUN ----
-    btnRun.addEventListener("click", () => {
+    btnRun.addEventListener("click", async () => {
       const pool = getActivePool();
       const mix  = JSON.parse(elMix.value || "{}");
       const cfg  = {
@@ -652,6 +657,22 @@
 
       // Lock scope after first Run
       lockScope();
+
+      // Fetch co-play matrix for leastPlayed outcome only.
+      // Matrix shape: { 'LOWER_GHIN|HIGHER_GHIN': { count: int, last: 'Y-m-d'|null } }
+      // NH players excluded here and again at the PHP level.
+      // On any failure: empty matrix = handicap tiebreak only — still a valid result.
+      let coPlayMatrix = {};
+      if (cfg.outcome === "leastPlayed") {
+        const ghins = pool.map(p => p.playerGHIN).filter(g => !isNH(g));
+        try {
+          const res = await MA.postJson(`${apiBase}/getCoPlayMatrix.php`, { ghins });
+          if (res && res.ok) coPlayMatrix = res.matrix || {};
+        } catch (err) {
+          console.warn("[AutoPair] Co-play matrix fetch failed — proceeding without history.", err);
+        }
+      }
+      cfg.coPlayMatrix = coPlayMatrix;
 
       // Generate preview
       currentPreviewGroups = AutoPairEngine.run(cfg, pool);
@@ -866,6 +887,7 @@
         case "abcdDraw": return this._draftABCD(buckets, sizes);
         case "random": return this._draftRandom(pool, sizes);
         case "stackedHighFirst": return this._draftStackedHighFirst(pool, sizes);
+        case "leastPlayed":      return this._draftLeastPlayed(pool, sizes, cfg.coPlayMatrix || {});
         default: return this._draftBalanced(buckets, sizes);
       }
     },
@@ -998,6 +1020,72 @@
     _draftStackedHighFirst(players, sizes) {
       // players already sorted asc by PH, so this is just InOrder
       return this._draftInOrder(players, sizes);
+    },
+    _draftLeastPlayed(pool, sizes, matrix) {
+      // pool arrives pre-sorted asc by PH from run() — real players anchor,
+      // NH players trail and never become group anchors.
+      const real      = pool.filter(p => !isNH(p.playerGHIN));
+      const nh        = pool.filter(p =>  isNH(p.playerGHIN));
+      const remaining = [...real, ...nh];
+
+      const groups = [];
+      for (const size of sizes) {
+        if (!remaining.length) break;
+        const anchor = remaining.shift();   // lowest PH real player
+        const group  = [anchor];
+        while (group.length < size && remaining.length) {
+          const best = this._pickBestCandidate(group, remaining, matrix);
+          if (!best) break;
+          remaining.splice(remaining.indexOf(best), 1);
+          group.push(best);
+        }
+        groups.push(group);
+      }
+      return groups;
+    },
+    _pickBestCandidate(group, remaining, matrix) {
+      let best = null, bestScore = null;
+      for (const candidate of remaining) {
+        let totalCount     = 0;
+        let mostRecentLast = null; // most recent shared game — we want the oldest
+        for (const member of group) {
+          // Sort GHINs to match PHP key convention (p1.GHIN < p2.GHIN)
+          const key   = [member.playerGHIN, candidate.playerGHIN].sort().join('|');
+          const entry = matrix[key];
+          if (entry) {
+            totalCount += entry.count;
+            if (entry.last && (!mostRecentLast || entry.last > mostRecentLast)) {
+              mostRecentLast = entry.last;
+            }
+          }
+          // No entry = never played together = count 0, last null (ideal)
+        }
+        const score = {
+          count:  totalCount,
+          last:   mostRecentLast,
+          spread: this._spreadIfAdded(group, candidate),
+        };
+        if (!best || this._compareScore(score, bestScore) < 0) {
+          best = candidate; bestScore = score;
+        }
+      }
+      return best;
+    },
+    _compareScore(a, b) {
+      // Priority 1: fewest times played together
+      if (a.count !== b.count) return a.count - b.count;
+      // Priority 2: longest ago (null = never = best)
+      if (a.last !== b.last) {
+        if (a.last === null) return -1;
+        if (b.last === null) return  1;
+        return a.last.localeCompare(b.last); // Y-m-d: older string wins
+      }
+      // Priority 3: tightest handicap spread
+      return a.spread - b.spread;
+    },
+    _spreadIfAdded(group, candidate) {
+      const vals = [...group, candidate].map(p => this.phValue(p));
+      return Math.max(...vals) - Math.min(...vals);
     },
     _mixVerbose(f, t3, t2, s1) {
       // Plain-English pairing size labels — no "foursomes/threesomes/twosomes/singles" (playing group language).
