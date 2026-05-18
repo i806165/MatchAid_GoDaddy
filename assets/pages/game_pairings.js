@@ -1110,16 +1110,19 @@
       chrome.setHeaderLines(["Game Pairings", title, subTitle]);
     }
 
-    chrome.setActions({
-      left: { show: false },
-      right: { show: true, label: "Actions", onClick: openActionsMenu },
-      footer: isDirty
-        ? {
-            save:   { label: "Save",   onClick: doSave },
-            cancel: { label: "Cancel", onClick: onResetPairings }
-          }
-        : null
-    });
+    if (chrome && typeof chrome.setActions === "function") {
+      const isDirty = state.dirty.size > 0;
+      chrome.setActions({
+        left: { show: false },
+        right: { show: true, label: "Actions", onClick: openActionsMenu },
+        footer: isDirty
+          ? {
+              save:   { label: "Save",   onClick: doSave },
+              cancel: { label: "Cancel", onClick: onResetPairings }
+            }
+          : null
+      });
+    }
 
     if (chrome && typeof chrome.setBottomNav === "function") {
       chrome.setBottomNav({
