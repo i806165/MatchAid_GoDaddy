@@ -209,7 +209,7 @@ final class ServiceDbPlayers
  *                          Pairs with no shared history are absent from the map.
  *                          Absence = implicitly count 0, last null (best score).
  */
-  public static function getCoPlayMatrix(array $ghins): array
+  public static function getCoPlayMatrix(array $ghins, string $ggid): array
   {
     // Strip NH players and blank values — no persistent identity
     $ghins = array_values(array_filter($ghins, function (string $g): bool {
@@ -228,12 +228,16 @@ final class ServiceDbPlayers
       $phA[] = ':a' . $i;
       $phB[] = ':b' . $i;
       $params[':a' . $i] = trim($ghin);
-      $params[':b' . $i] = trim($ghin);
-    }
-    $inA = implode(',', $phA);
-    $inB = implode(',', $phB);
+        $params[':b' . $i] = trim($ghin);
+      }
+      $inA = implode(',', $phA);
+      $inB = implode(',', $phB);
 
-    $sql = "
+      // Exclude current game — today's partial pairings must not
+      // influence history-based scoring before the round is played.
+      $params[':ggid'] = trim($ggid);
+
+      $sql = "
       SELECT
         p1.dbPlayers_PlayerGHIN   AS ghin_a,
         p2.dbPlayers_PlayerGHIN   AS ghin_b,
@@ -249,6 +253,7 @@ final class ServiceDbPlayers
         ON  g.dbGames_GGID = p1.dbPlayers_GGID
       WHERE p1.dbPlayers_PlayerGHIN IN ($inA)
         AND p2.dbPlayers_PlayerGHIN IN ($inB)
+        AND g.dbGames_GGID != :ggid
       GROUP BY p1.dbPlayers_PlayerGHIN, p2.dbPlayers_PlayerGHIN";
 
     $st = $pdo->prepare($sql);

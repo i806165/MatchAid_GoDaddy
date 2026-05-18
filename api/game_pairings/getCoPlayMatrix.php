@@ -33,7 +33,7 @@ try {
   $ghins = array_values(array_filter(array_map('strval', $ghins)));
 
   // 4) Delegate — NH filtering happens inside getCoPlayMatrix()
-  $matrix = ServiceDbPlayers::getCoPlayMatrix($ghins);
+  $matrix = ServiceDbPlayers::getCoPlayMatrix($ghins, $ggid);
 
   Logger::info('COPLAY_MATRIX_OK', [
     'ggid'     => $ggid,
