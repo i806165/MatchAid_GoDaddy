@@ -221,21 +221,21 @@ function getGameAdminMeta(g){
     // 2. Define the menu structure declaratively
     const menu = [
       // Participation Group
-      { category: "Registration Actions" },
+      { category: "Registration Actions"},
       { label: regLabel, action: 'register', enabled: true },
       isRegistered ? { label: 'Unregister yourself', action: 'unregister', enabled: !regClosedish } : null,
       { label: 'Add a Player or Guest', action: 'viewRoster', enabled: true },
 
-      { category: "Game Review" },
+      { category: "Game Review"},
       { label: 'View Game Players',    action: 'rosterView',  enabled: true },
       { label: 'View All Game Details', action: 'viewGame', enabled: true },
 
-      { category: "Digital Scoring" },
+      { category: "Digital Scoring"},
       { label: scoreLabel, action: 'scorehome', enabled: !!scoreId },
       scoreId ? { label: 'Scoring Leaderboard', action: 'scoresummary', enabled: true } : null,
       isRegistered ? { label: postLabel, action: 'ghinPost', enabled: !postedId } : null,
 
-      { category: "Accessibilty Tools" },
+      { category: "Accessibilty Tools"},
       { label: 'Add this Game to your Calendar', action: 'calendar', enabled: true },
       { separator: true }, { separator: true },
       { label: favoriteAdminLabel, action: 'toggleFavoriteAdmin', enabled: !!adminMeta.adminKey, danger: favoriteAdminDanger }
@@ -400,12 +400,13 @@ function getGameAdminMeta(g){
     
     const items = (actionItemsForGame(game) || []).map(it => {
       if (it.separator) return { separator: true };
-        return {
-          label: it.label,
-          action: () => onGameAction(game, it.action),
-          disabled: it.enabled === false,
-          danger: it.danger === true
-        };
+      if (it.category != null) return { category: it.category, description: it.description };  // ← add this
+      return {
+        label: it.label,
+        action: () => onGameAction(game, it.action),
+        disabled: it.enabled === false,
+        danger: it.danger === true
+      };
     });
     
     const title = rowText(game, ['title','dbGames_Title']) || 'Game Actions';
