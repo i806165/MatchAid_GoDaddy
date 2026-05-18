@@ -681,20 +681,22 @@ function applyPreset(presetKey) {
     const subtitle = [dateLine, g.dbGames_PlayTime || ""].filter(Boolean).join(" ");
 
     MA.ui.openActionsMenu(g.dbGames_Title || "Game", [
-      { label: "Player Quick View",      action: () => handleGameAction({ action: "rosterView", ggid: g.dbGames_GGID }) },
-      { separator: true },
-      { label: "Edit Game",               action: () => handleGameAction({ action: "editGame",   ggid: g.dbGames_GGID }) },
-      { label: "Adjust Settings",         action: () => handleGameAction({ action: "settings",   ggid: g.dbGames_GGID }) },
-      { separator: true },
-      { label: "Select Players",          action: () => handleGameAction({ action: "roster",     ggid: g.dbGames_GGID }) },
-      { label: "Pair Players",            action: () => handleGameAction({ action: "pairings",   ggid: g.dbGames_GGID }) },
-      { label: "Assign Tee Times",        action: () => handleGameAction({ action: "teetimes",   ggid: g.dbGames_GGID }) },
-      { label: "View Game Summary",       action: () => handleGameAction({ action: "summary",    ggid: g.dbGames_GGID }) },
-      { separator: true },
-      { label: "Pre-Game Scorecards",     action: () => handleGameAction({ action: "scorecard",  ggid: g.dbGames_GGID }) },
-      { separator: true },
-      { label: "Add Game to Calendar",    action: () => handleGameAction({ action: "calendar",   ggid: g.dbGames_GGID }) },
-      { label: "Send Message to Players", action: () => handleGameAction({ action: "notify",     ggid: g.dbGames_GGID }) },
+      { category: "GAME SETUP" },
+      { label: "Edit Game",               indent: true, action: () => handleGameAction({ action: "editGame",   ggid: g.dbGames_GGID }) },
+      { label: "Define Game Format & Handicapping", indent: true, action: () => handleGameAction({ action: "settings",   ggid: g.dbGames_GGID }) },
+
+      { category: "GAME ADMINISTRATION" },
+      { label: "Select Players",          indent: true, action: () => handleGameAction({ action: "roster",     ggid: g.dbGames_GGID }) },
+      { label: "Pair Players",            indent: true, action: () => handleGameAction({ action: "pairings",   ggid: g.dbGames_GGID }) },
+      { label: "Assign Tee Times",        indent: true, action: () => handleGameAction({ action: "teetimes",   ggid: g.dbGames_GGID }) },
+      { label: "View Game Summary",       indent: true, action: () => handleGameAction({ action: "summary",    ggid: g.dbGames_GGID }) },
+      { label: "Pre-Game Scorecards",     indent: true, action: () => handleGameAction({ action: "scorecard",  ggid: g.dbGames_GGID }) },
+
+      { category: "GAME SERVICES"},
+      { label: "View Players",       indent: true, action: () => handleGameAction({ action: "rosterView", ggid: g.dbGames_GGID }) },
+      { label: "Send Message to Players", indent: true, action: () => handleGameAction({ action: "notify",     ggid: g.dbGames_GGID }) },
+      { label: "Add Game to Calendar",    indent: true, action: () => handleGameAction({ action: "calendar",   ggid: g.dbGames_GGID }) },
+
       { separator: true },
       { label: "Delete the Game", danger: true, action: () => handleGameAction({ action: "deleteGame", ggid: g.dbGames_GGID }) },
     ], subtitle);
