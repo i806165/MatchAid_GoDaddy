@@ -221,23 +221,22 @@ function getGameAdminMeta(g){
     // 2. Define the menu structure declaratively
     const menu = [
       // Participation Group
-      { category: "Registration Actions"},
-      { label: regLabel, action: 'register', enabled: true },
-      isRegistered ? { label: 'Unregister yourself', action: 'unregister', enabled: !regClosedish } : null,
-      { label: 'Add a Player or Guest', action: 'viewRoster', enabled: true },
+      { category: "REGISTRATION ACTIONS"},
+      { label: regLabel, action: 'register', enabled: true, indent: true },
+      isRegistered ? { label: 'Unregister yourself', action: 'unregister', enabled: !regClosedish, indent: true } : null,
+      { label: 'Add a Player or Guest', action: 'viewRoster', enabled: true, indent: true },
 
-      { category: "Game Review"},
-      { label: 'View Game Players',    action: 'rosterView',  enabled: true },
-      { label: 'View All Game Details', action: 'viewGame', enabled: true },
+      { category: "GAME REVIEW"},
+      { label: 'View Game Players',    action: 'rosterView',  enabled: true, indent: true },
+      { label: 'View All Game Details', action: 'viewGame', enabled: true, indent: true },
 
-      { category: "Digital Scoring"},
-      { label: scoreLabel, action: 'scorehome', enabled: !!scoreId },
-      scoreId ? { label: 'Scoring Leaderboard', action: 'scoresummary', enabled: true } : null,
-      isRegistered ? { label: postLabel, action: 'ghinPost', enabled: !postedId } : null,
+      { category: "DIGITAL SCORING"},
+      { label: scoreLabel, action: 'scorehome', enabled: !!scoreId, indent: true },
+      scoreId ? { label: 'Scoring Leaderboard', action: 'scoresummary', enabled: true, indent: true } : null,
+      isRegistered ? { label: postLabel, action: 'ghinPost', enabled: !postedId, indent: true } : null,
 
-      { category: "Accessibilty Tools"},
-      { label: 'Add this Game to your Calendar', action: 'calendar', enabled: true },
-      { separator: true }, { separator: true },
+      { category: "ACCESSIBILITY TOOLS"},
+      { label: 'Add this Game to your Calendar', action: 'calendar', enabled: true, indent: true },
       { label: favoriteAdminLabel, action: 'toggleFavoriteAdmin', enabled: !!adminMeta.adminKey, danger: favoriteAdminDanger }
     ];
 
@@ -405,7 +404,8 @@ function getGameAdminMeta(g){
         label: it.label,
         action: () => onGameAction(game, it.action),
         disabled: it.enabled === false,
-        danger: it.danger === true
+        danger: it.danger === true,
+        indent: it.indent === true
       };
     });
     

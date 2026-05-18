@@ -4,10 +4,11 @@
  * - Exposed as MA.ui.openActionsMenu(title, items, subtitle)
  *
  * Item shapes:
- *   { label, action, danger, disabled }  — clickable button
- *   { separator: true }                  — thin divider line
- *   { category: "Label" }                — non-clickable section header
- *   { category: "Label", description: "More detail shown below the heading" }
+ *   { label, action, danger, disabled }         — clickable button
+ *   { label, action, danger, disabled, indent }  — clickable button, indented (use under a category)
+ *   { separator: true }                          — thin divider line
+ *   { category: "Label" }                        — non-clickable section header
+ *   { category: "Label", description: "..." }    — section header with description
  *
  * CSS classes to style in your stylesheet:
  *   .actionMenu_category      — section heading row (non-interactive)
@@ -84,8 +85,9 @@ function ensureOverlay() {
       const isDisabled = item.disabled === true || item.enabled === false;
       const disabledClass = isDisabled ? "disabled" : "";
       const disabledAttr = isDisabled ? "disabled" : "";
+      const indentClass = item.indent ? "indent" : "";
       // Store index to retrieve action callback later
-      return `<button class="actionMenu_item ${dangerClass} ${disabledClass}" type="button" data-idx="${idx}" ${disabledAttr}>${escapeHtml(label)}</button>`;
+      return `<button class="actionMenu_item ${dangerClass} ${disabledClass} ${indentClass}" type="button" data-idx="${idx}" ${disabledAttr}>${escapeHtml(label)}</button>`;
     }).join("");
 
     // Build Full HTML

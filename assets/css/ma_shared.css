@@ -1329,6 +1329,11 @@ textarea {
 
 .maModal .actionMenu_item.danger { color: var(--danger); }
 
+.actionMenu_item.indent,
+.maModal .actionMenu_item.indent {
+  padding-left: 28px;
+}
+
 .maModal .actionMenu_divider {
   height: 8px;
   background: #f0f0f0;
