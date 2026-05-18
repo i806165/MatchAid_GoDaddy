@@ -1335,6 +1335,53 @@ textarea {
   margin: 0;
 }
 
+/* Category break — section header with tinted background */
+.actionMenu_category {
+  background: var(--brandPrimaryBg);
+  border-top: 1px solid var(--borderSubtle);
+  border-bottom: 1px solid var(--borderSubtle);
+  padding: 8px 16px 5px;
+  font-weight: 900;
+  font-size: var(--fieldValueSize);
+  color: var(--ink);
+  pointer-events: none;
+  user-select: none;
+}
+
+.actionMenu_categoryDesc {
+  background: var(--brandPrimaryBg);
+  border-bottom: 1px solid var(--borderSubtle);
+  padding: 0 16px 7px;
+  font-weight: 800;
+  font-size: var(--fieldValueSize);
+  color: var(--ink);
+  pointer-events: none;
+  user-select: none;
+}
+
+.maModal .actionMenu_category {
+  background: var(--brandPrimaryBg);
+  border-top: 1px solid var(--borderSubtle);
+  border-bottom: 1px solid var(--borderSubtle);
+  padding: 8px 16px 5px;
+  font-weight: 900;
+  font-size: var(--fieldValueSize);
+  color: var(--ink);
+  pointer-events: none;
+  user-select: none;
+}
+
+.maModal .actionMenu_categoryDesc {
+  background: var(--brandPrimaryBg);
+  border-bottom: 1px solid var(--borderSubtle);
+  padding: 0 16px 7px;
+  font-weight: 800;
+  font-size: var(--fieldValueSize);
+  color: var(--ink);
+  pointer-events: none;
+  user-select: none;
+}
+
 
 /* ==========================================================================
    12. CARDS

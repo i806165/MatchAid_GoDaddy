@@ -2,6 +2,16 @@
  * Shared Actions Menu module.
  * - Renders a bottom-sheet/modal menu for actions.
  * - Exposed as MA.ui.openActionsMenu(title, items, subtitle)
+ *
+ * Item shapes:
+ *   { label, action, danger, disabled }  — clickable button
+ *   { separator: true }                  — thin divider line
+ *   { category: "Label" }                — non-clickable section header
+ *   { category: "Label", description: "More detail shown below the heading" }
+ *
+ * CSS classes to style in your stylesheet:
+ *   .actionMenu_category      — section heading row (non-interactive)
+ *   .actionMenu_categoryDesc  — optional description line beneath the heading
  */
 (function () {
   "use strict";
@@ -62,6 +72,12 @@ function ensureOverlay() {
     const rows = (Array.isArray(items) ? items : []).map((item, idx) => {
       if (item.separator) {
         return `<div class="actionMenu_divider"></div>`;
+      }
+      if (item.category != null) {
+        // Non-clickable section header with optional description (desc rendered as sibling)
+        const heading = `<div class="actionMenu_category">${escapeHtml(String(item.category || ""))}</div>`;
+        const desc    = item.description ? `<div class="actionMenu_categoryDesc">${escapeHtml(String(item.description))}</div>` : "";
+        return heading + desc;
       }
       const label = String(item.label || "");
       const dangerClass = item.danger ? "danger" : "";

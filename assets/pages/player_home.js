@@ -221,25 +221,21 @@ function getGameAdminMeta(g){
     // 2. Define the menu structure declaratively
     const menu = [
       // Participation Group
+      { category: "Registration Actions" },
       { label: regLabel, action: 'register', enabled: true },
       isRegistered ? { label: 'Unregister yourself', action: 'unregister', enabled: !regClosedish } : null,
       { label: 'Add a Player or Guest', action: 'viewRoster', enabled: true },
 
-      { separator: true }, { separator: true },
-      
-      { label: 'Player Quick View',    action: 'rosterView',  enabled: true },
-      { label: 'Review Game Details', action: 'viewGame', enabled: true },
+      { category: "Game Review" },
+      { label: 'View Game Players',    action: 'rosterView',  enabled: true },
+      { label: 'View All Game Details', action: 'viewGame', enabled: true },
 
-      { separator: true }, { separator: true },
-
-      // Scoring Group
+      { category: "Digital Scoring" },
       { label: scoreLabel, action: 'scorehome', enabled: !!scoreId },
       scoreId ? { label: 'Scoring Leaderboard', action: 'scoresummary', enabled: true } : null,
       isRegistered ? { label: postLabel, action: 'ghinPost', enabled: !postedId } : null,
 
-      { separator: true }, { separator: true },
-
-      // Utility Group
+      { category: "Accessibilty Tools" },
       { label: 'Add this Game to your Calendar', action: 'calendar', enabled: true },
       { separator: true }, { separator: true },
       { label: favoriteAdminLabel, action: 'toggleFavoriteAdmin', enabled: !!adminMeta.adminKey, danger: favoriteAdminDanger }
