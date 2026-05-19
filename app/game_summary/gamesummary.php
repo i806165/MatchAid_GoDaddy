@@ -52,6 +52,7 @@ $paths = [
   "routerApi"      => MA_ROUTE_API_ROUTER,
   "apiGHIN"        => MA_ROUTE_API_GHIN,
   "apiGameSummary" => "/api/game_summary/initGameSummary.php",
+  "apiNotify"      => MA_ROUTE_API_MESSAGING,  
 ];
 
 // Chrome values
@@ -98,7 +99,9 @@ $maChromeLogoUrl  = null;
   <script src="/assets/js/ma_shared.js"></script>
   <script src="/assets/modules/actions_menu.js?v=1"></script>
   <script src="/assets/modules/addCalendar.js?v=1"></script>
-  <script src="/assets/modules/composeEmail.js?v=1"></script>
+  <script src="/assets/modules/composeEmail.js?v=1"></script>       
+  <script src="/assets/modules/player_notifications.js?v=1"></script> 
+  <script src="/assets/modules/recalculate_handicaps.js"></script>
   <script src="/assets/pages/game_summary.js"></script>
 </body>
 </html>

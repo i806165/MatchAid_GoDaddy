@@ -1006,6 +1006,19 @@
     setStatus("CSV downloaded.", "ok");
   }
 
+  function openNotifyModal() {
+    if (!MA.notify || typeof MA.notify.open !== "function") {
+      setStatus("Messaging module not loaded.", "error");
+      return;
+    }
+    const g = state.game || {};
+    const ggid = String(g.dbGames_GGID || g.dbGames_GGIDnum || "").trim();
+    MA.notify.open({
+      ggid:    ggid,
+      apiPath: MA.paths?.apiNotify,
+    });
+  }
+
   async function emailSummary() {
     // 1. Copy rich HTML to clipboard first
     await copyRichTextToClipboard();
@@ -1116,6 +1129,14 @@
     }
   }
 
+  async function recalculateHandicaps() {
+    if (!MA.recalculateHandicaps) {
+      setStatus("Recalculate module not loaded.", "error");
+      return;
+    }
+    const ok = await MA.recalculateHandicaps(MA.paths?.apiGHIN);
+    if (ok) setStatus("Handicaps recalculated.", "success");
+  }
 
   function printScorecards() {
     if (typeof MA.routerGo === "function") {
@@ -1176,17 +1197,18 @@
     if (!MA.ui || !MA.ui.openActionsMenu) return;
 
     const items = [
-      { label: "Print Scorecards", action: printScorecards },
       { label: "Add Game to Calendar", action: downloadIcsForGame },
+      { label: "Send Message to Players",          action: openNotifyModal },
+      //{ label: "Compose Email to Players", action: emailSummary },
+      //{ label: "Compose Short Message to Players", action: emailShortMessage },
+      { separator: true },
       { separator: true }, 
-      { separator: true }, 
-      { label: "Compose Email to Players", action: emailSummary },
-      { label: "Compose Short Message to Players", action: emailShortMessage },
-      { separator: true }, 
-      { separator: true }, 
-      { label: "Export to .csv file", action: downloadCsv },
-      { label: "Copy csv to clipboard", action: copySummaryToClipboard },
-      { label: "Copy text to clipboard", action: copyRichTextToClipboard },
+      { label: "Copy View to clipboard", action: copyRichTextToClipboard },
+      { label: "Copy View to clipboard (csv)", action: copySummaryToClipboard },
+      { label: "Export View to .csv file", action: downloadCsv },
+      { separator: true },
+      { separator: true },  
+      { label: "Recalculate Handicaps",  action: recalculateHandicaps }, 
     ];
     MA.ui.openActionsMenu("Actions", items);
   }
