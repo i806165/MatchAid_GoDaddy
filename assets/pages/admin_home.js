@@ -692,7 +692,7 @@ function applyPreset(presetKey) {
       { label: "View Game Summary",       indent: true, action: () => handleGameAction({ action: "summary",    ggid: g.dbGames_GGID }) },
       { label: "Pre-Game Scorecards",     indent: true, action: () => handleGameAction({ action: "scorecard",  ggid: g.dbGames_GGID }) },
 
-      { category: "GAME SERVICES"},
+      { category: "ADMIN SERVICES"},
       { label: "View Players",       indent: true, action: () => handleGameAction({ action: "rosterView", ggid: g.dbGames_GGID }) },
       { label: "Send Message to Players", indent: true, action: () => handleGameAction({ action: "notify",     ggid: g.dbGames_GGID }) },
       { label: "Add Game to Calendar",    indent: true, action: () => handleGameAction({ action: "calendar",   ggid: g.dbGames_GGID }) },

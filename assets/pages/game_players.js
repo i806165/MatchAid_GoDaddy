@@ -576,7 +576,7 @@
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     MA.ui.openActionsMenu("Actions", [
-      { label: "Manage Teams",            action: onManageTeams },
+      { label: "Manage Team Assignments",            action: onManageTeams },
       { label: "Recalculate Handicaps",   action: onRecalcHandicaps },
       { label: "Send Message to Players", action: onNotify },
     ]);
