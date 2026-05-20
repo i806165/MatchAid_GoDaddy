@@ -994,12 +994,6 @@
     display: inline-flex;
   }
 
-  .gpFooter--canvas {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-  }
-
   /* Mobile tray header: actions on LEFT, close X on RIGHT */
   .maPage--players .gpTrayPanel .gpPanelHdr__actions {
     left: 10px;

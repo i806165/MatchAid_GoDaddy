@@ -643,7 +643,7 @@
     // Update canvas header count and footer summary
     const count = state.players.length;
     if (el.rosterCount) el.rosterCount.textContent = count ? `${count} players` : "";
-    if (el.rosterFooterLeft) el.rosterFooterLeft.textContent = count ? `${count} player${count !== 1 ? "s" : ""}` : "";
+    //if (el.rosterFooterLeft) el.rosterFooterLeft.textContent = count ? `${count} player${count !== 1 ? "s" : ""}` : "";
   }
 
   // ── Canvas controls — sort strip + Manage Teams + HCP date ────────────────

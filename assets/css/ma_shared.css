@@ -969,7 +969,7 @@ textarea {
 .maPanel__controls {
   flex: 0 0 auto;
   background: var(--panelControlsBg);
-  padding: var(--panelPad);
+  padding: 6px 8px; /*it was var(--panelPad); */
   border-bottom: 1px solid var(--panelControlsBorder);
 }
 

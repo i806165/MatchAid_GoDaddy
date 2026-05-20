@@ -25,13 +25,7 @@
     </header>
     <div class="maPanel__controls" id="gpTrayControls"></div>
     <div class="maPanel__body" id="gpTrayBody"></div>
-    <footer class="maPanel__ftr">
-      <div class="gpFooter gpFooter--canvas">
-        <button class="gsMobileAddPlayingGroupBtn" id="gpBtnTrayOpen" type="button">
-          + Add Players
-        </button>
-      </div>
-    </footer>
+    <footer class="maPanel__ftr"></footer>
   </section>
 
   <!-- RIGHT: Canvas — Roster, always visible -->
@@ -47,8 +41,11 @@
     <div class="maPanel__controls" id="gpCanvasControls"></div>
     <div class="maPanel__body" id="gpRosterBody"></div>
     <footer class="maPanel__ftr">
-      <div class="gpFooter">
+      <div class="gpFooter gpFooter--canvas">
         <div class="gpFooter__left" id="gpRosterFooterLeft"></div>
+        <button class="gsMobileAddPlayingGroupBtn" id="gpBtnTrayOpen" type="button">
+          + Add Players
+        </button>
       </div>
     </footer>
   </section>
