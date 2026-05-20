@@ -803,3 +803,221 @@
 .maSeg--sortBtn:hover:not(.is-active) {
   color: var(--ink);
 }
+/* ==========================================================================
+   TWO-PANEL REDESIGN ADDITIONS
+   game_players.css — appended additions for tray + canvas layout
+   ========================================================================== */
+
+/* Lock outer page scrolling; panels own their scroll bodies */
+.maPage--players {
+  overflow: hidden;
+}
+
+/* Tab Panels */
+.maPage--players .maPanels {
+  height: 100%;
+  min-height: 0;
+}
+
+/* Panel header — brandSecondary background matching game_pairings */
+.maPage--players .maPanel__hdr {
+  background: var(--brandSecondary);
+  color: var(--brandSecondaryText);
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.maPage--players .gpPanelHdr {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  position: relative;
+}
+
+.maPage--players .gpPanelHdr__title {
+  font-size: 14px;
+  font-weight: 950;
+  letter-spacing: .2px;
+  color: var(--brandSecondaryText);
+  flex: 1;
+  text-align: center;
+}
+
+.maPage--players .gpPanelHdr__actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  position: absolute;
+  right: 10px;
+}
+
+.maPage--players .gpPanelHdr__left {
+  display: flex;
+  position: absolute;
+  left: 10px;
+}
+
+/* Canvas controls row — sort strip + Manage Teams + HCP date */
+.gpCanvasControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gpCanvasControls__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.gpHcpDate {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--mutedText);
+  white-space: nowrap;
+}
+
+/* Tray tab strip inside controls area */
+.gpTrayTabStrip {
+  display: flex;
+  border: 1px solid var(--borderSubtle);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+
+.gpTrayTabBtn {
+  flex: 1;
+  background: #fff;
+  border: none;
+  border-right: 1px solid var(--borderSubtle);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--mutedText);
+  padding: 5px 2px;
+  cursor: pointer;
+  font-family: var(--fontFamilyBase);
+}
+
+.gpTrayTabBtn:last-child { border-right: none; }
+
+.gpTrayTabBtn.is-active {
+  background: var(--segmentSelectedBg);
+  color: var(--segmentSelectedText);
+}
+
+/* Tray per-tab controls area */
+.gpTrayTabControls {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Footer tray-open button — hidden on desktop, shown on mobile */
+.gsMobileAddPlayingGroupBtn {
+  display: none;
+  width: 100%;
+  min-height: var(--btnHeight);
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--borderSubtle);
+  border-radius: var(--radiusMd);
+  background: transparent;
+  color: var(--brandPrimary);
+  font-family: var(--fontFamilyBase);
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.gsMobileAddPlayingGroupBtn:active {
+  transform: translateY(1px);
+}
+
+/* Non-Rated — selected row tint */
+.gpNrRow--selected {
+  background: color-mix(in srgb, var(--brandPrimary) 6%, white);
+}
+
+/* Import panel footer band */
+.gpImportPanelFtr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-top: 1px solid var(--borderSubtle);
+  background: color-mix(in srgb, var(--panelBg) 96%, black);
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.gpImportPanelFtr__count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mutedText);
+}
+
+.gpImportPanelFtr__actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* Mobile: tray + canvas toggle pattern */
+@media (max-width: 900px) {
+  .gpTrayPanel {
+    display: none;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    border-left: none;
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+
+  /* Tray open: show tray, hide canvas */
+  .maPage--players.is-tray-open .gpTrayPanel {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .maPage--players.is-tray-open .maPanel--primary {
+    display: none;
+  }
+
+  /* Footer add button — shown on mobile only */
+  .gsMobileAddPlayingGroupBtn {
+    display: inline-flex;
+  }
+
+  .gpFooter--canvas {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  /* Mobile tray header: actions on LEFT, close X on RIGHT */
+  .maPage--players .gpTrayPanel .gpPanelHdr__actions {
+    left: 10px;
+    right: auto;
+  }
+
+  .maPage--players .gpTrayPanel .gpPanelHdr__left {
+    left: auto;
+    right: 10px;
+  }
+
+  /* Import panel footer wraps on narrow */
+  .gpImportPanelFtr {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .gpImportPanelFtr__actions {
+    justify-content: flex-end;
+  }
+}

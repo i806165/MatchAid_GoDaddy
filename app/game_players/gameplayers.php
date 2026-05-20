@@ -38,7 +38,6 @@ try {
   $adminToken = $_SESSION["SessionAdminToken"];
   $courseTeePayload = be_getCourseTeeSets($courseId, $adminToken);
 
-
   $initPayload = [
     "ok" => true,
     "ggid" => $ggid,
@@ -62,7 +61,6 @@ try {
   header("Location: " . $returnTo);
   exit;
 }
-
 
 $paths = [
   "routerApi" => MA_ROUTE_API_ROUTER,
@@ -92,7 +90,7 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>MatchAid • Game Players</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -100,19 +98,12 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="/assets/css/ma_shared.css">
-  <link rel="stylesheet" href="/assets/css/game_players.css?v=1">
+  <link rel="stylesheet" href="/assets/css/game_players.css?v=2">
 </head>
 <body>
   <?php include __DIR__ . "/../../includes/chromeHeader.php"; ?>
 
-  <div class="maControlArea gpControlsBand" id="gpControlsBand" role="region" aria-label="Game players controls">
-    <div class="gpShell">
-      <div id="gpTabStrip" class="gpTabs" role="tablist" aria-label="Player registration tabs"></div>
-      <div id="gpTabControls" class="gpTabControls"></div>
-    </div>
-  </div>
-
-  <main class="maPage" role="main">
+  <main class="maPage maPage--multi maPage--players" role="main">
     <?php include __DIR__ . "/gameplayers_view.php"; ?>
   </main>
 
@@ -145,6 +136,6 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   <script src="/assets/modules/player_notifications.js?v=1"></script>
   <script src="/assets/modules/pageHelp.js?v=1"></script>
   <script src="/assets/modules/teesetSelection.js?v=1"></script>
-  <script src="/assets/pages/game_players.js"></script>
+  <script src="/assets/pages/game_players.js?v=2"></script>
 </body>
 </html>

@@ -10,7 +10,7 @@
   const apiGHIN = MA.paths?.apiGHIN || "/api/GHIN";
 
   const state = {
-    activeTab: "roster",
+    activeTab: "favorites", // Roster is now the permanent canvas
     game: init.game || {},
     context: init.context || {},
     portal: init.portal || "",
@@ -44,6 +44,7 @@
     batchFallbackTee: null,      // tee selected in the picker for paths 2, 3, 4
     batchForceAssign: false,     // when true hierarchy is skipped; fallback tee used for all
     ghinState: "",
+    _nrSelectedGHIN: null, // tracks selected NH- player for edit mode
     ghinLast: "",
     ghinFirst: "",
     ghinClub: "",
@@ -58,21 +59,30 @@
   }
 
   function getTabs(){
+    // Roster is now the permanent canvas — not a tray tab.
     const baseTabs = [
-      { id: "roster", label: "Roster" },
-      { id: "self", label: "Self" },
-      { id: "favorites", label: "Favorites" },
-      { id: "ghin", label: "GHIN" },
-      { id: "nonrated", label: "Non-Rated" }
+      { id: "self",     label: "Self"      },
+      { id: "favorites",label: "Favorites" },
+      { id: "ghin",     label: "GHIN"      },
+      { id: "nonrated", label: "Non-Rated" },
     ];
     if (isImportDesktopEnabled()) baseTabs.push({ id: "import", label: "Import" });
     return baseTabs;
   }
 
   const el = {
-    tabStrip: document.getElementById("gpTabStrip"),
-    controls: document.getElementById("gpTabControls"),
-    body: document.getElementById("gpBody"),
+    // Tray
+    trayControls:    document.getElementById("gpTrayControls"),
+    trayBody:        document.getElementById("gpTrayBody"),
+    trayCount:       document.getElementById("gpTrayCount"),
+    mobileCloseBtn:  document.querySelector(".gpMobileCloseBtn button"),
+    btnTrayOpen:     document.getElementById("gpBtnTrayOpen"),
+
+    // Canvas
+    canvasControls:  document.getElementById("gpCanvasControls"),
+    rosterBody:      document.getElementById("gpRosterBody"),
+    rosterCount:     document.getElementById("gpRosterCount"),
+    rosterFooterLeft: document.getElementById("gpRosterFooterLeft"),
   };
 
   function safe(v){ return v == null ? "" : String(v); }
@@ -138,22 +148,22 @@
     } else {
       state.multiAddSelected = state.multiAddSelected.concat(id);
     }
-    renderControls();
-    renderBody();
+    renderTrayControls();
+    renderTrayBody();
   }
 
   function beginMultiAddMode(){
     state.multiAddMode = true;
     state.multiAddSelected = [];
-    renderControls();
-    renderBody();
+    renderTrayControls();
+    renderTrayBody();
   }
 
   function cancelMultiAddMode(){
     state.multiAddMode = false;
     state.multiAddSelected = [];
-    renderControls();
-    renderBody();
+    renderTrayControls();
+    renderTrayBody();
   }
 
   function toggleAllVisibleFavorites(){
@@ -166,8 +176,8 @@
     const allSelected = visibleSelectable.length > 0 && visibleSelectable.every(ghin => isFavoriteSelected(ghin));
 
     state.multiAddSelected = allSelected ? [] : visibleSelectable.slice();
-    renderControls();
-    renderBody();
+    renderTrayControls();
+    renderTrayBody();
   }
     function parseImportLines(text){
     return safe(text)
@@ -563,20 +573,169 @@
     return { top: `${mon}'${yr}`, mid: day, bot: dow };
   }
 
+
+  // ── Roster canvas — always rendered, independent of active tray tab ────────
+  function renderRoster(){
+    const favoriteSet = new Set((state.favorites || []).map((f) => safe(f.playerGHIN)));
+    const teamConfig = (window.__MA_INIT__ || {}).teamConfig || null;
+
+    const sortedPlayers = [...state.players].sort((a, b) => {
+      const s = state.rosterSort;
+      if (s === "hi") return (parseFloat(a.dbPlayers_HI) || 999) - (parseFloat(b.dbPlayers_HI) || 999);
+      if (s === "ch") return (parseFloat(a.dbPlayers_CH) || 999) - (parseFloat(b.dbPlayers_CH) || 999);
+      if (s === "team") {
+        const teamA = teamConfig ? ((teamConfig.teams || []).find(t => t.id === safe(a.dbPlayers_TeamKey))?.name || "zzz") : "zzz";
+        const teamB = teamConfig ? ((teamConfig.teams || []).find(t => t.id === safe(b.dbPlayers_TeamKey))?.name || "zzz") : "zzz";
+        const cmp = teamA.localeCompare(teamB);
+        if (cmp !== 0) return cmp;
+      }
+      return safe(a.dbPlayers_LName + a.dbPlayers_Name).localeCompare(safe(b.dbPlayers_LName + b.dbPlayers_Name));
+    });
+
+    const rows = sortedPlayers.map((p) => {
+      const ghin = safe(p.dbPlayers_PlayerGHIN);
+      const isFav = favoriteSet.has(ghin);
+      const hi = safe(p.dbPlayers_HI || "");
+      const ch = safe(p.dbPlayers_CH || "");
+      const ph = safe(p.dbPlayers_PH || "");
+      const so = safe(p.dbPlayers_SO);
+      const pairing = safe(p.dbPlayers_PairingID || "");
+      const teamKey  = safe(p.dbPlayers_TeamKey || "");
+      const teamName = teamKey && teamConfig ? (teamConfig.teams || []).find(t => t.id === teamKey)?.name || "" : "";
+      const meta = [hi && `HI ${hi}`, ch && `CH ${ch}`, ph && `PH ${ph}`, so && `SO ${so}`, pairing, teamName].filter(Boolean).join(" · ");
+      const teeName = safe(p.dbPlayers_TeeSetName || "");
+      const nameLine = teeName ? `${safe(p.dbPlayers_Name)} · ${teeName}` : safe(p.dbPlayers_Name);
+
+      const heartIcon = isFav
+        ? `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 2 7.5 2c1.74 0 3.41.81 4.5 2.09C13.09 2.81 14.76 2 16.5 2 19.58 2 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`
+        : `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.84-8.84 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`;
+
+      return `<div class="maListRow gpRow gpRow--roster" data-ghin="${esc(ghin)}">
+        <div class="maListRow__col">${esc(nameLine)}<div class="maListRow__col--muted gpSub">${esc(meta)}</div></div>
+        <button class="iconBtn btnSecondary" data-act="fav" title="Favorites" aria-label="Favorites">${heartIcon}</button>
+        <button class="iconBtn btnPrimary" data-act="del" title="Remove" aria-label="Remove"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+      </div>`;
+    }).join("");
+
+    el.rosterBody.innerHTML = `<div class="maListRows">${rows || `<div class="gpEmpty">No players registered yet.</div>`}</div>`;
+
+    el.rosterBody.querySelectorAll("button[data-act='del']").forEach(b => b.onclick = onDeleteRow);
+    el.rosterBody.querySelectorAll("button[data-act='fav']").forEach(b => b.onclick = onRowFavorite);
+    el.rosterBody.querySelectorAll(".gpRow[data-ghin]").forEach(row => {
+      row.addEventListener("click", (e) => {
+        const actionBtn = e.target.closest("button[data-act]");
+        if (actionBtn) return;
+        const ghin = row.getAttribute("data-ghin");
+        if (!ghin) return;
+        const p = state.players.find(x => safe(x.dbPlayers_PlayerGHIN) === safe(ghin));
+        if (!p) return;
+        beginTeeFlow({
+          ghin: safe(p.dbPlayers_PlayerGHIN),
+          first_name: safe(p.dbPlayers_Name).split(" ").slice(0,-1).join(" "),
+          last_name: safe(p.dbPlayers_LName),
+          gender: safe(p.dbPlayers_Gender),
+          hi: safe(p.dbPlayers_HI),
+          selectedTeeSetId: safe(p.dbPlayers_TeeSetID)
+        });
+      });
+    });
+
+    // Update canvas header count and footer summary
+    const count = state.players.length;
+    if (el.rosterCount) el.rosterCount.textContent = count ? `${count} players` : "";
+    if (el.rosterFooterLeft) el.rosterFooterLeft.textContent = count ? `${count} player${count !== 1 ? "s" : ""}` : "";
+  }
+
+  // ── Canvas controls — sort strip + Manage Teams + HCP date ────────────────
+  function renderCanvasControls(){
+    const g = state.game || {};
+    const eff = g.dbGames_HCEffectivity || "PlayDate";
+    let hcLabel = "HCP as of Play Date";
+    if (eff === "Low12") hcLabel = "HCP: 12m Low";
+    else if (eff === "Low6") hcLabel = "HCP: 6m Low";
+    else if (eff === "Low3") hcLabel = "HCP: 3m Low";
+    else if (eff === "Date") {
+      const d = g.dbGames_HCEffectivityDate || "Date";
+      hcLabel = `HCP as of ${d}`;
+    }
+
+    const sorts = [
+      { id: "name", label: "Name" },
+      { id: "team", label: "Team" },
+      { id: "hi",   label: "HI"   },
+      { id: "ch",   label: "CH"   },
+    ];
+
+    const sortStrip = `<div style="display:flex; gap:4px; background:var(--surfaceApp); border-radius:var(--radiusMd); padding:2px;" role="group" aria-label="Sort roster by">
+      ${sorts.map(s => `<button class="maSeg--sortBtn ${state.rosterSort === s.id ? "is-active" : ""}" type="button" data-roster-sort="${esc(s.id)}">${esc(s.label)}</button>`).join("")}
+    </div>`;
+
+    const teamsBtn = state.teamConfig
+      ? `<button id="gpBtnManageTeams" class="btn btnSecondary" type="button">Manage Teams</button>`
+      : "";
+
+    el.canvasControls.innerHTML = `
+      <div class="gpCanvasControls">
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="font-size:11px; font-weight:500; color:var(--mutedText); white-space:nowrap;">Sort:</span>
+          ${sortStrip}
+        </div>
+        <div class="gpCanvasControls__right">
+          ${teamsBtn}
+          <span class="gpHcpDate">${esc(hcLabel)}</span>
+        </div>
+      </div>`;
+
+    el.canvasControls.querySelectorAll("[data-roster-sort]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        state.rosterSort = btn.dataset.rosterSort;
+        renderCanvasControls();
+        renderRoster();
+      });
+    });
+
+    if (state.teamConfig) {
+      const teamsButton = document.getElementById("gpBtnManageTeams");
+      if (teamsButton) teamsButton.onclick = onManageTeams;
+    }
+  }
+
+
+  // ── Page-level event wiring — mobile tray toggle ─────────────────────────
+  function wirePageEvents(){
+    const maPage = document.querySelector(".maPage--players");
+
+    // Mobile: "Add Players" footer button opens tray
+    if (el.btnTrayOpen) {
+      el.btnTrayOpen.addEventListener("click", () => {
+        if (maPage) maPage.classList.add("is-tray-open");
+        el.btnTrayOpen.textContent = "Show Roster";
+      });
+    }
+
+    // Mobile: X close button in tray header returns to canvas
+    if (el.mobileCloseBtn) {
+      el.mobileCloseBtn.addEventListener("click", () => {
+        if (maPage) maPage.classList.remove("is-tray-open");
+        if (el.btnTrayOpen) el.btnTrayOpen.textContent = "+ Add Players";
+      });
+    }
+  }
+
   async function boot(){
     applyChrome();
+    wirePageEvents();
     await refreshPlayers();
     await refreshFavorites();
     if (isImportDesktopEnabled()) await ensureImportTeeOptions();
     if (!state.ghinState) state.ghinState = normalizeState(state.context.userState || "");
-    renderTabs();
-    render();
+    render(); // render() now calls renderTabs() internally
   }
 
   function openActionsMenu() {
+    // Manage Teams has moved to the canvas controls area (visible when teamConfig is set).
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     MA.ui.openActionsMenu("Actions", [
-      { label: "Manage Team Assignments",            action: onManageTeams },
       { label: "Recalculate Handicaps",   action: onRecalcHandicaps },
       { label: "Send Message to Players", action: onNotify },
     ]);
@@ -600,7 +759,7 @@
           });
         }
         if (window.__MA_INIT__) window.__MA_INIT__.teamConfig = teamConfig;
-        renderBody();
+        renderTrayBody();
       }
     });
   }
@@ -662,11 +821,19 @@
   }
 
   function renderTabs(){
-    el.tabStrip.classList.add("maSeg");
-        const tabs = getTabs();
-    el.tabStrip.innerHTML = tabs.map(t=>`<button class="maSegBtn ${state.activeTab===t.id?"is-active":""}" data-tab="${t.id}" role="tab" aria-selected="${state.activeTab===t.id?"true":"false"}">${esc(t.label)}</button>`).join("");
+    // Tab strip renders into tray controls row 1.
+    // Roster is no longer a tab — it lives in the canvas permanently.
+    const tabs = getTabs();
+    const stripHtml = `<div class="gpTrayTabStrip">${
+      tabs.map(t => `<button class="gpTrayTabBtn ${state.activeTab === t.id ? "is-active" : ""}" data-tab="${t.id}" role="tab" aria-selected="${state.activeTab === t.id ? "true" : "false"}">${esc(t.label)}</button>`).join("")
+    }</div>`;
 
-    el.tabStrip.querySelectorAll(".maSegBtn").forEach(btn=>btn.addEventListener("click", async ()=>{
+    // Preserve any per-tab controls rendered below the strip
+    const existingTabControls = el.trayControls.querySelector(".gpTrayTabControls");
+    el.trayControls.innerHTML = stripHtml;
+    if (existingTabControls) el.trayControls.appendChild(existingTabControls);
+
+    el.trayControls.querySelectorAll(".gpTrayTabBtn").forEach(btn => btn.addEventListener("click", async () => {
       state.activeTab = btn.dataset.tab;
       if (state.activeTab === "favorites") await refreshFavorites();
       if (state.activeTab === "import") {
@@ -674,25 +841,47 @@
         await ensureImportSourceGames();
       }
       if (state.activeTab !== "self") state.selfAutoLaunched = false;
-      renderTabs();
       render();
     }));
   }
 
   function render(){
-    renderControls();
-    renderBody();
+    renderTabs();           // tray tab strip (row 1 of tray controls)
+    renderTrayControls();   // per-tab controls (row 2+ of tray controls)
+    renderTrayBody();       // active tray tab content
+    renderRoster();         // canvas — always rendered regardless of active tab
+    renderCanvasControls(); // sort strip + Manage Teams + HCP date
   }
 
-  function renderControls(){
+  function renderTrayControls(){
     if (state.activeTab === "ghin") {
-      el.controls.innerHTML = `<div class="maFieldRow">
-        <div class="maField gpFieldState"><div class="maInputWrap gpInputClearWrap"><input id="gpGhinState" class="maTextInput" maxlength="2" placeholder="State" value="${esc(state.ghinState)}"></div></div>
-        <div class="maField gpFieldLast"><div class="maInputWrap gpInputClearWrap"><input id="gpGhinLast" class="maTextInput" placeholder="Last name or GHIN#" value="${esc(state.ghinLast)}"><button id="gpGhinLastClear" class="clearBtn ${state.ghinLast ? "" : "isHidden"}" type="button" aria-label="Clear last name">×</button></div></div>
-        <div class="maField gpFieldFirst"><div class="maInputWrap gpInputClearWrap"><input id="gpGhinFirst" class="maTextInput" placeholder="First name (optional)" value="${esc(state.ghinFirst)}"><button id="gpGhinFirstClear" class="clearBtn ${state.ghinFirst ? "" : "isHidden"}" type="button" aria-label="Clear first name">×</button></div></div>
-        <div class="maField gpFieldClub"><div class="maInputWrap gpInputClearWrap"><input id="gpGhinClub" class="maTextInput" placeholder="Club name (optional)" value="${esc(state.ghinClub)}"><button id="gpGhinClubClear" class="clearBtn ${state.ghinClub ? "" : "isHidden"}" type="button" aria-label="Clear club name">×</button></div></div>
-        <div class="maField gpFieldBtn"><button id="gpBtnSearchGhin" class="btn btnPrimary" type="button">Search</button></div>
-      </div>`;
+      el.trayControls.querySelector(".gpTrayTabControls")?.remove();
+      const gpTc = document.createElement("div");
+      gpTc.className = "gpTrayTabControls";
+      el.trayControls.appendChild(gpTc);
+      // Row 1: State | Last name | Search button
+      // Row 2: First name | Club name
+      gpTc.innerHTML = `
+        <div class="maFieldRow" style="gap:6px; align-items:center;">
+          <div class="maInputWrap gpInputClearWrap" style="flex:0 0 52px;">
+            <input id="gpGhinState" class="maTextInput" maxlength="2" placeholder="State" value="${esc(state.ghinState)}" style="padding-right:7px;">
+          </div>
+          <div class="maInputWrap gpInputClearWrap" style="flex:1 1 130px;">
+            <input id="gpGhinLast" class="maTextInput" placeholder="Last name or GHIN #" value="${esc(state.ghinLast)}">
+            <button id="gpGhinLastClear" class="clearBtn ${state.ghinLast ? "" : "isHidden"}" type="button" aria-label="Clear last name">×</button>
+          </div>
+          <button id="gpBtnSearchGhin" class="btn btnPrimary" type="button" style="flex-shrink:0;">Search</button>
+        </div>
+        <div class="maFieldRow" style="gap:6px; align-items:center;">
+          <div class="maInputWrap gpInputClearWrap" style="flex:1 1 110px;">
+            <input id="gpGhinFirst" class="maTextInput" placeholder="First name (optional)" value="${esc(state.ghinFirst)}">
+            <button id="gpGhinFirstClear" class="clearBtn ${state.ghinFirst ? "" : "isHidden"}" type="button" aria-label="Clear first name">×</button>
+          </div>
+          <div class="maInputWrap gpInputClearWrap" style="flex:1 1 auto;">
+            <input id="gpGhinClub" class="maTextInput" placeholder="Club name (optional)" value="${esc(state.ghinClub)}">
+            <button id="gpGhinClubClear" class="clearBtn ${state.ghinClub ? "" : "isHidden"}" type="button" aria-label="Clear club name">×</button>
+          </div>
+        </div>`;
       const inpState = document.getElementById("gpGhinState");
       const inpLast = document.getElementById("gpGhinLast");
       const inpFirst = document.getElementById("gpGhinFirst");
@@ -731,7 +920,11 @@
           </div>
         `;
 
-      el.controls.innerHTML = `<div class="maFieldRow">
+      el.trayControls.querySelector(".gpTrayTabControls")?.remove();
+    const gpTc2 = document.createElement("div");
+    gpTc2.className = "gpTrayTabControls";
+    el.trayControls.appendChild(gpTc2);
+    gpTc2.innerHTML = `<div class="maFieldRow">
         <div class="maField gpFieldGroup">
           <select id="gpFavGroup" class="maTextInput">${opts}</select>
         </div>
@@ -744,15 +937,15 @@
         <div class="maField gpFieldBtn">${actionButtons}</div>
       </div>`;
 
-      el.controls.innerHTML += `<div class="maFieldRow"><div class="maField"><div id="gpFavHint" class="maHelpText gpHint ${state.favBroadened ? "" : "isHidden"}">No match in selected group — showing all groups.</div></div></div>`;
+      gpTc2.innerHTML += `<div class="maFieldRow"><div class="maField"><div id="gpFavHint" class="maHelpText gpHint ${state.favBroadened ? "" : "isHidden"}">No match in selected group — showing all groups.</div></div></div>`;
 
       const sel = document.getElementById("gpFavGroup");
       if (sel) {
         sel.value = state.favGroupFilter;
         sel.onchange = () => {
           state.favGroupFilter = safe(sel.value) || "All groups";
-          renderControls();
-          renderBody();
+          renderTrayControls();
+          renderTrayBody();
         };
       }
 
@@ -762,7 +955,7 @@
         inp.oninput = () => {
           state.favNameFilter = safe(inp.value);
           if (clr) clr.classList.toggle("isHidden", !state.favNameFilter);
-          renderBody();
+          renderTrayBody();
         };
       }
       if (clr) clr.onclick = () => {
@@ -772,7 +965,7 @@
           inp.focus();
         }
         clr.classList.add("isHidden");
-        renderBody();
+        renderTrayBody();
       };
 
       const btnManage = document.getElementById("gpBtnFavoritesPage");
@@ -819,7 +1012,11 @@
 
       // sourceGamesHtml removed — existing game list is now rendered in the body, not a dropdown
 
-      el.controls.innerHTML = `
+      el.trayControls.querySelector(".gpTrayTabControls")?.remove();
+    const gpTc3 = document.createElement("div");
+    gpTc3.className = "gpTrayTabControls";
+    el.trayControls.appendChild(gpTc3);
+    gpTc3.innerHTML = `
         <div class="maFieldRow">
           <div class="maField">
             <div class="maSeg" style="display:grid; grid-template-columns:1fr 1fr;">
@@ -864,92 +1061,110 @@
       return;
     }
     if (state.activeTab === "nonrated") {
-      el.controls.innerHTML = `<div class="maFieldRow gpNrRow">
-        <div class="maField gpFieldFirst"><div class="maInputWrap gpInputClearWrap"><input id="gpNrFirst" class="maTextInput" placeholder="First name"><button id="gpNrFirstClear" class="clearBtn isHidden" type="button" aria-label="Clear first name">×</button></div></div>
-        <div class="maField gpFieldLast"><div class="maInputWrap gpInputClearWrap"><input id="gpNrLast" class="maTextInput" placeholder="Last name"><button id="gpNrLastClear" class="clearBtn isHidden" type="button" aria-label="Clear last name">×</button></div></div>
-        <div class="maField gpFieldHi"><div class="maInputWrap gpInputClearWrap"><input id="gpNrHi" class="maTextInput" placeholder="HI"><button id="gpNrHiClear" class="clearBtn isHidden" type="button" aria-label="Clear HI">×</button></div></div>
-        <div class="maField gpFieldGender"><select id="gpNrGender" class="maTextInput"><option>M</option><option>F</option></select></div>
-        <div class="maField gpFieldBtn"><button id="gpNrAdd" class="btn btnPrimary" type="button">Find Tee Sets</button></div>
-      </div>`;
+      el.trayControls.querySelector(".gpTrayTabControls")?.remove();
+      const gpTc4 = document.createElement("div");
+      gpTc4.className = "gpTrayTabControls";
+      el.trayControls.appendChild(gpTc4);
+
+      const isEditMode = !!state._nrSelectedGHIN;
+      const actionBtn = isEditMode
+        ? `<button id="gpNrUpdate" class="btn btnSecondary" type="button" style="background:var(--brandPrimary);color:#fff;border-color:var(--brandPrimary);">Update Player</button>
+           <button id="gpNrCancel" class="btn" type="button" style="color:var(--danger);border-color:rgba(198,40,40,.3);">Cancel</button>`
+        : `<button id="gpNrAdd" class="btn btnPrimary" type="button">Find Tee Sets</button>`;
+
+      gpTc4.innerHTML = `
+        <div class="maFieldRow" style="gap:6px; align-items:center;">
+          <div class="maInputWrap gpInputClearWrap" style="flex:1 1 auto;">
+            <input id="gpNrFirst" class="maTextInput" placeholder="First name" value="">
+            <button id="gpNrFirstClear" class="clearBtn isHidden" type="button" aria-label="Clear first name">×</button>
+          </div>
+          <div class="maInputWrap gpInputClearWrap" style="flex:1 1 auto;">
+            <input id="gpNrLast" class="maTextInput" placeholder="Last name" value="">
+            <button id="gpNrLastClear" class="clearBtn isHidden" type="button" aria-label="Clear last name">×</button>
+          </div>
+        </div>
+        <div class="maFieldRow" style="gap:6px; align-items:center;">
+          <div class="maInputWrap gpInputClearWrap" style="flex:0 0 80px;">
+            <input id="gpNrHi" class="maTextInput" placeholder="HI" value="">
+            <button id="gpNrHiClear" class="clearBtn isHidden" type="button" aria-label="Clear HI">×</button>
+          </div>
+          <select id="gpNrGender" class="maTextInput" style="flex:0 0 58px; padding-right:4px;"><option>M</option><option>F</option></select>
+          ${actionBtn}
+        </div>`;
+
       const nrFirst = document.getElementById("gpNrFirst");
-      const nrLast = document.getElementById("gpNrLast");
-      const nrHi = document.getElementById("gpNrHi");
+      const nrLast  = document.getElementById("gpNrLast");
+      const nrHi    = document.getElementById("gpNrHi");
       const nrFirstClr = document.getElementById("gpNrFirstClear");
-      const nrLastClr = document.getElementById("gpNrLastClear");
-      const nrHiClr = document.getElementById("gpNrHiClear");
-      if (nrFirst) nrFirst.oninput = ()=> nrFirstClr && nrFirstClr.classList.toggle("isHidden", !safe(nrFirst.value));
-      if (nrLast) nrLast.oninput = ()=> nrLastClr && nrLastClr.classList.toggle("isHidden", !safe(nrLast.value));
-      if (nrHi) nrHi.oninput = ()=> nrHiClr && nrHiClr.classList.toggle("isHidden", !safe(nrHi.value));
-      if (nrFirstClr) nrFirstClr.onclick = ()=>{ if (nrFirst) nrFirst.value=""; nrFirstClr.classList.add("isHidden"); nrFirst && nrFirst.focus(); };
-      if (nrLastClr) nrLastClr.onclick = ()=>{ if (nrLast) nrLast.value=""; nrLastClr.classList.add("isHidden"); nrLast && nrLast.focus(); };
-      if (nrHiClr) nrHiClr.onclick = ()=>{ if (nrHi) nrHi.value=""; nrHiClr.classList.add("isHidden"); nrHi && nrHi.focus(); };
-      document.getElementById("gpNrAdd").onclick = addNonRated;
+      const nrLastClr  = document.getElementById("gpNrLastClear");
+      const nrHiClr    = document.getElementById("gpNrHiClear");
+
+      if (nrFirst) nrFirst.oninput = () => nrFirstClr && nrFirstClr.classList.toggle("isHidden", !safe(nrFirst.value));
+      if (nrLast)  nrLast.oninput  = () => nrLastClr  && nrLastClr.classList.toggle("isHidden",  !safe(nrLast.value));
+      if (nrHi)    nrHi.oninput    = () => nrHiClr    && nrHiClr.classList.toggle("isHidden",    !safe(nrHi.value));
+      if (nrFirstClr) nrFirstClr.onclick = () => { if (nrFirst) { nrFirst.value = ""; nrFirst.dispatchEvent(new Event("input")); nrFirst.focus(); } };
+      if (nrLastClr)  nrLastClr.onclick  = () => { if (nrLast)  { nrLast.value  = ""; nrLast.dispatchEvent(new Event("input"));  nrLast.focus();  } };
+      if (nrHiClr)    nrHiClr.onclick    = () => { if (nrHi)    { nrHi.value    = ""; nrHi.dispatchEvent(new Event("input"));    nrHi.focus();    } };
+
+      if (!isEditMode) {
+        const btnAdd = document.getElementById("gpNrAdd");
+        if (btnAdd) btnAdd.onclick = addNonRated;
+      } else {
+        const btnUpdate = document.getElementById("gpNrUpdate");
+        const btnCancel = document.getElementById("gpNrCancel");
+        if (btnUpdate) btnUpdate.onclick = updateNonRated;
+        if (btnCancel) btnCancel.onclick = cancelNrEdit;
+      }
       return;
     }
     if (state.activeTab === "self") {
-      el.controls.innerHTML = `<div class="maFieldRow"><div class="maField"><div class="maHelpText">Your player record will open tee selection automatically.</div></div></div>`;
+      // Self tab — no controls needed; tee picker launches immediately.
       return;
     }
 
-    const eff = state.game?.dbGames_HCEffectivity || "PlayDate";
-    let hcLabel = "HCP as of Play Date";
-    if (eff === "Low12") hcLabel = "HCP: 12m Low";
-    else if (eff === "Low6") hcLabel = "HCP: 6m Low";
-    else if (eff === "Low3") hcLabel = "HCP: 3m Low";
-    else if (eff === "Date") {
-      const d = state.game?.dbGames_HCEffectivityDate || "Date";
-      hcLabel = `HCP as of ${d}`;
-    }
-
-    const sorts = [
-      { id: "name", label: "Name" },
-      { id: "team", label: "Team" },
-      { id: "hi",   label: "HI"   },
-      { id: "ch",   label: "CH"   },
-    ];
-    el.controls.innerHTML = `
-      <div class="maFieldRow" style="align-items:center; gap:8px;">
-        <span style="font-size:11px; font-weight:500; color:var(--mutedText); white-space:nowrap;">Sort:</span>
-        <div style="display:flex; gap:4px; background:var(--surfaceApp); border-radius:var(--radiusMd); padding:2px;" role="group" aria-label="Sort roster by">
-          ${sorts.map(s => `<button class="maSeg--sortBtn ${state.rosterSort === s.id ? "is-active" : ""}" type="button" data-roster-sort="${esc(s.id)}">${esc(s.label)}</button>`).join("")}
-        </div>
-        <div class="maHelpText" style="flex:0 0 auto; white-space:nowrap; margin-left:auto;">${esc(hcLabel)}</div>
-      </div>`;
-
-    el.controls.querySelectorAll("[data-roster-sort]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        state.rosterSort = btn.dataset.rosterSort;
-        renderControls();
-        renderBody();
-      });
-    });
+    // Sort strip and HCP date are rendered by renderCanvasControls() — not here.
+    // renderTrayControls() only handles tray tab content.
   }
 
-  function renderBody(){
+  function renderTrayBody(){
     if (state.activeTab === "ghin") {
       const enrolled = new Set((state.players || []).map((p) => safe(p.dbPlayers_PlayerGHIN)));
       const rows = (state.ghinRows || []).map((r) => {
         const ghin = safe(r.ghin);
         const isEnrolled = enrolled.has(ghin);
         const club = safe(r.club_name || r.clubName || "").trim();
-        const checkIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+        const gender = safe(r.gender || "");
+        const hi = safe(r.hi || "");
+        const subParts = [hi && `HI ${hi}`, club].filter(Boolean).join(" · ");
 
-        return `<div class="maListRow gpRow gpRow--ghin ${isEnrolled ? "" : "gpRowClickable"}" data-act="ghin-row" data-ghin="${esc(ghin)}" data-disabled="${isEnrolled ? "1" : "0"}">
-          <div class="maListRow__col">${esc(r.name || ghin)}${club ? ` • ${esc(club)}` : ""}</div>
-          <div class="maListRow__col maListRow__col--right">${esc(r.hi || "")}</div>
-          <div class="maListRow__col maListRow__col--right">${esc(r.gender || "")}</div>
-          <div class="maListRow__col maListRow__col--right gpEnrolledMark">${isEnrolled ? checkIcon : ""}</div>
+        // Enrolled badge — dimmed row, tap suppressed
+        const enrolledBadge = isEnrolled
+          ? `<span class="gpEnrolledMark" style="font-size:10px; font-weight:700; flex-shrink:0;">&#10003; Enrolled</span>`
+          : "";
+
+        return `<div class="maListRow gpRow ${isEnrolled ? "" : "gpRowClickable"}" data-act="ghin-row" data-ghin="${esc(ghin)}" data-disabled="${isEnrolled ? "1" : "0"}" style="${isEnrolled ? "opacity:.65; cursor:default;" : ""}">
+          <div class="maListRow__col" style="flex:1; min-width:0;">
+            <div style="font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(r.name || ghin)} <span style="font-weight:400; font-size:11px; color:var(--mutedText);">${gender ? `(${esc(gender)})` : ""}</span></div>
+            <div class="gpSub">${esc(subParts)}</div>
+          </div>
+          ${enrolledBadge}
         </div>`;
       }).join("");
+
+      // Truncated results → page footer status, not panel body
+      if (state.ghinTruncated) {
+        MA.setStatus("Results truncated — refine your search.", "warn");
+      }
+
       const status = state.ghinStatus ? `<div class="gpInlineStatus">${esc(state.ghinStatus)}</div>` : "";
-      const trunc = state.ghinTruncated ? `<div class="gpInlineStatus">Results truncated. Refine your search.</div>` : "";
-      const empty = (!rows && !status) ? `<div class="gpEmpty">Enter search criteria above, then Search.</div>` : "";
-      el.body.innerHTML = `<section class="maPanel">
-        <div class="maListRow maListRow--hdr gpRow--ghin"><div class="maListRow__col">GHIN Lookup</div><div class="maListRow__col maListRow__col--right">HI</div><div class="maListRow__col maListRow__col--right">G</div><div class="maListRow__col"></div></div>
-        <div class="maListRows">${status}${trunc}${rows}${empty}</div>
-      </section>`;
-      el.body.querySelectorAll("[data-act='ghin-row']").forEach((row)=>{
-        row.onclick = ()=>{
+      const empty = (!rows && !status) ? `<div class="gpEmpty">Enter a last name or GHIN number above, then tap Search.</div>` : "";
+
+      // Update tray header count
+      if (el.trayCount) el.trayCount.textContent = state.ghinRows.length ? `${state.ghinRows.length}${state.ghinTruncated ? "+" : ""} results` : "";
+
+      el.trayBody.innerHTML = `<div class="maListRows">${status}${rows}${empty}</div>`;
+      el.trayBody.querySelectorAll("[data-act='ghin-row']").forEach((row) => {
+        row.onclick = () => {
           if (row.getAttribute("data-disabled") === "1") return;
           onSelectGHINRow(row.getAttribute("data-ghin"));
         };
@@ -958,33 +1173,67 @@
     }
 
     if (state.activeTab === "nonrated") {
-      el.body.innerHTML = `<section class="maPanel">
-        <div class="maListRow maListRow--hdr gpRow--favs"><div class="maListRow__col">Add Non-Rated</div><div class="maListRow__col maListRow__col--right">HI</div><div class="maListRow__col maListRow__col--right">G</div><div class="maListRow__col"></div><div class="maListRow__col"></div></div>
-        <div class="maListRows"><div class="maListRow gpRow--favs">
-          <div class="maListRow__col">New Non-Rated Player</div>
-          <div class="maListRow__col maListRow__col--right">—</div>
-          <div class="maListRow__col maListRow__col--right">—</div>
-          <div class="maListRow__col maListRow__col--muted">Controls above</div>
-          <div class="maListRow__col"></div>
-        </div></div>
-      </section>`;
+      // List all NH- players currently on this game's roster
+      const nhPlayers = (state.players || []).filter(p => safe(p.dbPlayers_PlayerGHIN).startsWith("NH"));
+
+      const nhRows = nhPlayers.map(p => {
+        const ghin = safe(p.dbPlayers_PlayerGHIN);
+        const name = safe(p.dbPlayers_Name);
+        const hi   = safe(p.dbPlayers_HI || "");
+        const gender = safe(p.dbPlayers_Gender || "");
+        const isSelected = state._nrSelectedGHIN === ghin;
+        const subParts = [hi && `HI ${hi}`, gender, ghin].filter(Boolean).join(" · ");
+
+        return `<div class="maListRow gpRow gpRowClickable${isSelected ? " gpNrRow--selected" : ""}" data-act="nr-select" data-ghin="${esc(ghin)}" style="${isSelected ? "background:color-mix(in srgb, var(--brandPrimary) 6%, white);" : ""}">
+          <div class="maListRow__col" style="flex:1; min-width:0;">
+            <div style="font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(name)}</div>
+            <div class="gpSub">${esc(subParts)}</div>
+          </div>
+        </div>`;
+      }).join("");
+
+      const emptyOrList = nhRows
+        ? `<div style="font-size:10px; font-weight:700; color:var(--mutedText); padding:5px 8px; border-bottom:1px solid var(--borderSubtle);">Tap a player to edit their attributes</div>${nhRows}`
+        : `<div class="gpEmpty">Enter name, handicap index, and gender above.<br>Non-rated players are assigned an NH- GHIN number.</div>`;
+
+      if (el.trayCount) el.trayCount.textContent = nhPlayers.length ? `${nhPlayers.length} non-rated` : "";
+
+      el.trayBody.innerHTML = `<div class="maListRows">${emptyOrList}</div>`;
+
+      el.trayBody.querySelectorAll("[data-act='nr-select']").forEach(row => {
+        row.onclick = () => {
+          const g = row.getAttribute("data-ghin");
+          if (state._nrSelectedGHIN === g) {
+            // Tap same row again = deselect
+            state._nrSelectedGHIN = null;
+          } else {
+            state._nrSelectedGHIN = g;
+            // Populate controls fields
+            const p = state.players.find(x => safe(x.dbPlayers_PlayerGHIN) === g);
+            if (p) {
+              const fFirst = document.getElementById("gpNrFirst");
+              const fLast  = document.getElementById("gpNrLast");
+              const fHi    = document.getElementById("gpNrHi");
+              const fGender = document.getElementById("gpNrGender");
+              const nameParts = safe(p.dbPlayers_Name).trim().split(" ");
+              const last  = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
+              const first = nameParts.length > 1 ? nameParts.slice(0, -1).join(" ") : nameParts[0];
+              if (fFirst)  { fFirst.value  = first;  fFirst.dispatchEvent(new Event("input")); }
+              if (fLast)   { fLast.value   = last;   fLast.dispatchEvent(new Event("input")); }
+              if (fHi)     { fHi.value     = safe(p.dbPlayers_HI || ""); fHi.dispatchEvent(new Event("input")); }
+              if (fGender) { fGender.value = safe(p.dbPlayers_Gender || "M"); }
+            }
+          }
+          renderTrayControls();
+          renderTrayBody();
+        };
+      });
       return;
     }
 
     if (state.activeTab === "self") {
-      const selfName = safe(state.context.userName || "Current User");
-      const exists = state.players.some((p) => safe(p.dbPlayers_PlayerGHIN) === safe(state.context.userGHIN));
-      el.body.innerHTML = `<section class="maPanel">
-        <div class="maListRow maListRow--hdr gpRow--favs"><div class="maListRow__col">Add Self</div><div class="maListRow__col maListRow__col--right">HI</div><div class="maListRow__col maListRow__col--right">CH</div><div class="maListRow__col"></div><div class="maListRow__col"></div></div>
-        <div class="maListRows"><div class="maListRow gpRow gpRow--favs gpRowClickable" data-act="selftee">
-          <div class="maListRow__col">${esc(selfName)}<div class="maListRow__col--muted gpSub">${exists ? "Already in roster." : "Not in roster yet."}</div></div>
-          <div class="maListRow__col maListRow__col--right">—</div>
-          <div class="maListRow__col maListRow__col--right">—</div>
-          <div class="maListRow__col"></div><div class="maListRow__col"></div>
-        </div></div>
-      </section>`;
-      const selfRow = el.body.querySelector("[data-act='selftee']");
-      if (selfRow) selfRow.onclick = addSelf;
+      // No tray UI for Self — tee picker launches immediately.
+      el.trayBody.innerHTML = "";
       if (!state.selfAutoLaunched) {
         state.selfAutoLaunched = true;
         setTimeout(() => { addSelf(); }, 0);
@@ -997,7 +1246,7 @@
 
       if (isExternal) {
         if (state.importMode === "entry") {
-          el.body.innerHTML = `<section class="maPanel gpImportPanel">
+          el.trayBody.innerHTML = `<section class="maPanel gpImportPanel">
             <div class="gpImportCard">
               <div class="gpImportCard__hdr">
                 <div class="gpImportCard__label">Enter one GHIN number per line</div>
@@ -1043,7 +1292,7 @@
         }).join("");
 
         const actionable = state.importRows.filter(r => !r.alreadyOnRoster).length;
-        el.body.innerHTML = `<section class="maPanel gpImportPanel">
+        el.trayBody.innerHTML = `<section class="maPanel gpImportPanel">
           <div class="maListRow maListRow--hdr gpRow--import">
             <div class="maListRow__col">GHIN</div>
             <div class="maListRow__col">Name</div>
@@ -1096,7 +1345,7 @@ if (isExisting) {
           const skipped    = state.importRows.filter(r => !!r.alreadyOnRoster).length;
           const footerCount = `${actionable} player${actionable !== 1 ? "s" : ""} to import${skipped ? ` · ${skipped} skipped` : ""}`;
 
-          el.body.innerHTML = `<section class="maPanel gpImportPanel">
+          el.trayBody.innerHTML = `<section class="maPanel gpImportPanel">
             <div class="maListRow maListRow--hdr gpRow--import">
               <div class="maListRow__col">GHIN</div>
               <div class="maListRow__col">Player</div>
@@ -1158,7 +1407,7 @@ if (isExisting) {
           <span class="gpGameListHdr__hint">Tap a game to import</span>
         </div>`;
 
-        el.body.innerHTML = games.length
+        el.trayBody.innerHTML = games.length
           ? `<section class="maPanel gpImportPanel" style="padding:0;">
                ${listHeader}
                <div class="maListRows">${gameRows}</div>
@@ -1168,7 +1417,7 @@ if (isExisting) {
              </section>`;
 
         // Wire row taps
-        el.body.querySelectorAll(".gpGameRow[data-ggid]").forEach(row => {
+        el.trayBody.querySelectorAll(".gpGameRow[data-ggid]").forEach(row => {
           row.onclick = async () => {
             const ggid = row.getAttribute("data-ggid");
             if (!ggid) return;
@@ -1179,7 +1428,7 @@ if (isExisting) {
 
         // Scroll previously selected game into view
         if (state.importSourceGameId) {
-          const sel = el.body.querySelector(".gpGameRow--selected");
+          const sel = el.trayBody.querySelector(".gpGameRow--selected");
           if (sel) sel.scrollIntoView({ behavior: "smooth", block: "nearest" });
         }
 
@@ -1201,27 +1450,28 @@ if (isExisting) {
           const g = safe(f.playerGHIN);
           const n = safe(f.name || f.playerName);
           const enrolled = enrolledSet.has(g);
-          const checkIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+          const hi = safe(f.hi || f.HI || "");
+          const lastCourse = safe(f.lastCourse?.courseName || f.courseName || "");
+          const subParts = [hi && `HI ${hi}`, lastCourse].filter(Boolean).join(" · ");
 
-          return `<div class="maListRow gpRow gpRow--ghin ${enrolled ? "" : "gpRowClickable"}" data-fav-ghin="${esc(g)}" data-act="addfav" data-disabled="${enrolled ? "1" : "0"}">
-            <div class="maListRow__col">${esc(n)}</div>
-            <div class="maListRow__col maListRow__col--right"></div>
-            <div class="maListRow__col maListRow__col--right">${esc(f.gender || "")}</div>
-            <div class="maListRow__col maListRow__col--right gpEnrolledMark">${enrolled ? checkIcon : ""}</div>
+          const enrolledBadge = enrolled
+            ? `<span class="gpEnrolledMark" style="font-size:10px; font-weight:700; flex-shrink:0; color:#1f6fd6;">&#10003; Enrolled</span>`
+            : "";
+
+          return `<div class="maListRow gpRow ${enrolled ? "" : "gpRowClickable"}" data-fav-ghin="${esc(g)}" data-act="addfav" data-disabled="${enrolled ? "1" : "0"}" style="${enrolled ? "opacity:.65; cursor:default;" : ""}">
+            <div class="maListRow__col" style="flex:1; min-width:0;">
+              <div style="font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(n)}</div>
+              <div class="gpSub">${esc(subParts)}</div>
+            </div>
+            ${enrolledBadge}
           </div>`;
         }).join("");
 
-        el.body.innerHTML = `<section class="maPanel">
-          <div class="maListRow maListRow--hdr gpRow--ghin">
-            <div class="maListRow__col">Favorites</div>
-            <div class="maListRow__col maListRow__col--right">HI</div>
-            <div class="maListRow__col maListRow__col--right">G</div>
-            <div class="maListRow__col"></div>
-          </div>
-          <div class="maListRows">${favRows || `<div class="gpEmpty">No favorites found.</div>`}</div>
-        </section>`;
+        if (el.trayCount) el.trayCount.textContent = filtered.length ? `${filtered.length} favorites` : "";
 
-        el.body.querySelectorAll("[data-act='addfav']").forEach(r=>r.onclick = (e) => {
+        el.trayBody.innerHTML = `<div class="maListRows">${favRows || `<div class="gpEmpty">No favorites found.</div>`}</div>`;
+
+        el.trayBody.querySelectorAll("[data-act='addfav']").forEach(r => r.onclick = (e) => {
           if (r.getAttribute("data-disabled") === "1") return;
           onAddFavoriteRow(e);
         });
@@ -1258,7 +1508,7 @@ if (isExisting) {
         </div>`;
       }).join("");
 
-      el.body.innerHTML = `<section class="maPanel">
+      el.trayBody.innerHTML = `<section class="maPanel">
         <div class="maListRow maListRow--hdr gpRow--favMulti">
           <div class="maListRow__col"><button type="button" id="gpHdrToggleAll" class="gpMultiHdrToggle">${hdrToggleText}</button></div>
           <div class="maListRow__col">Favorites</div>
@@ -1271,7 +1521,7 @@ if (isExisting) {
       const hdrBtn = document.getElementById("gpHdrToggleAll");
       if (hdrBtn) hdrBtn.onclick = toggleAllVisibleFavorites;
 
-      el.body.querySelectorAll("[data-act='multifav']").forEach(r => {
+      el.trayBody.querySelectorAll("[data-act='multifav']").forEach(r => {
         r.onclick = () => {
           if (r.getAttribute("data-disabled") === "1") return;
           toggleFavoriteSelected(r.getAttribute("data-fav-ghin"));
@@ -1280,74 +1530,8 @@ if (isExisting) {
       return;
     }
 
-    const favoriteSet = new Set((state.favorites || []).map((f) => safe(f.playerGHIN)));
-    const teamConfig = (window.__MA_INIT__ || {}).teamConfig || null;
-
-    const sortedPlayers = [...state.players].sort((a, b) => {
-      const s = state.rosterSort;
-      if (s === "hi") return (parseFloat(a.dbPlayers_HI) || 999) - (parseFloat(b.dbPlayers_HI) || 999);
-      if (s === "ch") return (parseFloat(a.dbPlayers_CH) || 999) - (parseFloat(b.dbPlayers_CH) || 999);
-      if (s === "team") {
-        const teamA = teamConfig ? ((teamConfig.teams || []).find(t => t.id === safe(a.dbPlayers_TeamKey))?.name || "zzz") : "zzz";
-        const teamB = teamConfig ? ((teamConfig.teams || []).find(t => t.id === safe(b.dbPlayers_TeamKey))?.name || "zzz") : "zzz";
-        const cmp = teamA.localeCompare(teamB);
-        if (cmp !== 0) return cmp;
-      }
-      // name — default and tiebreak for team sort
-      return safe(a.dbPlayers_LName + a.dbPlayers_Name).localeCompare(safe(b.dbPlayers_LName + b.dbPlayers_Name));
-    });
-
-    const rows = sortedPlayers.map((p) => {
-      const ghin = safe(p.dbPlayers_PlayerGHIN);
-      const isFav = favoriteSet.has(ghin);
-      const hi = safe(p.dbPlayers_HI || "");
-      const ch = safe(p.dbPlayers_CH || "");
-      const ph = safe(p.dbPlayers_PH || "");
-      const so = safe(p.dbPlayers_SO);
-      const pairing = safe(p.dbPlayers_PairingID || "");
-      const teamKey  = safe(p.dbPlayers_TeamKey || "");
-      const teamName = teamKey && teamConfig ? (teamConfig.teams || []).find(t => t.id === teamKey)?.name || "" : "";
-      const meta = [hi && `HI ${hi}`, ch && `CH ${ch}`, ph && `PH ${ph}`, so && `SO ${so}`, pairing, teamName].filter(Boolean).join(" · ");
-      const teeName = safe(p.dbPlayers_TeeSetName || "");
-      const nameLine = teeName ? `${safe(p.dbPlayers_Name)} · ${teeName}` : safe(p.dbPlayers_Name);
-
-      const heartIcon = isFav 
-        ? `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 2 7.5 2c1.74 0 3.41.81 4.5 2.09C13.09 2.81 14.76 2 16.5 2 19.58 2 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`
-        : `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.84-8.84 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`;
-
-      return `<div class="maListRow gpRow gpRow--roster" data-ghin="${esc(ghin)}">
-        <div class="maListRow__col">${esc(nameLine)}<div class="maListRow__col--muted gpSub">${esc(meta)}</div></div>
-        <button class="iconBtn btnSecondary" data-act="fav" title="Favorites" aria-label="Favorites">${heartIcon}</button>
-        <button class="iconBtn btnPrimary" data-act="del" title="Remove" aria-label="Remove"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
-      </div>`;
-    }).join("");
-
-    const html = `<section class="maPanel">
-      <div class="maListRow maListRow--hdr gpRow--roster"><div class="maListRow__col">Roster (${state.players.length})</div><div class="maListRow__col"></div><div class="maListRow__col"></div></div>
-      <div class="maListRows">${rows || `<div class="gpEmpty">No players registered yet.</div>`}</div>
-    </section>`;
-
-    el.body.innerHTML = html;
-    el.body.querySelectorAll("button[data-act='del']").forEach(b=>b.onclick = onDeleteRow);
-    el.body.querySelectorAll("button[data-act='fav']").forEach(b=>b.onclick = onRowFavorite);
-    el.body.querySelectorAll(".gpRow[data-ghin]").forEach(row => {
-      row.addEventListener("click", (e) => {
-        const actionBtn = e.target.closest("button[data-act]");
-        if (actionBtn) return;
-        const ghin = row.getAttribute("data-ghin");
-        if (!ghin) return;
-        const p = state.players.find(x => safe(x.dbPlayers_PlayerGHIN) === safe(ghin));
-        if (!p) return;
-        beginTeeFlow({
-          ghin: safe(p.dbPlayers_PlayerGHIN),
-          first_name: safe(p.dbPlayers_Name).split(" ").slice(0,-1).join(" "),
-          last_name: safe(p.dbPlayers_LName),
-          gender: safe(p.dbPlayers_Gender),
-          hi: safe(p.dbPlayers_HI),
-          selectedTeeSetId: safe(p.dbPlayers_TeeSetID)
-        });
-      });
-    });
+    // Roster is rendered by renderRoster() into the canvas panel — not here.
+    // renderTrayBody() only handles tray tab content.
   }
 
   async function onAddFavoriteRow(e){
@@ -1384,6 +1568,40 @@ if (isExisting) {
     });
   }
 
+
+  // ── Non-Rated: update existing NH- player attributes ─────────────────────
+  async function updateNonRated(){
+    const ghin  = state._nrSelectedGHIN;
+    if (!ghin) return;
+    const first  = safe(document.getElementById("gpNrFirst")?.value).trim();
+    const last   = safe(document.getElementById("gpNrLast")?.value).trim();
+    const hi     = safe(document.getElementById("gpNrHi")?.value).trim();
+    const gender = safe(document.getElementById("gpNrGender")?.value || "M");
+    if (!first || !last) return MA.setStatus("Enter non-rated first/last name", "warn");
+
+    const player = { ghin, first_name: first, last_name: last, gender, hi };
+    // Find the player's existing tee assignment so we don't lose it on update
+    const existing = state.players.find(p => safe(p.dbPlayers_PlayerGHIN) === ghin);
+    const selectedTee = existing
+      ? { teeSetID: safe(existing.dbPlayers_TeeSetID || ""), value: safe(existing.dbPlayers_TeeSetID || "") }
+      : null;
+
+    const res = await MA.postJson(MA.paths.gamePlayersUpsert, { player, selectedTee });
+    if (!res?.ok) return MA.setStatus(res?.message || "Unable to update player", "danger");
+
+    state._nrSelectedGHIN = null;
+    await refreshPlayers();
+    render();
+    MA.setStatus("Player updated.", "success");
+  }
+
+  // ── Non-Rated: cancel edit — clear fields, deselect row ──────────────────
+  function cancelNrEdit(){
+    state._nrSelectedGHIN = null;
+    renderTrayControls();
+    renderTrayBody();
+  }
+
   async function addNonRated(){
     const first = safe(document.getElementById("gpNrFirst")?.value).trim();
     const last = safe(document.getElementById("gpNrLast")?.value).trim();
@@ -1405,12 +1623,12 @@ if (isExisting) {
       state.ghinRows = [];
       state.ghinTruncated = false;
       state.ghinStatus = "Enter last name or GHIN#.";
-      renderBody();
+      renderTrayBody();
       return;
     }
     const mode = /^\d+$/.test(lastOrId) ? "id" : "name";
     state.ghinStatus = "Searching…";
-    renderBody();
+    renderTrayBody();
     const payload = (mode === "id")
       ? { mode, ghin: lastOrId }
       : { mode, state: stateCode, lastName: lastOrId, firstName: first, clubName: club };
@@ -1420,13 +1638,13 @@ if (isExisting) {
       state.ghinRows = [];
       state.ghinTruncated = false;
       state.ghinStatus = res?.message || "GHIN search failed.";
-      renderBody();
+      renderTrayBody();
       return;
     }
     state.ghinRows = Array.isArray(res.payload?.rows) ? res.payload.rows : [];
     state.ghinTruncated = !!res.payload?.truncated;
     state.ghinStatus = state.ghinRows.length ? "" : "No players found.";
-    renderBody();
+    renderTrayBody();
   }
 
   async function onSelectGHINRow(ghin){
@@ -1854,7 +2072,7 @@ async function beginBatchTeeFlow(){
 
     await refreshPlayers();
     await refreshFavorites();
-    renderBody();
+    renderTrayBody();
     MA.setStatus("Player added/updated.", "success");
   }
 
@@ -1911,7 +2129,7 @@ async function beginBatchTeeFlow(){
 
     await refreshPlayers();
     await refreshFavorites();
-    renderBody();
+    renderTrayBody();
   }
 
   function onRowFavorite(e){
