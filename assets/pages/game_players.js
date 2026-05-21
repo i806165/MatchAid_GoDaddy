@@ -1206,14 +1206,18 @@
           if (state._nrSelectedGHIN === g) {
             // Tap same row again = deselect
             state._nrSelectedGHIN = null;
+            renderTrayControls();
+            renderTrayBody();
           } else {
             state._nrSelectedGHIN = g;
-            // Populate controls fields
+            renderTrayControls(); // render first — fields now exist in DOM
+            renderTrayBody();
+            // Now populate fields
             const p = state.players.find(x => safe(x.dbPlayers_PlayerGHIN) === g);
             if (p) {
-              const fFirst = document.getElementById("gpNrFirst");
-              const fLast  = document.getElementById("gpNrLast");
-              const fHi    = document.getElementById("gpNrHi");
+              const fFirst  = document.getElementById("gpNrFirst");
+              const fLast   = document.getElementById("gpNrLast");
+              const fHi     = document.getElementById("gpNrHi");
               const fGender = document.getElementById("gpNrGender");
               const nameParts = safe(p.dbPlayers_Name).trim().split(" ");
               const last  = nameParts.length > 1 ? nameParts[nameParts.length - 1] : "";
@@ -1224,8 +1228,6 @@
               if (fGender) { fGender.value = safe(p.dbPlayers_Gender || "M"); }
             }
           }
-          renderTrayControls();
-          renderTrayBody();
         };
       });
       return;
@@ -2061,6 +2063,15 @@ async function beginBatchTeeFlow(){
     }
     if (ghin.startsWith("NH")) MA.ghinSearch.close && MA.ghinSearch.close();
     state.pendingPlayer = null;
+    // Clear NH- fields after successful enroll
+    if (ghin.startsWith("NH")) {
+      const f = document.getElementById("gpNrFirst");
+      const l = document.getElementById("gpNrLast");
+      const h = document.getElementById("gpNrHi");
+      if (f) { f.value = ""; f.dispatchEvent(new Event("input")); }
+      if (l) { l.value = ""; l.dispatchEvent(new Event("input")); }
+      if (h) { h.value = ""; h.dispatchEvent(new Event("input")); }
+    }
 
     // Trigger-2 Action: Recalc PH/SO if paired
     if (wasPaired) {
