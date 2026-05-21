@@ -240,9 +240,19 @@ function isMobileLandscapeLike(){
       const isRangeEnd = (idx === seg.holes.length - 1);
 
       if (isSegEnd || isRangeEnd) {
-        const segIndex = Math.floor(idx / seg.size) + 1;
-        let key = (seg.size === 18 ? '9' : String(seg.size)) + String.fromCharCode(96 + segIndex);
-        if (seg.size === 18 && isRangeEnd) key = '9c';
+        let key;
+        if (seg.size === 18 && isRangeEnd) {
+          key = '9c';
+        } else if (seg.size === 18) {
+          // shouldn't normally hit this for 18-hole segment, but keep safe
+          const segIndex = Math.floor(idx / seg.size) + 1;
+          key = '9' + String.fromCharCode(96 + segIndex);
+        } else {
+          // Use absolute hole number to derive segment index, matching PHP's logic
+          const segStartHole = seg.holes[Math.floor(idx / seg.size) * seg.size];
+          const segIndex = Math.floor((segStartHole - 1) / seg.size) + 1;
+          key = String(seg.size) + String.fromCharCode(96 + segIndex);
+        }
         html += renderSummaryCell(cardState, rowData, key, sId, options);
       }
     });
