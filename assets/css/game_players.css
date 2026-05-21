@@ -67,6 +67,15 @@
   padding: 4px;
 }
 
+/* Tighten maListRow padding in both panels — base is 12px 12px in ma_shared */
+.maPage--players #gpRosterBody .maListRow {
+  padding: 5px 8px;
+}
+
+.maPage--players #gpTrayBody .maListRow {
+  padding: 5px 8px;
+}
+
 .gpRow--favs{
   display: grid;
   grid-template-columns: minmax(0,1fr) 48px minmax(0,120px) 34px 34px;
@@ -191,6 +200,7 @@
   gap:8px;
   flex-wrap:wrap;
   justify-content:flex-end;
+  margin-top: 0;
 }
 
 .gpRow--favMulti{
@@ -887,7 +897,7 @@
   border: 1px solid var(--borderSubtle);
   border-radius: 6px;
   overflow: hidden;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .gpTrayTabBtn {
@@ -914,7 +924,7 @@
 .gpTrayTabControls {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 /* Footer tray-open button — hidden on desktop, shown on mobile */

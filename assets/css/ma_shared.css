@@ -973,6 +973,11 @@ textarea {
   border-bottom: 1px solid var(--panelControlsBorder);
 }
 
+.maPanel__controls .maFieldRow {
+  margin-top: 4px;
+  gap: 6px;
+}
+
 .maPanel__body {
   flex: 1 1 auto;
   min-height: 0;
@@ -1967,7 +1972,7 @@ textarea {
   display: flex;
   gap: 10px;
   align-items: center;
-  padding: 12px 12px;
+  padding: 10px 10px;
   background: #fff;
   border-bottom: 1px solid var(--borderSubtle);
   cursor: pointer;
