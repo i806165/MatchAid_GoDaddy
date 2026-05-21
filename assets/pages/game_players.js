@@ -74,6 +74,7 @@
     // Tray
     trayControls:    document.getElementById("gpTrayControls"),
     trayBody:        document.getElementById("gpTrayBody"),
+    trayFtr:         document.querySelector(".gpTrayPanel .maPanel__ftr"),
     trayCount:       document.getElementById("gpTrayCount"),
     mobileCloseBtn:  document.querySelector(".gpMobileCloseBtn button"),
     btnTrayOpen:     document.getElementById("gpBtnTrayOpen"),
@@ -835,6 +836,12 @@
 
     el.trayControls.querySelectorAll(".gpTrayTabBtn").forEach(btn => btn.addEventListener("click", async () => {
       state.activeTab = btn.dataset.tab;
+      // Clear tray footer when switching away from favorites (removes Select Tee/Cancel)
+      if (state.activeTab !== "favorites") {
+        state.multiAddMode = false;
+        state.multiAddSelected = [];
+        if (el.trayFtr) el.trayFtr.innerHTML = "";
+      }
       if (state.activeTab === "favorites") await refreshFavorites();
       if (state.activeTab === "import") {
         await ensureImportTeeOptions();
@@ -904,27 +911,14 @@
     if (state.activeTab === "favorites") {
       const opts = ["All groups"].concat(state.groups || []).map(g => `<option value="${esc(g)}">${esc(g)}</option>`).join("");
 
-      const actionButtons = state.multiAddMode
-        ? `
-          <div class="gpFavBtnRow">
-            <button id="gpBtnSelectTee" class="btn btnSecondary" type="button" ${state.multiAddSelected.length ? "" : "disabled"}>
-              Select Tee${state.multiAddSelected.length ? ` (${state.multiAddSelected.length})` : ""}
-            </button>
-            <button id="gpBtnCancelMulti" class="btn btnSecondary" type="button">Cancel Multi-Select</button>
-          </div>
-        `
-        : `
-          <div class="gpFavBtnRow">
-            <button id="gpBtnMultiAdd" class="btn btnSecondary" type="button">Multi-Add</button>
-            <button id="gpBtnFavoritesPage" class="btn btnSecondary" type="button">Manage Favorites</button>
-          </div>
-        `;
-
+      // Controls area: single row — group filter | player name | Multi-Add button
+      // Multi-Add button stays in controls row always.
+      // Select Tee + Cancel move to tray panel footer when multi-add is active.
       el.trayControls.querySelector(".gpTrayTabControls")?.remove();
-    const gpTc2 = document.createElement("div");
-    gpTc2.className = "gpTrayTabControls";
-    el.trayControls.appendChild(gpTc2);
-    gpTc2.innerHTML = `<div class="maFieldRow">
+      const gpTc2 = document.createElement("div");
+      gpTc2.className = "gpTrayTabControls";
+      el.trayControls.appendChild(gpTc2);
+      gpTc2.innerHTML = `<div class="maFieldRow">
         <div class="maField gpFieldGroup">
           <select id="gpFavGroup" class="maTextInput">${opts}</select>
         </div>
@@ -934,10 +928,30 @@
             <button id="gpFavSearchClear" class="clearBtn ${state.favNameFilter ? "" : "isHidden"}" type="button" aria-label="Clear filter">×</button>
           </div>
         </div>
-        <div class="maField gpFieldBtn">${actionButtons}</div>
+        <div class="maField gpFieldBtn">
+          <button id="gpBtnMultiAdd" class="btn btnSecondary" type="button">${state.multiAddMode ? "Multi-Add" : "Multi-Add"}</button>
+        </div>
       </div>`;
 
       gpTc2.innerHTML += `<div class="maFieldRow"><div class="maField"><div id="gpFavHint" class="maHelpText gpHint ${state.favBroadened ? "" : "isHidden"}">No match in selected group — showing all groups.</div></div></div>`;
+
+      // Tray panel footer — shows Select Tee + Cancel in multi-add mode, empty otherwise
+      if (el.trayFtr) {
+        if (state.multiAddMode) {
+          el.trayFtr.innerHTML = `<div class="gpFooter gpFooter--canvas">
+            <button id="gpBtnSelectTee" class="btn btnPrimary" type="button" ${state.multiAddSelected.length ? "" : "disabled"}>
+              Select Tee${state.multiAddSelected.length ? ` (${state.multiAddSelected.length})` : ""}
+            </button>
+            <button id="gpBtnCancelMulti" class="btn btnSecondary" type="button" style="color:var(--danger);border-color:rgba(198,40,40,.3);">Cancel</button>
+          </div>`;
+          const btnSelectTee = document.getElementById("gpBtnSelectTee");
+          if (btnSelectTee) btnSelectTee.onclick = beginBatchTeeFlow;
+          const btnCancel = document.getElementById("gpBtnCancelMulti");
+          if (btnCancel) btnCancel.onclick = cancelMultiAddMode;
+        } else {
+          el.trayFtr.innerHTML = "";
+        }
+      }
 
       const sel = document.getElementById("gpFavGroup");
       if (sel) {
@@ -968,17 +982,8 @@
         renderTrayBody();
       };
 
-      const btnManage = document.getElementById("gpBtnFavoritesPage");
-      if (btnManage) btnManage.onclick = () => MA.routerGo("favorites", { returnTo: "roster" });
-
       const btnMulti = document.getElementById("gpBtnMultiAdd");
-      if (btnMulti) btnMulti.onclick = beginMultiAddMode;
-
-      const btnCancel = document.getElementById("gpBtnCancelMulti");
-      if (btnCancel) btnCancel.onclick = cancelMultiAddMode;
-
-      const btnSelectTee = document.getElementById("gpBtnSelectTee");
-      if (btnSelectTee) btnSelectTee.onclick = beginBatchTeeFlow;
+      if (btnMulti) btnMulti.onclick = state.multiAddMode ? null : beginMultiAddMode;
 
       return;
     }
