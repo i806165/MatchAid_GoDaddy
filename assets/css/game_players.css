@@ -76,6 +76,16 @@
   padding: 5px 8px;
 }
 
+.maPage--players .gpMobileCloseBtn {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .maPage--players .gpMobileCloseBtn {
+    display: flex;
+  }
+}
+
 .gpRow--favs{
   display: grid;
   grid-template-columns: minmax(0,1fr) 48px minmax(0,120px) 34px 34px;
