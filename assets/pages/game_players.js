@@ -671,9 +671,7 @@
       ${sorts.map(s => `<button class="maSeg--sortBtn ${state.rosterSort === s.id ? "is-active" : ""}" type="button" data-roster-sort="${esc(s.id)}">${esc(s.label)}</button>`).join("")}
     </div>`;
 
-    const teamsBtn = state.teamConfig
-      ? `<button id="gpBtnManageTeams" class="btn btnSecondary" type="button">Manage Teams</button>`
-      : "";
+    const teamsBtn = `<button id="gpBtnManageTeams" class="btn btnSecondary" type="button">Manage Teams</button>`;
 
     el.canvasControls.innerHTML = `
       <div class="gpCanvasControls">
@@ -695,10 +693,8 @@
       });
     });
 
-    if (state.teamConfig) {
-      const teamsButton = document.getElementById("gpBtnManageTeams");
-      if (teamsButton) teamsButton.onclick = onManageTeams;
-    }
+    const teamsButton = document.getElementById("gpBtnManageTeams");
+    if (teamsButton) teamsButton.onclick = onManageTeams;
   }
 
 
