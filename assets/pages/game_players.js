@@ -918,19 +918,17 @@
       const gpTc2 = document.createElement("div");
       gpTc2.className = "gpTrayTabControls";
       el.trayControls.appendChild(gpTc2);
-      gpTc2.innerHTML = `<div class="maFieldRow">
-        <div class="maField gpFieldGroup">
+      gpTc2.innerHTML = `<div class="maFieldRow" style="flex-wrap:nowrap; align-items:center;">
+        <div class="maField gpFieldGroup" style="flex:0 0 auto;">
           <select id="gpFavGroup" class="maTextInput">${opts}</select>
         </div>
-        <div class="maField">
+        <div class="maField" style="flex:1 1 auto; min-width:0;">
           <div class="maInputWrap gpInputClearWrap">
             <input id="gpFavFilter" class="maTextInput" placeholder="Player name" value="${esc(state.favNameFilter)}">
             <button id="gpFavSearchClear" class="clearBtn ${state.favNameFilter ? "" : "isHidden"}" type="button" aria-label="Clear filter">×</button>
           </div>
         </div>
-        <div class="maField gpFieldBtn">
-          <button id="gpBtnMultiAdd" class="btn btnSecondary" type="button">${state.multiAddMode ? "Multi-Add" : "Multi-Add"}</button>
-        </div>
+        <button id="gpBtnMultiAdd" class="btn btnSecondary" type="button" style="flex-shrink:0;">Multi-Add</button>
       </div>`;
 
       gpTc2.innerHTML += `<div class="maFieldRow"><div class="maField"><div id="gpFavHint" class="maHelpText gpHint ${state.favBroadened ? "" : "isHidden"}">No match in selected group — showing all groups.</div></div></div>`;
@@ -942,7 +940,7 @@
             <button id="gpBtnSelectTee" class="btn btnPrimary" type="button" ${state.multiAddSelected.length ? "" : "disabled"}>
               Select Tee${state.multiAddSelected.length ? ` (${state.multiAddSelected.length})` : ""}
             </button>
-            <button id="gpBtnCancelMulti" class="btn btnSecondary" type="button" style="color:var(--danger);border-color:rgba(198,40,40,.3);">Cancel</button>
+            <button id="gpBtnCancelMulti" class="btn btnSecondary" type="button">Cancel</button>
           </div>`;
           const btnSelectTee = document.getElementById("gpBtnSelectTee");
           if (btnSelectTee) btnSelectTee.onclick = beginBatchTeeFlow;
