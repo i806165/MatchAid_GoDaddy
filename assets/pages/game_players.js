@@ -1593,6 +1593,7 @@ if (isExisting) {
 
     state._nrSelectedGHIN = null;
     await refreshPlayers();
+    renderRoster()
     render();
     MA.setStatus("Player updated.", "success");
   }
@@ -1885,6 +1886,7 @@ async function evaluateImportRows(){
       }
 
       await refreshPlayers();
+      renderRoster()
       await refreshFavorites();
       state.importText = "";
       state.importRows = [];
@@ -2010,6 +2012,7 @@ async function beginBatchTeeFlow(){
       }
 
       await refreshPlayers();
+      renderRoster()
       await refreshFavorites();
       state.multiAddSelected = [];
       state.multiAddMode = false;
@@ -2083,6 +2086,7 @@ async function beginBatchTeeFlow(){
 
     await refreshPlayers();
     await refreshFavorites();
+    renderRoster();
     renderTrayBody();
     MA.setStatus("Player added/updated.", "success");
   }
@@ -2140,7 +2144,9 @@ async function beginBatchTeeFlow(){
 
     await refreshPlayers();
     await refreshFavorites();
+    renderRoster();
     renderTrayBody();
+    MA.setStatus("Player removed.", "success");
   }
 
   function onRowFavorite(e){
