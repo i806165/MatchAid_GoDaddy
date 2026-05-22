@@ -1,23 +1,297 @@
 /* /assets/css/player_home.css
    Player Portal Games — page-specific styles
-   Aligned with admin patterns.
+
+   PHILOSOPHY: This file adds ONLY what ma_shared.css does not already provide.
+   Layout structure  → .maPanels / .maPanel / .maPanel__body / .maPanel__ftr
+   Buttons           → .btn .btnSecondary (Apply), .btnLink (Select all / Favorites)
+   Inputs            → .maTextInput
+   Checkbox rows     → .maAdminRow / .maAdminRow__check pattern
+   Section labels    → .maLabel
+   All tokens        → var(--brandPrimary), var(--borderSubtle), etc.
 */
 
-/* Card header uses brand green to match existing portal pattern */
-.maCard__hdr{
+
+/* ==========================================================================
+   PAGE LAYOUT
+   Overrides .maPanels--2 to use a fixed 220px sidebar + fluid cards column.
+   On mobile the grid collapses to 1fr (ma_shared.css default) — no regression.
+   ========================================================================== */
+
+@media (min-width: 900px) {
+  .maPanels--playerHome {
+    grid-template-columns: 220px 1fr;
+    height: 100%;
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  /* Left panel: sidebar scrolls, footer is sticky */
+  .maPanels--playerHome .maPanel--sidebar {
+    overflow: hidden;   /* maPanel__body handles scroll */
+  }
+
+  /* Right panel: cards column scrolls independently */
+  .maPanels--playerHome .maPanel--cards {
+    overflow-y: auto;
+    border: none;       /* cards column has no panel chrome — just the card list */
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+  }
+}
+
+
+/* ==========================================================================
+   SIDEBAR SECTIONS
+   Divides the .maPanel__body into labelled filter groups.
+   ========================================================================== */
+
+.phSidebar__section {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--borderSubtle);
+}
+
+.phSidebar__section:last-child {
+  border-bottom: none;
+}
+
+/* Section label — reuses maLabel token sizing but uppercase + tighter */
+.phSidebar__sectionTitle {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--mutedText);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 8px;
+  font-family: var(--fontFamilyBase);
+}
+
+/* Control row (Select all | Favorites) */
+.phSidebar__controls {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 7px;
+  flex-wrap: wrap;
+  row-gap: 3px;
+}
+
+.phSidebar__ctrlDiv {
+  color: var(--borderSubtle);
+  font-size: 11px;
+}
+
+
+/* ==========================================================================
+   RADIO ROWS — Show and Date sections
+   Radio dot is the only genuinely new component.
+   ========================================================================== */
+
+.phSidebar__radioGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.phSidebar__radioRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 1px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.phSidebar__radioRow:hover .phSidebar__radioLbl {
+  text-decoration: underline;
+}
+
+.phSidebar__radioDot {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1.5px solid var(--borderSubtle);
+  flex-shrink: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.phSidebar__radioDot.is-active {
+  border-color: var(--brandSecondary);
+}
+
+.phSidebar__radioDot.is-active::after {
+  content: '';
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brandSecondary);
+}
+
+.phSidebar__radioLbl {
+  font-size: var(--fieldValueSize);
+  font-weight: 800;
+  font-family: var(--fontFamilyBase);
+}
+
+.phSidebar__radioRow.is-active .phSidebar__radioLbl { color: var(--ink); }
+.phSidebar__radioRow:not(.is-active) .phSidebar__radioLbl { color: var(--mutedText); }
+
+
+/* ==========================================================================
+   DATE INPUTS
+   Uses .maTextInput from shared CSS — only layout wrapper needed here.
+   ========================================================================== */
+
+.phSidebar__dateFields {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 9px;
+}
+
+.phSidebar__dateField {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.phSidebar__dateLbl {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--mutedText);
+  font-family: var(--fontFamilyBase);
+  width: 26px;
+  flex-shrink: 0;
+}
+
+/* Override maTextInput sizing for the compact sidebar context */
+.phSidebar__dateField .maTextInput {
+  height: 28px;
+  min-height: 28px;
+  font-size: var(--fieldValueSize);
+  border-radius: var(--radiusSq);
+  padding: 0 8px;
+}
+
+.phSidebar__dateField .maTextInput:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+
+/* ==========================================================================
+   CHECKBOX ROWS — Admins and Courses
+   Lighter, compact version of .maAdminRow pattern from shared CSS.
+   Uses .maAdminRow__check.on for the filled state (already in shared CSS).
+   ========================================================================== */
+
+.phSidebar__rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.phSidebar__row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 1px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.phSidebar__row:hover .phSidebar__rowName {
+  text-decoration: underline;
+}
+
+/* Compact check box — shares .on class logic with maAdminRow__check */
+.phSidebar__check {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1.5px solid var(--borderSubtle);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  font-size: 10px;
+  font-weight: 900;
+  color: var(--brandPrimaryText);
+  font-family: var(--fontFamilyBase);
+}
+
+.phSidebar__check.is-active {
+  background: var(--brandSecondary);
+  border-color: var(--brandSecondary);
+}
+
+.phSidebar__rowName {
+  flex: 1;
+  font-size: var(--fieldValueSize);
+  font-weight: 800;
+  font-family: var(--fontFamilyBase);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.phSidebar__row.is-active .phSidebar__rowName { color: var(--ink); }
+.phSidebar__row:not(.is-active) .phSidebar__rowName { color: var(--mutedText); }
+
+.phSidebar__rowCount {
+  font-size: var(--fieldValueSize);
+  font-weight: 800;
+  color: var(--mutedText);
+  font-family: var(--fontFamilyBase);
+  flex-shrink: 0;
+}
+
+.phSidebar__rowFav {
+  color: var(--brandSecondary);
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+/* "Show N more" — reuses .btnLink appearance */
+.phSidebar__moreLink {
+  margin-top: 6px;
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--fontFamilyBase);
+  font-size: var(--fieldValueSize);
+  font-weight: 800;
+  color: var(--brandAccent);
+}
+
+.phSidebar__moreLink:hover { text-decoration: underline; }
+
+
+/* ==========================================================================
+   EXISTING CARD STYLES — UNCHANGED from original player_home.css
+   ========================================================================== */
+
+.maCard__hdr {
   color: var(--brandSecondaryText);
   background: var(--brandSecondary);
   border-bottom-color: color-mix(in srgb, var(--brandPrimary) 70%, black);
 }
-.maCard__title{ color: var(--brandPrimaryText); }
+.maCard__title { color: var(--brandPrimaryText); }
 
-.maCard__titleGgid{
+.maCard__titleGgid {
   margin-left: 6px;
   color: var(--brandPrimaryTextMuted);
   font-weight: 800;
 }
 
-.maGameCard__hdrAdmin{
+.maGameCard__hdrAdmin {
   color: var(--brandPrimaryTextMuted);
   font-weight: 800;
   white-space: nowrap;
@@ -28,93 +302,65 @@
   margin-right: 8px;
 }
 
-.maGameCard__body{
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-.maGameCard__top{
-  display:flex;
-  gap:12px;
-  align-items:center;
-  min-width:0;
-}
-.maGameCard__meta{
-  flex:1 1 auto;
-  min-width:0;
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
+.maGameCard__body { display: flex; flex-direction: column; gap: 8px; }
+.maGameCard__top { display: flex; gap: 12px; align-items: center; min-width: 0; }
+.maGameCard__meta { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+
 .maGameCard__line1,
 .maGameCard__line2,
-.maGameCard__line3{
-  display:flex;
-  justify-content:space-between;
+.maGameCard__line3 {
+  display: flex;
+  justify-content: space-between;
   align-items: baseline;
-  gap:10px;
-  min-width:0;
+  gap: 10px;
+  min-width: 0;
 }
 
 .maGameCard__courseWrap,
 .maGameCard__facts,
-.maGameCard__admin{
-  min-width:0;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
+.maGameCard__admin {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.maGameCard__courseWrap{ flex: 1 1 auto; font-weight:900; color:var(--ink); }
-.maGameCard__facilityName{ color:var(--mutedText); font-weight:900; }
-.maGameCard__facts{ flex: 1 1 auto; color:var(--mutedText); font-weight:800; }
 
-.maPill{
-  display:inline-flex;
-  align-items:center;
-  min-height:24px;
-  padding:0 8px;
-  border-radius:999px;
-  border:1px solid var(--borderSubtle);
-  background:#fff;
-  font-size:12px;
-  font-weight:800;
-  white-space:nowrap;
-}
-.maPill--success{ background: rgba(10,164,92,.08); border-color: rgba(10,164,92,.28); }
-.maPill--warn{ background: rgba(246,211,101,.18); border-color: rgba(0,0,0,.12); }
-.maPill--danger{ background: rgba(198,40,40,.08); border-color: rgba(198,40,40,.22); }
+.maGameCard__courseWrap { flex: 1 1 auto; font-weight: 900; color: var(--ink); }
+.maGameCard__facilityName { color: var(--mutedText); font-weight: 900; }
+.maGameCard__facts { flex: 1 1 auto; color: var(--mutedText); font-weight: 800; }
 
-.maPillLabel{ font-weight: 400; color: var(--mutedText); margin-right: 4px; font-size: 12px; }
-.maPillValue{ font-weight: 800; }
-
-
-/* Fix for MANAGE button layout (text link style) */
-.maGameCard__manageBtn.maCard__actionBtn {
-  width: auto;
-  height: auto;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--brandAccent);
+.maPill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid var(--borderSubtle);
+  background: #fff;
   font-size: 12px;
-  font-weight: 900;
-  letter-spacing: .3px;
-  text-transform: uppercase;
-}
-
-/* Provisional notice — shown when course is not yet confirmed */
-.maGameCard__provisional {
-  font-size: 11px;
   font-weight: 800;
-  color: #7A5A10;
-  background: #FFF3CD;
-  border: 1px solid #E8C87A;
-  border-radius: var(--radiusSq, 6px);
-  padding: 2px 8px;
-  display: inline-block;
+  white-space: nowrap;
+}
+.maPill--success { background: rgba(10,164,92,.08); border-color: rgba(10,164,92,.28); }
+.maPill--warn    { background: rgba(246,211,101,.18); border-color: rgba(0,0,0,.12); }
+.maPill--danger  { background: rgba(198,40,40,.08); border-color: rgba(198,40,40,.22); }
+
+.maPillLabel { font-weight: 400; color: var(--mutedText); margin-right: 4px; font-size: 12px; }
+.maPillValue { font-weight: 800; }
+
+.maGameCard__manageBtn.maCard__actionBtn {
+  width: auto; height: auto; padding: 0; border: 0; background: transparent;
+  color: var(--brandAccent); font-size: 12px; font-weight: 900;
+  letter-spacing: .3px; text-transform: uppercase;
 }
 
-@media (max-width: 520px){
+.maGameCard__provisional {
+  font-size: 11px; font-weight: 800; color: #7A5A10;
+  background: #FFF3CD; border: 1px solid #E8C87A;
+  border-radius: var(--radiusSq, 6px); padding: 2px 8px; display: inline-block;
+}
+
+@media (max-width: 520px) {
   .maGameCard__manageBtn { display: none; }
   .maGameCard__line2,
   .maGameCard__line3 { flex-wrap: wrap; }

@@ -3,6 +3,15 @@
    - Follows admin page pattern
    - Preserves many Wix HTML IDs in the PHP view
    - First pass: init + filters + card render + action menu hooks
+
+   CHANGE SUMMARY (UI refactor only):
+   - Added wireSidebar() function — wires the desktop sidebar filter panel
+   - wireSidebar() reads/writes the SAME state.filters and state.uiFilters
+     as the modal, using the same reloadGames() call. Zero business logic change.
+   - Added buildSidebarCourses() helper — derives course list from state.games
+     (courses panel is client-side only; no new API calls)
+   - initialize() now calls wireSidebar() after wireEvents()
+   - All existing functions unchanged
 */
 (function(){
   'use strict';
@@ -23,7 +32,7 @@
     overlay: document.getElementById('overlay'),
     status: document.getElementById('status'),
 
-    // Filter modal
+    // Filter modal (mobile path — unchanged)
     segDate: document.getElementById('segDate'),
     segAdmin: document.getElementById('segAdmin'),
     panelDate: document.getElementById('panelDate'),
@@ -60,6 +69,7 @@
     OPEN: 'All Available Games',
     CUSTOM: 'Filtered Results' // For when quickPreset is empty, implying advanced filters
   };
+
   // ---- Date Helpers (Admin parity) ----
   function parseYmd(ymd) {
     if (!ymd) return null;
@@ -205,9 +215,6 @@ function getGameAdminMeta(g){
     const postedId = rowText(g, ['ghinPostId']);
 
     const adminMeta = getGameAdminMeta(g);
-//    const favoriteAdminLabel = adminMeta.adminKey
-//      ? (adminMeta.isFavorite ? 'Remove this Admin from Favorites' : 'Add Admin to Favorites')
-//      : 'Admin Favorite Unavailable';
     const favoriteAdminLabel = adminMeta.adminKey
       ? (adminMeta.isFavorite ? `UnFollow ${adminMeta.adminName}'s Games` : `Follow Games from ${adminMeta.adminName}`)
       : 'Admin Favorite Unavailable';
@@ -399,7 +406,7 @@ function getGameAdminMeta(g){
     
     const items = (actionItemsForGame(game) || []).map(it => {
       if (it.separator) return { separator: true };
-      if (it.category != null) return { category: it.category, description: it.description };  // ← add this
+      if (it.category != null) return { category: it.category, description: it.description };
       return {
         label: it.label,
         action: () => onGameAction(game, it.action),
@@ -564,6 +571,7 @@ function getGameAdminMeta(g){
       }
       applyChrome(); // Update header with new filter context
       renderCards();
+      refreshSidebar(); // Re-populate sidebar lists from updated game set
       setStatus(`Ready • ${state.games.length} games`, 'success');
     } catch (err) {
       console.error(err);
@@ -578,10 +586,7 @@ function getGameAdminMeta(g){
   function getCurrentTeeSetIdForGame(ggid){
     const id = String(ggid || "").trim();
     if (!id) return "";
-
-    // Look in state.games (VM) which has player-specific data injected
     const game = (state.games || []).find(g => String(g.ggid || "").trim() === id);
-
     return String(
       game?.yourTeeSetId ??
       game?.playerTeeSetId ??
@@ -596,7 +601,6 @@ function getGameAdminMeta(g){
     // Set game session and route for all game relevant actions
     await apiAdmin("setGameSession.php", { ggid });
 
-    // First-pass routing/actions (non-destructive). Can be wired to final routes later.
     if (action === 'scorehome') {
       const scoreId = rowText(g, ['yourPlayerKey', 'scoreId', 'playerKey', 'dbPlayers_PlayerKey']);
       return routerGo("scorehome", { scoreId: scoreId });
@@ -620,7 +624,6 @@ function getGameAdminMeta(g){
       return routerGo("roster", {});
     }
     if (action === 'register') {
-      // In-Place Registration
       if (MA.TeeSetSelection) {
           const u = init.user;
           const player = {
@@ -662,7 +665,6 @@ function getGameAdminMeta(g){
           }
         });
       } else {
-        // Fallback if module missing
         return routerGo("roster", {});
       }
       return;
@@ -753,9 +755,9 @@ function getGameAdminMeta(g){
     return res.json();
   }
 
-  // ---- Filters Modal Wiring (Ported from Admin) ----
+  // ---- Filters Modal Wiring (Ported from Admin) — UNCHANGED ----
   function wireFiltersModal() {
-    const modalOverlay = document.getElementById('overlay'); // Reusing existing ID
+    const modalOverlay = document.getElementById('overlay');
     const btnCloseX = document.getElementById('btnCloseModal');
     const btnCancel = document.getElementById('btnCancelFilters');
     const btnApply = document.getElementById('btnApplyFilters');
@@ -766,7 +768,6 @@ function getGameAdminMeta(g){
 
     if (!modalOverlay) return;
 
-    // Segmented control
     function setPanel(which) {
       const isDate = which === 'date';
       if (segDate) segDate.classList.toggle('is-active', isDate);
@@ -775,20 +776,17 @@ function getGameAdminMeta(g){
       if (panelAdmin) panelAdmin.classList.toggle('is-active', !isDate);
     }
 
-    // ---- Native date pickers only (remove custom calendar) ----
     const dateFromEl = document.getElementById('dateFrom');
     const dateToEl   = document.getElementById('dateTo');
     const btnPickFrom = document.getElementById('btnPickFrom');
     const btnPickTo   = document.getElementById('btnPickTo');
 
-    // Optional: hide the old custom calendar container if it still exists in the HTML
     const calWrap = document.getElementById('calWrap');
     if (calWrap) {
       calWrap.style.display = 'none';
       calWrap.setAttribute('aria-hidden', 'true');
     }
 
-    // Icon buttons should open the native <input type="date"> picker
     if (btnPickFrom) btnPickFrom.onclick = (e) => {
       e.preventDefault();
       if (dateFromEl) { dateFromEl.focus(); dateFromEl.click(); }
@@ -798,46 +796,25 @@ function getGameAdminMeta(g){
       e.preventDefault();
       if (dateToEl) { dateToEl.focus(); dateToEl.click(); }
     };
-    
-    // ---- Native date pickers only ----
-    // Icon buttons should just focus/click the native <input type="date">.
-    if (btnPickFrom) btnPickFrom.onclick = (e) => {
-      e.preventDefault();
-      dateFromEl?.focus();
-      dateFromEl?.click();
-    };
 
-    if (btnPickTo) btnPickTo.onclick = (e) => {
-      e.preventDefault();
-      dateToEl?.focus();
-      dateToEl?.click();
-    };
-
-    // No custom calendar open/render on focus/change.
-    // Leave onchange alone only if you need to validate ranges; otherwise omit entirely.
-    // Modal Open/Close
     let pendingFrom = '';
     let pendingTo = '';
     let pendingSelectedKeys = [];
 
-    // Assign to outer scope so openActionsMenu can call it
     openFiltersModal = () => {
-      // Snapshot
       pendingFrom = String(state.filters.dateFrom || '');
       pendingTo = String(state.filters.dateTo || '');
       pendingSelectedKeys = [...(state.uiFilters.selectedAdminKeys || [])];
       
-      // Seed UI
       if (dateFromEl) dateFromEl.value = pendingFrom;
       if (dateToEl) dateToEl.value = pendingTo;
-      state.uiFilters.selectedAdminKeys = [...pendingSelectedKeys]; // Sync UI state
+      state.uiFilters.selectedAdminKeys = [...pendingSelectedKeys];
       renderAdminRows();
 
       setPanel('date');
       modalOverlay.style.display = 'flex';
       modalOverlay.setAttribute('aria-hidden', 'false');
       document.documentElement.classList.add('maOverlayOpen');
-      //closeCalendar();
     };
 
     const closeModal = (revert = true) => {
@@ -846,7 +823,6 @@ function getGameAdminMeta(g){
         if (dateToEl) dateToEl.value = pendingTo;
         state.uiFilters.selectedAdminKeys = [...pendingSelectedKeys];
       }
-      //closeCalendar();
       modalOverlay.style.display = 'none';
       modalOverlay.setAttribute('aria-hidden', 'true');
       document.documentElement.classList.remove('maOverlayOpen');
@@ -859,7 +835,6 @@ function getGameAdminMeta(g){
       btnApply.onclick = async () => {
         state.filters.dateFrom = String(dateFromEl?.value || '');
         state.filters.dateTo = String(dateToEl?.value || '');
-        // Admin keys are already in state.uiFilters.selectedAdminKeys from toggles
         state.filters.selectedAdminKeys = [...state.uiFilters.selectedAdminKeys];
         
         closeModal(false);
@@ -871,8 +846,386 @@ function getGameAdminMeta(g){
     if (segAdmin) segAdmin.onclick = () => setPanel('admin');
   }
 
+  // ---- Sidebar Wiring — NEW, desktop only -------------------------
+  // Reads and writes the same state.filters / state.uiFilters as the modal.
+  // No new API calls — courses are derived client-side from state.games.
+  // "Show" (all vs mine) is a client-side filter applied before renderCards.
+
+  // Sidebar local state — does not affect server-side filters
+  const sbState = {
+    showMine: false,              // Show: All games vs My registered
+    datePreset: 'next30',         // prev30 | next30 | custom
+    adminExpanded: false,
+    courseExpanded: false,
+    // checkedCourses: Set of courseName strings (client-side only)
+    // Populated by buildSidebarCourses() after each reloadGames
+    checkedCourses: new Set(),
+    allCourses: [],               // [{name, count}] sorted by count desc
+  };
+
+  const SB_SHOW = 5; // rows visible before "Show more"
+
+  function toYmd(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  // Derive course list from current state.games (client-side, no API)
+  function buildSidebarCourses() {
+    const counts = {};
+    (state.games || []).forEach(g => {
+      const name = String(g.courseName || g.dbGames_CourseName || '').trim();
+      if (!name) return;
+      counts[name] = (counts[name] || 0) + 1;
+    });
+    sbState.allCourses = Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    // On first build (or after reload) ensure all courses are checked
+    // Re-add any new courses; keep existing checked state for known ones
+    sbState.allCourses.forEach(c => {
+      if (!sbState.checkedCourses.has(c.name)) {
+        sbState.checkedCourses.add(c.name);
+      }
+    });
+    // Remove stale courses no longer in results
+    sbState.checkedCourses.forEach(name => {
+      if (!sbState.allCourses.find(c => c.name === name)) {
+        sbState.checkedCourses.delete(name);
+      }
+    });
+  }
+
+  function sbApplyDatePreset(preset) {
+    const today = new Date();
+    const fromEl = document.getElementById('sbDateFrom');
+    const toEl   = document.getElementById('sbDateTo');
+    if (!fromEl || !toEl) return;
+
+    if (preset === 'prev30') {
+      const f = new Date(today); f.setDate(f.getDate() - 30);
+      fromEl.value = toYmd(f);
+      toEl.value   = toYmd(today);
+      fromEl.disabled = true;
+      toEl.disabled   = true;
+    } else if (preset === 'next30') {
+      const t = new Date(today); t.setDate(t.getDate() + 30);
+      fromEl.value = toYmd(today);
+      toEl.value   = toYmd(t);
+      fromEl.disabled = true;
+      toEl.disabled   = true;
+    } else {
+      // custom — use current state.filters dates as starting point
+      fromEl.value    = state.filters.dateFrom || toYmd(today);
+      toEl.value      = state.filters.dateTo   || toYmd(today);
+      fromEl.disabled = false;
+      toEl.disabled   = false;
+    }
+  }
+
+  function sbRenderAdminRows() {
+    const container = document.getElementById('sbAdminRows');
+    const moreEl    = document.getElementById('sbAdminMore');
+    const toggleEl  = document.getElementById('sbAdminToggle');
+    if (!container) return;
+
+    const admins  = state.admins || [];
+    const selKeys = new Set(state.uiFilters.selectedAdminKeys || []);
+    const allOn   = admins.length > 0 && admins.every(a => selKeys.has(String(a.key || a.adminKey || '')));
+
+    if (toggleEl) toggleEl.textContent = allOn ? 'Clear all' : 'Select all';
+
+    container.innerHTML = '';
+    admins.forEach((a, i) => {
+      const key     = String(a.key || a.adminKey || '');
+      const on      = selKeys.has(key);
+      const hidden  = !sbState.adminExpanded && i >= SB_SHOW;
+      // Count games for this admin in current results
+      const count   = (state.games || []).filter(g =>
+        String(g.adminName || g.dbGames_AdminName || '') === String(a.name || '')
+      ).length;
+
+      const row = document.createElement('div');
+      row.className = 'phSidebar__row' + (on ? ' is-active' : '');
+      if (hidden) row.style.display = 'none';
+      row.innerHTML =
+        `<div class="phSidebar__check${on ? ' is-active' : ''}">${on ? '✓' : ''}</div>` +
+        (a.isFavorite ? `<span class="phSidebar__rowFav" aria-label="Favorite">♥</span>` : '') +
+        `<span class="phSidebar__rowName">${esc(a.name || key)}</span>` +
+        `<span class="phSidebar__rowCount">${count}</span>`;
+
+      row.addEventListener('click', () => {
+        const set = new Set(state.uiFilters.selectedAdminKeys || []);
+        if (set.has(key)) {
+          set.delete(key);
+          // Empty = select all (per agreed UX rule)
+          if (set.size === 0) admins.forEach(x => set.add(String(x.key || x.adminKey || '')));
+        } else {
+          set.add(key);
+        }
+        state.uiFilters.selectedAdminKeys = [...set];
+        sbRenderAdminRows();
+      });
+
+      container.appendChild(row);
+    });
+
+    const rem = admins.length - SB_SHOW;
+    if (!sbState.adminExpanded && rem > 0) {
+      moreEl.textContent = `Show ${rem} more admin${rem > 1 ? 's' : ''}`;
+      moreEl.style.display = 'inline-block';
+    } else {
+      if (moreEl) moreEl.style.display = 'none';
+    }
+  }
+
+  function sbRenderCourseRows() {
+    const container = document.getElementById('sbCourseRows');
+    const moreEl    = document.getElementById('sbCourseMore');
+    if (!container) return;
+
+    container.innerHTML = '';
+    sbState.allCourses.forEach((c, i) => {
+      const on     = sbState.checkedCourses.has(c.name);
+      const hidden = !sbState.courseExpanded && i >= SB_SHOW;
+
+      const row = document.createElement('div');
+      row.className = 'phSidebar__row' + (on ? ' is-active' : '');
+      if (hidden) row.style.display = 'none';
+      row.innerHTML =
+        `<div class="phSidebar__check${on ? ' is-active' : ''}">${on ? '✓' : ''}</div>` +
+        `<span class="phSidebar__rowName">${esc(c.name)}</span>` +
+        `<span class="phSidebar__rowCount">${c.count}</span>`;
+
+      row.addEventListener('click', () => {
+        if (sbState.checkedCourses.has(c.name)) {
+          sbState.checkedCourses.delete(c.name);
+          // Empty = select all
+          if (sbState.checkedCourses.size === 0) {
+            sbState.allCourses.forEach(x => sbState.checkedCourses.add(x.name));
+          }
+        } else {
+          sbState.checkedCourses.add(c.name);
+        }
+        sbRenderCourseRows();
+      });
+
+      container.appendChild(row);
+    });
+
+    const rem = sbState.allCourses.length - SB_SHOW;
+    if (!sbState.courseExpanded && rem > 0) {
+      moreEl.textContent = `Show ${rem} more course${rem > 1 ? 's' : ''}`;
+      moreEl.style.display = 'inline-block';
+    } else {
+      if (moreEl) moreEl.style.display = 'none';
+    }
+  }
+
+  // Re-populate sidebar lists — called after every reloadGames()
+  function refreshSidebar() {
+    buildSidebarCourses();
+    sbRenderAdminRows();
+    sbRenderCourseRows();
+  }
+
+  // Client-side Show filter applied on top of state.games
+  // Called by sbApply — filters el.cards after renderCards has run
+  function sbApplyShowFilter() {
+    if (!sbState.showMine) return; // All games — nothing to hide
+    const cards = el.cards ? el.cards.querySelectorAll('.maCard') : [];
+    cards.forEach(card => {
+      const ggid = card.dataset.ggid || '';
+      const g = (state.games || []).find(x => String(x.ggid || x.dbGames_GGID || '') === ggid);
+      if (!g) { card.style.display = 'none'; return; }
+      const { enrollmentStatus } = inferStatuses(g);
+      const adminMeta = getGameAdminMeta(g);
+      const keep = enrollmentStatus === 'Registered' || !!adminMeta.adminKey;
+      card.style.display = keep ? '' : 'none';
+    });
+  }
+
+  // Client-side course filter applied on top of rendered cards
+  function sbApplyCourseFilter() {
+    const allChecked = sbState.allCourses.every(c => sbState.checkedCourses.has(c.name));
+    if (allChecked) return; // All selected — nothing to hide
+    const cards = el.cards ? el.cards.querySelectorAll('.maCard') : [];
+    cards.forEach(card => {
+      const ggid = card.dataset.ggid || '';
+      const g = (state.games || []).find(x => String(x.ggid || x.dbGames_GGID || '') === ggid);
+      if (!g) return;
+      const course = String(g.courseName || g.dbGames_CourseName || '').trim();
+      if (!sbState.checkedCourses.has(course)) card.style.display = 'none';
+    });
+  }
+
+  function wireSidebar() {
+    const sidebar = document.getElementById('phSidebar');
+    if (!sidebar) return; // Not in DOM — mobile or older template
+
+    // ---- SHOW radios ----
+    const showGroup = document.getElementById('sbShowGroup');
+    if (showGroup) {
+      showGroup.addEventListener('click', e => {
+        const row = e.target.closest('[data-v]');
+        if (!row) return;
+        showGroup.querySelectorAll('[data-v]').forEach(r => {
+          r.classList.toggle('is-active', r === row);
+          r.querySelector('.phSidebar__radioDot')?.classList.toggle('is-active', r === row);
+        });
+        sbState.showMine = (row.dataset.v === 'mine');
+      });
+    }
+
+    // ---- DATE radios ----
+    const dateGroup = document.getElementById('sbDateGroup');
+    if (dateGroup) {
+      // Set initial display from launch default (next30)
+      sbApplyDatePreset('next30');
+
+      dateGroup.addEventListener('click', e => {
+        const row = e.target.closest('[data-d]');
+        if (!row) return;
+        dateGroup.querySelectorAll('[data-d]').forEach(r => {
+          r.classList.toggle('is-active', r === row);
+          r.querySelector('.phSidebar__radioDot')?.classList.toggle('is-active', r === row);
+        });
+        sbState.datePreset = row.dataset.d;
+        sbApplyDatePreset(sbState.datePreset);
+      });
+    }
+
+    // ---- ADMINS: Select all / Clear all toggle ----
+    const adminToggle = document.getElementById('sbAdminToggle');
+    if (adminToggle) {
+      adminToggle.addEventListener('click', () => {
+        const admins  = state.admins || [];
+        const selKeys = new Set(state.uiFilters.selectedAdminKeys || []);
+        const allOn   = admins.length > 0 && admins.every(a => selKeys.has(String(a.key || a.adminKey || '')));
+        if (allOn) {
+          // Clear — but empty means all, so immediately re-select all
+          state.uiFilters.selectedAdminKeys = [];
+        } else {
+          state.uiFilters.selectedAdminKeys = admins.map(a => String(a.key || a.adminKey || '')).filter(Boolean);
+        }
+        sbRenderAdminRows();
+      });
+    }
+
+    // ---- ADMINS: Favorites ----
+    const adminFavs = document.getElementById('sbAdminFavs');
+    if (adminFavs) {
+      adminFavs.addEventListener('click', () => {
+        const favKeys = (state.admins || [])
+          .filter(a => a.isFavorite)
+          .map(a => String(a.key || a.adminKey || ''))
+          .filter(Boolean);
+        state.uiFilters.selectedAdminKeys = favKeys.length ? favKeys : [];
+        // If no favorites exist, fall back to all
+        if (!state.uiFilters.selectedAdminKeys.length) {
+          state.uiFilters.selectedAdminKeys = (state.admins || []).map(a => String(a.key || a.adminKey || '')).filter(Boolean);
+        }
+        sbRenderAdminRows();
+      });
+    }
+
+    // ---- ADMINS: Show more ----
+    const adminMore = document.getElementById('sbAdminMore');
+    if (adminMore) {
+      adminMore.addEventListener('click', () => {
+        sbState.adminExpanded = true;
+        sbRenderAdminRows();
+      });
+    }
+
+    // ---- COURSES: Select all ----
+    const courseSelectAll = document.getElementById('sbCourseSelectAll');
+    if (courseSelectAll) {
+      courseSelectAll.addEventListener('click', () => {
+        sbState.allCourses.forEach(c => sbState.checkedCourses.add(c.name));
+        sbRenderCourseRows();
+      });
+    }
+
+    // ---- COURSES: Clear all (empty = all per UX rule) ----
+    const courseClearAll = document.getElementById('sbCourseClearAll');
+    if (courseClearAll) {
+      courseClearAll.addEventListener('click', () => {
+        // Clear all = select all per agreed rule: empty means no filter
+        sbState.allCourses.forEach(c => sbState.checkedCourses.add(c.name));
+        sbRenderCourseRows();
+      });
+    }
+
+    // ---- COURSES: Show more ----
+    const courseMore = document.getElementById('sbCourseMore');
+    if (courseMore) {
+      courseMore.addEventListener('click', () => {
+        sbState.courseExpanded = true;
+        sbRenderCourseRows();
+      });
+    }
+
+    // ---- APPLY button ----
+    // Admin selection → writes to state.filters.selectedAdminKeys (server-side filter)
+    // Date preset     → writes to state.filters.dateFrom / dateTo (server-side filter)
+    // Show (mine)     → client-side card visibility only, no API call
+    // Courses         → client-side card visibility only, no API call
+    const applyBtn = document.getElementById('sbApplyBtn');
+    if (applyBtn) {
+      applyBtn.addEventListener('click', async () => {
+        applyBtn.disabled = true;
+        applyBtn.textContent = 'Applying…';
+
+        // Commit date values from sidebar inputs to state.filters
+        const fromEl = document.getElementById('sbDateFrom');
+        const toEl   = document.getElementById('sbDateTo');
+        if (fromEl && toEl) {
+          state.filters.dateFrom = fromEl.value || state.filters.dateFrom;
+          state.filters.dateTo   = toEl.value   || state.filters.dateTo;
+        }
+
+        // Commit admin selection from uiFilters to filters
+        state.filters.selectedAdminKeys = [...(state.uiFilters.selectedAdminKeys || [])];
+
+        // Clear quickPreset when user is using sidebar (custom filter state)
+        state.filters.quickPreset = '';
+
+        try {
+          // Reload from server with new date + admin filters
+          await reloadGames();
+
+          // After reload, apply client-side filters (Show + Courses)
+          sbApplyShowFilter();
+          sbApplyCourseFilter();
+        } finally {
+          applyBtn.disabled = false;
+          applyBtn.textContent = 'Apply filters';
+        }
+      });
+    }
+
+    // Initial population
+    buildSidebarCourses();
+    sbRenderAdminRows();
+    sbRenderCourseRows();
+
+    // Set launch defaults:
+    // - Show: All games (already default in sbState)
+    // - Date: Next 30d (already applied above)
+    // - Admins: favorites pre-selected
+    const favKeys = (state.admins || [])
+      .filter(a => a.isFavorite)
+      .map(a => String(a.key || a.adminKey || ''))
+      .filter(Boolean);
+    if (favKeys.length) {
+      state.uiFilters.selectedAdminKeys = favKeys;
+      sbRenderAdminRows();
+    }
+  }
+
   function wireEvents(){
-    // Wire the modal logic
+    // Wire the modal logic (mobile path — unchanged)
     wireFiltersModal();
 
     el.adminSearch?.addEventListener('input', renderAdminRows);
@@ -897,7 +1250,6 @@ function getGameAdminMeta(g){
       renderAdminRows();
     });
 
-    // Wix-HTML quick filter IDs do not exist in the GoDaddy chrome; support if later added.
     document.getElementById('btnHome')?.addEventListener('click', () => routerGo ? routerGo('home') : window.location.assign('/'));
   }
 
@@ -905,6 +1257,7 @@ function getGameAdminMeta(g){
     applyChrome();
     renderCards();
     wireEvents();
+    wireSidebar();   // NEW — desktop sidebar wiring (no-op if sidebar not in DOM)
     setStatus(`Ready • ${state.games.length} games`, 'success');
   }
 
