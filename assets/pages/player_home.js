@@ -870,7 +870,7 @@ function getGameAdminMeta(g){
   }
 
   // Derive course list from current state.games (client-side, no API)
-  function buildSidebarCourses() {
+  function buildSidebarCourses(isFirstBuild = false) {
     const counts = {};
     (state.games || []).forEach(g => {
       const name = String(g.courseName || g.dbGames_CourseName || '').trim();
@@ -881,19 +881,18 @@ function getGameAdminMeta(g){
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count);
 
-    // On first build (or after reload) ensure all courses are checked
-    // Re-add any new courses; keep existing checked state for known ones
-    sbState.allCourses.forEach(c => {
-      if (!sbState.checkedCourses.has(c.name)) {
-        sbState.checkedCourses.add(c.name);
-      }
-    });
-    // Remove stale courses no longer in results
-    sbState.checkedCourses.forEach(name => {
-      if (!sbState.allCourses.find(c => c.name === name)) {
-        sbState.checkedCourses.delete(name);
-      }
-    });
+    if (isFirstBuild) {
+      // First load only — check everything by default
+      sbState.allCourses.forEach(c => sbState.checkedCourses.add(c.name));
+    } else {
+      // Subsequent reloads — only remove stale courses no longer in results.
+      // Do NOT re-add unchecked courses — that would stomp the player's selection.
+      sbState.checkedCourses.forEach(name => {
+        if (!sbState.allCourses.find(c => c.name === name)) {
+          sbState.checkedCourses.delete(name);
+        }
+      });
+    }
   }
 
   function sbApplyDatePreset(preset) {
@@ -1254,7 +1253,7 @@ function getGameAdminMeta(g){
     }
 
     // Initial population
-    buildSidebarCourses();
+    buildSidebarCourses(true); // first load — check all by default
     sbRenderAdminRows();
     sbRenderCourseRows();
 

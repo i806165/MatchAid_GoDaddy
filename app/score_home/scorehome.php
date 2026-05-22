@@ -8,7 +8,7 @@ require_once MA_SERVICES . "/scoring/service_ScoreEntry.php";
 require_once MA_SVC_DB . "/service_dbPlayers.php";
 
 // 1. Capture incoming context
-$urlKey = trim((string)($_GET['key'] ?? ''));
+$urlKey    = trim((string)($_GET['key'] ?? ''));
 $targetGGID = null;
 
 // Resolve GGID from URL key if provided
@@ -22,9 +22,9 @@ if (!$targetGGID) {
     $targetGGID = ServiceContextGame::getStoredGGID();
 }
 
-// 2. Extra GGID Check: Reset pod if switching games or keys
+// 2. Reset pod if switching games or keys
 $activeScoringGGID = ServiceScoreEntry::getScoringPodGGID();
-$sessionKey = ServiceScoreEntry::getScorecardKey();
+$sessionKey        = ServiceScoreEntry::getScorecardKey();
 
 if ($targetGGID && ($targetGGID !== $activeScoringGGID || ($urlKey !== "" && $urlKey !== $sessionKey))) {
     ServiceScoreEntry::clearScoringSession();
@@ -32,34 +32,55 @@ if ($targetGGID && ($targetGGID !== $activeScoringGGID || ($urlKey !== "" && $ur
     ServiceContextGame::setGameContext($targetGGID);
 }
 
+// 3. Read current session state
 $scorerGHIN = ServiceScoreEntry::getEffectivePlayerGHIN();
 $sessionKey = ServiceScoreEntry::getScorecardKey();
-$isResumeReady = ($sessionKey !== null && $scorerGHIN !== null);
 
-// 3. Auto-Resume Logic
-if ($isResumeReady && $urlKey === "") {
-    header("Location: " . MA_ROUTE_SCORE_ENTRY);
-    exit;
+// 4. Auto-scorer: resolve from session login when available
+//    (mirrors logic in score_home.js — kept in sync here for the PHP payload)
+$sessionGhin  = $_SESSION["SessionGHINLogonID"] ?? "";
+$sessionPortal = $_SESSION["SessionPortal"] ?? "";
+$autoScorerGhin = "";
+
+if ($sessionGhin !== "" && $sessionPortal === "PLAYER PORTAL") {
+    // Verify membership at render time only if we have a session key
+    if ($sessionKey !== null) {
+        $groupPlayers = ServiceDbPlayers::getPlayersByPlayerKey($sessionKey);
+        $isMember = false;
+        foreach (($groupPlayers ?? []) as $p) {
+            if ((string)($p['dbPlayers_PlayerGHIN'] ?? '') === $sessionGhin) {
+                $isMember = true;
+                break;
+            }
+        }
+        if ($isMember) $autoScorerGhin = $sessionGhin;
+    }
+} elseif ($sessionGhin !== "" && $sessionPortal === "ADMIN PORTAL") {
+    $autoScorerGhin = $sessionGhin;
 }
 
+// 5. Build paths and payload
 $paths = [
     "apiScoreHome" => MA_ROUTE_API_SCORE_HOME,
     "scoreEntry"   => MA_ROUTE_SCORE_ENTRY,
-    "routerApi"    => MA_ROUTE_API_ROUTER
+    "routerApi"    => MA_ROUTE_API_ROUTER,
+    "scoreHome"    => MA_ROUTE_SCORE_HOME,
 ];
 
-// 4. Build payload
 $initPayload = [
-    "ok" => true,
-    "urlKey" => $urlKey,
-    "portal" => $_SESSION["SessionPortal"] ?? "",
-    "sessionGhin" => $_SESSION["SessionGHINLogonID"] ?? "",
-    "isResumeReady" => $isResumeReady,
-    "header" => ["subtitle" => $isResumeReady ? "Ready to Play" : "Scoring Setup"]
+    "ok"             => true,
+    "urlKey"         => $urlKey,
+    "portal"         => $sessionPortal,
+    "sessionGhin"    => $sessionGhin,
+    "autoScorerGhin" => $autoScorerGhin,
+    // scorerGHIN: the currently persisted scorer for this pod (null if not yet set)
+    "scorerGHIN"     => $scorerGHIN,
+    // sessionKey: the current scorecard key (null if no pod established)
+    "sessionKey"     => $sessionKey,
 ];
 
-$maChromeTitle = "Scoring Home";
-$maChromeSubtitle = $initPayload["header"]["subtitle"];
+$maChromeTitle    = "Scoring Home";
+$maChromeSubtitle = "Score Entry";
 ?>
 <!DOCTYPE html><html lang="en"><head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
@@ -68,14 +89,16 @@ $maChromeSubtitle = $initPayload["header"]["subtitle"];
 <link rel="stylesheet" href="/assets/css/score_home.css" />
 </head><body>
 <?php require MA_INCLUDES . '/chromeHeader.php'; ?>
-<main class="maPage"><?php require __DIR__ . '/scorehome_view.php'; ?></main>
+<main class="maPage">
+<?php require __DIR__ . '/scorehome_view.php'; ?>
+</main>
 <?php require MA_INCLUDES . '/chromeFooter.php'; ?>
-
 <script>
   window.MA = window.MA || {};
   window.MA.paths = <?= json_encode($paths, JSON_UNESCAPED_SLASHES) ?>;
-
-window.__INIT__ = <?= json_encode($initPayload) ?>;</script>
+  window.__INIT__ = <?= json_encode($initPayload) ?>;
+</script>
 <script src="/assets/js/ma_shared.js"></script>
+<script src="/assets/modules/module_DisplayGameFormat.js"></script>
 <script src="/assets/pages/score_home.js"></script>
 </body></html>

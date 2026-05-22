@@ -1,19 +1,177 @@
 /* /assets/css/score_home.css */
+
 .isHidden { display: none !important; }
 
-.maCards {
+/* ── Page wrapper ─────────────────────────────────────────────────────────── */
+.sh-page {
   max-width: 600px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 10px;
+  gap: 10px;
+  padding: 4px 0 80px; /* bottom pad clears action bar */
 }
 
-.maChoiceChips {
+/* ── Group context strip ──────────────────────────────────────────────────── */
+.sh-groupContext {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 12px;
-  justify-content: center;
+  gap: 16px;
+  padding: 7px 10px;
+  background: var(--ControlAreaBg);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+
+.sh-groupContext__cell {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sh-groupContext__lbl {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--mutedText);
+}
+
+.sh-groupContext__val {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--ink);
+}
+
+/* ── Player rows ──────────────────────────────────────────────────────────── */
+.sh-playerRow {
+  cursor: default;         /* read-only — no tap action on the row itself */
+  align-items: flex-start;
+  padding: 9px 10px;
+}
+
+.sh-playerRow:hover { background: transparent; }
+
+.sh-playerRow__text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Player meta line (HI / CH / PH / SO) ────────────────────────────────── */
+.sh-playerMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 3px;
+}
+
+.sh-playerMeta__item {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--mutedText);
+}
+
+/* ── Required button modifier (amber) ────────────────────────────────────── */
+.sh-btn--required {
+  background:   #BA7517;
+  color:        #FAEEDA;
+  border-color: #854F0B;
+}
+
+.sh-btn--required:active {
+  filter: brightness(.92);
+}
+
+/* ── Secondary actions row (below action bar in ready mode) ──────────────── */
+.sh-secondaryActions {
+  display: flex;
+  gap: 8px;
+  padding: 0 0 4px;
+}
+
+.sh-sec-btn {
+  flex: 1;
+  font-size: 12px;
+  min-height: 36px;
+  padding: 0 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Cart sheet pills ─────────────────────────────────────────────────────── */
+.sh-pill--cart1 {
+  background: color-mix(in srgb, var(--brandColor3) 12%, white);
+  color: var(--brandColor3);
+  border: 1px solid color-mix(in srgb, var(--brandColor3) 30%, transparent);
+}
+
+.sh-pill--cart2 {
+  background: color-mix(in srgb, var(--success) 12%, white);
+  color: var(--success);
+  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
+}
+
+.sh-pill--driver {
+  background: color-mix(in srgb, var(--brandPrimary) 10%, white);
+  color: var(--brandPrimary);
+  border: 1px solid color-mix(in srgb, var(--brandPrimary) 30%, transparent);
+}
+
+/* Cart label colors in preview */
+.sh-cart1-label { color: var(--brandColor3); }
+.sh-cart2-label { color: var(--success); }
+
+/* Cart role rows — pointer cursor since pills are tappable */
+.sh-cartRoleRow { cursor: default; }
+.sh-cartRoleRow:hover { background: transparent; }
+
+/* ── module_DisplayGameFormat modal body ─────────────────────────────────── */
+.sh-gfd__modal {
+  max-width: 480px;
+}
+
+.sh-gfd__body {
+  padding: 0;
+}
+
+.sh-gfd__section {
+  padding: 8px 14px 4px;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--mutedText);
+  background: var(--ControlAreaBg);
+  border-bottom: 1px solid var(--borderSubtle);
+  border-top: 1px solid var(--borderSubtle);
+}
+
+.sh-gfd__section:first-child {
+  border-top: none;
+}
+
+.sh-gfd__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--borderSubtle);
+  font-size: 13px;
+}
+
+.sh-gfd__row:last-child {
+  border-bottom: none;
+}
+
+.sh-gfd__key {
+  color: var(--mutedText);
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.sh-gfd__val {
+  color: var(--ink);
+  font-weight: 900;
+  text-align: right;
 }
