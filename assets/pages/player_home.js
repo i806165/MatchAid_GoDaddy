@@ -933,14 +933,10 @@ function getGameAdminMeta(g){
   function sbRenderAdminRows() {
     const container = document.getElementById('sbAdminRows');
     const moreEl    = document.getElementById('sbAdminMore');
-    const toggleEl  = document.getElementById('sbAdminToggle');
     if (!container) return;
 
     const admins  = state.admins || [];
     const selKeys = new Set(state.uiFilters.selectedAdminKeys || []);
-    const allOn   = admins.length > 0 && admins.every(a => selKeys.has(String(a.key || a.adminKey || '')));
-
-    if (toggleEl) toggleEl.textContent = allOn ? 'Clear all' : 'Select all';
 
     container.innerHTML = '';
     admins.forEach((a, i) => {
@@ -1144,25 +1140,26 @@ function getGameAdminMeta(g){
       });
     }
 
-    // ---- ADMINS: Select all / Clear all toggle ----
-    const adminToggle = document.getElementById('sbAdminToggle');
-    if (adminToggle) {
-      adminToggle.addEventListener('click', () => {
-        const admins  = state.admins || [];
-        const selKeys = new Set(state.uiFilters.selectedAdminKeys || []);
-        const allOn   = admins.length > 0 && admins.every(a => selKeys.has(String(a.key || a.adminKey || '')));
-        if (allOn) {
-          // Clear all — uncheck everything so player can pick just one
-          state.uiFilters.selectedAdminKeys = [];
-        } else {
-          // Select all
-          state.uiFilters.selectedAdminKeys = admins.map(a => String(a.key || a.adminKey || '')).filter(Boolean);
-        }
+    // ---- ADMINS: Select all ----
+    const adminSelectAll = document.getElementById('sbAdminSelectAll');
+    if (adminSelectAll) {
+      adminSelectAll.addEventListener('click', () => {
+        state.uiFilters.selectedAdminKeys = (state.admins || [])
+          .map(a => String(a.key || a.adminKey || '')).filter(Boolean);
         sbRenderAdminRows();
       });
     }
 
-    // ---- ADMINS: Favorites ----
+    // ---- ADMINS: Clear all — uncheck everything so player can pick just one ----
+    const adminClearAll = document.getElementById('sbAdminClearAll');
+    if (adminClearAll) {
+      adminClearAll.addEventListener('click', () => {
+        state.uiFilters.selectedAdminKeys = [];
+        sbRenderAdminRows();
+      });
+    }
+
+    // ---- ADMINS: Favorites — select only favorited admins ----
     const adminFavs = document.getElementById('sbAdminFavs');
     if (adminFavs) {
       adminFavs.addEventListener('click', () => {
@@ -1170,11 +1167,9 @@ function getGameAdminMeta(g){
           .filter(a => a.isFavorite)
           .map(a => String(a.key || a.adminKey || ''))
           .filter(Boolean);
-        state.uiFilters.selectedAdminKeys = favKeys.length ? favKeys : [];
-        // If no favorites exist, fall back to all
-        if (!state.uiFilters.selectedAdminKeys.length) {
-          state.uiFilters.selectedAdminKeys = (state.admins || []).map(a => String(a.key || a.adminKey || '')).filter(Boolean);
-        }
+        // If no favorites exist fall back to all
+        state.uiFilters.selectedAdminKeys = favKeys.length ? favKeys
+          : (state.admins || []).map(a => String(a.key || a.adminKey || '')).filter(Boolean);
         sbRenderAdminRows();
       });
     }

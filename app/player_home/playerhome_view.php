@@ -79,10 +79,13 @@
       <div class="phSidebar__section">
         <div class="phSidebar__sectionTitle">Admins</div>
         <div class="phSidebar__controls">
-          <button class="btnLink" id="sbAdminToggle" type="button">Select all</button>
+          <button class="btnLink" id="sbAdminSelectAll" type="button">Select all</button>
+          <span class="phSidebar__ctrlDiv">|</span>
+          <button class="btnLink" id="sbAdminClearAll" type="button">Clear all</button>
           <span class="phSidebar__ctrlDiv">|</span>
           <button class="btnLink" id="sbAdminFavs" type="button">Favorites</button>
         </div>
+
         <div class="phSidebar__rows" id="sbAdminRows"></div>
         <button class="phSidebar__moreLink" id="sbAdminMore" type="button" style="display:none;"></button>
       </div>
