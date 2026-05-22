@@ -19,7 +19,7 @@
 
 @media (min-width: 900px) {
   .maPanels--playerHome {
-    grid-template-columns: 220px 1fr;
+    grid-template-columns: 280px 1fr;
     height: 100%;
     align-items: stretch;
     overflow: hidden;
@@ -37,6 +37,7 @@
     background: transparent;
     box-shadow: none;
     border-radius: 0;
+    padding: 4px 2px;  /* tight horizontal padding — cards are full-width enough */
   }
 }
 

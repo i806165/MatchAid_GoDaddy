@@ -920,9 +920,11 @@ function getGameAdminMeta(g){
       fromEl.disabled = true;
       toEl.disabled   = true;
     } else {
-      // custom — use current state.filters dates as starting point
-      fromEl.value    = state.filters.dateFrom || toYmd(today);
-      toEl.value      = state.filters.dateTo   || toYmd(today);
+      // custom — unlock inputs but preserve whatever dates are already showing.
+      // The player just switched from a preset so the values are already correct;
+      // overwriting with state.filters would reset to the last server-committed range.
+      if (!fromEl.value) fromEl.value = state.filters.dateFrom || toYmd(today);
+      if (!toEl.value)   toEl.value   = state.filters.dateTo   || toYmd(today);
       fromEl.disabled = false;
       toEl.disabled   = false;
     }
@@ -963,8 +965,6 @@ function getGameAdminMeta(g){
         const set = new Set(state.uiFilters.selectedAdminKeys || []);
         if (set.has(key)) {
           set.delete(key);
-          // Empty = select all (per agreed UX rule)
-          if (set.size === 0) admins.forEach(x => set.add(String(x.key || x.adminKey || '')));
         } else {
           set.add(key);
         }
@@ -1005,10 +1005,6 @@ function getGameAdminMeta(g){
       row.addEventListener('click', () => {
         if (sbState.checkedCourses.has(c.name)) {
           sbState.checkedCourses.delete(c.name);
-          // Empty = select all
-          if (sbState.checkedCourses.size === 0) {
-            sbState.allCourses.forEach(x => sbState.checkedCourses.add(x.name));
-          }
         } else {
           sbState.checkedCourses.add(c.name);
         }
@@ -1095,6 +1091,11 @@ function getGameAdminMeta(g){
 
   // Client-side course filter applied on top of rendered cards
   function sbApplyCourseFilter() {
+    // Empty at Apply time means no filter — treat as select all
+    if (sbState.checkedCourses.size === 0) {
+      sbState.allCourses.forEach(c => sbState.checkedCourses.add(c.name));
+      sbRenderCourseRows();
+    }
     const allChecked = sbState.allCourses.every(c => sbState.checkedCourses.has(c.name));
     if (allChecked) return; // All selected — nothing to hide
     const cards = el.cards ? el.cards.querySelectorAll('.maCard') : [];
@@ -1151,9 +1152,10 @@ function getGameAdminMeta(g){
         const selKeys = new Set(state.uiFilters.selectedAdminKeys || []);
         const allOn   = admins.length > 0 && admins.every(a => selKeys.has(String(a.key || a.adminKey || '')));
         if (allOn) {
-          // Clear — but empty means all, so immediately re-select all
+          // Clear all — uncheck everything so player can pick just one
           state.uiFilters.selectedAdminKeys = [];
         } else {
+          // Select all
           state.uiFilters.selectedAdminKeys = admins.map(a => String(a.key || a.adminKey || '')).filter(Boolean);
         }
         sbRenderAdminRows();
@@ -1195,12 +1197,11 @@ function getGameAdminMeta(g){
       });
     }
 
-    // ---- COURSES: Clear all (empty = all per UX rule) ----
+    // ---- COURSES: Clear all — uncheck everything so player can pick just one ----
     const courseClearAll = document.getElementById('sbCourseClearAll');
     if (courseClearAll) {
       courseClearAll.addEventListener('click', () => {
-        // Clear all = select all per agreed rule: empty means no filter
-        sbState.allCourses.forEach(c => sbState.checkedCourses.add(c.name));
+        sbState.checkedCourses.clear();
         sbRenderCourseRows();
       });
     }
@@ -1233,8 +1234,12 @@ function getGameAdminMeta(g){
           state.filters.dateTo   = toEl.value   || state.filters.dateTo;
         }
 
-        // Commit admin selection from uiFilters to filters
-        state.filters.selectedAdminKeys = [...(state.uiFilters.selectedAdminKeys || [])];
+        // Commit admin selection from uiFilters to filters.
+        // Empty at Apply time means no filter — treat as select all.
+        const committedAdmins = state.uiFilters.selectedAdminKeys || [];
+        state.filters.selectedAdminKeys = committedAdmins.length
+          ? [...committedAdmins]
+          : (state.admins || []).map(a => String(a.key || a.adminKey || '')).filter(Boolean);
 
         // Clear quickPreset when user is using sidebar (custom filter state)
         state.filters.quickPreset = '';
