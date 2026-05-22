@@ -2013,7 +2013,22 @@ textarea {
   font-weight: 700;
 }
 
-/* Group divider label — section header within a scrollable list */
+/* Group divider label — section sub-heading within a scrollable list.
+   Use to separate named buckets of rows (e.g. team groups on the roster,
+   flight groups in pairings, status groups in any list view).
+
+   Base style (no modifier): neutral tint, darkened ink for legibility in
+   daylight. Pair with a --color modifier to add a team/status swatch dot.
+
+   Usage:
+     <div class="maListRow__group">All Players</div>
+     <div class="maListRow__group maListRow__group--red">Team A</div>
+     <div class="maListRow__group maListRow__group--blue">Team B</div>
+     <div class="maListRow__group maListRow__group--none">No Team</div>
+
+   Pages currently using this pattern:
+     - game_players.js  → roster team groups (sort by team)
+*/
 .maListRow__group {
   display: flex;
   align-items: center;
@@ -2022,12 +2037,35 @@ textarea {
   font-weight: 800;
   letter-spacing: 0.5px;
   text-transform: uppercase;
-  color: var(--mutedText);
+  /* Use --ink rather than --mutedText: the light brandPrimaryBg background
+     makes #3a3a3a hard to read in bright daylight; --ink (#111) gives
+     sufficient contrast at this small font size. */
+  color: var(--ink);
   padding: 7px 12px 3px;
-  background: var(--panelControlsBg);
+  background: var(--brandPrimaryBg);
   border-top: 0.5px solid var(--borderSubtle);
   border-bottom: 0.5px solid var(--borderSubtle);
+  user-select: none;
 }
+
+/* Color-dot swatch — indicates team or category identity.
+   Dot is suppressed on the base class (no modifier).
+   Parallels .maSwatch but auto-inserted via ::before so no extra markup
+   is needed. */
+.maListRow__group--red::before,
+.maListRow__group--blue::before,
+.maListRow__group--none::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.maListRow__group--red::before  { background: var(--danger); }
+.maListRow__group--blue::before { background: var(--brandColor3); }
+.maListRow__group--none::before { background: var(--mutedText); opacity: .45; }
 
 /* Avatar circle — circular initials badge used as left slot in a list row */
 .maListRow__avatar {

@@ -585,14 +585,27 @@
       if (s === "hi") return (parseFloat(a.dbPlayers_HI) || 999) - (parseFloat(b.dbPlayers_HI) || 999);
       if (s === "ch") return (parseFloat(a.dbPlayers_CH) || 999) - (parseFloat(b.dbPlayers_CH) || 999);
       if (s === "team") {
-        const teamA = teamConfig ? ((teamConfig.teams || []).find(t => t.id === safe(a.dbPlayers_TeamKey))?.name || "zzz") : "zzz";
-        const teamB = teamConfig ? ((teamConfig.teams || []).find(t => t.id === safe(b.dbPlayers_TeamKey))?.name || "zzz") : "zzz";
+        const keyA = safe(a.dbPlayers_TeamKey);
+        const keyB = safe(b.dbPlayers_TeamKey);
+        // No-team (empty key) sorts to the top; use "\x00" so it precedes all real names
+        const teamA = keyA ? (teamConfig ? ((teamConfig.teams || []).find(t => t.id === keyA)?.name || keyA) : keyA) : "\x00";
+        const teamB = keyB ? (teamConfig ? ((teamConfig.teams || []).find(t => t.id === keyB)?.name || keyB) : keyB) : "\x00";
         const cmp = teamA.localeCompare(teamB);
         if (cmp !== 0) return cmp;
       }
       return safe(a.dbPlayers_LName + a.dbPlayers_Name).localeCompare(safe(b.dbPlayers_LName + b.dbPlayers_Name));
     });
 
+    // Build team color lookup for group headers (keyed by team id)
+    const teamColorMap = {};
+    if (teamConfig) {
+      (teamConfig.teams || []).forEach((t, i) => {
+        // Use the same color pattern as maTeamBadge: first team = red, second = blue
+        teamColorMap[t.id] = i === 0 ? "red" : "blue";
+      });
+    }
+
+    let lastGroupKey = undefined; // tracks the current group key to inject headers
     const rows = sortedPlayers.map((p) => {
       const ghin = safe(p.dbPlayers_PlayerGHIN);
       const isFav = favoriteSet.has(ghin);
@@ -611,11 +624,22 @@
         ? `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 2 7.5 2c1.74 0 3.41.81 4.5 2.09C13.09 2.81 14.76 2 16.5 2 19.58 2 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`
         : `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.84-8.84 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`;
 
-      return `<div class="maListRow gpRow gpRow--roster" data-ghin="${esc(ghin)}">
+      const rowHtml = `<div class="maListRow gpRow gpRow--roster" data-ghin="${esc(ghin)}">
         <div class="maListRow__col">${esc(nameLine)}<div class="maListRow__col--muted gpSub">${esc(meta)}</div></div>
         <button class="iconBtn btnSecondary" data-act="fav" title="Favorites" aria-label="Favorites">${heartIcon}</button>
         <button class="iconBtn btnPrimary" data-act="del" title="Remove" aria-label="Remove"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
       </div>`;
+
+      // Inject a group header when sorting by team and the group changes
+      if (state.rosterSort === "team" && teamKey !== lastGroupKey) {
+        lastGroupKey = teamKey;
+        const color = teamKey ? (teamColorMap[teamKey] || "none") : "none";
+        const label = teamKey ? (teamName || teamKey) : "No Team";
+        const headerHtml = `<div class="maListRow__group maListRow__group--${esc(color)}">${esc(label)}</div>`;
+        return headerHtml + rowHtml;
+      }
+
+      return rowHtml;
     }).join("");
 
     el.rosterBody.innerHTML = `<div class="maListRows">${rows || `<div class="gpEmpty">No players registered yet.</div>`}</div>`;

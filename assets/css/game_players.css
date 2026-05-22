@@ -1,3 +1,7 @@
+/* ==========================================================================
+   /assets/css/game_players.css
+*/
+
 .maListRow--hdr {
   background: var(--brandSecondary);
   color: var(--brandSecondaryText);
@@ -799,6 +803,9 @@
    Sits inside a surfaceApp-coloured container for visual separation
    from the primary maSeg tab strip above it.
    --------------------------------------------------------------------- */
+
+/* Roster team group dividers — use shared .maListRow__group + color modifier.
+   See ma_shared.css section 17 for full documentation and usage. */
 
 .maSeg--sortBtn {
   padding: 3px 10px;
