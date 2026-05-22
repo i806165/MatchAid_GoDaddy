@@ -54,6 +54,10 @@
             <div class="phSidebar__radioDot is-active"></div>
             <span class="phSidebar__radioLbl">Next 30 days</span>
           </div>
+          <div class="phSidebar__radioRow" data-d="today">
+            <div class="phSidebar__radioDot"></div>
+            <span class="phSidebar__radioLbl">Today</span>
+          </div>
           <div class="phSidebar__radioRow" data-d="custom">
             <div class="phSidebar__radioDot"></div>
             <span class="phSidebar__radioLbl">Custom range</span>

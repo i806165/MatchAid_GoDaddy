@@ -914,6 +914,11 @@ function getGameAdminMeta(g){
       toEl.value   = toYmd(t);
       fromEl.disabled = true;
       toEl.disabled   = true;
+    } else if (preset === 'today') {
+      fromEl.value = toYmd(today);
+      toEl.value   = toYmd(today);
+      fromEl.disabled = true;
+      toEl.disabled   = true;
     } else {
       // custom — use current state.filters dates as starting point
       fromEl.value    = state.filters.dateFrom || toYmd(today);
@@ -1022,8 +1027,51 @@ function getGameAdminMeta(g){
     }
   }
 
+  // Sync the sidebar Date radio and inputs to whatever state.filters now holds.
+  // Called after every reloadGames() so external changes (Actions menu presets,
+  // direct-link mode, session restore) are always reflected in the sidebar.
+  function syncSidebarDateFromState() {
+    const fromEl = document.getElementById('sbDateFrom');
+    const toEl   = document.getElementById('sbDateTo');
+    const dateGroup = document.getElementById('sbDateGroup');
+    if (!fromEl || !toEl || !dateGroup) return;
+
+    const df = state.filters.dateFrom || '';
+    const dt = state.filters.dateTo   || '';
+
+    // Compute what each preset would look like right now
+    const today = new Date();
+    const todayYmd   = toYmd(today);
+    const prev30From = toYmd(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30));
+    const prev30To   = todayYmd;
+    const next30From = todayYmd;
+    const next30To   = toYmd(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 30));
+
+    let matchedPreset = 'custom';
+    if (df === prev30From && dt === prev30To)     matchedPreset = 'prev30';
+    else if (df === next30From && dt === next30To) matchedPreset = 'next30';
+    else if (df === todayYmd  && dt === todayYmd)  matchedPreset = 'today';
+
+    // Update radio selection
+    dateGroup.querySelectorAll('[data-d]').forEach(row => {
+      const match = row.dataset.d === matchedPreset;
+      row.classList.toggle('is-active', match);
+      row.querySelector('.phSidebar__radioDot')?.classList.toggle('is-active', match);
+    });
+
+    // Update input values and enabled state
+    fromEl.value    = df;
+    toEl.value      = dt;
+    fromEl.disabled = (matchedPreset !== 'custom');
+    toEl.disabled   = (matchedPreset !== 'custom');
+
+    // Keep sbState in sync so the Apply button uses the right preset next time
+    sbState.datePreset = matchedPreset;
+  }
+
   // Re-populate sidebar lists — called after every reloadGames()
   function refreshSidebar() {
+    syncSidebarDateFromState(); // Always reflect actual state.filters dates
     buildSidebarCourses();
     sbRenderAdminRows();
     sbRenderCourseRows();
