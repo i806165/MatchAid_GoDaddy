@@ -73,7 +73,7 @@ final class ServiceLogin
             $_SESSION["SessionGHINLogonID"] = $ghinId;
             $_SESSION["SessionUserToken"]   = $userToken;
             $_SESSION["SessionAdminToken"]  = $adminToken;
-            $_SESSION["SessionLoginTime"]   = gmdate("c");
+            $_SESSION["SessionLoginTime"]   =  time();
             $_SESSION["SessionUserName"]    = $userName;
             $_SESSION["SessionUserLName"]   = $last;
             $_SESSION["SessionClubID"]      = $clubId;

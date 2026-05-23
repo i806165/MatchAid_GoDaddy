@@ -74,7 +74,14 @@ $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
   ini_set('session.gc_maxlifetime', (string)MA_SESSION_IDLE_SECONDS);
-
+  session_set_cookie_params([
+    'lifetime' => MA_SESSION_IDLE_SECONDS,   // 6-hour cookie, survives app backgrounding
+    'path'     => '/',
+    'secure'   => true,                      // always; your site is full HTTPS
+    'httponly' => true,
+    'samesite' => 'Lax',
+  ]);
+  /* OLD SETUP
   session_set_cookie_params([
     'lifetime' => 0,
     'path'     => '/',
@@ -82,6 +89,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     'httponly' => true,
     'samesite' => 'Lax',
   ]);
+  */
 
   session_start();
 }
@@ -154,15 +162,12 @@ function ma_api_require_auth(int $ttlMinutes = MA_AUTH_TTL_MINUTES): array
     exit;
   }
 
-  $loginTime = trim((string)($_SESSION["SessionLoginTime"] ?? ""));
-  if ($loginTime !== "") {
-    $loginTs = strtotime($loginTime);
-    if ($loginTs !== false) {
-      $elapsedMinutes = (int)floor((time() - $loginTs) / 60);
-      if ($elapsedMinutes > $ttlMinutes) {
-        ma_respond(401, ["ok" => false, "error" => "AUTH_EXPIRED"]);
-        exit;
-      }
+  $loginTs = (int)($_SESSION["SessionLoginTime"] ?? 0);
+  if ($loginTs > 0) {
+    $elapsedMinutes = (int)floor((time() - $loginTs) / 60);
+    if ($elapsedMinutes > $ttlMinutes) {
+      ma_respond(401, ["ok" => false, "error" => "AUTH_EXPIRED"]);
+      exit;
     }
   }
 
@@ -177,10 +182,10 @@ function ma_api_require_auth(int $ttlMinutes = MA_AUTH_TTL_MINUTES): array
   }
 
   return [
-    "ghinId" => $ghinId,
+    "ghinId"     => $ghinId,
     "adminToken" => $adminToken,
-    "userToken" => $userToken,
-    "clubId" => $clubId,
-    "clubName" => $clubName
+    "userToken"  => $userToken,
+    "clubId"     => $clubId,
+    "clubName"   => $clubName
   ];
 }
