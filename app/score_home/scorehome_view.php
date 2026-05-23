@@ -51,8 +51,8 @@
   <div id="shActionBar" class="isHidden">
 
     <!-- Primary CTA — full width, smart-routed by JS -->
-    <button id="shBtnGo" class="sh-btn--primary" type="button" disabled>
-      Go to digital scoring
+     <button id="shBtnGo" class="btn btnSecondary" type="button" disabled>
+      Go to Digital Scoring
     </button>
 
     <!-- Secondary actions: change cart / change scorer (rendered by JS in ready mode) -->
