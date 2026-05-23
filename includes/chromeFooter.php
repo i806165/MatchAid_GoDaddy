@@ -54,7 +54,7 @@
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-app-home.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
       </span>
-      <span class="maNavLabel">Home</span>
+      <span class="maNavLabel">MatchAid</span>
     </button>
 
     <button type="button" class="maNavBtn" data-nav="clubhome" aria-label="Club Home">
@@ -142,7 +142,7 @@
   
     <button class="maNavBtn" data-nav="scorehome" aria-label="Score Home">
       <span class="maNavIcon" aria-hidden="true">
-        <img src="/assets/images/nav-score-entry.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
+        <img src="/assets/images/nav-app-home.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
       </span>
       <span class="maNavLabel">Score Home</span>
     </button>
