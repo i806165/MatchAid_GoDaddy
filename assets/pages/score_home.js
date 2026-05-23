@@ -761,14 +761,12 @@
     el.cartPreview.querySelectorAll('[data-role-ghin]').forEach(pill => {
       pill.addEventListener('click', () => {
         const ghin = pill.dataset.roleGhin;
-        // Find the cart this player is in, then set them as driver
-        // and implicitly make the other the passenger
+        // Find which cart this player belongs to
         const cartPlayers = cart1.some(p => p.ghin === ghin) ? cart1 : cart2;
-        s.drivers.clear();
-        // Only set the clicked player as driver — passenger is implied
-        cartPlayers.forEach(p => {
-          if (p.ghin === ghin) s.drivers.add(p.ghin);
-        });
+        // Only clear the driver within THIS cart — leave the other cart's driver intact
+        cartPlayers.forEach(p => s.drivers.delete(p.ghin));
+        // Set the tapped player as driver — other cart member becomes passenger implicitly
+        s.drivers.add(ghin);
         renderCartPreview();
       });
     });
