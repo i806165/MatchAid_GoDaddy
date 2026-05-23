@@ -1509,9 +1509,7 @@ function onResetChanges() {
 
     if (missingCount === 0) return;
 
-    const msg = missingCount === total
-      ? "Some/All players have not been matched into flights yet. Please complete Match Pairings before assigning tee times."
-      : `${missingCount} of ${total} players have not been matched into flights yet. Tee time assignments may be incomplete.`;
+    const msg = "WARNING: Some/All matches not set. Return to Pairings page and set Matches before setting tee times."
 
     if (MA.setStatus) MA.setStatus(msg, "warn");
   }
