@@ -13,15 +13,12 @@ final class ServiceUserContext {
      * - loads db_Users row and returns { adminToken, userProfile, userToken }
      */
     public static function initializeUserContext(): ?array {
-        $ghinId =trim((string)($_SESSION["SessionGHINLogonID"] ?? ""));
-        $loginTime =trim((string)($_SESSION["SessionLoginTime"] ?? ""));
+        $ghinId  = trim((string)($_SESSION["SessionGHINLogonID"] ?? ""));
+        $loginTs = (int)($_SESSION["SessionLoginTime"] ?? 0);
 
-        if ($ghinId ==="" || $loginTime ==="") return null;
+        if ($ghinId === "" || $loginTs === 0) return null;
 
-        $loginTs =strtotime($loginTime);
-        if ($loginTs ===false) return null;
-
-        $elapsedMinutes =(int)floor((time() - $loginTs) / 60);
+        $elapsedMinutes = (int)floor((time() - $loginTs) / 60);
         if ($elapsedMinutes > 360) return null;
 
         $userData = self::retrieveGHINUser($ghinId);
@@ -91,13 +88,10 @@ public static function getUserContext(): ?array {
     if ($ghinId === "") return null;
 
     // enforce the same 360-minute policy if SessionLoginTime is present
-    $loginTime = trim((string)($_SESSION["SessionLoginTime"] ?? ""));
-    if ($loginTime !== "") {
-        $loginTs = strtotime($loginTime);
-        if ($loginTs !== false) {
-            $elapsedMinutes = (int)floor((time() - $loginTs) / 60);
-            if ($elapsedMinutes > 360) return null;
-        }
+    $loginTs = (int)($_SESSION["SessionLoginTime"] ?? 0);
+    if ($loginTs > 0) {
+        $elapsedMinutes = (int)floor((time() - $loginTs) / 60);
+        if ($elapsedMinutes > 360) return null;
     }
 
     // No config param needed anymore
