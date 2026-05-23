@@ -139,19 +139,19 @@
       </span>
       <span class="maNavLabel">Import Games</span>
     </button>
+  
+    <button class="maNavBtn" data-nav="scorehome" aria-label="Score Home">
+      <span class="maNavIcon" aria-hidden="true">
+        <img src="/assets/images/nav-score-entry.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
+      </span>
+      <span class="maNavLabel">Score Home</span>
+    </button>
 
     <button class="maNavBtn" data-nav="scoreentry" aria-label="Enter Scores">
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-score-entry.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
       </span>
       <span class="maNavLabel">Enter Scores</span>
-    </button>
-
-    <button class="maNavBtn" data-nav="scorehome" aria-label="Score Home">
-      <span class="maNavIcon" aria-hidden="true">
-        <img src="/assets/images/nav-score-entry.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
-      </span>
-      <span class="maNavLabel">Score Home</span>
     </button>
 
     <button class="maNavBtn" data-nav="scorecardPlayer" aria-label="Player Scorecard">
