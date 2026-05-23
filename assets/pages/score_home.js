@@ -31,8 +31,7 @@
     gatingMsg:        document.getElementById('shGatingMsg'),
 
     actionBar:        document.getElementById('shActionBar'),
-    btnEnterScores:   document.getElementById('shBtnEnterScores'),
-    btnSummary:       document.getElementById('shBtnSummary'),
+    btnGo:            document.getElementById('shBtnGo'),
     secondaryActions: document.getElementById('shSecondaryActions'),
 
     // Cart drawer
@@ -69,6 +68,7 @@
 
     // From API response
     hasScores:       false,
+    isGameDay:       false,
     scorerGHIN:      initData.scorerGHIN || null,
     cartAssignments: null,
 
@@ -309,7 +309,7 @@
         if (flags.showSide && p.flightPos) {
           headerParts.push(`Side ${p.flightPos}`);
         }
-        headerParts.push(`Pair ${parseInt(p.pairingId, 10)}`);
+        headerParts.push(`Pair ${Number(p.pairingId)}`);
         if (allSameTeam && teamNames[0]) {
           headerParts.push(teamNames[0]);
         }
@@ -339,8 +339,8 @@
       const metaParts = [];
       if (p.hi)                         metaParts.push(`HI ${p.hi}`);
       if (flags.showCH && p.ch)         metaParts.push(`CH ${p.ch}`);
-      if (flags.showPH && p.ph)         metaParts.push(`PH ${p.ph}`);
-      if (flags.showSO && p.so && p.so !== '0') metaParts.push(`SO ${p.so}`);
+      if (flags.showCH && p.ph)         metaParts.push(`PH ${p.ph}`);
+      if (flags.showSO && p.so !== null && p.so !== '') metaParts.push(`SO ${p.so}`);
 
       const line2 = metaParts.length
         ? `<div class="sh-playerMeta">${
@@ -464,17 +464,17 @@
   // Enter Scores button state
   // -------------------------------------------------------------------------
 
-  function updateEnterScoresState() {
-    const flags = state.flags;
+  function updateGoButton() {
+    const flags      = state.flags;
     const cartDone   = !flags.cartRequired   || state.cartAssignments !== null;
     const scorerDone = !flags.scorerRequired || state.scorerGHIN      !== null;
-    const canEnter   = state.hasScores || (cartDone && scorerDone);
+    const canGo      = state.hasScores || (cartDone && scorerDone);
 
-    el.btnEnterScores.disabled = !canEnter;
-    if (canEnter) {
-      el.btnEnterScores.classList.remove('is-disabled');
+    el.btnGo.disabled = !canGo;
+    if (canGo) {
+      el.btnGo.classList.remove('is-disabled');
     } else {
-      el.btnEnterScores.classList.add('is-disabled');
+      el.btnGo.classList.add('is-disabled');
     }
   }
 
@@ -559,6 +559,7 @@
       state.game           = payload.game || {};
       state.portal         = payload.portal || initData.portal || '';
       state.hasScores      = !!payload.hasScores;
+      state.isGameDay      = !!payload.isGameDay;
       state.scorerGHIN     = payload.scorerGHIN || null;
       state.cartAssignments = payload.cartAssignments || null;
       state.flags          = deriveFlags(state.game);
@@ -591,7 +592,7 @@
       renderPlayerRows();
       renderCardFooter();
       renderSecondaryActions();
-      updateEnterScoresState();
+      updateGoButton();
       applyChrome();
 
       MA.setStatus('Ready.', 'success');
@@ -817,7 +818,7 @@
       renderCardFooter();
       renderSecondaryActions();
       renderPlayerRows();
-      updateEnterScoresState();
+      updateGoButton();
       MA.setStatus('Cart configuration saved.', 'success');
     } catch (e) {
       MA.setStatus('Failed to save cart configuration.', 'error');
@@ -917,7 +918,7 @@
       closeScorerDrawer();
       renderCardFooter();
       renderSecondaryActions();
-      updateEnterScoresState();
+      updateGoButton();
       MA.setStatus('Scorer set.', 'success');
     } catch (e) {
       MA.setStatus('Failed to set scorer.', 'error');
@@ -931,11 +932,8 @@
   el.btnLaunch?.addEventListener('click', onLaunch);
   el.playerKey?.addEventListener('keydown', (e) => { if (e.key === 'Enter') onLaunch(); });
 
-  el.btnEnterScores?.addEventListener('click', () => {
-    window.location.href = apiUrls.scoreEntry;
-  });
-  el.btnSummary?.addEventListener('click', () => {
-    window.location.href = apiUrls.scoreSummary;
+  el.btnGo?.addEventListener('click', () => {
+    window.location.href = state.isGameDay ? apiUrls.scoreEntry : apiUrls.scoreSummary;
   });
 
   // Cart drawer

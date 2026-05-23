@@ -101,7 +101,7 @@ function isMobileLandscapeLike(){
 
     if (chrome.setActions) {
       chrome.setActions({
-        right: { show: state.mode === 'player', label: 'Actions', onClick: openActionsMenu },
+        right: { show: true, label: 'Actions', onClick: openActionsMenu },
         left: { show: false }
       });
     }
@@ -118,7 +118,7 @@ function isMobileLandscapeLike(){
                       : (portal === "PLAYER PORTAL" ? "player" : "home");
 
       chrome.setBottomNav({
-        visible: [homeRoute, 'scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoresummary', 'scoreskins'],
+        visible: ['scorehome', homeRoute, 'scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoresummary', 'scoreskins'],
         active: activeNav,
         onNavigate: (id) => MA.routerGo?.(id)
       });
@@ -130,6 +130,14 @@ function isMobileLandscapeLike(){
 
     const items = [];
     const rows = activeRows();
+
+    if (game && Object.keys(game).length) {
+      items.push({
+        label: 'View game details',
+        action: () => MA.gameDetails && MA.gameDetails.open(game),
+      });
+    }
+
     if (state.mode === 'player') {
       items.push({ 
         label: 'Post to GHIN', 

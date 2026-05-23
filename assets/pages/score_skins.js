@@ -38,6 +38,13 @@
       chrome.setHeaderLines(['Hole Champions', init.header?.title || 'Skins', subtitle]);
     }
 
+    if (chrome.setActions) {
+      chrome.setActions({
+        right: { show: true, label: 'Actions', onClick: openActionsMenu },
+        left: { show: false }
+      });
+    }
+
     if (chrome.setBottomNav) {
       const portal = init.portal || "";
       const homeRoute = (portal === "ADMIN PORTAL")
@@ -45,10 +52,24 @@
         : (portal === "PLAYER PORTAL" ? "player" : "home");
 
       chrome.setBottomNav({
-        visible: [homeRoute, 'scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoresummary', 'scoreskins'],
+        visible: ['scorehome', homeRoute, 'scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoresummary', 'scoreskins'],
         active: 'scoreskins',
         onNavigate: (id) => MA.routerGo?.(id)
       });
+    }
+  }
+
+  function openActionsMenu() {
+    if (!MA.ui || !MA.ui.openActionsMenu) return;
+    const items = [];
+    if (game && Object.keys(game).length) {
+      items.push({
+        label: 'View game details',
+        action: () => MA.gameDetails && MA.gameDetails.open(game),
+      });
+    }
+    if (items.length) {
+      MA.ui.openActionsMenu('Actions', items);
     }
   }
 

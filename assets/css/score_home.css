@@ -9,7 +9,25 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 4px 0 80px; /* bottom pad clears action bar */
+  padding: 4px 0 80px;
+}
+
+/* ── Card header — matches player_home.css treatment ─────────────────────── */
+.sh-page .maCard__hdr {
+  color: var(--brandSecondaryText);
+  background: var(--brandSecondary);
+  border-bottom-color: color-mix(in srgb, var(--brandPrimary) 70%, black);
+}
+
+.sh-page .maCard__title {
+  color: var(--brandPrimaryText);
+}
+
+/* PlayerKey in card header — muted right slot */
+.sh-groupKey {
+  color: var(--brandPrimaryTextMuted);
+  font-weight: 800;
+  font-size: 12px;
 }
 
 /* ── Group context strip ──────────────────────────────────────────────────── */
@@ -44,7 +62,7 @@
 
 /* ── Player rows ──────────────────────────────────────────────────────────── */
 .sh-playerRow {
-  cursor: default;         /* read-only — no tap action on the row itself */
+  cursor: default;
   align-items: flex-start;
   padding: 9px 10px;
 }
@@ -70,7 +88,7 @@
   color: var(--mutedText);
 }
 
-/* ── Required button modifier (amber) ────────────────────────────────────── */
+/* ── Required setup buttons (amber — signals action needed) ──────────────── */
 .sh-btn--required {
   background:   #BA7517;
   color:        #FAEEDA;
@@ -81,7 +99,36 @@
   filter: brightness(.92);
 }
 
-/* ── Secondary actions row (below action bar in ready mode) ──────────────── */
+/* ── Primary action button — full width ──────────────────────────────────── */
+.sh-btn--primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 46px;
+  border-radius: var(--radiusSq, 8px);
+  border: none;
+  background: var(--brandPrimary);
+  color: var(--brandPrimaryText);
+  font-size: 15px;
+  font-weight: 900;
+  font-family: var(--fontFamilyBase);
+  cursor: pointer;
+  letter-spacing: .01em;
+}
+
+.sh-btn--primary:active {
+  filter: brightness(.92);
+}
+
+.sh-btn--primary:disabled,
+.sh-btn--primary.is-disabled {
+  background: var(--borderSubtle);
+  color: var(--mutedText);
+  cursor: not-allowed;
+}
+
+/* ── Secondary actions row — side by side small blue buttons ─────────────── */
 .sh-secondaryActions {
   display: flex;
   gap: 8px;
@@ -90,12 +137,23 @@
 
 .sh-sec-btn {
   flex: 1;
+  height: 36px;
+  border-radius: var(--radiusSq, 8px);
+  border: 1.5px solid var(--brandPrimary);
+  background: transparent;
+  color: var(--brandPrimary);
   font-size: 12px;
-  min-height: 36px;
-  padding: 0 10px;
+  font-weight: 800;
+  font-family: var(--fontFamilyBase);
+  cursor: pointer;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  padding: 0 8px;
+}
+
+.sh-sec-btn:active {
+  background: color-mix(in srgb, var(--brandPrimary) 8%, transparent);
 }
 
 /* ── Cart sheet pills ─────────────────────────────────────────────────────── */
@@ -117,11 +175,9 @@
   border: 1px solid color-mix(in srgb, var(--brandPrimary) 30%, transparent);
 }
 
-/* Cart label colors in preview */
 .sh-cart1-label { color: var(--brandColor3); }
 .sh-cart2-label { color: var(--success); }
 
-/* Cart role rows — pointer cursor since pills are tappable */
 .sh-cartRoleRow { cursor: default; }
 .sh-cartRoleRow:hover { background: transparent; }
 

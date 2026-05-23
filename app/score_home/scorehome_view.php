@@ -26,7 +26,7 @@
 
     <div class="maCard__hdr">
       <div class="maCard__title">Playing group</div>
-      <div id="shGroupKey" class="maListRow__col--muted" style="font-size:12px"></div>
+      <div id="shGroupKey" class="sh-groupKey"></div>
     </div>
 
     <!-- Group context strip: tee time / start hole / match (rendered by JS) -->
@@ -35,7 +35,7 @@
     <!-- Player rows (rendered by JS) -->
     <div id="shPlayerRows"></div>
 
-    <!-- Card footer: setup buttons (rendered by JS, hidden when not needed) -->
+    <!-- Card footer: required setup buttons (rendered by JS, hidden when not needed) -->
     <div id="shCardFooter" class="maPanel__ftr isHidden" style="display:none"></div>
 
   </div>
@@ -49,17 +49,15 @@
 
   <!-- ── Action Bar ───────────────────────────────────────────────────── -->
   <div id="shActionBar" class="isHidden">
-    <div class="maChrome__ftrActions" style="display:flex; padding:10px 0;">
-      <button id="shBtnEnterScores" class="maFtrBtn maFtrBtn--save" type="button" disabled>
-        Enter scores
-      </button>
-      <button id="shBtnSummary" class="maFtrBtn maFtrBtn--cancel" type="button">
-        Summary
-      </button>
-    </div>
 
-    <!-- Secondary actions: change buttons in ready mode -->
-    <div id="shSecondaryActions" class="sh-secondaryActions isHidden"></div>
+    <!-- Primary CTA — full width, smart-routed by JS -->
+    <button id="shBtnGo" class="sh-btn--primary" type="button" disabled>
+      Go to digital scoring
+    </button>
+
+    <!-- Secondary actions: change cart / change scorer (rendered by JS in ready mode) -->
+    <div id="shSecondaryActions" class="sh-secondaryActions isHidden" style="margin-top:8px"></div>
+
   </div>
 
 </div>
@@ -74,15 +72,10 @@
     </div>
 
     <div class="maPanel__body" style="padding:0; overflow-y:auto">
-      <!-- Instruction -->
       <div class="maListRow__group" id="shCartInstruction">
         Tap players to assign to Cart 1 — rest go to Cart 2
       </div>
-
-      <!-- Player assignment list -->
       <div id="shCartPlayerList"></div>
-
-      <!-- Cart preview (shown once Cart 1 has ≥1 player) -->
       <div id="shCartPreview" class="isHidden" style="padding:8px 10px 4px"></div>
     </div>
 
@@ -106,7 +99,6 @@
     <div class="maPanel__body" style="padding:0; overflow-y:auto">
       <div class="maListRow__group">Group players</div>
       <div id="shScorerPlayerList"></div>
-      <!-- Admin section injected by JS when portal === ADMIN PORTAL -->
       <div id="shScorerAdminSection" class="isHidden">
         <div class="maListRow__group">Admin</div>
         <div id="shScorerAdminRow"></div>

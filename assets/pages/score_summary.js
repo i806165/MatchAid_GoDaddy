@@ -285,7 +285,7 @@
     if (chrome.setActions) {
       chrome.setActions({
         left: { show: false },
-        right: { show: false }
+        right: { show: true, label: 'Actions', onClick: openActionsMenu }
       });
     }
 
@@ -296,10 +296,24 @@
         portal === 'PLAYER PORTAL' ? 'player' : 'home';
 
       chrome.setBottomNav({
-        visible: [homeRoute, 'scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoresummary', 'scoreskins'],
+        visible: ['scorehome', homeRoute, 'scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoresummary', 'scoreskins'],
         active: 'scoresummary',
         onNavigate: (id) => MA.routerGo?.(id)
       });
+    }
+  }
+
+  function openActionsMenu() {
+    if (!MA.ui || !MA.ui.openActionsMenu) return;
+    const items = [];
+    if (game && Object.keys(game).length) {
+      items.push({
+        label: 'View game details',
+        action: () => MA.gameDetails && MA.gameDetails.open(game),
+      });
+    }
+    if (items.length) {
+      MA.ui.openActionsMenu('Actions', items);
     }
   }
 
