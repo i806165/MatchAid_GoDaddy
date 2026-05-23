@@ -99,6 +99,7 @@ $maChromeSubtitle = "Score Entry";
   window.__INIT__ = <?= json_encode($initPayload) ?>;
 </script>
 <script src="/assets/js/ma_shared.js"></script>
+<script src="/assets/modules/actions_menu.js"></script>
 <script src="/assets/modules/module_DisplayGameFormat.js"></script>
 <script src="/assets/pages/score_home.js"></script>
 </body></html>
