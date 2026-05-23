@@ -952,9 +952,13 @@
 
   applyChrome();
 
-  // Auto-launch if key was provided in URL
-  if (initData.urlKey && el.playerKey) {
-    el.playerKey.value = initData.urlKey;
+  // Auto-launch:
+  // Scenario 1 — QR code / direct URL: use urlKey from URL param
+  // Scenario 2 — Nav from within app: fall back to sessionKey from existing session
+  // Fresh user with no context gets neither — key entry form shown for manual entry
+  const autoKey = initData.urlKey || initData.sessionKey || '';
+  if (autoKey && el.playerKey) {
+    el.playerKey.value = autoKey;
     onLaunch();
   }
 
