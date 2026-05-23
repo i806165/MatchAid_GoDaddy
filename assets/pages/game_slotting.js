@@ -1498,6 +1498,24 @@ function onResetChanges() {
     });
   }
 
+  function checkPairPairFlightWarning() {
+    if (!isPairPair()) return;
+
+    const total = state.players.length;
+    if (total === 0) return;
+
+    const missingFlight = state.players.filter(p => !String(p.flightId || "").trim());
+    const missingCount = missingFlight.length;
+
+    if (missingCount === 0) return;
+
+    const msg = missingCount === total
+      ? "Some/All players have not been matched into flights yet. Please complete Match Pairings before assigning tee times."
+      : `${missingCount} of ${total} players have not been matched into flights yet. Tee time assignments may be incomplete.`;
+
+    if (MA.setStatus) MA.setStatus(msg, "warn");
+  }
+
   function applyChrome() {
     if (chrome.setHeaderLines) {
       chrome.setHeaderLines([
@@ -1544,6 +1562,7 @@ function onResetChanges() {
     state.players = normalizePlayers(init.players || []);
     applyChrome();
     wireEvents();
+    checkPairPairFlightWarning(); 
 
     // Move Assign button to controls area on desktop only.
     // On mobile the chrome footer Assign button owns this action.
