@@ -537,6 +537,7 @@
     const pairingId = String(state.players[0]?.pairingId || state.players[0]?.dbPlayers_PairingID || '');
     MA.blindPlayer.open({
       gameRow:      state.game,
+      blindConfig:  state.blindConfig,
       roster:       state.roster.length ? state.roster : state.players,
       pairingId,
       pairingLabel: `Pair ${Number(pairingId)}`,

@@ -38,18 +38,8 @@
     }[c]));
   }
 
-  function parseBlindConfig(gameRow) {
-    const raw = gameRow?.dbGames_BlindPlayers;
-    if (!raw) return null;
-    try {
-      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
-      // Only the flat-object shape with a mode key is valid
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.mode) {
-        return parsed;
-      }
-    } catch (e) { /* ignore */ }
-    return null;
-  }
+  // blindConfig is normalised by initScoreHome.php before being passed in as opts.blindConfig.
+  // Shape: { mode: "game"|"group", target: int, ghin: string|null, name: string|null }
 
   // ── Score derivation ────────────────────────────────────────────────────────
 
@@ -367,9 +357,9 @@
     const existing = document.getElementById('maBlindPlayerOverlay');
     if (existing) existing.remove();
 
-    const blindConfig = parseBlindConfig(opts.gameRow);
+    const blindConfig = opts.blindConfig || null;
     if (!blindConfig) {
-      console.warn('MA.blindPlayer.open: no blind config found on game record.');
+      console.warn('MA.blindPlayer.open: no blindConfig provided.');
       return;
     }
 

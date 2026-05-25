@@ -70,18 +70,32 @@ $portal = $_SESSION["SessionPortal"] ?? "";
 
 // ── blindConfig: parsed from game record ──────────────────────────────────────
 // Null if blind player has not been configured for this game.
+// Stored as legacy array shape: [{ ghin, name }, { target }]
+// Parse into a normalised shape for the JS payload.
 $blindConfig = null;
 if ($gameRow) {
-    $rawBlind   = $gameRow['dbGames_BlindPlayers'] ?? '[]';
+    $rawBlind    = $gameRow['dbGames_BlindPlayers'] ?? '[]';
     $blindParsed = is_string($rawBlind)
         ? (json_decode($rawBlind, true) ?: [])
         : (is_array($rawBlind) ? $rawBlind : []);
 
-    // Only surface the config when the new flat-object shape is present
-    // (mode key indicates the config has been set via the updated wizard).
-    // Legacy array shape without a mode key is treated as not configured.
-    if (!empty($blindParsed) && isset($blindParsed['mode'])) {
-        $blindConfig = $blindParsed;
+    if (!empty($blindParsed) && is_array($blindParsed)) {
+        $configGHIN   = null;
+        $configName   = null;
+        $configTarget = null;
+        foreach ($blindParsed as $item) {
+            if (!is_array($item)) continue;
+            if (isset($item['ghin']))   { $configGHIN = (string)$item['ghin']; $configName = (string)($item['name'] ?? ''); }
+            if (isset($item['target'])) { $configTarget = (int)$item['target']; }
+        }
+        if ($configTarget !== null) {
+            $blindConfig = [
+                'mode'   => ($configGHIN !== null && $configGHIN !== '') ? 'game' : 'group',
+                'target' => $configTarget,
+                'ghin'   => $configGHIN,
+                'name'   => $configName,
+            ];
+        }
     }
 }
 
