@@ -85,6 +85,11 @@
     scorer: {
       selectedGHIN: null,
     },
+
+    // Blind player state (from initScoreHome payload)
+    blindConfig:       null,   // { mode, target, ghin?, name? } or null
+    existingBlindGHIN: null,   // GHIN from db_Scores if already applied to this pairing
+    roster:            [],     // full filtered game roster for blind player selection
   };
 
   // -------------------------------------------------------------------------
@@ -168,6 +173,10 @@
       showSO:       !isTeamFormat && !['DeclareManual', 'DeclarePlayer'].includes(scoringSystem),
       cartRequired: rotationMethod !== 'None',
       scorerRequired: !state.autoScorerGhin,
+
+      // Blind player — presence of blindConfig drives Actions Menu visibility.
+      // Enabled/disabled state is computed at menu-open time from group size vs target.
+      blindConfigured: false, // populated after payload hydration in onLaunch
     };
   }
 
@@ -523,12 +532,51 @@
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     const items = [];
+
     if (state.game) {
       items.push({
         label: 'View game details',
         action: () => MA.gameDetails && MA.gameDetails.open(state.game),
       });
     }
+
+    // ── Blind player menu item ──────────────────────────────────────────────
+    // Shown whenever blind is configured on the game record.
+    // Enabled when the group is short (player count < target); disabled otherwise.
+    if (state.flags.blindConfigured && state.blindConfig) {
+      const target       = Number(state.blindConfig.target ?? 0);
+      const groupSize    = state.players.length;
+      const pairingId    = state.players[0]?.pairingId || '';
+      const isPaired     = pairingId !== '' && pairingId !== '000';
+      const groupIsShort = isPaired && (groupSize < target);
+
+      items.push({
+        label:    'Invoke Blind Player',
+        disabled: !groupIsShort,
+        action: groupIsShort ? () => {
+          const p = state.players[0] || {};
+          if (!MA.blindPlayer) {
+            MA.setStatus('Blind player module not loaded.', 'error');
+            return;
+          }
+          MA.blindPlayer.open({
+            gameRow:      state.game,
+            roster:       state.roster.length ? state.roster : state.players,
+            pairingId:    pairingId,
+            pairingLabel: `Pair ${Number(pairingId)}`,
+            existingGHIN: state.existingBlindGHIN,
+            apiBase:      (MA.paths?.apiGameSettings || '/api/game_settings'),
+            onApplied: (appliedGHIN) => {
+              // Optimistic update — record who was applied so rerun state
+              // shows correctly if the scorer opens the modal again.
+              state.existingBlindGHIN = appliedGHIN || state.existingBlindGHIN;
+              MA.setStatus('Blind player applied.', 'success');
+            },
+          });
+        } : null,
+      });
+    }
+
     MA.ui.openActionsMenu('Actions', items);
   }
 
@@ -563,6 +611,12 @@
       state.scorerGHIN     = payload.scorerGHIN || null;
       state.cartAssignments = payload.cartAssignments || null;
       state.flags          = deriveFlags(state.game);
+
+      // Blind player
+      state.blindConfig       = payload.blindConfig       || null;
+      state.existingBlindGHIN = payload.existingBlindGHIN || null;
+      state.roster            = normalizePlayers(payload.roster || []);
+      state.flags.blindConfigured = state.blindConfig !== null;
 
       // Resolve autoScorerGhin from session (mirrors scorehome.php logic)
       const sessionGhin = initData.sessionGhin || '';

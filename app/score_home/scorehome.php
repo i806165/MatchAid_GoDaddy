@@ -61,10 +61,11 @@ if ($sessionGhin !== "" && $sessionPortal === "PLAYER PORTAL") {
 
 // 5. Build paths and payload
 $paths = [
-    "apiScoreHome" => MA_ROUTE_API_SCORE_HOME,
-    "scoreEntry"   => MA_ROUTE_SCORE_ENTRY,
-    "routerApi"    => MA_ROUTE_API_ROUTER,
-    "scoreHome"    => MA_ROUTE_SCORE_HOME,
+    "apiScoreHome"    => MA_ROUTE_API_SCORE_HOME,
+    "apiGameSettings" => MA_ROUTE_API_GAME_SETTINGS,
+    "scoreEntry"      => MA_ROUTE_SCORE_ENTRY,
+    "routerApi"       => MA_ROUTE_API_ROUTER,
+    "scoreHome"       => MA_ROUTE_SCORE_HOME,
 ];
 
 $initPayload = [
@@ -101,5 +102,6 @@ $maChromeSubtitle = "Score Entry";
 <script src="/assets/js/ma_shared.js"></script>
 <script src="/assets/modules/actions_menu.js"></script>
 <script src="/assets/modules/module_DisplayGameFormat.js"></script>
+<script src="/assets/modules/module_BlindPlayer.js"></script>
 <script src="/assets/pages/score_home.js"></script>
 </body></html>

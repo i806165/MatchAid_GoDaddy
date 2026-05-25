@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_SERVICES . "/scoring/service_ScoreEntry.php";
+require_once MA_SERVICES . "/scoring/service_BlindPlayer.php";
 require_once MA_SVC_DB . "/service_dbPlayers.php";
 
 $input = ma_json_in();
@@ -26,7 +27,7 @@ $gameRow = $gc['game'] ?? null;
 $isGameDay = $gameRow ? ServiceScoreEntry::isScoreEntryAllowedToday($gameRow) : false;
 $canSave   = true; // Bypass game-day check (testing mode)
 
-// --- hasScores: true if any player in the group has recorded at least one hole ---
+// ── hasScores: true if any player in the group has recorded at least one hole ──
 $hasScores = false;
 foreach ($players as $p) {
     $scoresJson = $p['dbPlayers_Scores'] ?? null;
@@ -40,12 +41,10 @@ foreach ($players as $p) {
     }
 }
 
-// --- scorerGHIN: currently persisted scorer for this pod ---
+// ── scorerGHIN: currently persisted scorer for this pod ──
 $scorerGHIN = ServiceScoreEntry::getEffectivePlayerGHIN();
 
-// --- cartAssignments: derive from persisted PairingID/PairingPos on player rows ---
-// If PairingPos is set (non-null, non-empty) on any player, carts have been configured.
-// We return a map of GHIN => { pairingId, pairingPos } so the JS can restore sheet state.
+// ── cartAssignments: derive from persisted PairingID/PairingPos on player rows ──
 $cartAssignments = null;
 $anyPos = false;
 foreach ($players as $p) {
@@ -66,16 +65,62 @@ if ($anyPos) {
     }
 }
 
-// --- portal: pass through for JS scorer resolution ---
+// ── portal: pass through for JS scorer resolution ──
 $portal = $_SESSION["SessionPortal"] ?? "";
 
+// ── blindConfig: parsed from game record ──────────────────────────────────────
+// Null if blind player has not been configured for this game.
+$blindConfig = null;
+if ($gameRow) {
+    $rawBlind   = $gameRow['dbGames_BlindPlayers'] ?? '[]';
+    $blindParsed = is_string($rawBlind)
+        ? (json_decode($rawBlind, true) ?: [])
+        : (is_array($rawBlind) ? $rawBlind : []);
+
+    // Only surface the config when the new flat-object shape is present
+    // (mode key indicates the config has been set via the updated wizard).
+    // Legacy array shape without a mode key is treated as not configured.
+    if (!empty($blindParsed) && isset($blindParsed['mode'])) {
+        $blindConfig = $blindParsed;
+    }
+}
+
+// ── existingBlindGHIN: GHIN from db_Scores for this group's pairing ──────────
+// Tells the module whether a blind player has already been applied so it can
+// render the rerun state rather than the fresh-selection state.
+$existingBlindGHIN = null;
+$groupPairingId    = (string)($players[0]['dbPlayers_PairingID'] ?? '');
+if ($blindConfig !== null && $groupPairingId !== '' && $groupPairingId !== '000') {
+    $existingBlindGHIN = ServiceBlindPlayer::getBlindScoreForPairing($ggid, $groupPairingId);
+}
+
+// ── roster: full game player list for the blind player selection modal ─────────
+// Excludes stray / unattached players (PairingID = "000" or empty, or PlayerKey
+// null / empty). Players with null Scores are included — the module renders them
+// as non-selectable so the scorer can see they exist but cannot borrow their score.
+$roster = [];
+if ($blindConfig !== null) {
+    $allGamePlayers = ServiceDbPlayers::getGamePlayers((string)$ggid);
+    foreach ($allGamePlayers as $gp) {
+        $pid = (string)($gp['dbPlayers_PairingID'] ?? '');
+        $pk  = (string)($gp['dbPlayers_PlayerKey']  ?? '');
+        // Exclude unattached players
+        if ($pid === '' || $pid === '000') continue;
+        if ($pk  === '') continue;
+        $roster[] = $gp;
+    }
+}
+
 ma_respond(200, ['ok' => true, 'payload' => [
-    'players'         => $players,
-    'game'            => $gameRow,
-    'isGameDay'       => $isGameDay,
-    'canSave'         => $canSave,
-    'hasScores'       => $hasScores,
-    'scorerGHIN'      => $scorerGHIN,
-    'cartAssignments' => $cartAssignments,
-    'portal'          => $portal,
+    'players'           => $players,
+    'game'              => $gameRow,
+    'isGameDay'         => $isGameDay,
+    'canSave'           => $canSave,
+    'hasScores'         => $hasScores,
+    'scorerGHIN'        => $scorerGHIN,
+    'cartAssignments'   => $cartAssignments,
+    'portal'            => $portal,
+    'blindConfig'       => $blindConfig,
+    'existingBlindGHIN' => $existingBlindGHIN,
+    'roster'            => $roster,
 ]]);

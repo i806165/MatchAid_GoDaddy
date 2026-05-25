@@ -26,7 +26,7 @@ if (!is_array($in)) $in = [];
 $userToken  = (string)($_SESSION["SessionUserToken"]  ?? "");
 $adminToken = (string)($_SESSION["SessionAdminToken"] ?? "");
 //$token = $adminToken !== "" ? $adminToken : $userToken;
-$token = $useUserToken
+$token = $userToken
   ? $userToken
   : ($adminToken !== "" ? $adminToken : $userToken);
 

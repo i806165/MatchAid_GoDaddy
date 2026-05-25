@@ -10,23 +10,33 @@ require_once MA_API_LIB . '/Logger.php';
 $auth = ma_api_require_auth();
 
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-    ma_respond(405, ['ok' => false, 'message' => 'Method not allowed']);
+    ma_respond(405, ['ok' => false, 'message' => 'Method not allowed.']);
 }
 
 $in     = ma_json_in();
 $action = trim((string)($in['action'] ?? 'apply'));
 
-// GGID always from session — never trust request body for game identity
+// GGID always from session — never trust the request body for game identity.
 $ggid = (int)(ServiceContextGame::getStoredGGID() ?? 0);
 if ($ggid <= 0) {
     ma_respond(400, ['ok' => false, 'message' => 'No game selected.']);
 }
 
+// pairingId — present when called from the scoring portal (scoped apply).
+// Absent when called from a game-wide context.
+$pairingId = trim((string)($in['pairingId'] ?? ''));
+$pairingId = ($pairingId !== '' && $pairingId !== '000') ? $pairingId : null;
+
+// overrideGHIN — scorer's selected player (group mode only).
+// Ignored by the service when game mode is "game" (pre-assigned).
+$overrideGHIN = trim((string)($in['ghin'] ?? ''));
+$overrideGHIN = ($overrideGHIN !== '') ? $overrideGHIN : null;
+
 try {
     if ($action === 'recalc') {
         $result = ServiceBlindPlayer::recalculateDeclaredFlags($ggid);
     } else {
-        $result = ServiceBlindPlayer::applyBlindPlayer($ggid);
+        $result = ServiceBlindPlayer::applyBlindPlayer($ggid, $pairingId, $overrideGHIN);
     }
 
     $code = !empty($result['ok']) ? 200 : 400;

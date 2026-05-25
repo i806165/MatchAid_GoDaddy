@@ -15,11 +15,21 @@ final class ServiceBlindPlayer
     /**
      * Master function — apply, update, or remove blind player for a game.
      * Safe to re-run: always deletes existing blind rows before re-inserting.
+     *
+     * @param int         $ggid          Game identifier (always from session — never trust request body).
+     * @param string|null $pairingId     When provided, scopes the apply to a single pairing (scoring
+     *                                   context). When null, applies game-wide (legacy / settings context).
+     * @param string|null $overrideGHIN  Scorer-selected GHIN. Only honoured when $pairingId is provided
+     *                                   AND the game config mode is "group". Pre-assigned ("game" mode)
+     *                                   always uses the GHIN from the game record regardless of this value.
      */
-    public static function applyBlindPlayer(int $ggid): array
-    {
+    public static function applyBlindPlayer(
+        int     $ggid,
+        ?string $pairingId    = null,
+        ?string $overrideGHIN = null
+    ): array {
         try {
-            // Step 1: Load and validate game
+            // ── Step 1: Load and validate game ────────────────────────────────
             $gameRow = ServiceDbGames::getGameByGGID($ggid);
             if (!$gameRow) {
                 return ['ok' => false, 'message' => 'Game not found.'];
@@ -29,37 +39,110 @@ final class ServiceBlindPlayer
                 return ['ok' => false, 'message' => 'Blind player only applies to PairField games.'];
             }
 
-            // Step 2: Parse blind config
+            // ── Step 2: Parse blind config ────────────────────────────────────
             $rawBlind = $gameRow['dbGames_BlindPlayers'] ?? '[]';
-            $blindArr = is_string($rawBlind) ? (json_decode($rawBlind, true) ?: []) : (is_array($rawBlind) ? $rawBlind : []);
+            $blindConfig = is_string($rawBlind)
+                ? (json_decode($rawBlind, true) ?: [])
+                : (is_array($rawBlind) ? $rawBlind : []);
 
-            $blindGHINs = [];
-            $target     = null;
-            foreach ($blindArr as $item) {
-                if (isset($item['ghin'])) {
-                    $blindGHINs[] = (string)$item['ghin'];
+            // Support both new flat-object shape { mode, target, ghin, name }
+            // and legacy array shape [{ ghin, name }, { target }].
+            $configMode  = null;
+            $configGHIN  = null;
+            $target      = null;
+
+            if (isset($blindConfig['mode'])) {
+                // New shape
+                $configMode = (string)($blindConfig['mode'] ?? 'group');
+                $target     = isset($blindConfig['target']) ? (int)$blindConfig['target'] : null;
+                $configGHIN = isset($blindConfig['ghin']) ? (string)$blindConfig['ghin'] : null;
+            } else {
+                // Legacy array shape — derive equivalent fields
+                foreach ($blindConfig as $item) {
+                    if (!is_array($item)) continue;
+                    if (isset($item['ghin'])) {
+                        $configGHIN = (string)$item['ghin'];
+                        $configMode = 'game';
+                    }
+                    if (isset($item['target'])) {
+                        $target = (int)$item['target'];
+                    }
                 }
-                if (isset($item['target'])) {
-                    $target = (int)$item['target'];
+                if ($configGHIN === null) $configMode = 'group';
+            }
+
+            // ── Step 3: Resolve the effective GHIN to clone ───────────────────
+            // Pre-assigned ("game" mode): always use the game record GHIN.
+            // Ignoring any overrideGHIN closes the direct-POST loophole.
+            // Group mode: honour overrideGHIN when provided, otherwise no GHIN
+            // at this stage (each pairing will need one — validated below).
+            $isScoringContext = ($pairingId !== null && $pairingId !== '');
+            $isGameMode       = ($configMode === 'game');
+
+            if ($isGameMode) {
+                // Game-level assignment: GHIN is fixed by the admin
+                if ($configGHIN === null || $configGHIN === '') {
+                    return ['ok' => false, 'message' => 'Blind player not configured for this game.'];
+                }
+                $effectiveGHIN = $configGHIN;
+            } else {
+                // Group mode: scorer supplies the GHIN (scoring context only)
+                if ($isScoringContext) {
+                    $effectiveGHIN = ($overrideGHIN !== null && $overrideGHIN !== '')
+                        ? $overrideGHIN
+                        : null;
+                    if ($effectiveGHIN === null) {
+                        return ['ok' => false, 'message' => 'No blind player selected.'];
+                    }
+                } else {
+                    // Game-wide group mode (legacy path — should not reach here normally)
+                    $effectiveGHIN = null;
                 }
             }
 
-            $n             = (int)($gameRow['dbGames_BestBall'] ?? 1);
-            $scoringMethod = (string)($gameRow['dbGames_ScoringMethod'] ?? 'NET');
-
-            // Step 3: Always delete existing blind rows (safe re-run)
-            $pdo  = Db::pdo();
-            $stmt = $pdo->prepare('DELETE FROM db_Scores WHERE dbScores_GGID = ? AND dbScores_isBlind = 1');
-            $stmt->execute([$ggid]);
-            Logger::info('BLIND_APPLY', ['ggid' => $ggid, 'step' => 'deleted_old_blind_rows']);
-
-            // Step 4: If nothing configured, just recalculate real player flags
-            if (empty($blindGHINs) || $target === null) {
-                self::recalculateDeclaredFlags($ggid);
-                return ['ok' => true, 'message' => 'Blind player removed, flags recalculated', 'pairingsUpdated' => 0];
+            if ($target === null) {
+                return ['ok' => false, 'message' => 'Blind player target size not configured.'];
             }
 
-            // Step 5: Load players and find short pairings
+            // ── Step 4: Scoring-context validation — selected player must have scores ──
+            // pairingId being present is the sentinel for scoring context.
+            // In game-wide (settings) context this check is skipped.
+            if ($isScoringContext && $effectiveGHIN !== null) {
+                $candidateRecord = ServiceDbPlayers::getPlayerByGGIDGHIN((string)$ggid, $effectiveGHIN);
+                if (!$candidateRecord) {
+                    return ['ok' => false, 'message' => 'Selected player not found in roster.'];
+                }
+                $candidateScores = $candidateRecord['dbPlayers_Scores'] ?? null;
+                if (is_string($candidateScores)) {
+                    $candidateScores = json_decode($candidateScores, true) ?: null;
+                }
+                $holesPlayed = (int)(($candidateScores['Scores'][0]['number_of_played_holes'] ?? 0));
+                if ($holesPlayed === 0) {
+                    return [
+                        'ok'      => false,
+                        'message' => 'Selected player has no scores recorded. Choose a player who has completed at least one hole.',
+                    ];
+                }
+            }
+
+            // ── Step 5: Delete existing blind rows ────────────────────────────
+            // Scoped to the target pairing when in scoring context;
+            // game-wide when called without a pairingId.
+            $pdo = Db::pdo();
+            if ($isScoringContext) {
+                $delStmt = $pdo->prepare(
+                    'DELETE FROM db_Scores WHERE dbScores_GGID = ? AND dbScores_isBlind = 1 AND dbScores_PairingID = ?'
+                );
+                $delStmt->execute([$ggid, $pairingId]);
+            } else {
+                $delStmt = $pdo->prepare(
+                    'DELETE FROM db_Scores WHERE dbScores_GGID = ? AND dbScores_isBlind = 1'
+                );
+                $delStmt->execute([$ggid]);
+            }
+            Logger::info('BLIND_APPLY', ['ggid' => $ggid, 'pairingId' => $pairingId, 'step' => 'deleted_old_blind_rows']);
+
+            // ── Step 6: Load players and identify short pairings ──────────────
             $allPlayers = ServiceDbPlayers::getScorecardPlayersByGGID((string)$ggid);
             foreach ($allPlayers as &$p) {
                 if (isset($p['dbPlayers_Scores']) && is_string($p['dbPlayers_Scores'])) {
@@ -76,16 +159,32 @@ final class ServiceBlindPlayer
                 $pairingGroups[$pid][] = $player;
             }
 
-            $shortPairings = array_filter($pairingGroups, fn($members) => count($members) < $target);
-            if (empty($shortPairings)) {
-                self::recalculateDeclaredFlags($ggid);
-                return ['ok' => true, 'message' => 'No short pairings found', 'pairingsUpdated' => 0];
+            // When scoped to a single pairing, restrict to that pairing only.
+            if ($isScoringContext) {
+                $pairingGroups = isset($pairingGroups[$pairingId])
+                    ? [$pairingId => $pairingGroups[$pairingId]]
+                    : [];
             }
 
-            // Step 6: Load each blind player's real record
+            $shortPairings = array_filter($pairingGroups, fn($members) => count($members) < $target);
+
+            if (empty($shortPairings)) {
+                self::recalculateDeclaredFlags($ggid);
+                return [
+                    'ok'              => true,
+                    'message'         => 'No short pairings found — no blind player needed.',
+                    'pairingsUpdated' => 0,
+                ];
+            }
+
+            // ── Step 7: Load blind player record(s) ───────────────────────────
+            // In group mode, $effectiveGHIN is the scorer's selection, applied
+            // uniformly to all short pairings in scope (typically just one).
+            // In game mode, $effectiveGHIN is the admin-configured GHIN.
+            $blindGHINs   = ($effectiveGHIN !== null) ? [$effectiveGHIN] : [];
             $blindRecords = [];
+
             foreach ($blindGHINs as $blindGHIN) {
-                // De-duplicate: only load each unique GHIN once
                 if (isset($blindRecords[$blindGHIN])) continue;
                 $record = ServiceDbPlayers::getPlayerByGGIDGHIN((string)$ggid, $blindGHIN);
                 if (!$record) {
@@ -101,7 +200,7 @@ final class ServiceBlindPlayer
                 $blindRecords[$blindGHIN] = $record;
             }
 
-            // Step 7: Insert blind clones into short pairings
+            // ── Step 8: Insert blind clones into short pairings ───────────────
             $insertSql = '
                 INSERT INTO db_Scores
                     (dbScores_GGID, dbScores_GHIN, dbScores_PairingID, dbScores_PairingPos, dbScores_isBlind, dbScores_Scores)
@@ -109,8 +208,8 @@ final class ServiceBlindPlayer
                 ON DUPLICATE KEY UPDATE dbScores_Scores = VALUES(dbScores_Scores), _updatedDate = NOW()
             ';
             $insertStmt = $pdo->prepare($insertSql);
+            $blindIdx   = 0;
 
-            $blindIdx = 0;
             foreach ($shortPairings as $shortPairingId => $members) {
                 $shortBy = $target - count($members);
 
@@ -126,6 +225,8 @@ final class ServiceBlindPlayer
                     }
                     $usedPositions[] = $nextPos;
 
+                    // Cycle through available blind GHINs (supports future multi-blind).
+                    // In current usage there is always exactly one GHIN.
                     $blindGHIN   = $blindGHINs[$blindIdx % count($blindGHINs)];
                     $blindRecord = $blindRecords[$blindGHIN];
                     $scoresJson  = json_encode($blindRecord['dbPlayers_Scores'] ?? []);
@@ -142,12 +243,12 @@ final class ServiceBlindPlayer
                 }
             }
 
-            // Step 8: Recalculate all declared flags with blind players now in place
+            // ── Step 9: Recalculate declared flags ────────────────────────────
             self::recalculateDeclaredFlags($ggid);
 
             return [
                 'ok'              => true,
-                'message'         => 'Blind player applied successfully',
+                'message'         => 'Blind player applied successfully.',
                 'pairingsUpdated' => count($shortPairings),
             ];
 
@@ -159,6 +260,7 @@ final class ServiceBlindPlayer
 
     /**
      * Recalculate declared flags for ALL pairings in a game (real + blind players).
+     * Unchanged from original — operates game-wide always.
      */
     public static function recalculateDeclaredFlags(int $ggid): array
     {
@@ -266,7 +368,6 @@ final class ServiceBlindPlayer
                     $declared = ServiceScoreEntry::resolveDeclaredForHole($scoreRows, $n, $scoringMethod);
 
                     foreach ($members as $member) {
-                        // Match the same three-part key used above for blind members
                         $key        = $member['isBlind']
                             ? ($member['ghin'] . '_' . $pairingId . '_' . $member['pos'])
                             : $member['ghin'];
@@ -323,7 +424,7 @@ final class ServiceBlindPlayer
 
             return [
                 'ok'              => true,
-                'message'         => 'Declared flags recalculated',
+                'message'         => 'Declared flags recalculated.',
                 'pairingsUpdated' => count($pairingPool),
             ];
 
@@ -345,17 +446,26 @@ final class ServiceBlindPlayer
     }
 
     /**
+     * Fetch blind score rows for a specific pairing within a game.
+     * Used by initScoreHome to determine existingBlindGHIN for a group.
+     */
+    public static function getBlindScoreForPairing(int $ggid, string $pairingId): ?string
+    {
+        if ($pairingId === '' || $pairingId === '000') return null;
+        $pdo  = Db::pdo();
+        $stmt = $pdo->prepare(
+            'SELECT dbScores_GHIN FROM db_Scores
+             WHERE dbScores_GGID = ? AND dbScores_isBlind = 1 AND dbScores_PairingID = ?
+             LIMIT 1'
+        );
+        $stmt->execute([$ggid, $pairingId]);
+        $row = $stmt->fetch();
+        return $row ? (string)$row['dbScores_GHIN'] : null;
+    }
+
+    /**
      * Merge blind score rows into the player pool as synthetic player records.
-     *
-     * Blind records inherit all tee/HC/course data from the real player record.
-     * Name fields, pairing placement, and PlayerKey are overridden:
-     *   - dbPlayers_PairingID  → target pairing from db_Scores
-     *   - dbPlayers_PairingPos → target position from db_Scores
-     *   - dbPlayers_PlayerKey  → derived from target pairing's existing members
-     *                            (the scorecard walking group, not the donor's group)
-     *
-     * The GHIN is intentionally retained from the donor — the blind clone IS that
-     * real player's scores playing for a different competitive pairing.
+     * Unchanged from original.
      */
     public static function mergeBlindScoresIntoPlayers(array $players, array $blindScores, array $gameRow): array
     {
@@ -365,8 +475,6 @@ final class ServiceBlindPlayer
             if ($ghin !== '') $byGHIN[$ghin] = $p;
         }
 
-        // Build PairingID → PlayerKey map from real players so the blind clone
-        // inherits the correct walking group (scorecard slot), not the donor's.
         $pairingKeyMap = [];
         foreach ($players as $p) {
             $pid = (string)($p['dbPlayers_PairingID'] ?? '');
