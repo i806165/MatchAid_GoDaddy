@@ -23,7 +23,7 @@ final class ServiceScoreCard {
    * Build blank scorecard payload for pre-round printing.
    * Preserves the existing canonical blank-scorecard behavior.
    */
-  public static function buildBlankScorecardPayload(array $gameRow, array $players): array {
+  public static function buildBlankScorecardPayload(array $gameRow, array $players, bool $useBalancedStrokes = false): array {
     if (!$gameRow) {
       throw new RuntimeException("buildBlankScorecardPayload: missing gameRow");
     }
@@ -39,7 +39,7 @@ final class ServiceScoreCard {
         "dbGames_Competition" => (string)($gameRow["dbGames_Competition"] ?? "")
       ]), $groupsMap[$id] ?? []);
       $playersInGroup = self::sortPlayersForScorecard($playersInGroup);
-      $rows[] = self::buildGroupRowPayload($gameRow, $playersInGroup, $id, $groupingMode);
+      $rows[] = self::buildGroupRowPayload($gameRow, $playersInGroup, $id, $groupingMode, $useBalancedStrokes);
     }
 
     return [
@@ -635,7 +635,7 @@ final class ServiceScoreCard {
   // 5. Player Scorecard Context Assembly
   // ==========================================================================
 
-  public static function buildGroupRowPayload(array $gameRow, array $players, $groupId, string $mode): array {
+  public static function buildGroupRowPayload(array $gameRow, array $players, $groupId, string $mode, bool $useBalancedStrokes = false): array {
     $first = $players[0] ?? [];
     $courseName = self::buildCourseName($gameRow);
     $teeSetIdsUsed = self::getTeeSetIdsUsed($players);
@@ -680,12 +680,12 @@ final class ServiceScoreCard {
       "teeTime" => (string)($first["dbPlayers_TeeTime"] ?? ""),
       "startHole" => (string)($first["dbPlayers_StartHole"] ?? ""),
       "courseInfo" => $courseRows,
-      "players" => self::buildPlayersArray($players, $gameRow),
+      "players" => self::buildPlayersArray($players, $gameRow, $useBalancedStrokes),
       "gameHeader" => self::buildGameHeader($gameRow, $first, $courseName),
     ];
   }
 
-  public static function buildPlayersArray(array $playersInGroup, array $gameRow): array {
+  public static function buildPlayersArray(array $playersInGroup, array $gameRow, bool $useBalancedStrokes = false): array {
     $isAdjGross = (trim((string)($gameRow["dbGames_ScoringMethod"] ?? "NET")) === "ADJ GROSS");
     $out = [];
 
@@ -696,7 +696,16 @@ final class ServiceScoreCard {
       if (!$isAdjGross && $playerHC != 0) {
         $teeDetails = $player["dbPlayers_TeeSetDetails"] ?? null;
         $teeHoles = is_array($teeDetails) ? ($teeDetails["holes"] ?? $teeDetails["Holes"] ?? []) : [];
-        $allocMap = self::buildStrokeAllocationMap($gameRow, $playerHC, $teeHoles);
+
+        // For qualifying games (non-Standard stroke distribution + rotation),
+        // use the same spin-aware allocator the scoring scorecard uses so that
+        // printed stroke marks match in-round stroke marks exactly.
+        if ($useBalancedStrokes) {
+          $allocMap = ServiceScoreRotation::buildSpinAwareStrokeAllocationMap($gameRow, $playerHC, $teeHoles);
+        } else {
+          $allocMap = self::buildStrokeAllocationMap($gameRow, $playerHC, $teeHoles);
+        }
+
         foreach ($allocMap as $holeNum => $v) {
           if (intval($v) !== 0) $strokes["h" . $holeNum] = intval($v);
         }

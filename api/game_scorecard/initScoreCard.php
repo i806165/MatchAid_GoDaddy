@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/scoring/service_ScoreCard.php";
+require_once MA_SERVICES . "/scoring/service_ScoreRotation.php";
 require_once MA_SVC_DB . "/service_dbGames.php";
 require_once MA_SVC_DB . "/service_dbPlayers.php";
 
@@ -68,10 +69,20 @@ function initBlankScoreCard(string $ggid, array $ctx = []): array {
     ];
   }
 
-  $game = $hydrated["game"];
+  $game    = $hydrated["game"];
   $players = $hydrated["players"];
 
-  $scorecards = ServiceScoreCard::buildBlankScorecardPayload($game, $players);
+  // Determine whether this game needs balanced stroke distribution.
+  // Qualifying games have a non-Standard StrokeDistribution AND a
+  // RotationMethod that is not blank or "None". For these games the
+  // blank scorecard must use the same spin-aware stroke allocation
+  // that the scoring scorecard already uses, so printed stroke marks
+  // match what players see during the round.
+  $rotation    = strtoupper(trim((string)($game["dbGames_RotationMethod"] ?? "")));
+  $strokeDist  = trim((string)($game["dbGames_StrokeDistribution"] ?? "Standard"));
+  $useBalanced = ($rotation !== "" && $rotation !== "NONE" && $strokeDist !== "Standard");
+
+  $scorecards = ServiceScoreCard::buildBlankScorecardPayload($game, $players, $useBalanced);
 
   return [
     "ok" => true,
