@@ -111,20 +111,20 @@
 
               <div class="gsWizFieldGroup">
                 <div class="gsWizFieldLabel">Who selects the blind player?</div>
-                <div class="gsWizBlindModeOption" data-mode="group"
+                <div class="maListRow gsWizBlindModeOption" data-mode="group"
                      onclick="window.gsWiz.selectBlindMode('group')">
                   <div class="gsWizBlindModeRadio"></div>
-                  <div>
-                    <div class="gsWizBlindModeTitle">Select a blind player in the Digital Scoring page</div>
-                    <div class="gsWizHint" style="margin:0">Allows each group to select a blind player.</div>
+                  <div class="maListRow__col">
+                    <div>Scorer selects on game day</div>
+                    <div class="maListRow__col--muted" style="font-size:11px;white-space:normal;margin-top:2px">Each group draws from a hat. The scorer picks from the full roster in the scoring portal.</div>
                   </div>
                 </div>
-                <div class="gsWizBlindModeOption" data-mode="game"
+                <div class="maListRow gsWizBlindModeOption" data-mode="game"
                      onclick="window.gsWiz.selectBlindMode('game')">
                   <div class="gsWizBlindModeRadio"></div>
-                  <div>
-                    <div class="gsWizBlindModeTitle">Pre-assign a blind player now</div>
-                    <div class="gsWizHint" style="margin:0">The same player's scores are used as the blind for all groups.</div>
+                  <div class="maListRow__col">
+                    <div>Pre-assign a player now</div>
+                    <div class="maListRow__col--muted" style="font-size:11px;white-space:normal;margin-top:2px">The same player's scores are used as the blind for all short groups.</div>
                   </div>
                 </div>
               </div>
