@@ -529,53 +529,42 @@
     }
   }
 
+  function invokeBlindPlayer() {
+    if (!MA.blindPlayer) {
+      MA.setStatus('Blind player module not loaded.', 'error');
+      return;
+    }
+    const pairingId = String(state.players[0]?.pairingId || state.players[0]?.dbPlayers_PairingID || '');
+    MA.blindPlayer.open({
+      gameRow:      state.game,
+      roster:       state.roster.length ? state.roster : state.players,
+      pairingId,
+      pairingLabel: `Pair ${Number(pairingId)}`,
+      existingGHIN: state.existingBlindGHIN,
+      apiBase:      MA.paths?.apiGameSettings || '/api/game_settings',
+      onApplied:    (appliedGHIN) => {
+        state.existingBlindGHIN = appliedGHIN || state.existingBlindGHIN;
+        MA.setStatus('Blind player applied.', 'success');
+      },
+    });
+  }
+
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
-    const items = [];
 
-    if (state.game) {
-      items.push({
-        label: 'View game details',
-        action: () => MA.gameDetails && MA.gameDetails.open(state.game),
-      });
-    }
+    const pairingId    = String(state.players[0]?.pairingId || state.players[0]?.dbPlayers_PairingID || '');
+    const isPaired     = pairingId !== '' && pairingId !== '000';
+    const groupIsShort = isPaired && state.players.length < Number(state.blindConfig?.target ?? 0);
 
-    // ── Blind player ────────────────────────────────────────────────────────
-    // Shown whenever blind is configured on the game record.
-    // Enabled only when the group is short of the target size.
-    if (state.flags.blindConfigured && state.blindConfig) {
-      const target       = Number(state.blindConfig.target ?? 0);
-      const groupSize    = state.players.length;
-      const pairingId    = String(state.players[0]?.pairingId || state.players[0]?.dbPlayers_PairingID || '');
-      const isPaired     = pairingId !== '' && pairingId !== '000';
-      const groupIsShort = isPaired && groupSize < target;
-
-      items.push({
+    MA.ui.openActionsMenu('Actions', [
+      { label: 'View game details', action: () => MA.gameDetails && MA.gameDetails.open(state.game) },
+      ...(state.flags.blindConfigured ? [{ separator: true }] : []),
+      ...(state.flags.blindConfigured ? [{
         label:    'Invoke Blind Player',
         disabled: !groupIsShort,
-        action: () => {
-          if (!groupIsShort) return;
-          if (!MA.blindPlayer) {
-            MA.setStatus('Blind player module not loaded.', 'error');
-            return;
-          }
-          MA.blindPlayer.open({
-            gameRow:      state.game,
-            roster:       state.roster.length ? state.roster : state.players,
-            pairingId,
-            pairingLabel: `Pair ${Number(pairingId)}`,
-            existingGHIN: state.existingBlindGHIN,
-            apiBase:      MA.paths?.apiGameSettings || '/api/game_settings',
-            onApplied: (appliedGHIN) => {
-              state.existingBlindGHIN = appliedGHIN || state.existingBlindGHIN;
-              MA.setStatus('Blind player applied.', 'success');
-            },
-          });
-        },
-      });
-    }
-
-    MA.ui.openActionsMenu('Actions', items);
+        action:   () => invokeBlindPlayer(),
+      }] : []),
+    ]);
   }
 
   // -------------------------------------------------------------------------
