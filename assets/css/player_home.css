@@ -366,3 +366,9 @@
   .maGameCard__line2,
   .maGameCard__line3 { flex-wrap: wrap; }
 }
+/* Hide sidebar entirely on small screens */
+@media (max-width: 899px) {
+  .maPanel--sidebar {
+    display: none;
+  }
+}
