@@ -27,7 +27,7 @@ final class ServiceLogin
         $password = trim($password);
 
         if ($userId === "" || $password === "") {
-            return ["ok" => false, "message" => "Please enter Email/GHIN and Password."];
+            return ["ok" => false, "message" => "Please enter UserID and Password."];
         }
 
         $errInd = "000"; // Error indicator for debugging
@@ -51,9 +51,11 @@ final class ServiceLogin
                 throw new RuntimeException("Invalid login response: missing GHIN ID or user token.");
             }
 
+            // Rare GHIN data issue — blank club ID in profile
             if ($clubId === "") {
                 return [
                     "ok"      => false,
+                    "errCode" => "BLANK_CLUB_ID",
                     "message" => "Sign-in failed: your Golf Network profile has a blank club. Please contact your club professional.",
                 ];
             }
@@ -65,10 +67,19 @@ final class ServiceLogin
             $adminToken = $userToken;
 
             $adminCreds = be_getAdminCredentialsByClub($clubId);
-            if ($adminCreds) {
-                $adminLogin = be_loginGHIN($adminCreds["ghin"], $adminCreds["password"]);
-                $adminToken = (string)($adminLogin["golfer_user"]["golfer_user_token"] ?? $adminToken);
+
+            // Club has no MatchAid credentials — not enrolled
+            if ($adminCreds === null) {
+                return [
+                    "ok"      => false,
+                    "errCode" => "CLUB_NOT_ENROLLED",
+                    "clubId"  => $clubId,
+                    "message" => "Your club is not yet enrolled in MatchAid.",
+                ];
             }
+
+            $adminLogin = be_loginGHIN($adminCreds["ghin"], $adminCreds["password"]);
+            $adminToken = (string)($adminLogin["golfer_user"]["golfer_user_token"] ?? $adminToken);
 
             // Step 3: Store session immediately
             $errInd = "300";
@@ -142,12 +153,12 @@ final class ServiceLogin
                 // Stage 100: GHIN authentication call
                 str_starts_with($errInd, "1") => match(true) {
                     str_contains($exMsg, "HTTP 401"),
-                    str_contains($exMsg, "HTTP 403") => "Incorrect UserID or Password. Please check your credentials and try again.",
-                    str_contains($exMsg, "HTTP 400")  => "Invalid login format. Please check your credentials and try again.",
-                    str_contains($exMsg, "HTTP 404")  => "No account found with that UserID.",
-                    str_contains($exMsg, "HTTP 500")  => "The back end service is temporarily unavailable. Please try again shortly.",
-                    str_contains($exMsg, "Network error") => "Could not reach the back end service. Please check your connection and try again.",
-                    default => "We couldn't verify your credentials. Please try again.",
+                    str_contains($exMsg, "HTTP 403") => "Incorrect UserID or Password. Please check your Golf Network credentials and try again.",
+                    str_contains($exMsg, "HTTP 400")  => "Invalid login format. Please check your Golf Network credentials and try again.",
+                    str_contains($exMsg, "HTTP 404")  => "No Golf Network account found with that UserID.",
+                    str_contains($exMsg, "HTTP 500")  => "The Golf Network service is temporarily unavailable. Please try again shortly.",
+                    str_contains($exMsg, "Network error") => "Could not reach the back end Golf Network service. Please check your connection and try again.",
+                    default => "We couldn't verify your Golf Network credentials. Please try again.",
                 },
 
                 // Stage 200: Admin credentials/token retrieval

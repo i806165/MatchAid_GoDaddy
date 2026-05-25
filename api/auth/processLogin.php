@@ -30,23 +30,24 @@ $userId = trim((string)($in["userId"] ?? ""));
 $pass   = (string)($in["password"] ?? "");
 
 if ($userId === "" || $pass === "") {
-    respond(400, ["ok" => false, "message" => "Please enter Email/GHIN and Password."]);
+    respond(400, ["ok" => false, "message" => "Please enter Golf Network ID and Password."]);
 }
 
 try {
     $result = ServiceLogin::processLogin($userId, $pass, $config);
 
+    // Successful login — add nextUrl for JS router fallback
     if (!empty($result["ok"])) {
-        // Successful login — add nextUrl for JS router fallback
         $result["nextUrl"] = MA_ROUTE_HOME;
         respond(200, $result);
     }
 
-    // Club not authorized — redirect to marketing page instead of showing an error
-    if (($result["errCode"] ?? "") === "101") {
+    // Club not enrolled — redirect to marketing page, passing club ID for display
+    if (($result["errCode"] ?? "") === "CLUB_NOT_ENROLLED") {
+        $clubId = urlencode((string)($result["clubId"] ?? ""));
         respond(200, [
             "ok"      => false,
-            "nextUrl" => MA_ROUTE_CLUB_MARKETING,
+            "nextUrl" => MA_ROUTE_CLUB_MARKETING . ($clubId !== "" ? "?clubId={$clubId}" : ""),
         ]);
     }
 

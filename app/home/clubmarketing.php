@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . "/../../bootstrap.php";
 
 $homeUrl = MA_ROUTE_HOME;
+$clubId  = trim((string)($_GET["clubId"] ?? ""));
 
 header("Content-Type: text/html; charset=utf-8");
 

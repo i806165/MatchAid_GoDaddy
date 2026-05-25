@@ -335,6 +335,12 @@
     }
   </style>
 </head>
+<?php
+$emailSubject = !empty($clubId)
+    ? rawurlencode("Club Enrollment Request – Club ID " . $clubId)
+    : rawurlencode("Club Enrollment Request");
+$mailtoHref = "mailto:signup@matchaid.org?subject=" . $emailSubject;
+?>
 <body>
 <div class="page">
 
@@ -352,7 +358,7 @@
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
         Return to home
       </a>
-      <a class="mk-hdr-email" href="mailto:signup@matchaid.org?subject=Club%20Enrollment%20Request">
+      <a class="mk-hdr-email" href="<?= htmlspecialchars($mailtoHref) ?>">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 4-8 5-8-5V6l8 5 8-5v2Z"/></svg>
         Contact us to enroll
       </a>
@@ -363,7 +369,7 @@
   <div class="mk-hero">
     <div class="mk-badge">&#x1F512; Club enrollment required</div>
     <h1 class="mk-hero-title">Unlock the MatchAid experience for your club</h1>
-    <p class="mk-hero-sub">Your Golf Network user profile is linked to a club that isn't yet enrolled in MatchAid. Enrollment is free — reach out and we'll get you set up.</p>
+    <p class="mk-hero-sub">Your GHIN profile is linked to a club that isn't yet enrolled in MatchAid. Enrollment is free — reach out and we'll get you set up.</p>
   </div>
 
   <!-- Body -->
@@ -371,7 +377,10 @@
 
     <div class="mk-alert">
       <strong>Why am I seeing this?</strong>
-      To maintain platform integrity, each participating club must be enrolled in MatchAid. Once your club is enrolled, all members can sign in and access the tools below.
+      To maintain secure GHIN integration and platform integrity, each participating club must be enrolled in MatchAid. Once your club is enrolled, all members can sign in and access the tools below.
+      <?php if (!empty($clubId)): ?>
+        <br><br>Your GHIN club ID is <strong><?= htmlspecialchars($clubId) ?></strong> — include this in your enrollment email so we can get you set up quickly.
+      <?php endif; ?>
     </div>
 
     <div class="mk-section-title">What MatchAid gives your club</div>
@@ -429,7 +438,7 @@
         <div class="mk-cta-title">Ready to get your club enrolled?</div>
         <div class="mk-cta-sub">E-mail us at signup@matchaid.org — we'll respond within one business day.</div>
       </div>
-      <a class="mk-email-btn" href="mailto:signup@matchaid.org?subject=Club%20Enrollment%20Request">
+      <a class="mk-email-btn" href="<?= htmlspecialchars($mailtoHref) ?>">
         <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 4-8 5-8-5V6l8 5 8-5v2Z"/></svg>
         Get started
       </a>
