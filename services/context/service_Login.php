@@ -54,8 +54,7 @@ final class ServiceLogin
             if ($clubId === "") {
                 return [
                     "ok"      => false,
-                    "message" => "Your GHIN account isn't linked to a club. Please contact your GHIN administrator.",
-                    "errCode" => "101",
+                    "message" => "Sign-in failed: your Golf Network profile has a blank club. Please contact your club professional.",
                 ];
             }
 
