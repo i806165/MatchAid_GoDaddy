@@ -80,18 +80,25 @@ function initSharedScoreCard(string $ggid, string $mode = "game", string $scope 
   $mode = strtolower(trim($mode));
   $scope = trim($scope);
 
+  // Determine whether this game needs balanced stroke distribution.
+  // Matches the same qualification logic used in initBlankScoreCard —
+  // non-Standard StrokeDistribution AND a non-None RotationMethod.
+  $rotation    = strtoupper(trim((string)($game["dbGames_RotationMethod"] ?? "")));
+  $strokeDist  = trim((string)($game["dbGames_StrokeDistribution"] ?? "Standard"));
+  $useBalanced = ($rotation !== "" && $rotation !== "NONE" && $strokeDist !== "Standard");
+
   switch ($mode) {
     case "player":
-      $baselineScorecards = ServiceScoreCard::buildPlayerScorecardPayload($game, $players, $scope);
+      $baselineScorecards = ServiceScoreCard::buildPlayerScorecardPayload($game, $players, $scope, $useBalanced);
       break;
 
     case "group":
-      $baselineScorecards = ServiceScoreCard::buildGroupScorecardPayload($game, $players, $scope);
+      $baselineScorecards = ServiceScoreCard::buildGroupScorecardPayload($game, $players, $scope, $useBalanced);
       break;
 
     case "game":
     default:
-      $baselineScorecards = ServiceScoreCard::buildGameScorecardsPayload($game, $players);
+      $baselineScorecards = ServiceScoreCard::buildGameScorecardsPayload($game, $players, $useBalanced);
       $mode = "game";
       break;
   }
@@ -101,7 +108,8 @@ function initSharedScoreCard(string $ggid, string $mode = "game", string $scope 
     $baselineScorecards,
     $players,
     $mode,
-    $scope
+    $scope,
+    $useBalanced
   );
 
   return [

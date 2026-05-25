@@ -28,7 +28,8 @@ final class ServiceScoreCardRotation
         array $baselineScorecards,
         array $hydratedPlayers = [],
         string $mode = 'game',
-        string $scope = ''
+        string $scope = '',
+        bool $useBalancedStrokes = false
     ): array {
         if (!$gameRow) {
             return $baselineScorecards;
@@ -39,7 +40,7 @@ final class ServiceScoreCardRotation
 
         // Always normalize from a GAME baseline so group/player can be derived
         // from a single consistent normalized game contract.
-        $gameBaseline = self::resolveGameBaselinePayload($gameRow, $baselineScorecards, $hydratedPlayers);
+        $gameBaseline = self::resolveGameBaselinePayload($gameRow, $baselineScorecards, $hydratedPlayers, $useBalancedStrokes);
         $normalizedGame = self::buildNormalizedGamePayload($gameRow, $gameBaseline);
 
         return self::projectModeFromNormalizedGame($normalizedGame, $mode, $scope, $hydratedPlayers);
@@ -48,7 +49,8 @@ final class ServiceScoreCardRotation
     private static function resolveGameBaselinePayload(
         array $gameRow,
         array $baselineScorecards,
-        array $hydratedPlayers
+        array $hydratedPlayers,
+        bool $useBalancedStrokes = false
     ): array {
         $baselineMode = strtolower(trim((string)($baselineScorecards['mode'] ?? 'game')));
 
@@ -57,7 +59,7 @@ final class ServiceScoreCardRotation
         }
 
         if ($hydratedPlayers) {
-            return ServiceScoreCard::buildGameScorecardsPayload($gameRow, $hydratedPlayers);
+            return ServiceScoreCard::buildGameScorecardsPayload($gameRow, $hydratedPlayers, $useBalancedStrokes);
         }
 
         return $baselineScorecards;

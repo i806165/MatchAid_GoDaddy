@@ -52,7 +52,7 @@ final class ServiceScoreCard {
   /**
    * Build all scored group cards for in-play/post-play game view.
    */
-  public static function buildGameScorecardsPayload(array $gameRow, array $players): array {
+  public static function buildGameScorecardsPayload(array $gameRow, array $players, bool $useBalancedStrokes = false): array {
     if (!$gameRow) {
       throw new RuntimeException("buildGameScorecardsPayload: missing gameRow");
     }
@@ -68,7 +68,7 @@ final class ServiceScoreCard {
         "dbGames_Competition" => (string)($gameRow["dbGames_Competition"] ?? "")
       ]), $groupsMap[$id] ?? []);
       $playersInGroup = self::sortPlayersForScorecard($playersInGroup);
-      $rows[] = self::buildScoredGroupRowPayload($gameRow, $playersInGroup, (string)$id, $groupingMode, null);
+      $rows[] = self::buildScoredGroupRowPayload($gameRow, $playersInGroup, (string)$id, $groupingMode, null, $useBalancedStrokes);
     }
 
     return [
@@ -83,7 +83,7 @@ final class ServiceScoreCard {
   /**
    * Build one scored group card.
    */
-  public static function buildGroupScorecardPayload(array $gameRow, array $players, string $selectedPlayerId): array {
+  public static function buildGroupScorecardPayload(array $gameRow, array $players, string $selectedPlayerId, bool $useBalancedStrokes = false): array {
     if (!$gameRow) {
       throw new RuntimeException("buildGroupScorecardPayload: missing gameRow");
     }
@@ -102,7 +102,7 @@ final class ServiceScoreCard {
       "mode" => "group",
       "competition" => trim((string)($gameRow["dbGames_Competition"] ?? "PairField")),
       "grouping" => $groupingMode,
-      "rows" => $playersInGroup ? [self::buildScoredGroupRowPayload($gameRow, $playersInGroup, $realGroupId, $groupingMode, null)] : [],
+      "rows" => $playersInGroup ? [self::buildScoredGroupRowPayload($gameRow, $playersInGroup, $realGroupId, $groupingMode, null, $useBalancedStrokes)] : [],
       "meta" => self::buildScorecardMeta($gameRow, $players),
     ];
   }
@@ -111,7 +111,7 @@ final class ServiceScoreCard {
    * Build one selected player's scorecard in the context of the player's group.
    * Player selector / page wrapper can pass PlayerID, GHIN, or PlayerKey.
    */
-  public static function buildPlayerScorecardPayload(array $gameRow, array $players, string $selectedPlayerId): array {
+  public static function buildPlayerScorecardPayload(array $gameRow, array $players, string $selectedPlayerId, bool $useBalancedStrokes = false): array {
     if (!$gameRow) {
       throw new RuntimeException("buildPlayerScorecardPayload: missing gameRow");
     }
@@ -146,7 +146,8 @@ final class ServiceScoreCard {
           $groupPlayers,
           $groupId,
           $groupingMode,
-          self::playerIdentity($selected)
+          self::playerIdentity($selected),
+          $useBalancedStrokes
         )
       ],
       "meta" => self::buildScorecardMeta($gameRow, $players),
@@ -162,22 +163,22 @@ final class ServiceScoreCard {
    * - This method only selects the correct scored scorecard builder and
    *   returns the outward init payload shape.
    */
-  public static function buildScoredScoreCardPayload(array $game, array $players, string $mode = "game", string $scope = ""): array {
+  public static function buildScoredScoreCardPayload(array $game, array $players, string $mode = "game", string $scope = "", bool $useBalancedStrokes = false): array {
     $mode = strtolower(trim($mode));
     $scope = trim($scope);
 
     switch ($mode) {
       case "player":
-        $scorecards = self::buildPlayerScorecardPayload($game, $players, $scope);
+        $scorecards = self::buildPlayerScorecardPayload($game, $players, $scope, $useBalancedStrokes);
         break;
 
       case "group":
-        $scorecards = self::buildGroupScorecardPayload($game, $players, $scope);
+        $scorecards = self::buildGroupScorecardPayload($game, $players, $scope, $useBalancedStrokes);
         break;
 
       case "game":
       default:
-        $scorecards = self::buildGameScorecardsPayload($game, $players);
+        $scorecards = self::buildGameScorecardsPayload($game, $players, $useBalancedStrokes);
         $mode = "game";
         break;
     }
@@ -687,11 +688,23 @@ final class ServiceScoreCard {
 
   public static function buildPlayersArray(array $playersInGroup, array $gameRow, bool $useBalancedStrokes = false): array {
     $isAdjGross = (trim((string)($gameRow["dbGames_ScoringMethod"] ?? "NET")) === "ADJ GROSS");
+
+    // Determine if dual handicap display (raw:effective) is needed.
+    // Only Balanced-Rounded rotation games may produce a rounded effective HC
+    // that differs from the raw playing HC — those are the only ones worth showing both.
+    $rotation   = strtoupper(trim((string)($gameRow["dbGames_RotationMethod"] ?? "")));
+    $strokeDist = trim((string)($gameRow["dbGames_StrokeDistribution"] ?? "Standard"));
+    $showDual   = $useBalancedStrokes
+        && $strokeDist === "Balanced-Rounded"
+        && $rotation !== ""
+        && $rotation !== "NONE";
+
     $out = [];
 
     foreach ($playersInGroup as $player) {
       $playerHC = self::calculateEffectiveHandicap($gameRow, $player);
-      $strokes = [];
+      $strokes  = [];
+      $allocMap = [];
 
       if (!$isAdjGross && $playerHC != 0) {
         $teeDetails = $player["dbPlayers_TeeSetDetails"] ?? null;
@@ -711,12 +724,21 @@ final class ServiceScoreCard {
         }
       }
 
+      // playerHCDisplay: for Balanced-Rounded rotation games show "raw:effective"
+      // so players can see both their official handicap and what is applied on this card.
+      // For all other games show the raw value only — consistent with existing behavior.
+      $effectiveHC      = $showDual ? array_sum($allocMap) : $playerHC;
+      $playerHCDisplay  = $showDual
+          ? $playerHC . ":" . $effectiveHC
+          : (string)$playerHC;
+
       $out[] = array_merge($player, [
-        "playerName" => (string)($player["dbPlayers_Name"] ?? ""),
-        "playerHC" => $playerHC,
-        "tee" => (string)($player["dbPlayers_TeeSetName"] ?? ""),
-        "teeSetId" => trim((string)($player["dbPlayers_TeeSetID"] ?? "")),
-        "strokes" => $strokes,
+        "playerName"      => (string)($player["dbPlayers_Name"] ?? ""),
+        "playerHC"        => $playerHC,
+        "playerHCDisplay" => $playerHCDisplay,
+        "tee"             => (string)($player["dbPlayers_TeeSetName"] ?? ""),
+        "teeSetId"        => trim((string)($player["dbPlayers_TeeSetID"] ?? "")),
+        "strokes"         => $strokes,
       ]);
 
       Logger::info('BUILD_PLAYERS_ARRAY_ENTRY', [
@@ -742,9 +764,10 @@ final class ServiceScoreCard {
     array $players,
     string $groupId,
     string $mode,
-    ?string $selectedPlayerId
+    ?string $selectedPlayerId,
+    bool $useBalancedStrokes = false
   ): array {
-    $base = self::buildGroupRowPayload($gameRow, $players, $groupId, $mode);
+    $base = self::buildGroupRowPayload($gameRow, $players, $groupId, $mode, $useBalancedStrokes);
     $fullPlayers = self::decorateScoredPlayers($gameRow, $base["players"]);
 
     $base["players"] = self::filterSelectedPlayer($fullPlayers, $selectedPlayerId);
