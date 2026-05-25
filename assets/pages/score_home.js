@@ -540,21 +540,21 @@
       });
     }
 
-    // ── Blind player menu item ──────────────────────────────────────────────
+    // ── Blind player ────────────────────────────────────────────────────────
     // Shown whenever blind is configured on the game record.
-    // Enabled when the group is short (player count < target); disabled otherwise.
+    // Enabled only when the group is short of the target size.
     if (state.flags.blindConfigured && state.blindConfig) {
       const target       = Number(state.blindConfig.target ?? 0);
       const groupSize    = state.players.length;
-      const pairingId    = state.players[0]?.pairingId || '';
+      const pairingId    = String(state.players[0]?.pairingId || state.players[0]?.dbPlayers_PairingID || '');
       const isPaired     = pairingId !== '' && pairingId !== '000';
-      const groupIsShort = isPaired && (groupSize < target);
+      const groupIsShort = isPaired && groupSize < target;
 
       items.push({
         label:    'Invoke Blind Player',
         disabled: !groupIsShort,
-        action: groupIsShort ? () => {
-          const p = state.players[0] || {};
+        action: () => {
+          if (!groupIsShort) return;
           if (!MA.blindPlayer) {
             MA.setStatus('Blind player module not loaded.', 'error');
             return;
@@ -562,18 +562,16 @@
           MA.blindPlayer.open({
             gameRow:      state.game,
             roster:       state.roster.length ? state.roster : state.players,
-            pairingId:    pairingId,
+            pairingId,
             pairingLabel: `Pair ${Number(pairingId)}`,
             existingGHIN: state.existingBlindGHIN,
-            apiBase:      (MA.paths?.apiGameSettings || '/api/game_settings'),
+            apiBase:      MA.paths?.apiGameSettings || '/api/game_settings',
             onApplied: (appliedGHIN) => {
-              // Optimistic update — record who was applied so rerun state
-              // shows correctly if the scorer opens the modal again.
               state.existingBlindGHIN = appliedGHIN || state.existingBlindGHIN;
               MA.setStatus('Blind player applied.', 'success');
             },
           });
-        } : null,
+        },
       });
     }
 
