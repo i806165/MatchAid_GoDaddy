@@ -538,7 +538,7 @@
     MA.blindPlayer.open({
       gameRow:      state.game,
       blindConfig:  state.blindConfig,
-      roster:       state.roster.length ? state.roster : state.players,
+      roster:       state.roster,
       pairingId,
       pairingLabel: `Pair ${Number(pairingId)}`,
       existingGHIN: state.existingBlindGHIN,
@@ -603,7 +603,7 @@
       // Blind player
       state.blindConfig       = payload.blindConfig       || null;
       state.existingBlindGHIN = payload.existingBlindGHIN || null;
-      state.roster            = normalizePlayers(payload.roster || []);
+      state.roster            = payload.roster || [];  // raw rows — module reads dbPlayers_* field names directly
       state.flags.blindConfigured = state.blindConfig !== null;
 
       // Resolve autoScorerGhin from session (mirrors scorehome.php logic)
