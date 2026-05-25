@@ -22,8 +22,15 @@ try {
   $game = $gc["game"];
   $ggid = $gc["ggid"];
 
-  // Fetch the roster for the blind player dropdown
-  $roster = ServiceDbPlayers::getGamePlayers((string)$ggid);
+  // Fetch the roster for the blind player dropdown.
+  // Only include players who are paired (PairingID != "000") and have a PlayerKey —
+  // stray / unattached players are not valid blind player candidates.
+  $allRoster = ServiceDbPlayers::getGamePlayers((string)$ggid);
+  $roster = array_values(array_filter($allRoster, function (array $p): bool {
+      $pid = trim((string)($p['dbPlayers_PairingID'] ?? ''));
+      $pk  = trim((string)($p['dbPlayers_PlayerKey']  ?? ''));
+      return $pid !== '' && $pid !== '000' && $pk !== '';
+  }));
 
   // Fetch course pars
   $coursePars = [];

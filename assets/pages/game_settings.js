@@ -204,6 +204,7 @@
     rotation:           null,
     // Step 2 — Setup (blind player)
     useBlind:           false,
+    blindMode:          "group",   // "group" = scorer selects on game day; "game" = pre-assigned
     blindGHIN:          "",
     blindName:          "",
     blindTarget:        null,
@@ -257,10 +258,6 @@
     wizBlindSelect:      document.getElementById("gsWizBlindSelect"),
     wizBlindTargetChips: document.getElementById("gsWizBlindTargetChips"),
     wizGroupBlind:       document.getElementById("gsWizGroupBlind"),
-    wizBlindApplyWrap:   document.getElementById("gsWizBlindApplyWrap"),
-    wizBtnApplyBlind:    document.getElementById("gsWizBtnApplyBlind"),
-    wizBlindApplyStatus: document.getElementById("gsWizBlindApplyStatus"),
-
     // Step 3 — Scoring
     wizMethodChips:          document.getElementById("gsWizMethodChips"),
     wizGroupBB:              document.getElementById("gsWizGroupBB"),
@@ -578,9 +575,12 @@
       dbGames_Segments:           wiz.segments               || "9",
       dbGames_RotationMethod:     wiz.rotation               || "None",
       dbGames_BlindPlayers:       (() => {
-        if (!wiz.useBlind || !wiz.blindGHIN) return [];
-        const arr = [{ ghin: wiz.blindGHIN, name: wiz.blindName }];
-        if (wiz.blindTarget !== null) arr.push({ target: wiz.blindTarget });
+        if (!wiz.useBlind || wiz.blindTarget === null) return [];
+        const arr = [];
+        if (wiz.blindMode === "game" && wiz.blindGHIN) {
+          arr.push({ ghin: wiz.blindGHIN, name: wiz.blindName });
+        }
+        arr.push({ target: wiz.blindTarget });
         return arr;
       })(),
       dbGames_ScoringMethod:      wiz.scoringMethod          || "NET",
@@ -664,7 +664,10 @@
       if (item.target !== undefined) { wiz.blindTarget = Number(item.target) || null; }
       else if (item.ghin)            { wiz.blindGHIN = String(item.ghin); wiz.blindName = String(item.name || ""); }
     }
-    wiz.useBlind = !!wiz.blindGHIN;
+    // Derive mode from presence of ghin — group if no ghin, game if ghin present
+    wiz.blindMode = wiz.blindGHIN ? "game" : "group";
+    // useBlind is true if target is set (blind is configured regardless of mode)
+    wiz.useBlind = wiz.blindTarget !== null;
 
     // Step 2
     wiz.scoringMethod    = String(g.dbGames_ScoringMethod  || "NET");
@@ -860,6 +863,7 @@
     // If switched to PairPair, clear any previously saved blind state
     if (!isPairField && wiz.useBlind) {
       wiz.useBlind    = false;
+      wiz.blindMode   = "group";
       wiz.blindGHIN   = "";
       wiz.blindName   = "";
       wiz.blindTarget = null;
@@ -867,13 +871,13 @@
 
     if (el.wizUseBlind) el.wizUseBlind.checked = wiz.useBlind;
     show(el.wizBlindConfig, wiz.useBlind);
+    wizRenderBlindModeOptions();
     wizRenderBlindSelect();
     wizRenderBlindTargetChips();
 
-    // Show apply button only when blind is fully configured
-    const blindComplete = wiz.useBlind && !!wiz.blindGHIN && wiz.blindTarget !== null;
-    show(el.wizBlindApplyWrap, blindComplete);
-    if (el.wizBlindApplyStatus) el.wizBlindApplyStatus.textContent = '';
+    // blindComplete — group mode needs only target; game mode needs player + target
+    const blindComplete = wiz.useBlind && wiz.blindTarget !== null &&
+      (wiz.blindMode === "group" || !!wiz.blindGHIN);
   }
 
   function wizRenderBlindSelect() {
@@ -1396,6 +1400,7 @@
     // Blind player is PairField only — clear if switching away
     if (val !== "PairField" && wiz.useBlind) {
       wiz.useBlind    = false;
+      wiz.blindMode   = "group";
       wiz.blindGHIN   = "";
       wiz.blindName   = "";
       wiz.blindTarget = null;
@@ -1466,12 +1471,14 @@
     wiz.useBlind = checked;
     show(el.wizBlindConfig, checked);
     if (!checked) {
+      wiz.blindMode   = "group";
       wiz.blindGHIN   = "";
       wiz.blindName   = "";
       wiz.blindTarget = null;
       if (el.wizBlindSelect) el.wizBlindSelect.value = "";
       wizRenderBlindTargetChips();
     }
+    wizRenderBlindModeOptions();
     setDirty(true); wizUpdateSummary(); wizCheckComplete();
   }
 
@@ -1482,6 +1489,31 @@
       : null;
     wiz.blindName = opt ? opt.textContent.trim() : "";
     setDirty(true); wizUpdateSummary(); wizCheckComplete();
+  }
+
+  function wizSelectBlindMode(mode) {
+    wiz.blindMode = mode;
+    // Switching to group mode clears any pre-assigned player
+    if (mode === "group") {
+      wiz.blindGHIN = "";
+      wiz.blindName = "";
+      if (el.wizBlindSelect) el.wizBlindSelect.value = "";
+    }
+    wizRenderBlindModeOptions();
+    setDirty(true); wizUpdateSummary(); wizCheckComplete();
+  }
+
+  function wizRenderBlindModeOptions() {
+    const modeOptions = document.querySelectorAll(".gsWizBlindModeOption");
+    modeOptions.forEach(opt => {
+      const isSelected = opt.dataset.mode === wiz.blindMode;
+      opt.classList.toggle("selected", isSelected);
+      const radio = opt.querySelector(".gsWizBlindModeRadio");
+      if (radio) radio.classList.toggle("selected", isSelected);
+    });
+    // Show player select only when mode is game (pre-assigned)
+    const playerWrap = document.getElementById("gsWizBlindPlayerWrap");
+    if (playerWrap) show(playerWrap, wiz.blindMode === "game");
   }
 
   function wizSelectBlindTarget(target) {
@@ -1749,9 +1781,10 @@
         ok = wiz.pairing === "PairPair"
           ? !!(wiz.segments && wiz.rotation !== null)
           : true;
-        // If blind is enabled, player and target must both be set
+        // Blind gating — group mode needs target only; game mode needs player + target
         if (ok && wiz.useBlind) {
-          ok = !!(wiz.blindGHIN && wiz.blindTarget !== null);
+          ok = wiz.blindTarget !== null &&
+            (wiz.blindMode === "group" || !!wiz.blindGHIN);
         }
         break;
       }
@@ -1823,35 +1856,13 @@
     if (carouselLeft)  carouselLeft.addEventListener("click",  () => wizScrollCarousel(-1));
     if (carouselRight) carouselRight.addEventListener("click", () => wizScrollCarousel(1));
 
-    async function wizApplyBlind() {
-      if (!state.ggid) return;
-      const statusEl = el.wizBlindApplyStatus;
-      const btn      = el.wizBtnApplyBlind;
-      if (statusEl) statusEl.textContent = 'Applying blind player...';
-      if (btn)      btn.disabled = true;
-      try {
-        const url = `${String(gsApiBase).replace(/\/$/, '')}/applyBlindPlayer.php`;
-        const res = await postJson(url, { ggid: state.ggid });
-        if (statusEl) {
-          statusEl.textContent = res?.message || (res?.ok ? 'Applied successfully.' : 'Failed.');
-          statusEl.style.color = res?.ok ? 'var(--color-success, green)' : 'var(--color-error, red)';
-        }
-      } catch (e) {
-        if (statusEl) {
-          statusEl.textContent = 'An error occurred.';
-          statusEl.style.color = 'var(--color-error, red)';
-        }
-      } finally {
-        if (btn) btn.disabled = false;
-      }
-    }
-
     window.gsWiz = {
       selectPairing:         wizSelectPairing,
       selectGame:            wizSelectGame,
       selectSegments:        wizSelectSegments,
       selectRotation:        wizSelectRotation,
       toggleBlind:           wizToggleBlind,
+      selectBlindMode:       wizSelectBlindMode,
       selectBlind:           wizSelectBlind,
       selectBlindTarget:     wizSelectBlindTarget,
       selectMethod:          wizSelectMethod,
@@ -1870,7 +1881,6 @@
       onEffDateChange:       wizOnEffDateChange,
       scrollCarousel:        wizScrollCarousel,
       goToStep:              wizGoToStep,
-      applyBlind:            wizApplyBlind,
     };
   }
 

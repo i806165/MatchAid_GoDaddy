@@ -110,6 +110,27 @@
             <div id="gsWizBlindConfig" class="hidden">
 
               <div class="gsWizFieldGroup">
+                <div class="gsWizFieldLabel">Who selects the blind player?</div>
+                <div class="gsWizBlindModeOption" data-mode="group"
+                     onclick="window.gsWiz.selectBlindMode('group')">
+                  <div class="gsWizBlindModeRadio"></div>
+                  <div>
+                    <div class="gsWizBlindModeTitle">Select a blind player in the Digital Scoring page</div>
+                    <div class="gsWizHint" style="margin:0">Allows each group to select a blind player.</div>
+                  </div>
+                </div>
+                <div class="gsWizBlindModeOption" data-mode="game"
+                     onclick="window.gsWiz.selectBlindMode('game')">
+                  <div class="gsWizBlindModeRadio"></div>
+                  <div>
+                    <div class="gsWizBlindModeTitle">Pre-assign a blind player now</div>
+                    <div class="gsWizHint" style="margin:0">The same player's scores are used as the blind for all groups.</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Player select — shown only when mode is game (pre-assigned) -->
+              <div class="gsWizFieldGroup hidden" id="gsWizBlindPlayerWrap">
                 <div class="gsWizFieldLabel">Blind Player</div>
                 <select class="maTextInput gsWizSelect" id="gsWizBlindSelect"
                         onchange="window.gsWiz.selectBlind(this.value)">
@@ -125,21 +146,6 @@
                   <button class="wizChip" data-val="3" onclick="window.gsWiz.selectBlindTarget(3)">3</button>
                   <button class="wizChip" data-val="4" onclick="window.gsWiz.selectBlindTarget(4)">4</button>
                 </div>
-              </div>
-
-              <!-- Apply Blind Player — shown after blind is fully configured -->
-              <div id="gsWizBlindApplyWrap" class="gsWizFieldGroup hidden">
-                <div class="gsWizDivider"></div>
-                <div class="gsWizFieldLabel">Apply Blind Player</div>
-                <div class="gsWizHint">
-                  Run this after all scores have been entered to add the blind player
-                  and recalculate scores.
-                </div>
-                <button class="btn btnSecondary" id="gsWizBtnApplyBlind"
-                        onclick="window.gsWiz.applyBlind()">
-                  Apply Blind Player
-                </button>
-                <div id="gsWizBlindApplyStatus" class="gsWizHint" style="margin-top:8px;"></div>
               </div>
 
             </div><!-- /gsWizBlindConfig -->
