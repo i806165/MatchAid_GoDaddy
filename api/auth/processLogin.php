@@ -51,7 +51,7 @@ try {
     }
 
     // All other failures — return error message for login.js to display
-    respond(401, $result);
+    respond(200, $result);
 
 } catch (Throwable $e) {
     error_log("[processLogin.php] UNEXPECTED_ERROR: " . $e->getMessage() . " Trace: " . $e->getTraceAsString());
