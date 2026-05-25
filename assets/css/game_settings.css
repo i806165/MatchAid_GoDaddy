@@ -539,6 +539,40 @@
   background: var(--brandPrimaryBg);
 }
 
+/* ==========================================================================
+   Blind player mode selection — Step 2 of Game Settings wizard.
+   Add to game_settings.css after the existing blind player section.
+   ========================================================================== */
+
+/* Row wrapper — inherits maListRow for layout, hover, active, and
+   is-selected state. No additional layout rules needed here. */
+
+/* Radio indicator dot */
+.gsWizBlindModeRadio {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--borderSubtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.gsWizBlindModeRadio.on {
+  border-color: var(--brandSecondary);
+  background: var(--brandSecondary);
+}
+
+.gsWizBlindModeRadio.on::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  display: block;
+}
+
 @media (max-width: 720px) {
   .gsWizNinesRow {
     grid-template-columns: 64px 1fr;
