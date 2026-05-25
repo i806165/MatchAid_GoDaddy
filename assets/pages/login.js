@@ -92,6 +92,12 @@
         return;
       }
 
+      // Server-directed redirect on failure (e.g. club not enrolled)
+      if (out && out.nextUrl) {
+        window.location.assign(out.nextUrl);
+        return;
+      }
+
       const msg = (out && out.message) ? String(out.message) : "Invalid credentials";
       showError(msg);
 
