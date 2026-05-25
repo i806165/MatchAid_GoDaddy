@@ -559,12 +559,12 @@
   flex-shrink: 0;
 }
 
-.gsWizBlindModeRadio.on {
+.gsWizBlindModeRadio.selected {
   border-color: var(--brandSecondary);
   background: var(--brandSecondary);
 }
 
-.gsWizBlindModeRadio.on::after {
+.gsWizBlindModeRadio.selected::after {
   content: '';
   width: 8px;
   height: 8px;

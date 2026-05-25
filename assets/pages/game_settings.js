@@ -1507,7 +1507,7 @@
     const modeOptions = document.querySelectorAll(".gsWizBlindModeOption");
     modeOptions.forEach(opt => {
       const isSelected = opt.dataset.mode === wiz.blindMode;
-      opt.classList.toggle("selected", isSelected);
+      opt.classList.toggle("is-selected", isSelected);
       const radio = opt.querySelector(".gsWizBlindModeRadio");
       if (radio) radio.classList.toggle("selected", isSelected);
     });
