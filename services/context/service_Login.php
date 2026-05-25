@@ -18,12 +18,12 @@ final class ServiceLogin
      * @param string $userId The user's GHIN ID or email.
      * @param string $password The user's password.
      * @param array $config Application configuration.
-     * @return array An associative array with 'ok' status, 'message', and 'nextUrl' on success.
+     * @return array An associative array with 'ok' status, 'message', and 'needsSettings' on success.
      * @throws RuntimeException On critical errors during the login process.
      */
     public static function processLogin(string $userId, string $password, array $config): array
     {
-        $userId = trim($userId);
+        $userId   = trim($userId);
         $password = trim($password);
 
         if ($userId === "" || $password === "") {
@@ -37,7 +37,7 @@ final class ServiceLogin
             $errInd = "100";
             $login = be_loginGHIN($userId, $password);
 
-            // Extract fields (keep your existing keys, but add fallbacks)
+            // Extract fields
             $userToken = (string)($login["golfer_user"]["golfer_user_token"] ?? "");
             $ghinId    = (string)(
                 $login["golfer_user"]["golfer_id"]
@@ -50,15 +50,19 @@ final class ServiceLogin
             if ($ghinId === "" || $userToken === "") {
                 throw new RuntimeException("Invalid login response: missing GHIN ID or user token.");
             }
+
             if ($clubId === "") {
-                return ["ok" => false, "message" => "101 Login Failed: GHIN Club Null"];
+                return [
+                    "ok"      => false,
+                    "message" => "Your GHIN account isn't linked to a club. Please contact your GHIN administrator.",
+                    "errCode" => "101",
+                ];
             }
 
             $userName = trim($first . " " . $last);
 
-            // Step 2: get admin creds by club (via GHIN_API_Login.php)
-            // Use the user's token as admin token initially, then try to get a specific admin token
-            $errInd = "200";
+            // Step 2: Get admin creds by club (via GHIN_API_Login.php)
+            $errInd     = "200";
             $adminToken = $userToken;
 
             $adminCreds = be_getAdminCredentialsByClub($clubId);
@@ -67,28 +71,30 @@ final class ServiceLogin
                 $adminToken = (string)($adminLogin["golfer_user"]["golfer_user_token"] ?? $adminToken);
             }
 
-            // Step 3: store session immediately (equivalent to storeGHINUser initial save)
-            session_regenerate_id(true);
+            // Step 3: Store session immediately
             $errInd = "300";
+            session_regenerate_id(true);
             $_SESSION["SessionGHINLogonID"] = $ghinId;
             $_SESSION["SessionUserToken"]   = $userToken;
             $_SESSION["SessionAdminToken"]  = $adminToken;
-            $_SESSION["SessionLoginTime"]   =  time();
+            $_SESSION["SessionLoginTime"]   = time();
             $_SESSION["SessionUserName"]    = $userName;
             $_SESSION["SessionUserLName"]   = $last;
             $_SESSION["SessionClubID"]      = $clubId;
+
             ServiceUserContext::storeGHINUser(
                 $ghinId,
                 $userName,
-                ["loginTime" => $_SESSION["SessionLoginTime"]], // minimal, but non-empty
+                ["loginTime" => $_SESSION["SessionLoginTime"]],
                 $adminToken,
                 $userToken
             );
 
-            // Step 4: secure GHIN calls (profile + facility) using admin token
+            // Step 4: Secure GHIN calls (profile + facility) using admin token
+            // If this fails the app cannot function, so we block entry and clean up the session.
             $errInd = "400";
 
-            $profile = be_getPlayersByID($ghinId, $adminToken);
+            $profile  = be_getPlayersByID($ghinId, $adminToken);
             $facility = be_getUserFacility($ghinId, $adminToken);
 
             ServiceUserContext::storeGHINUser(
@@ -97,36 +103,67 @@ final class ServiceLogin
                 [
                     "loginTime"    => $_SESSION["SessionLoginTime"],
                     "profileJson"  => $profile,
-                    "facilityJson" => $facility
+                    "facilityJson" => $facility,
                 ],
                 $adminToken,
                 $userToken
             );
 
-            // Step 5: Session variables for UI context (no client trust)
-            // These are set by ServiceUserContext::getUserContext() on subsequent requests,
-            // but we can set some here for immediate use if needed.
-            // The user explicitly requested no SessionPortal setting here.
-            // The user explicitly requested no pre-filling of userid/password.
-
-            // Determine next URL (default to home)
-            //$nextUrl = "/"; // Default home route
-            // You might want to add logic here to determine a specific landing page
-            // based on user role or a 'returnAction' parameter if passed to this service.
-            // For now, it defaults to the root.
-
+            // Step 5: Determine if user needs to complete settings
             $needsSettings = !ServiceUserContext::hasCompletedSettings($ghinId);
             return ["ok" => true, "needsSettings" => $needsSettings];
 
         } catch (Throwable $e) {
+
+            // If we fail after the session was written (stage 400+), clean it up.
+            // The app cannot function without profile/facility data, so we block entry.
+            if (str_starts_with($errInd, "4") && session_status() === PHP_SESSION_ACTIVE) {
+                $_SESSION = [];
+                if (ini_get("session.use_cookies")) {
+                    $p = session_get_cookie_params();
+                    setcookie(
+                        session_name(), "", time() - 42000,
+                        $p["path"], $p["domain"], $p["secure"], $p["httponly"]
+                    );
+                }
+                session_destroy();
+            }
+
             Logger::error("LOGIN_PROCESS_FAIL", [
-                "errInd" => $errInd,
+                "errInd"  => $errInd,
                 "message" => $e->getMessage(),
-                "trace" => $e->getTraceAsString(),
-                "userId" => $userId // Log userId for debugging, but be mindful of PII
+                "trace"   => $e->getTraceAsString(),
+                "userId"  => $userId,
             ]);
-            // Generic error message for the user, specific for logs
-            return ["ok" => false, "message" => "Login Failed: Invalid credentials or server error."];
+
+            $exMsg = $e->getMessage();
+
+            $userMessage = match(true) {
+
+                // Stage 100: GHIN authentication call
+                str_starts_with($errInd, "1") => match(true) {
+                    str_contains($exMsg, "HTTP 401"),
+                    str_contains($exMsg, "HTTP 403") => "Incorrect UserID or Password. Please check your credentials and try again.",
+                    str_contains($exMsg, "HTTP 400")  => "Invalid login format. Please check your credentials and try again.",
+                    str_contains($exMsg, "HTTP 404")  => "No account found with that UserID.",
+                    str_contains($exMsg, "HTTP 500")  => "The back end service is temporarily unavailable. Please try again shortly.",
+                    str_contains($exMsg, "Network error") => "Could not reach the back end service. Please check your connection and try again.",
+                    default => "We couldn't verify your credentials. Please try again.",
+                },
+
+                // Stage 200: Admin credentials/token retrieval
+                str_starts_with($errInd, "2") => "Sign-in succeeded but your club is not yet authorized for MatchAid.",
+
+                // Stage 300: Session setup
+                str_starts_with($errInd, "3") => "A session error occurred. Please clear your browser cookies and try again.",
+
+                // Stage 400: Profile/facility load — session cleaned up above
+                str_starts_with($errInd, "4") => "Sign-in succeeded but we couldn't load your profile. Please try again shortly.",
+
+                default => "An unexpected error occurred. Please try again or contact support.",
+            };
+
+            return ["ok" => false, "message" => $userMessage, "errCode" => $errInd];
         }
     }
 }
