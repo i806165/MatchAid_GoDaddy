@@ -237,7 +237,33 @@
   function normalizeRosterForPlayingGroupDisplay(records) {
   const copy = Array.isArray(records) ? records.slice() : [];
   const pairPair = isPairPairCompetition();
-  const isShotgun = String(state.game?.dbGames_TOMethod || "").trim() === "Shotgun";
+  const toMethod = String(state.game?.dbGames_TOMethod || "").trim();
+  const isShotgun  = toMethod === "ShotGun";
+  const isTeeTimes = toMethod === "TeeTimes";
+
+  // Parses "08:30 AM", "08:30", or 24-hour "08:30" to total minutes.
+  // Returns null for blank/unparseable values — those sort last (9999).
+  function parseTimeToMinutes(timeText) {
+    const raw = String(timeText || "").trim();
+    if (!raw) return null;
+    // 12-hour with AM/PM
+    let m = raw.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*([AP]M)\b/i);
+    if (m) {
+      let hour = parseInt(m[1], 10);
+      const minute = parseInt(m[2], 10);
+      if (hour === 12) hour = 0;
+      if (m[3].toUpperCase() === "PM") hour += 12;
+      return hour * 60 + minute;
+    }
+    // 24-hour
+    m = raw.match(/(?:^|\s)(\d{1,2}):(\d{2})(?::\d{2})?(?:$|\s)/);
+    if (m) {
+      const hour = parseInt(m[1], 10);
+      const minute = parseInt(m[2], 10);
+      if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) return hour * 60 + minute;
+    }
+    return null;
+  }
 
   function holeSortValue(v) {
     const n = Number(String(v ?? "").trim());
@@ -251,6 +277,14 @@
   }
 
   copy.sort((a, b) => {
+    // TeeTimes games — tee time is the primary sort
+    if (isTeeTimes) {
+      const tA = parseTimeToMinutes(a.dbPlayers_TeeTime) ?? 9999;
+      const tB = parseTimeToMinutes(b.dbPlayers_TeeTime) ?? 9999;
+      if (tA !== tB) return tA - tB;
+    }
+
+    // ShotGun games — start hole then suffix
     if (isShotgun) {
       const holeA = holeSortValue(a.dbPlayers_StartHole);
       const holeB = holeSortValue(b.dbPlayers_StartHole);
@@ -261,6 +295,7 @@
       if (suffixA !== suffixB) return suffixA.localeCompare(suffixB);
     }
 
+    // PlayerKey — then flight/pairing/position/name as before
     const groupA = pairingSortValue(a.dbPlayers_PlayerKey) || "—";
     const groupB = pairingSortValue(b.dbPlayers_PlayerKey) || "—";
     if (groupA !== groupB) return groupA.localeCompare(groupB, undefined, { numeric: true });
