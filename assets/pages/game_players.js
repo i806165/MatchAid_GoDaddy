@@ -780,6 +780,7 @@
           });
         }
         if (window.__MA_INIT__) window.__MA_INIT__.teamConfig = teamConfig;
+        renderRoster(); 
         renderTrayBody();
       }
     });
