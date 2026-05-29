@@ -56,7 +56,6 @@
     if (!s) return "—";
     const n = Number(s);
     if (Number.isFinite(n)) {
-      // Keep integers as-is, floats to 1dp (mirrors legacy feel)
       return (Math.round(n) === n) ? String(n) : n.toFixed(1);
     }
     return s;
@@ -77,7 +76,6 @@
 
   function formatDate(s) {
     if (!s) return "";
-    // Try to parse YYYY-MM-DD or similar
     let d = null;
     if (String(s).match(/^\d{4}-\d{2}-\d{2}$/)) {
       const [y, m, day] = s.split("-").map(Number);
@@ -115,11 +113,8 @@
     el.actionHint.textContent = "";
   }
 
-
   function renderMetaPills() {
-    const g = state.game || {};
     const players = Array.isArray(state.roster) ? state.roster.length : 0;
-
     if (el.metaPlayers) el.metaPlayers.textContent = players ? String(players) : "—";
   }
 
@@ -141,7 +136,7 @@
     return copy;
   }
 
-    function isPairPairCompetition() {
+  function isPairPairCompetition() {
     return String(state.game?.dbGames_Competition || "").trim() === "PairPair";
   }
 
@@ -210,100 +205,93 @@
   }
 
   function normalizeRosterForPlayingGroupDisplay(records) {
-  const copy = Array.isArray(records) ? records.slice() : [];
-  const pairPair = isPairPairCompetition();
-  const toMethod = String(state.game?.dbGames_TOMethod || "").trim();
-  const isShotgun  = toMethod === "ShotGun";
-  const isTeeTimes = toMethod === "TeeTimes";
+    const copy = Array.isArray(records) ? records.slice() : [];
+    const pairPair = isPairPairCompetition();
+    const toMethod = String(state.game?.dbGames_TOMethod || "").trim();
+    const isShotgun  = toMethod === "ShotGun";
+    const isTeeTimes = toMethod === "TeeTimes";
 
-  // Parses "08:30 AM", "08:30", or 24-hour "08:30" to total minutes.
-  // Returns null for blank/unparseable values — those sort last (9999).
-  function parseTimeToMinutes(timeText) {
-    const raw = String(timeText || "").trim();
-    if (!raw) return null;
-    // 12-hour with AM/PM
-    let m = raw.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*([AP]M)\b/i);
-    if (m) {
-      let hour = parseInt(m[1], 10);
-      const minute = parseInt(m[2], 10);
-      if (hour === 12) hour = 0;
-      if (m[3].toUpperCase() === "PM") hour += 12;
-      return hour * 60 + minute;
+    function parseTimeToMinutes(timeText) {
+      const raw = String(timeText || "").trim();
+      if (!raw) return null;
+      let m = raw.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*([AP]M)\b/i);
+      if (m) {
+        let hour = parseInt(m[1], 10);
+        const minute = parseInt(m[2], 10);
+        if (hour === 12) hour = 0;
+        if (m[3].toUpperCase() === "PM") hour += 12;
+        return hour * 60 + minute;
+      }
+      m = raw.match(/(?:^|\s)(\d{1,2}):(\d{2})(?::\d{2})?(?:$|\s)/);
+      if (m) {
+        const hour = parseInt(m[1], 10);
+        const minute = parseInt(m[2], 10);
+        if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) return hour * 60 + minute;
+      }
+      return null;
     }
-    // 24-hour
-    m = raw.match(/(?:^|\s)(\d{1,2}):(\d{2})(?::\d{2})?(?:$|\s)/);
-    if (m) {
-      const hour = parseInt(m[1], 10);
-      const minute = parseInt(m[2], 10);
-      if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) return hour * 60 + minute;
+
+    function holeSortValue(v) {
+      const n = Number(String(v ?? "").trim());
+      return Number.isFinite(n) ? n : 999;
     }
-    return null;
+
+    function suffixSortValue(v) {
+      const s = String(v ?? "").trim().toUpperCase();
+      if (!s) return "ZZZ";
+      return s;
+    }
+
+    copy.sort((a, b) => {
+      if (isTeeTimes) {
+        const tA = parseTimeToMinutes(a.dbPlayers_TeeTime) ?? 9999;
+        const tB = parseTimeToMinutes(b.dbPlayers_TeeTime) ?? 9999;
+        if (tA !== tB) return tA - tB;
+      }
+
+      if (isShotgun) {
+        const holeA = holeSortValue(a.dbPlayers_StartHole);
+        const holeB = holeSortValue(b.dbPlayers_StartHole);
+        if (holeA !== holeB) return holeA - holeB;
+
+        const suffixA = suffixSortValue(a.dbPlayers_StartHoleSuffix);
+        const suffixB = suffixSortValue(b.dbPlayers_StartHoleSuffix);
+        if (suffixA !== suffixB) return suffixA.localeCompare(suffixB);
+      }
+
+      const groupA = pairingSortValue(a.dbPlayers_PlayerKey) || "—";
+      const groupB = pairingSortValue(b.dbPlayers_PlayerKey) || "—";
+      if (groupA !== groupB) return groupA.localeCompare(groupB, undefined, { numeric: true });
+
+      if (pairPair) {
+        const flightA = pairingSortValue(a.dbPlayers_FlightID) || "—";
+        const flightB = pairingSortValue(b.dbPlayers_FlightID) || "—";
+        if (flightA !== flightB) return flightA.localeCompare(flightB, undefined, { numeric: true });
+
+        const teamA = pairingSortValue(a.dbPlayers_FlightPos) || "—";
+        const teamB = pairingSortValue(b.dbPlayers_FlightPos) || "—";
+        if (teamA !== teamB) return numericOrTextCompare(teamA, teamB);
+      }
+
+      const pairA = pairingSortValue(a.dbPlayers_PairingID) || "—";
+      const pairB = pairingSortValue(b.dbPlayers_PairingID) || "—";
+      if (pairA !== pairB) return pairA.localeCompare(pairB, undefined, { numeric: true });
+
+      const posA = pairingSortValue(a.dbPlayers_PairingPos) || "999";
+      const posB = pairingSortValue(b.dbPlayers_PairingPos) || "999";
+      if (posA !== posB) return numericOrTextCompare(posA, posB);
+
+      const lnA = pairingSortValue(a.dbPlayers_LName);
+      const lnB = pairingSortValue(b.dbPlayers_LName);
+      if (lnA !== lnB) return lnA.localeCompare(lnB);
+
+      const nmA = pairingSortValue(a.dbPlayers_Name);
+      const nmB = pairingSortValue(b.dbPlayers_Name);
+      return nmA.localeCompare(nmB);
+    });
+
+    return copy;
   }
-
-  function holeSortValue(v) {
-    const n = Number(String(v ?? "").trim());
-    return Number.isFinite(n) ? n : 999;
-  }
-
-  function suffixSortValue(v) {
-    const s = String(v ?? "").trim().toUpperCase();
-    if (!s) return "ZZZ";
-    return s;
-  }
-
-  copy.sort((a, b) => {
-    // TeeTimes games — tee time is the primary sort
-    if (isTeeTimes) {
-      const tA = parseTimeToMinutes(a.dbPlayers_TeeTime) ?? 9999;
-      const tB = parseTimeToMinutes(b.dbPlayers_TeeTime) ?? 9999;
-      if (tA !== tB) return tA - tB;
-    }
-
-    // ShotGun games — start hole then suffix
-    if (isShotgun) {
-      const holeA = holeSortValue(a.dbPlayers_StartHole);
-      const holeB = holeSortValue(b.dbPlayers_StartHole);
-      if (holeA !== holeB) return holeA - holeB;
-
-      const suffixA = suffixSortValue(a.dbPlayers_StartHoleSuffix);
-      const suffixB = suffixSortValue(b.dbPlayers_StartHoleSuffix);
-      if (suffixA !== suffixB) return suffixA.localeCompare(suffixB);
-    }
-
-    // PlayerKey — then flight/pairing/position/name as before
-    const groupA = pairingSortValue(a.dbPlayers_PlayerKey) || "—";
-    const groupB = pairingSortValue(b.dbPlayers_PlayerKey) || "—";
-    if (groupA !== groupB) return groupA.localeCompare(groupB, undefined, { numeric: true });
-
-    if (pairPair) {
-      const flightA = pairingSortValue(a.dbPlayers_FlightID) || "—";
-      const flightB = pairingSortValue(b.dbPlayers_FlightID) || "—";
-      if (flightA !== flightB) return flightA.localeCompare(flightB, undefined, { numeric: true });
-
-      const teamA = pairingSortValue(a.dbPlayers_FlightPos) || "—";
-      const teamB = pairingSortValue(b.dbPlayers_FlightPos) || "—";
-      if (teamA !== teamB) return numericOrTextCompare(teamA, teamB);
-    }
-
-    const pairA = pairingSortValue(a.dbPlayers_PairingID) || "—";
-    const pairB = pairingSortValue(b.dbPlayers_PairingID) || "—";
-    if (pairA !== pairB) return pairA.localeCompare(pairB, undefined, { numeric: true });
-
-    const posA = pairingSortValue(a.dbPlayers_PairingPos) || "999";
-    const posB = pairingSortValue(b.dbPlayers_PairingPos) || "999";
-    if (posA !== posB) return numericOrTextCompare(posA, posB);
-
-    const lnA = pairingSortValue(a.dbPlayers_LName);
-    const lnB = pairingSortValue(b.dbPlayers_LName);
-    if (lnA !== lnB) return lnA.localeCompare(lnB);
-
-    const nmA = pairingSortValue(a.dbPlayers_Name);
-    const nmB = pairingSortValue(b.dbPlayers_Name);
-    return nmA.localeCompare(nmB);
-  });
-
-  return copy;
-}
 
   function groupRosterForPairing(sortedRoster) {
     const pairPair = isPairPairCompetition();
@@ -319,12 +307,7 @@
         : pairingId;
 
       if (!groupMap.has(key)) {
-        groupMap.set(key, {
-          flightId,
-          flightPos,
-          pairingId,
-          players: []
-        });
+        groupMap.set(key, { flightId, flightPos, pairingId, players: [] });
       }
 
       groupMap.get(key).players.push(p);
@@ -344,13 +327,7 @@
       const pairingId = pairingSortValue(p.dbPlayers_PairingID) || "—";
 
       if (!groupMap.has(playerKey)) {
-        groupMap.set(playerKey, {
-          playerKey,
-          flightId,
-          flightPos,
-          pairingId,
-          players: []
-        });
+        groupMap.set(playerKey, { playerKey, flightId, flightPos, pairingId, players: [] });
       }
 
       groupMap.get(playerKey).players.push(p);
@@ -382,6 +359,36 @@
     return `<strong>Playing Group ${esc(group.playerKey)}</strong>`;
   }
 
+  // ---- mobile card builder (shared across all three scope views) ----
+  function buildMobilePlayerCard(p) {
+    const name    = valueOrDash(p.dbPlayers_Name);
+    const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
+    const time    = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
+    const start   = valueOrDash(getFormattedStartHole(p));
+    const tee     = valueOrDash(p.dbPlayers_TeeSetName);
+    const hi      = numberOrDash(p.dbPlayers_HI);
+    const ch      = numberOrDash(p.dbPlayers_CH);
+    const ph      = numberOrDash(p.dbPlayers_PH);
+    const so      = numberOrDash(p.dbPlayers_SO);
+    const pair    = valueOrDash(p.dbPlayers_PairingID);
+    const pos     = valueOrDash(p.dbPlayers_PairingPos);
+
+    return (
+      '<div class="gsPlayerCard">' +
+        '<div class="gsLine1">' +
+          '<div class="gsName">' + esc(name) + '</div>' +
+          '<a class="gsScoreLink gsMono" href="#" data-scoreid="' + esc(scoreId) + '">' + esc(scoreId) + '</a>' +
+        '</div>' +
+        '<div class="gsLine2">' +
+          esc(time) + ' &nbsp;·&nbsp; Hole ' + esc(start) + ' &nbsp;·&nbsp; Tee ' + esc(tee) +
+        '</div>' +
+        '<div class="gsLine3">' +
+          '<span class="gsLine3__hc">HI ' + esc(hi) + ' &nbsp;·&nbsp; CH ' + esc(ch) + ' &nbsp;·&nbsp; PH ' + esc(ph) + ' &nbsp;·&nbsp; SO ' + esc(so) + '</span>' +
+          '<span class="gsLine3__pair">Pair ' + esc(pair) + ' · Pos ' + esc(pos) + '</span>' +
+        '</div>' +
+      '</div>'
+    );
+  }
 
   function renderScopeButtons() {
     const byPlayer = state.scope === "byPlayer";
@@ -448,19 +455,19 @@
   function renderRosterByPlayer(sorted) {
     if (el.rosterTbody) {
       el.rosterTbody.innerHTML = sorted.map(p => {
-        const name = valueOrDash(p.dbPlayers_Name);
-        const tee = valueOrDash(p.dbPlayers_TeeSetName);
-        const hi = numberOrDash(p.dbPlayers_HI);
-        const ch = numberOrDash(p.dbPlayers_CH);
-        const ph = numberOrDash(p.dbPlayers_PH);
-        const so = numberOrDash(p.dbPlayers_SO);
-        const time = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
-        const start = valueOrDash(getFormattedStartHole(p));
-        const flight = valueOrDash(p.dbPlayers_FlightID);
-        const fPos = valueOrDash(p.dbPlayers_FlightPos);
+        const name    = valueOrDash(p.dbPlayers_Name);
+        const tee     = valueOrDash(p.dbPlayers_TeeSetName);
+        const hi      = numberOrDash(p.dbPlayers_HI);
+        const ch      = numberOrDash(p.dbPlayers_CH);
+        const ph      = numberOrDash(p.dbPlayers_PH);
+        const so      = numberOrDash(p.dbPlayers_SO);
+        const time    = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
+        const start   = valueOrDash(getFormattedStartHole(p));
+        const flight  = valueOrDash(p.dbPlayers_FlightID);
+        const fPos    = valueOrDash(p.dbPlayers_FlightPos);
         const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
-        const pair = valueOrDash(p.dbPlayers_PairingID);
-        const pos = valueOrDash(p.dbPlayers_PairingPos);
+        const pair    = valueOrDash(p.dbPlayers_PairingID);
+        const pos     = valueOrDash(p.dbPlayers_PairingPos);
         const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
 
         return (
@@ -485,58 +492,13 @@
     }
 
     if (el.mobileList) {
-      el.mobileList.innerHTML = sorted.map(p => {
-        const name = valueOrDash(p.dbPlayers_Name);
-        const ph = numberOrDash(p.dbPlayers_PH);
-        const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
-
-        const time = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
-        const start = valueOrDash(getFormattedStartHole(p));
-        const tee = valueOrDash(p.dbPlayers_TeeSetName);
-
-        const ch = numberOrDash(p.dbPlayers_CH);
-        const hi = numberOrDash(p.dbPlayers_HI);
-        const so = numberOrDash(p.dbPlayers_SO);
-
-        const flight = valueOrDash(p.dbPlayers_FlightID);
-        const fPos = valueOrDash(p.dbPlayers_FlightPos);
-        const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
-        const pair = valueOrDash(p.dbPlayers_PairingID);
-        const pos = valueOrDash(p.dbPlayers_PairingPos);
-
-        return (
-          '<div class="gsPlayerCard">' +
-            '<div class="gsLine1">' +
-              '<div class="gsName" title="' + esc(name) + '">' + esc(name) + '</div>' +
-              '<div class="gsPH">PH ' + esc(ph) + '</div>' +
-              '<a class="gsScoreLink gsMono" href="#" data-scoreid="' + esc(scoreId) + '" title="Open Scorecard">' + esc(scoreId) + '</a>' +
-            '</div>' +
-            '<div class="gsLine2">' +
-              '<div class="gsMetaItem">Time ' + esc(time) + '</div>' +
-              '<div class="gsMetaItem">Start ' + esc(start) + '</div>' +
-              '<div class="gsMetaItem">Tee ' + esc(tee) + '</div>' +
-            '</div>' +
-            '<div class="gsLine3">' +
-              '<div class="gsMetaItem">CH ' + esc(ch) + '</div>' +
-              '<div class="gsMetaItem">HI ' + esc(hi) + '</div>' +
-              '<div class="gsMetaItem">SO ' + esc(so) + '</div>' +
-            '</div>' +
-            '<div class="gsLine4">' +
-              '<div class="gsMetaItem col-team">Team ' + esc(teamKey) + '</div>' +
-              '<div class="gsMetaItem col-match">Match ' + esc(flight) + '</div>' +
-              '<div class="gsMetaItem col-flightpos">Side ' + esc(fPos) + '</div>' +
-              '<div class="gsMetaItem">Pair ' + esc(pair) + '</div>' +
-              '<div class="gsMetaItem">Pos ' + esc(pos) + '</div>' +
-            '</div>' +
-          '</div>'
-        );
-      }).join("");
+      el.mobileList.innerHTML = sorted.map(p => buildMobilePlayerCard(p)).join("");
     }
 
     wireScoreLinks();
   }
 
-    function renderRosterByPairing(sorted) {
+  function renderRosterByPairing(sorted) {
     const groups = groupRosterForPairing(sorted);
     const isPairPair = isPairPairCompetition();
     const desktopParts = [];
@@ -548,19 +510,19 @@
       );
 
       group.players.forEach((p) => {
-        const name = valueOrDash(p.dbPlayers_Name);
-        const tee = valueOrDash(p.dbPlayers_TeeSetName);
-        const hi = numberOrDash(p.dbPlayers_HI);
-        const ch = numberOrDash(p.dbPlayers_CH);
-        const ph = numberOrDash(p.dbPlayers_PH);
-        const so = numberOrDash(p.dbPlayers_SO);
-        const time = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
-        const start = valueOrDash(getFormattedStartHole(p));
-        const match = valueOrDash(p.dbPlayers_FlightID);
-        const team = valueOrDash(p.dbPlayers_FlightPos);
+        const name    = valueOrDash(p.dbPlayers_Name);
+        const tee     = valueOrDash(p.dbPlayers_TeeSetName);
+        const hi      = numberOrDash(p.dbPlayers_HI);
+        const ch      = numberOrDash(p.dbPlayers_CH);
+        const ph      = numberOrDash(p.dbPlayers_PH);
+        const so      = numberOrDash(p.dbPlayers_SO);
+        const time    = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
+        const start   = valueOrDash(getFormattedStartHole(p));
+        const match   = valueOrDash(p.dbPlayers_FlightID);
+        const team    = valueOrDash(p.dbPlayers_FlightPos);
         const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
-        const pair = valueOrDash(p.dbPlayers_PairingID);
-        const pos = valueOrDash(p.dbPlayers_PairingPos);
+        const pair    = valueOrDash(p.dbPlayers_PairingID);
+        const pos     = valueOrDash(p.dbPlayers_PairingPos);
         const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
 
         desktopParts.push(
@@ -589,51 +551,8 @@
     if (el.mobileList) {
       const mob = [];
       groups.forEach((group) => {
-        mob.push('<div class="maHint">' + buildPairingHeader(group) + '</div>');
-
-        group.players.forEach((p) => {
-          const name = valueOrDash(p.dbPlayers_Name);
-          const ph = numberOrDash(p.dbPlayers_PH);
-          const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
-          const time = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
-          const start = valueOrDash(getFormattedStartHole(p));
-          const tee = valueOrDash(p.dbPlayers_TeeSetName);
-          const ch = numberOrDash(p.dbPlayers_CH);
-          const hi = numberOrDash(p.dbPlayers_HI);
-          const so = numberOrDash(p.dbPlayers_SO);
-          const match = valueOrDash(p.dbPlayers_FlightID);
-          const team = valueOrDash(p.dbPlayers_FlightPos);
-          const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
-          const pair = valueOrDash(p.dbPlayers_PairingID);
-          const pos = valueOrDash(p.dbPlayers_PairingPos);
-
-          mob.push(
-            '<div class="gsPlayerCard">' +
-              '<div class="gsLine1">' +
-                '<div class="gsName">' + esc(name) + '</div>' +
-                '<div class="gsPH">PH ' + esc(ph) + '</div>' +
-                '<a class="gsScoreLink gsMono" href="#" data-scoreid="' + esc(scoreId) + '">' + esc(scoreId) + '</a>' +
-              '</div>' +
-              '<div class="gsLine2">' +
-                '<div class="gsMetaItem">Time ' + esc(time) + '</div>' +
-                '<div class="gsMetaItem">Start ' + esc(start) + '</div>' +
-                '<div class="gsMetaItem">Tee ' + esc(tee) + '</div>' +
-              '</div>' +
-              '<div class="gsLine3">' +
-                '<div class="gsMetaItem">CH ' + esc(ch) + '</div>' +
-                '<div class="gsMetaItem">HI ' + esc(hi) + '</div>' +
-                '<div class="gsMetaItem">SO ' + esc(so) + '</div>' +
-              '</div>' +
-              '<div class="gsLine4">' +
-                '<div class="gsMetaItem col-team">Team ' + esc(teamKey) + '</div>' +
-                '<div class="gsMetaItem col-match">Match ' + esc(match) + '</div>' +
-                '<div class="gsMetaItem col-flightpos">Side ' + esc(team) + '</div>' +
-                '<div class="gsMetaItem">Pair ' + esc(pair) + '</div>' +
-                '<div class="gsMetaItem">Pos ' + esc(pos) + '</div>' +
-              '</div>' +
-            '</div>'
-          );
-        });
+        mob.push('<div class="maListRow__group">' + buildPairingHeader(group) + '</div>');
+        group.players.forEach((p) => { mob.push(buildMobilePlayerCard(p)); });
       });
       el.mobileList.innerHTML = mob.join("");
     }
@@ -641,7 +560,7 @@
     wireScoreLinks();
   }
 
-    function renderRosterByPlayingGroup(sorted) {
+  function renderRosterByPlayingGroup(sorted) {
     const groups = groupRosterForPlayingGroup(sorted);
     const isPairPair = isPairPairCompetition();
     const desktopParts = [];
@@ -653,19 +572,19 @@
       );
 
       group.players.forEach((p) => {
-        const name = valueOrDash(p.dbPlayers_Name);
-        const tee = valueOrDash(p.dbPlayers_TeeSetName);
-        const hi = numberOrDash(p.dbPlayers_HI);
-        const ch = numberOrDash(p.dbPlayers_CH);
-        const ph = numberOrDash(p.dbPlayers_PH);
-        const so = numberOrDash(p.dbPlayers_SO);
-        const time = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
-        const start = valueOrDash(getFormattedStartHole(p));
-        const match = valueOrDash(p.dbPlayers_FlightID);
-        const team = valueOrDash(p.dbPlayers_FlightPos);
+        const name    = valueOrDash(p.dbPlayers_Name);
+        const tee     = valueOrDash(p.dbPlayers_TeeSetName);
+        const hi      = numberOrDash(p.dbPlayers_HI);
+        const ch      = numberOrDash(p.dbPlayers_CH);
+        const ph      = numberOrDash(p.dbPlayers_PH);
+        const so      = numberOrDash(p.dbPlayers_SO);
+        const time    = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
+        const start   = valueOrDash(getFormattedStartHole(p));
+        const match   = valueOrDash(p.dbPlayers_FlightID);
+        const team    = valueOrDash(p.dbPlayers_FlightPos);
         const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
-        const pair = valueOrDash(p.dbPlayers_PairingID);
-        const pos = valueOrDash(p.dbPlayers_PairingPos);
+        const pair    = valueOrDash(p.dbPlayers_PairingID);
+        const pos     = valueOrDash(p.dbPlayers_PairingPos);
         const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
 
         desktopParts.push(
@@ -694,86 +613,13 @@
     if (el.mobileList) {
       const mob = [];
       groups.forEach((group) => {
-        mob.push('<div class="maHint">' + buildPlayingGroupHeader(group) + '</div>');
-
-        group.players.forEach((p) => {
-          const name = valueOrDash(p.dbPlayers_Name);
-          const ph = numberOrDash(p.dbPlayers_PH);
-          const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
-          const time = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
-          const start = valueOrDash(getFormattedStartHole(p));
-          const tee = valueOrDash(p.dbPlayers_TeeSetName);
-          const ch = numberOrDash(p.dbPlayers_CH);
-          const hi = numberOrDash(p.dbPlayers_HI);
-          const so = numberOrDash(p.dbPlayers_SO);
-          const match = valueOrDash(p.dbPlayers_FlightID);
-          const team = valueOrDash(p.dbPlayers_FlightPos);
-          const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
-          const pair = valueOrDash(p.dbPlayers_PairingID);
-          const pos = valueOrDash(p.dbPlayers_PairingPos);
-
-          mob.push(
-            '<div class="gsPlayerCard">' +
-              '<div class="gsLine1">' +
-                '<div class="gsName">' + esc(name) + '</div>' +
-                '<div class="gsPH">PH ' + esc(ph) + '</div>' +
-                '<a class="gsScoreLink gsMono" href="#" data-scoreid="' + esc(scoreId) + '">' + esc(scoreId) + '</a>' +
-              '</div>' +
-              '<div class="gsLine2">' +
-                '<div class="gsMetaItem">Time ' + esc(time) + '</div>' +
-                '<div class="gsMetaItem">Start ' + esc(start) + '</div>' +
-                '<div class="gsMetaItem">Tee ' + esc(tee) + '</div>' +
-              '</div>' +
-              '<div class="gsLine3">' +
-                '<div class="gsMetaItem">CH ' + esc(ch) + '</div>' +
-                '<div class="gsMetaItem">HI ' + esc(hi) + '</div>' +
-                '<div class="gsMetaItem">SO ' + esc(so) + '</div>' +
-              '</div>' +
-              '<div class="gsLine4">' +
-                '<div class="gsMetaItem col-team">Team ' + esc(teamKey) + '</div>' +
-                '<div class="gsMetaItem col-match">Match ' + esc(match) + '</div>' +
-                '<div class="gsMetaItem col-flightpos">Side ' + esc(team) + '</div>' +
-                '<div class="gsMetaItem">Pair ' + esc(pair) + '</div>' +
-                '<div class="gsMetaItem">Pos ' + esc(pos) + '</div>' +
-              '</div>' +
-            '</div>'
-          );
-        });
+        mob.push('<div class="maListRow__group">' + buildPlayingGroupHeader(group) + '</div>');
+        group.players.forEach((p) => { mob.push(buildMobilePlayerCard(p)); });
       });
       el.mobileList.innerHTML = mob.join("");
     }
 
     wireScoreLinks();
-  }
-
-  function buildMobilePlayerCard(p) {
-    const name    = valueOrDash(p.dbPlayers_Name);
-    const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
-    const time    = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
-    const start   = valueOrDash(getFormattedStartHole(p));
-    const tee     = valueOrDash(p.dbPlayers_TeeSetName);
-    const hi      = numberOrDash(p.dbPlayers_HI);
-    const ch      = numberOrDash(p.dbPlayers_CH);
-    const ph      = numberOrDash(p.dbPlayers_PH);
-    const so      = numberOrDash(p.dbPlayers_SO);
-    const pair    = valueOrDash(p.dbPlayers_PairingID);
-    const pos     = valueOrDash(p.dbPlayers_PairingPos);
-
-    return (
-      '<div class="gsPlayerCard">' +
-        '<div class="gsLine1">' +
-          '<div class="gsName">' + esc(name) + '</div>' +
-          '<a class="gsScoreLink gsMono" href="#" data-scoreid="' + esc(scoreId) + '">' + esc(scoreId) + '</a>' +
-        '</div>' +
-        '<div class="gsLine2">' +
-          esc(time) + ' &nbsp;·&nbsp; Hole ' + esc(start) + ' &nbsp;·&nbsp; Tee ' + esc(tee) +
-        '</div>' +
-        '<div class="gsLine3">' +
-          '<span class="gsLine3__hc">HI ' + esc(hi) + ' &nbsp;·&nbsp; CH ' + esc(ch) + ' &nbsp;·&nbsp; PH ' + esc(ph) + ' &nbsp;·&nbsp; SO ' + esc(so) + '</span>' +
-          '<span class="gsLine3__pair">Pair ' + esc(pair) + ' · Pos ' + esc(pos) + '</span>' +
-        '</div>' +
-      '</div>'
-    );
   }
 
   function wireScoreLinks() {
@@ -809,10 +655,10 @@
   // ---- actions ----
   function buildCsvText() {
     const rows = (state.scope === "byPlayer")
-  ? normalizeRosterForPlayerDisplay(state.roster || [])
-  : (state.scope === "byPairing")
-    ? normalizeRosterForPairingDisplay(state.roster || [])
-    : normalizeRosterForPlayingGroupDisplay(state.roster || []);
+      ? normalizeRosterForPlayerDisplay(state.roster || [])
+      : (state.scope === "byPairing")
+        ? normalizeRosterForPairingDisplay(state.roster || [])
+        : normalizeRosterForPlayingGroupDisplay(state.roster || []);
 
     const header = ["Name","Tee","Team","Match","Side","Pair","Pos","HI","CH","PH","SO","Time","Start","GroupID"];
     const lines = [header.join(",")];
@@ -839,11 +685,10 @@
       lines.push(vals.join(","));
     });
 
-    // Append Game Configuration
     const g = state.game || {};
-    lines.push(""); // Blank line separator
+    lines.push("");
     lines.push("GAME CONFIGURATION,");
-    
+
     const config = [
       ["Facility", g.dbGames_FacilityName],
       ["Course", g.dbGames_CourseName],
@@ -877,7 +722,7 @@
 
     const g = state.game || {};
     const isPairPair = g.dbGames_Competition === 'PairPair';
-    
+
     let html = `
       <h2 style="font-family: sans-serif;">${esc(g.dbGames_Title || "Game Summary")}</h2>
       <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; font-family: sans-serif; font-size: 10pt; width: 100%;">
@@ -923,9 +768,7 @@
         group.players.forEach((p) => { html += buildRow(p); });
       });
     } else {
-      rows.forEach((p) => {
-        html += buildRow(p);
-      });
+      rows.forEach((p) => { html += buildRow(p); });
     }
 
     html += `</tbody></table><br/>
@@ -959,7 +802,6 @@
   function copySummaryToClipboard() {
     if (!navigator.clipboard) {
       setStatus("Clipboard API not available on this browser.", "warn");
-      showActionHint("Clipboard API not available on this browser.", "warn");
       return;
     }
     const csv = buildCsvText();
@@ -976,14 +818,14 @@
       setStatus("Rich text copy not supported on this browser.", "warn");
       return;
     }
-    
+
     try {
       const html = buildHtmlSummary();
-      const text = buildCsvText(); // Fallback plain text
-      
+      const text = buildCsvText();
+
       const blobHtml = new Blob([html], { type: "text/html" });
       const blobText = new Blob([text], { type: "text/plain" });
-      const data = [new ClipboardItem({ "text/html": blobHtml, "text/plain": blobText })]; 
+      const data = [new ClipboardItem({ "text/html": blobHtml, "text/plain": blobText })];
       await navigator.clipboard.write(data);
       setStatus("Game summary copied. Ready to paste...", "success");
     } catch (err) {
@@ -1024,19 +866,17 @@
   }
 
   async function emailSummary() {
-    // 1. Copy rich HTML to clipboard first
     await copyRichTextToClipboard();
 
-    // 2. Launch email client with placeholder body
     const g = state.game || {};
     const subject = "MatchAid Game Summary - " + (g.dbGames_Title || "Game");
-    
-    const body = 
+
+    const body =
       "(Note: use ctrl+v / cmd+v to paste the game summary here)\n\n" +
       "Game: " + (g.dbGames_Title || "") + "\n" +
       "Facility: " + (g.dbGames_FacilityName || "") + "\n" +
       "Course: " + (g.dbGames_CourseName || "") + "\n" +
-      "Date: " + (g.dbGames_PlayDate || "") + "\n" ;
+      "Date: " + (g.dbGames_PlayDate || "") + "\n";
 
     const recipients = (state.roster || [])
       .filter(p => p.contactEmail)
@@ -1044,7 +884,7 @@
 
     if (MA.email && MA.email.compose) {
       MA.email.compose({
-        bcc: recipients, // Use BCC for privacy/large lists
+        bcc: recipients,
         subject: subject,
         body: body,
         bodyIsHtml: false
@@ -1086,10 +926,10 @@
 
   function emailShortMessage() {
     const recipients = (state.roster || []).reduce((out, p) => {
-      const method = safeString(p.contactMethod).trim();
+      const method   = safeString(p.contactMethod).trim();
       const smsEmail = safeString(p.contactSmsEmail).trim();
-      const email = safeString(p.contactEmail).trim();
-      const name = safeString(p.dbPlayers_Name).trim();
+      const email    = safeString(p.contactEmail).trim();
+      const name     = safeString(p.dbPlayers_Name).trim();
 
       if (method === "SMS" && smsEmail) {
         out.push({ name, email: smsEmail });
@@ -1147,7 +987,6 @@
       try { MA.routerGo("scorecard"); return; } catch (e) {}
     }
     setStatus("Print Scorecards: wire router action for this button.", "warn");
-    showActionHint("TODO: route to your scorecards page.", "warn");
   }
 
   // ---- init ----
@@ -1165,7 +1004,7 @@
 
   function applyInit(init) {
     if (!init || !init.ok) throw new Error(init?.message || "Init failed");
-    state.game = init.game || init.payload?.game || null;
+    state.game   = init.game   || init.payload?.game   || null;
     state.roster = init.roster || init.payload?.roster || [];
     state.portal = init.portal || init.payload?.portal || "";
   }
@@ -1200,27 +1039,25 @@
     if (!MA.ui || !MA.ui.openActionsMenu) return;
 
     const items = [
-      { label: "Add Game to Calendar", action: downloadIcsForGame },
-      { label: "Send Message to Players",          action: openNotifyModal },
-      //{ label: "Compose Email to Players", action: emailSummary },
-      //{ label: "Compose Short Message to Players", action: emailShortMessage },
+      { label: "Add Game to Calendar",          action: downloadIcsForGame },
+      { label: "Send Message to Players",        action: openNotifyModal },
       { separator: true },
-      { separator: true }, 
-      { label: "Copy View to clipboard", action: copyRichTextToClipboard },
-      { label: "Copy View to clipboard (csv)", action: copySummaryToClipboard },
-      { label: "Export View to .csv file", action: downloadCsv },
       { separator: true },
-      { separator: true },  
-      { label: "Recalculate Handicaps",  action: recalculateHandicaps }, 
+      { label: "Copy View to clipboard",         action: copyRichTextToClipboard },
+      { label: "Copy View to clipboard (csv)",   action: copySummaryToClipboard },
+      { label: "Export View to .csv file",       action: downloadCsv },
+      { separator: true },
+      { separator: true },
+      { label: "Recalculate Handicaps",          action: recalculateHandicaps },
     ];
     MA.ui.openActionsMenu("Actions", items);
   }
 
   function applyChrome() {
     const g = state.game || {};
-    const title = String(g.dbGames_Title || "");
-    const course = String(g.dbGames_CourseName || "");
-    const date = formatDate(g.dbGames_PlayDate);
+    const title    = String(g.dbGames_Title || "");
+    const course   = String(g.dbGames_CourseName || "");
+    const date     = formatDate(g.dbGames_PlayDate);
     const subTitle = [course, date].filter(Boolean).join(" • ");
 
     if (chrome && typeof chrome.setHeaderLines === "function") {
@@ -1230,16 +1067,14 @@
     if (chrome && typeof chrome.setActions === "function") {
       chrome.setActions({
         right: { show: true, label: "Actions", onClick: openActionsMenu },
-        left: { show: false }
+        left:  { show: false }
       });
     }
 
     if (chrome && typeof chrome.setBottomNav === "function") {
-      // Identify launch source from hydrated state
       const isPlayerPortal = (state.portal === "PLAYER PORTAL");
       const homeRoute = isPlayerPortal ? "player" : "admin";
 
-      // Define visibility based on portal context
       const visible = isPlayerPortal
         ? [homeRoute, "scoreentry", "scorecardPlayer", "scorecardGame", "scoreskins"]
         : [homeRoute, "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"];
@@ -1261,7 +1096,7 @@
 
       applyChrome();
 
-      renderMetaPills();              // Players / Holes / HC
+      renderMetaPills();
       renderScopeButtons();
       renderRoster();
 
