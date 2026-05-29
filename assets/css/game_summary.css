@@ -5,7 +5,7 @@
 
 .gsGameHdr{ display:flex; flex-direction:column; gap:4px; }
 .gsTitle{ font-weight:900; font-size:20px; letter-spacing:.2px; }
-.gsSub{ color: var(--inkMuted); font-weight:700; }
+.gsSub{ color: var(--mutedText); font-weight:700; }
 
 .gsPillRow{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
 
@@ -30,13 +30,13 @@
   box-shadow: 0 0 0 3px rgba(0,0,0,.06);
 }
 
-.gsCfgTitle{ font-size: 14px; letter-spacing: .2px; }
+.gsCfgTitle{ font-size: 14px; letter-spacing: .2px; color: var(--brandAccent); }
 .gsCfgChevron{
   transition: transform .15s ease;
   font-weight: 900;
   opacity: .9;
+  color: var(--brandAccent);
 }
-.gsCfgToggle.is-open .gsCfgChevron{ transform: rotate(180deg); }
 
 .gsControlsRow{
   margin-top: 12px;
@@ -47,7 +47,6 @@
   flex-wrap: wrap;
 }
 
-/* maSeg defaults to width:100%; make it compact like the screenshot */
 .gsScopeSeg{
   width: auto;
   flex: 0 0 auto;
@@ -66,7 +65,6 @@
 .gsTable{ width:100%; border-collapse:collapse; font-size: 13px; }
 .gsTable th, .gsTable td{ padding:10px 10px; border-bottom:1px solid rgba(0,0,0,.08); vertical-align:top; }
 
-/* Match screenshot: dark green header */
 .gsTable th{
   text-align:left;
   font-weight:900;
@@ -80,28 +78,9 @@
 .gsRight{ text-align:right; }
 .gsMono{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 
-.gsScoreLink{ text-decoration:underline; cursor:pointer; }
+.gsScoreLink{ text-decoration:underline; cursor:pointer; color: var(--brandAccent); }
 
-.gsMobileList{ display:none; margin-top:12px; gap:10px; }
-.gsPlayerCard{
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--controlRadius);
-  background:#fff;
-  padding: 10px 10px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-.gsLine1{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
-.gsName{ font-weight:900; }
-.gsPH{ font-weight:900; }
-.gsLine2, .gsLine3, .gsLine4{ display:flex; gap:10px; flex-wrap:wrap; color: var(--inkMuted); font-weight:800; }
-.gsMetaItem{ white-space:nowrap; }
-
-@media (max-width: 820px){
-  .gsTableWrap{ display:none; }
-  .gsMobileList{ display:flex; flex-direction:column; }
-}
+.gsMobileList{ display:none; }
 
 .gsActionList{ display:flex; flex-direction:column; gap:10px; }
 .gsActionBtn{ width:100%; display:flex; justify-content:space-between; align-items:center; }
@@ -110,39 +89,85 @@
 
 .gsGroupHdr td{ background: var(--brandPrimaryBg); }
 
-/* ===== Match-play columns (Match / Side) =====
-   Hidden by default; revealed only for PairPair competitions.
-*/
+/* ===== Match-play columns ===== */
 .col-match,
-.col-flightpos {
-  display: none;
-}
+.col-flightpos { display: none; }
 
 .gsTable.is-match-play .col-match,
-.gsTable.is-match-play .col-flightpos {
-  display: table-cell;
-}
+.gsTable.is-match-play .col-flightpos { display: table-cell; }
 
 .gsMobileList.is-match-play .col-match,
-.gsMobileList.is-match-play .col-flightpos {
-  display: inline;
-}
+.gsMobileList.is-match-play .col-flightpos { display: inline; }
 
-/* ===== Team column =====
-   Hidden by default; revealed when dbGames_TeamConfig is not null.
-   Independent of PairPair — teams can exist in any competition format.
-*/
-.col-team {
-  display: none;
-}
+/* ===== Team column ===== */
+.col-team { display: none; }
 
-.gsTable.is-has-teams .col-team {
-  display: table-cell;
-}
+.gsTable.is-has-teams .col-team { display: table-cell; }
 
-.gsMobileList.is-has-teams .col-team {
-  display: inline;
-}
+.gsMobileList.is-has-teams .col-team { display: inline; }
 
 /* ===== Centered table cells ===== */
 .gsCenter { text-align: center; }
+
+/* ===== Mobile card view ===== */
+@media (max-width: 820px){
+  .gsTableWrap{ display:none; }
+
+  .gsMobileList{
+    display: flex;
+    flex-direction: column;
+    gap: var(--cardsGap);
+  }
+
+  .gsPlayerCard{
+    border: 1px solid var(--cardBorder);
+    border-radius: var(--cardRadius);
+    background: var(--cardBg);
+    box-shadow: var(--cardShadow);
+    padding: var(--cardPad) var(--cardHdrPadX);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .gsLine1{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .gsName{
+    font-size: var(--labelTextSize);
+    font-weight: 900;
+    color: var(--ink);
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .gsLine2,
+  .gsLine3{
+    font-size: var(--fieldValueSize);
+    color: var(--mutedText);
+    font-weight: 800;
+  }
+
+  .gsLine3{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .gsLine3__hc{
+    color: var(--mutedText);
+  }
+
+  .gsLine3__pair{
+    color: var(--mutedText);
+    font-size: var(--fieldValueSublineSize);
+    flex-shrink: 0;
+  }
+}

@@ -746,6 +746,36 @@
     wireScoreLinks();
   }
 
+  function buildMobilePlayerCard(p) {
+    const name    = valueOrDash(p.dbPlayers_Name);
+    const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
+    const time    = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
+    const start   = valueOrDash(getFormattedStartHole(p));
+    const tee     = valueOrDash(p.dbPlayers_TeeSetName);
+    const hi      = numberOrDash(p.dbPlayers_HI);
+    const ch      = numberOrDash(p.dbPlayers_CH);
+    const ph      = numberOrDash(p.dbPlayers_PH);
+    const so      = numberOrDash(p.dbPlayers_SO);
+    const pair    = valueOrDash(p.dbPlayers_PairingID);
+    const pos     = valueOrDash(p.dbPlayers_PairingPos);
+
+    return (
+      '<div class="gsPlayerCard">' +
+        '<div class="gsLine1">' +
+          '<div class="gsName">' + esc(name) + '</div>' +
+          '<a class="gsScoreLink gsMono" href="#" data-scoreid="' + esc(scoreId) + '">' + esc(scoreId) + '</a>' +
+        '</div>' +
+        '<div class="gsLine2">' +
+          esc(time) + ' &nbsp;·&nbsp; Hole ' + esc(start) + ' &nbsp;·&nbsp; Tee ' + esc(tee) +
+        '</div>' +
+        '<div class="gsLine3">' +
+          '<span class="gsLine3__hc">HI ' + esc(hi) + ' &nbsp;·&nbsp; CH ' + esc(ch) + ' &nbsp;·&nbsp; PH ' + esc(ph) + ' &nbsp;·&nbsp; SO ' + esc(so) + '</span>' +
+          '<span class="gsLine3__pair">Pair ' + esc(pair) + ' · Pos ' + esc(pos) + '</span>' +
+        '</div>' +
+      '</div>'
+    );
+  }
+
   function wireScoreLinks() {
     const links = document.querySelectorAll(".gsScoreLink[data-scoreid]");
     links.forEach(a => {
