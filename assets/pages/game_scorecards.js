@@ -279,7 +279,7 @@ function renderGroup(group) {
 
         <div class="scHdr__right">
           <div class="scHdrRightText">
-            <div class="scHdrLink">Live Scoring at ${window.location.host}/app/score_entry/scoreentry.php</div>
+            <div class="scHdrLink">Live Scoring at ${window.location.host}${paths.scoreHome || '/app/score_home/scorehome.php'}</div>
             <div class="scHdrKey">Use ScoreCard-ID: <span class="scHdrKeyVal">${esc(scoreCardId)}</span></div>
           </div>
           <div class="scQR">
