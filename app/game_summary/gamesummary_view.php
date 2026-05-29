@@ -28,16 +28,6 @@
         <div class="maPillLabel">Players</div>
         <div class="maPillValue maListRow__col--muted" id="gsMetaPlayers">—</div>
       </div>
-
-      <div class="maPill maPillKV" role="group" aria-label="Holes">
-        <div class="maPillLabel">Holes</div>
-        <div class="maPillValue maListRow__col--muted" id="gsMetaHoles">—</div>
-      </div>
-
-      <div class="maPill maPillKV" role="group" aria-label="HC Method">
-        <div class="maPillLabel">HC</div>
-        <div class="maPillValue maListRow__col--muted" id="gsMetaHC">—</div>
-      </div>
     </div>
   </div>
 </div>

@@ -30,8 +30,6 @@
     scopeByPlayingGroup: document.getElementById("scopeByPlayingGroup"),
 
     metaPlayers: document.getElementById("gsMetaPlayers"),
-    metaHoles: document.getElementById("gsMetaHoles"),
-    metaHC: document.getElementById("gsMetaHC"),
 
     // Body
     rosterTbody: document.getElementById("rosterTableBody"),
@@ -123,12 +121,6 @@
     const players = Array.isArray(state.roster) ? state.roster.length : 0;
 
     if (el.metaPlayers) el.metaPlayers.textContent = players ? String(players) : "—";
-
-    const holes = String(g.dbGames_Holes || "").trim();
-    if (el.metaHoles) el.metaHoles.textContent = holes || "—";
-
-    const hc = String(g.dbGames_HCMethod || "").trim();
-    if (el.metaHC) el.metaHC.textContent = hc || "—";
   }
 
   function normalizeRosterForPlayerDisplay(records) {
