@@ -115,7 +115,7 @@
   <!-- ============================================================
        RIGHT CARDS PANEL
        ============================================================ -->
-  <div class="maPanel--cards">
+  <div class="maPanel maPanel--cards">
 
     <div id="emptyState" class="maEmptyState" style="display:none;">
       No games match your current filters.
