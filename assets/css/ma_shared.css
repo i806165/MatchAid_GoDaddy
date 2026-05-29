@@ -1121,6 +1121,10 @@ textarea {
   -webkit-overflow-scrolling: touch;
 }
 
+.maModal__body--flush {
+  padding: 0;
+}
+
 .maModal__ftr {
   flex: 0 0 auto;
   display: flex;
@@ -1981,6 +1985,10 @@ textarea {
 
 .maListRow:hover  { background: rgba(0,0,0,.02); }
 .maListRow:active { background: rgba(0,0,0,.04); }
+.maListRow--static {
+  cursor: default;
+  pointer-events: none;
+}
 
 .maListRow__col {
   min-width: 0;

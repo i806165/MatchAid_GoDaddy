@@ -166,14 +166,14 @@
     const v = val(value);
     if (v === null) return '';
     return `
-      <div class="sh-gfd__row">
-        <span class="sh-gfd__key">${esc(LABELS[labelKey] ?? labelKey)}</span>
-        <span class="sh-gfd__val">${esc(v)}</span>
+      <div class="maListRow maListRow--static">
+        <span class="maListRow__col--muted">${esc(LABELS[labelKey] ?? labelKey)}</span>
+        <span class="maListRow__col maListRow__col--right">${esc(v)}</span>
       </div>`;
   }
 
   function sectionHeader(labelKey) {
-    return `<div class="sh-gfd__section">${esc(LABELS[labelKey] ?? labelKey)}</div>`;
+    return `<div class="maListRow__group">${esc(LABELS[labelKey] ?? labelKey)}</div>`;
   }
 
   // -------------------------------------------------------------------------
@@ -270,14 +270,14 @@
     overlay.setAttribute('aria-label', 'Game details');
 
     overlay.innerHTML = `
-      <section class="maModal sh-gfd__modal">
+      <section class="maModal" style="max-width:480px;">
         <header class="maModal__hdr">
           <div class="maModal__titles">
             <div class="maModal__title">Game details</div>
           </div>
           <button type="button" class="iconBtn btnPrimary sh-gfd__close" aria-label="Close">&#x2715;</button>
         </header>
-        <div class="maModal__body sh-gfd__body">
+        <div class="maModal__body maModal__body--flush">
           ${renderGeneral(g)}
           ${renderScoring(g)}
           ${renderHandicaps(g)}
