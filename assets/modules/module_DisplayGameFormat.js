@@ -168,7 +168,7 @@
     return `
       <div class="maListRow maListRow--static">
         <span class="maListRow__col--muted">${esc(LABELS[labelKey] ?? labelKey)}</span>
-        <span class="maListRow__col maListRow__col--right">${esc(v)}</span>
+        <span class="maListRow__col--rightJust">${esc(v)}</span>
       </div>`;
   }
 
