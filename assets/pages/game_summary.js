@@ -29,8 +29,6 @@
     scopeByPairing: document.getElementById("scopeByPairing"),
     scopeByPlayingGroup: document.getElementById("scopeByPlayingGroup"),
 
-    metaPlayers: document.getElementById("gsMetaPlayers"),
-
     // Body
     rosterTbody: document.getElementById("rosterTableBody"),
     mobileList: document.getElementById("mobileList"),
@@ -111,11 +109,6 @@
     if (!el.actionHint) return;
     el.actionHint.style.display = "none";
     el.actionHint.textContent = "";
-  }
-
-  function renderMetaPills() {
-    const players = Array.isArray(state.roster) ? state.roster.length : 0;
-    if (el.metaPlayers) el.metaPlayers.textContent = players ? String(players) : "—";
   }
 
   function normalizeRosterForPlayerDisplay(records) {
@@ -440,14 +433,16 @@
       el.mobileList.classList.toggle("is-has-teams", hasTeams);
     }
 
+    const playerCount = sorted.length ? ' (' + sorted.length + ')' : '';
+
     if (state.scope === "byPlayer") {
-      if (el.cardTitle) el.cardTitle.textContent = "Players by Name";
+      if (el.cardTitle) el.cardTitle.textContent = "Players by Name" + playerCount;
       renderRosterByPlayer(sorted);
     } else if (state.scope === "byPairing") {
-      if (el.cardTitle) el.cardTitle.textContent = "Players organized Competitively";
+      if (el.cardTitle) el.cardTitle.textContent = "Players organized Competitively" + playerCount;
       renderRosterByPairing(sorted);
     } else {
-      if (el.cardTitle) el.cardTitle.textContent = "Players organized by Tee Assignments";
+      if (el.cardTitle) el.cardTitle.textContent = "Players organized by Tee Assignments" + playerCount;
       renderRosterByPlayingGroup(sorted);
     }
   }
@@ -1096,7 +1091,6 @@
 
       applyChrome();
 
-      renderMetaPills();
       renderScopeButtons();
       renderRoster();
 

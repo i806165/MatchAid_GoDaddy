@@ -22,13 +22,6 @@
       <button type="button" class="maSegBtn" id="scopeByPairing" aria-selected="false">By Pairing</button>
       <button type="button" class="maSegBtn" id="scopeByPlayingGroup" aria-selected="false">By Playing Group</button>
     </div>
-
-    <div class="maPills gsMetaPills" aria-label="Game quick stats">
-      <div class="maPill maPillKV" role="group" aria-label="Players">
-        <div class="maPillLabel">Players</div>
-        <div class="maPillValue maListRow__col--muted" id="gsMetaPlayers">—</div>
-      </div>
-    </div>
   </div>
 </div>
 
