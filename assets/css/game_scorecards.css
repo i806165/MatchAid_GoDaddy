@@ -309,3 +309,19 @@
     break-after: page;
   }
 }
+
+.scHdrText {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.scHdr__sub,
+.scHdr__sub2 {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+@media (max-width: 820px) {
+  .scHdr__right { display: none; }
+  .scHdr__sub2  { display: none; }
+}
