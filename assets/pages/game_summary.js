@@ -24,8 +24,6 @@
   const el = {
     // Controls band
     cfgToggle: document.getElementById("gsCfgToggle"),
-    cfgPanel: document.getElementById("gsCfgPanel"),
-    configGrid: document.getElementById("configGrid"),
 
     scopeByPlayer: document.getElementById("scopeByPlayer"),
     scopeByPairing: document.getElementById("scopeByPairing"),
@@ -119,21 +117,6 @@
     el.actionHint.textContent = "";
   }
 
-  function configRow(label, value) {
-    return (
-      '<div class="gsKV">' +
-        '<div class="gsKVLabel">' + esc(label) + '</div>' +
-        '<div class="gsKVValue" title="' + esc(valueOrDash(value)) + '">' + esc(valueOrDash(value)) + '</div>' +
-      '</div>'
-    );
-  }
-
-  function setConfigExpanded(isExpanded) {
-    if (!el.cfgToggle || !el.cfgPanel) return;
-    el.cfgToggle.classList.toggle("is-open", !!isExpanded);
-    el.cfgToggle.setAttribute("aria-expanded", isExpanded ? "true" : "false");
-    el.cfgPanel.hidden = !isExpanded;
-  }
 
   function renderMetaPills() {
     const g = state.game || {};
@@ -407,42 +390,6 @@
     return `<strong>Playing Group ${esc(group.playerKey)}</strong>`;
   }
 
-  // ---- rendering ----
-  function renderConfig() {
-    const g = state.game;
-    if (!el.configGrid) return;
-    if (!g) { el.configGrid.innerHTML = ""; return; }
-
-    const parts = [];
-    parts.push(configRow("Facility", g.dbGames_FacilityName));
-    parts.push(configRow("Course", g.dbGames_CourseName));
-    parts.push(configRow("Play Date", g.gameDateDDDMMDDYY || g.dbGames_PlayDate));
-    parts.push(configRow("Play Time", g.gameTimeCondensed || g.dbGames_PlayTime));
-    parts.push(configRow("Holes", g.dbGames_Holes));
-    parts.push(configRow("TeeOff Method", g.dbGames_TOMethod));
-    parts.push(configRow("Game Format", g.dbGames_GameFormat));
-    parts.push(configRow("Privacy", g.dbGames_Privacy));
-
-    parts.push(configRow("Competition", g.dbGames_Competition));
-    parts.push(configRow("Segments", g.dbGames_Segments));
-    parts.push(configRow("Rotation", g.dbGames_RotationMethod));
-    parts.push(configRow("Blind Players", g.dbGames_BlindPlayers));
-
-    parts.push(configRow("Scoring Basis", g.dbGames_ScoringBasis));
-    parts.push(configRow("Scoring Method", g.dbGames_ScoringMethod));
-    parts.push(configRow("Scoring System", g.dbGames_ScoringSystem));
-    parts.push(configRow("Best Ball", g.dbGames_BestBall));
-    parts.push(configRow("Declare Player", g.dbGames_PlayerDeclaration));
-    parts.push(configRow("Declare Hole", g.dbGames_HoleDeclaration));
-
-    parts.push(configRow("HC Method", g.dbGames_HCMethod));
-    parts.push(configRow("Allowance", g.dbGames_Allowance));
-    parts.push(configRow("Stroke Distribution", g.dbGames_StrokeDistribution));
-    parts.push(configRow("HC Effectivity", g.dbGames_HCEffectivity));
-    parts.push(configRow("HC Eff. Date", g.dbGames_HCEffectivityDate));
-
-    el.configGrid.innerHTML = parts.join("");
-  }
 
   function renderScopeButtons() {
     const byPlayer = state.scope === "byPlayer";
@@ -1204,8 +1151,7 @@
   function wireEvents() {
     if (el.cfgToggle) {
       el.cfgToggle.addEventListener("click", () => {
-        const expanded = el.cfgToggle.getAttribute("aria-expanded") === "true";
-        setConfigExpanded(!expanded);
+        MA.gameDetails.open(state.game);
       });
     }
 
@@ -1293,8 +1239,6 @@
 
       applyChrome();
 
-      renderConfig();
-      setConfigExpanded(false);       // default collapsed
       renderMetaPills();              // Players / Holes / HC
       renderScopeButtons();
       renderRoster();

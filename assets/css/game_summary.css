@@ -38,8 +38,6 @@
 }
 .gsCfgToggle.is-open .gsCfgChevron{ transform: rotate(180deg); }
 
-.gsCfgPanel{ margin-top: 10px; }
-
 .gsControlsRow{
   margin-top: 12px;
   display:flex;
@@ -62,26 +60,6 @@
   justify-content: flex-end;
   flex: 1 1 auto;
 }
-
-/* ===== Config grid (expanded inline) ===== */
-.gsConfigGrid{
-  display:grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap:10px;
-}
-
-@media (min-width: 900px){
-  .gsConfigGrid{ grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
-
-.gsKV{
-  background: var(--surfaceChrome);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--controlRadius);
-  padding: 10px 10px;
-}
-.gsKVLabel{ font-size: 12px; font-weight: 900; letter-spacing: .2px; color: var(--inkMuted); }
-.gsKVValue{ margin-top: 2px; font-weight: 800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
 /* ===== Table ===== */
 .gsTableWrap{ width:100%; overflow:auto; border:1px solid var(--borderSubtle); border-radius: var(--controlRadius); background:#fff; }

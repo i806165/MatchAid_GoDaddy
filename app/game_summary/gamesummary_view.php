@@ -6,10 +6,7 @@
 <div class="maControlArea" id="gsControls" aria-label="Game Summary Controls">
 
   <!-- Collapsible: Game Configuration -->
-  <button type="button"
-          class="gsCfgToggle"
-          id="gsCfgToggle"
-          aria-expanded="false">
+  <button type="button" class="gsCfgToggle" id="gsCfgToggle">
     <span class="gsCfgTitle">Game Settings</span>
     <span class="gsCfgChevron" aria-hidden="true">▾</span>
   </button>

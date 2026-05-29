@@ -102,6 +102,7 @@ $maChromeLogoUrl  = null;
   <script src="/assets/modules/composeEmail.js?v=1"></script>       
   <script src="/assets/modules/player_notifications.js?v=1"></script> 
   <script src="/assets/modules/recalculate_handicaps.js"></script>
+  <script src="/assets/modules/module_DisplayGameFormat.js?v=1"></script>
   <script src="/assets/pages/game_summary.js"></script>
 </body>
 </html>
