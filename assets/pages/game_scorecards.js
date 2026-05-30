@@ -257,9 +257,8 @@ function renderGroup(group) {
   // QR / Right Side
   // ==========================================================================
   const scoreCardId = String(gh.playerKey || "").trim();
-  const qrUrl =
-    (scoreCardId && gh.GGID)
-      ? `${window.location.origin}${paths.scoreHome || '/app/score_home/scorehome.php'}?key=${encodeURIComponent(scoreCardId)}`
+  const qrUrl = (scoreCardId && gh.GGID)
+      ? `${window.location.origin}/score/${encodeURIComponent(scoreCardId)}`
       : "";
 
   return `
@@ -279,8 +278,7 @@ function renderGroup(group) {
 
         <div class="scHdr__right">
           <div class="scHdrRightText">
-            <div class="scHdrLink">Live Scoring at ${window.location.host}${paths.scoreHome || '/app/score_home/scorehome.php'}</div>
-            <div class="scHdrKey">Use ScoreCard-ID: <span class="scHdrKeyVal">${esc(scoreCardId)}</span></div>
+            <div class="scHdrLink">Live Scoring at ${window.location.host}/score/${esc(scoreCardId)}</div>
           </div>
           <div class="scQR">
             ${qrUrl ? `<img alt="QR" src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(qrUrl)}">` : ""}
