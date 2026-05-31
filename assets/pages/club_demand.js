@@ -30,12 +30,10 @@
     pFilter: "all",       // all | multicourse | singlegame
 
     // facility and Date (set once on load, replaced only on date range change)
-    filters:  { dateFrom: "", dateTo: "", facilityId: "" },
+    filters:  { dateFrom: "", dateTo: "" },
     context:  {
       facilityId: "",
       facilityName: "",
-      facilityOptions: [],
-      canSelectFacility: false,
     },
     summary:  {},
     games:    [],         // enriched game records from hydrateClubDemand
@@ -97,7 +95,6 @@
     modalClose:    document.getElementById("cdModalClose"),
     modalCancel:   document.getElementById("cdModalCancel"),
     modalExecute:  document.getElementById("cdModalExecute"),
-    inputFacility: document.getElementById("cdInputFacility"),
     inputFrom:     document.getElementById("cdInputFrom"),
     inputTo:       document.getElementById("cdInputTo"),
 
@@ -909,37 +906,9 @@
     if (el.dashAdminSub)   el.dashAdminSub.textContent   = label;
   }
 
-  function renderFacilityOptions() {
-    if (!el.inputFacility) return;
-
-    const options = Array.isArray(state.context.facilityOptions)
-      ? state.context.facilityOptions
-      : [];
-
-    const selectedFacilityId = safeStr(state.filters.facilityId || state.context.facilityId);
-
-    el.inputFacility.innerHTML = options.map(f => {
-      const facilityId = safeStr(f.facilityId);
-      const facilityName = safeStr(f.facilityName) || `Facility ${facilityId}`;
-      const selected = facilityId === selectedFacilityId ? " selected" : "";
-
-      return `<option value="${esc(facilityId)}"${selected}>${esc(facilityName)}</option>`;
-    }).join("");
-
-    el.inputFacility.disabled = !state.context.canSelectFacility || options.length <= 1;
-
-    if (selectedFacilityId && el.inputFacility.value !== selectedFacilityId) {
-      el.inputFacility.value = selectedFacilityId;
-    }
-  }
-
   // ── Modal ──────────────────────────────────────────────────────
   function openModal() {
-    renderFacilityOptions();
 
-    if (el.inputFacility) {
-      el.inputFacility.value = state.filters.facilityId || state.context.facilityId || "";
-    }
     if (el.inputFrom) el.inputFrom.value = state.filters.dateFrom || "";
     if (el.inputTo)   el.inputTo.value   = state.filters.dateTo   || "";
 
@@ -1282,9 +1251,8 @@
   }
 
   async function executeAcquire() {
-    const facilityId = safeStr(el.inputFacility?.value || state.filters.facilityId || state.context.facilityId);
-    const dateFrom   = safeStr(el.inputFrom?.value);
-    const dateTo     = safeStr(el.inputTo?.value);
+    const dateFrom = safeStr(el.inputFrom?.value);
+    const dateTo   = safeStr(el.inputTo?.value);
 
     if (!dateFrom || !dateTo) {
       setStatus("Please select both a From and To date.", "warn");
@@ -1292,10 +1260,6 @@
     }
     if (dateFrom > dateTo) {
       setStatus("From date must be before To date.", "warn");
-      return;
-    }
-    if (!facilityId) {
-      setStatus("Please select a facility.", "warn");
       return;
     }
 
@@ -1313,7 +1277,7 @@
 
       const res = await postJson(apiUrl, {
         payload: {
-          filters: { facilityId, dateFrom, dateTo }
+          filters: { dateFrom, dateTo }
         }
       });
 
@@ -1429,17 +1393,14 @@
     if (!init || !init.ok) throw new Error(init?.message || "Init payload invalid.");
 
     state.filters = {
-      dateFrom:   safeStr(init.filters?.dateFrom),
-      dateTo:     safeStr(init.filters?.dateTo),
-      facilityId: safeStr(init.filters?.facilityId || init.context?.facilityId),
+      dateFrom: safeStr(init.filters?.dateFrom),
+      dateTo:   safeStr(init.filters?.dateTo),
     };
 
     state.context = {
       ...(init.context || {}),
-      facilityId:        safeStr(init.context?.facilityId || init.filters?.facilityId),
-      facilityName:      safeStr(init.context?.facilityName),
-      facilityOptions:   Array.isArray(init.context?.facilityOptions) ? init.context.facilityOptions : [],
-      canSelectFacility: Boolean(init.context?.canSelectFacility),
+      facilityId:   safeStr(init.context?.facilityId),
+      facilityName: safeStr(init.context?.facilityName),
     };
 
     state.summary = init.summary || {};

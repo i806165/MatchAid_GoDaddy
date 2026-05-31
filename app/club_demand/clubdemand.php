@@ -29,16 +29,14 @@ if (!$ctx || empty($ctx["ok"])) {
 $today   = new DateTimeImmutable("today");
 $plus30  = $today->modify("+30 days");
 
-$sessFrom     = trim(strval($_SESSION["CD_FILTERDATEFROM"]   ?? ""));
-$sessTo       = trim(strval($_SESSION["CD_FILTERDATETO"]     ?? ""));
-$sessFacility = trim(strval($_SESSION["CD_FILTERFACILITYID"] ?? ""));
+$sessFrom = trim(strval($_SESSION["CD_FILTERDATEFROM"] ?? ""));
+$sessTo   = trim(strval($_SESSION["CD_FILTERDATETO"]   ?? ""));
 
 $isReturn = ($sessFrom !== "" && $sessTo !== "");
 
 $filters = [
-  "facilityId" => $isReturn ? $sessFacility : trim(strval($_SESSION["SessionFacilityID"] ?? "")),
-  "dateFrom"   => $isReturn ? $sessFrom     : $today->format("Y-m-d"),
-  "dateTo"     => $isReturn ? $sessTo       : $plus30->format("Y-m-d"),
+  "dateFrom" => $isReturn ? $sessFrom : $today->format("Y-m-d"),
+  "dateTo"   => $isReturn ? $sessTo   : $plus30->format("Y-m-d"),
 ];
 
 // ----------------------------------------------------------------
@@ -57,10 +55,9 @@ try {
   exit;
 }
 
-// Persist resolved filters to session for page restore
-$_SESSION["CD_FILTERFACILITYID"] = $initPayload["filters"]["facilityId"] ?? "";
-$_SESSION["CD_FILTERDATEFROM"]   = $filters["dateFrom"];
-$_SESSION["CD_FILTERDATETO"]     = $filters["dateTo"];
+// Persist date filters to session for page restore
+$_SESSION["CD_FILTERDATEFROM"] = $filters["dateFrom"];
+$_SESSION["CD_FILTERDATETO"]   = $filters["dateTo"];
 
 // Tell JS whether this is a return visit (skip modal) or fresh load (open modal)
 $initPayload["isReturn"] = $isReturn;

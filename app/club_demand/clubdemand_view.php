@@ -369,15 +369,6 @@
 
       <div class="maFieldRow">
         <div class="maField maField--inlineLabel">
-          <label class="maLabel" for="cdInputFacility">Facility</label>
-          <div class="maInputWrap">
-            <select class="maTextInput" id="cdInputFacility"></select>
-          </div>
-        </div>
-      </div>
-
-      <div class="maFieldRow">
-        <div class="maField maField--inlineLabel">
           <label class="maLabel" for="cdInputFrom">From</label>
           <div class="maInputWrap">
             <input type="date" class="maTextInput" id="cdInputFrom" />

@@ -15,33 +15,33 @@
 <div class="maControlArea" id="chControls" aria-label="Club Admin Controls">
 
   <!-- Single facility chip (read-only) -->
-  <div class="chFacilityWrap" id="chFacilityChip" hidden>
+  <div class="chFacilityWrap" id="chFacilityChip" style="display:none;">
     <span class="chFacilityLabel">Facility</span>
     <div class="chFacilityChip" id="chFacilityChipName"></div>
   </div>
 
   <!-- Multiple facilities dropdown -->
-  <div class="chFacilityWrap" id="chFacilityDropdown" hidden>
+  <div class="chFacilityWrap" id="chFacilityDropdown" style="display:none;">
     <span class="chFacilityLabel">Select facility</span>
     <select class="maTextInput chFacilitySelect" id="chFacilitySelect"></select>
   </div>
 
   <!-- Site admin search picker -->
-  <div class="chFacilityWrap" id="chFacilitySearch" hidden>
+  <div class="chFacilityWrap" id="chFacilitySearch" style="display:none;">
     <span class="chFacilityLabel">Search for a facility</span>
     <div class="chSearchWrap">
       <input type="text" id="chFacilitySearchInput" class="maTextInput chSearchInput"
              placeholder="Type facility name…" autocomplete="off" />
       <button id="chFacilitySearchClear" class="clearBtn isHidden" type="button" aria-label="Clear">×</button>
     </div>
-    <div class="chSearchResults" id="chSearchResults" hidden></div>
-    <div class="chSelectedBanner" id="chSelectedBanner" hidden>
+    <div class="chSearchResults" id="chSearchResults" style="display:none;"></div>
+    <div class="chSelectedBanner" id="chSelectedBanner" style="display:none;">
       <span id="chSelectedBannerName"></span>
     </div>
   </div>
 
   <!-- No roles — unauthorized -->
-  <div class="chFacilityWrap" id="chFacilityNone" hidden>
+  <div class="chFacilityWrap" id="chFacilityNone" style="display:none;">
     <div class="chNoAccess">
       No facility access is configured for your account. Contact your administrator.
     </div>

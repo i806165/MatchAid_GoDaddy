@@ -82,14 +82,14 @@
       el.facilityDropdown,
       el.facilitySearch,
       el.facilityNone,
-    ].forEach(el => { if (el) el.hidden = true; });
+    ].forEach(e => { if (e) e.style.display = "none"; });
   }
 
   function renderPicker() {
     hideAllPickers();
 
     if (!state.authorized) {
-      if (el.facilityNone) el.facilityNone.hidden = false;
+      if (el.facilityNone) el.facilityNone.style.display = "";
       disableTiles();
       return;
     }
@@ -97,22 +97,18 @@
     const count = state.facilityOptions.length;
 
     if (state.canSearch) {
-      // Site admin — search picker
-      if (el.facilitySearch) el.facilitySearch.hidden = false;
+      if (el.facilitySearch) el.facilitySearch.style.display = "";
       renderSearchBanner();
 
     } else if (count <= 1) {
-      // Single facility — read-only chip
-      if (el.facilityChip) el.facilityChip.hidden = false;
+      if (el.facilityChip) el.facilityChip.style.display = "";
       if (el.facilityChipName) {
         el.facilityChipName.textContent = state.facilityName || "—";
       }
-      // Single facility — auto-confirmed, enable tiles immediately
       enableTiles();
 
     } else {
-      // Multiple facilities — dropdown
-      if (el.facilityDropdown) el.facilityDropdown.hidden = false;
+      if (el.facilityDropdown) el.facilityDropdown.style.display = "";
       renderDropdown();
     }
   }
@@ -142,7 +138,7 @@
       : [];
 
     if (state.searchResults.length === 0 || q === "") {
-      el.searchResults.hidden = true;
+      el.searchResults.style.display = "none";
       el.searchResults.innerHTML = "";
       return;
     }
@@ -156,7 +152,7 @@
         </div>
       `).join("");
 
-    el.searchResults.hidden = false;
+    el.searchResults.style.display = "";
   }
 
   function renderSearchBanner() {
@@ -164,10 +160,10 @@
 
     if (state.facilityId && state.facilityName) {
       el.selectedBannerName.textContent = state.facilityName;
-      el.selectedBanner.hidden = false;
+      el.selectedBanner.style.display = "";
       enableTiles();
     } else {
-      el.selectedBanner.hidden = true;
+      el.selectedBanner.style.display = "none";
       disableTiles();
     }
   }
@@ -250,7 +246,7 @@
       el.facilitySearchClear.classList.add("isHidden");
       state.facilityId   = "";
       state.facilityName = "";
-      if (el.searchResults) el.searchResults.hidden = true;
+      if (el.searchResults) el.searchResults.style.display = "none";
       renderSearchBanner();
       disableTiles();
     });
@@ -265,7 +261,7 @@
 
       if (el.facilitySearchInput) el.facilitySearchInput.value = facilityName;
       if (el.facilitySearchClear) el.facilitySearchClear.classList.remove("isHidden");
-      if (el.searchResults) el.searchResults.hidden = true;
+      if (el.searchResults) el.searchResults.style.display = "none";
 
       await selectFacility(facilityId, facilityName);
     });

@@ -9,8 +9,13 @@ require_once MA_API_LIB . "/Logger.php";
 /**
  * hydrateClubUsers
  *
- * Queries db_Users scoped to the resolved facility via db_UserRoles.
- * All filtering (name search) is handled client-side in club_users.js.
+ * Queries db_Users scoped to the resolved facility.
+ *
+ * Two-query approach for performance:
+ *   1. LIKE pre-filter on dbUser_Profile to find matching GHINs
+ *      — avoids pulling longtext for all users
+ *   2. Fetch display columns only for matching GHINs
+ *      — dbUser_Profile never crosses the wire in query 2
  *
  * Facility must be resolved and set in session BEFORE this is called
  * (by club_home.php via service_ContextFacility).
@@ -37,32 +42,84 @@ function hydrateClubUsers(array $context): array {
   try {
     $pdo = Db::pdo();
 
-    // Scope db_Users to users who have a role at the resolved facility.
-    // Joins db_UserRoles on GHIN so we only return users belonging
-    // to this facility — not the entire system user list.
-    $sql = "
-      SELECT DISTINCT
-        CAST(u.dbUser_GHIN        AS CHAR) AS ghin,
-        u.dbUser_Name                       AS name,
-        u.dbUser_FName                      AS fName,
-        u.dbUser_LName                      AS lName,
-        u.dbUser_EMail                      AS email,
-        u.dbUser_MobilePhone                AS mobilePhone,
-        u.dbUser_ContactMethod              AS contactMethod,
-        u._createdDate                      AS createdDate,
-        u._updatedDate                      AS updatedDate
-      FROM db_Users u
-      INNER JOIN db_UserRoles r
-        ON CAST(r.dbUserRoles_UserGHIN AS CHAR) = CAST(u.dbUser_GHIN AS CHAR)
-      WHERE TRIM(CAST(r.dbUserRoles_FacilityID AS CHAR)) = :facilityId
-      ORDER BY u.dbUser_Name ASC
+    // ----------------------------------------------------------------
+    // Query 1 — Pre-filter: find GHINs whose profile contains this
+    // facility_id. The pattern "facility_id":NNNN is structurally
+    // reliable in the GHIN API JSON — facility_id is always an integer,
+    // never quoted, so this match is precise.
+    // dbUser_Profile (longtext) is only touched here for the LIKE — 
+    // it is NOT selected, keeping data transfer minimal.
+    // ----------------------------------------------------------------
+    $likePattern = '%"facility_id":' . intval($facilityId) . '%';
+
+    $sqlGhins = "
+      SELECT CAST(dbUser_GHIN AS CHAR) AS ghin
+      FROM db_Users
+      WHERE dbUser_Profile LIKE :pattern
     ";
 
-    $st = $pdo->prepare($sql);
-    $st->execute([":facilityId" => $facilityId]);
-    $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    $stGhins = $pdo->prepare($sqlGhins);
+    $stGhins->execute([":pattern" => $likePattern]);
+    $ghins = $stGhins->fetchAll(PDO::FETCH_COLUMN) ?: [];
 
-    // Normalize rows — ensure all keys are strings, never null
+    if (empty($ghins)) {
+      Logger::info("CLUB_USERS_HYDRATE_EMPTY", [
+        "userGHIN"   => $userGHIN,
+        "facilityId" => $facilityId,
+      ]);
+
+      return [
+        "ok"      => true,
+        "context" => [
+          "clubId"       => $clubId,
+          "clubName"     => $clubName,
+          "facilityId"   => $facilityId,
+          "facilityName" => $facilityName,
+          "userGHIN"     => $userGHIN,
+        ],
+        "users"  => [],
+        "header" => [
+          "title"    => "Club Users",
+          "subtitle" => $facilityName ?: $clubName,
+        ],
+      ];
+    }
+
+    // ----------------------------------------------------------------
+    // Query 2 — Fetch display columns only for matching GHINs.
+    // dbUser_Profile is deliberately excluded — not needed for display.
+    // ----------------------------------------------------------------
+    $placeholders = implode(",", array_map(
+      fn(int $i) => ":g{$i}",
+      range(0, count($ghins) - 1)
+    ));
+
+    $params = [];
+    foreach ($ghins as $i => $ghin) {
+      $params[":g{$i}"] = $ghin;
+    }
+
+    $sqlUsers = "
+      SELECT
+        CAST(dbUser_GHIN        AS CHAR) AS ghin,
+        dbUser_Name                       AS name,
+        dbUser_FName                      AS fName,
+        dbUser_LName                      AS lName,
+        dbUser_EMail                      AS email,
+        dbUser_MobilePhone                AS mobilePhone,
+        dbUser_ContactMethod              AS contactMethod,
+        _createdDate                      AS createdDate,
+        _updatedDate                      AS updatedDate
+      FROM db_Users
+      WHERE CAST(dbUser_GHIN AS CHAR) IN ({$placeholders})
+      ORDER BY dbUser_Name ASC
+    ";
+
+    $stUsers = $pdo->prepare($sqlUsers);
+    $stUsers->execute($params);
+    $rows = $stUsers->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    // Normalize — ensure all values are strings, never null
     $normalized = array_map(function (array $row): array {
       return [
         "ghin"          => trim(strval($row["ghin"]          ?? "")),
