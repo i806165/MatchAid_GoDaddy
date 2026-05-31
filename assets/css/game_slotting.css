@@ -222,7 +222,7 @@
   min-height: var(--btnHeight);
   align-items: center;
   justify-content: center;
-  border: 1px dashed var(--borderSubtle);
+  border: 1px dashed var(--brandPrimary);
   border-radius: var(--radiusMd);
   background: transparent;
   color: var(--brandPrimary);
