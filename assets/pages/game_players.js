@@ -881,7 +881,23 @@
     renderCanvasControls(); // sort strip + Manage Teams + HCP date
   }
 
-  function renderTrayControls(){
+function renderTrayControls(){
+
+    // Default footer — Return to Roster button always set first.
+    // The favorites tab will overwrite this in multi-add mode only.
+    if (el.trayFtr) {
+      el.trayFtr.innerHTML = `<div class="gpFooter gpFooter--tray">
+        <button class="btn btnPrimary gsMobileReturnBtn" id="gpBtnTrayClose" type="button">
+          ← Return to Roster
+        </button>
+      </div>`;
+      const btnClose = document.getElementById("gpBtnTrayClose");
+      if (btnClose) btnClose.onclick = () => {
+        const maPage = document.querySelector(".maPage--players");
+        if (maPage) maPage.classList.remove("is-tray-open");
+      };
+    }
+
     if (state.activeTab === "ghin") {
       el.trayControls.querySelector(".gpTrayTabControls")?.remove();
       const gpTc = document.createElement("div");
@@ -929,12 +945,14 @@
       document.getElementById("gpBtnSearchGhin").onclick = doSearch;
       return;
     }
+
     if (state.activeTab === "favorites") {
       const opts = ["All groups"].concat(state.groups || []).map(g => `<option value="${esc(g)}">${esc(g)}</option>`).join("");
 
       // Controls area: single row — group filter | player name | Multi-Add button
       // Multi-Add button stays in controls row always.
-      // Select Tee + Cancel move to tray panel footer when multi-add is active.
+      // Select Tee + Cancel move to tray panel footer when multi-add is active,
+      // overwriting the default Return to Roster button set above.
       el.trayControls.querySelector(".gpTrayTabControls")?.remove();
       const gpTc2 = document.createElement("div");
       gpTc2.className = "gpTrayTabControls";
@@ -954,22 +972,19 @@
 
       gpTc2.innerHTML += `<div class="maFieldRow"><div class="maField"><div id="gpFavHint" class="maHelpText gpHint ${state.favBroadened ? "" : "isHidden"}">No match in selected group — showing all groups.</div></div></div>`;
 
-      // Tray panel footer — shows Select Tee + Cancel in multi-add mode, empty otherwise
-      if (el.trayFtr) {
-        if (state.multiAddMode) {
-          el.trayFtr.innerHTML = `<div class="gpFooter gpFooter--canvas">
-            <button id="gpBtnSelectTee" class="btn btnSecondary" type="button" ${state.multiAddSelected.length ? "" : "disabled"}>
-              Select Tee${state.multiAddSelected.length ? ` (${state.multiAddSelected.length})` : ""}
-            </button>
-            <button id="gpBtnCancelMulti" class="btn btnPrimary" type="button">Cancel</button>
-          </div>`;
-          const btnSelectTee = document.getElementById("gpBtnSelectTee");
-          if (btnSelectTee) btnSelectTee.onclick = beginBatchTeeFlow;
-          const btnCancel = document.getElementById("gpBtnCancelMulti");
-          if (btnCancel) btnCancel.onclick = cancelMultiAddMode;
-        } else {
-          el.trayFtr.innerHTML = "";
-        }
+      // Multi-add mode: overwrite footer with Select Tee + Cancel.
+      // Intentionally traps the user — they must commit or cancel before returning to roster.
+      if (el.trayFtr && state.multiAddMode) {
+        el.trayFtr.innerHTML = `<div class="gpFooter gpFooter--canvas">
+          <button id="gpBtnSelectTee" class="btn btnSecondary" type="button" ${state.multiAddSelected.length ? "" : "disabled"}>
+            Select Tee${state.multiAddSelected.length ? ` (${state.multiAddSelected.length})` : ""}
+          </button>
+          <button id="gpBtnCancelMulti" class="btn btnPrimary" type="button">Cancel</button>
+        </div>`;
+        const btnSelectTee = document.getElementById("gpBtnSelectTee");
+        if (btnSelectTee) btnSelectTee.onclick = beginBatchTeeFlow;
+        const btnCancel = document.getElementById("gpBtnCancelMulti");
+        if (btnCancel) btnCancel.onclick = cancelMultiAddMode;
       }
 
       const sel = document.getElementById("gpFavGroup");
@@ -1006,6 +1021,7 @@
 
       return;
     }
+
     if (state.activeTab === "import") {
       const isExternal = state.importSourceMode === "external";
       const isExisting = state.importSourceMode === "existing";
@@ -1037,10 +1053,10 @@
       // sourceGamesHtml removed — existing game list is now rendered in the body, not a dropdown
 
       el.trayControls.querySelector(".gpTrayTabControls")?.remove();
-    const gpTc3 = document.createElement("div");
-    gpTc3.className = "gpTrayTabControls";
-    el.trayControls.appendChild(gpTc3);
-    gpTc3.innerHTML = `
+      const gpTc3 = document.createElement("div");
+      gpTc3.className = "gpTrayTabControls";
+      el.trayControls.appendChild(gpTc3);
+      gpTc3.innerHTML = `
         <div class="maFieldRow">
           <div class="maField">
             <div class="maSeg" style="display:grid; grid-template-columns:1fr 1fr;">
@@ -1084,6 +1100,7 @@
 
       return;
     }
+
     if (state.activeTab === "nonrated") {
       el.trayControls.querySelector(".gpTrayTabControls")?.remove();
       const gpTc4 = document.createElement("div");
@@ -1141,6 +1158,7 @@
       }
       return;
     }
+
     if (state.activeTab === "self") {
       // Self tab — no controls needed; tee picker launches immediately.
       return;
