@@ -726,11 +726,10 @@
   function wirePageEvents(){
     const maPage = document.querySelector(".maPage--players");
 
-    // Mobile: "Add Players" footer button opens tray
+    // Mobile: "+ Add Players" footer button opens tray
     if (el.btnTrayOpen) {
       el.btnTrayOpen.addEventListener("click", () => {
         if (maPage) maPage.classList.add("is-tray-open");
-        el.btnTrayOpen.textContent = "Show Roster";
       });
     }
 
@@ -738,7 +737,6 @@
     if (el.mobileCloseBtn) {
       el.mobileCloseBtn.addEventListener("click", () => {
         if (maPage) maPage.classList.remove("is-tray-open");
-        if (el.btnTrayOpen) el.btnTrayOpen.textContent = "+ Add Players";
       });
     }
   }
