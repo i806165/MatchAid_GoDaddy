@@ -1,23 +1,22 @@
 /* /assets/pages/club_home.js
  * Club Admin Home page
  *
- * Architecture:
- *   - Resolves facility context from window.__INIT__.facility
- *   - Renders correct facility picker state in controls area
- *   - Tiles remain disabled until a facility is confirmed
- *   - On facility selection, POSTs to setFacility.php to persist session
- *   - No other DB calls
+ * Facility selector:
+ *   - Zero/single facility → read-only chip, tiles enabled immediately
+ *   - Multiple/00000 → chip + Change button → modal picker
+ *   - No access → lock message, tiles stay disabled
  *
- * Follows club_demand.js patterns:
- *   IIFE · strict mode · state · el DOM map
- *   applyInit() → applyChrome() → wireEvents() → boot()
+ * Modal:
+ *   - Current selection floated to top, checked
+ *   - Remaining options sorted alphabetically below a divider
+ *   - Search filters client-side, no API calls
+ *   - Selection calls setFacility.php, then enables tiles
  */
 (function () {
   "use strict";
 
   const MA        = window.MA      || {};
   const chrome    = MA.chrome      || {};
-  const postJson  = typeof MA.postJson === "function" ? MA.postJson : null;
   const setStatus = typeof MA.setStatus === "function"
     ? MA.setStatus
     : function (m, lvl) { if (m) console.log("[STATUS]", lvl || "info", m); };
@@ -28,29 +27,21 @@
     facilityName:     "",
     facilityOptions:  [],
     canSelectFacility: false,
-    canSearch:        false,
     authorized:       false,
-    searchResults:    [],
+    modalSearch:      "",
   };
 
   // ── DOM map ────────────────────────────────────────────────────
   const el = {
-    // Facility picker states
-    facilityChip:        document.getElementById("chFacilityChip"),
-    facilityChipName:    document.getElementById("chFacilityChipName"),
-    facilityDropdown:    document.getElementById("chFacilityDropdown"),
-    facilitySelect:      document.getElementById("chFacilitySelect"),
-    facilitySearch:      document.getElementById("chFacilitySearch"),
-    facilitySearchInput: document.getElementById("chFacilitySearchInput"),
-    facilitySearchClear: document.getElementById("chFacilitySearchClear"),
-    searchResults:       document.getElementById("chSearchResults"),
-    selectedBanner:      document.getElementById("chSelectedBanner"),
-    selectedBannerName:  document.getElementById("chSelectedBannerName"),
-    facilityNone:        document.getElementById("chFacilityNone"),
-
-    // Tiles
-    tileDemand: document.getElementById("chTileDemand"),
-    tileUsers:  document.getElementById("chTileUsers"),
+    facilityName:      document.getElementById("chFacilityName"),
+    facilityChangeBtn: document.getElementById("chFacilityChangeBtn"),
+    facilityModal:     document.getElementById("chFacilityModal"),
+    modalClose:        document.getElementById("chModalClose"),
+    modalCancel:       document.getElementById("chModalCancel"),
+    modalSearch:       document.getElementById("chModalSearch"),
+    modalList:         document.getElementById("chModalList"),
+    tileDemand:        document.getElementById("chTileDemand"),
+    tileUsers:         document.getElementById("chTileUsers"),
   };
 
   // ── Utility ────────────────────────────────────────────────────
@@ -75,97 +66,108 @@
     });
   }
 
-  // ── Facility picker rendering ──────────────────────────────────
-  function hideAllPickers() {
-    [
-      el.facilityChip,
-      el.facilityDropdown,
-      el.facilitySearch,
-      el.facilityNone,
-    ].forEach(e => { if (e) e.style.display = "none"; });
-  }
-
-  function renderPicker() {
-    hideAllPickers();
-
+  // ── Facility bar ───────────────────────────────────────────────
+  function renderFacilityBar() {
     if (!state.authorized) {
-      if (el.facilityNone) el.facilityNone.style.display = "";
+      if (el.facilityName) {
+        el.facilityName.textContent = "No facility access configured for your account.";
+        el.facilityName.style.color = "var(--mutedText)";
+        el.facilityName.style.fontWeight = "600";
+      }
+      if (el.facilityChangeBtn) el.facilityChangeBtn.style.display = "none";
       disableTiles();
       return;
     }
 
-    const count = state.facilityOptions.length;
-
-    if (state.canSearch) {
-      if (el.facilitySearch) el.facilitySearch.style.display = "";
-      renderSearchBanner();
-
-    } else if (count <= 1) {
-      if (el.facilityChip) el.facilityChip.style.display = "";
-      if (el.facilityChipName) {
-        el.facilityChipName.textContent = state.facilityName || "—";
-      }
-      enableTiles();
-
-    } else {
-      if (el.facilityDropdown) el.facilityDropdown.style.display = "";
-      renderDropdown();
+    if (el.facilityName) {
+      el.facilityName.textContent = state.facilityName || "—";
+      el.facilityName.style.color = "";
+      el.facilityName.style.fontWeight = "";
     }
-  }
 
-  function renderDropdown() {
-    if (!el.facilitySelect) return;
+    if (el.facilityChangeBtn) {
+      el.facilityChangeBtn.style.display = state.canSelectFacility ? "" : "none";
+    }
 
-    el.facilitySelect.innerHTML = state.facilityOptions
-      .map(f => `<option value="${esc(f.facilityId)}"
-        ${f.facilityId === state.facilityId ? "selected" : ""}>
-        ${esc(f.facilityName)}
-      </option>`)
-      .join("");
-
-    // If a facility is already selected, enable tiles immediately
     if (state.facilityId) enableTiles();
+    else disableTiles();
   }
 
-  function renderSearchResults(query) {
-    if (!el.searchResults) return;
+  // ── Modal ──────────────────────────────────────────────────────
+  function openModal() {
+    if (!el.facilityModal) return;
+    state.modalSearch = "";
+    if (el.modalSearch) el.modalSearch.value = "";
+    renderModalList("");
+    el.facilityModal.removeAttribute("aria-hidden");
+    el.facilityModal.style.display = "";
+    if (el.modalSearch) el.modalSearch.focus();
+  }
+
+  function closeModal() {
+    if (!el.facilityModal) return;
+    el.facilityModal.setAttribute("aria-hidden", "true");
+    el.facilityModal.style.display = "none";
+  }
+
+  function renderModalList(query) {
+    if (!el.modalList) return;
 
     const q = query.toLowerCase();
-    state.searchResults = q.length >= 1
-      ? state.facilityOptions.filter(f =>
-          safeStr(f.facilityName).toLowerCase().includes(q)
-        )
-      : [];
+    const all = state.facilityOptions;
 
-    if (state.searchResults.length === 0 || q === "") {
-      el.searchResults.style.display = "none";
-      el.searchResults.innerHTML = "";
-      return;
+    // Filter by search
+    const filtered = q
+      ? all.filter(f => safeStr(f.facilityName).toLowerCase().includes(q)
+                     || safeStr(f.facilityId).includes(q))
+      : all;
+
+    // Float current selection to top — only when no search active
+    const current  = !q ? filtered.filter(f => f.facilityId === state.facilityId) : [];
+    const rest     = !q ? filtered.filter(f => f.facilityId !== state.facilityId) : filtered;
+
+    let html = "";
+
+    // Current selection — floated to top
+    if (current.length > 0) {
+      html += current.map(f => renderModalRow(f, true)).join("");
+      if (rest.length > 0) {
+        html += `<div class="chModalDivider"></div>`;
+      }
     }
 
-    el.searchResults.innerHTML = state.searchResults
-      .slice(0, 8)
-      .map(f => `
-        <div class="chSearchResult" data-facility-id="${esc(f.facilityId)}"
-             data-facility-name="${esc(f.facilityName)}">
-          ${esc(f.facilityName)}
-        </div>
-      `).join("");
+    // Remaining options
+    html += rest.map(f => renderModalRow(f, false)).join("");
 
-    el.searchResults.style.display = "";
+    if (html === "") {
+      html = `<div style="padding:12px 14px; font-size:13px; color:var(--mutedText);">No facilities match.</div>`;
+    }
+
+    el.modalList.innerHTML = html;
+
+    // Wire row clicks
+    el.modalList.querySelectorAll(".chModalRow").forEach(row => {
+      row.addEventListener("click", async () => {
+        const facilityId   = safeStr(row.dataset.facilityId);
+        const facilityName = safeStr(row.dataset.facilityName);
+        await selectFacility(facilityId, facilityName);
+      });
+    });
   }
 
-  function renderSearchBanner() {
-    if (!el.selectedBanner || !el.selectedBannerName) return;
-
-    if (state.facilityId && state.facilityName) {
-      el.selectedBannerName.textContent = state.facilityName;
-      el.selectedBanner.style.display = "";
-      enableTiles();
-    } else {
-      el.selectedBanner.style.display = "none";
-      disableTiles();
-    }
+  function renderModalRow(f, isSelected) {
+    return `
+      <div class="chModalRow${isSelected ? " is-selected" : ""}"
+           data-facility-id="${esc(f.facilityId)}"
+           data-facility-name="${esc(f.facilityName)}">
+        <div class="chModalCheck">
+          <div class="chModalCheck__tick"></div>
+        </div>
+        <div class="chModalRowBody">
+          <div class="chModalRowName">${esc(f.facilityName)}</div>
+          <div class="chModalRowId">${esc(f.facilityId)}</div>
+        </div>
+      </div>`;
   }
 
   // ── Facility selection ─────────────────────────────────────────
@@ -178,22 +180,24 @@
       const apiUrl = window.MA?.routes?.setFacility
         || "/api/club_home/setFacility.php";
 
-      const res = postJson
-        ? await postJson(apiUrl, { facilityId })
-        : await fetch(apiUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ facilityId }),
-          }).then(r => r.json());
-
-      if (!res || !res.ok) {
-        throw new Error(res?.error || "Failed to set facility.");
+      let res;
+      if (typeof MA.postJson === "function") {
+        res = await MA.postJson(apiUrl, { facilityId });
+      } else {
+        res = await fetch(apiUrl, {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ facilityId }),
+        }).then(r => r.json());
       }
+
+      if (!res || !res.ok) throw new Error(res?.error || "Failed to set facility.");
 
       state.facilityId   = safeStr(res.facilityId   || facilityId);
       state.facilityName = safeStr(res.facilityName || facilityName);
 
-      renderSearchBanner();
+      closeModal();
+      renderFacilityBar();
       setStatus("", "info");
 
     } catch (e) {
@@ -205,65 +209,35 @@
   // ── Wire events ────────────────────────────────────────────────
   function wireEvents() {
 
-    // Tile navigation — only fires when tiles are enabled
+    // Tile navigation
     el.tileDemand?.addEventListener("click", () => {
-      if (el.tileDemand.classList.contains("chTile--disabled")) return;
-      window.location.assign(window.MA.paths.demandReport);
+      if (!el.tileDemand.classList.contains("chTile--disabled")) {
+        window.location.assign(window.MA.paths.demandReport);
+      }
     });
 
     el.tileUsers?.addEventListener("click", () => {
-      if (el.tileUsers.classList.contains("chTile--disabled")) return;
-      window.location.assign(window.MA.paths.clubUsers);
-    });
-
-    // Dropdown change
-    el.facilitySelect?.addEventListener("change", async () => {
-      const selected = el.facilitySelect.options[el.facilitySelect.selectedIndex];
-      if (!selected) return;
-      await selectFacility(selected.value, selected.text);
-    });
-
-    // Search input
-    el.facilitySearchInput?.addEventListener("input", () => {
-      const val = safeStr(el.facilitySearchInput.value);
-      if (el.facilitySearchClear) {
-        el.facilitySearchClear.classList.toggle("isHidden", !val);
+      if (!el.tileUsers.classList.contains("chTile--disabled")) {
+        window.location.assign(window.MA.paths.clubUsers);
       }
-      // Clear confirmed selection when user starts a new search
-      state.facilityId   = "";
-      state.facilityName = "";
-      renderSearchBanner();
-      disableTiles();
-      renderSearchResults(val);
     });
 
-    // Search clear
-    el.facilitySearchClear?.addEventListener("click", () => {
-      if (el.facilitySearchInput) {
-        el.facilitySearchInput.value = "";
-        el.facilitySearchInput.focus();
-      }
-      el.facilitySearchClear.classList.add("isHidden");
-      state.facilityId   = "";
-      state.facilityName = "";
-      if (el.searchResults) el.searchResults.style.display = "none";
-      renderSearchBanner();
-      disableTiles();
+    // Change button → open modal
+    el.facilityChangeBtn?.addEventListener("click", openModal);
+
+    // Modal close
+    el.modalClose?.addEventListener("click",  closeModal);
+    el.modalCancel?.addEventListener("click", closeModal);
+
+    // Click outside modal to close
+    el.facilityModal?.addEventListener("click", (e) => {
+      if (e.target === el.facilityModal) closeModal();
     });
 
-    // Search result selection (event delegation)
-    el.searchResults?.addEventListener("click", async (e) => {
-      const row = e.target.closest(".chSearchResult");
-      if (!row) return;
-
-      const facilityId   = safeStr(row.dataset.facilityId);
-      const facilityName = safeStr(row.dataset.facilityName);
-
-      if (el.facilitySearchInput) el.facilitySearchInput.value = facilityName;
-      if (el.facilitySearchClear) el.facilitySearchClear.classList.remove("isHidden");
-      if (el.searchResults) el.searchResults.style.display = "none";
-
-      await selectFacility(facilityId, facilityName);
+    // Modal search
+    el.modalSearch?.addEventListener("input", () => {
+      state.modalSearch = safeStr(el.modalSearch.value);
+      renderModalList(state.modalSearch);
     });
   }
 
@@ -275,10 +249,7 @@
       chrome.setHeaderLines(["Club Admin", clubName]);
     }
     if (typeof chrome.setActions === "function") {
-      chrome.setActions({
-        left:  { show: false },
-        right: { show: false },
-      });
+      chrome.setActions({ left: { show: false }, right: { show: false } });
     }
     if (typeof chrome.setBottomNav === "function") {
       chrome.setBottomNav({
@@ -294,13 +265,11 @@
     if (!init || !init.ok) throw new Error("Missing or invalid init payload.");
 
     const f = init.facility || {};
-
     state.authorized        = Boolean(f.authorized);
     state.facilityId        = safeStr(f.facilityId);
     state.facilityName      = safeStr(f.facilityName);
     state.facilityOptions   = Array.isArray(f.facilityOptions) ? f.facilityOptions : [];
     state.canSelectFacility = Boolean(f.canSelectFacility);
-    state.canSearch         = Boolean(f.canSearch);
   }
 
   // ── Boot ───────────────────────────────────────────────────────
@@ -312,7 +281,7 @@
       applyInit(init);
       applyChrome();
       wireEvents();
-      renderPicker();
+      renderFacilityBar();
 
       setStatus("", "info");
     } catch (e) {

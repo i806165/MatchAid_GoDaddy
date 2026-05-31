@@ -4,51 +4,61 @@
 ?>
 
 <!-- ============================================================
-     CONTROLS BAND — Facility picker
-     JS shows exactly one of:
-       #chFacilityChip     (single facility — read-only)
-       #chFacilityDropdown (multiple facilities — select)
-       #chFacilitySearch   (site admin 00000 — search)
-       #chFacilityNone     (no roles — unauthorized message)
-     All start hidden; JS reveals the correct one on boot.
+     CONTROLS BAND — Single facility element
+     States managed by JS:
+       - Zero/single: read-only chip (no button)
+       - Multiple/00000: chip + Change button → opens modal
+       - No access: lock message
      ============================================================ -->
 <div class="maControlArea" id="chControls" aria-label="Club Admin Controls">
+  <div class="chFacilityBar" id="chFacilityBar">
 
-  <!-- Single facility chip (read-only) -->
-  <div class="chFacilityWrap" id="chFacilityChip" style="display:none;">
-    <span class="chFacilityLabel">Facility</span>
-    <div class="chFacilityChip" id="chFacilityChipName"></div>
+    <!-- Building icon — always visible -->
+    <svg class="chFacilityIcon" viewBox="0 0 24 24" width="18" height="18" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+         aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="2"/>
+      <path d="M9 3v18M3 9h6M3 15h6M15 9h6M15 15h6"/>
+    </svg>
+
+    <!-- Facility name — JS sets textContent -->
+    <span class="chFacilityName" id="chFacilityName">—</span>
+
+    <!-- Change button — JS shows/hides based on canSelectFacility -->
+    <button type="button" class="btn btnSecondary chFacilityChangeBtn"
+            id="chFacilityChangeBtn" style="display:none;">
+      Change
+    </button>
+
   </div>
+</div>
 
-  <!-- Multiple facilities dropdown -->
-  <div class="chFacilityWrap" id="chFacilityDropdown" style="display:none;">
-    <span class="chFacilityLabel">Select facility</span>
-    <select class="maTextInput chFacilitySelect" id="chFacilitySelect"></select>
-  </div>
+<!-- ============================================================
+     FACILITY PICKER MODAL
+     ============================================================ -->
+<div id="chFacilityModal" class="maModalOverlay" aria-hidden="true">
+  <section class="maModal" role="dialog" aria-modal="true"
+           aria-label="Select Facility" style="max-width:400px;">
 
-  <!-- Site admin search picker -->
-  <div class="chFacilityWrap" id="chFacilitySearch" style="display:none;">
-    <span class="chFacilityLabel">Search for a facility</span>
-    <div class="chSearchWrap">
-      <input type="text" id="chFacilitySearchInput" class="maTextInput chSearchInput"
-             placeholder="Type facility name…" autocomplete="off" />
-      <button id="chFacilitySearchClear" class="clearBtn isHidden" type="button" aria-label="Clear">×</button>
+    <header class="maModal__hdr">
+      <div class="maModal__title">Select Facility</div>
+      <button type="button" class="iconBtn" id="chModalClose" aria-label="Close">✕</button>
+    </header>
+
+    <div class="maModal__body">
+      <div class="maInputWrap" style="margin-bottom:10px;">
+        <input type="text" class="maTextInput" id="chModalSearch"
+               placeholder="Search facilities…" autocomplete="off" />
+      </div>
+      <div class="chModalList" id="chModalList"></div>
     </div>
-    <div class="chSearchResults" id="chSearchResults" style="display:none;"></div>
-    <div class="chSelectedBanner" id="chSelectedBanner" style="display:none;">
-      <span id="chSelectedBannerName"></span>
-    </div>
-  </div>
 
-  <!-- No roles — unauthorized -->
-  <div class="chFacilityWrap" id="chFacilityNone" style="display:none;">
-    <div class="chNoAccess">
-      No facility access is configured for your account. Contact your administrator.
-    </div>
-  </div>
+    <footer class="maModal__ftr">
+      <button type="button" class="btn btnSecondary" id="chModalCancel">Cancel</button>
+    </footer>
 
-</div><!-- /maControlArea -->
-
+  </section>
+</div>
 
 <!-- ============================================================
      MAIN PAGE BODY
@@ -69,7 +79,7 @@
     </div>
   </section>
 
-  <!-- Tool tiles — disabled until facility is confirmed -->
+  <!-- Tool tiles — disabled until facility confirmed -->
   <div class="chTileGrid">
 
     <button type="button" class="chTile chTile--disabled" id="chTileDemand">
@@ -90,7 +100,6 @@
       <div class="chTile__arrow" aria-hidden="true">›</div>
     </button>
 
-    <!-- Placeholder tile -->
     <div class="chTile chTile--disabled" aria-disabled="true">
       <div class="chTile__icon" aria-hidden="true">📅</div>
       <div class="chTile__body">

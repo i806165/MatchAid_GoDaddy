@@ -16,133 +16,128 @@
   line-height: 1.55;
 }
 
-/* ===== Facility picker — controls area ===== */
-.chFacilityWrap {
+/* ===== Facility bar — single element in controls band ===== */
+.chFacilityBar {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.chFacilityLabel {
-  font-size: 11px;
-  font-weight: 900;
-  color: var(--mutedText);
-  letter-spacing: .2px;
-  text-transform: uppercase;
-}
-
-/* Single facility chip */
-.chFacilityChip {
-  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: var(--surfaceChrome);
-  border: 0.5px solid var(--borderSubtle);
-  border-radius: var(--radiusMd);
-  padding: 7px 12px;
+  gap: 10px;
+  width: 100%;
+}
+
+.chFacilityIcon {
+  flex: 0 0 auto;
+  color: var(--mutedText);
+}
+
+.chFacilityName {
+  flex: 1 1 auto;
   font-size: 13px;
   font-weight: 700;
   color: var(--ink);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* Dropdown */
-.chFacilitySelect {
-  width: 100%;
-  max-width: 420px;
+.chFacilityChangeBtn {
+  flex: 0 0 auto;
+  font-size: 12px;
+  padding: 4px 12px;
+  min-height: unset;
+  height: auto;
 }
 
-/* Search wrap */
-.chSearchWrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-  max-width: 420px;
-}
-
-.chSearchInput {
-  width: 100%;
-  padding-right: 30px;
-}
-
-.chSearchWrap .clearBtn {
-  position: absolute;
-  right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 24px;
-  height: 24px;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--mutedText);
-  font-size: 20px;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.chSearchWrap .clearBtn.isHidden {
-  display: none;
-}
-
-/* Search results list */
-.chSearchResults {
-  max-width: 420px;
-  border: 0.5px solid var(--borderSubtle);
+/* ===== Facility picker modal list ===== */
+.chModalList {
+  border: 1px solid var(--borderSubtle);
   border-radius: var(--radiusMd);
   overflow: hidden;
-  background: var(--cardBg);
-  margin-top: 2px;
+  max-height: 320px;
+  overflow-y: auto;
 }
 
-.chSearchResult {
-  padding: 9px 12px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink);
-  border-bottom: 0.5px solid var(--borderSubtle);
+.chModalRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--borderSubtle);
   cursor: pointer;
+  font-size: 13px;
+  color: var(--ink);
+  transition: background .1s ease;
 }
 
-.chSearchResult:last-child {
+.chModalRow:last-child {
   border-bottom: none;
 }
 
-.chSearchResult:hover {
+.chModalRow:hover {
   background: var(--brandPrimaryBg);
-  color: var(--brandPrimary);
 }
 
-/* Selected facility banner */
-.chSelectedBanner {
+.chModalRow.is-selected {
+  background: var(--brandPrimaryBg);
+}
+
+/* Checkbox */
+.chModalCheck {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--borderSubtle);
+  border-radius: var(--radiusSq);
+  background: #fff;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 12px;
-  background: var(--successBg, #e8f5e9);
-  border-radius: var(--radiusMd);
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--success, #2e7d32);
-  max-width: 420px;
+  justify-content: center;
 }
 
-.chSelectedBanner::before {
-  content: "✓";
-  font-weight: 900;
+.chModalRow.is-selected .chModalCheck {
+  background: var(--brandPrimary);
+  border-color: var(--brandPrimary);
 }
 
-/* No access message */
-.chNoAccess {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  background: var(--surfaceChrome);
-  border: 0.5px solid var(--borderSubtle);
-  border-radius: var(--radiusMd);
-  font-size: 13px;
+.chModalCheck__tick {
+  display: none;
+  width: 10px;
+  height: 10px;
+  border-left: 2px solid #fff;
+  border-bottom: 2px solid #fff;
+  transform: rotate(-45deg) translateY(-1px);
+}
+
+.chModalRow.is-selected .chModalCheck__tick {
+  display: block;
+}
+
+/* Facility name + ID */
+.chModalRowBody {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.chModalRowName {
   font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chModalRowId {
+  font-size: 11px;
+  font-weight: 600;
   color: var(--mutedText);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  margin-top: 1px;
+}
+
+/* Divider after selected row */
+.chModalDivider {
+  height: 0;
+  border-bottom: 2px solid var(--borderSubtle);
 }
 
 /* ===== Tool tile grid ===== */
@@ -174,7 +169,6 @@
 .chTile:hover  { background: var(--brandPrimaryBg); }
 .chTile:active { background: var(--pressedBg); transform: scale(.99); }
 
-/* Disabled / coming-soon tiles */
 .chTile--disabled {
   opacity: .45;
   cursor: default;
