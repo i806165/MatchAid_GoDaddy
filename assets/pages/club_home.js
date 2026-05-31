@@ -100,7 +100,7 @@
     if (el.modalSearch) el.modalSearch.value = "";
     renderModalList("");
     el.facilityModal.removeAttribute("aria-hidden");
-    el.facilityModal.style.display = "";
+    el.facilityModal.style.display = "flex";  // ← was "" which doesn't override inline none
     if (el.modalSearch) el.modalSearch.focus();
   }
 

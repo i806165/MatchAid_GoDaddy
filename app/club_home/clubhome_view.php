@@ -36,7 +36,7 @@
 <!-- ============================================================
      FACILITY PICKER MODAL
      ============================================================ -->
-<div id="chFacilityModal" class="maModalOverlay" aria-hidden="true">
+<div id="chFacilityModal" class="maModalOverlay" aria-hidden="true" style="display:none;">
   <section class="maModal" role="dialog" aria-modal="true"
            aria-label="Select Facility" style="max-width:400px;">
 
