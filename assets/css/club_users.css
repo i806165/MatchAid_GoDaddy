@@ -1,0 +1,118 @@
+/* /assets/css/club_users.css
+   Page-specific styles for Club Users.
+   Keep minimal — prefer ma_shared.css tokens/classes.
+   Mirrors club_demand.css table conventions.
+*/
+
+/* ===== Controls band ===== */
+.cuInputClearWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.cuInputClearWrap .maTextInput {
+  padding-right: 30px;
+}
+
+.cuInputClearWrap .clearBtn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--mutedText);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cuInputClearWrap .clearBtn.isHidden {
+  display: none;
+}
+
+.cuUserCount {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--mutedText);
+  white-space: nowrap;
+}
+
+/* ===== Card subtitle ===== */
+.cuCardSub {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--brandSecondaryText);
+  opacity: .8;
+}
+
+/* ===== Table ===== */
+.cuTableWrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--controlRadius);
+  background: var(--cardBg);
+}
+
+.cuTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.cuTable th,
+.cuTable td {
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(0,0,0,.07);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.cuTable th {
+  text-align: left;
+  font-weight: 900;
+  position: sticky;
+  top: 0;
+  background: var(--brandSecondary);
+  color: var(--brandSecondaryText);
+  z-index: 1;
+  font-size: 12px;
+  letter-spacing: .2px;
+}
+
+.cuTable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.cuTable tbody tr:hover td {
+  background: var(--brandPrimaryBg);
+}
+
+.cuTable tbody td {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.cuMuted {
+  color: var(--mutedText);
+  font-weight: 600;
+}
+
+/* ===== Mobile ===== */
+@media (max-width: 520px) {
+  .cuTable th:nth-child(4),
+  .cuTable td:nth-child(4),
+  .cuTable th:nth-child(6),
+  .cuTable td:nth-child(6),
+  .cuTable th:nth-child(7),
+  .cuTable td:nth-child(7) {
+    display: none;
+  }
+}

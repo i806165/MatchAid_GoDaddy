@@ -13,7 +13,7 @@ require_once MA_SERVICES . "/database/service_dbGames.php";
  * First-class data acquisition for the Club Demand page.
  *
  * Data acquisition flow:
- *   1. Resolve the signed-in user's responsible facility/facilities from db_UserRoles
+ *   1. Read resolved facility from session (set by club_home.php)
  *   2. Query games for the selected facility within the date range
  *   3. Bulk-fetch player rows for all GGIDs in one query
  *
@@ -21,12 +21,12 @@ require_once MA_SERVICES . "/database/service_dbGames.php";
  * is handled client-side in club_demand.js.
  *
  * Important business rule:
- *   Club Demand always reports on exactly one real facility.
- *   dbUserRoles_FacilityID = "00000" means the user may choose a facility;
- *   it is never passed through as an unconstrained game query.
+ *   Facility context is resolved once at club_home.php via
+ *   service_ContextFacility and stored in session. This file
+ *   trusts that value — no re-resolution here.
  *
  * @param array $context  userGHIN / clubId / clubName
- * @param array $filters  dateFrom / dateTo / facilityId
+ * @param array $filters  dateFrom / dateTo
  * @return array          INIT payload for the Club Demand page
  */
 function hydrateClubDemand(array $context, array $filters): array {
@@ -53,42 +53,26 @@ function hydrateClubDemand(array $context, array $filters): array {
     if ($dateTo   === "") $dateTo   = $plus30->format("Y-m-d");
   }
 
-  // Default to user's home facility from session if none explicitly selected
-  if (empty($filters["facilityId"])) {
-      $filters["facilityId"] = trim(strval($_SESSION["SessionFacilityID"] ?? ""));
-  }
+  // ----------------------------------------------------------------
+  // Read facility from session — resolved by club_home.php
+  // ----------------------------------------------------------------
+  $facilityId   = trim(strval($_SESSION["SessionFacilityID"]   ?? ""));
+  $facilityName = trim(strval($_SESSION["SessionFacilityName"] ?? ""));
 
-  // Resolve facility access / selected facility
-  $facilityCtx = cdResolveClubDemandFacilityContext($userGHIN, $filters);
-
-  if (empty($facilityCtx["authorized"])) {
-    $message = strval($facilityCtx["message"] ?? "Club Demand is not configured for this user.");
-
+  if ($facilityId === "" || $facilityId === "00000") {
     return cdBuildEmptyClubDemandPayload(
       $clubId,
       $clubName,
       $dateFrom,
       $dateTo,
-      $message
+      "No facility selected. Return to Club Home and select a facility."
     );
-  }
-
-  $facilityId      = strval($facilityCtx["facilityId"] ?? "");
-  $facilityName    = strval($facilityCtx["facilityName"] ?? "");
-  $facilityOptions = is_array($facilityCtx["facilityOptions"] ?? null)
-    ? $facilityCtx["facilityOptions"]
-    : [];
-
-  if ($facilityId === "" || $facilityId === "00000") {
-    return ["ok" => false, "message" => "Missing valid facility selection."];
   }
 
   // ----------------------------------------------------------------
   // Step 1 — Query games for selected facility + date range
   // ----------------------------------------------------------------
   $gamesResult = ServiceDbGames::queryGames([
-    // Keep clubId for compatibility, but ServiceDbGames should prefer
-    // facilityId when provided.
     "clubId"              => $clubId,
     "facilityId"          => $facilityId,
     "dateFrom"            => $dateFrom,
@@ -142,8 +126,6 @@ function hydrateClubDemand(array $context, array $filters): array {
 
       $inClause = implode(",", $in);
 
-      // Individual player rows for client-side detail view + counts.
-      // Player count is derived from count($playersByGGID[$ggid]).
       $sqlPlayers = "
         SELECT
           CAST(dbPlayers_GGID       AS CHAR) AS ggid,
@@ -152,7 +134,7 @@ function hydrateClubDemand(array $context, array $filters): array {
           dbPlayers_Name                      AS fullName,
           dbPlayers_LName                     AS lastName,
           dbPlayers_HI                        AS hi,
-          dbPlayers_TeeTime AS teetime,
+          dbPlayers_TeeTime                   AS teetime,
           _createdDate                        AS registeredDate
         FROM db_Players
         WHERE CAST(dbPlayers_GGID AS CHAR) IN ({$inClause})
@@ -169,13 +151,13 @@ function hydrateClubDemand(array $context, array $filters): array {
         if (!isset($playersByGGID[$g])) $playersByGGID[$g] = [];
 
         $playersByGGID[$g][] = [
-          "ghin"      => strval($row["ghin"]      ?? ""),
-          "localId"   => strval($row["localId"]   ?? ""),
-          "fullName" => strval($row["fullName"] ?? ""),
-          "lastName"  => strval($row["lastName"]  ?? ""),
+          "ghin"           => strval($row["ghin"]           ?? ""),
+          "localId"        => strval($row["localId"]        ?? ""),
+          "fullName"       => strval($row["fullName"]       ?? ""),
+          "lastName"       => strval($row["lastName"]       ?? ""),
           "registeredDate" => strval($row["registeredDate"] ?? ""),
-          "teetime" => strval($row["teetime"] ?? ""),
-          "hi"        => strval($row["hi"]        ?? ""),
+          "teetime"        => strval($row["teetime"]        ?? ""),
+          "hi"             => strval($row["hi"]             ?? ""),
         ];
       }
 
@@ -237,9 +219,9 @@ function hydrateClubDemand(array $context, array $filters): array {
   ]);
 
   return [
-    "ok"      => true,
+    "ok"         => true,
     "authorized" => true,
-    "filters" => [
+    "filters"    => [
       "dateFrom"   => $dateFrom,
       "dateTo"     => $dateTo,
       "facilityId" => $facilityId,
@@ -249,8 +231,8 @@ function hydrateClubDemand(array $context, array $filters): array {
       "clubName"          => $clubName,
       "facilityId"        => $facilityId,
       "facilityName"      => $facilityName,
-      "facilityOptions"   => $facilityOptions,
-      "canSelectFacility" => !empty($facilityCtx["canSelectFacility"]),
+      "facilityOptions"   => [],
+      "canSelectFacility" => false,
     ],
     "summary" => [
       "gameCount"   => $gameCount,
@@ -267,198 +249,8 @@ function hydrateClubDemand(array $context, array $filters): array {
 }
 
 /**
- * Resolve the facility context for Club Demand.
- *
- * Rules:
- * - A real FacilityID means the user may report on that facility.
- * - FacilityID "00000" means all-facility permission, but is not a query value.
- * - For "00000", load all real facilities and default to the first one.
- * - The selected facility must be one of the available real facilities.
+ * Build an empty payload when no facility is available.
  */
-function cdResolveClubDemandFacilityContext(string $userGHIN, array $filters): array {
-  try {
-    $userRoles = cdLoadUserFacilityRoles($userGHIN);
-
-    if (empty($userRoles)) {
-      return [
-        "ok"         => true,
-        "authorized" => false,
-        "message"    => "Club Demand is not configured for this user.",
-      ];
-    }
-
-    $hasAllAccess = false;
-    $realOptions  = [];
-
-    foreach ($userRoles as $role) {
-      $fid = cdNormalizeFacilityId($role["facilityId"] ?? "");
-      $fn  = trim(strval($role["facilityName"] ?? ""));
-
-      if ($fid === "00000") {
-        $hasAllAccess = true;
-        continue;
-      }
-
-      if ($fid !== "") {
-        cdAddFacilityOption($realOptions, $fid, $fn);
-      }
-    }
-
-    // Site Admin / All Facilities users may choose from all real facilities.
-    // Do not include "00000" as an option.
-    if ($hasAllAccess) {
-      $allOptions = cdLoadAllRealFacilityOptions();
-      if (!empty($allOptions)) {
-        $realOptions = $allOptions;
-      }
-    }
-
-    cdSortFacilityOptions($realOptions);
-    if (empty($realOptions)) {
-      return [
-        "ok"         => true,
-        "authorized" => false,
-        "message"    => "Club Demand is not configured for this user.",
-      ];
-    }
-
-    $requestedId = cdNormalizeFacilityId($filters["facilityId"] ?? "");
-    $selected    = cdFindFacilityOption($realOptions, $requestedId);
-
-    // Never allow blank or 00000 to drive this report. Default to first real facility.
-    if (!$selected) {
-      $selected = $realOptions[0];
-    }
-
-    return [
-      "ok"                => true,
-      "authorized"        => true,
-      "facilityId"        => strval($selected["facilityId"] ?? ""),
-      "facilityName"      => strval($selected["facilityName"] ?? ""),
-      "facilityOptions"   => array_values($realOptions),
-      "canSelectFacility" => count($realOptions) > 1,
-      "hasAllAccess"      => $hasAllAccess,
-    ];
-
-  } catch (Throwable $e) {
-    Logger::error("CLUB_DEMAND_FACILITY_RESOLVE_FAIL", [
-      "userGHIN" => $userGHIN,
-      "err"      => $e->getMessage(),
-    ]);
-
-    return [
-      "ok"         => true,
-      "authorized" => false,
-      "message"    => "Club Demand is not configured for this user.",
-    ];
-  }
-}
-
-/**
- * Load facility roles for the signed-in user.
- */
-function cdLoadUserFacilityRoles(string $userGHIN): array {
-  $pdo = Db::pdo();
-
-  $sql = "
-    SELECT DISTINCT
-      CAST(dbUserRoles_FacilityID AS CHAR) AS facilityId,
-      dbUserRoles_FacilityName             AS facilityName,
-      dbUserRoles_RoleID                   AS roleId
-    FROM db_UserRoles
-    WHERE CAST(dbUserRoles_UserGHIN AS CHAR) = :ghin
-    ORDER BY dbUserRoles_FacilityName ASC
-  ";
-
-  $st = $pdo->prepare($sql);
-  $st->execute([":ghin" => $userGHIN]);
-
-  return $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
-}
-
-/**
- * Load all real facilities from db_UserRoles.
- *
- * Used only when the signed-in user has FacilityID "00000".
- * This intentionally excludes "00000" so Club Demand always runs
- * for one actual facility.
- */
-function cdLoadAllRealFacilityOptions(): array {
-  $pdo = Db::pdo();
-
-  $sql = "
-    SELECT DISTINCT
-      CAST(dbUserRoles_FacilityID AS CHAR) AS facilityId,
-      dbUserRoles_FacilityName             AS facilityName
-    FROM db_UserRoles
-    WHERE TRIM(CAST(dbUserRoles_FacilityID AS CHAR)) <> ''
-      AND TRIM(CAST(dbUserRoles_FacilityID AS CHAR)) <> '00000'
-    ORDER BY dbUserRoles_FacilityName ASC
-  ";
-
-  $st = $pdo->prepare($sql);
-  $st->execute();
-
-  $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
-  $out  = [];
-
-  foreach ($rows as $row) {
-    $fid = cdNormalizeFacilityId($row["facilityId"] ?? "");
-    $fn  = trim(strval($row["facilityName"] ?? ""));
-
-    if ($fid !== "") {
-      cdAddFacilityOption($out, $fid, $fn);
-    }
-  }
-
-  cdSortFacilityOptions($out);
-
-  return array_values($out);
-}
-
-function cdNormalizeFacilityId($value): string {
-  return trim(strval($value ?? ""));
-}
-
-function cdAddFacilityOption(array &$options, string $facilityId, string $facilityName): void {
-  if ($facilityId === "" || $facilityId === "00000") return;
-
-  if ($facilityName === "") {
-    $facilityName = "Facility " . $facilityId;
-  }
-
-  foreach ($options as $existing) {
-    if (strval($existing["facilityId"] ?? "") === $facilityId) {
-      return;
-    }
-  }
-
-  $options[] = [
-    "facilityId"   => $facilityId,
-    "facilityName" => $facilityName,
-  ];
-}
-
-function cdFindFacilityOption(array $options, string $facilityId): ?array {
-  if ($facilityId === "" || $facilityId === "00000") return null;
-
-  foreach ($options as $option) {
-    if (strval($option["facilityId"] ?? "") === $facilityId) {
-      return $option;
-    }
-  }
-
-  return null;
-}
-
-function cdSortFacilityOptions(array &$options): void {
-  usort($options, function(array $a, array $b): int {
-    return strcasecmp(
-      strval($a["facilityName"] ?? ""),
-      strval($b["facilityName"] ?? "")
-    );
-  });
-}
 function cdBuildEmptyClubDemandPayload(
   string $clubId,
   string $clubName,
@@ -470,7 +262,7 @@ function cdBuildEmptyClubDemandPayload(
     "ok"         => true,
     "authorized" => false,
     "message"    => $message,
-    "filters" => [
+    "filters"    => [
       "dateFrom"   => $dateFrom,
       "dateTo"     => $dateTo,
       "facilityId" => "",
@@ -489,7 +281,7 @@ function cdBuildEmptyClubDemandPayload(
       "totalSlots"  => 0,
       "avgPerGame"  => 0,
     ],
-    "games" => [],
+    "games"  => [],
     "header" => [
       "title"    => "Club Demand",
       "subtitle" => trim($clubName),

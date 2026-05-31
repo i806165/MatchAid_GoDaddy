@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
+require_once MA_SERVICES . "/context/service_ContextFacility.php";
 
 Logger::info("CLUB_HOME_ENTRY", [
   "uri"  => $_SERVER["REQUEST_URI"] ?? "",
@@ -38,24 +39,59 @@ if ($userName === "" && !empty($ctx["profile"]) && is_array($ctx["profile"])) {
   ));
 }
 
-$userInitial = $userName !== "" ? strtoupper(substr($userName, 0, 1)) : "?";
-
 $clubName = trim(strval($_SESSION["SessionClubName"] ?? ""));
 
 // ----------------------------------------------------------------
-// 4) Chrome values
+// 4) Resolve facility context
+//    Restore prior selection from session if present
+// ----------------------------------------------------------------
+$userGHIN            = trim(strval($_SESSION["SessionGHINLogonID"] ?? ""));
+$requestedFacilityId = trim(strval($_SESSION["SessionFacilityID"] ?? ""));
+
+$facilityCtx = ServiceContextFacility::resolve($userGHIN, $requestedFacilityId);
+
+// Persist resolved facility to session
+if (!empty($facilityCtx["authorized"])) {
+  $_SESSION["SessionFacilityID"]        = $facilityCtx["facilityId"];
+  $_SESSION["SessionFacilityName"]      = $facilityCtx["facilityName"];
+  $_SESSION["SessionCanSelectFacility"] = $facilityCtx["canSelectFacility"];
+  $_SESSION["SessionFacilityCanSearch"] = $facilityCtx["canSearch"];
+} else {
+  // Clear stale facility session values if no longer authorized
+  unset(
+    $_SESSION["SessionFacilityID"],
+    $_SESSION["SessionFacilityName"],
+    $_SESSION["SessionCanSelectFacility"],
+    $_SESSION["SessionFacilityCanSearch"]
+  );
+}
+
+// ----------------------------------------------------------------
+// 5) Chrome values
 // ----------------------------------------------------------------
 $maChromeTitle    = "Club Admin";
 $maChromeSubtitle = $clubName !== "" ? $clubName : "";
 $maChromeLogoUrl  = null;
 
 // ----------------------------------------------------------------
-// 5) Path constants for JS
+// 6) Build init payload for JS
+// ----------------------------------------------------------------
+$initPayload = [
+  "ok"       => true,
+  "clubName" => $clubName,
+  "userName" => $userName,
+  "facility" => $facilityCtx,
+];
+
+// ----------------------------------------------------------------
+// 7) Path constants for JS
 // ----------------------------------------------------------------
 $paths = [
-  "apiSession"   => MA_ROUTE_API_SESSION,
-  "routerApi"    => MA_ROUTE_API_ROUTER,
-  "demandReport" => MA_ROUTE_CLUB_DEMAND,
+  "apiSession"    => MA_ROUTE_API_SESSION,
+  "routerApi"     => MA_ROUTE_API_ROUTER,
+  "demandReport"  => MA_ROUTE_CLUB_DEMAND,
+  "clubUsers"     => MA_ROUTE_CLUB_USERS,
+  "setFacility"   => "/api/club_home/setFacility.php",
 ];
 ?>
 <!DOCTYPE html>
@@ -83,9 +119,13 @@ $paths = [
 <script>
   window.MA       = window.MA || {};
   window.MA.paths = <?= json_encode($paths, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+  window.__INIT__ = <?= json_encode($initPayload, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+  window.__MA_INIT__ = window.__INIT__;
   window.MA.routes = {
-    router:       window.MA.paths.routerApi,
-    demandReport: window.MA.paths.demandReport,
+    router:        window.MA.paths.routerApi,
+    demandReport:  window.MA.paths.demandReport,
+    clubUsers:     window.MA.paths.clubUsers,
+    setFacility:   window.MA.paths.setFacility,
   };
 </script>
 

@@ -16,6 +16,135 @@
   line-height: 1.55;
 }
 
+/* ===== Facility picker — controls area ===== */
+.chFacilityWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chFacilityLabel {
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--mutedText);
+  letter-spacing: .2px;
+  text-transform: uppercase;
+}
+
+/* Single facility chip */
+.chFacilityChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surfaceChrome);
+  border: 0.5px solid var(--borderSubtle);
+  border-radius: var(--radiusMd);
+  padding: 7px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* Dropdown */
+.chFacilitySelect {
+  width: 100%;
+  max-width: 420px;
+}
+
+/* Search wrap */
+.chSearchWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  max-width: 420px;
+}
+
+.chSearchInput {
+  width: 100%;
+  padding-right: 30px;
+}
+
+.chSearchWrap .clearBtn {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--mutedText);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.chSearchWrap .clearBtn.isHidden {
+  display: none;
+}
+
+/* Search results list */
+.chSearchResults {
+  max-width: 420px;
+  border: 0.5px solid var(--borderSubtle);
+  border-radius: var(--radiusMd);
+  overflow: hidden;
+  background: var(--cardBg);
+  margin-top: 2px;
+}
+
+.chSearchResult {
+  padding: 9px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  border-bottom: 0.5px solid var(--borderSubtle);
+  cursor: pointer;
+}
+
+.chSearchResult:last-child {
+  border-bottom: none;
+}
+
+.chSearchResult:hover {
+  background: var(--brandPrimaryBg);
+  color: var(--brandPrimary);
+}
+
+/* Selected facility banner */
+.chSelectedBanner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  background: var(--successBg, #e8f5e9);
+  border-radius: var(--radiusMd);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--success, #2e7d32);
+  max-width: 420px;
+}
+
+.chSelectedBanner::before {
+  content: "✓";
+  font-weight: 900;
+}
+
+/* No access message */
+.chNoAccess {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--surfaceChrome);
+  border: 0.5px solid var(--borderSubtle);
+  border-radius: var(--radiusMd);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mutedText);
+}
+
 /* ===== Tool tile grid ===== */
 .chTileGrid {
   display: flex;

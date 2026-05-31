@@ -58,6 +58,7 @@ define('MA_ROUTE_SCORE_SUMMARY', '/app/score_summary/scoresummary.php');
 define('MA_ROUTE_API_USER_SETTINGS', '/api/user_settings');
 define('MA_ROUTE_USER_SETTINGS',     '/app/user_settings/usersettings.php');
 define('MA_ROUTE_CLUB_DEMAND', '/app/club_demand/clubdemand.php');
+define('MA_ROUTE_CLUB_USERS', '/app/club_users/clubusers.php');
 define('MA_ROUTE_CLUB_HOME', '/app/club_home/clubhome.php');
 define('MA_ROUTE_API_MESSAGING', '/api/messaging/initPlayerNotifications.php');
 define("MA_ROUTE_CLUB_MARKETING", "/app/home/clubmarketing.php");
