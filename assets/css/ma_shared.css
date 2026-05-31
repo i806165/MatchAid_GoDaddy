@@ -563,7 +563,7 @@ textarea {
   width: 100%;
   padding: 11px 14px;
   background: transparent;
-  border: 1.5px dashed var(--borderSubtle);
+  border: 1.5px dashed var(--brandPrimary);
   border-radius: var(--controlRadius);
   color: var(--mutedText);
   font-family: var(--fontFamilyBase);
