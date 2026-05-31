@@ -1,7 +1,7 @@
 /* /assets/css/club_users.css
    Page-specific styles for Club Users.
    Keep minimal — prefer ma_shared.css tokens/classes.
-   Mirrors club_demand.css table conventions.
+   Mirrors game_summary.css table/mobile-card conventions.
 */
 
 /* ===== Controls band ===== */
@@ -44,18 +44,10 @@
   white-space: nowrap;
 }
 
-/* ===== Card subtitle ===== */
-.cuCardSub {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--brandSecondaryText);
-  opacity: .8;
-}
-
-/* ===== Table ===== */
+/* ===== Table — desktop ===== */
 .cuTableWrap {
   width: 100%;
-  overflow-x: auto;
+  overflow: auto;
   border: 1px solid var(--borderSubtle);
   border-radius: var(--controlRadius);
   background: var(--cardBg);
@@ -105,14 +97,70 @@
   font-weight: 600;
 }
 
-/* ===== Mobile ===== */
-@media (max-width: 520px) {
-  .cuTable th:nth-child(4),
-  .cuTable td:nth-child(4),
-  .cuTable th:nth-child(6),
-  .cuTable td:nth-child(6),
-  .cuTable th:nth-child(7),
-  .cuTable td:nth-child(7) {
+/* ===== Mobile card list — hidden on desktop ===== */
+.cuMobileList {
+  display: none;
+}
+
+/* ===== Mobile — swap table for cards ===== */
+@media (max-width: 820px) {
+
+  .cuTableWrap {
     display: none;
+  }
+
+  .cuMobileList {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cardsGap);
+  }
+
+  .cuPlayerCard {
+    border: 1px solid var(--cardBorder);
+    border-radius: var(--cardRadius);
+    background: var(--cardBg);
+    box-shadow: var(--cardShadow);
+    padding: var(--cardPad) var(--cardHdrPadX);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .cuCard__name {
+    font-size: var(--labelTextSize);
+    font-weight: 900;
+    color: var(--ink);
+  }
+
+  .cuCard__line {
+    font-size: var(--fieldValueSize);
+    font-weight: 700;
+    color: var(--mutedText);
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .cuCard__label {
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .3px;
+    text-transform: uppercase;
+    color: var(--mutedText);
+    opacity: .7;
+    flex: 0 0 auto;
+  }
+
+  .cuCard__value {
+    color: var(--ink);
+    font-weight: 700;
+  }
+
+  .cuCard__date {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--mutedText);
+    margin-top: 4px;
   }
 }

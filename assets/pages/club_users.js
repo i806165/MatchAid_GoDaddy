@@ -4,12 +4,12 @@
  * Architecture:
  *   - All data arrives via window.__INIT__ (pre-baked by PHP controller)
  *   - No DB calls from JS — static display with client-side name filter
- *   - state.users is the in-memory dataset for the session
+ *   - Desktop: table view; Mobile (≤820px): card-per-user view
+ *   - Mirrors game_summary.js mobile/desktop pattern
  *
  * Follows club_demand.js patterns:
  *   IIFE · strict mode · state object · el DOM map
- *   applyInit() → wireEvents() → renderTable() → boot()
- *   chrome.setHeaderLines / setActions / setBottomNav
+ *   applyInit() → wireEvents() → render() → boot()
  */
 (function () {
   "use strict";
@@ -22,11 +22,13 @@
 
   // ── State ──────────────────────────────────────────────────────
   const state = {
-    users:      [],   // full list from __INIT__
-    nameFilter: "",   // current search string
+    users:      [],
+    nameFilter: "",
     context:    {
-      clubId:   "",
-      clubName: "",
+      clubId:       "",
+      clubName:     "",
+      facilityId:   "",
+      facilityName: "",
     },
   };
 
@@ -35,8 +37,8 @@
     search:      document.getElementById("cuSearch"),
     searchClear: document.getElementById("cuSearchClear"),
     userCount:   document.getElementById("cuUserCount"),
-    cardSub:     document.getElementById("cuCardSub"),
     tbody:       document.getElementById("cuTbody"),
+    mobileList:  document.getElementById("cuMobileList"),
     empty:       document.getElementById("cuEmpty"),
   };
 
@@ -50,6 +52,19 @@
   function safeStr(v) { return String(v ?? "").trim(); }
   function dash(v)    { const s = safeStr(v); return s || "—"; }
 
+  function fmtDateTime(raw) {
+    if (!raw) return "—";
+    const s = String(raw).trim();
+    if (!s) return "—";
+    const d = new Date(s.replace(" ", "T"));
+    if (isNaN(d.getTime())) return s;
+    return d.toLocaleDateString("en-US", {
+      month: "short", day: "numeric", year: "numeric",
+    }) + " " + d.toLocaleTimeString("en-US", {
+      hour: "numeric", minute: "2-digit", hour12: true,
+    });
+  }
+
   function fmtPhone(raw) {
     const digits = safeStr(raw).replace(/\D/g, "");
     if (digits.length === 10) {
@@ -58,24 +73,16 @@
     return dash(raw);
   }
 
-  // ── Render ─────────────────────────────────────────────────────
-  function renderTable() {
+  // ── Filter ─────────────────────────────────────────────────────
+  function getVisible() {
     const filter = state.nameFilter.toLowerCase();
-
-    const visible = filter
+    return filter
       ? state.users.filter(u => safeStr(u.name).toLowerCase().includes(filter))
       : state.users;
+  }
 
-    // Update count
-    if (el.userCount) {
-      el.userCount.textContent = visible.length === state.users.length
-        ? `${state.users.length} user${state.users.length !== 1 ? "s" : ""}`
-        : `${visible.length} of ${state.users.length}`;
-    }
-
-    // Empty state
-    if (el.empty) el.empty.style.display = visible.length === 0 ? "" : "none";
-
+  // ── Render desktop table ────────────────────────────────────────
+  function renderDesktop(visible) {
     if (!el.tbody) return;
 
     if (visible.length === 0) {
@@ -90,16 +97,74 @@
         <td>${esc(dash(u.email))}</td>
         <td class="cuMuted">${esc(fmtPhone(u.mobilePhone))}</td>
         <td>${esc(dash(u.contactMethod))}</td>
+        <td class="cuMuted">${esc(fmtDateTime(u.createdDate))}</td>
+        <td class="cuMuted">${esc(fmtDateTime(u.updatedDate))}</td>
       </tr>
     `).join("");
   }
 
+  // ── Render mobile cards ─────────────────────────────────────────
+  function renderMobile(visible) {
+    if (!el.mobileList) return;
+
+    if (visible.length === 0) {
+      el.mobileList.innerHTML = "";
+      return;
+    }
+
+    el.mobileList.innerHTML = visible.map(u => `
+      <div class="cuPlayerCard">
+        <div class="cuCard__name">${esc(dash(u.name))}</div>
+        <div class="cuCard__line">
+          <span class="cuCard__label">GHIN</span>
+          <span class="cuCard__value">${esc(dash(u.ghin))}</span>
+        </div>
+        ${u.email ? `
+        <div class="cuCard__line">
+          <span class="cuCard__label">Email</span>
+          <span class="cuCard__value">${esc(u.email)}</span>
+        </div>` : ""}
+        ${u.mobilePhone ? `
+        <div class="cuCard__line">
+          <span class="cuCard__label">Mobile</span>
+          <span class="cuCard__value">${esc(fmtPhone(u.mobilePhone))}</span>
+        </div>` : ""}
+        ${u.contactMethod ? `
+        <div class="cuCard__line">
+          <span class="cuCard__label">Contact</span>
+          <span class="cuCard__value">${esc(u.contactMethod)}</span>
+        </div>` : ""}
+        <div class="cuCard__date">Last activity: ${esc(fmtDateTime(u.updatedDate))}</div>
+      </div>
+    `).join("");
+  }
+
+  // ── Master render ───────────────────────────────────────────────
+  function render() {
+    const visible = getVisible();
+
+    // Count
+    if (el.userCount) {
+      el.userCount.textContent = visible.length === state.users.length
+        ? `${state.users.length} user${state.users.length !== 1 ? "s" : ""}`
+        : `${visible.length} of ${state.users.length}`;
+    }
+
+    // Empty state
+    if (el.empty) el.empty.style.display = visible.length === 0 ? "" : "none";
+
+    renderDesktop(visible);
+    renderMobile(visible);
+  }
+
   // ── Chrome ─────────────────────────────────────────────────────
   function applyChrome() {
-    const clubName = safeStr(state.context.clubName) || "Club Users";
+    const facilityName = safeStr(state.context.facilityName)
+      || safeStr(state.context.clubName)
+      || "Club Users";
 
     if (typeof chrome.setHeaderLines === "function") {
-      chrome.setHeaderLines(["Club Users", clubName, ""]);
+      chrome.setHeaderLines(["Club Users", facilityName]);
     }
     if (typeof chrome.setActions === "function") {
       chrome.setActions({
@@ -122,43 +187,31 @@
 
     state.users   = Array.isArray(init.users) ? init.users : [];
     state.context = {
-      clubId:   safeStr(init.context?.clubId),
-      clubName: safeStr(init.context?.clubName),
+      clubId:       safeStr(init.context?.clubId),
+      clubName:     safeStr(init.context?.clubName),
+      facilityId:   safeStr(init.context?.facilityId),
+      facilityName: safeStr(init.context?.facilityName),
     };
-
-    // Card subtitle
-    if (el.cardSub) {
-      el.cardSub.textContent = state.context.clubName || "";
-    }
   }
 
   // ── Wire events ────────────────────────────────────────────────
   function wireEvents() {
-    if (el.search) {
-      el.search.addEventListener("input", () => {
-        state.nameFilter = safeStr(el.search.value);
-        if (el.searchClear) {
-          el.searchClear.classList.toggle("isHidden", !state.nameFilter);
-        }
-        renderTable();
-      });
-    }
+    el.search?.addEventListener("input", () => {
+      state.nameFilter = safeStr(el.search.value);
+      el.searchClear?.classList.toggle("isHidden", !state.nameFilter);
+      render();
+    });
 
-    if (el.searchClear) {
-      el.searchClear.addEventListener("click", () => {
-        state.nameFilter = "";
-        if (el.search) {
-          el.search.value = "";
-          el.search.focus();
-        }
-        el.searchClear.classList.add("isHidden");
-        renderTable();
-      });
-    }
+    el.searchClear?.addEventListener("click", () => {
+      state.nameFilter = "";
+      if (el.search) { el.search.value = ""; el.search.focus(); }
+      el.searchClear.classList.add("isHidden");
+      render();
+    });
   }
 
   // ── Boot ───────────────────────────────────────────────────────
-  async function boot() {
+  function boot() {
     try {
       setStatus("Loading users…", "info");
 
@@ -168,9 +221,9 @@
       applyInit(init);
       wireEvents();
       applyChrome();
-      renderTable();
+      render();
 
-      setStatus("Ready.", "ok");
+      setStatus("", "info");
     } catch (e) {
       console.error(e);
       setStatus(String(e?.message || e), "err");

@@ -5,10 +5,8 @@
 
 <!-- ============================================================
      CONTROLS BAND
-     Row 1: Name search filter
      ============================================================ -->
 <div class="maControlArea" id="cuControls" aria-label="Club Users Controls">
-
   <div class="maFieldRow" style="align-items:center; gap:8px;">
     <div class="maField" style="flex:1 1 auto; min-width:0;">
       <div class="maInputWrap cuInputClearWrap">
@@ -18,44 +16,35 @@
     </div>
     <div class="cuUserCount" id="cuUserCount"></div>
   </div>
-
-</div><!-- /maControlArea -->
-
+</div>
 
 <!-- ============================================================
      MAIN PAGE BODY
      ============================================================ -->
 <main class="maPage" role="main" id="cuPage">
 
-  <section class="maCard" aria-label="Club Users">
-    <header class="maCard__hdr">
-      <div class="maCard__title">REGISTERED USERS</div>
-      <div class="cuCardSub" id="cuCardSub"></div>
-    </header>
-    <div class="maCard__body">
+  <!-- Desktop table -->
+  <div class="cuTableWrap">
+    <table class="cuTable" id="cuTable">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>GHIN</th>
+          <th>Email</th>
+          <th>Mobile Phone</th>
+          <th>Contact Method</th>
+          <th>Created</th>
+          <th>Last Activity</th>
+        </tr>
+      </thead>
+      <tbody id="cuTbody"></tbody>
+    </table>
+  </div>
 
-      <div class="cuTableWrap">
-        <table class="cuTable" id="cuTable">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>GHIN</th>
-              <th>Email</th>
-              <th>Mobile Phone</th>
-              <th>Contact Method</th>
-              <th>Created</th>
-              <th>Last Activity</th>
-            </tr>
-          </thead>
-          <tbody id="cuTbody"></tbody>
-        </table>
-      </div>
+  <!-- Mobile card list -->
+  <div class="cuMobileList" id="cuMobileList"></div>
 
-      <div class="maHint" id="cuEmpty" style="display:none;">
-        No users found.
-      </div>
+  <!-- Empty state -->
+  <div class="maHint" id="cuEmpty" style="display:none;">No users found.</div>
 
-    </div>
-  </section>
-
-</main><!-- /cuPage -->
+</main>
