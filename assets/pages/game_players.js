@@ -887,7 +887,7 @@ function renderTrayControls(){
     // The favorites tab will overwrite this in multi-add mode only.
     if (el.trayFtr) {
       el.trayFtr.innerHTML = `<div class="gpFooter gpFooter--tray">
-        <button class="btn btnPrimary gsMobileReturnBtn" id="gpBtnTrayClose" type="button">
+        <button class="btn btnSecondary gsMobileReturnBtn" id="gpBtnTrayClose" type="button">
           ← Return to Roster
         </button>
       </div>`;
