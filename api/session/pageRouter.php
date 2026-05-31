@@ -76,6 +76,7 @@ $ROUTES = [
 
     "clubhome" => "/app/club_home/clubhome.php",
     "clubdemand" => "/app/club_demand/clubdemand.php",
+    "clubusers" => "/app/club_users/clubusers.php",
 ];
 
 

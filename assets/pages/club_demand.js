@@ -1381,7 +1381,7 @@
     }
     if (typeof chrome.setBottomNav === "function") {
       chrome.setBottomNav({
-        visible:    ["home", "clubhome", "clubdemand"],
+        visible:    ["home", "clubhome", "clubdemand", "clubusers"],
         active:     "clubdemand",
         onNavigate: (id) => (typeof MA.routerGo === "function" ? MA.routerGo(id) : null),
       });

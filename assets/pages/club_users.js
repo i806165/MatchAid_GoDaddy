@@ -109,8 +109,8 @@
     }
     if (typeof chrome.setBottomNav === "function") {
       chrome.setBottomNav({
-        visible:    ["home", "clubhome"],
-        active:     "clubhome",
+        visible:    ["home", "clubhome", "clubdemand", "clubusers"],
+        active:     "clubusers",
         onNavigate: (id) => (typeof MA.routerGo === "function" ? MA.routerGo(id) : null),
       });
     }

@@ -71,6 +71,13 @@
       <span class="maNavLabel">Club Demand</span>
     </button>
 
+    <button type="button" class="maNavBtn" data-nav="clubusers" aria-label="Club Users">
+      <span class="maNavIcon" aria-hidden="true">
+        <img src="/assets/images/nav-users.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
+      </span>
+      <span class="maNavLabel">Club Users</span>
+    </button>
+
     <button type="button" class="maNavBtn" data-nav="admin" aria-label="Admin">
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-admin-home.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
