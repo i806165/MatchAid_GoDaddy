@@ -74,6 +74,11 @@ ini_set("error_log", MA_ROOT . "/logs/matchaid.log");
 
 $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
 
+$sessionPath = MA_ROOT . '/sessions';
+if (!is_dir($sessionPath)) {
+  mkdir($sessionPath, 0700, true);
+}
+
 if (session_status() !== PHP_SESSION_ACTIVE) {
   ini_set('session.gc_maxlifetime', (string)MA_SESSION_IDLE_SECONDS);
   session_set_cookie_params([
@@ -136,6 +141,17 @@ define('MA_SITE_URL', ma_config()['app']['site_url'] ?? 'https://www.matchaid.or
 require_once MA_API_LIB . '/Db.php';
 require_once MA_API_LIB . '/Logger.php';
 Db::init(ma_config()['db'] ?? []);
+
+Logger::info("SESSION_CONFIG", [
+  "save_path"       => session_save_path(),
+  "gc_maxlifetime"  => ini_get("session.gc_maxlifetime"),
+  "gc_probability"  => ini_get("session.gc_probability"),
+  "gc_divisor"      => ini_get("session.gc_divisor"),
+  "cookie_lifetime" => ini_get("session.cookie_lifetime"),
+  "session_path"    => $sessionPath,
+  "path_exists"     => is_dir($sessionPath)      ? "yes" : "no",
+  "path_writable"   => is_writable($sessionPath) ? "yes" : "no",
+]);
 
 // Help service — available globally on all pages
 require_once MA_SVC_HELP . '/service_PageHelp.php';
