@@ -163,3 +163,205 @@ main.maPage .maListRow__col--muted {
     margin-inline: auto;
   }
 }
+/* /assets/css/favorite_players.css — additions for email modal + group modal
+ * Add these rules to the existing favorite_players.css.
+ * All structural rules only — theming defers to ma_shared.css variables.
+ */
+
+/* ── Email field wrapper ────────────────────────────────────────────────────── */
+.fp-email-wrap {
+  position: relative;
+}
+
+.fp-email-wrap input {
+  padding-right: 36px;
+}
+
+.fp-email-pick {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: var(--brandAccent);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.fp-email-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-top: 4px;
+  background: var(--color-background-info, #E6F1FB);
+  color: var(--color-text-info, #0C447C);
+}
+
+.fp-email-badge .ti {
+  font-size: 11px;
+}
+
+/* ── Email selection modal rows ─────────────────────────────────────────────── */
+.fp-email-section-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--textMuted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 14px 0 6px;
+  padding: 0 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fp-email-section-label:first-child {
+  margin-top: 0;
+}
+
+.fp-email-section-label .ti {
+  font-size: 12px;
+}
+
+.fp-email-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  margin-bottom: 8px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.fp-email-row:last-child {
+  margin-bottom: 0;
+}
+
+.fp-email-row:not(.is-masked):hover {
+  border-color: var(--brandAccent);
+  background: var(--surfaceHover, var(--surfaceApp));
+}
+
+.fp-email-row.is-selected {
+  border-color: var(--brandAccent);
+  background: color-mix(in srgb, var(--brandAccent) 8%, transparent);
+}
+
+.fp-email-row.is-masked {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.fp-email-row__radio {
+  margin-top: 3px;
+  flex-shrink: 0;
+  accent-color: var(--brandAccent);
+}
+
+.fp-email-row__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.fp-email-row__address {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--textPrimary);
+  word-break: break-all;
+}
+
+.fp-email-row__label {
+  font-size: 11px;
+  color: var(--textMuted);
+  margin-top: 2px;
+}
+
+.fp-email-row__masked {
+  font-size: 11px;
+  color: var(--color-text-warning, #BA7517);
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fp-email-row__masked .ti {
+  font-size: 12px;
+}
+
+.fp-email-manual {
+  margin-top: 8px;
+}
+
+.fp-email-manual .maInput {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ── Add group modal — narrower width ───────────────────────────────────────── */
+.fp-group-modal {
+  max-width: 360px;
+}
+
+/* ── Groups header row (label + Add Group button) ───────────────────────────── */
+.fp-groups-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.fp-groups-label {
+  font-size: 13px;
+  color: var(--textMuted);
+  font-weight: 500;
+}
+
+.fp-btn-add-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--brandAccent);
+  color: var(--brandAccent);
+  background: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.fp-btn-add-group .ti {
+  font-size: 13px;
+}
+
+.fp-btn-add-group:hover {
+  background: color-mix(in srgb, var(--brandAccent) 8%, transparent);
+}
+
+/* ── Modal close button ─────────────────────────────────────────────────────── */
+.maModal__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  line-height: 1;
+}
+
+.maModal__close:hover {
+  color: #fff;
+}
