@@ -46,6 +46,7 @@ final class ServiceLogin
             $first  = (string)($login["golfer_user"]["golfers"][0]["first_name"] ?? "");
             $last   = (string)($login["golfer_user"]["golfers"][0]["last_name"] ?? "");
             $clubId = (string)($login["golfer_user"]["golfers"][0]["club_id"] ?? "");
+            $clubName = (string)($login["golfer_user"]["golfers"][0]["club_name"] ?? "");
 
             if ($ghinId === "" || $userToken === "") {
                 throw new RuntimeException("Invalid login response: missing GHIN ID or user token.");
@@ -74,6 +75,11 @@ final class ServiceLogin
                     "ok"      => false,
                     "errCode" => "CLUB_NOT_ENROLLED",
                     "clubId"  => $clubId,
+                    "clubName" => $clubName,
+                    "userName" => $userName,
+                    "firstName"=> $first,
+                    "lastName" => $last,
+                    "ghinId"   => $ghinId,
                     "message" => "Your club is not yet enrolled in MatchAid.",
                 ];
             }

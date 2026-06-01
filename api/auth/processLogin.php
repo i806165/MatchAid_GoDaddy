@@ -45,6 +45,17 @@ try {
     // Club not enrolled — redirect to marketing page, passing club ID for display
     if (($result["errCode"] ?? "") === "CLUB_NOT_ENROLLED") {
         $clubId = urlencode((string)($result["clubId"] ?? ""));
+
+        Logger::info("LOGIN_CLUB_NOT_ENROLLED", [
+                "userId"    => $userId,
+                "ghinId"    => $result["ghinId"]    ?? "",
+                "userName"  => $result["userName"]  ?? "",
+                "firstName" => $result["firstName"] ?? "",
+                "lastName"  => $result["lastName"]  ?? "",
+                "clubId"    => $result["clubId"]    ?? "",
+                "clubName"  => $result["clubName"]  ?? "",
+        ]);
+
         respond(200, [
             "ok"      => false,
             "nextUrl" => MA_ROUTE_CLUB_MARKETING . ($clubId !== "" ? "?clubId={$clubId}" : ""),
