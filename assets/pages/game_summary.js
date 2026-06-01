@@ -848,8 +848,13 @@
   }
 
   async function copyThenNotify() {
-    await copyRichTextToClipboard();
-    openNotifyModal();
+      openNotifyModal();
+      try {
+          await copyRichTextToClipboard();
+      } catch (e) {
+          console.warn("[MA] Clipboard copy failed:", e);
+          // modal still opens regardless
+      }
   }
 
   function openNotifyModal() {
