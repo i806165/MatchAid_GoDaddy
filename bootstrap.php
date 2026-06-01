@@ -63,6 +63,13 @@ define('MA_ROUTE_CLUB_HOME', '/app/club_home/clubhome.php');
 define('MA_ROUTE_API_MESSAGING', '/api/messaging/initPlayerNotifications.php');
 define("MA_ROUTE_CLUB_MARKETING", "/app/home/clubmarketing.php");
 
+function ma_asset(string $relativePath): string {
+    $full = MA_ROOT . $relativePath;
+    $v = file_exists($full) ? filemtime($full) : '1';
+    return $relativePath . '?v=' . $v;
+}
+
+
 // Global testing flag: Set to true to bypass game-day score entry gating
 define('MA_TESTING_MODE', true);
 // MatchAid session policy
@@ -143,6 +150,7 @@ require_once MA_API_LIB . '/Db.php';
 require_once MA_API_LIB . '/Logger.php';
 Db::init(ma_config()['db'] ?? []);
 
+/* 
 Logger::info("SESSION_CONFIG", [
   "save_path"       => session_save_path(),
   "gc_maxlifetime"  => ini_get("session.gc_maxlifetime"),
@@ -153,6 +161,7 @@ Logger::info("SESSION_CONFIG", [
   "path_exists"     => is_dir($sessionPath)      ? "yes" : "no",
   "path_writable"   => is_writable($sessionPath) ? "yes" : "no",
 ]);
+*/
 
 // Help service — available globally on all pages
 require_once MA_SVC_HELP . '/service_PageHelp.php';

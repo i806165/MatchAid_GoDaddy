@@ -44,8 +44,8 @@ $maChromeLogoUrl = null;
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="/assets/css/ma_shared.css?v=1" />
-  <link rel="stylesheet" href="/assets/css/game_scorecards.css?v=1" />
+  <link rel="stylesheet" href="<?= ma_asset('/assets/css/ma_shared.css') ?>" />
+  <link rel="stylesheet" href="<?= ma_asset('/assets/css/game_scorecards.css') ?>" />
 </head>
 <body>
 
@@ -70,8 +70,8 @@ $maChromeLogoUrl = null;
   window.__MA_INIT__ = window.__INIT__;
 </script>
 
-<script src="/assets/js/ma_shared.js?v=1"></script>
-<script src="/assets/pages/game_scorecards.js?v=1"></script>
-<script src="/assets/modules/actions_menu.js?v=1"></script>
+<script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
+<script src="<?= ma_asset('/assets/pages/game_scorecards.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>
 </body>
 </html>
