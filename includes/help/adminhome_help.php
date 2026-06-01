@@ -171,5 +171,17 @@ return [
             ],
         ],
 
+        // ── FAQ ───────────────────────────────────────────────────────────────
+        [
+            'label'    => 'FAQ',
+            'sections' => [
+                [
+                    'icon'    => 'tip',
+                    'heading' => 'Send Message to Players isn\'t opening my email program — what do I do?',
+                    'body'    => 'This can happen after a Windows or Office update silently resets your default mail handler. To fix it: open Windows Settings → Apps → Default Apps, search for "mailto", and make sure it is set to Outlook (or your preferred email program). This is a Windows configuration issue and is not related to MatchAid.',
+                ],
+            ],
+        ],
+
     ],
 ];
