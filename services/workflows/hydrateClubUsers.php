@@ -112,7 +112,7 @@ function hydrateClubUsers(array $context): array {
         _updatedDate                      AS updatedDate
       FROM db_Users
       WHERE CAST(dbUser_GHIN AS CHAR) IN ({$placeholders})
-      ORDER BY dbUser_Name ASC
+      ORDER BY dbUser_LName ASC, dbUser_FName ASC
     ";
 
     $stUsers = $pdo->prepare($sqlUsers);
