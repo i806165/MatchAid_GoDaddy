@@ -1045,7 +1045,8 @@
 
     const items = [
       { label: "Add Game to Calendar",          action: downloadIcsForGame },
-      { label: "Send Message to Players",        action: copyThenNotify },
+      { label: "Send Message to Players", action: openNotifyModal },
+      //{ label: "Send Message to Players",        action: copyThenNotify },
       { separator: true },
       { separator: true },
       { label: "Copy View to clipboard",         action: copyRichTextToClipboard },
