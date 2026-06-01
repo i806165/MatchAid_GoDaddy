@@ -78,6 +78,7 @@ $sessionPath = MA_ROOT . '/sessions';
 if (!is_dir($sessionPath)) {
   mkdir($sessionPath, 0700, true);
 }
+ini_set('session.save_path', $sessionPath);
 
 if (session_status() !== PHP_SESSION_ACTIVE) {
   ini_set('session.gc_maxlifetime', (string)MA_SESSION_IDLE_SECONDS);
