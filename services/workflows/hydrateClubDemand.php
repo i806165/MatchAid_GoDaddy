@@ -84,15 +84,6 @@ function hydrateClubDemand(array $context, array $filters): array {
 
   $gamesRaw = $gamesResult["games"]["raw"] ?? [];
 
-  Logger::info("CLUB_DEMAND_GAMES", [
-    "userGHIN"      => $userGHIN,
-    "clubId"        => $clubId,
-    "facilityId"    => $facilityId,
-    "facilityName"  => $facilityName,
-    "dateFrom"      => $dateFrom,
-    "dateTo"        => $dateTo,
-    "gameCount"     => count($gamesRaw),
-  ]);
 
   // ----------------------------------------------------------------
   // Step 2 — Extract unique GGIDs
@@ -210,13 +201,6 @@ function hydrateClubDemand(array $context, array $filters): array {
   $gameCount  = count($enriched);
   $avgPerGame = $gameCount > 0 ? round($totalRounds / $gameCount, 1) : 0;
 
-  Logger::info("CLUB_DEMAND_HYDRATE_COMPLETE", [
-    "facilityId"   => $facilityId,
-    "facilityName" => $facilityName,
-    "gameCount"    => $gameCount,
-    "totalRounds"  => $totalRounds,
-    "totalSlots"   => $totalSlots,
-  ]);
 
   return [
     "ok"         => true,

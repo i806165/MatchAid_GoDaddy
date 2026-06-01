@@ -39,13 +39,15 @@ try {
   // 5) Delegate to service — full two-pass normalize + inherit + persist
   $final = ServiceProcessPairings::savePairings($ggid, $assignments, $isPairPair);
 
+  /*
   Logger::info('PAIRINGS_SAVE_OK', [
     'ggid'        => $ggid,
     'assigned'    => count($assignments),
     'competition' => $game['dbGames_Competition'] ?? '',
     'userGHIN'    => $_SESSION['SessionGHINLogonID'] ?? ''
   ]);
-
+  */
+  
   echo json_encode(['ok' => true, 'payload' => ['players' => $final]]);
 
 } catch (Throwable $e) {

@@ -61,12 +61,14 @@ try {
         "adminClubName"  => $_SESSION["SessionClubName"] ?? null,
     ];
 
+    /*
     Logger::info("IMPORT_EXEC_START", [
         "title"     => $title,
         "adminGhin" => $adminGhin,
         "rowCount"  => count($rows),
     ]);
-
+    */
+    
     // 4) Delegate to workflow
     $result = be_importGames($title, $admin, $defaults, $rows, $sessionCtx, $courseConfirmed);
 

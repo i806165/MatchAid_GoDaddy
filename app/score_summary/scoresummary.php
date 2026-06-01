@@ -8,12 +8,6 @@ require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_SVC_DB . "/service_dbGames.php";
 require_once MA_API . "/score_summary/initScoreSummary.php";
 
-Logger::info("SCORESUMMARY_ENTRY", [
-  "uri" => $_SERVER["REQUEST_URI"] ?? "",
-  "ghin" => $_SESSION["SessionGHINLogonID"] ?? "",
-  "ggid" => $_SESSION["SessionStoredGGID"] ?? "",
-]);
-
 try {
     $gc = ServiceContextGame::getGameContext();
     $game = $gc["game"] ?? null;

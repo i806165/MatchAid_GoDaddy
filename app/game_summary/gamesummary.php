@@ -29,10 +29,6 @@ try {
 
   $initPayload["portal"] = $_SESSION["SessionPortal"] ?? "ADMIN PORTAL";
 
-  Logger::info("GAMESUMMARY_CTX_DEBUG", [
-    "ggid"    => $gc["ggid"] ?? "missing",
-    "hasGame" => !empty($gc["game"])
-  ]);
 
 } catch (Throwable $e) {
   Logger::error("GAMESUMMARY_INIT_FAIL", [

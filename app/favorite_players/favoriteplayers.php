@@ -6,12 +6,6 @@ require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 
-Logger::info("FAVPLAYERS_ENTRY", [
-  "uri" => $_SERVER["REQUEST_URI"] ?? "",
-  "ghin" => $_SESSION["SessionGHINLogonID"] ?? "",
-  "loginTime" => $_SESSION["SessionLoginTime"] ?? "",
-]);
-
 // 1) USER context hydration (Rule-2)
 $uc = ServiceUserContext::getUserContext();
 if (!$uc || empty($uc["ok"])) {

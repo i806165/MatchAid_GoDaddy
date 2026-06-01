@@ -25,11 +25,6 @@ final class ServiceGHINScores
 
             $payload = self::buildGHINPayload($game, $player);
 
-            // TEMPORARY: Log the JSON payload for testing purposes
-            Logger::info("GHIN_SCORE_POST_DEBUG", [
-                'payload' => $payload
-            ]);
-
             // INTERCEPT: Return early during testing to prevent live GHIN posting
             //return ['ok' => true, 'message' => 'DRY RUN: Score logged but not posted to GHIN.', 'ghinPostId' => 'DEBUG_' . time()];
 

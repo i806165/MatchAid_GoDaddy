@@ -7,11 +7,6 @@ require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_API . "/club_demand/initClubDemand.php";
 
-Logger::info("CLUB_DEMAND_ENTRY", [
-  "uri"  => $_SERVER["REQUEST_URI"] ?? "",
-  "ghin" => $_SESSION["SessionGHINLogonID"] ?? "",
-]);
-
 // ----------------------------------------------------------------
 // 1) Auth check (Rule-2) — before any DB IO
 // ----------------------------------------------------------------

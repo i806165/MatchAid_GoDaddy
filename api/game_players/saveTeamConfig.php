@@ -96,11 +96,6 @@ try {
     exit;
   }
 
-  Logger::info("SAVE_TEAM_CONFIG_OK", [
-    "ggid"  => $ggid,
-    "teams" => count($sanitized),
-    "ghin"  => $_SESSION["SessionGHINLogonID"] ?? "",
-  ]);
 
   $teamConfig = count($sanitized) === 0 ? null : ["teams" => $sanitized];
   echo json_encode(["ok" => true, "payload" => ["teamConfig" => $teamConfig]]);

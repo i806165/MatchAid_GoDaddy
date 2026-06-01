@@ -134,13 +134,6 @@ function hydrateClubUsers(array $context): array {
       ];
     }, $rows);
 
-    Logger::info("CLUB_USERS_HYDRATE_COMPLETE", [
-      "userGHIN"     => $userGHIN,
-      "facilityId"   => $facilityId,
-      "facilityName" => $facilityName,
-      "userCount"    => count($normalized),
-    ]);
-
     return [
       "ok"      => true,
       "context" => [

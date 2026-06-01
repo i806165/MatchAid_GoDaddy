@@ -64,11 +64,7 @@ try {
   $_SESSION["SessionCanSelectFacility"]   = $resolved["canSelectFacility"];
   $_SESSION["SessionFacilityCanSearch"]   = $resolved["canSearch"];
 
-  Logger::info("FACILITY_SET", [
-    "userGHIN"     => $userGHIN,
-    "facilityId"   => $resolved["facilityId"],
-    "facilityName" => $resolved["facilityName"],
-  ]);
+
 
   echo json_encode([
     "ok"           => true,

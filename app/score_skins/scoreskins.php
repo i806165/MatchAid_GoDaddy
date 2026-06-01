@@ -9,12 +9,6 @@ require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_SERVICES . "/scoring/service_ScoreCard.php";
 
-Logger::info("SCORESKINS_ENTRY", [
-  "uri" => $_SERVER["REQUEST_URI"] ?? "",
-  "ghin" => $_SESSION["SessionGHINLogonID"] ?? "",
-  "ggid" => $_SESSION["SessionStoredGGID"] ?? "",
-]);
-
 $uc = ServiceUserContext::getUserContext();
 if (!$uc || empty($uc["ok"])) {
   header("Location: " . MA_ROUTE_LOGIN);

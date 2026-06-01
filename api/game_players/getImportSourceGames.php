@@ -52,14 +52,6 @@ try {
         ];
     }
 
-    Logger::info("IMPORT_SOURCE_GAMES_DEBUG", [
-        "adminGhin"   => $adminGhin,
-        "clubId"      => $clubId,
-        "rawCount"    => count($rawGames),
-        "gamesCount"  => count($games),
-        "firstRaw"    => !empty($rawGames) ? array_slice($rawGames[0], 0, 5) : null,
-    ]);
-
     echo json_encode([
         "ok" => true,
         "payload" => [

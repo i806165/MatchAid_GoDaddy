@@ -35,13 +35,14 @@ try {
   // 4) Delegate — NH filtering happens inside getCoPlayMatrix()
   $matrix = ServiceDbPlayers::getCoPlayMatrix($ghins, $ggid);
 
+  /*
   Logger::info('COPLAY_MATRIX_OK', [
     'ggid'     => $ggid,
     'poolSize' => count($ghins),
     'pairs'    => count($matrix),
     'userGHIN' => $_SESSION['SessionGHINLogonID'] ?? ''
   ]);
-
+  */
   echo json_encode(['ok' => true, 'matrix' => $matrix]);
 
 } catch (Throwable $e) {

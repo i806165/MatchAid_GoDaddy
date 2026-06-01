@@ -74,12 +74,6 @@ try {
     $saved++;
   }
 
-  Logger::info("SAVE_TEAM_ASSIGNMENTS_OK", [
-    "ggid"  => $ggid,
-    "saved" => $saved,
-    "ghin"  => $_SESSION["SessionGHINLogonID"] ?? "",
-  ]);
-
   // 6) Return refreshed player list
   $players = ServiceDbPlayers::getGamePlayers($ggid);
   echo json_encode(["ok" => true, "payload" => ["players" => $players]]);

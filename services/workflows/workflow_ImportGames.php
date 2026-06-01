@@ -92,16 +92,8 @@ function be_importGames(
                 "dbGames_CourseConfirmed"    => $courseConfirmed,
             ];
 
-            Logger::info("IMPORT_ROW_SAVE_BEGIN", [
-                "idx"         => $idx,
-                "playDateISO" => $playDateISO,
-                "courseId"    => $courseId,
-            ]);
-
             $saved  = ServiceDbGames::saveGame("add", $patch, $sessionCtx);
             $newGgid = (int)($saved["ggid"] ?? 0);
-
-            Logger::info("IMPORT_ROW_SAVE_OK", ["idx" => $idx, "ggid" => $newGgid]);
 
             $results[] = ["idx" => $idx, "ok" => true, "ggid" => $newGgid];
             $inserted++;
