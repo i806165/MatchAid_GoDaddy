@@ -1,6 +1,11 @@
 <?php
 // /public_html/app/game_scorecards/scorecards_view.php
 ?>
+
+<div class="maControlArea" id="scControls">
+  <button class="btn btnSecondary" onclick="window.print()">🖨 Print Scorecards</button>
+</div>
+
 <div class="maCards" id="scCards">
   <section class="maCard" id="scHostCard" aria-label="Scorecards">
     <header class="maCard__hdr">
