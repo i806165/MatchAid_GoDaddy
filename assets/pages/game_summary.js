@@ -847,6 +847,11 @@
     setStatus("CSV downloaded.", "ok");
   }
 
+  async function copyThenNotify() {
+    await copyRichTextToClipboard();
+    openNotifyModal();
+  }
+
   function openNotifyModal() {
     if (!MA.notify || typeof MA.notify.open !== "function") {
       setStatus("Messaging module not loaded.", "error");
@@ -1035,7 +1040,7 @@
 
     const items = [
       { label: "Add Game to Calendar",          action: downloadIcsForGame },
-      { label: "Send Message to Players",        action: openNotifyModal },
+      { label: "Send Message to Players",        action: copyThenNotify },
       { separator: true },
       { separator: true },
       { label: "Copy View to clipboard",         action: copyRichTextToClipboard },
