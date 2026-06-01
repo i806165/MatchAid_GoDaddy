@@ -57,7 +57,12 @@
       console.warn("mailto link exceeds 2000 chars. Some recipients may be truncated.");
     }
 
-    window.location.href = link;
+    //window.location.href = link;  removed in favor of code below.
+    const a = document.createElement("a");
+    a.href = link;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   };
 
 })();
