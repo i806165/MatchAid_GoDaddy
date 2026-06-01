@@ -75,15 +75,20 @@
     if (!MA.chrome || !MA.chrome.setActions) return;
     if (mode === "list") {
       MA.chrome.setActions({
-        left:  { show: false },
-        right: { show: false },
+        left:   { show: false },
+        right:  { show: false },
+        footer: null,
+        page:   { label: "+ Add New Favorite", onClick: () => openAddNew() }
       });
     } else {
       MA.chrome.setActions({
-        left:  { show: false },
-        right: { show: false },
-        save:   { label: "Save",   onClick: () => doSave() },
-        cancel: { label: "Cancel", onClick: () => doCancel() },
+        left:   { show: false },
+        right:  { show: false },
+        footer: {
+          save:   { label: "Save",   onClick: () => doSave() },
+          cancel: { label: "Cancel", onClick: () => doCancel() }
+        },
+        page: null
       });
     }
   }
@@ -102,14 +107,19 @@
     if (!MA.chrome || !MA.chrome.setBottomNav) return;
     if (mode === "form") {
       MA.chrome.setBottomNav({ visible: [], disabled: [] });
+      const nav = document.getElementById("chromeBottomNav");
+      if (nav) nav.style.display = "none";
       return;
     }
+    const nav = document.getElementById("chromeBottomNav");
+    if (nav) nav.style.display = "";
     MA.chrome.setBottomNav({
-      visible: ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"],
-      active: "roster",
+      visible:  ["home", "admin", "favorites"],
+      disabled: ["favorites"],
+      active:   "favorites",
       onNavigate: async (id) => {
         await MA.routerGo(id);
-      },
+      }
     });
   }
 
@@ -183,8 +193,8 @@
         <div class="maListRow" data-ghin="${escapeHtml(f.playerGHIN)}">
           <div class="maListRow__col">${escapeHtml(f.name || "")}</div>
           <div class="maListRow__col maListRow__col--muted">${ghin}${groups ? " &bull; " + escapeHtml(groups) : ""}</div>
-          <div class="maListRow__col maListRow__col--actions">
-            <button class="maBtn maBtn--ghost maBtn--sm js-delete" data-ghin="${escapeHtml(f.playerGHIN)}" aria-label="Remove">
+          <div class="maListRow__col">
+            <button class="iconBtn btnPrimary js-delete" data-ghin="${escapeHtml(f.playerGHIN)}" aria-label="Remove">
               <i class="ti ti-trash" aria-hidden="true"></i>
             </button>
           </div>
@@ -330,7 +340,7 @@
           <div class="fp-email-row__address">Enter a different address...</div>
           <div class="fp-email-manual" id="fpEmailManualWrap" style="display:none;">
             <input type="email" id="fpEmailManualInput" placeholder="name@example.com"
-              class="maInput" autocomplete="email" />
+              class="maTextInput" autocomplete="email" />
           </div>
         </div>
       </div>`;
@@ -342,7 +352,7 @@
             <div class="maModal__title">Select Email Address</div>
             <div class="maModal__subtitle">${escapeHtml(state.current?.name || "")} &bull; ${escapeHtml(maskGHIN(state.current?.playerGHIN || ""))}</div>
           </div>
-          <button class="maModal__close" id="fpEmailModalClose" aria-label="Close">
+          <button class="btn btnLink" id="fpEmailModalClose" aria-label="Close">
             <i class="ti ti-x" aria-hidden="true"></i>
           </button>
         </header>
@@ -353,8 +363,8 @@
         </div>
         <footer class="maModal__ftr">
           <div class="maModal__ftrActions">
-            <button class="maBtn maBtn--ghost" id="fpEmailModalCancel">Cancel</button>
-            <button class="maBtn maBtn--primary" id="fpEmailModalSave">Use This Email</button>
+            <button class="btn btnPrimary" id="fpEmailModalCancel">Cancel</button>
+            <button class="btn btnSecondary" id="fpEmailModalSave">Use This Email</button>
           </div>
         </footer>
       </section>`;
@@ -443,18 +453,18 @@
             <div class="maModal__title">Add Group</div>
             <div class="maModal__subtitle">${escapeHtml(state.current?.name || "")}</div>
           </div>
-          <button class="maModal__close" id="fpGroupModalClose" aria-label="Close">
+          <button class="btn btnLink" id="fpGroupModalClose" aria-label="Close">
             <i class="ti ti-x" aria-hidden="true"></i>
           </button>
         </header>
         <div class="maModal__body">
-          <input type="text" id="fpGroupModalInput" class="maInput"
+          <input type="text" id="fpGroupModalInput" class="maTextInput"
             placeholder="Group name..." autocomplete="off" />
         </div>
         <footer class="maModal__ftr">
           <div class="maModal__ftrActions">
-            <button class="maBtn maBtn--ghost" id="fpGroupModalCancel">Cancel</button>
-            <button class="maBtn maBtn--primary" id="fpGroupModalSave" disabled>Add Group</button>
+            <button class="btn btnPrimary" id="fpGroupModalCancel">Cancel</button>
+            <button class="btn btnSecondary" id="fpGroupModalSave" disabled>Add Group</button>
           </div>
         </footer>
       </section>`;

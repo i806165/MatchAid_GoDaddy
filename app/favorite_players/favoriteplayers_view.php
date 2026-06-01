@@ -51,7 +51,7 @@
     <!-- Groups header with Add Group button -->
     <div class="fp-groups-header" style="margin-top:12px;">
       <span class="fp-groups-label maPillLabel">Groups</span>
-      <button type="button" class="fp-btn-add-group" id="fpBtnAddGroup">
+      <button type="button" class="btn btnSecondary fp-btn-add-group" id="fpBtnAddGroup">
         <i class="ti ti-plus" aria-hidden="true"></i>
         Add Group
       </button>

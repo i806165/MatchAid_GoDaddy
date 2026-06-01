@@ -163,17 +163,18 @@ main.maPage .maListRow__col--muted {
     margin-inline: auto;
   }
 }
-/* /assets/css/favorite_players.css — additions for email modal + group modal
- * Add these rules to the existing favorite_players.css.
- * All structural rules only — theming defers to ma_shared.css variables.
- */
 
-/* ── Email field wrapper ────────────────────────────────────────────────────── */
+
+/* ============================================================
+   Email modal + Group modal additions
+   ============================================================ */
+
+/* ── Email field wrapper ────────────────────────────────────── */
 .fp-email-wrap {
   position: relative;
 }
 
-.fp-email-wrap input {
+.fp-email-wrap .maTextInput {
   padding-right: 36px;
 }
 
@@ -201,15 +202,15 @@ main.maPage .maListRow__col--muted {
   padding: 2px 8px;
   border-radius: 999px;
   margin-top: 4px;
-  background: var(--color-background-info, #E6F1FB);
-  color: var(--color-text-info, #0C447C);
+  background: color-mix(in srgb, var(--brandAccent) 10%, transparent);
+  color: var(--brandAccent);
 }
 
 .fp-email-badge .ti {
   font-size: 11px;
 }
 
-/* ── Email selection modal rows ─────────────────────────────────────────────── */
+/* ── Email selection modal rows ─────────────────────────────── */
 .fp-email-section-label {
   font-size: 11px;
   font-weight: 500;
@@ -249,7 +250,7 @@ main.maPage .maListRow__col--muted {
 
 .fp-email-row:not(.is-masked):hover {
   border-color: var(--brandAccent);
-  background: var(--surfaceHover, var(--surfaceApp));
+  background: color-mix(in srgb, var(--brandAccent) 6%, transparent);
 }
 
 .fp-email-row.is-selected {
@@ -260,6 +261,11 @@ main.maPage .maListRow__col--muted {
 .fp-email-row.is-masked {
   opacity: 0.6;
   cursor: default;
+}
+
+.fp-email-row.is-masked:hover {
+  background: transparent;
+  border-color: var(--border);
 }
 
 .fp-email-row__radio {
@@ -288,7 +294,7 @@ main.maPage .maListRow__col--muted {
 
 .fp-email-row__masked {
   font-size: 11px;
-  color: var(--color-text-warning, #BA7517);
+  color: var(--colorWarning, #BA7517);
   margin-top: 4px;
   display: flex;
   align-items: center;
@@ -303,17 +309,17 @@ main.maPage .maListRow__col--muted {
   margin-top: 8px;
 }
 
-.fp-email-manual .maInput {
+.fp-email-manual .maTextInput {
   width: 100%;
   box-sizing: border-box;
 }
 
-/* ── Add group modal — narrower width ───────────────────────────────────────── */
+/* ── Add Group modal — narrower width ───────────────────────── */
 .fp-group-modal {
   max-width: 360px;
 }
 
-/* ── Groups header row (label + Add Group button) ───────────────────────────── */
+/* ── Groups header row ──────────────────────────────────────── */
 .fp-groups-header {
   display: flex;
   align-items: center;
@@ -322,46 +328,12 @@ main.maPage .maListRow__col--muted {
 }
 
 .fp-groups-label {
-  font-size: 13px;
-  color: var(--textMuted);
-  font-weight: 500;
+  margin: 0;
 }
 
-.fp-btn-add-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  padding: 4px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--brandAccent);
-  color: var(--brandAccent);
-  background: none;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
+/* fp-btn-add-group styling defers to .btn.btnSecondary from ma_shared.css */
 .fp-btn-add-group .ti {
   font-size: 13px;
 }
 
-.fp-btn-add-group:hover {
-  background: color-mix(in srgb, var(--brandAccent) 8%, transparent);
-}
-
-/* ── Modal close button ─────────────────────────────────────────────────────── */
-.maModal__close {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 20px;
-  display: flex;
-  align-items: center;
-  padding: 0;
-  line-height: 1;
-}
-
-.maModal__close:hover {
-  color: #fff;
-}
+/* maModal close button uses .btn.btnLink from ma_shared.css */
