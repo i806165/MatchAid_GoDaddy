@@ -86,6 +86,10 @@
   }
 }
 
+.gsMobileReturnBtn {
+  display: none;
+}
+
 @media (max-width: 900px) {
   .maPage--players .gpMobileCloseBtn {
     display: flex;
@@ -95,6 +99,7 @@
     width: 100%;
     justify-content: center;
   }
+  
 }
 
 .gpRow--favs{
