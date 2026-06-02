@@ -43,10 +43,10 @@ final class ServiceLogin
                 $login["golfer_user"]["golfer_id"]
                 ?? ($login["golfer_user"]["golfers"][0]["ghin"] ?? "")
             );
-            $first  = (string)($login["golfer_user"]["golfers"][0]["first_name"] ?? "");
-            $last   = (string)($login["golfer_user"]["golfers"][0]["last_name"] ?? "");
-            $clubId = (string)($login["golfer_user"]["golfers"][0]["club_id"] ?? "");
-            $clubName = (string)($login["golfer_user"]["golfers"][0]["club_name"] ?? "");
+            $first    = (string)($login["golfer_user"]["golfers"][0]["first_name"] ?? "");
+            $last     = (string)($login["golfer_user"]["golfers"][0]["last_name"]  ?? "");
+            $clubId   = (string)($login["golfer_user"]["golfers"][0]["club_id"]    ?? "");
+            $clubName = (string)($login["golfer_user"]["golfers"][0]["club_name"]  ?? "");
 
             if ($ghinId === "" || $userToken === "") {
                 throw new RuntimeException("Invalid login response: missing GHIN ID or user token.");
@@ -64,24 +64,57 @@ final class ServiceLogin
             $userName = trim($first . " " . $last);
 
             // Step 2: Get admin creds by club (via GHIN_API_Login.php)
-            $errInd     = "200";
-            $adminToken = $userToken;
+            $errInd      = "200";
+            $adminToken  = $userToken;
+            $accessLevel = "MEMBER"; // default — enrolled club
 
             $adminCreds = be_getAdminCredentialsByClub($clubId);
 
-            // Club has no MatchAid credentials — not enrolled
+            // Club not enrolled — try master credential and flag as guest
             if ($adminCreds === null) {
-                return [
-                    "ok"      => false,
-                    "errCode" => "CLUB_NOT_ENROLLED",
-                    "clubId"  => $clubId,
-                    "clubName" => $clubName,
-                    "userName" => $userName,
-                    "firstName"=> $first,
-                    "lastName" => $last,
-                    "ghinId"   => $ghinId,
-                    "message" => "Your club is not yet enrolled in MatchAid.",
-                ];
+                $adminCreds = be_getAdminCredentialsByClub("MASTER");
+
+                if ($adminCreds === null) {
+                    // Master credential also missing — log and redirect to marketing
+                    Logger::info("LOGIN_CLUB_NOT_ENROLLED", [
+                        "userId"    => $userId,
+                        "ghinId"    => $ghinId,
+                        "userName"  => $userName,
+                        "firstName" => $first,
+                        "lastName"  => $last,
+                        "clubId"    => $clubId,
+                        "clubName"  => $clubName,
+                        "ip"        => $_SERVER["REMOTE_ADDR"]     ?? "",
+                        "userAgent" => $_SERVER["HTTP_USER_AGENT"] ?? "",
+                        "ts"        => date("Y-m-d H:i:s"),
+                    ]);
+
+                    return [
+                        "ok"       => false,
+                        "errCode"  => "CLUB_NOT_ENROLLED",
+                        "clubId"   => $clubId,
+                        "clubName" => $clubName,
+                        "userName" => $userName,
+                        "firstName"=> $first,
+                        "lastName" => $last,
+                        "ghinId"   => $ghinId,
+                        "message"  => "Your club is not yet enrolled in MatchAid.",
+                    ];
+                }
+
+                // Master credential found — flag as guest
+                $accessLevel = "GUEST";
+
+                Logger::info("LOGIN_GUEST_ACCESS", [
+                    "userId"    => $userId,
+                    "ghinId"    => $ghinId,
+                    "userName"  => $userName,
+                    "clubId"    => $clubId,
+                    "clubName"  => $clubName,
+                    "ip"        => $_SERVER["REMOTE_ADDR"]     ?? "",
+                    "userAgent" => $_SERVER["HTTP_USER_AGENT"] ?? "",
+                    "ts"        => date("Y-m-d H:i:s"),
+                ]);
             }
 
             $adminLogin = be_loginGHIN($adminCreds["ghin"], $adminCreds["password"]);
@@ -90,13 +123,14 @@ final class ServiceLogin
             // Step 3: Store session immediately
             $errInd = "300";
             session_regenerate_id(true);
-            $_SESSION["SessionGHINLogonID"] = $ghinId;
-            $_SESSION["SessionUserToken"]   = $userToken;
-            $_SESSION["SessionAdminToken"]  = $adminToken;
-            $_SESSION["SessionLoginTime"]   = time();
-            $_SESSION["SessionUserName"]    = $userName;
-            $_SESSION["SessionUserLName"]   = $last;
-            $_SESSION["SessionClubID"]      = $clubId;
+            $_SESSION["SessionGHINLogonID"]  = $ghinId;
+            $_SESSION["SessionUserToken"]    = $userToken;
+            $_SESSION["SessionAdminToken"]   = $adminToken;
+            $_SESSION["SessionLoginTime"]    = time();
+            $_SESSION["SessionUserName"]     = $userName;
+            $_SESSION["SessionUserLName"]    = $last;
+            $_SESSION["SessionClubID"]       = $clubId;
+            $_SESSION["SessionAccessLevel"]  = $accessLevel;
 
             ServiceUserContext::storeGHINUser(
                 $ghinId,
@@ -127,7 +161,11 @@ final class ServiceLogin
 
             // Step 5: Determine if user needs to complete settings
             $needsSettings = !ServiceUserContext::hasCompletedSettings($ghinId);
-            return ["ok" => true, "needsSettings" => $needsSettings];
+            return [
+                "ok"            => true,
+                "needsSettings" => $needsSettings,
+                "accessLevel"   => $accessLevel,
+            ];
 
         } catch (Throwable $e) {
 
