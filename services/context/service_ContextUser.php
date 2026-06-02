@@ -148,7 +148,7 @@ public static function getUserContext(): ?array {
     $facilityName = "";
 
     $facilities = is_array($profile)
-        ? ($profile["profileJson"]["facilityJson"]["facilities"] ?? null)
+        ? ($profile["facilityJson"]["facilities"] ?? null)
         : null;
 
     if (is_array($facilities) && !empty($facilities)) {
