@@ -482,6 +482,17 @@ public static function requireAccessLevel(string ...$allowed): void
 {
     $level = trim((string)($_SESSION['SessionAccessLevel'] ?? 'MEMBER'));
     if (!in_array($level, $allowed, true)) {
+        Logger::info("ACCESS_LEVEL_DENIED", [
+            "ghinId"      => $_SESSION["SessionGHINLogonID"] ?? "",
+            "userName"    => $_SESSION["SessionUserName"]    ?? "",
+            "clubId"      => $_SESSION["SessionClubID"]      ?? "",
+            "clubName"    => $_SESSION["SessionClubName"]    ?? "",
+            "accessLevel" => $level,
+            "allowed"     => implode(", ", $allowed),
+            "uri"         => $_SERVER["REQUEST_URI"]         ?? "",
+            "ip"          => $_SERVER["REMOTE_ADDR"]         ?? "",
+            "ts"          => date("Y-m-d H:i:s"),
+        ]);
         header('Location: ' . MA_ROUTE_CLUB_MARKETING);
         exit;
     }
