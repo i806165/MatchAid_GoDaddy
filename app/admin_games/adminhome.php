@@ -24,6 +24,9 @@ if (!$ctx || empty($ctx["ok"])) {
   exit;
 }
 
+// Gate — only members may not access the admin portal
+ServiceUserContext::requireAccessLevel("MEMBER");
+
 // Pull “frequently used” values from session
 $ghinId     = trim((string)($_SESSION["SessionGHINLogonID"] ?? ""));
 $clubId     = trim((string)($_SESSION["SessionClubID"] ?? ""));

@@ -465,4 +465,26 @@ private static function isValidMobileCarrier(string $carrier): bool {
     return array_key_exists($carrier, self::getMobileCarrierGateways());
 }
 
+/**
+ * requireAccessLevel()
+ *
+ * Gate helper — call at the top of any controller that needs
+ * a specific access level. Redirects to the marketing page if
+ * the session access level is not in the allowed list.
+ *
+ * Usage:
+ *   ServiceUserContext::requireAccessLevel('MEMBER');
+ *   ServiceUserContext::requireAccessLevel('MEMBER', 'SITE_ADMIN');
+ *
+ * @param string ...$allowed  One or more permitted access levels.
+ */
+public static function requireAccessLevel(string ...$allowed): void
+{
+    $level = trim((string)($_SESSION['SessionAccessLevel'] ?? 'MEMBER'));
+    if (!in_array($level, $allowed, true)) {
+        header('Location: ' . MA_ROUTE_CLUB_MARKETING);
+        exit;
+    }
+}
+
 }
