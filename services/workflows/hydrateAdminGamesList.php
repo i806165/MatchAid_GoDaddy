@@ -68,9 +68,6 @@ function hydrateAdminGamesList(array $context, array $filters): array {
     "selectedAdminKeys" => $uiSelected,
   ]);
 
-//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-  error_log("[MA][HYDRATE] clubId={$clubId} userGHIN={$userGhin} dateFrom={$dateFrom} dateTo={$dateTo} uiSelectedCount=" . (is_array($uiSelected) ? count($uiSelected) : 0) . " adminScope={$adminScope} queryKeyCount=" . (is_array($selectedForQuery) ? count($selectedForQuery) : 0));
-//xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
   $games = ServiceDbGames::queryGames([
     "clubId" => $clubId,
@@ -85,7 +82,7 @@ function hydrateAdminGamesList(array $context, array $filters): array {
   //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
   $vmLen  = isset($games["games"]["vm"])  && is_array($games["games"]["vm"])  ? count($games["games"]["vm"])  : 0;
   $rawLen = isset($games["games"]["raw"]) && is_array($games["games"]["raw"]) ? count($games["games"]["raw"]) : 0;
-  error_log("[MA][HYDRATE] games.vm={$vmLen} games.raw={$rawLen}");
+  //error_log("[MA][HYDRATE] games.vm={$vmLen} games.raw={$rawLen}");
   //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
   $subtitle = trim("Game List for " . substr(strval($context["clubName"] ?? ""), 0, 25) . " " . $clubId);
 
