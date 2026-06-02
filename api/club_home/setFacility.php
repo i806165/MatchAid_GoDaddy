@@ -48,7 +48,6 @@ try {
     exit;
   }
 
-  // Confirm the resolved facility matches what was requested
   if ($resolved["facilityId"] !== $facilityId) {
     http_response_code(403);
     echo json_encode([
@@ -58,13 +57,11 @@ try {
     exit;
   }
 
-  // ── Persist to session ────────────────────────────────────────
-  $_SESSION["SessionFacilityID"]          = $resolved["facilityId"];
-  $_SESSION["SessionFacilityName"]        = $resolved["facilityName"];
-  $_SESSION["SessionCanSelectFacility"]   = $resolved["canSelectFacility"];
-  $_SESSION["SessionFacilityCanSearch"]   = $resolved["canSearch"];
-
-
+  // ── Persist to club home portal session variables ─────────────
+  $_SESSION["clubhomeSession_FacilityID"]        = $resolved["facilityId"];
+  $_SESSION["clubhomeSession_FacilityName"]      = $resolved["facilityName"];
+  $_SESSION["clubhomeSession_CanSelectFacility"] = $resolved["canSelectFacility"];
+  $_SESSION["clubhomeSession_CanSearch"]         = $resolved["canSearch"];
 
   echo json_encode([
     "ok"           => true,

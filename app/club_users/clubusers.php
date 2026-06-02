@@ -19,7 +19,7 @@ if (!$ctx || empty($ctx["ok"])) {
 // ----------------------------------------------------------------
 // 2) Facility guard — must have been set by club_home.php
 // ----------------------------------------------------------------
-if (empty($_SESSION["SessionFacilityID"])) {
+if (empty($_SESSION["clubhomeSession_FacilityID"])) {
   header("Location: " . MA_ROUTE_CLUB_HOME);
   exit;
 }
@@ -52,7 +52,7 @@ $paths = [
 // ----------------------------------------------------------------
 // 5) Chrome values
 // ----------------------------------------------------------------
-$facilityName     = strval($_SESSION["SessionFacilityName"] ?? "");
+$facilityName     = strval($_SESSION["clubhomeSession_FacilityName"] ?? "");
 $maChromeTitle    = "Club Users";
 $maChromeSubtitle = $facilityName !== "" ? $facilityName : strval($_SESSION["SessionClubName"] ?? "");
 $maChromeLogoUrl  = null;
@@ -68,9 +68,9 @@ $maChromeLogoUrl  = null;
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="/assets/css/ma_shared.css?v=1" />
-  <link rel="stylesheet" href="/assets/css/club_demand.css?v=1" />
-  <link rel="stylesheet" href="/assets/css/club_users.css?v=1" />
+  <link rel="stylesheet" href="<?= ma_asset('/assets/css/ma_shared.css') ?>" />
+  <link rel="stylesheet" href="<?= ma_asset('/assets/css/club_demand.css') ?>" />
+  <link rel="stylesheet" href="<?= ma_asset('/assets/css/club_users.css') ?>" />
 </head>
 <body>
 
@@ -91,8 +91,8 @@ $maChromeLogoUrl  = null;
   };
 </script>
 
-  <script src="/assets/js/ma_shared.js"></script>
-  <script src="/assets/modules/actions_menu.js?v=1"></script>
-  <script src="/assets/pages/club_users.js?v=1"></script>
+  <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/pages/club_users.js') ?>"></script>
 </body>
 </html>

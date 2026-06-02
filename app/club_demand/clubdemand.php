@@ -17,12 +17,20 @@ if (!$ctx || empty($ctx["ok"])) {
 }
 
 // ----------------------------------------------------------------
-// 2) Resolve date filters
-//    - Return visit: restore from CD_FILTER* session vars
-//    - Fresh visit:  default today-30 → today
+// 2) Facility guard — must have been set by club_home.php
 // ----------------------------------------------------------------
-$today   = new DateTimeImmutable("today");
-$plus30  = $today->modify("+30 days");
+if (empty($_SESSION["clubhomeSession_FacilityID"])) {
+  header("Location: " . MA_ROUTE_CLUB_HOME);
+  exit;
+}
+
+// ----------------------------------------------------------------
+// 3) Resolve date filters
+//    - Return visit: restore from CD_FILTER* session vars
+//    - Fresh visit:  default today → today+30
+// ----------------------------------------------------------------
+$today  = new DateTimeImmutable("today");
+$plus30 = $today->modify("+30 days");
 
 $sessFrom = trim(strval($_SESSION["CD_FILTERDATEFROM"] ?? ""));
 $sessTo   = trim(strval($_SESSION["CD_FILTERDATETO"]   ?? ""));
@@ -30,12 +38,13 @@ $sessTo   = trim(strval($_SESSION["CD_FILTERDATETO"]   ?? ""));
 $isReturn = ($sessFrom !== "" && $sessTo !== "");
 
 $filters = [
-  "dateFrom" => $isReturn ? $sessFrom : $today->format("Y-m-d"),
-  "dateTo"   => $isReturn ? $sessTo   : $plus30->format("Y-m-d"),
+  "dateFrom"   => $isReturn ? $sessFrom : $today->format("Y-m-d"),
+  "dateTo"     => $isReturn ? $sessTo   : $plus30->format("Y-m-d"),
+  "facilityId" => strval($_SESSION["clubhomeSession_FacilityID"] ?? ""),
 ];
 
 // ----------------------------------------------------------------
-// 3) Build INIT payload
+// 4) Build INIT payload
 // ----------------------------------------------------------------
 try {
   $initPayload = buildClubDemandInit($ctx, $filters);
@@ -54,11 +63,10 @@ try {
 $_SESSION["CD_FILTERDATEFROM"] = $filters["dateFrom"];
 $_SESSION["CD_FILTERDATETO"]   = $filters["dateTo"];
 
-// Tell JS whether this is a return visit (skip modal) or fresh load (open modal)
 $initPayload["isReturn"] = $isReturn;
 
 // ----------------------------------------------------------------
-// 4) Path constants for JS
+// 5) Path constants for JS
 // ----------------------------------------------------------------
 $paths = [
   "apiClubDemand" => "/api/club_demand/initClubDemand.php",
@@ -82,8 +90,8 @@ $maChromeLogoUrl  = null;
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="/assets/css/ma_shared.css?v=1" />
-  <link rel="stylesheet" href="/assets/css/club_demand.css?v=1" />
+  <link rel="stylesheet" href="<?= ma_asset('/assets/css/ma_shared.css') ?>" />
+  <link rel="stylesheet" href="<?= ma_asset('/assets/css/club_demand.css') ?>" />
 </head>
 <body>
 
@@ -97,7 +105,6 @@ $maChromeLogoUrl  = null;
   window.MA       = window.MA || {};
   window.MA.paths = <?= json_encode($paths, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
   window.__INIT__ = <?= json_encode($initPayload, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-
   window.__MA_INIT__ = window.__INIT__;
   window.MA.routes   = {
     router:        window.MA.paths.routerApi,
@@ -105,8 +112,8 @@ $maChromeLogoUrl  = null;
   };
 </script>
 
-  <script src="/assets/js/ma_shared.js"></script>
-  <script src="/assets/modules/actions_menu.js?v=1"></script>
-  <script src="/assets/pages/club_demand.js?v=1"></script>
+  <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/pages/club_demand.js') ?>"></script>
 </body>
 </html>

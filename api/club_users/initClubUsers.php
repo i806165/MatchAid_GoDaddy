@@ -22,10 +22,10 @@ function buildClubUsersInit(array $ctx): array {
 
   $context = [
     "userGHIN"     => strval($ctx["userGHIN"] ?? ($_SESSION["SessionGHINLogonID"] ?? "")),
-    "clubId"       => strval($_SESSION["SessionClubID"]       ?? ""),
-    "clubName"     => strval($_SESSION["SessionClubName"]     ?? ""),
-    "facilityId"   => strval($_SESSION["SessionFacilityID"]   ?? ""),
-    "facilityName" => strval($_SESSION["SessionFacilityName"] ?? ""),
+    "clubId"       => strval($_SESSION["SessionClubID"]                ?? ""),
+    "clubName"     => strval($_SESSION["SessionClubName"]              ?? ""),
+    "facilityId"   => strval($_SESSION["clubhomeSession_FacilityID"]   ?? ""),
+    "facilityName" => strval($_SESSION["clubhomeSession_FacilityName"] ?? ""),
   ];
 
   return hydrateClubUsers($context);
@@ -57,7 +57,7 @@ if ($isDirect) {
     }
 
     // ── Facility guard ────────────────────────────────────────────
-    if (empty($_SESSION["SessionFacilityID"])) {
+    if (empty($_SESSION["clubhomeSession_FacilityID"])) {
       http_response_code(403);
       echo json_encode([
         "ok"          => false,

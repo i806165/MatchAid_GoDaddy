@@ -38,26 +38,33 @@ $clubName = trim(strval($_SESSION["SessionClubName"] ?? ""));
 
 // ----------------------------------------------------------------
 // 4) Resolve facility context
-//    Restore prior selection from session if present
+//    Priority:
+//      1. clubhomeSession_FacilityID — previously selected in this portal
+//      2. SessionFacilityID          — set at login from GHIN profile
+//      3. Alphabetical first         — last resort in resolve()
 // ----------------------------------------------------------------
-$userGHIN            = trim(strval($_SESSION["SessionGHINLogonID"] ?? ""));
-$requestedFacilityId = trim(strval($_SESSION["SessionFacilityID"] ?? ""));
+$userGHIN            = trim(strval($_SESSION["SessionGHINLogonID"]       ?? ""));
+$requestedFacilityId = trim(strval($_SESSION["clubhomeSession_FacilityID"] ?? ""));
+
+// Fall back to login-time facility if portal facility not yet set
+if ($requestedFacilityId === "") {
+  $requestedFacilityId = trim(strval($_SESSION["SessionFacilityID"] ?? ""));
+}
 
 $facilityCtx = ServiceContextFacility::resolve($userGHIN, $requestedFacilityId);
 
-// Persist resolved facility to session
+// Persist resolved facility to club home portal session variables
 if (!empty($facilityCtx["authorized"])) {
-  $_SESSION["SessionFacilityID"]        = $facilityCtx["facilityId"];
-  $_SESSION["SessionFacilityName"]      = $facilityCtx["facilityName"];
-  $_SESSION["SessionCanSelectFacility"] = $facilityCtx["canSelectFacility"];
-  $_SESSION["SessionFacilityCanSearch"] = $facilityCtx["canSearch"];
+  $_SESSION["clubhomeSession_FacilityID"]        = $facilityCtx["facilityId"];
+  $_SESSION["clubhomeSession_FacilityName"]      = $facilityCtx["facilityName"];
+  $_SESSION["clubhomeSession_CanSelectFacility"] = $facilityCtx["canSelectFacility"];
+  $_SESSION["clubhomeSession_CanSearch"]         = $facilityCtx["canSearch"];
 } else {
-  // Clear stale facility session values if no longer authorized
   unset(
-    $_SESSION["SessionFacilityID"],
-    $_SESSION["SessionFacilityName"],
-    $_SESSION["SessionCanSelectFacility"],
-    $_SESSION["SessionFacilityCanSearch"]
+    $_SESSION["clubhomeSession_FacilityID"],
+    $_SESSION["clubhomeSession_FacilityName"],
+    $_SESSION["clubhomeSession_CanSelectFacility"],
+    $_SESSION["clubhomeSession_CanSearch"]
   );
 }
 
@@ -100,8 +107,8 @@ $paths = [
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="/assets/css/ma_shared.css?v=1" />
-  <link rel="stylesheet" href="/assets/css/club_home.css?v=1" />
+  <link rel="stylesheet" href="<?= ma_asset('/assets/css/ma_shared.css') ?>" />
+  <link rel="stylesheet" href="<?= ma_asset('/assets/css/club_home.css') ?>" />
 </head>
 <body>
 
@@ -124,8 +131,8 @@ $paths = [
   };
 </script>
 
-  <script src="/assets/js/ma_shared.js"></script>
-  <script src="/assets/modules/actions_menu.js?v=1"></script>
-  <script src="/assets/pages/club_home.js?v=1"></script>
+  <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/pages/club_home.js') ?>"></script>
 </body>
 </html>
