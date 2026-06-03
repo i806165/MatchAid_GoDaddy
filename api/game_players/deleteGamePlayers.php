@@ -56,6 +56,33 @@ try {
     exit;
   }
 
+  // Score audit — log deletion of a player who had recorded scores.
+  // The JS confirms with the user first; this is a server-side paper trail only.
+  $playerRow = ServiceDbPlayers::getPlayerByGGIDGHIN($ggid, $playerGHIN);
+  if ($playerRow) {
+    $rawScores = $playerRow["dbPlayers_Scores"] ?? "";
+    if ($rawScores && $rawScores !== "" && $rawScores !== "null") {
+      $decoded = json_decode((string)$rawScores, true);
+      $hasScores = false;
+      foreach (($decoded["Scores"] ?? []) as $score) {
+        foreach (($score["hole_details"] ?? []) as $hole) {
+          if (($hole["adjusted_gross_score"] ?? 0) > 0) {
+            $hasScores = true;
+            break 2;
+          }
+        }
+      }
+      if ($hasScores) {
+        Logger::warn("GAMEPLAYERS_DELETE_WITH_SCORES", [
+          "ggid"       => $ggid,
+          "playerGHIN" => $playerGHIN,
+          "playerName" => $playerRow["dbPlayers_Name"] ?? "",
+          "deletedBy"  => $_SESSION["SessionGHINLogonID"] ?? "",
+        ]);
+      }
+    }
+  }
+
   $ok = ServiceDbPlayers::deleteGamePlayer($ggid, $playerGHIN);
   echo json_encode(["ok" => $ok]);
 

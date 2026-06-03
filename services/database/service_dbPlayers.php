@@ -271,4 +271,23 @@ final class ServiceDbPlayers
     return $matrix;
   }
 
+    public static function playerHasScores(string $ggid, string $playerGHIN): bool
+  {
+      $row = self::getPlayerByGGIDGHIN($ggid, $playerGHIN);
+      if (!$row) return false;
+
+      $raw = $row["dbPlayers_Scores"] ?? "";
+      if (!$raw || $raw === "" || $raw === "null") return false;
+
+      $decoded = json_decode((string)$raw, true);
+      $scores  = $decoded["Scores"] ?? [];
+
+      foreach ($scores as $score) {
+          foreach ($score["hole_details"] ?? [] as $hole) {
+              if (($hole["adjusted_gross_score"] ?? 0) > 0) return true;
+          }
+      }
+      return false;
+  }
+
 }

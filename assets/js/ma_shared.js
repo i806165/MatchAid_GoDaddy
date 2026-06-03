@@ -408,6 +408,158 @@
     });
   };
 
+  // ----------------------------------------------------------------------------
+  // MA.confirm — generic branded confirm dialog using maModal CSS tokens.
+  //
+  // Usage:
+  //   const ok = await MA.confirm({ ...options });
+  //   if (!ok) return; // user cancelled
+  //
+  // Options (all optional):
+  //
+  //   title        {string}  — modal header text.
+  //                            Default: "Are you sure?"
+  //
+  //   message      {string}  — body copy. HTML is allowed and rendered as-is.
+  //                            Keep it to 1–2 sentences. Bold a key noun with
+  //                            <strong> if helpful. Default: ""
+  //
+  //   detail       {string}  — optional HTML block rendered below message.
+  //                            Use for structured context the caller owns
+  //                            (stat strips, lists, field previews, etc.).
+  //                            MA.confirm is agnostic about content —
+  //                            the caller builds and passes the full HTML string.
+  //                            Default: "" (nothing rendered)
+  //
+  //   confirmLabel {string}  — label for the confirm button.
+  //                            Default: "Confirm"
+  //
+  //   danger       {boolean} — when true the confirm button renders in
+  //                            --danger red to signal a destructive action.
+  //                            Default: false
+  //
+  // Returns:
+  //   Promise<boolean> — resolves true if user clicked confirm,
+  //                      false if cancelled (Cancel button or backdrop click).
+  //
+  // Caller pattern — build detail HTML before calling:
+  //
+  //   const detail = `
+  //     <div style="background:var(--brandPrimaryBg);border:1px solid
+  //       var(--borderSubtle);border-radius:var(--radiusMd);padding:10px 14px;
+  //       margin:12px 0 0;display:flex;gap:20px;">
+  //       <div style="display:flex;flex-direction:column;gap:2px;">
+  //         <span style="font-size:11px;color:var(--mutedText);font-weight:800;">Label</span>
+  //         <span style="font-size:18px;font-weight:800;color:var(--ink);">${value}</span>
+  //       </div>
+  //     </div>`;
+  //
+  //   const ok = await MA.confirm({
+  //     title:        "Confirm action",
+  //     message:      "Are you sure you want to do this?",
+  //     detail,
+  //     confirmLabel: "Yes, do it",
+  //     danger:       true
+  //   });
+  // ----------------------------------------------------------------------------
+  MA.confirm = function ({
+    title        = "Are you sure?",
+    message      = "",
+    detail       = "",
+    confirmLabel = "Confirm",
+    danger       = false
+  } = {}) {
+    return new Promise((resolve) => {
+
+      const backdrop = document.createElement("div");
+      backdrop.style.cssText = [
+        "position:fixed",
+        "inset:0",
+        "background:var(--overlayBg)",
+        "z-index:var(--overlayZ)",
+        "display:flex",
+        "align-items:center",
+        "justify-content:center",
+        "padding:16px",
+      ].join(";");
+
+      const confirmBg = danger ? "var(--danger)" : "var(--btnSaveBg)";
+
+      backdrop.innerHTML = `
+        <div role="dialog" aria-modal="true" aria-labelledby="maConfirmTitle" style="
+          background:var(--modalSurface);
+          border-radius:var(--modalRadius);
+          box-shadow:var(--modalShadow);
+          max-width:420px;
+          width:100%;
+          overflow:hidden;
+        ">
+          <div style="
+            background:var(--modalHeaderBg);
+            color:var(--modalHeaderText);
+            padding:14px 16px;
+            font-weight:800;
+            font-size:15px;
+            font-family:var(--fontFamilyBase);
+            display:flex;
+            align-items:center;
+            gap:8px;
+          ">
+            <span style="font-size:18px;">&#9888;</span>
+            <span id="maConfirmTitle">${title}</span>
+          </div>
+          <div style="padding:16px 18px 14px;font-size:13px;color:var(--ink);line-height:1.55;font-family:var(--fontFamilyBase);">
+            ${message}${detail}
+          </div>
+          <div style="
+            display:flex;
+            gap:10px;
+            justify-content:flex-end;
+            padding:12px 16px;
+            border-top:1px solid var(--borderSubtle);
+          ">
+            <button data-ma-action="cancel" style="
+              height:var(--btnHeight);
+              padding:0 var(--btnPadX);
+              border-radius:var(--btnRadius);
+              border:1px solid var(--btnCancelBorder);
+              background:var(--btnCancelBg);
+              color:var(--btnCancelText);
+              font-family:var(--fontFamilyBase);
+              font-size:13px;
+              font-weight:800;
+              cursor:pointer;
+            ">Cancel</button>
+            <button data-ma-action="confirm" style="
+              height:var(--btnHeight);
+              padding:0 var(--btnPadX);
+              border-radius:var(--btnRadius);
+              border:none;
+              background:${confirmBg};
+              color:#ffffff;
+              font-family:var(--fontFamilyBase);
+              font-size:13px;
+              font-weight:800;
+              cursor:pointer;
+            ">${confirmLabel}</button>
+          </div>
+        </div>`;
+
+      function close(result) {
+        document.body.classList.remove("maOverlayOpen");
+        backdrop.remove();
+        resolve(result);
+      }
+
+      backdrop.querySelector("[data-ma-action='cancel']").addEventListener("click",  () => close(false));
+      backdrop.querySelector("[data-ma-action='confirm']").addEventListener("click", () => close(true));
+      backdrop.addEventListener("click", (e) => { if (e.target === backdrop) close(false); });
+
+      document.body.classList.add("maOverlayOpen");
+      document.body.appendChild(backdrop);
+    });
+  };
+
   MA.chrome.openHub = function () {
     const tray = document.getElementById("chromeHubTray");
     const btn  = document.getElementById("chromeNavHubBtn");

@@ -2167,6 +2167,62 @@ async function beginBatchTeeFlow(){
       // Non-fatal — let server-side guard handle it
     }
 
+    // Score guard — confirm before deleting a player with recorded scores
+    if (p) {
+      try {
+        const raw     = p.dbPlayers_Scores || "{}";
+        const decoded = typeof raw === "string" ? JSON.parse(raw) : raw;
+        const scores  = Array.isArray(decoded?.Scores) ? decoded.Scores : [];
+        const scored  = scores.find(s =>
+          (s.hole_details ?? []).some(h => (h.adjusted_gross_score ?? 0) > 0)
+        );
+
+        if (scored) {
+          const playerName  = safe(p.dbPlayers_Name || ghin);
+          const holesPlayed = scored.number_of_played_holes ?? scored.hole_details?.length ?? 0;
+          const grossScore  = scored.adjusted_gross_score ?? 0;
+          const netScore    = scored.net_score ?? 0;
+
+          // Build the score detail strip — a stat row with three values.
+          // MA.confirm is generic; the caller owns and passes this HTML.
+          // Stat cell pattern: 11px muted label above, 18px bold value below.
+          const statCell = (label, value) => `
+            <div style="display:flex;flex-direction:column;gap:2px;">
+              <span style="font-size:11px;color:var(--mutedText);font-weight:800;">${label}</span>
+              <span style="font-size:18px;font-weight:800;color:var(--ink);">${value}</span>
+            </div>`;
+
+          const detail = `
+            <div style="
+              background:var(--brandPrimaryBg);
+              border:1px solid var(--borderSubtle);
+              border-radius:var(--radiusMd);
+              padding:10px 14px;
+              margin:12px 0 0;
+              display:flex;
+              gap:20px;
+            ">
+              ${statCell("Holes played", holesPlayed)}
+              ${statCell("Gross score",  grossScore)}
+              ${statCell("Net score",    netScore)}
+            </div>`;
+
+          const confirmed = await MA.confirm({
+            title:        "Player has scores",
+            message:      `<strong>${playerName}</strong> has scores recorded for this round. Deleting them will permanently erase those scores.<br><br><span style="color:var(--mutedText);font-size:12px;">Are you sure you want to continue?</span>`,
+            detail,
+            confirmLabel: "Delete anyway",
+            danger:       true
+          });
+
+          if (!confirmed) return;
+        }
+      } catch (err) {
+        // Non-fatal — proceed; server is the authoritative guard
+        console.warn("Score check failed for", ghin, err);
+      }
+    }
+
     const res = await MA.postJson(MA.paths.gamePlayersDelete, { playerGHIN: ghin });
     if (!res?.ok) return MA.setStatus("Unable to delete player", "danger");
 
