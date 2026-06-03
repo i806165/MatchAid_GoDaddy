@@ -22,7 +22,7 @@ function playerGamesFetchBaseGames(
     $st = $pdo->prepare("
       SELECT *
       FROM db_Games g
-      WHERE CAST(g.dbGames_GGID AS CHAR) = :ggid
+      WHERE g.dbGames_GGID = :ggid
       LIMIT 1
     ");
     $st->execute([':ggid' => $directLinkGGID]);
@@ -40,7 +40,7 @@ function playerGamesFetchBaseGames(
       $inParts[] = $ph;
       $params[$ph] = $k;
     }
-    $where[] = 'CAST(g.dbGames_AdminGHIN AS CHAR) IN (' . implode(',', $inParts) . ')';
+    $where[] = 'g.dbGames_AdminGHIN IN (' . implode(',', $inParts) . ')';
   }
 
   $sqlGames = "
@@ -280,7 +280,7 @@ function hydratePlayerGamesList(string $userGHIN, array $filters, string $userCl
   $myGGIDs = [];
   $myPlayerData = [];
   try {
-    $stP = $pdo->prepare("SELECT * FROM db_Players WHERE CAST(dbPlayers_PlayerGHIN AS CHAR)=:u LIMIT 2000");
+    $stP = $pdo->prepare("SELECT * FROM db_Players WHERE dbPlayers_PlayerGHIN = :u LIMIT 2000");
     $stP->execute([':u' => $userGHIN]);
     foreach (($stP->fetchAll(PDO::FETCH_ASSOC) ?: []) as $r) {
       $ggid = trim((string)($r['dbPlayers_GGID'] ?? ''));
@@ -300,10 +300,10 @@ function hydratePlayerGamesList(string $userGHIN, array $filters, string $userCl
   $favPlayerTags = [];
   try {
     $stB = $pdo->prepare(
-      "SELECT CAST(dbFav_UserGHIN AS CHAR) AS adminKey,
+      "SELECT dbFav_UserGHIN AS adminKey,
               dbFav_PlayerTags AS tags
        FROM db_FavPlayers
-       WHERE CAST(dbFav_PlayerGHIN AS CHAR) = :u
+       WHERE dbFav_PlayerGHIN = :u
        LIMIT 2000"
     );
     $stB->execute([':u' => $userGHIN]);
@@ -334,7 +334,7 @@ function hydratePlayerGamesList(string $userGHIN, array $filters, string $userCl
     $ps = [];
     foreach ($ggids as $i => $ggid) { $ph = ':g' . $i; $in[] = $ph; $ps[$ph] = $ggid; }
     try {
-      $sqlStats = "SELECT CAST(dbPlayers_GGID AS CHAR) AS ggid, COUNT(*) AS cnt, MIN(CASE WHEN dbPlayers_HI REGEXP '^-?[0-9]+(\\.[0-9]+)?$' THEN CAST(dbPlayers_HI AS DECIMAL(6,2)) END) AS min_hi, AVG(CASE WHEN dbPlayers_HI REGEXP '^-?[0-9]+(\\.[0-9]+)?$' THEN CAST(dbPlayers_HI AS DECIMAL(6,2)) END) AS avg_hi, MAX(CASE WHEN dbPlayers_HI REGEXP '^-?[0-9]+(\\.[0-9]+)?$' THEN CAST(dbPlayers_HI AS DECIMAL(6,2)) END) AS max_hi FROM db_Players WHERE CAST(dbPlayers_GGID AS CHAR) IN (" . implode(',', $in) . ") GROUP BY CAST(dbPlayers_GGID AS CHAR)";
+      $sqlStats = "SELECT dbPlayers_GGID AS ggid, COUNT(*) AS cnt, MIN(CASE WHEN dbPlayers_HI REGEXP '^-?[0-9]+(\\.[0-9]+)?$' THEN CAST(dbPlayers_HI AS DECIMAL(6,2)) END) AS min_hi, AVG(CASE WHEN dbPlayers_HI REGEXP '^-?[0-9]+(\\.[0-9]+)?$' THEN CAST(dbPlayers_HI AS DECIMAL(6,2)) END) AS avg_hi, MAX(CASE WHEN dbPlayers_HI REGEXP '^-?[0-9]+(\\.[0-9]+)?$' THEN CAST(dbPlayers_HI AS DECIMAL(6,2)) END) AS max_hi FROM db_Players WHERE dbPlayers_GGID IN (" . implode(',', $in) . ") GROUP BY dbPlayers_GGID";
       $stS = $pdo->prepare($sqlStats);
       $stS->execute($ps);
       foreach (($stS->fetchAll(PDO::FETCH_ASSOC) ?: []) as $r) {
