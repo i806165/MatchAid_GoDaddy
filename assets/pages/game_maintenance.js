@@ -50,6 +50,7 @@
 
     holesRow: document.getElementById("gmHolesRow"),
     privacyRow: document.getElementById("gmPrivacyRow"),
+    privacyHint: document.getElementById("gmPrivacyHint"),
 
     pickCourseBtn: document.getElementById("gmPickCourseBtn"),
     confirmBtn: document.getElementById("gmCourseConfirmBtn"),
@@ -419,6 +420,21 @@
     else el.hcHint.textContent = "Handicaps will use each player's latest index.";
   }
 
+  // Privacy hint definitions — mirrors the visibility model in hydratePlayerGamesList.php.
+  // Update both locations if the model changes.
+  const PRIVACY_HINTS = {
+    "Only Me":  "Only the Game Admin can see this game in the Player Portal.",
+    "Players":  "Only players registered to this game can see the game.",
+    "Buddies":  "Any player the Game Admin has marked as a favorite can discover and self-enroll, regardless of their club membership.",
+    "Club":     "Any member of your club can discover and self-enroll. No outside club members can see this game."
+  };
+
+  function renderPrivacyHint() {
+    if (!el.privacyHint) return;
+    const value = readChoice(el.privacyRow) || (state.game?.dbGames_Privacy ?? "Club");
+    el.privacyHint.textContent = PRIVACY_HINTS[value] || "";
+  }
+
   function render() {
     const g = state.game || {};
 
@@ -450,6 +466,7 @@
     renderCourseSummary();
     renderTeeHint();
     renderHcHint();
+    renderPrivacyHint();
   }
 
   function bindFieldChange(input, handler) {
@@ -496,6 +513,9 @@
             state.game.dbGames_HCEffectivityDate = "";
           }
           renderHcHint();
+        }
+        if (key === "dbGames_Privacy") {
+          renderPrivacyHint();
         }
         setDirty(true);
       });

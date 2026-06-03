@@ -72,8 +72,11 @@ function playerGamesIsVisible(
   $privacy = trim((string)($g['dbGames_Privacy'] ?? 'Club'));
   if ($privacy === '') $privacy = 'Club';
 
-  // Legacy compatibility: "Players" is retired; treat it as "Club"
-  if ($privacy === 'Players') $privacy = 'Club';
+  // Privacy model:
+  // - "Only Me"  → admin only; no self-discovery by anyone else
+  // - "Players"  → enrolled players only; covered by isEnrolled; no additional discovery
+  // - "Buddies"  → any player the admin has favorited, regardless of club membership
+  // - "Club"     → any player in the same club as the game admin
 
   $gameClubId = trim((string)(
     $g['dbGames_AdminClubID'] ??
@@ -87,21 +90,20 @@ function playerGamesIsVisible(
   $isBuddyAdmin = ($admin !== '' && !empty($buddyAdmins[$admin]));
   $isSameClub   = ($gameClubId !== '' && $userClubId !== '' && $gameClubId === $userClubId);
 
-  $allowByAdmin = $isAdminSelf;
-  $allowByEnrollment = $isEnrolled;
+  $allowByAdmin       = $isAdminSelf;
+  $allowByEnrollment  = $isEnrolled;
   $allowByClubPrivacy = false;
 
-  if ($isSameClub) {
-    if ($privacy === 'Club') {
-      $allowByClubPrivacy = true;
-    } elseif ($privacy === 'Buddies') {
-      $allowByClubPrivacy = $isBuddyAdmin;
-    } elseif ($privacy === 'Only Me') {
-      $allowByClubPrivacy = false;
-    } else {
-      $allowByClubPrivacy = false;
-    }
+  if ($privacy === 'Buddies') {
+    // Buddy discovery crosses club boundaries — club match is irrelevant.
+    // The admin's favorites list is the gate.
+    $allowByClubPrivacy = $isBuddyAdmin;
+  } elseif ($privacy === 'Club') {
+    // Club discovery is strictly same-club only.
+    $allowByClubPrivacy = $isSameClub;
   }
+  // "Players" and "Only Me" leave $allowByClubPrivacy false.
+  // "Players" visibility is fully covered by $isEnrolled above.
 
   if ($directLinkMode) {
     $visible = true;

@@ -130,6 +130,7 @@
             </div>
           </div>
         </div>
+        <div class="gmHint" id="gmPrivacyHint"></div>
       </div>
     </section>
 
