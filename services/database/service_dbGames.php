@@ -386,11 +386,15 @@ public static function queryGames(array $args): array {
     if ($ggid <= 0) return false;
     $pdo = Db::pdo();
 
-    // 1. Delete players
+    // 1. Delete scores
+    $delScores = $pdo->prepare("DELETE FROM db_Scores WHERE dbScores_GGID = :ggid");
+    $delScores->execute([":ggid" => $ggid]);
+
+    // 2. Delete players
     $delPlayers = $pdo->prepare("DELETE FROM db_Players WHERE dbPlayers_GGID = :ggid");
     $delPlayers->execute([":ggid" => $ggid]);
 
-    // 2. Delete game
+    // 3. Delete game
     $delGame = $pdo->prepare("DELETE FROM db_Games WHERE dbGames_GGID = :ggid LIMIT 1");
     $delGame->execute([":ggid" => $ggid]);
 
