@@ -468,11 +468,12 @@
   // ----------------------------------------------------------------------------
 
   function openBuddyGroupsModal() {
-    // Snapshot current committed groups into the draft.
-    // buddyGroupsDraftNone distinguishes "all selected" (draft=[], none=false)
-    // from "none selected" (draft=[], none=true) inside the modal.
-    state.buddyGroupsDraft     = [...state.privacyGroups];
-    state.buddyGroupsDraftNone = false;
+    // Always expand draft to an explicit list of checked tags.
+    // privacyGroups=[] means "all favorites" — expand to all tags so the
+    // draft is unambiguous. Interpretation (all vs partial) happens only on Apply.
+    state.buddyGroupsDraft = (state.privacyGroups.length === 0)
+      ? [...state.availableTags]
+      : [...state.privacyGroups];
     renderBuddyTagRows();
     document.body.classList.add("maOverlayOpen");
     el.buddyModal.classList.add("is-open");
@@ -488,9 +489,6 @@
   function renderBuddyTagRows() {
     const tags      = state.availableTags;
     const draft     = state.buddyGroupsDraft;
-    const noneFlag  = !!state.buddyGroupsDraftNone;
-    // allSel: draft=[] and none flag not set means "all favorites, no filter"
-    const allSel    = draft.length === 0 && !noneFlag;
     const container = el.buddyTagRows;
     container.innerHTML = "";
 
@@ -499,17 +497,17 @@
         <div style="padding:24px 14px;text-align:center;font-size:13px;font-weight:800;color:var(--mutedText);line-height:1.55;">
           No groups defined.<br>Go to Favorites to create groups.
         </div>`;
-      el.buddyApplyBtn.disabled  = true;
+      el.buddyApplyBtn.disabled = true;
       el.buddySelectAllBtn.style.display = "none";
       el.buddySelectedCount.textContent  = "";
       return;
     }
 
     el.buddySelectAllBtn.style.display = "";
-    el.buddyApplyBtn.disabled = false;
 
+    // Render one row per tag — checked state is simply whether tag is in draft
     tags.forEach(tag => {
-      const isChecked = allSel || draft.includes(tag);
+      const isChecked = draft.includes(tag);
       const row = document.createElement("div");
       row.style.cssText = "display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;border-bottom:1px solid var(--borderSubtle);";
       row.setAttribute("role", "checkbox");
@@ -519,13 +517,6 @@
         <span style="font-size:13px;font-weight:800;color:var(--ink);font-family:var(--fontFamilyBase);">${tag}</span>`;
 
       row.addEventListener("click", () => {
-        // If currently "all selected" (draft=[], noneFlag=false), expand to all tags first
-        // then remove the tapped one
-        if (state.buddyGroupsDraft.length === 0 && !state.buddyGroupsDraftNone) {
-          state.buddyGroupsDraft = [...state.availableTags];
-        }
-        // Clear none flag — user is making an explicit selection
-        state.buddyGroupsDraftNone = false;
         const idx = state.buddyGroupsDraft.indexOf(tag);
         if (idx === -1) state.buddyGroupsDraft.push(tag);
         else state.buddyGroupsDraft.splice(idx, 1);
@@ -535,50 +526,33 @@
       container.appendChild(row);
     });
 
-    // Update Select All / Deselect All label
-    const effectiveCount = allSel ? tags.length : (noneFlag ? 0 : draft.length);
-    el.buddySelectAllBtn.textContent = (allSel || draft.length === tags.length)
-      ? "Deselect all"
-      : "Select all";
+    // Count + Select All label + Apply gate — pure count, no interpretation
+    const count = draft.length;
+    el.buddySelectAllBtn.textContent = (count === tags.length) ? "Deselect all" : "Select all";
 
-    // Count label + Apply gate
-    if (effectiveCount === 0) {
+    if (count === 0) {
       el.buddySelectedCount.textContent = "Select at least one group";
       el.buddyApplyBtn.disabled = true;
-    } else if (effectiveCount === tags.length) {
+    } else if (count === tags.length) {
       el.buddySelectedCount.textContent = "All selected";
       el.buddyApplyBtn.disabled = false;
     } else {
-      el.buddySelectedCount.textContent = `${effectiveCount} of ${tags.length} selected`;
+      el.buddySelectedCount.textContent = `${count} of ${tags.length} selected`;
       el.buddyApplyBtn.disabled = false;
     }
   }
 
   function wireBuddyGroupsModal() {
-    // Select All / Deselect All
-    // draft=[] means "all favorites, no filter" (the committed semantic).
-    // Inside the modal we need to distinguish "all checked" from "none checked".
-    // We use state.buddyGroupsDraftAllSelected as an explicit flag so [] is
-    // unambiguous: when the modal opens, allSel=true means show all checked.
+    // Select All / Deselect All — explicit array, no overloaded meaning
     el.buddySelectAllBtn.addEventListener("click", () => {
-      const allEffectivelySelected = state.buddyGroupsDraft.length === 0
-                                  || state.buddyGroupsDraft.length === state.availableTags.length;
-      if (allEffectivelySelected) {
-        // Deselect all — set draft to empty array but mark as "none"
-        state.buddyGroupsDraft = [];
-        state.buddyGroupsDraftNone = true;
-      } else {
-        // Select all — draft=[] with none flag cleared
-        state.buddyGroupsDraft = [];
-        state.buddyGroupsDraftNone = false;
-      }
+      const allChecked = state.buddyGroupsDraft.length === state.availableTags.length;
+      state.buddyGroupsDraft = allChecked ? [] : [...state.availableTags];
       renderBuddyTagRows();
     });
 
     // Cancel — discard draft, revert privacy pill if Buddies was just opened
     el.buddyCancelBtn.addEventListener("click", () => {
-      state.buddyGroupsDraft     = [];
-      state.buddyGroupsDraftNone = false;
+      state.buddyGroupsDraft = [];
       // If Buddies wasn't the previously committed privacy, revert the pill
       const committed = state.game?.dbGames_Privacy || "Club";
       if (committed !== "Buddies") {
@@ -597,21 +571,18 @@
       if (e.target === el.buddyModal) el.buddyCancelBtn.click();
     });
 
-    // Apply — commit draft; [] if all tags selected (semantic "no filter")
+    // Apply — interpret draft here, not during interaction.
+    // All tags checked = [] (all favorites, no filter). Partial = explicit list.
     el.buddyApplyBtn.addEventListener("click", () => {
       if (el.buddyApplyBtn.disabled) return;
-      const allSelected = !state.buddyGroupsDraftNone && (
-        state.buddyGroupsDraft.length === 0 ||
-        state.buddyGroupsDraft.length === state.availableTags.length
-      );
-      state.privacyGroups = allSelected ? [] : [...state.buddyGroupsDraft];
+      const allChecked = state.buddyGroupsDraft.length === state.availableTags.length;
+      state.privacyGroups              = allChecked ? [] : [...state.buddyGroupsDraft];
       state.game.dbGames_Privacy       = "Buddies";
       state.game.dbGames_PrivacyGroups = JSON.stringify(state.privacyGroups);
       pickRowValue(el.privacyRow, "Buddies");
       renderPrivacyHint();
       setDirty(true);
-      state.buddyGroupsDraft     = [];
-      state.buddyGroupsDraftNone = false;
+      state.buddyGroupsDraft = [];
       closeBuddyGroupsModal();
     });
   }
