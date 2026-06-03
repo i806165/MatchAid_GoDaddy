@@ -412,6 +412,7 @@ public static function queryGames(array $args): array {
       "dbGames_TeeTimeInterval",
       "dbGames_Holes",
       "dbGames_Privacy",
+      "dbGames_PrivacyGroups",
       "dbGames_Comments",
       "dbGames_HCEffectivity",
       "dbGames_HCEffectivityDate",
@@ -485,8 +486,9 @@ public static function queryGames(array $args): array {
     $g["dbGames_HCEffectivity"] = $g["dbGames_HCEffectivity"] ?? "PlayDate";
 
     // Visibility / holes defaults
-    $g["dbGames_Privacy"] = $g["dbGames_Privacy"] ?? "Club";
-    $g["dbGames_Holes"] = $g["dbGames_Holes"] ?? "All 18";
+    $g["dbGames_Privacy"]       = $g["dbGames_Privacy"]       ?? "Club";
+    $g["dbGames_PrivacyGroups"] = $g["dbGames_PrivacyGroups"] ?? "[]";
+    $g["dbGames_Holes"]         = $g["dbGames_Holes"]         ?? "All 18";
 
     // New games start as tentative unless explicitly confirmed
     if (!array_key_exists("dbGames_CourseConfirmed", $g)) {

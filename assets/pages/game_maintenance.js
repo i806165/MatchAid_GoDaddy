@@ -70,7 +70,16 @@
 
     comments: document.getElementById("gmComments"),
 
-    // Modal
+    // Buddy Groups Modal
+    buddyModal:         document.getElementById("gmBuddyGroupsModal"),
+    buddyCloseBtn:      document.getElementById("gmBuddyGroupsCloseBtn"),
+    buddyCancelBtn:     document.getElementById("gmBuddyGroupsCancelBtn"),
+    buddyApplyBtn:      document.getElementById("gmBuddyGroupsApplyBtn"),
+    buddySelectAllBtn:  document.getElementById("gmBuddySelectAllBtn"),
+    buddySelectedCount: document.getElementById("gmBuddySelectedCount"),
+    buddyTagRows:       document.getElementById("gmBuddyTagRows"),
+
+    // Course Modal
     modal: document.getElementById("gmCourseModal"),
     modalClose: document.getElementById("gmCourseCloseBtn"),
     tabBar: document.getElementById("gmCourseTabs"),
@@ -93,6 +102,9 @@
     recentCourses: [],
     searchCourses: [],
     busy: false,
+    availableTags:   [],   // distinct tag strings from admin's favorites (from __INIT__)
+    privacyGroups:   [],   // committed selection — [] means all favorites
+    buddyGroupsDraft: [],  // in-modal working copy; committed on Apply, discarded on Cancel
   };
 
   // ---- Utils ----
@@ -432,7 +444,152 @@
   function renderPrivacyHint() {
     if (!el.privacyHint) return;
     const value = readChoice(el.privacyRow) || (state.game?.dbGames_Privacy ?? "Club");
-    el.privacyHint.textContent = PRIVACY_HINTS[value] || "";
+    const groups = state.privacyGroups;
+    let hint = PRIVACY_HINTS[value] || "";
+
+    // When Buddies is active and groups are selected, append group names to hint
+    if (value === "Buddies" && Array.isArray(groups) && groups.length > 0) {
+      hint = `Visible to favorites in: ${groups.join(", ")}.`;
+    }
+    el.privacyHint.textContent = hint;
+  }
+
+  // ----------------------------------------------------------------------------
+  // Buddy Groups Modal
+  // Allows the admin to filter Buddies visibility to specific favorite groups.
+  //
+  // State flow:
+  //   state.privacyGroups    — committed value; [] = all favorites (no filter)
+  //   state.buddyGroupsDraft — working copy inside the modal; committed on Apply,
+  //                            discarded on Cancel
+  //
+  // Select All writes [] on Apply (semantic "no filter"), not the full tag list.
+  // Zero selections blocks Apply — user must select at least one group.
+  // ----------------------------------------------------------------------------
+
+  function openBuddyGroupsModal() {
+    // Snapshot current committed groups into the draft
+    state.buddyGroupsDraft = [...state.privacyGroups];
+    renderBuddyTagRows();
+    document.body.classList.add("maOverlayOpen");
+    el.buddyModal.classList.add("is-open");
+    el.buddyModal.setAttribute("aria-hidden", "false");
+  }
+
+  function closeBuddyGroupsModal() {
+    el.buddyModal.classList.remove("is-open");
+    el.buddyModal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("maOverlayOpen");
+  }
+
+  function renderBuddyTagRows() {
+    const tags    = state.availableTags;
+    const draft   = state.buddyGroupsDraft;
+    const allSel  = draft.length === 0; // [] means all selected
+    const container = el.buddyTagRows;
+    container.innerHTML = "";
+
+    if (!tags.length) {
+      container.innerHTML = `
+        <div style="padding:24px 14px;text-align:center;font-size:13px;font-weight:800;color:var(--mutedText);line-height:1.55;">
+          No groups defined.<br>Go to Favorites to create groups.
+        </div>`;
+      el.buddyApplyBtn.disabled  = true;
+      el.buddySelectAllBtn.style.display = "none";
+      el.buddySelectedCount.textContent  = "";
+      return;
+    }
+
+    el.buddySelectAllBtn.style.display = "";
+    el.buddyApplyBtn.disabled = false;
+
+    tags.forEach(tag => {
+      const isChecked = allSel || draft.includes(tag);
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;border-bottom:1px solid var(--borderSubtle);";
+      row.setAttribute("role", "checkbox");
+      row.setAttribute("aria-checked", isChecked ? "true" : "false");
+      row.innerHTML = `
+        <div class="maCheckbox${isChecked ? " is-checked" : ""}"></div>
+        <span style="font-size:13px;font-weight:800;color:var(--ink);font-family:var(--fontFamilyBase);">${tag}</span>`;
+
+      row.addEventListener("click", () => {
+        // If currently "all selected" (draft=[]), expand to all tags first,
+        // then remove the tapped one
+        if (state.buddyGroupsDraft.length === 0) {
+          state.buddyGroupsDraft = [...state.availableTags];
+        }
+        const idx = state.buddyGroupsDraft.indexOf(tag);
+        if (idx === -1) state.buddyGroupsDraft.push(tag);
+        else state.buddyGroupsDraft.splice(idx, 1);
+        renderBuddyTagRows();
+      });
+
+      container.appendChild(row);
+    });
+
+    // Update Select All / Deselect All label
+    const effectiveCount = (draft.length === 0) ? tags.length : draft.length;
+    el.buddySelectAllBtn.textContent = (draft.length === 0 || draft.length === tags.length)
+      ? "Deselect all"
+      : "Select all";
+
+    // Count label + Apply gate
+    if (effectiveCount === 0) {
+      el.buddySelectedCount.textContent = "Select at least one group";
+      el.buddyApplyBtn.disabled = true;
+    } else if (effectiveCount === tags.length) {
+      el.buddySelectedCount.textContent = "All selected";
+      el.buddyApplyBtn.disabled = false;
+    } else {
+      el.buddySelectedCount.textContent = `${effectiveCount} of ${tags.length} selected`;
+      el.buddyApplyBtn.disabled = false;
+    }
+  }
+
+  function wireBuddyGroupsModal() {
+    // Select All / Deselect All
+    el.buddySelectAllBtn.addEventListener("click", () => {
+      // Toggle: if all selected (draft=[]) deselect all; otherwise select all (draft=[])
+      state.buddyGroupsDraft = (state.buddyGroupsDraft.length === 0) ? [...state.availableTags] : [];
+      renderBuddyTagRows();
+    });
+
+    // Cancel — discard draft, revert privacy pill if Buddies was just opened
+    el.buddyCancelBtn.addEventListener("click", () => {
+      state.buddyGroupsDraft = [];
+      // If Buddies wasn't the previously committed privacy, revert the pill
+      const committed = state.game?.dbGames_Privacy || "Club";
+      if (committed !== "Buddies") {
+        pickRowValue(el.privacyRow, committed);
+      }
+      closeBuddyGroupsModal();
+    });
+
+    // Close X — same as Cancel
+    el.buddyCloseBtn.addEventListener("click", () => {
+      el.buddyCancelBtn.click();
+    });
+
+    // Backdrop click — same as Cancel
+    el.buddyModal.addEventListener("click", (e) => {
+      if (e.target === el.buddyModal) el.buddyCancelBtn.click();
+    });
+
+    // Apply — commit draft; [] if all tags selected (semantic "no filter")
+    el.buddyApplyBtn.addEventListener("click", () => {
+      if (el.buddyApplyBtn.disabled) return;
+      const allSelected = state.buddyGroupsDraft.length === state.availableTags.length
+                       || state.buddyGroupsDraft.length === 0;
+      state.privacyGroups = allSelected ? [] : [...state.buddyGroupsDraft];
+      state.game.dbGames_Privacy       = "Buddies";
+      state.game.dbGames_PrivacyGroups = JSON.stringify(state.privacyGroups);
+      pickRowValue(el.privacyRow, "Buddies");
+      renderPrivacyHint();
+      setDirty(true);
+      state.buddyGroupsDraft = [];
+      closeBuddyGroupsModal();
+    });
   }
 
   function render() {
@@ -523,6 +680,17 @@
     wireChoiceRow(el.holesRow, "dbGames_Holes");
     wireChoiceRow(el.privacyRow, "dbGames_Privacy");
     wireChoiceRow(el.hcEffRow, "dbGames_HCEffectivity");
+
+    // Intercept Buddies button — opens group selector modal instead of
+    // selecting directly. Other privacy values wire normally via wireChoiceRow.
+    el.privacyRow.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.(".gmChoiceBtn");
+      if (!btn || btn.dataset.value !== "Buddies") return;
+      e.stopImmediatePropagation();
+      openBuddyGroupsModal();
+    }, true); // capture phase so it fires before wireChoiceRow's bubble handler
+
+    wireBuddyGroupsModal();
 
     bindFieldChange(el.hcDate, () => { state.game.dbGames_HCEffectivityDate = String(el.hcDate.value || "").trim(); renderHcHint(); });
 
@@ -650,7 +818,8 @@
       dbGames_TeeTimeCnt: String(el.teeCount.value || ""),
       dbGames_TeeTimeInterval: String(el.teeInterval.value || ""),
       dbGames_Holes: readChoice(el.holesRow) || "All 18",
-      dbGames_Privacy: readChoice(el.privacyRow) || "Club",
+      dbGames_Privacy:       readChoice(el.privacyRow) || "Club",
+      dbGames_PrivacyGroups: JSON.stringify(state.privacyGroups ?? []),
       dbGames_Comments: String(el.comments.value || ""),
       dbGames_HCEffectivity: eff,
       dbGames_HCEffectivityDate: hcDate,
@@ -807,10 +976,21 @@
       const init = readInit();
       if (!init || !init.ok) throw new Error("Missing or invalid __INIT__ payload (page must inject User+Game context).");
 
-      state.mode = init.mode || state.mode;
-      state.ggid = init.ggid || null;
-      state.game = init.game || null;
+      state.mode        = init.mode || state.mode;
+      state.ggid        = init.ggid || null;
+      state.game        = init.game || null;
       state.playerCount = typeof init.playerCount === "number" ? init.playerCount : 0;
+      state.availableTags = Array.isArray(init.availableTags) ? init.availableTags : [];
+
+      // Restore committed privacy groups from saved game row.
+      // [] = all favorites (no filter); non-empty = specific groups.
+      const rawGroups = state.game?.dbGames_PrivacyGroups ?? "[]";
+      try {
+        const parsed = typeof rawGroups === "string" ? JSON.parse(rawGroups) : rawGroups;
+        state.privacyGroups = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        state.privacyGroups = [];
+      }
 
       if (!state.game) throw new Error("Missing init.game in __INIT__.");
 

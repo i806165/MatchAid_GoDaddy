@@ -2096,6 +2096,48 @@ textarea {
   color: var(--mutedText);
 }
 
+/* ==========================================================================
+   SHARED CHECKBOX — .maCheckbox / .maCheckbox.is-checked
+   Reusable row-level checkbox using brand tokens.
+   Used by: Buddy Groups modal, game pairings, admin picker, and any future
+   multi-select list. Replaces page-local variants (gpRowCheck, gmTagCheck,
+   maAdminRow__check).
+
+   Markup pattern:
+     <div class="maCheckbox"></div>                  — unchecked
+     <div class="maCheckbox is-checked"></div>       — checked
+   The checkmark is rendered via ::after pseudo-element (no inner text needed).
+   ========================================================================== */
+
+.maCheckbox {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radiusSq);
+  border: 1px solid var(--borderSubtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  background: var(--bg);
+  box-sizing: border-box;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.maCheckbox.is-checked {
+  background: var(--brandSecondary);
+  border-color: var(--brandSecondary);
+}
+
+.maCheckbox.is-checked::after {
+  content: '';
+  width: 10px;
+  height: 6px;
+  border-left: 2px solid #ffffff;
+  border-bottom: 2px solid #ffffff;
+  transform: rotate(-45deg) translateY(-1px);
+  display: block;
+}
+
 
 /* ==========================================================================
    18. ADMIN PICKER

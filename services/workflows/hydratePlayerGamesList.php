@@ -73,10 +73,12 @@ function playerGamesIsVisible(
   if ($privacy === '') $privacy = 'Club';
 
   // Privacy model:
-  // - "Only Me"  → admin only; no self-discovery by anyone else
-  // - "Players"  → enrolled players only; covered by isEnrolled; no additional discovery
-  // - "Buddies"  → any player the admin has favorited, regardless of club membership
-  // - "Club"     → any player in the same club as the game admin
+  // - "Only Me"  -> admin only; no self-discovery by anyone else
+  // - "Players"  -> enrolled players only; covered by isEnrolled; no additional discovery
+  // - "Buddies"  -> any player the admin has favorited, regardless of club membership.
+  //                 If dbGames_PrivacyGroups is non-empty, the player must also have
+  //                 at least one matching tag in their favorites record for this admin.
+  // - "Club"     -> any player in the same club as the game admin
 
   $gameClubId = trim((string)(
     $g['dbGames_AdminClubID'] ??
@@ -96,8 +98,21 @@ function playerGamesIsVisible(
 
   if ($privacy === 'Buddies') {
     // Buddy discovery crosses club boundaries — club match is irrelevant.
-    // The admin's favorites list is the gate.
-    $allowByClubPrivacy = $isBuddyAdmin;
+    // The admin's favorites list is the primary gate.
+    if ($isBuddyAdmin) {
+      $rawGroups  = $g['dbGames_PrivacyGroups'] ?? '[]';
+      $privGroups = is_string($rawGroups) ? (json_decode($rawGroups, true) ?? []) : (array)$rawGroups;
+
+      if (empty($privGroups)) {
+        // [] = no group filter; all buddies can discover
+        $allowByClubPrivacy = true;
+      } else {
+        // Hard filter — player must share at least one group tag with the game's filter.
+        // Player tags come from their favorites record under this admin.
+        $playerFavTags = $favPlayerTags[$admin][$userGHIN] ?? [];
+        $allowByClubPrivacy = !empty(array_intersect($privGroups, $playerFavTags));
+      }
+    }
   } elseif ($privacy === 'Club') {
     // Club discovery is strictly same-club only.
     $allowByClubPrivacy = $isSameClub;
@@ -277,14 +292,35 @@ function hydratePlayerGamesList(string $userGHIN, array $filters, string $userCl
     Logger::info('PLAYERGAMES_DBPLAYERS_WARN', ['msg' => $e->getMessage()]);
   }
 
-  // 4) Buddy-admin set
-  $buddyAdmins = [];
+  // 4) Buddy-admin set + player tag map for group filtering
+  // $buddyAdmins: adminGHIN => true (admins who have favorited this player)
+  // $favPlayerTags: adminGHIN => [ playerGHIN => [tag, tag, ...] ]
+  //   Used by Buddies+PrivacyGroups filter to check if player has a matching tag.
+  $buddyAdmins   = [];
+  $favPlayerTags = [];
   try {
-    $stB = $pdo->prepare("SELECT CAST(dbFav_UserGHIN AS CHAR) AS adminKey FROM db_FavPlayers WHERE CAST(dbFav_PlayerGHIN AS CHAR)=:u LIMIT 2000");
+    $stB = $pdo->prepare(
+      "SELECT CAST(dbFav_UserGHIN AS CHAR) AS adminKey,
+              dbFav_PlayerTags AS tags
+       FROM db_FavPlayers
+       WHERE CAST(dbFav_PlayerGHIN AS CHAR) = :u
+       LIMIT 2000"
+    );
     $stB->execute([':u' => $userGHIN]);
     foreach (($stB->fetchAll(PDO::FETCH_ASSOC) ?: []) as $r) {
-      $k = trim((string)($r['adminKey'] ?? ''));
-      if ($k !== '') $buddyAdmins[$k] = true;
+      $adminKey = trim((string)($r['adminKey'] ?? ''));
+      if ($adminKey === '') continue;
+      $buddyAdmins[$adminKey] = true;
+
+      // Decode tags for this admin→player relationship
+      $rawTags = $r['tags'] ?? '';
+      $tags = [];
+      if (is_string($rawTags) && trim($rawTags) !== '') {
+        $decoded = json_decode($rawTags, true);
+        if (is_array($decoded)) $tags = $decoded;
+        else $tags = array_map('trim', explode(',', $rawTags));
+      }
+      $favPlayerTags[$adminKey][$userGHIN] = array_values(array_filter(array_map('strval', $tags)));
     }
   } catch (Throwable $e) {
     Logger::info('PLAYERGAMES_BUDDIES_WARN', ['msg' => $e->getMessage()]);

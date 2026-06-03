@@ -7,6 +7,7 @@ require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_SERVICES . "/database/service_dbPlayers.php";
+require_once MA_SERVICES . "/database/service_dbFavPlayers.php";
 
 // 1) USER context hydration (Rule-2)
 $ctx = ServiceUserContext::getUserContext();
@@ -42,12 +43,19 @@ try {
     ? "Add New Game"
     : ("GGID " . (string)$ggid);
 
+  // Fetch admin's distinct favorite groups for the Buddy Groups modal.
+  // Only meaningful when dbGames_Privacy = "Buddies"; injected regardless
+  // so the modal is ready without an extra round trip.
+  $adminGhin    = trim((string)($_SESSION["SessionGHINLogonID"] ?? ""));
+  $availableTags = service_dbFavPlayers::getGroupsForUser($adminGhin);
+
   $initPayload = [
-    "ok" => true,
-    "mode" => $mode,
-    "ggid" => $ggid,
-    "game" => $game,
-    "playerCount" => $playerCount,
+    "ok"           => true,
+    "mode"         => $mode,
+    "ggid"         => $ggid,
+    "game"         => $game,
+    "playerCount"  => $playerCount,
+    "availableTags" => $availableTags,
     "authorizations" => ($mode === "edit") ? ($gc["authorizations"] ?? []) : ServiceContextGame::getGameAuthorizations(),
     "header" => [
       "subtitle" => $subtitle
