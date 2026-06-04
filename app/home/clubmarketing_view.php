@@ -379,7 +379,7 @@ $mailtoHref = "mailto:signup@matchaid.org?subject=" . $emailSubject;
       <strong>Why am I seeing this?</strong>
       To maintain secure GHIN integration and platform integrity, each participating club must be enrolled in MatchAid. Once your club is enrolled, all members can sign in and access the tools below.
       <?php if (!empty($clubName)): ?>
-        <br><br>Your club is <strong><?= htmlspecialchars($clubName) ?></strong><?php if (!empty($clubId)): ?> (Club ID: <strong><?= htmlspecialchars($clubId) ?></strong>)<?php endif; ?><?php if (!empty($facilityName)): ?>, facility <strong><?= htmlspecialchars($facilityName) ?></strong><?php endif; ?> — include this information in your enrollment email so we can get you set up quickly.
+        <br><br>Your club is <strong><?= htmlspecialchars($clubName) ?></strong><?php if (!empty($clubId)): ?> (Club ID: <strong><?= htmlspecialchars($clubId) ?></strong>)<?php endif; ?><?php if (!empty($facilityName)): ?> &bull; Facility: <strong><?= htmlspecialchars($facilityName) ?></strong><?php if (!empty($facilityId)): ?> (Facility ID: <strong><?= htmlspecialchars($facilityId) ?></strong>)<?php endif; ?><?php endif; ?> — include this information in your enrollment email so we can get you set up quickly.
       <?php endif; ?>
     </div>
 
