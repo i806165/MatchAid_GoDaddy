@@ -336,8 +336,8 @@
   </style>
 </head>
 <?php
-$emailSubject = !empty($clubId)
-    ? rawurlencode("Club Enrollment Request – Club ID " . $clubId)
+$emailSubject = !empty($clubName)
+    ? rawurlencode("Club Enrollment Request – " . $clubName . (!empty($clubId) ? " (ID: " . $clubId . ")" : ""))
     : rawurlencode("Club Enrollment Request");
 $mailtoHref = "mailto:signup@matchaid.org?subject=" . $emailSubject;
 ?>
@@ -378,8 +378,8 @@ $mailtoHref = "mailto:signup@matchaid.org?subject=" . $emailSubject;
     <div class="mk-alert">
       <strong>Why am I seeing this?</strong>
       To maintain secure GHIN integration and platform integrity, each participating club must be enrolled in MatchAid. Once your club is enrolled, all members can sign in and access the tools below.
-      <?php if (!empty($clubId)): ?>
-        <br><br>Your GHIN club ID is <strong><?= htmlspecialchars($clubId) ?></strong> — include this in your enrollment email so we can get you set up quickly.
+      <?php if (!empty($clubName)): ?>
+        <br><br>Your club is <strong><?= htmlspecialchars($clubName) ?></strong><?php if (!empty($clubId)): ?> (Club ID: <strong><?= htmlspecialchars($clubId) ?></strong>)<?php endif; ?><?php if (!empty($facilityName)): ?>, facility <strong><?= htmlspecialchars($facilityName) ?></strong><?php endif; ?> — include this information in your enrollment email so we can get you set up quickly.
       <?php endif; ?>
     </div>
 
