@@ -8,8 +8,8 @@ require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 
 Logger::info("IMPORT_GAMES_ENTRY", [
-  "uri" => $_SERVER["REQUEST_URI"] ?? "",
-  "ghin" => $_SESSION["SessionGHINLogonID"] ?? "",
+  "uri"       => $_SERVER["REQUEST_URI"] ?? "",
+  "ghin"      => $_SESSION["SessionGHINLogonID"] ?? "",
   "loginTime" => $_SESSION["SessionLoginTime"] ?? "",
 ]);
 
@@ -20,7 +20,7 @@ if (!$ctx || empty($ctx["ok"])) {
   exit;
 }
 
-// Gate — guests may not import games
+// 2) Gate — guests may not import games
 ServiceUserContext::requireAccessLevel("MEMBER");
 
 $paths = [
@@ -30,31 +30,31 @@ $paths = [
 ];
 
 // Chrome values
-$maChromeTitle = "Import Games";
+$maChromeTitle    = "Import Games";
 $maChromeSubtitle = "Batch game creation";
-$maChromeLogoUrl = null;
+$maChromeLogoUrl  = null;
 
 // Small init payload; page JS will call InitImport.php for real hydrate
 $initPayload = [
-  "ok" => true,
+  "ok"     => true,
   "header" => [
-    "subtitle" => $maChromeSubtitle
-  ]
+    "subtitle" => $maChromeSubtitle,
+  ],
 ];
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
   <title>MatchAid • Import Games</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="/assets/css/ma_shared.css">
-  <link rel="stylesheet" href="/assets/css/game_import.css">
+  <link rel="stylesheet" href="<?= ma_asset('/assets/css/ma_shared.css') ?>">
+  <link rel="stylesheet" href="<?= ma_asset('/assets/css/game_import.css') ?>">
 </head>
 <body>
   <?php include __DIR__ . "/../../includes/chromeHeader.php"; ?>
@@ -68,18 +68,16 @@ $initPayload = [
 <script>
   window.MA = window.MA || {};
   window.MA.paths = <?= json_encode($paths, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-
   window.__INIT__ = <?= json_encode($initPayload, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
   window.__MA_INIT__ = window.__INIT__;
-
   window.MA.routes = {
-    router: window.MA.paths.routerApi,
-    login: <?= json_encode(MA_ROUTE_LOGIN) ?>,
-    apiImportGames: window.MA.paths.apiImportGames
+    router:         window.MA.paths.routerApi,
+    login:          <?= json_encode(MA_ROUTE_LOGIN) ?>,
+    apiImportGames: window.MA.paths.apiImportGames,
   };
 </script>
 
-  <script src="/assets/js/ma_shared.js"></script>
-  <script src="/assets/pages/game_import.js"></script>
+  <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/pages/game_import.js') ?>"></script>
 </body>
 </html>
