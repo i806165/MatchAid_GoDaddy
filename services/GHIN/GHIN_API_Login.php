@@ -42,14 +42,14 @@ function be_loginGHIN(string $GHIN, string $PASSCODE): array
         "Content-Type: application/json",
     ]);
  
-    // Sort golfers so home club (is_home_club = true) surfaces first.
+    // Sort golfers so home club (club_id === primary_club_id) surfaces first.
     // This ensures golfers[0] always reflects the player's GHIN home club,
     // which determines SessionClubID and SessionAccessLevel downstream.
     if (!empty($response["golfer_user"]["golfers"])) {
         usort($response["golfer_user"]["golfers"], function ($a, $b) {
-            $aHome = !empty($a["is_home_club"]) ? 0 : 1;
-            $bHome = !empty($b["is_home_club"]) ? 0 : 1;
-            return $aHome <=> $bHome;
+            $aPrimary = (string)($a["club_id"] ?? "") === (string)($a["primary_club_id"] ?? "") ? 0 : 1;
+            $bPrimary = (string)($b["club_id"] ?? "") === (string)($b["primary_club_id"] ?? "") ? 0 : 1;
+            return $aPrimary <=> $bPrimary;
         });
     }
  
