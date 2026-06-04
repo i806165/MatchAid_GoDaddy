@@ -13,7 +13,49 @@ require_once MA_SERVICES . "/context/service_ContextUser.php";
  * - Returns decoded GHIN JSON array (same as Wix httpResponse.json())
  * - Throws RuntimeException on network/HTTP errors (controller can catch)
  */
+
 function be_loginGHIN(string $GHIN, string $PASSCODE): array
+{
+    $GHIN = trim($GHIN);
+    if ($GHIN === "" || $PASSCODE === "") {
+        throw new RuntimeException("Missing GHIN or PASSCODE.");
+    }
+
+    $config = ma_config();
+    $loginUrl = (string)($config["ghin"]["login_url"] ?? "");
+
+    if ($loginUrl === "") {
+        throw new RuntimeException("GHIN login_url missing in config.php");
+    }
+
+    $payload = [
+        "user" => [
+            "email_or_ghin" => $GHIN,
+            "password" => $PASSCODE,
+            "remember_me" => "true",
+        ],
+        "token" => "nonblank",
+    ];
+
+    $response = HttpClient::postJson($loginUrl, $payload, [
+        "accept: application/json",
+        "Content-Type: application/json",
+    ]);
+
+    // Sort golfers so enrolled club surfaces first before any caller reads [0]
+    if (!empty($response["golfer_user"]["golfers"])) {
+        usort($response["golfer_user"]["golfers"], function ($a, $b) {
+            $aEnrolled = be_getAdminCredentialsByClub((string)($a["club_id"] ?? "")) !== null ? 0 : 1;
+            $bEnrolled = be_getAdminCredentialsByClub((string)($b["club_id"] ?? "")) !== null ? 0 : 1;
+            return $aEnrolled <=> $bEnrolled;
+        });
+    }
+
+    return $response;
+}
+
+
+function be_loginGHINOLD(string $GHIN, string $PASSCODE): array
 {
     $GHIN = trim($GHIN);
     if ($GHIN === "" || $PASSCODE === "") {
