@@ -22,7 +22,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 1.5rem 1rem 3rem;
+      padding: 1rem 0.75rem 3rem;
     }
 
     .page {
@@ -34,17 +34,19 @@
     .mk-hdr {
       background: #07432A;
       border-radius: 12px 12px 0 0;
-      padding: 1.125rem 1.5rem;
+      padding: 1rem 1.25rem;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 1rem;
+      gap: 0.75rem;
+      flex-wrap: wrap;
     }
 
     .mk-brand {
       display: flex;
       align-items: center;
       gap: 10px;
+      flex-shrink: 0;
     }
 
     .mk-logo {
@@ -72,6 +74,13 @@
       color: rgba(255,255,255,0.6);
     }
 
+    .mk-hdr-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
     .mk-home-btn {
       display: inline-flex;
       align-items: center;
@@ -85,17 +94,49 @@
       color: rgba(255,255,255,0.9);
       text-decoration: none;
       white-space: nowrap;
-      flex-shrink: 0;
     }
 
-    .mk-home-btn:hover {
-      background: rgba(255,255,255,0.2);
+    .mk-home-btn:hover { background: rgba(255,255,255,0.2); }
+
+    .mk-hdr-email {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #C4692A;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 13px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: 'Montserrat', sans-serif;
+      cursor: pointer;
+      white-space: nowrap;
+      text-decoration: none;
+    }
+
+    .mk-hdr-email:hover { background: #b05c24; }
+
+    /* Mobile — stack header actions below brand */
+    @media (max-width: 520px) {
+      .mk-hdr {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .mk-hdr-actions {
+        width: 100%;
+      }
+      .mk-home-btn,
+      .mk-hdr-email {
+        flex: 1 1 auto;
+        justify-content: center;
+      }
     }
 
     /* ── Hero ── */
     .mk-hero {
       background: #0A5235;
-      padding: 1.5rem;
+      padding: 1.5rem 1.25rem;
     }
 
     .mk-badge {
@@ -112,11 +153,15 @@
     }
 
     .mk-hero-title {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 600;
       color: #fff;
       margin-bottom: 0.5rem;
       line-height: 1.3;
+    }
+
+    @media (min-width: 521px) {
+      .mk-hero-title { font-size: 20px; }
     }
 
     .mk-hero-sub {
@@ -131,7 +176,11 @@
       border: 1px solid #e0e0d8;
       border-top: none;
       border-radius: 0 0 12px 12px;
-      padding: 1.25rem 1.5rem;
+      padding: 1.25rem;
+    }
+
+    @media (min-width: 521px) {
+      .mk-body { padding: 1.25rem 1.5rem; }
     }
 
     .mk-alert {
@@ -145,11 +194,17 @@
       line-height: 1.65;
     }
 
-    .mk-alert strong {
+    /* Only the heading strong is block — inline strongs stay inline */
+    .mk-alert > strong:first-child {
       display: block;
       color: #1a1a1a;
       font-weight: 600;
       margin-bottom: 3px;
+    }
+
+    .mk-alert strong {
+      color: #1a1a1a;
+      font-weight: 600;
     }
 
     .mk-section-title {
@@ -164,13 +219,13 @@
     /* ── Portal cards ── */
     .mk-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: 1fr;
       gap: 10px;
       margin-bottom: 1.25rem;
     }
 
-    @media (max-width: 520px) {
-      .mk-grid { grid-template-columns: 1fr; }
+    @media (min-width: 521px) {
+      .mk-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
 
     .mk-card {
@@ -225,7 +280,6 @@
       color: #07432A;
       font-weight: 700;
       flex-shrink: 0;
-      margin-top: 0;
     }
 
     /* ── CTA ── */
@@ -267,6 +321,7 @@
     .mk-email-btn {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 6px;
       background: #C4692A;
       color: #fff;
@@ -284,32 +339,10 @@
 
     .mk-email-btn:hover { background: #b05c24; }
 
-    /* ── Header email btn ── */
-    .mk-hdr-email {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      background: #C4692A;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 7px 13px;
-      font-size: 12px;
-      font-weight: 600;
-      font-family: 'Montserrat', sans-serif;
-      cursor: pointer;
-      white-space: nowrap;
-      text-decoration: none;
-      flex-shrink: 0;
-    }
-
-    .mk-hdr-email:hover { background: #b05c24; }
-
-    .mk-hdr-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-shrink: 0;
+    /* Mobile CTA — button full width */
+    @media (max-width: 520px) {
+      .mk-cta { flex-direction: column; align-items: flex-start; }
+      .mk-email-btn { width: 100%; }
     }
 
     .mk-fine {
@@ -340,6 +373,16 @@ $emailSubject = !empty($clubName)
     ? rawurlencode("Club Enrollment Request – " . $clubName . (!empty($clubId) ? " (ID: " . $clubId . ")" : ""))
     : rawurlencode("Club Enrollment Request");
 $mailtoHref = "mailto:signup@matchaid.org?subject=" . $emailSubject;
+
+// Build info line cleanly for mobile-safe rendering
+$infoLine = "";
+if (!empty($clubName)) {
+    $infoLine  = "Your club is <strong>" . htmlspecialchars($clubName) . "</strong>";
+    if (!empty($clubId))       $infoLine .= " (Club ID: <strong>" . htmlspecialchars($clubId) . "</strong>)";
+    if (!empty($facilityName)) $infoLine .= " &bull; Facility: <strong>" . htmlspecialchars($facilityName) . "</strong>";
+    if (!empty($facilityId))   $infoLine .= " (Facility ID: <strong>" . htmlspecialchars($facilityId) . "</strong>)";
+    $infoLine .= " &mdash; include this information in your enrollment email so we can get you set up quickly.";
+}
 ?>
 <body>
 <div class="page">
@@ -378,8 +421,8 @@ $mailtoHref = "mailto:signup@matchaid.org?subject=" . $emailSubject;
     <div class="mk-alert">
       <strong>Why am I seeing this?</strong>
       To maintain secure GHIN integration and platform integrity, each participating club must be enrolled in MatchAid. Once your club is enrolled, all members can sign in and access the tools below.
-      <?php if (!empty($clubName)): ?>
-        <br><br>Your club is <strong><?= htmlspecialchars($clubName) ?></strong><?php if (!empty($clubId)): ?> (Club ID: <strong><?= htmlspecialchars($clubId) ?></strong>)<?php endif; ?><?php if (!empty($facilityName)): ?> &bull; Facility: <strong><?= htmlspecialchars($facilityName) ?></strong><?php if (!empty($facilityId)): ?> (Facility ID: <strong><?= htmlspecialchars($facilityId) ?></strong>)<?php endif; ?><?php endif; ?> — include this information in your enrollment email so we can get you set up quickly.
+      <?php if (!empty($infoLine)): ?>
+        <br><br><?= $infoLine ?>
       <?php endif; ?>
     </div>
 
