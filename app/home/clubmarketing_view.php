@@ -412,7 +412,7 @@ if (!empty($clubName)) {
   <div class="mk-hero">
     <div class="mk-badge">&#x1F512; Club enrollment required</div>
     <h1 class="mk-hero-title">Unlock the MatchAid experience for your club</h1>
-    <p class="mk-hero-sub">Your GHIN profile is linked to a club that isn't yet enrolled in MatchAid. Enrollment is free — reach out and we'll get you set up.</p>
+    <p class="mk-hero-sub">Your Golf Network profile is linked to a club that isn't yet enrolled in MatchAid. Enrollment is free — reach out and we'll get you set up.</p>
   </div>
 
   <!-- Body -->
@@ -420,7 +420,7 @@ if (!empty($clubName)) {
 
     <div class="mk-alert">
       <strong>Why am I seeing this?</strong>
-      To maintain secure GHIN integration and platform integrity, each participating club must be enrolled in MatchAid. Once your club is enrolled, all members can sign in and access the tools below.
+      To maintain security and platform integrity, each participating club must be enrolled in MatchAid. Once your club is enrolled, all members can sign in and access the tools below.
       <?php if (!empty($infoLine)): ?>
         <br><br><?= $infoLine ?>
       <?php endif; ?>
