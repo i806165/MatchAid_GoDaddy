@@ -20,37 +20,39 @@ function be_loginGHIN(string $GHIN, string $PASSCODE): array
     if ($GHIN === "" || $PASSCODE === "") {
         throw new RuntimeException("Missing GHIN or PASSCODE.");
     }
-
-    $config = ma_config();
+ 
+    $config   = ma_config();
     $loginUrl = (string)($config["ghin"]["login_url"] ?? "");
-
+ 
     if ($loginUrl === "") {
         throw new RuntimeException("GHIN login_url missing in config.php");
     }
-
+ 
     $payload = [
         "user" => [
             "email_or_ghin" => $GHIN,
-            "password" => $PASSCODE,
-            "remember_me" => "true",
+            "password"      => $PASSCODE,
+            "remember_me"   => "true",
         ],
         "token" => "nonblank",
     ];
-
+ 
     $response = HttpClient::postJson($loginUrl, $payload, [
         "accept: application/json",
         "Content-Type: application/json",
     ]);
-
-    // Sort golfers so enrolled club surfaces first before any caller reads [0]
+ 
+    // Sort golfers so home club (is_home_club = true) surfaces first.
+    // This ensures golfers[0] always reflects the player's GHIN home club,
+    // which determines SessionClubID and SessionAccessLevel downstream.
     if (!empty($response["golfer_user"]["golfers"])) {
         usort($response["golfer_user"]["golfers"], function ($a, $b) {
-            $aEnrolled = be_getAdminCredentialsByClub((string)($a["club_id"] ?? "")) !== null ? 0 : 1;
-            $bEnrolled = be_getAdminCredentialsByClub((string)($b["club_id"] ?? "")) !== null ? 0 : 1;
-            return $aEnrolled <=> $bEnrolled;
+            $aHome = !empty($a["is_home_club"]) ? 0 : 1;
+            $bHome = !empty($b["is_home_club"]) ? 0 : 1;
+            return $aHome <=> $bHome;
         });
     }
-
+ 
     return $response;
 }
 
