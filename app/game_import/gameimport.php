@@ -20,6 +20,9 @@ if (!$ctx || empty($ctx["ok"])) {
   exit;
 }
 
+// Gate — guests may not import games
+ServiceUserContext::requireAccessLevel("MEMBER");
+
 $paths = [
   "apiImportGames" => "/api/game_import",
   "routerApi"      => MA_ROUTE_API_ROUTER,
