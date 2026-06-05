@@ -86,8 +86,8 @@ $maChromeSubtitle = "Score Entry";
 <!DOCTYPE html><html lang="en"><head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
 <title>MatchAid — Scoring Home</title>
-<link rel="stylesheet" href="/assets/css/ma_shared.css" />
-<link rel="stylesheet" href="/assets/css/score_home.css" />
+<link rel="stylesheet" href="<?= ma_asset('/assets/css/ma_shared.css') ?>" />
+<link rel="stylesheet" href="<?= ma_asset('/assets/css/score_home.css') ?>" />
 </head><body>
 <?php require MA_INCLUDES . '/chromeHeader.php'; ?>
 <main class="maPage">
@@ -99,9 +99,9 @@ $maChromeSubtitle = "Score Entry";
   window.MA.paths = <?= json_encode($paths, JSON_UNESCAPED_SLASHES) ?>;
   window.__INIT__ = <?= json_encode($initPayload) ?>;
 </script>
-<script src="/assets/js/ma_shared.js"></script>
-<script src="/assets/modules/actions_menu.js"></script>
-<script src="/assets/modules/module_DisplayGameFormat.js"></script>
-<script src="/assets/modules/module_BlindPlayer.js"></script>
-<script src="/assets/pages/score_home.js"></script>
+<script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_DisplayGameFormat.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_BlindPlayer.js') ?>"></script>
+<script src="<?= ma_asset('/assets/pages/score_home.js') ?>"></script>
 </body></html>

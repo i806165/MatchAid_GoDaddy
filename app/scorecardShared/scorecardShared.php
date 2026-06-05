@@ -20,9 +20,9 @@ function renderScorecardSharedPage(array $initPayload, string $pageTitle): void 
 <title>MatchAid — <?= htmlspecialchars($pageTitle) ?></title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/css/ma_shared.css?v=1" />
-<link rel="stylesheet" href="/assets/css/game_scorecards.css?v=1" />
-<link rel="stylesheet" href="/assets/css/scorecardShared.css?v=1" />
+<link rel="stylesheet" href="<?= ma_asset('/assets/css/ma_shared.css') ?>" />
+<link rel="stylesheet" href="<?= ma_asset('/assets/css/game_scorecards.css') ?>" />
+<link rel="stylesheet" href="<?= ma_asset('/assets/css/scorecardShared.css') ?>" />
 </head><body>
 <?php require_once MA_INCLUDES . '/chromeHeader.php'; ?>
 <div id="scControls" class="maControlArea"></div>
@@ -41,9 +41,9 @@ function renderScorecardSharedPage(array $initPayload, string $pageTitle): void 
   });
 </script>
 
-<script src="/assets/js/ma_shared.js?v=1"></script>
-<script src="/assets/modules/ghin_post_scores.js?v=1"></script>
-<script src="/assets/modules/module_DisplayGameFormat.js"></script>
-<script src="/assets/pages/scorecardShared.js?v=1"></script>
+<script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/ghin_post_scores.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_DisplayGameFormat.js') ?>"></script>
+<script src="<?= ma_asset('/assets/pages/scorecardShared.js') ?>"></script>
 </body></html>
 <?php }

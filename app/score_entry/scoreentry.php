@@ -55,8 +55,8 @@ $maChromeLogoUrl = null;
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="/assets/css/ma_shared.css">
-  <link rel="stylesheet" href="/assets/css/score_entry.css?v=1">
+  <link rel="stylesheet" href="<?= ma_asset('/assets/css/ma_shared.css') ?>">
+  <link rel="stylesheet" href="<?= ma_asset('/assets/css/score_entry.css') ?>">
 </head>
 <body>
   <?php include MA_INCLUDES . "/chromeHeader.php"; ?>
@@ -82,8 +82,8 @@ $maChromeLogoUrl = null;
   };
 </script>
 
-  <script src="/assets/js/ma_shared.js"></script>
-  <script src="/assets/modules/actions_menu.js?v=1"></script>
-  <script src="/assets/pages/score_entry.js"></script>
+  <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/pages/score_entry.js') ?>"></script>
 </body>
 </html>

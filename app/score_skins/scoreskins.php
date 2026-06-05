@@ -64,9 +64,9 @@ $maChromeSubtitle = $initPayload["header"]["subtitle"];
 <title>MatchAid — Hole Champions</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/css/ma_shared.css?v=1" />
-<link rel="stylesheet" href="/assets/css/scorecardShared.css?v=1" />
-<link rel="stylesheet" href="/assets/css/score_skins.css?v=1" />
+<link rel="stylesheet" href="<?= ma_asset('/assets/css/ma_shared.css') ?>" />
+<link rel="stylesheet" href="<?= ma_asset('/assets/css/scorecardShared.css') ?>" />
+<link rel="stylesheet" href="<?= ma_asset('/assets/css/score_skins.css') ?>" />
 </head><body>
 <?php require_once MA_INCLUDES . '/chromeHeader.php'; ?>
 <main class="maPage"><?php require __DIR__ . '/scoreskins_view.php'; ?></main>
@@ -77,7 +77,7 @@ $maChromeSubtitle = $initPayload["header"]["subtitle"];
   window.__INIT__ = <?= json_encode($initPayload, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
   window.MA.routes = { router: window.MA.paths.routerApi };
 </script>
-<script src="/assets/js/ma_shared.js?v=1"></script>
-<script src="/assets/modules/module_DisplayGameFormat.js"></script>
-<script src="/assets/pages/score_skins.js?v=1"></script>
+<script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_DisplayGameFormat.js') ?>"></script>
+<script src="<?= ma_asset('/assets/pages/score_skins.js') ?>"></script>
 </body></html>

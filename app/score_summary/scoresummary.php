@@ -45,8 +45,8 @@ $maChromeSubtitle = $initPayload["header"]["subtitle"] ?? "";
 <title>MatchAid — Score Summary</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/css/ma_shared.css?v=1" />
-<link rel="stylesheet" href="/assets/css/score_summary.css?v=1" />
+<link rel="stylesheet" href="<?= ma_asset('/assets/css/ma_shared.css') ?>" />
+<link rel="stylesheet" href="<?= ma_asset('/assets/css/score_summary.css') ?>" />
 </head><body>
 <?php require_once MA_INCLUDES . '/chromeHeader.php'; ?>
 <div id="ssControls" class="maControlArea"></div>
@@ -59,7 +59,7 @@ $maChromeSubtitle = $initPayload["header"]["subtitle"] ?? "";
   window.__MA_INIT__ = window.__INIT__;
   window.MA.routes = { router: window.MA.paths.routerApi };
 </script>
-<script src="/assets/js/ma_shared.js?v=1"></script>
-<script src="/assets/modules/module_DisplayGameFormat.js"></script>
-<script src="/assets/pages/score_summary.js?v=1"></script>
+<script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_DisplayGameFormat.js') ?>"></script>
+<script src="<?= ma_asset('/assets/pages/score_summary.js') ?>"></script>
 </body></html>
