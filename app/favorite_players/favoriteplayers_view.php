@@ -63,7 +63,7 @@
     </header>
     <div class="maCard__body">
       <div class="fp-groups-header">
-        <span class="maLabel">Select all that apply</span>
+        <span class="maLabel">Select all that apply or add a new one</span>
         <button type="button" class="btn btnSecondary" id="fpBtnAddGroup">
           <i class="ti ti-plus" aria-hidden="true"></i>
           Add Group

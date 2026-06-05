@@ -214,7 +214,7 @@
       return `
         <div class="fpCard" data-ghin="${escapeHtml(f.playerGHIN)}">
           <div class="fpCard__top">
-            <div class="fpCard__avatar fpAvatar ${colorCls}">${escapeHtml(initials)}</div>
+            <div class="maListRow__avatar fpAvatar ${colorCls}">${escapeHtml(initials)}</div>
             <span class="fpCard__name">${escapeHtml(f.name || "")}</span>
             <button class="fpCard__trash js-delete" data-ghin="${escapeHtml(f.playerGHIN)}" aria-label="Remove">
               <img src="/assets/images/icon_trashcan.png" alt="Remove" />
