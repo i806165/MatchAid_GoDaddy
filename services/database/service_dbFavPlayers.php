@@ -487,8 +487,15 @@ public static function resolveEmailsToGHINs(array $emails): array
             "emails"    => $emails,
         ]);
 
+        $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+
+        Logger::error("DEBUG_FETCH", [
+            "rowsFetched" => count($rows),
+            "firstRow"    => $rows[0] ?? null,
+        ]);
+
         $map = [];
-        while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
+        foreach ($rows as $row) {
             $email = (string)($row["email"] ?? "");
             $ghin  = (string)($row["ghin"]  ?? "");
             if ($email === "" || $ghin === "") continue;
