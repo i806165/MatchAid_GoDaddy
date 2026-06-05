@@ -272,14 +272,14 @@
       console.warn("[FP] getPlayerEmails failed:", e);
     }
 
-    // If API returned nothing, seed from the favorite's stored email
-    if (state.emailSources.length === 0 && state.current?.email && trim(state.current.email) !== "") {
+    // Seed from the favorite's stored email if API returned nothing
+    if (state.emailSources.length === 0 && ghinEmail && !isMaskedEmail(ghinEmail) && trim(ghinEmail) !== "") {
       state.emailSources.push({
-        email:    trim(state.current.email),
+        email:    trim(ghinEmail),
         source:   "addressbook",
         label:    "Address book",
-        masked:   isMaskedEmail(state.current.email),
-        priority: isMaskedEmail(state.current.email) ? 99 : 2,
+        masked:   false,
+        priority: 2,
       });
     }
 
@@ -593,7 +593,6 @@
   }
 
   async function _openFormWithSources(fav, suppressFooter) {
-    // Load email sources in background before opening form
     await loadEmailSources(fav.playerGHIN, fav.email || "");
     openForm(fav, suppressFooter);
   }
