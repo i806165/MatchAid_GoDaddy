@@ -453,26 +453,21 @@ final class service_dbFavPlayers
      * @return array             Map of [ lowercased_email => playerGHIN ]
      *                           Emails with no match are absent from the map.
      */
-    public static function resolveEmailsToGHINs(array $emails): array
-    {
-        if (empty($emails)) return [];
+public static function resolveEmailsToGHINs(array $emails): array
+{
+    if (empty($emails)) return [];
 
-        // Normalize — lowercase and trim
-        $emails = array_values(array_unique(array_filter(
-            array_map(fn($e) => strtolower(trim((string)$e)), $emails)
-        )));
+    $emails = array_values(array_unique(array_filter(
+        array_map(fn($e) => strtolower(trim((string)$e)), $emails)
+    )));
 
-        if (empty($emails)) return [];
+    if (empty($emails)) return [];
 
+    try {
         $pdo = Db::pdo();
 
-        // Build IN clause placeholders
         $placeholders = implode(",", array_fill(0, count($emails), "?"));
 
-        // LOWER() on the stored column ensures case-insensitive match
-        // regardless of column collation.
-        // We SELECT DISTINCT to collapse multiple rows for the same email
-        // (same player favorited by different admin users).
         $sql = "SELECT LOWER(dbFav_PlayerEMail) AS email,
                        dbFav_PlayerGHIN          AS ghin
                 FROM   db_FavPlayers
@@ -483,23 +478,37 @@ final class service_dbFavPlayers
                   AND  dbFav_PlayerGHIN  <> ''";
 
         $st = $pdo->prepare($sql);
-        $st->execute(array_values($emails));
+        $ok = $st->execute(array_values($emails));
+
+        Logger::error("DEBUG_resolveEmailsToGHINs", [
+            "ok"        => $ok,
+            "errorInfo" => $st->errorInfo(),
+            "rowCount"  => $st->rowCount(),
+            "emails"    => $emails,
+        ]);
 
         $map = [];
         while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
             $email = (string)($row["email"] ?? "");
             $ghin  = (string)($row["ghin"]  ?? "");
             if ($email === "" || $ghin === "") continue;
-
-            // First match wins — covers the case where the same email
-            // appears under multiple dbFav_UserGHIN rows.
             if (!isset($map[$email])) {
                 $map[$email] = $ghin;
             }
         }
 
         return $map;
+
+    } catch (Throwable $e) {
+        Logger::error("DEBUG_resolveEmailsToGHINs_EXCEPTION", [
+            "error"   => $e->getMessage(),
+            "file"    => $e->getFile(),
+            "line"    => $e->getLine(),
+            "emails"  => $emails,
+        ]);
+        return [];
     }
+}
 
     // -------------------------
     // Helpers
