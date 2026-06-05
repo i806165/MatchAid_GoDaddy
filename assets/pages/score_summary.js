@@ -312,6 +312,21 @@
         action: () => MA.gameDetails && MA.gameDetails.open(game),
       });
     }
+
+    if (MA.ghinPostScores) {
+      const postedId = init.user?.ghinPostId || '';
+      const postLabel = postedId ? 'Score Already Posted to GHIN' : 'Post Score to GHIN';
+      items.push({
+        label:   postLabel,
+        enabled: !postedId,
+        indent:  true,
+        action:  () => MA.ghinPostScores.open({
+          ggid:     game.dbGames_GGID,
+          onPosted: () => applyChrome(),
+        }),
+      });
+    }
+
     if (items.length) {
       MA.ui.openActionsMenu('Actions', items);
     }

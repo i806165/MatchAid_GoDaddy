@@ -60,6 +60,7 @@ $maChromeSubtitle = $initPayload["header"]["subtitle"] ?? "";
   window.MA.routes = { router: window.MA.paths.routerApi };
 </script>
 <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/ghin_post_scores.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/module_DisplayGameFormat.js') ?>"></script>
 <script src="<?= ma_asset('/assets/pages/score_summary.js') ?>"></script>
 </body></html>
