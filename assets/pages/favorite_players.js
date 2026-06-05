@@ -272,6 +272,17 @@
       console.warn("[FP] getPlayerEmails failed:", e);
     }
 
+    // If API returned nothing, seed from the favorite's stored email
+    if (state.emailSources.length === 0 && state.current?.email && trim(state.current.email) !== "") {
+      state.emailSources.push({
+        email:    trim(state.current.email),
+        source:   "addressbook",
+        label:    "Address book",
+        masked:   isMaskedEmail(state.current.email),
+        priority: isMaskedEmail(state.current.email) ? 99 : 2,
+      });
+    }
+
     // Merge GHIN email if not already in sources
     if (ghinEmail && trim(ghinEmail) !== "") {
       const already = state.emailSources.some(
