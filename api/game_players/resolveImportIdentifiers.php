@@ -1,26 +1,6 @@
 <?php
 declare(strict_types=1);
 // /api/game_players/resolveImportIdentifiers.php
-//
-// Accepts a POST body: { "identifiers": ["6105388", "cdisney99@gmail.com", ...] }
-// Each entry is already classified and normalized by module_parseImportPlayers.js.
-//
-// For each identifier:
-//   - type "ghin"  → passed through as-is (GHIN API lookup happens later in the JS loop)
-//   - type "email" → resolved to GHIN via db_FavPlayers; unresolved if no match found
-//   - type "unknown" → immediately unresolved
-//
-// Returns:
-// {
-//   "ok": true,
-//   "resolved": [
-//     { "input": "6105388",            "type": "ghin",  "ghin": "6105388" },
-//     { "input": "cdisney99@gmail.com","type": "email", "ghin": "9876543" }
-//   ],
-//   "unresolved": [
-//     { "input": "notfound@x.com", "type": "email", "reason": "Email not found in favorites" }
-//   ]
-// }
 
 require_once __DIR__ . "/../../bootstrap.php";
 
@@ -49,6 +29,8 @@ try {
     $in          = ma_json_in();
     $identifiers = is_array($in["identifiers"] ?? null) ? $in["identifiers"] : [];
 
+    Logger::error("DEBUG_IDENTIFIERS", ["identifiers" => $identifiers]);
+
     if (empty($identifiers)) {
         http_response_code(400);
         echo json_encode(["ok" => false, "message" => "No identifiers provided."]);
@@ -56,9 +38,7 @@ try {
     }
 
     // ── Collect emails for batch DB lookup ───────────────────────────────────
-    // Separate emails from GHINs in one pass so we can do a single
-    // batch query rather than one query per email.
-    $emailInputs = []; // [ lowercased_email => original_input_object ]
+    $emailInputs = [];
 
     foreach ($identifiers as $item) {
         $type  = (string)($item["type"]  ?? "");
@@ -74,6 +54,12 @@ try {
         $emailToGhin = service_dbFavPlayers::resolveEmailsToGHINs(array_keys($emailInputs));
     }
 
+    // ── Log AFTER the call ───────────────────────────────────────────────────
+    Logger::error("RESOLVE_MAP_DEBUG", [
+        "emailInputs_keys" => array_keys($emailInputs),
+        "emailToGhin"      => $emailToGhin,
+    ]);
+
     // ── Build response arrays ─────────────────────────────────────────────────
     $resolved   = [];
     $unresolved = [];
@@ -87,9 +73,8 @@ try {
             // Pass numeric GHINs through — existence validated later by searchPlayers.php
             $resolved[] = [
                 "input" => $raw,
-                "type"  => "email",
-                "value" => $email,
-                "ghin"  => $emailToGhin[$email],
+                "type"  => "ghin",
+                "ghin"  => $value,
             ];
             continue;
         }
