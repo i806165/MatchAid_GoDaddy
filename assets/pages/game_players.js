@@ -869,7 +869,7 @@
             <input id="gpGhinState" class="maTextInput" maxlength="2" placeholder="State" value="${esc(state.ghinState)}" style="padding-right:7px;">
           </div>
           <div class="maInputWrap gpInputClearWrap" style="flex:1 1 130px;">
-            <input id="gpGhinLast" class="maTextInput" placeholder="Last name or GHIN #" value="${esc(state.ghinLast)}">
+            <input id="gpGhinLast" class="maTextInput" placeholder="Last name or Golf Network #" value="${esc(state.ghinLast)}">
             <button id="gpGhinLastClear" class="clearBtn ${state.ghinLast ? "" : "isHidden"}" type="button" aria-label="Clear last name">×</button>
           </div>
           <button id="gpBtnSearchGhin" class="btn btnPrimary" type="button" style="flex-shrink:0;">Search</button>
@@ -1127,7 +1127,7 @@
       }
 
       const status = state.ghinStatus ? `<div class="gpInlineStatus">${esc(state.ghinStatus)}</div>` : "";
-      const empty = (!rows && !status) ? `<div class="gpEmpty">Enter a last name or GHIN number above, then tap Search.</div>` : "";
+      const empty = (!rows && !status) ? `<div class="gpEmpty">Enter a last name or Golf Network number above, then tap Search.</div>` : "";
 
       if (el.trayCount) el.trayCount.textContent = state.ghinRows.length ? `${state.ghinRows.length}${state.ghinTruncated ? "+" : ""} results` : "";
 
@@ -1162,7 +1162,7 @@
 
       const emptyOrList = nhRows
         ? `<div style="font-size:10px; font-weight:700; color:var(--mutedText); padding:5px 8px; border-bottom:1px solid var(--borderSubtle);">Tap a player to edit their attributes</div>${nhRows}`
-        : `<div class="gpEmpty">Enter name, handicap index, and gender above.<br>Non-rated players are assigned an NH- GHIN number.</div>`;
+        : `<div class="gpEmpty">Enter name, handicap index, and gender above.<br>Non-rated players are assigned an NH- number.</div>`;
 
       if (el.trayCount) el.trayCount.textContent = nhPlayers.length ? `${nhPlayers.length} non-rated` : "";
 
@@ -1218,11 +1218,11 @@
           el.trayBody.innerHTML = `<section class="maPanel gpImportPanel">
             <div class="gpImportCard">
               <div class="gpImportCard__hdr">
-                <div class="gpImportCard__label">Enter GHIN numbers or email addresses</div>
+                <div class="gpImportCard__label">Enter Golf Network numbers or email addresses</div>
                 <button id="gpBtnImportEvaluate" class="btn btnSecondary gpImportCard__btn" type="button">Evaluate</button>
               </div>
-              <textarea id="gpImportText" class="maTextInput gpImportText" placeholder="6105388&#10;cdisney99@gmail.com&#10;127435&#10;ldisney@sap.com">${esc(state.importText)}</textarea>
-              <div class="maHelpText gpHint" style="margin-top:4px;">Accepts GHIN numbers, email addresses, or a mix. Paste directly from Outlook or Gmail.</div>
+              <textarea id="gpImportText" class="maTextInput gpImportText" placeholder="123456&#10;player123@gmail.com&#10;987654&#10;player456@aol.com">${esc(state.importText)}</textarea>
+              <div class="maHelpText gpHint" style="margin-top:4px;">Accepts numbers, email addresses, or a mix. Paste directly from Outlook or Gmail.</div>
             </div>
           </section>`;
 
@@ -1519,7 +1519,7 @@
 
   async function addSelf(){
     if (!safe(state.context.userGHIN)) {
-      MA.setStatus("Missing user GHIN context.", "warn");
+      MA.setStatus("Missing user context.", "warn");
       return;
     }
     const nm = splitName(state.context.userName);
@@ -1602,7 +1602,7 @@
     if (!res?.ok) {
       state.ghinRows = [];
       state.ghinTruncated = false;
-      state.ghinStatus = res?.message || "GHIN search failed.";
+      state.ghinStatus = res?.message || "Golf Network search failed.";
       renderTrayBody();
       return;
     }
@@ -1634,7 +1634,7 @@
     const parsed = MA.parseImportPlayers(state.importText);
 
     if (!parsed.length) {
-      MA.setStatus("Enter at least one GHIN number or email address.", "warn");
+      MA.setStatus("Enter at least one Golf Network number or email address.", "warn");
       return;
     }
 
@@ -1649,7 +1649,7 @@
 
     const actionable = parsed.filter(p => p.type === "ghin" || p.type === "email");
     if (!actionable.length) {
-      MA.setStatus("No valid GHIN numbers or email addresses found.", "warn");
+      MA.setStatus("No valid Golf Network numbers or email addresses found.", "warn");
       return;
     }
 
@@ -1746,7 +1746,7 @@
           if (!ghin) {
             row.ok     = false;
             row.status = "Email not found";
-            row.error  = `No GHIN found for ${item.raw}`;
+            row.error  = `No Golf Network found for ${item.raw}`;
             rows.push(row);
             continue;
           }
@@ -1758,7 +1758,7 @@
         if (seen.has(ghin)) {
           row.ok     = false;
           row.status = "Duplicate";
-          row.error  = "Resolves to the same GHIN as another entry in this list";
+          row.error  = "Resolves to the same identity as another entry in this list";
           rows.push(row);
           continue;
         }
@@ -1780,8 +1780,8 @@
 
         if (!res?.ok || !hit) {
           row.ok     = false;
-          row.status = "GHIN not found";
-          row.error  = "No GHIN player found";
+          row.status = "Golf Network ID not found";
+          row.error  = "No Golf Network player found";
           rows.push(row);
           continue;
         }
