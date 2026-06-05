@@ -265,14 +265,14 @@
     state.emailSources = [];
     try {
       const res = await MA.postJson(MA.paths.favPlayersGetEmails, { playerGHIN });
-      console.log("[loadEmailSources] playerGHIN:", playerGHIN, "ghinEmail:", ghinEmail, "res:", JSON.stringify(res));
+      //console.log("[loadEmailSources] playerGHIN:", playerGHIN, "ghinEmail:", ghinEmail, "res:", JSON.stringify(res));
       if (res && res.ok && Array.isArray(res.sources)) {
         state.emailSources = res.sources;
       }
     } catch (e) {
       console.warn("[FP] getPlayerEmails failed:", e);
     }
-    console.log("[loadEmailSources] emailSources after API:", JSON.stringify(state.emailSources));
+    //console.log("[loadEmailSources] emailSources after API:", JSON.stringify(state.emailSources));
 
     // Seed from the favorite's stored email if API returned nothing
     if (state.emailSources.length === 0 && ghinEmail && !isMaskedEmail(ghinEmail) && trim(ghinEmail) !== "") {
@@ -595,7 +595,7 @@
   }
 
   async function _openFormWithSources(fav, suppressFooter) {
-    console.log("[_openFormWithSources] fav.email:", fav.email, "fav.playerGHIN:", fav.playerGHIN);
+    //console.log("[_openFormWithSources] fav.email:", fav.email, "fav.playerGHIN:", fav.playerGHIN);
     await loadEmailSources(fav.playerGHIN, fav.email || "");
     openForm(fav, suppressFooter);
   }
