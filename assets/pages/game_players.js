@@ -1254,24 +1254,22 @@
           // Show original input (email or GHIN) in the first column
           const displayId = r.inputEmail ? r.inputEmail : (r.ghin || r.raw);
           return `<div class="maListRow gpRow gpRow--import${isSkip ? " gpRow--skip" : ""}">
-            <div class="maListRow__col">${esc(displayId)}</div>
-            <div class="maListRow__col">${esc(p.name || "")}</div>
-            <div class="maListRow__col maListRow__col--right">${esc(p.gender || "")}</div>
-            <div class="maListRow__col maListRow__col--right">${esc(p.hi || "")}</div>
-            <div class="maListRow__col">${esc(r.assignedTeeText || "")}</div>
-            <div class="maListRow__col"><span class="maPill gpTeeSourcePill gpTeeSourcePill--${esc(r.resolvedTeeSource || (isSkip ? "skip" : ""))}">${esc(statusText)}</span></div>
+            <div class="maListRow__col" style="flex:2;">${esc(displayId)}</div>
+            <div class="maListRow__col" style="flex:2;">${esc(p.name || "")}</div>
+            <div class="maListRow__col maListRow__col--right" style="flex:0 0 28px;">${esc(p.gender || "")}</div>
+            <div class="maListRow__col" style="flex:2;">${esc(r.assignedTeeText || "")}</div>
+            <div class="maListRow__col" style="flex:1.5;"><span class="maPill gpTeeSourcePill gpTeeSourcePill--${esc(r.resolvedTeeSource || (isSkip ? "skip" : ""))}">${esc(statusText)}</span></div>
           </div>`;
         }).join("");
 
         const actionable = state.importRows.filter(r => !r.alreadyOnRoster).length;
         el.trayBody.innerHTML = `<section class="maPanel gpImportPanel">
           <div class="maListRow maListRow--hdr gpRow--import">
-            <div class="maListRow__col">Input</div>
-            <div class="maListRow__col">Name</div>
-            <div class="maListRow__col maListRow__col--right">G</div>
-            <div class="maListRow__col maListRow__col--right">HI</div>
-            <div class="maListRow__col">Tee Name</div>
-            <div class="maListRow__col">Status</div>
+            <div class="maListRow__col" style="flex:2;">Input</div>
+            <div class="maListRow__col" style="flex:2;">Name</div>
+            <div class="maListRow__col maListRow__col--right" style="flex:0 0 28px;">G</div>
+            <div class="maListRow__col" style="flex:2;">Tee Name</div>
+            <div class="maListRow__col" style="flex:1.5;">Status</div>
           </div>
           <div class="maListRows">${rows || `<div class="gpEmpty">No import rows evaluated.</div>`}</div>
           <div class="gpImportFooter">
@@ -1745,7 +1743,7 @@
           ghin = emailResolutionMap[item.value.toLowerCase()] || "";
           if (!ghin) {
             row.ok     = false;
-            row.status = "Email not found";
+            row.status = "Not Found";
             row.error  = `No Golf Network found for ${item.raw}`;
             rows.push(row);
             continue;
