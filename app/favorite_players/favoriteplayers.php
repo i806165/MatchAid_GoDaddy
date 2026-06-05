@@ -76,12 +76,12 @@ $maChromeFooterMode = $footerMode;
   <div class="maFieldRow">
     <div class="maField">
       <div class="maInputWrap">
-        <input id="fpSearchText" class="maTextInput" type="text" placeholder="Search players..." />
+        <select id="fpGroupFilter" class="maTextInput"></select>
       </div>
     </div>
-    <div class="maField" style="flex:0 0 180px;">
+    <div class="maField">
       <div class="maInputWrap">
-        <select id="fpGroupFilter" class="maTextInput"></select>
+        <input id="fpSearchText" class="maTextInput" type="text" placeholder="Search players..." />
       </div>
     </div>
   </div>

@@ -1,143 +1,134 @@
-/* /assets/css/favorite_players.css
- * Page-specific rules (minimal; prefer ma_shared.css).
- */
+/* /assets/css/favorite_players.css */
 
-/* (Optional) simple check icon style reused in GHIN list rows */
-.maIconCheck {
-  display: inline-flex;
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
+/* ── Card grid ──────────────────────────────────────────────────────────────── */
+.fpCardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.fpCard {
+  background: #fff;
+  border: 0.5px solid rgba(0,0,0,.15);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+
+.fpCard:hover {
+  border-color: rgba(0,0,0,.30);
+}
+
+/* ── Card top row: avatar + name + trash ────────────────────────────────────── */
+.fpCard__top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fpCard__avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(0,0,0,0.2);
-  font-weight: 700;
-  line-height: 1;
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  flex: 0 0 42px;
 }
 
-.blue-checkmark {
-  color: var(--brandAccent);  /* Set the color to blue */
-  font-size: 20px;  /* Adjust size if needed */
-}
+/* Avatar colors — cycled by index in JS */
+.fpCard__avatar--0 { background: #3F7652; }
+.fpCard__avatar--1 { background: #07432A; }
+.fpCard__avatar--2 { background: #185FA5; }
+.fpCard__avatar--3 { background: #3B6D11; }
+.fpCard__avatar--4 { background: #993C1D; }
+.fpCard__avatar--5 { background: #534AB7; }
 
-
-/* (Optional) disabled list row state */
-.maListRow.is-disabled {
-  cursor: default;
-  opacity: 0.75;
-}
-
-/* ------------------------------------------------------
-   Favorite Players list rows
-   Standard classes only: maListRow + maListRow__col
-   Desktop/tablet: one line
-   True mobile: two lines
-   Also tighten row height (less empty space)
-   ------------------------------------------------------ */
-
-/* Default (desktop/tablet): ONE line + tighter padding */
-main.maPage .maListRow {
-  flex-wrap: nowrap;
-  align-items: center;
-  padding-top: 8px;
-  padding-bottom: 8px;
-}
-
-/* Columns stay on one line; meta can truncate */
-main.maPage .maListRow__col {
-  width: auto;
+.fpCard__name {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink);
+  flex: 1;
   min-width: 0;
   white-space: nowrap;
-}
-
-main.maPage .maListRow__col--muted {
-  flex: 1 1 auto;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.maGHINSearchModal .maModal__body{
-  padding-top: 0;
-}
-
-/* GHIN Search Modal: sticky results header + column sizing */
-.maResultsHdr{
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  margin: 0; /* cancels .maModal__body padding */
-  padding: 10px 14px;
-  background: var(--brandSecondary);
-  color: #fff;
-  border-bottom: 1px solid var(--border);
-  font-weight: 800;
-}
-
-/* Header row styling */
-.maListRow--hdr{
-  opacity: 0.95;
-}
-
-/* Column widths (tune as needed) */
-.ghinColName{ flex: 1 1 auto; }
-.ghinColHI{ flex: 0 0 56px; text-align: right; }
-.ghinColG{  flex: 0 0 40px; text-align: center; }
-.ghinColMark{ flex: 0 0 34px; }
-
-/* GHIN search controls layout */
-.ghinSearchRow{
+.fpCard__trash {
+  flex: 0 0 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid rgba(0,0,0,.15);
+  background: #fff;
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
   align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: border-color .15s;
 }
 
-/* Default (desktop): one line: Last | First | State | Search */
-.ghinFieldLast{  flex: 1 1 320px; }
-.ghinFieldFirst{ flex: 1 1 220px; }
-.ghinFieldState{ flex: 0 0 90px; }
-.ghinFieldBtn{   flex: 0 0 auto; }
-
-/* Make inputs/buttons consistent height if needed */
-.ghinFieldBtn .btn{ white-space: nowrap; }
-
-/* Mobile behavior: Line 1 = Last | State | Search ; Line 2 = First (full width) */
-@media (max-width: 640px){
-  .ghinFieldLast{ flex: 1 1 220px; order: 1; }   /* grows, but stays on line 1 */
-  .ghinFieldState{ flex: 0 0 72px; order: 2;}    /* compact 2-char state */
-  .ghinFieldBtn{ flex: 0 0 auto; order: 3;}    /* stays on line 1 */
-  .ghinFieldFirst{ flex: 1 1 100%; order: 10; } /* forces to line 2 after the others */
+.fpCard__trash:hover {
+  border-color: #c62828;
 }
 
-.ghinFieldState input{
-  text-transform: uppercase;
+.fpCard__trash img {
+  width: 18px;
+  height: 18px;
+  opacity: 0.5;
+  transition: opacity .15s;
 }
 
-/* Mobile Favorites list: single-line row (Name + icons), hide GHIN + groups */
-@media (max-width: 640px){
-  main.maPage .maListRow{
-    flex-wrap: nowrap;
-    align-items: center;
+.fpCard__trash:hover img {
+  opacity: 1;
+}
+
+/* ── Divider ────────────────────────────────────────────────────────────────── */
+.fpCard__divider {
+  height: 0.5px;
+  background: rgba(0,0,0,.1);
+}
+
+/* ── Email + groups rows ────────────────────────────────────────────────────── */
+.fpCard__email,
+.fpCard__groups {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fpCard__email--empty {
+  color: #999;
+  font-style: italic;
+  font-weight: 400;
+}
+
+/* ── Mobile: single column, hide groups ─────────────────────────────────────── */
+@media (max-width: 640px) {
+  .fpCardGrid {
+    grid-template-columns: 1fr;
   }
 
-  /* Hide the “••••1234 • Group1, Group2” column */
-  main.maPage .maListRow__col--muted{
+  .fpCard__groups {
     display: none;
   }
-
-  /* Name should take remaining space and truncate */
-  main.maPage .maListRow__col:first-child{
-    flex: 1 1 auto;
-    min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
 }
 
-@media (min-width: 980px){
-  /* 1) Desktop backdrop ("outside the canvas") */
-  body{
+/* ── Desktop: constrain grid width ──────────────────────────────────────────── */
+@media (min-width: 980px) {
+  body {
     background:
       radial-gradient(1200px circle at 18% 8%,
         color-mix(in srgb, var(--brandPrimary) 16%, transparent),
@@ -151,10 +142,7 @@ main.maPage .maListRow__col--muted {
     background-attachment: fixed;
   }
 
-  /* 2) Center the page content column */
-  .maPage{
-    display: block;
-  }
+  .maPage { display: block; }
 
   #fpList,
   #fpForm,
@@ -164,36 +152,51 @@ main.maPage .maListRow__col--muted {
   }
 }
 
+/* ── GHIN Search Modal ───────────────────────────────────────────────────────── */
+.maGHINSearchModal .maModal__body { padding-top: 0; }
 
-/* ============================================================
-   Email modal + Group modal additions
-   ============================================================ */
-
-/* ── Email field wrapper ────────────────────────────────────── */
-.fp-email-wrap {
-  position: relative;
+.maResultsHdr {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  margin: 0;
+  padding: 10px 14px;
+  background: var(--brandSecondary);
+  color: #fff;
+  border-bottom: 1px solid var(--border);
+  font-weight: 800;
 }
 
-.fp-email-wrap .maTextInput {
-  padding-right: 36px;
-}
+.maListRow--hdr { opacity: 0.95; }
 
-.fp-email-pick {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  color: var(--brandAccent);
-  font-size: 18px;
+.ghinColName  { flex: 1 1 auto; }
+.ghinColHI    { flex: 0 0 56px; text-align: right; }
+.ghinColG     { flex: 0 0 40px; text-align: center; }
+.ghinColMark  { flex: 0 0 34px; }
+
+.ghinSearchRow {
   display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   align-items: center;
-  line-height: 1;
 }
 
+.ghinFieldLast  { flex: 1 1 320px; }
+.ghinFieldFirst { flex: 1 1 220px; }
+.ghinFieldState { flex: 0 0 90px; }
+.ghinFieldBtn   { flex: 0 0 auto; }
+.ghinFieldBtn .btn { white-space: nowrap; }
+
+@media (max-width: 640px) {
+  .ghinFieldLast  { flex: 1 1 220px; order: 1; }
+  .ghinFieldState { flex: 0 0 72px;  order: 2; }
+  .ghinFieldBtn   { flex: 0 0 auto;  order: 3; }
+  .ghinFieldFirst { flex: 1 1 100%;  order: 10; }
+}
+
+.ghinFieldState input { text-transform: uppercase; }
+
+/* ── Email modal ─────────────────────────────────────────────────────────────── */
 .fp-email-badge {
   display: inline-flex;
   align-items: center;
@@ -206,11 +209,6 @@ main.maPage .maListRow__col--muted {
   color: var(--brandAccent);
 }
 
-.fp-email-badge .ti {
-  font-size: 11px;
-}
-
-/* ── Email selection modal rows ─────────────────────────────── */
 .fp-email-section-label {
   font-size: 11px;
   font-weight: 500;
@@ -224,13 +222,7 @@ main.maPage .maListRow__col--muted {
   gap: 4px;
 }
 
-.fp-email-section-label:first-child {
-  margin-top: 0;
-}
-
-.fp-email-section-label .ti {
-  font-size: 12px;
-}
+.fp-email-section-label:first-child { margin-top: 0; }
 
 .fp-email-row {
   display: flex;
@@ -244,9 +236,7 @@ main.maPage .maListRow__col--muted {
   transition: border-color 0.15s, background 0.15s;
 }
 
-.fp-email-row:last-child {
-  margin-bottom: 0;
-}
+.fp-email-row:last-child { margin-bottom: 0; }
 
 .fp-email-row:not(.is-masked):hover {
   border-color: var(--brandAccent);
@@ -263,34 +253,10 @@ main.maPage .maListRow__col--muted {
   cursor: default;
 }
 
-.fp-email-row.is-masked:hover {
-  background: transparent;
-  border-color: var(--border);
-}
-
-.fp-email-row__radio {
-  margin-top: 3px;
-  flex-shrink: 0;
-  accent-color: var(--brandAccent);
-}
-
-.fp-email-row__content {
-  flex: 1;
-  min-width: 0;
-}
-
-.fp-email-row__address {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--textPrimary);
-  word-break: break-all;
-}
-
-.fp-email-row__label {
-  font-size: 11px;
-  color: var(--textMuted);
-  margin-top: 2px;
-}
+.fp-email-row__radio   { margin-top: 3px; flex-shrink: 0; accent-color: var(--brandAccent); }
+.fp-email-row__content { flex: 1; min-width: 0; }
+.fp-email-row__address { font-size: 14px; font-weight: 500; color: var(--textPrimary); word-break: break-all; }
+.fp-email-row__label   { font-size: 11px; color: var(--textMuted); margin-top: 2px; }
 
 .fp-email-row__masked {
   font-size: 11px;
@@ -301,25 +267,12 @@ main.maPage .maListRow__col--muted {
   gap: 4px;
 }
 
-.fp-email-row__masked .ti {
-  font-size: 12px;
-}
+.fp-email-manual { margin-top: 8px; }
+.fp-email-manual .maTextInput { width: 100%; box-sizing: border-box; }
 
-.fp-email-manual {
-  margin-top: 8px;
-}
+/* ── Add Group modal ─────────────────────────────────────────────────────────── */
+.fp-group-modal { max-width: 360px; }
 
-.fp-email-manual .maTextInput {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-/* ── Add Group modal — narrower width ───────────────────────── */
-.fp-group-modal {
-  max-width: 360px;
-}
-
-/* ── Groups header row ──────────────────────────────────────── */
 .fp-groups-header {
   display: flex;
   align-items: center;
@@ -327,13 +280,4 @@ main.maPage .maListRow__col--muted {
   margin-bottom: 8px;
 }
 
-.fp-groups-label {
-  margin: 0;
-}
-
-/* fp-btn-add-group styling defers to .btn.btnSecondary from ma_shared.css */
-.fp-btn-add-group .ti {
-  font-size: 13px;
-}
-
-/* maModal close button uses .btn.btnLink from ma_shared.css */
+.fp-groups-label { margin: 0; }

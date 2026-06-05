@@ -1795,6 +1795,45 @@ textarea {
   min-width: 0;
 }
 
+/* Input wrap with inner action button (chevron, clear, search icon, etc.)
+   Usage: add .maInputWrap--inner to the wrap div, place .maInputInnerBtn
+   as the last child after .maTextInput.                                   */
+.maInputWrap--inner {
+  position: relative;
+}
+
+.maInputWrap--inner .maTextInput {
+  padding-right: 40px;
+}
+
+.maInputInnerBtn {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.maInputInnerBtn:active {
+  opacity: 0.7;
+  transform: translateY(-50%) scale(.93);
+}
+
+/* Clear variant — unicode × rendered as text */
+.maInputInnerBtn--clear {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--textMuted);
+  line-height: 1;
+}
+
 .maTextInput {
   width: 100%;
   min-height: var(--btnHeight);

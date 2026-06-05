@@ -175,6 +175,16 @@
     });
   }
 
+ function avatarColor(index) {
+    return "fpCard__avatar--" + (index % 6);
+  }
+
+  function avatarInitials(name) {
+    const parts = trim(name).split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return trim(name).slice(0, 2).toUpperCase();
+  }
+
   function renderList() {
     const vm = filteredFavorites();
     if (!vm.length) {
@@ -184,30 +194,43 @@
     }
     if (el.empty) el.empty.style.display = "none";
 
-    el.listRows.innerHTML = vm.map(f => {
-      const ghin   = escapeHtml(maskGHIN(f.playerGHIN || ""));
-      const groups = Array.isArray(f.groups) && f.groups.length
-        ? f.groups.join(", ")
+    el.listRows.innerHTML = vm.map((f, i) => {
+      const initials = avatarInitials(f.name || "?");
+      const colorCls = avatarColor(i);
+      const email    = trim(f.email);
+      const groups   = Array.isArray(f.groups) && f.groups.filter(g => g && g !== "_default");
+      const groupStr = groups.length ? groups.join(", ") : "";
+
+      const emailHtml = email
+        ? `<div class="fpCard__email">${escapeHtml(email)}</div>`
+        : `<div class="fpCard__email fpCard__email--empty">No email on file</div>`;
+
+      const groupsHtml = groupStr
+        ? `<div class="fpCard__groups" title="${escapeHtml(groupStr)}">${escapeHtml(groupStr)}</div>`
         : "";
+
       return `
-        <div class="maListRow" data-ghin="${escapeHtml(f.playerGHIN)}">
-          <div class="maListRow__col">${escapeHtml(f.name || "")}</div>
-          <div class="maListRow__col maListRow__col--muted">${ghin}${groups ? " &bull; " + escapeHtml(groups) : ""}</div>
-          <div class="maListRow__col">
-            <button class="iconBtn btnPrimary js-delete" data-ghin="${escapeHtml(f.playerGHIN)}" aria-label="Remove">
-              <i class="ti ti-trash" aria-hidden="true"></i>
+        <div class="fpCard" data-ghin="${escapeHtml(f.playerGHIN)}">
+          <div class="fpCard__top">
+            <div class="fpCard__avatar ${colorCls}">${escapeHtml(initials)}</div>
+            <span class="fpCard__name">${escapeHtml(f.name || "")}</span>
+            <button class="fpCard__trash js-delete" data-ghin="${escapeHtml(f.playerGHIN)}" aria-label="Remove">
+              <img src="/assets/images/icon_trashcan.png" alt="Remove" />
             </button>
           </div>
+          <div class="fpCard__divider"></div>
+          ${emailHtml}
+          ${groupsHtml}
         </div>`;
     }).join("");
 
-    el.listRows.querySelectorAll(".maListRow").forEach(row => {
-      row.querySelector(".js-delete")?.addEventListener("click", e => {
+    el.listRows.querySelectorAll(".fpCard").forEach(card => {
+      card.querySelector(".js-delete")?.addEventListener("click", e => {
         e.stopPropagation();
-        doDelete(row.dataset.ghin);
+        doDelete(card.dataset.ghin);
       });
-      row.addEventListener("click", () => {
-        const fav = state.favorites.find(f => String(f.playerGHIN) === String(row.dataset.ghin));
+      card.addEventListener("click", () => {
+        const fav = state.favorites.find(f => String(f.playerGHIN) === String(card.dataset.ghin));
         if (fav) openForm(fav, true);
       });
     });

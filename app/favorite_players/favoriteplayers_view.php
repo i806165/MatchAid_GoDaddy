@@ -1,16 +1,15 @@
 <?php
 // /app/favorite_players/favoriteplayers_view.php
-// Markup-only view fragment (rendered inside chrome).
 ?>
 <!-- List screen -->
 <section id="fpList">
   <div id="fpEmpty" class="maEmptyState" style="display:none;">
     No favorites found.
   </div>
-  <div id="fpListRows" class="maListRows"></div>
+  <div id="fpListRows" class="fpCardGrid"></div>
 </section>
 
-<!-- Entry Form screen (dual-route; list is hidden when form active) -->
+<!-- Entry Form screen -->
 <section id="fpForm" class="maCard" style="display:none;">
   <div class="maCard__hdr">
     <div class="maCard__title" id="fpFormTitle">Edit Favorite</div>
@@ -20,16 +19,14 @@
   <div class="maCard__body">
     <div class="maFieldRow">
 
-      <!-- Email field with source picker -->
+      <!-- Email field with inner chevron -->
       <div class="maField">
         <label class="maLabel" for="fpEmail">Email</label>
-        <div class="maInputWrap fp-email-wrap">
+        <div class="maInputWrap maInputWrap--inner">
           <input id="fpEmail" class="maTextInput" type="text" readonly />
-            <button type="button" class="iconBtn btnSecondary" id="fpEmailPickBtn" aria-label="Choose email source">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </button>
+          <button type="button" class="maInputInnerBtn" id="fpEmailPickBtn" aria-label="Choose email source">
+            <img src="/assets/images/icon_chevron_down.png" width="16" height="16" alt="" />
+          </button>
         </div>
         <span class="fp-email-badge" id="fpEmailBadge" style="display:none;"></span>
       </div>
