@@ -233,7 +233,7 @@
       });
       card.addEventListener("click", () => {
         const fav = state.favorites.find(f => String(f.playerGHIN) === String(card.dataset.ghin));
-        if (fav) openForm(fav, true);
+        if (fav) _openFormWithSources(Object.assign({}, fav, { __existing: true }), true);
       });
     });
   }
@@ -595,6 +595,7 @@
   }
 
   async function _openFormWithSources(fav, suppressFooter) {
+    console.log("[_openFormWithSources] fav.email:", fav.email, "fav.playerGHIN:", fav.playerGHIN);
     await loadEmailSources(fav.playerGHIN, fav.email || "");
     openForm(fav, suppressFooter);
   }
