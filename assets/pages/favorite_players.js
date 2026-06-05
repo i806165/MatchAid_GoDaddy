@@ -276,8 +276,9 @@
     renderEmailBadge(source);
     // Disable pick button if only one non-masked source
     if (el.emailPickBtn) {
-      const usable = state.emailSources.filter(s => !s.masked || s.source === "ghin");
-      el.emailPickBtn.style.display = usable.length > 1 || state.emailSources.some(s => s.masked) ? "" : "none";
+      // Pick button always visible — "Enter manually" option is always available
+      // regardless of how many email sources were found.
+      el.emailPickBtn.style.display = "";
     }
   }
 
