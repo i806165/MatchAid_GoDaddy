@@ -439,6 +439,68 @@ final class service_dbFavPlayers
         }
     }
 
+    /**
+     * resolveEmailsToGHINs
+     *
+     * Batch-resolves an array of email addresses to player GHINs using
+     * the db_FavPlayers table. Matching is case-insensitive.
+     *
+     * A player may have multiple email addresses stored across different
+     * admin accounts (dbFav_UserGHIN rows), but all will map to the same
+     * dbFav_PlayerGHIN — so the first match found is used.
+     *
+     * @param  string[] $emails  Lowercased, trimmed email addresses.
+     * @return array             Map of [ lowercased_email => playerGHIN ]
+     *                           Emails with no match are absent from the map.
+     */
+    public static function resolveEmailsToGHINs(array $emails): array
+    {
+        if (empty($emails)) return [];
+
+        // Normalize — lowercase and trim
+        $emails = array_values(array_unique(array_filter(
+            array_map(fn($e) => strtolower(trim((string)$e)), $emails)
+        )));
+
+        if (empty($emails)) return [];
+
+        $pdo = Db::pdo();
+
+        // Build IN clause placeholders
+        $placeholders = implode(",", array_fill(0, count($emails), "?"));
+
+        // LOWER() on the stored column ensures case-insensitive match
+        // regardless of column collation.
+        // We SELECT DISTINCT to collapse multiple rows for the same email
+        // (same player favorited by different admin users).
+        $sql = "SELECT LOWER(dbFav_PlayerEMail) AS email,
+                       dbFav_PlayerGHIN          AS ghin
+                FROM   db_FavPlayers
+                WHERE  LOWER(dbFav_PlayerEMail) IN ($placeholders)
+                  AND  dbFav_PlayerEMail IS NOT NULL
+                  AND  dbFav_PlayerEMail <> ''
+                  AND  dbFav_PlayerGHIN  IS NOT NULL
+                  AND  dbFav_PlayerGHIN  <> ''";
+
+        $st = $pdo->prepare($sql);
+        $st->execute($emails);
+
+        $map = [];
+        while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
+            $email = (string)($row["email"] ?? "");
+            $ghin  = (string)($row["ghin"]  ?? "");
+            if ($email === "" || $ghin === "") continue;
+
+            // First match wins — covers the case where the same email
+            // appears under multiple dbFav_UserGHIN rows.
+            if (!isset($map[$email])) {
+                $map[$email] = $ghin;
+            }
+        }
+
+        return $map;
+    }
+
     // -------------------------
     // Helpers
     // -------------------------

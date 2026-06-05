@@ -77,6 +77,7 @@ $paths = [
   "ghinPlayerSearch" => MA_ROUTE_API_GHIN . "/searchPlayers.php",
   "ghinGetTeeSets" => MA_ROUTE_API_GHIN . "/getTeeSets.php",
   "apiNotify" => MA_ROUTE_API_MESSAGING,
+  "resolveImportIdentifiers" => MA_ROUTE_API_GAME_PLAYERS . "/resolveImportIdentifiers.php",
 ];
 
 $maChromeTitle    = "Game Players";
@@ -136,6 +137,7 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   <script src="<?= ma_asset('/assets/modules/player_notifications.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/pageHelp.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/teesetSelection.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_parseImportPlayers.js') ?>"></script>
   <script src="<?= ma_asset('/assets/pages/game_players.js') ?>"></script>
 </body>
 </html>

@@ -180,12 +180,6 @@
     renderTrayControls();
     renderTrayBody();
   }
-    function parseImportLines(text){
-    return safe(text)
-      .split(/\r?\n/)
-      .map(s => s.trim())
-      .filter(Boolean);
-  }
 
   function buildEmptyImportPlayer(){
     return {
@@ -198,30 +192,14 @@
     };
   }
 
-  function buildImportRow(raw){
-    const trimmed = safe(raw).trim();
-    return {
-      source: "ghin",
-      raw: trimmed,
-      ghin: trimmed,
-      ok: false,
-      status: "",
-      error: "",
-      player: buildEmptyImportPlayer(),
-      assignedTeeId: "",
-      assignedTeeText: "",
-      alreadyOnRoster: false
-    };
-  }
-
   function canImportAllRows(){
-      // Already-on-roster rows are skipped during commit — they must not
-      // block the button. Only require that at least one actionable row
-      // exists and that all actionable rows are valid.
-      const actionable = state.importRows.filter(r => !r.alreadyOnRoster);
-      if (!actionable.length) return false;
-      return actionable.every(r => r.ok && !!safe(r.assignedTeeId));
-    }
+    // Already-on-roster rows are skipped during commit — they must not
+    // block the button. Only require that at least one actionable row
+    // exists and that all actionable rows are valid.
+    const actionable = state.importRows.filter(r => !r.alreadyOnRoster);
+    if (!actionable.length) return false;
+    return actionable.every(r => r.ok && !!safe(r.assignedTeeId));
+  }
 
   function hydrateImportTeeOptionsFromPayload(){
     const payload = state.courseTeePayload || {};
@@ -246,10 +224,9 @@
       .sort((a, b) => {
         const genderDiff = safe(b.gender).localeCompare(safe(a.gender));
         if (genderDiff !== 0) return genderDiff;
-
         return Number(b.teeSetYards || 0) - Number(a.teeSetYards || 0);
       });
-    }
+  }
 
   async function ensureImportTeeOptions(){
     if (state.importTeeOptions.length) return;
@@ -294,15 +271,15 @@
   }
 
   function resetImportStateForSourceMode(){
-      state.importMode = "entry";
-      state.importRows = [];
-      state.importSelectedTee = null;
-      state.importSelectedTeeId = "";
-      state.importText = "";
-      state.batchFallbackTee = null;
-      state.batchForceAssign = false;
-      resetExistingGameImport();
-    }
+    state.importMode = "entry";
+    state.importRows = [];
+    state.importSelectedTee = null;
+    state.importSelectedTeeId = "";
+    state.importText = "";
+    state.batchFallbackTee = null;
+    state.batchForceAssign = false;
+    resetExistingGameImport();
+  }
 
   function formatImportSourceGameLabel(g){
     const playDate = formatDate(safe(g.playDate || g.dbGames_PlayDate || ""));
@@ -323,7 +300,7 @@
     state.importSourceGames = Array.isArray(res.payload?.games) ? res.payload.games : [];
   }
 
-// Opens the picker for path 4 (copy from game).
+  // Opens the picker for path 4 (copy from game).
   // Called both on initial game selection and when user taps "Change" in the summary bar.
   function openBatchPickerForExisting(){
     const g = state.game || {};
@@ -540,7 +517,6 @@
 
   function formatDate(s) {
     if (!s) return "";
-    // Try to parse YYYY-MM-DD or similar
     let d = null;
     if (String(s).match(/^\d{4}-\d{2}-\d{2}$/)) {
       const [y, m, day] = s.split("-").map(Number);
@@ -587,7 +563,6 @@
       if (s === "team") {
         const keyA = safe(a.dbPlayers_TeamKey);
         const keyB = safe(b.dbPlayers_TeamKey);
-        // No-team (empty key) sorts to the top; use "\x00" so it precedes all real names
         const teamA = keyA ? (teamConfig ? ((teamConfig.teams || []).find(t => t.id === keyA)?.name || keyA) : keyA) : "\x00";
         const teamB = keyB ? (teamConfig ? ((teamConfig.teams || []).find(t => t.id === keyB)?.name || keyB) : keyB) : "\x00";
         const cmp = teamA.localeCompare(teamB);
@@ -600,12 +575,11 @@
     const teamColorMap = {};
     if (teamConfig) {
       (teamConfig.teams || []).forEach((t, i) => {
-        // Use the same color pattern as maTeamBadge: first team = red, second = blue
         teamColorMap[t.id] = i === 0 ? "red" : "blue";
       });
     }
 
-    let lastGroupKey = undefined; // tracks the current group key to inject headers
+    let lastGroupKey = undefined;
     const rows = sortedPlayers.map((p) => {
       const ghin = safe(p.dbPlayers_PlayerGHIN);
       const isFav = favoriteSet.has(ghin);
@@ -630,7 +604,6 @@
         <button class="iconBtn btnPrimary" data-act="del" title="Remove" aria-label="Remove"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
       </div>`;
 
-      // Inject a group header when sorting by team and the group changes
       if (state.rosterSort === "team" && teamKey !== lastGroupKey) {
         lastGroupKey = teamKey;
         const color = teamKey ? (teamColorMap[teamKey] || "none") : "none";
@@ -665,10 +638,8 @@
       });
     });
 
-    // Update canvas header count and footer summary
     const count = state.players.length;
     if (el.rosterCount) el.rosterCount.textContent = count ? `${count} players` : "";
-    //if (el.rosterFooterLeft) el.rosterFooterLeft.textContent = count ? `${count} player${count !== 1 ? "s" : ""}` : "";
   }
 
   // ── Canvas controls — sort strip + Manage Teams + HCP date ────────────────
@@ -726,14 +697,12 @@
   function wirePageEvents(){
     const maPage = document.querySelector(".maPage--players");
 
-    // Mobile: "+ Add Players" footer button opens tray
     if (el.btnTrayOpen) {
       el.btnTrayOpen.addEventListener("click", () => {
         if (maPage) maPage.classList.add("is-tray-open");
       });
     }
 
-    // Mobile: X close button in tray header returns to canvas
     if (el.mobileCloseBtn) {
       el.mobileCloseBtn.addEventListener("click", () => {
         if (maPage) maPage.classList.remove("is-tray-open");
@@ -748,11 +717,10 @@
     await refreshFavorites();
     if (isImportDesktopEnabled()) await ensureImportTeeOptions();
     if (!state.ghinState) state.ghinState = normalizeState(state.context.userState || "");
-    render(); // render() now calls renderTabs() internally
+    render();
   }
 
   function openActionsMenu() {
-    // Manage Teams has moved to the canvas controls area (visible when teamConfig is set).
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     MA.ui.openActionsMenu("Actions", [
       { label: "Recalculate Handicaps",   action: onRecalcHandicaps },
@@ -778,7 +746,7 @@
           });
         }
         if (window.__MA_INIT__) window.__MA_INIT__.teamConfig = teamConfig;
-        renderRoster(); 
+        renderRoster();
         renderTrayBody();
       }
     });
@@ -815,11 +783,11 @@
         left: { show:false }
       });
     }
-    
+
     if (MA.chrome && MA.chrome.setBottomNav) {
       const isPlayer = (state.portal === "PLAYER PORTAL");
-      const visible = isPlayer 
-        ? ["player", "roster", "summary"] 
+      const visible = isPlayer
+        ? ["player", "roster", "summary"]
         : ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"];
 
       MA.chrome.setBottomNav({ visible: visible, active:"roster", onNavigate:(id)=>MA.routerGo(id) });
@@ -841,21 +809,17 @@
   }
 
   function renderTabs(){
-    // Tab strip renders into tray controls row 1.
-    // Roster is no longer a tab — it lives in the canvas permanently.
     const tabs = getTabs();
     const stripHtml = `<div class="gpTrayTabStrip">${
       tabs.map(t => `<button class="gpTrayTabBtn ${state.activeTab === t.id ? "is-active" : ""}" data-tab="${t.id}" role="tab" aria-selected="${state.activeTab === t.id ? "true" : "false"}">${esc(t.label)}</button>`).join("")
     }</div>`;
 
-    // Preserve any per-tab controls rendered below the strip
     const existingTabControls = el.trayControls.querySelector(".gpTrayTabControls");
     el.trayControls.innerHTML = stripHtml;
     if (existingTabControls) el.trayControls.appendChild(existingTabControls);
 
     el.trayControls.querySelectorAll(".gpTrayTabBtn").forEach(btn => btn.addEventListener("click", async () => {
       state.activeTab = btn.dataset.tab;
-      // Clear tray footer when switching away from favorites (removes Select Tee/Cancel)
       if (state.activeTab !== "favorites") {
         state.multiAddMode = false;
         state.multiAddSelected = [];
@@ -872,17 +836,15 @@
   }
 
   function render(){
-    renderTabs();           // tray tab strip (row 1 of tray controls)
-    renderTrayControls();   // per-tab controls (row 2+ of tray controls)
-    renderTrayBody();       // active tray tab content
-    renderRoster();         // canvas — always rendered regardless of active tab
-    renderCanvasControls(); // sort strip + Manage Teams + HCP date
+    renderTabs();
+    renderTrayControls();
+    renderTrayBody();
+    renderRoster();
+    renderCanvasControls();
   }
 
-function renderTrayControls(){
+  function renderTrayControls(){
 
-    // Default footer — Return to Roster button always set first.
-    // The favorites tab will overwrite this in multi-add mode only.
     if (el.trayFtr) {
       el.trayFtr.innerHTML = `<div class="gpFooter gpFooter--tray">
         <button class="btn btnSecondary gsMobileReturnBtn" id="gpBtnTrayClose" type="button">
@@ -901,8 +863,6 @@ function renderTrayControls(){
       const gpTc = document.createElement("div");
       gpTc.className = "gpTrayTabControls";
       el.trayControls.appendChild(gpTc);
-      // Row 1: State | Last name | Search button
-      // Row 2: First name | Club name
       gpTc.innerHTML = `
         <div class="maFieldRow" style="gap:6px; align-items:center;">
           <div class="maInputWrap gpInputClearWrap" style="flex:0 0 52px;">
@@ -947,10 +907,6 @@ function renderTrayControls(){
     if (state.activeTab === "favorites") {
       const opts = ["All groups"].concat(state.groups || []).map(g => `<option value="${esc(g)}">${esc(g)}</option>`).join("");
 
-      // Controls area: single row — group filter | player name | Multi-Add button
-      // Multi-Add button stays in controls row always.
-      // Select Tee + Cancel move to tray panel footer when multi-add is active,
-      // overwriting the default Return to Roster button set above.
       el.trayControls.querySelector(".gpTrayTabControls")?.remove();
       const gpTc2 = document.createElement("div");
       gpTc2.className = "gpTrayTabControls";
@@ -970,8 +926,6 @@ function renderTrayControls(){
 
       gpTc2.innerHTML += `<div class="maFieldRow"><div class="maField"><div id="gpFavHint" class="maHelpText gpHint ${state.favBroadened ? "" : "isHidden"}">No match in selected group — showing all groups.</div></div></div>`;
 
-      // Multi-add mode: overwrite footer with Select Tee + Cancel.
-      // Intentionally traps the user — they must commit or cancel before returning to roster.
       if (el.trayFtr && state.multiAddMode) {
         el.trayFtr.innerHTML = `<div class="gpFooter gpFooter--canvas">
           <button id="gpBtnSelectTee" class="btn btnSecondary" type="button" ${state.multiAddSelected.length ? "" : "disabled"}>
@@ -1048,8 +1002,6 @@ function renderTrayControls(){
         })
       ).join("");
 
-      // sourceGamesHtml removed — existing game list is now rendered in the body, not a dropdown
-
       el.trayControls.querySelector(".gpTrayTabControls")?.remove();
       const gpTc3 = document.createElement("div");
       gpTc3.className = "gpTrayTabControls";
@@ -1064,22 +1016,6 @@ function renderTrayControls(){
           </div>
         </div>
       `;
-
-      if (isExternal) {
-        if (state.importMode === "entry") {
-          // Controls band shows only the sub-tab toggle in entry state.
-          // The Evaluate button and hint live inside the body card header.
-          // Nothing extra needed here.
-        } else {
-          // Controls band shows only sub-tab toggle in review state.
-          // Buttons are rendered in the body footer band instead.
-        }
-      }
-
-      if (isExisting) {
-        // Controls band shows only the sub-tab toggle in both entry and review states.
-        // The game list and results table live entirely in the body.
-      }
 
       const btnExternal = document.getElementById("gpImportModeExternal");
       const btnExisting = document.getElementById("gpImportModeExisting");
@@ -1158,12 +1094,8 @@ function renderTrayControls(){
     }
 
     if (state.activeTab === "self") {
-      // Self tab — no controls needed; tee picker launches immediately.
       return;
     }
-
-    // Sort strip and HCP date are rendered by renderCanvasControls() — not here.
-    // renderTrayControls() only handles tray tab content.
   }
 
   function renderTrayBody(){
@@ -1177,7 +1109,6 @@ function renderTrayControls(){
         const hi = safe(r.hi || "");
         const subParts = [hi && `HI ${hi}`, club].filter(Boolean).join(" · ");
 
-        // Enrolled badge — dimmed row, tap suppressed
         const enrolledBadge = isEnrolled
           ? `<span class="gpEnrolledMark" style="font-size:10px; font-weight:700; flex-shrink:0;">&#10003; Enrolled</span>`
           : "";
@@ -1191,7 +1122,6 @@ function renderTrayControls(){
         </div>`;
       }).join("");
 
-      // Truncated results → page footer status, not panel body
       if (state.ghinTruncated) {
         MA.setStatus("Results truncated — refine your search.", "warn");
       }
@@ -1199,7 +1129,6 @@ function renderTrayControls(){
       const status = state.ghinStatus ? `<div class="gpInlineStatus">${esc(state.ghinStatus)}</div>` : "";
       const empty = (!rows && !status) ? `<div class="gpEmpty">Enter a last name or GHIN number above, then tap Search.</div>` : "";
 
-      // Update tray header count
       if (el.trayCount) el.trayCount.textContent = state.ghinRows.length ? `${state.ghinRows.length}${state.ghinTruncated ? "+" : ""} results` : "";
 
       el.trayBody.innerHTML = `<div class="maListRows">${status}${rows}${empty}</div>`;
@@ -1213,7 +1142,6 @@ function renderTrayControls(){
     }
 
     if (state.activeTab === "nonrated") {
-      // List all NH- players currently on this game's roster
       const nhPlayers = (state.players || []).filter(p => safe(p.dbPlayers_PlayerGHIN).startsWith("NH"));
 
       const nhRows = nhPlayers.map(p => {
@@ -1244,15 +1172,13 @@ function renderTrayControls(){
         row.onclick = () => {
           const g = row.getAttribute("data-ghin");
           if (state._nrSelectedGHIN === g) {
-            // Tap same row again = deselect
             state._nrSelectedGHIN = null;
             renderTrayControls();
             renderTrayBody();
           } else {
             state._nrSelectedGHIN = g;
-            renderTrayControls(); // render first — fields now exist in DOM
+            renderTrayControls();
             renderTrayBody();
-            // Now populate fields
             const p = state.players.find(x => safe(x.dbPlayers_PlayerGHIN) === g);
             if (p) {
               const fFirst  = document.getElementById("gpNrFirst");
@@ -1274,7 +1200,6 @@ function renderTrayControls(){
     }
 
     if (state.activeTab === "self") {
-      // No tray UI for Self — tee picker launches immediately.
       el.trayBody.innerHTML = "";
       if (!state.selfAutoLaunched) {
         state.selfAutoLaunched = true;
@@ -1282,19 +1207,22 @@ function renderTrayControls(){
       }
       return;
     }
+
     if (state.activeTab === "import") {
       const isExternal = state.importSourceMode === "external";
       const isExisting = state.importSourceMode === "existing";
 
       if (isExternal) {
         if (state.importMode === "entry") {
+          // ── CHANGED: label, placeholder, and hint updated to accept GHIN or email ──
           el.trayBody.innerHTML = `<section class="maPanel gpImportPanel">
             <div class="gpImportCard">
               <div class="gpImportCard__hdr">
-                <div class="gpImportCard__label">Enter one GHIN number per line</div>
+                <div class="gpImportCard__label">Enter GHIN numbers or email addresses</div>
                 <button id="gpBtnImportEvaluate" class="btn btnSecondary gpImportCard__btn" type="button">Evaluate</button>
               </div>
-              <textarea id="gpImportText" class="maTextInput gpImportText" placeholder="6105388&#10;1234567&#10;7654321">${esc(state.importText)}</textarea>
+              <textarea id="gpImportText" class="maTextInput gpImportText" placeholder="6105388&#10;cdisney99@gmail.com&#10;127435&#10;ldisney@sap.com">${esc(state.importText)}</textarea>
+              <div class="maHelpText gpHint" style="margin-top:4px;">Accepts GHIN numbers, email addresses, or a mix. Paste directly from Outlook or Gmail.</div>
             </div>
           </section>`;
 
@@ -1323,8 +1251,10 @@ function renderTrayControls(){
           const statusText = isSkip
             ? "On roster"
             : (sourceLabels[r.resolvedTeeSource] || r.status || "");
+          // Show original input (email or GHIN) in the first column
+          const displayId = r.inputEmail ? r.inputEmail : (r.ghin || r.raw);
           return `<div class="maListRow gpRow gpRow--import${isSkip ? " gpRow--skip" : ""}">
-            <div class="maListRow__col">${esc(r.ghin || r.raw)}</div>
+            <div class="maListRow__col">${esc(displayId)}</div>
             <div class="maListRow__col">${esc(p.name || "")}</div>
             <div class="maListRow__col maListRow__col--right">${esc(p.gender || "")}</div>
             <div class="maListRow__col maListRow__col--right">${esc(p.hi || "")}</div>
@@ -1336,7 +1266,7 @@ function renderTrayControls(){
         const actionable = state.importRows.filter(r => !r.alreadyOnRoster).length;
         el.trayBody.innerHTML = `<section class="maPanel gpImportPanel">
           <div class="maListRow maListRow--hdr gpRow--import">
-            <div class="maListRow__col">GHIN</div>
+            <div class="maListRow__col">Input</div>
             <div class="maListRow__col">Name</div>
             <div class="maListRow__col maListRow__col--right">G</div>
             <div class="maListRow__col maListRow__col--right">HI</div>
@@ -1361,9 +1291,8 @@ function renderTrayControls(){
         return;
       }
 
-if (isExisting) {
+      if (isExisting) {
 
-        // ── Review state: results table + footer band ─────────────────────
         if (state.importMode === "review") {
           const reviewRows = (state.importExistingPreviewRows || []).map((r) => {
             const isSkip = !!r.alreadyOnRoster;
@@ -1458,7 +1387,6 @@ if (isExisting) {
                <div class="maEmptyState">No games with players found.</div>
              </section>`;
 
-        // Wire row taps
         el.trayBody.querySelectorAll(".gpGameRow[data-ggid]").forEach(row => {
           row.onclick = async () => {
             const ggid = row.getAttribute("data-ggid");
@@ -1468,7 +1396,6 @@ if (isExisting) {
           };
         });
 
-        // Scroll previously selected game into view
         if (state.importSourceGameId) {
           const sel = el.trayBody.querySelector(".gpGameRow--selected");
           if (sel) sel.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -1571,9 +1498,6 @@ if (isExisting) {
       });
       return;
     }
-
-    // Roster is rendered by renderRoster() into the canvas panel — not here.
-    // renderTrayBody() only handles tray tab content.
   }
 
   async function onAddFavoriteRow(e){
@@ -1610,7 +1534,6 @@ if (isExisting) {
     });
   }
 
-
   // ── Non-Rated: update existing NH- player attributes ─────────────────────
   async function updateNonRated(){
     const ghin  = state._nrSelectedGHIN;
@@ -1622,7 +1545,6 @@ if (isExisting) {
     if (!first || !last) return MA.setStatus("Enter non-rated first/last name", "warn");
 
     const player = { ghin, first_name: first, last_name: last, gender, hi };
-    // Find the player's existing tee assignment so we don't lose it on update
     const existing = state.players.find(p => safe(p.dbPlayers_PlayerGHIN) === ghin);
     const selectedTee = existing
       ? { teeSetID: safe(existing.dbPlayers_TeeSetID || ""), value: safe(existing.dbPlayers_TeeSetID || "") }
@@ -1633,7 +1555,7 @@ if (isExisting) {
 
     state._nrSelectedGHIN = null;
     await refreshPlayers();
-    renderRoster()
+    renderRoster();
     render();
     MA.setStatus("Player updated.", "success");
   }
@@ -1676,7 +1598,7 @@ if (isExisting) {
       ? { mode, ghin: lastOrId }
       : { mode, state: stateCode, lastName: lastOrId, firstName: first, clubName: club };
     const res = await MA.postJson(MA.paths.ghinPlayerSearch, payload);
-    
+
     if (!res?.ok) {
       state.ghinRows = [];
       state.ghinTruncated = false;
@@ -1702,92 +1624,164 @@ if (isExisting) {
       hi: safe(row.hi)
     });
   }
-async function evaluateImportRows(){
+
+  // ── CHANGED: evaluateImportRows — uses MA.parseImportPlayers() instead of
+  //   parseImportLines(), and resolves emails before the evaluate loop ────────
+  async function evaluateImportRows(){
     if (state.importBusy) return;
 
-    const lines = parseImportLines(state.importText);
-    if (!lines.length) {
-      MA.setStatus("Enter at least one GHIN number.", "warn");
+    // Use the shared parser module — handles GHIN, plain email, Outlook/Gmail paste
+    const parsed = MA.parseImportPlayers(state.importText);
+
+    if (!parsed.length) {
+      MA.setStatus("Enter at least one GHIN number or email address.", "warn");
       return;
     }
 
-    // Picker opens once before evaluate begins.
-    // User selects fallback tee and sets force/fallback toggle.
+    // Surface unrecognized tokens immediately
+    const unknown = parsed.filter(p => p.type === "unknown");
+    if (unknown.length) {
+      MA.setStatus(
+        `${unknown.length} unrecognized entr${unknown.length === 1 ? "y" : "ies"} will be skipped: ${unknown.map(u => u.raw).join(", ")}`,
+        "warn"
+      );
+    }
+
+    const actionable = parsed.filter(p => p.type === "ghin" || p.type === "email");
+    if (!actionable.length) {
+      MA.setStatus("No valid GHIN numbers or email addresses found.", "warn");
+      return;
+    }
+
     const g = state.game || {};
     const gameId = String(g.dbGames_GGID || g.dbGames_GGIDnum || g.ggid || "").trim();
-
-    // Use a generic proxy player — gender M is the safest default for
-    // loading a full tee list; all tees are shown regardless in batch-setup mode.
     const proxyPlayer = { ghin: safe(state.context?.userGHIN || "0"), gender: "M", hi: "0" };
 
     MA.TeeSetSelection.open({
       mode: "batch-setup",
       gameId,
       player: proxyPlayer,
-      subtitle: `Select fallback tee for ${lines.length} players`,
+      subtitle: `Select fallback tee for ${actionable.length} players`,
       onSaveBatch: async ({ selectedTee, forceAssign }) => {
         state.batchFallbackTee = selectedTee;
         state.batchForceAssign = !!forceAssign;
-        await runEvaluateImportRows(lines);
+        await runEvaluateImportRows(actionable);
       }
     });
   }
 
-  async function runEvaluateImportRows(lines){
+  // ── CHANGED: runEvaluateImportRows — accepts parsed token array, resolves
+  //   emails to GHINs via resolveImportIdentifiers.php before the loop ────────
+  async function runEvaluateImportRows(parsed){
     if (state.importBusy) return;
     state.importBusy = true;
-    showBusyModal("Evaluating GHIN list...");
+    showBusyModal("Resolving players...");
 
     const apiPath = (MA.paths?.apiGHIN || "/api/GHIN") + "/getTeeSets.php";
-    const g = state.game || {};
-    const courseId = safe(g.dbGames_CourseID || "");
 
     try {
+      // ── Step 1: Batch resolve emails → GHINs ─────────────────────────────
+      const emailResolutionMap = {}; // lowercased email → ghin
+
+      const hasEmails = parsed.some(p => p.type === "email");
+      if (hasEmails) {
+        updateBusyModal("Resolving email addresses...");
+        try {
+          const res = await MA.postJson(MA.paths.resolveImportIdentifiers, {
+            identifiers: parsed
+          });
+
+          if (res?.ok) {
+            for (const r of (res.resolved || [])) {
+              if (r.type === "email" && r.ghin) {
+                emailResolutionMap[r.input.toLowerCase()] = r.ghin;
+              }
+            }
+            const unresolved = (res.unresolved || []).filter(u => u.type === "email");
+            if (unresolved.length) {
+              MA.setStatus(
+                `${unresolved.length} email${unresolved.length === 1 ? "" : "s"} not found in favorites: ${unresolved.map(u => u.input).join(", ")}`,
+                "warn"
+              );
+            }
+          }
+        } catch (e) {
+          console.warn("Email resolution failed:", e);
+          // Non-fatal — unresolved emails will surface as "Email not found" below
+        }
+      }
+
+      // ── Step 2: Evaluate each token ───────────────────────────────────────
       const enrolledSet = new Set((state.players || []).map((p) => safe(p.dbPlayers_PlayerGHIN)));
       const seen = new Set();
       const rows = [];
 
       let index = 0;
-      for (const raw of lines) {
+      for (const item of parsed) {
         index += 1;
-        updateBusyModal(`Evaluating ${index} of ${lines.length}...`);
+        updateBusyModal(`Evaluating ${index} of ${parsed.length}...`);
 
-        const row = buildImportRow(raw);
-        const ghin = safe(row.ghin);
+        const row = {
+          source:           item.type === "email" ? "email" : "ghin",
+          raw:              item.raw,
+          ghin:             "",
+          ok:               false,
+          status:           "",
+          error:            "",
+          player:           buildEmptyImportPlayer(),
+          assignedTeeId:    "",
+          assignedTeeText:  "",
+          resolvedTeeSource:"",
+          alreadyOnRoster:  false,
+          inputEmail:       item.type === "email" ? item.value : "",
+        };
 
-        if (!/^\d+$/.test(ghin)) {
-          row.ok = false;
-          row.status = "Invalid GHIN";
-          row.error = "GHIN must be numeric";
-          rows.push(row);
-          continue;
+        // ── Resolve to GHIN ───────────────────────────────────────────────
+        let ghin = "";
+
+        if (item.type === "ghin") {
+          ghin = item.value;
+        } else if (item.type === "email") {
+          ghin = emailResolutionMap[item.value.toLowerCase()] || "";
+          if (!ghin) {
+            row.ok     = false;
+            row.status = "Email not found";
+            row.error  = `No GHIN found for ${item.raw}`;
+            rows.push(row);
+            continue;
+          }
         }
 
+        row.ghin = ghin;
+
+        // ── Duplicate check (post-resolution — two emails → same GHIN) ───
         if (seen.has(ghin)) {
-          row.ok = false;
-          row.status = "Duplicate in input";
-          row.error = "Duplicate GHIN in pasted list";
+          row.ok     = false;
+          row.status = "Duplicate";
+          row.error  = "Resolves to the same GHIN as another entry in this list";
           rows.push(row);
           continue;
         }
         seen.add(ghin);
 
+        // ── Already on roster ─────────────────────────────────────────────
         if (enrolledSet.has(ghin)) {
-          row.ok = false;
-          row.status = "Already in roster";
-          row.error = "Player is already in the roster";
+          row.ok              = false;
+          row.status          = "Already in roster";
+          row.error           = "Player is already in the roster";
           row.alreadyOnRoster = true;
           rows.push(row);
           continue;
         }
 
+        // ── GHIN API lookup — name, gender, HI ───────────────────────────
         const res = await MA.postJson(MA.paths.ghinPlayerSearch, { mode: "id", ghin });
         const hit = Array.isArray(res?.payload?.rows) ? res.payload.rows[0] : null;
 
         if (!res?.ok || !hit) {
-          row.ok = false;
+          row.ok     = false;
           row.status = "GHIN not found";
-          row.error = "No GHIN player found";
+          row.error  = "No GHIN player found";
           rows.push(row);
           continue;
         }
@@ -1802,9 +1796,9 @@ async function evaluateImportRows(){
           hi:         safe(hit.hi || "")
         };
 
-        // Resolve tee via hierarchy unless force-assign is on.
-        let resolvedTee        = state.batchFallbackTee;
-        let resolvedTeeSource  = "fallback";
+        // ── Tee resolution ────────────────────────────────────────────────
+        let resolvedTee       = state.batchFallbackTee;
+        let resolvedTeeSource = "fallback";
 
         if (!state.batchForceAssign) {
           try {
@@ -1830,23 +1824,25 @@ async function evaluateImportRows(){
           resolvedTeeSource = "force_assigned";
         }
 
-        row.ok               = true;
-        row.status           = "OK";
-        row.error            = "";
-        row.player           = player;
-        row.assignedTeeId    = safe(resolvedTee?.teeSetID || resolvedTee?.value || "");
-        row.assignedTeeText  = formatAssignedTeeText(resolvedTee);
+        row.ok                = true;
+        row.status            = "OK";
+        row.error             = "";
+        row.player            = player;
+        row.assignedTeeId     = safe(resolvedTee?.teeSetID || resolvedTee?.value || "");
+        row.assignedTeeText   = formatAssignedTeeText(resolvedTee);
         row.resolvedTeeSource = resolvedTeeSource;
-        row.alreadyOnRoster  = false;
+        row.alreadyOnRoster   = false;
         rows.push(row);
       }
 
-      state.importRows         = rows;
-      state.importSelectedTee  = state.batchFallbackTee;
-      state.importMode         = "review";
+      state.importRows        = rows;
+      state.importSelectedTee = state.batchFallbackTee;
+      state.importMode        = "review";
       render();
+
       if (canImportAllRows()) MA.setStatus(`Evaluated ${rows.length} rows. All rows valid.`, "success");
       else MA.setStatus(`Evaluated ${rows.length} rows. Fix errors before import.`, "warn");
+
     } finally {
       state.importBusy = false;
       hideBusyModal();
@@ -1863,17 +1859,17 @@ async function evaluateImportRows(){
   }
 
   async function beginExistingGameImport(){
-      if (state.importBusy) return;
-      if (!safe(state.importSourceGameId)) {
-        MA.setStatus("Select a source game first.", "warn");
-        return;
-      }
-      if (!canImportAllRows()) {
-        MA.setStatus("No importable players found. All players may already be on the roster.", "warn");
-        return;
-      }
-      await commitImportBatch(state.importRows.slice());
+    if (state.importBusy) return;
+    if (!safe(state.importSourceGameId)) {
+      MA.setStatus("Select a source game first.", "warn");
+      return;
     }
+    if (!canImportAllRows()) {
+      MA.setStatus("No importable players found. All players may already be on the roster.", "warn");
+      return;
+    }
+    await commitImportBatch(state.importRows.slice());
+  }
 
   async function commitImportBatch(rows){
     if (!rows.length) return;
@@ -1895,10 +1891,6 @@ async function evaluateImportRows(){
           continue;
         }
 
-        // For existing-game imports the assignedTeeId is the server-resolved
-        // tee ID and may not be present in importTeeOptions (dest course cache).
-        // Fall back to a passthrough object so upsertGamePlayers.php can still
-        // resolve it via its own tee lookup rather than hard-failing here.
         const selectedTee = getImportTeeById(row.assignedTeeId) || (
           safe(row.assignedTeeId)
             ? { teeSetID: safe(row.assignedTeeId), value: safe(row.assignedTeeId) }
@@ -1916,7 +1908,6 @@ async function evaluateImportRows(){
           last_name:  safe(p.last_name),
           gender:     safe(p.gender),
           hi:         safe(p.hi),
-          // teamKey carried from source game for existing-game imports; empty for all other paths.
           teamKey:    safe(p.teamKey || "")
         };
 
@@ -1926,7 +1917,7 @@ async function evaluateImportRows(){
       }
 
       await refreshPlayers();
-      renderRoster()
+      renderRoster();
       await refreshFavorites();
       state.importText = "";
       state.importRows = [];
@@ -1942,7 +1933,7 @@ async function evaluateImportRows(){
     }
   }
 
-async function beginBatchTeeFlow(){
+  async function beginBatchTeeFlow(){
     if (state.multiAddBusy) return;
 
     const enrolledSet = new Set((state.players || []).map((p) => safe(p.dbPlayers_PlayerGHIN)));
@@ -1976,8 +1967,6 @@ async function beginBatchTeeFlow(){
     const g = state.game || {};
     const gameId = String(g.dbGames_GGID || g.dbGames_GGIDnum || g.ggid || "").trim();
 
-    // Picker opens once — user selects fallback tee and sets force/fallback toggle.
-    // onSaveBatch now receives { selectedTee, forceAssign } from teesetSelection.js.
     MA.TeeSetSelection.open({
       mode: "batch",
       gameId,
@@ -2021,7 +2010,6 @@ async function beginBatchTeeFlow(){
           hi:         safe(row.hi || "0")
         };
 
-        // Resolve tee via hierarchy unless force-assign is on.
         let resolvedTee = state.batchFallbackTee;
         if (!state.batchForceAssign) {
           try {
@@ -2032,8 +2020,6 @@ async function beginBatchTeeFlow(){
               sourceGameTeeSetId: ""
             });
             if (tres?.ok && tres.payload?.resolvedTeeId) {
-              // Find the full tee object from the returned list so
-              // upsertGamePlayers.php receives the same shape it always has.
               const allTees = Array.isArray(tres.payload?.teeSets) ? tres.payload.teeSets : [];
               const match = allTees.find(t =>
                 safe(t.teeSetID || t.value || "") === safe(tres.payload.resolvedTeeId)
@@ -2041,7 +2027,6 @@ async function beginBatchTeeFlow(){
               if (match) resolvedTee = match;
             }
           } catch (e) {
-            // Non-fatal — fall through to batchFallbackTee
             console.warn("Tee resolve failed for", player.ghin, e);
           }
         }
@@ -2052,7 +2037,7 @@ async function beginBatchTeeFlow(){
       }
 
       await refreshPlayers();
-      renderRoster()
+      renderRoster();
       await refreshFavorites();
       state.multiAddSelected = [];
       state.multiAddMode = false;
@@ -2066,29 +2051,28 @@ async function beginBatchTeeFlow(){
     }
   }
 
-    async function beginTeeFlow(player){
-      state.pendingPlayer = Object.assign({}, player);
+  async function beginTeeFlow(player){
+    state.pendingPlayer = Object.assign({}, player);
 
-      const g = state.game || {};
-      const gameId = String(g.dbGames_GGID || g.dbGames_GGIDnum || g.ggid || "").trim();
+    const g = state.game || {};
+    const gameId = String(g.dbGames_GGID || g.dbGames_GGIDnum || g.ggid || "").trim();
 
-      MA.TeeSetSelection.open({
-        gameId,
-        player: state.pendingPlayer,
-        currentTeeSetId: safe(state.pendingPlayer.selectedTeeSetId || ""),
-        recentTeeSetId: safe(state.pendingPlayer.recentTeeSetId || ""),
-        courseConfirmed: !!(state.game?.dbGames_CourseConfirmed == 1 || state.game?.dbGames_CourseConfirmed === true),
-        onSave: async (selectedTee) => {
-          state.selectedTee = selectedTee || null;
-          await commitPending();
-        }
-      });
-    }
+    MA.TeeSetSelection.open({
+      gameId,
+      player: state.pendingPlayer,
+      currentTeeSetId: safe(state.pendingPlayer.selectedTeeSetId || ""),
+      recentTeeSetId: safe(state.pendingPlayer.recentTeeSetId || ""),
+      courseConfirmed: !!(state.game?.dbGames_CourseConfirmed == 1 || state.game?.dbGames_CourseConfirmed === true),
+      onSave: async (selectedTee) => {
+        state.selectedTee = selectedTee || null;
+        await commitPending();
+      }
+    });
+  }
 
   async function commitPending(){
     if (!state.pendingPlayer || !state.selectedTee) return;
 
-    // Trigger-2 Check: Is this an existing player in a pairing?
     const ghin = safe(state.pendingPlayer.ghin);
     const existing = state.players.find(p => safe(p.dbPlayers_PlayerGHIN) === ghin);
     let wasPaired = false;
@@ -2106,7 +2090,6 @@ async function beginBatchTeeFlow(){
     }
     if (ghin.startsWith("NH")) MA.ghinSearch.close && MA.ghinSearch.close();
     state.pendingPlayer = null;
-    // Clear NH- fields after successful enroll
     if (ghin.startsWith("NH")) {
       const f = document.getElementById("gpNrFirst");
       const l = document.getElementById("gpNrLast");
@@ -2116,7 +2099,6 @@ async function beginBatchTeeFlow(){
       if (h) { h.value = ""; h.dispatchEvent(new Event("input")); }
     }
 
-    // Trigger-2 Action: Recalc PH/SO if paired
     if (wasPaired) {
       MA.setStatus("Calculating shots off...", "info");
       try {
@@ -2135,7 +2117,6 @@ async function beginBatchTeeFlow(){
     const ghin = e.currentTarget.closest(".gpRow")?.getAttribute("data-ghin");
     if (!ghin) return;
 
-    // Trigger-2 Check: Was player paired?
     const p = state.players.find(x => safe(x.dbPlayers_PlayerGHIN) === safe(ghin));
     let wasPaired = false;
     let pid = "000";
@@ -2149,7 +2130,6 @@ async function beginBatchTeeFlow(){
       wasPaired = (comp === "PairPair") ? (pid !== "000" && fid !== "" && fid !== "0") : (pid !== "000");
     }
 
-    // Blind player guard — immediate client-side feedback
     try {
       const rawBlind = state.game?.dbGames_BlindPlayers || '[]';
       const blindArr = typeof rawBlind === 'string' ? JSON.parse(rawBlind) : rawBlind;
@@ -2167,7 +2147,6 @@ async function beginBatchTeeFlow(){
       // Non-fatal — let server-side guard handle it
     }
 
-    // Score guard — confirm before deleting a player with recorded scores
     if (p) {
       try {
         const raw     = p.dbPlayers_Scores || "{}";
@@ -2183,9 +2162,6 @@ async function beginBatchTeeFlow(){
           const grossScore  = scored.adjusted_gross_score ?? 0;
           const netScore    = scored.net_score ?? 0;
 
-          // Build the score detail strip — a stat row with three values.
-          // MA.confirm is generic; the caller owns and passes this HTML.
-          // Stat cell pattern: 11px muted label above, 18px bold value below.
           const statCell = (label, value) => `
             <div style="display:flex;flex-direction:column;gap:2px;">
               <span style="font-size:11px;color:var(--mutedText);font-weight:800;">${label}</span>
@@ -2218,7 +2194,6 @@ async function beginBatchTeeFlow(){
           if (!confirmed) return;
         }
       } catch (err) {
-        // Non-fatal — proceed; server is the authoritative guard
         console.warn("Score check failed for", ghin, err);
       }
     }
@@ -2226,7 +2201,6 @@ async function beginBatchTeeFlow(){
     const res = await MA.postJson(MA.paths.gamePlayersDelete, { playerGHIN: ghin });
     if (!res?.ok) return MA.setStatus("Unable to delete player", "danger");
 
-    // Trigger-2 Action: Recalc group
     if (wasPaired) {
       MA.setStatus("Calculating shots off...", "info");
       try {
