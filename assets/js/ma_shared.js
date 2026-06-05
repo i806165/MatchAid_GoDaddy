@@ -329,30 +329,6 @@
   MA.chrome._hubActive   = "";
   MA.chrome._hubNavigate = null;
 
-  // Label map — nav id → human-readable label for the tray.
-  // Matches data-nav values in chromeFooter.php.
-  MA.chrome._hubLabels = {
-    home            : { label: "Home",            icon: "⌂"  },
-    admin           : { label: "Admin Home",       icon: "🔒" },
-    adminOld        : { label: "Admin",            icon: "🔒" },
-    player          : { label: "Player Home",      icon: "📋" },
-    edit            : { label: "Edit Game",        icon: "✎"  },
-    settings        : { label: "Settings",         icon: "⚙"  },
-    roster          : { label: "Roster",           icon: "👥" },
-    pairings        : { label: "Pairings",         icon: "🔗" },
-    teetimes        : { label: "Tee Times",        icon: "⏱" },
-    summary         : { label: "Summary",          icon: "📄" },
-    import          : { label: "Import Games",     icon: "⭳" },
-    scoreentry      : { label: "Enter Scores",     icon: "📝" },
-    scorecardPlayer : { label: "Player Card",      icon: "📋" },
-    scorecardGroup  : { label: "Group Card",       icon: "👥" },
-    scorecardGame   : { label: "Game Cards",       icon: "📄" },
-    scoreskins      : { label: "Skins",            icon: "💰" },
-    scoresummary    : { label: "Leaders",          icon: "📊" },
-    favorites       : { label: "Favorites",        icon: "★"  },
-    usersettings    : { label: "My Settings",      icon: "⚙"  },
-  };
-
   MA.chrome._buildHubRows = function () {
     const container = document.getElementById("chromeHubRows");
     if (!container) return;
@@ -360,7 +336,6 @@
     const visible  = MA.chrome._hubVisible;
     const disabled = MA.chrome._hubDisabled;
     const active   = MA.chrome._hubActive;
-    const labels   = MA.chrome._hubLabels;
 
     // Collect visible ids in the order they appear in the icon nav markup
     const nav = document.getElementById("chromeBottomNav");
@@ -375,7 +350,9 @@
     container.innerHTML = "";
 
     orderedIds.forEach((id, idx) => {
-      const meta       = labels[id] || { label: id, icon: "›" };
+      const navBtn     = nav.querySelector(`.maNavBtn[data-nav="${id}"]`);
+      const label      = navBtn?.querySelector(".maNavLabel")?.textContent?.trim() || id;
+      const icon       = navBtn?.querySelector(".maNavIcon")?.innerHTML?.trim()    || "›";
       const isActive   = active && id === active;
       const isDisabled = disabled.has(id) || isActive;
 
@@ -394,8 +371,8 @@
       btn.disabled  = isDisabled;
       btn.setAttribute("data-nav", id);
       btn.innerHTML =
-        `<span class="maHubRow__icon" aria-hidden="true">${meta.icon}</span>` +
-        `<span class="maHubRow__label">${meta.label}</span>` +
+        `<span class="maHubRow__icon" aria-hidden="true">${icon}</span>` +
+        `<span class="maHubRow__label">${label}</span>` +
         `<span class="maHubRow__arrow" aria-hidden="true">›</span>`;
 
       btn.addEventListener("click", () => {
