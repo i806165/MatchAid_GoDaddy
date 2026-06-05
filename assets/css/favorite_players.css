@@ -1,6 +1,64 @@
 /* /assets/css/favorite_players.css */
 
-/* ── Card grid ──────────────────────────────────────────────────────────────── */
+/* ── Card header color (brandPrimary) ───────────────────────────────────────
+   Overrides ma_shared.css default for this page only.
+   game_maintenance.css uses brandSecondary — no conflict.            */
+.maCard__hdr {
+  background: var(--brandPrimary);
+  color: var(--brandPrimaryText);
+}
+
+.maCard__title {
+  color: var(--brandPrimaryText);
+}
+
+/* ── Avatar size + color overrides ──────────────────────────────────────────
+   Base shape uses .maListRow__avatar from ma_shared.css (32px neutral).
+   .fpAvatar bumps size to 42px and enables color variants.           */
+.fpAvatar {
+  width: 42px;
+  height: 42px;
+  font-size: 14px;
+  flex: 0 0 42px;
+}
+
+.fpAvatar.fpColor--0 { background: #3F7652; color: #fff; }
+.fpAvatar.fpColor--1 { background: #07432A; color: #fff; }
+.fpAvatar.fpColor--2 { background: #185FA5; color: #fff; }
+.fpAvatar.fpColor--3 { background: #3B6D11; color: #fff; }
+.fpAvatar.fpColor--4 { background: #993C1D; color: #fff; }
+.fpAvatar.fpColor--5 { background: #534AB7; color: #fff; }
+
+/* ── Player identity row ────────────────────────────────────────────────────
+   Uses .maListRow as base — just needs a border + radius to feel contained. */
+#fpPlayerRow {
+  border: 1px solid var(--controlBorder);
+  border-radius: var(--controlRadius);
+  padding: 10px 12px;
+}
+
+/* ── Form field row — 3 col desktop, 1 col mobile ───────────────────────── */
+.fpFormFieldRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 640px) {
+  .fpFormFieldRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Groups header row ──────────────────────────────────────────────────── */
+.fp-groups-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+/* ── Card grid (list view) ──────────────────────────────────────────────── */
 .fpCardGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -8,10 +66,11 @@
   padding: 4px 0;
 }
 
+/* ── List cards ─────────────────────────────────────────────────────────── */
 .fpCard {
-  background: #fff;
-  border: 0.5px solid rgba(0,0,0,.15);
-  border-radius: 12px;
+  background: var(--cardBg);
+  border: 0.5px solid var(--cardBorder);
+  border-radius: var(--cardRadius);
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
@@ -20,37 +79,13 @@
   transition: border-color .15s;
 }
 
-.fpCard:hover {
-  border-color: rgba(0,0,0,.30);
-}
+.fpCard:hover { border-color: rgba(0,0,0,.30); }
 
-/* ── Card top row: avatar + name + trash ────────────────────────────────────── */
 .fpCard__top {
   display: flex;
   align-items: center;
   gap: 12px;
 }
-
-.fpCard__avatar {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  font-weight: 800;
-  color: #fff;
-  flex: 0 0 42px;
-}
-
-/* Avatar colors — cycled by index in JS */
-.fpCard__avatar--0 { background: #3F7652; }
-.fpCard__avatar--1 { background: #07432A; }
-.fpCard__avatar--2 { background: #185FA5; }
-.fpCard__avatar--3 { background: #3B6D11; }
-.fpCard__avatar--4 { background: #993C1D; }
-.fpCard__avatar--5 { background: #534AB7; }
 
 .fpCard__name {
   font-size: 16px;
@@ -66,9 +101,9 @@
 .fpCard__trash {
   flex: 0 0 32px;
   height: 32px;
-  border-radius: 6px;
-  border: 1px solid rgba(0,0,0,.15);
-  background: #fff;
+  border-radius: var(--radiusSq);
+  border: 1px solid var(--controlBorder);
+  background: var(--cardBg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -77,9 +112,7 @@
   transition: border-color .15s;
 }
 
-.fpCard__trash:hover {
-  border-color: #c62828;
-}
+.fpCard__trash:hover { border-color: #c62828; }
 
 .fpCard__trash img {
   width: 18px;
@@ -88,17 +121,13 @@
   transition: opacity .15s;
 }
 
-.fpCard__trash:hover img {
-  opacity: 1;
-}
+.fpCard__trash:hover img { opacity: 1; }
 
-/* ── Divider ────────────────────────────────────────────────────────────────── */
 .fpCard__divider {
   height: 0.5px;
-  background: rgba(0,0,0,.1);
+  background: var(--borderSubtle);
 }
 
-/* ── Email + groups rows ────────────────────────────────────────────────────── */
 .fpCard__email,
 .fpCard__groups {
   font-size: 15px;
@@ -110,23 +139,18 @@
 }
 
 .fpCard__email--empty {
-  color: #999;
+  color: var(--mutedText);
   font-style: italic;
   font-weight: 400;
 }
 
-/* ── Mobile: single column, hide groups ─────────────────────────────────────── */
+/* ── Mobile: single column, hide groups ─────────────────────────────────── */
 @media (max-width: 640px) {
-  .fpCardGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .fpCard__groups {
-    display: none;
-  }
+  .fpCardGrid { grid-template-columns: 1fr; }
+  .fpCard__groups { display: none; }
 }
 
-/* ── Desktop: constrain grid width ──────────────────────────────────────────── */
+/* ── Desktop canvas ──────────────────────────────────────────────────────── */
 @media (min-width: 980px) {
   body {
     background:
@@ -145,14 +169,22 @@
   .maPage { display: block; }
 
   #fpList,
-  #fpForm,
   #fpControls {
     width: min(100%, 1280px);
     margin-inline: auto;
   }
+
+  #fpForm {
+    width: min(100%, 1280px);
+    margin-inline: auto;
+    background: rgba(255,255,255,.72);
+    border: 1px solid rgba(0,0,0,.06);
+    border-radius: 18px;
+    padding: 14px;
+  }
 }
 
-/* ── GHIN Search Modal ───────────────────────────────────────────────────────── */
+/* ── GHIN Search Modal ───────────────────────────────────────────────────── */
 .maGHINSearchModal .maModal__body { padding-top: 0; }
 
 .maResultsHdr {
@@ -168,7 +200,6 @@
 }
 
 .maListRow--hdr { opacity: 0.95; }
-
 .ghinColName  { flex: 1 1 auto; }
 .ghinColHI    { flex: 0 0 56px; text-align: right; }
 .ghinColG     { flex: 0 0 40px; text-align: center; }
@@ -196,23 +227,11 @@
 
 .ghinFieldState input { text-transform: uppercase; }
 
-/* ── Email modal ─────────────────────────────────────────────────────────────── */
-.fp-email-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  margin-top: 4px;
-  background: color-mix(in srgb, var(--brandAccent) 10%, transparent);
-  color: var(--brandAccent);
-}
-
+/* ── Email modal ─────────────────────────────────────────────────────────── */
 .fp-email-section-label {
   font-size: 11px;
   font-weight: 500;
-  color: var(--textMuted);
+  color: var(--mutedText);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   margin: 14px 0 6px;
@@ -248,15 +267,12 @@
   background: color-mix(in srgb, var(--brandAccent) 8%, transparent);
 }
 
-.fp-email-row.is-masked {
-  opacity: 0.6;
-  cursor: default;
-}
+.fp-email-row.is-masked { opacity: 0.6; cursor: default; }
 
 .fp-email-row__radio   { margin-top: 3px; flex-shrink: 0; accent-color: var(--brandAccent); }
 .fp-email-row__content { flex: 1; min-width: 0; }
-.fp-email-row__address { font-size: 14px; font-weight: 500; color: var(--textPrimary); word-break: break-all; }
-.fp-email-row__label   { font-size: 11px; color: var(--textMuted); margin-top: 2px; }
+.fp-email-row__address { font-size: 14px; font-weight: 500; color: var(--ink); word-break: break-all; }
+.fp-email-row__label   { font-size: 11px; color: var(--mutedText); margin-top: 2px; }
 
 .fp-email-row__masked {
   font-size: 11px;
@@ -270,14 +286,5 @@
 .fp-email-manual { margin-top: 8px; }
 .fp-email-manual .maTextInput { width: 100%; box-sizing: border-box; }
 
-/* ── Add Group modal ─────────────────────────────────────────────────────────── */
+/* ── Add Group modal ─────────────────────────────────────────────────────── */
 .fp-group-modal { max-width: 360px; }
-
-.fp-groups-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-
-.fp-groups-label { margin: 0; }

@@ -36,10 +36,12 @@
     empty:      document.getElementById("fpEmpty"),
     search:     document.getElementById("fpSearchText"),
     groupFilter:document.getElementById("fpGroupFilter"),
-    formTitle:  document.getElementById("fpFormTitle"),
+    formTitle:  null,
     formSub:    document.getElementById("fpFormSub"),
+    formGhin:   document.getElementById("fpFormGhin"),   
+    formAvatar: document.getElementById("fpFormAvatar"), 
     email:      document.getElementById("fpEmail"),
-    emailBadge: document.getElementById("fpEmailBadge"),
+    emailBadge: null,
     emailPickBtn: document.getElementById("fpEmailPickBtn"),
     mobile:     document.getElementById("fpMobile"),
     memberId:   document.getElementById("fpMemberId"),
@@ -176,7 +178,7 @@
   }
 
  function avatarColor(index) {
-    return "fpCard__avatar--" + (index % 6);
+    return "fpColor--" + (index % 6);
   }
 
   function avatarInitials(name) {
@@ -610,9 +612,16 @@
     setHeaderActionsFor("form");
     if (!suppressFooter) setFooterFor("form");
 
-    if (el.formTitle) el.formTitle.textContent = isEdit ? "Edit Favorite" : "Add Favorite";
-    if (el.formSub) el.formSub.textContent = `${state.current.name || "Selected Player"} \u2022 ${maskGHIN(state.current.playerGHIN)}`;
-    if (el.mobile) el.mobile.value = state.current.mobile || "";
+    // Player identity row
+    const name = state.current.name || "Selected Player";
+    if (el.formAvatar) {
+      el.formAvatar.className = `maListRow__avatar fpAvatar ${avatarColor(0)}`;
+      el.formAvatar.textContent = avatarInitials(name);
+    }
+    if (el.formSub)  el.formSub.textContent  = name;
+    if (el.formGhin) el.formGhin.textContent = "GHIN " + maskGHIN(state.current.playerGHIN);
+
+    if (el.mobile)   el.mobile.value   = state.current.mobile   || "";
     if (el.memberId) el.memberId.value = state.current.memberId || "";
 
     // Set email from best available source
