@@ -3,9 +3,9 @@
 /* ── Card header color (brandPrimary) ───────────────────────────────────────
    Overrides ma_shared.css default for this page only.
    game_maintenance.css uses brandSecondary — no conflict.            */
-.maCard__hdr {
-  background: var(--brandPrimary);
-  color: var(--brandPrimaryText);
+.maCard__hdr{
+  color: var(--brandSecondaryText);
+  background: var(--brandSecondary);
 }
 
 .maCard__title {
