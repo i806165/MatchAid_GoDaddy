@@ -87,8 +87,9 @@ try {
             // Pass numeric GHINs through — existence validated later by searchPlayers.php
             $resolved[] = [
                 "input" => $raw,
-                "type"  => "ghin",
-                "ghin"  => $value,
+                "type"  => "email",
+                "value" => $email,
+                "ghin"  => $emailToGhin[$email],
             ];
             continue;
         }

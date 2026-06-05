@@ -1698,7 +1698,7 @@ function renderTrayBody(){
           if (res?.ok) {
             for (const r of (res.resolved || [])) {
               if (r.type === "email" && r.ghin) {
-                emailResolutionMap[r.input.toLowerCase()] = r.ghin;
+                emailResolutionMap[(r.value || r.input).toLowerCase()] = r.ghin;
               }
             }
             const unresolved = (res.unresolved || []).filter(u => u.type === "email");
