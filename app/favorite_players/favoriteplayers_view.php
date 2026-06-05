@@ -25,9 +25,11 @@
         <label class="maLabel" for="fpEmail">Email</label>
         <div class="maInputWrap fp-email-wrap">
           <input id="fpEmail" class="maTextInput" type="text" readonly />
-          <button type="button" class="fp-email-pick" id="fpEmailPickBtn" aria-label="Choose email source">
-            <i class="ti ti-chevrons-up-down" aria-hidden="true"></i>
-          </button>
+            <button type="button" class="iconBtn btnSecondary" id="fpEmailPickBtn" aria-label="Choose email source">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
         </div>
         <span class="fp-email-badge" id="fpEmailBadge" style="display:none;"></span>
       </div>
