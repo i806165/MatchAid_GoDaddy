@@ -483,7 +483,7 @@ final class service_dbFavPlayers
                   AND  dbFav_PlayerGHIN  <> ''";
 
         $st = $pdo->prepare($sql);
-        $st->execute($emails);
+        $st->execute(array_values($emails));
 
         $map = [];
         while ($row = $st->fetch(PDO::FETCH_ASSOC)) {
