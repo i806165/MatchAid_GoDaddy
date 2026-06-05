@@ -172,7 +172,13 @@
       if (!inGroup) return false;
       const q = trim(state.searchText).toLowerCase();
       if (!q) return true;
-      const hay = (safe(f.name) + " " + safe(f.playerGHIN)).toLowerCase();
+      const hay = (
+        safe(f.name) + " " +
+        safe(f.playerGHIN) + " " +
+        safe(f.email) + " " +
+        safe(f.memberId) + " " +
+        (Array.isArray(f.groups) ? f.groups.join(" ") : "")
+      ).toLowerCase();
       return hay.includes(q);
     });
   }
