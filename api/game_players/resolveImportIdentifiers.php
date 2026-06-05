@@ -54,12 +54,6 @@ try {
         $emailToGhin = service_dbFavPlayers::resolveEmailsToGHINs(array_keys($emailInputs));
     }
 
-    // ── Log AFTER the call ───────────────────────────────────────────────────
-    Logger::error("RESOLVE_MAP_DEBUG", [
-        "emailInputs_keys" => array_keys($emailInputs),
-        "emailToGhin"      => $emailToGhin,
-    ]);
-
     // ── Build response arrays ─────────────────────────────────────────────────
     $resolved   = [];
     $unresolved = [];
@@ -105,11 +99,6 @@ try {
             "reason" => "Unrecognized format — not a GHIN or email address",
         ];
     }
-
-    Logger::error("DEBUG_RESPONSE", [
-        "resolved"   => $resolved,
-        "unresolved" => $unresolved,
-    ]);
 
     echo json_encode([
         "ok"         => true,

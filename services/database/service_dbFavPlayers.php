@@ -480,19 +480,7 @@ public static function resolveEmailsToGHINs(array $emails): array
         $st = $pdo->prepare($sql);
         $ok = $st->execute(array_values($emails));
 
-        Logger::error("DEBUG_resolveEmailsToGHINs", [
-            "ok"        => $ok,
-            "errorInfo" => $st->errorInfo(),
-            "rowCount"  => $st->rowCount(),
-            "emails"    => $emails,
-        ]);
-
         $rows = $st->fetchAll(PDO::FETCH_ASSOC);
-
-        Logger::error("DEBUG_FETCH", [
-            "rowsFetched" => count($rows),
-            "firstRow"    => $rows[0] ?? null,
-        ]);
 
         $map = [];
         foreach ($rows as $row) {
