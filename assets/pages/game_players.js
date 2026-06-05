@@ -1098,7 +1098,7 @@
     }
   }
 
-  function renderTrayBody(){
+function renderTrayBody(){
     if (state.activeTab === "ghin") {
       const enrolled = new Set((state.players || []).map((p) => safe(p.dbPlayers_PlayerGHIN)));
       const rows = (state.ghinRows || []).map((r) => {
@@ -1214,7 +1214,6 @@
 
       if (isExternal) {
         if (state.importMode === "entry") {
-          // ── CHANGED: label, placeholder, and hint updated to accept GHIN or email ──
           el.trayBody.innerHTML = `<section class="maPanel gpImportPanel">
             <div class="gpImportCard">
               <div class="gpImportCard__hdr">
@@ -1238,6 +1237,9 @@
           return;
         }
 
+        // ── External list review table ────────────────────────────────────
+        // Col widths defined here via flex — gpRow--import is flex only in CSS.
+        // Input  flex:2  |  Name  flex:2  |  G  28px  |  Tee  flex:2  |  Status  90px
         const rows = state.importRows.map((r) => {
           const p = r.player || buildEmptyImportPlayer();
           const sourceLabels = {
@@ -1247,18 +1249,17 @@
             force_assigned:    "Force assigned",
             fallback:          "Fallback"
           };
-          const isSkip    = !!r.alreadyOnRoster;
+          const isSkip     = !!r.alreadyOnRoster;
           const statusText = isSkip
             ? "On roster"
             : (sourceLabels[r.resolvedTeeSource] || r.status || "");
-          // Show original input (email or GHIN) in the first column
-          const displayId = r.inputEmail ? r.inputEmail : (r.ghin || r.raw);
+          const displayId  = r.inputEmail ? r.inputEmail : (r.ghin || r.raw);
           return `<div class="maListRow gpRow gpRow--import${isSkip ? " gpRow--skip" : ""}">
             <div class="maListRow__col" style="flex:2;">${esc(displayId)}</div>
             <div class="maListRow__col" style="flex:2;">${esc(p.name || "")}</div>
-            <div class="maListRow__col maListRow__col--right" style="flex:0 0 28px;">${esc(p.gender || "")}</div>
+            <div class="maListRow__col" style="flex:0 0 28px; text-align:center;">${esc(p.gender || "")}</div>
             <div class="maListRow__col" style="flex:2;">${esc(r.assignedTeeText || "")}</div>
-            <div class="maListRow__col" style="flex:1.5;"><span class="maPill gpTeeSourcePill gpTeeSourcePill--${esc(r.resolvedTeeSource || (isSkip ? "skip" : ""))}">${esc(statusText)}</span></div>
+            <div class="maListRow__col" style="flex:0 0 90px;"><span class="maPill gpTeeSourcePill gpTeeSourcePill--${esc(r.resolvedTeeSource || (isSkip ? "skip" : ""))}">${esc(statusText)}</span></div>
           </div>`;
         }).join("");
 
@@ -1267,9 +1268,9 @@
           <div class="maListRow maListRow--hdr gpRow--import">
             <div class="maListRow__col" style="flex:2;">Input</div>
             <div class="maListRow__col" style="flex:2;">Name</div>
-            <div class="maListRow__col maListRow__col--right" style="flex:0 0 28px;">G</div>
-            <div class="maListRow__col" style="flex:2;">Tee Name</div>
-            <div class="maListRow__col" style="flex:1.5;">Status</div>
+            <div class="maListRow__col" style="flex:0 0 28px; text-align:center;">G</div>
+            <div class="maListRow__col" style="flex:2;">Tee</div>
+            <div class="maListRow__col" style="flex:0 0 90px;">Status</div>
           </div>
           <div class="maListRows">${rows || `<div class="gpEmpty">No import rows evaluated.</div>`}</div>
           <div class="gpImportFooter">
@@ -1292,21 +1293,26 @@
       if (isExisting) {
 
         if (state.importMode === "review") {
+          // ── Existing game review table ────────────────────────────────────
+          // Col widths defined here via flex — gpRow--import is flex only in CSS.
+          // GHIN  70px  |  Player  flex:2  |  HI  44px  |  Source Tee  flex:1  |  Assigned Tee  flex:1.5  |  Status  90px
           const reviewRows = (state.importExistingPreviewRows || []).map((r) => {
             const isSkip = !!r.alreadyOnRoster;
             const sourceLabels = {
-              same_course: "Same course", last_played: "Last played",
-              preferred_yardage: "Pref. yardage", force_assigned: "Force assigned",
-              fallback: "Fallback"
+              same_course:       "Same course",
+              last_played:       "Last played",
+              preferred_yardage: "Pref. yardage",
+              force_assigned:    "Force assigned",
+              fallback:          "Fallback"
             };
             const statusText = isSkip ? "On roster" : (sourceLabels[r.resolvedTeeSource] || "");
             return `<div class="maListRow gpRow gpRow--import${isSkip ? " gpRow--skip" : ""}">
-              <div class="maListRow__col maListRow__col--muted" style="font-size:11px;">${esc(r.ghin || "")}</div>
-              <div class="maListRow__col">${esc(r.playerName || "")}</div>
-              <div class="maListRow__col maListRow__col--right">${esc(r.hi || "")}</div>
-              <div class="maListRow__col maListRow__col--muted" style="font-size:11px;">${esc(r.sourceTeeText || "")}</div>
-              <div class="maListRow__col maListRow__col--muted" style="font-size:11px;">${esc(r.assignedTeeText || "")}</div>
-              <div class="maListRow__col"><span class="maPill gpTeeSourcePill gpTeeSourcePill--${esc(r.resolvedTeeSource || (isSkip ? "skip" : ""))}">${esc(statusText)}</span></div>
+              <div class="maListRow__col maListRow__col--muted" style="flex:0 0 70px; font-size:11px;">${esc(r.ghin || "")}</div>
+              <div class="maListRow__col" style="flex:2;">${esc(r.playerName || "")}</div>
+              <div class="maListRow__col" style="flex:0 0 44px; text-align:right;">${esc(r.hi || "")}</div>
+              <div class="maListRow__col maListRow__col--muted" style="flex:1; font-size:11px;">${esc(r.sourceTeeText || "")}</div>
+              <div class="maListRow__col maListRow__col--muted" style="flex:1.5; font-size:11px;">${esc(r.assignedTeeText || "")}</div>
+              <div class="maListRow__col" style="flex:0 0 90px;"><span class="maPill gpTeeSourcePill gpTeeSourcePill--${esc(r.resolvedTeeSource || (isSkip ? "skip" : ""))}">${esc(statusText)}</span></div>
             </div>`;
           }).join("");
 
@@ -1316,12 +1322,12 @@
 
           el.trayBody.innerHTML = `<section class="maPanel gpImportPanel">
             <div class="maListRow maListRow--hdr gpRow--import">
-              <div class="maListRow__col">GHIN</div>
-              <div class="maListRow__col">Player</div>
-              <div class="maListRow__col maListRow__col--right">HI</div>
-              <div class="maListRow__col">Source Tee</div>
-              <div class="maListRow__col">Assigned Tee</div>
-              <div class="maListRow__col">Status</div>
+              <div class="maListRow__col" style="flex:0 0 70px;">GHIN</div>
+              <div class="maListRow__col" style="flex:2;">Player</div>
+              <div class="maListRow__col" style="flex:0 0 44px; text-align:right;">HI</div>
+              <div class="maListRow__col" style="flex:1;">Source Tee</div>
+              <div class="maListRow__col" style="flex:1.5;">Assigned Tee</div>
+              <div class="maListRow__col" style="flex:0 0 90px;">Status</div>
             </div>
             <div class="maListRows">${reviewRows || `<div class="gpEmpty">No players loaded.</div>`}</div>
             <div class="gpImportFooter">

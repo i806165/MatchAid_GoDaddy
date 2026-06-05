@@ -323,29 +323,16 @@
 .gpFieldTeeImport{
   min-width: 220px;
 }
-.gpRow--import{
-  display: grid;
-  /* Col:  GHIN      Player             HI     Src Tee  Assigned Tee      Status  */
-  grid-template-columns: 88px minmax(160px, 1.4fr) 44px 120px minmax(100px, 1fr) 100px;
+.gpRow--import {
+  display: flex;
   align-items: center;
   column-gap: 10px;
 }
 
-.gpRow--import .maListRow__col{
+.gpRow--import .maListRow__col {
   min-width: 0;
-}
-
-/* Left-aligned text columns */
-.gpRow--import .maListRow__col:nth-child(2),
-.gpRow--import .maListRow__col:nth-child(4),
-.gpRow--import .maListRow__col:nth-child(5),
-.gpRow--import .maListRow__col:nth-child(6){
-  text-align: left;
-}
-
-/* No-wrap columns */
-.gpRow--import .maListRow__col:nth-child(1),
-.gpRow--import .maListRow__col:nth-child(3){
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -434,39 +421,6 @@
   line-height: 1.2;
   display: inline-flex;
   align-items: center;
-}
-
-/* ==========================================================================
-   Import table — responsive breakpoints
-   ========================================================================== */
-
-/* Tablet: tighten columns, Source Tee still visible */
-@media (max-width: 760px) {
-  .gpRow--import {
-    grid-template-columns: 72px minmax(120px, 1fr) 40px 100px minmax(80px, 1fr) 88px;
-    column-gap: 8px;
-  }
-}
-
-/* Mobile: hide Source Tee column (col 4) — least critical,
-   Assigned Tee already tells the story.
-   Also tighten remaining columns for 375px screens. */
-@media (max-width: 480px) {
-  .gpRow--import {
-    grid-template-columns: 64px minmax(100px, 1fr) 36px minmax(80px, 1fr) 80px;
-    column-gap: 6px;
-  }
-
-  /* Hide Source Tee column (4th child) on both header and data rows */
-  .gpRow--import .maListRow__col:nth-child(4) {
-    display: none;
-  }
-
-  /* Re-map alignment for the shifted columns */
-  .gpRow--import .maListRow__col:nth-child(5),
-  .gpRow--import .maListRow__col:nth-child(6) {
-    text-align: left;
-  }
 }
 
 /* ==========================================================================
