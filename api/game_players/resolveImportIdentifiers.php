@@ -73,8 +73,7 @@ try {
             // Pass numeric GHINs through — existence validated later by searchPlayers.php
             $resolved[] = [
                 "input" => $raw,
-                "type"  => "ghin",
-                "value" => $email,   
+                "type"  => "ghin",  
                 "ghin"  => $value,
             ];
             continue;
@@ -86,6 +85,7 @@ try {
                 $resolved[] = [
                     "input" => $raw,
                     "type"  => "email",
+                    "value" => $email, 
                     "ghin"  => $emailToGhin[$email],
                 ];
             } else {
@@ -105,6 +105,11 @@ try {
             "reason" => "Unrecognized format — not a GHIN or email address",
         ];
     }
+
+    Logger::error("DEBUG_RESPONSE", [
+        "resolved"   => $resolved,
+        "unresolved" => $unresolved,
+    ]);
 
     echo json_encode([
         "ok"         => true,
