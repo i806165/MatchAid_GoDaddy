@@ -74,6 +74,7 @@ try {
             $resolved[] = [
                 "input" => $raw,
                 "type"  => "ghin",
+                "value" => $email,   
                 "ghin"  => $value,
             ];
             continue;
