@@ -750,7 +750,7 @@
     // Email pick button → open email modal
     if (el.emailPickBtn) {
       el.emailPickBtn.addEventListener("click", () => {
-        if (state.emailSources.length) openEmailModal();
+        openEmailModal();
       });
     }
 
