@@ -804,6 +804,38 @@
     });
   }
 
+  // ── Import busy overlay ─────────────────────────────────────────────────────
+
+  function _importEnsureOverlay() {
+    if (document.getElementById("fpBusyOverlay")) return;
+    const overlay = document.createElement("div");
+    overlay.id = "fpBusyOverlay";
+    overlay.className = "maModalOverlay";
+    const modal = document.createElement("section");
+    modal.className = "maModal";
+    modal.style.maxWidth = "320px";
+    modal.innerHTML = `
+      <header class="maModal__hdr">
+        <div class="maModal__titles">
+          <div class="maModal__title">Please wait</div>
+          <div class="maModal__subtitle" id="fpBusyMessage">Working...</div>
+        </div>
+      </header>`;
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+  }
+
+  function _importShowOverlay(message) {
+    _importEnsureOverlay();
+    const msg = document.getElementById("fpBusyMessage");
+    if (msg) msg.textContent = message || "Working...";
+    document.getElementById("fpBusyOverlay")?.classList.add("is-open");
+  }
+
+  function _importHideOverlay() {
+    document.getElementById("fpBusyOverlay")?.classList.remove("is-open");
+  }
+
   // ── Import ──────────────────────────────────────────────────────────────────
 
   const FP_IMPORT_BATCH_MAX   = 100;
@@ -811,12 +843,12 @@
 
   const FP_IMPORT_SYNONYMS = {
     ghin:      ["ghin", "golf network", "handicap id", "ghin #", "network #", "ghin number"],
-    firstName: ["firstname", "first name", "given name", "fname", "first"],
-    lastName:  ["lastname", "last name", "surname", "lname", "last"],
-    email:     ["email", "emailaddress", "e-mail", "email address"],
-    mobile:    ["mobile", "mobilenumber", "mobile phone", "phone", "cell", "telephone"],
-    memberId:  ["memberid", "member id", "member #", "local id", "membership #", "club id", "member"],
-    groups:    ["groups", "group", "tags", "tag", "category", "categories"],
+    firstName: ["first", "firstname", "first name", "given name", "fname"],
+    lastName:  ["last", "lastname", "last name", "surname", "lname"],
+    email:     ["email", "e-mail", "email address", "emailaddress"],
+    mobile:    ["mobile", "phone", "cell", "mobile phone", "telephone"],
+    memberId:  ["member", "memberid", "member id", "member #", "local id", "membership #", "club id"],
+    groups:    ["groups", "tags", "group", "tag", "category", "categories"],
   };
 
   const FP_IMPORT_TEMPLATE_HEADERS = [
@@ -947,11 +979,11 @@
       (state.favorites || []).map((f) => String(f.playerGHIN))
     );
 
-    if (MA.showBusyModal) MA.showBusyModal(`Validating 1 of ${pending.length}...`);
+    _importShowOverlay(`Validating 1 of ${pending.length}...`);
 
     for (let i = 0; i < pending.length; i++) {
       const row = pending[i];
-      if (MA.showBusyModal) MA.showBusyModal(`Validating ${i + 1} of ${pending.length}...`);
+      _importShowOverlay(`Validating ${i + 1} of ${pending.length}...`);
 
       try {
         // Reuse the existing fetchGhinById already in this file
@@ -976,7 +1008,7 @@
       if (idx !== -1) rows[idx] = row;
     }
 
-    if (MA.hideBusyModal) MA.hideBusyModal();
+    _importHideOverlay();
     state.importValidatedRows = rows;
     _importRenderReview(rows);
   }
@@ -1064,11 +1096,11 @@
     );
     if (!actionable.length) return;
 
-    if (MA.showBusyModal) MA.showBusyModal("Importing players...");
+    _importShowOverlay("Importing players...");
 
     try {
       const res = await MA.postJson(MA.paths.favPlayersImport, { rows: actionable });
-      if (MA.hideBusyModal) MA.hideBusyModal();
+      _importHideOverlay();
 
       if (!res?.ok) {
         if (MA.setStatus) MA.setStatus(res?.message ?? "Import failed. Please try again.", "danger");
@@ -1093,7 +1125,7 @@
       showList();
 
     } catch (err) {
-      if (MA.hideBusyModal) MA.hideBusyModal();
+      _importHideOverlay();
       console.error("[fpImport] commit error", err);
       if (MA.setStatus) MA.setStatus("Import failed due to a network error. Please try again.", "danger");
     }
@@ -1104,7 +1136,7 @@
       if (MA.setStatus) MA.setStatus("Template generator not loaded. Please refresh and try again.", "warn");
       return;
     }
-    const sampleRow = ["4821093", "John", "Smith", "john@example.com", "555-0100", "M-0001", "Tuesday Group;Members"];
+    const sampleRow = ["4821093", "John", "Smith", "john@example.com", "555-0100", "M-0001", "Tuesday Group|Members"];
     const ws = XLSX.utils.aoa_to_sheet([FP_IMPORT_TEMPLATE_HEADERS, sampleRow]);
     ws["!cols"] = [
       { wch: 12 }, { wch: 14 }, { wch: 14 },
