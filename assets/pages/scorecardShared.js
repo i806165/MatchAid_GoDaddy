@@ -138,13 +138,17 @@ function isMobileLandscapeLike(){
       });
     }
 
-    if (state.mode === 'player') {
-      items.push({ 
-        label: 'Post to GHIN', 
-        action: () => MA.ghinPostScores.open({ 
+    if (state.mode === 'player' && MA.ghinPostScores) {
+      const p = rows[0]?.players?.[0];
+      const postedId = p?.dbPlayers_GHINPostID || '';
+      const postLabel = postedId ? 'Score Already Posted to GHIN' : 'Post Score to GHIN';
+      items.push({
+        label:   postLabel,
+        enabled: !postedId,
+        indent:  true,
+        action:  () => MA.ghinPostScores.open({
           ggid: game.dbGames_GGID,
           onPosted: (res) => {
-            const p = rows[0]?.players?.[0];
             if (p) p.dbPlayers_GHINPostID = res.ghinPostId;
             applyChrome();
           }
