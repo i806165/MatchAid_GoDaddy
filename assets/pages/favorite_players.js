@@ -36,6 +36,7 @@
   const el = {
     list:       document.getElementById("fpList"),
     form:       document.getElementById("fpForm"),
+    controls:   document.getElementById("fpControls"),
     listRows:   document.getElementById("fpListRows"),
     empty:      document.getElementById("fpEmpty"),
     search:     document.getElementById("fpSearchText"),
@@ -268,6 +269,7 @@
     el.form.style.display   = "none";
     if (el.importSection) el.importSection.style.display = "none";
     el.list.style.display   = "";
+    if (el.controls) el.controls.style.display = "";
     setHeaderActionsFor("list");
     setFooterFor("list");
     renderFilters();
@@ -646,6 +648,7 @@
 
     el.list.style.display = "none";
     el.form.style.display = "";
+    if (el.controls) el.controls.style.display = "none";
 
     setHeaderActionsFor("form");
     if (!suppressFooter) setFooterFor("form");
@@ -808,12 +811,12 @@
 
   const FP_IMPORT_SYNONYMS = {
     ghin:      ["ghin", "golf network", "handicap id", "ghin #", "network #", "ghin number"],
-    firstName: ["first", "firstname", "first name", "given name", "fname"],
-    lastName:  ["last", "lastname", "last name", "surname", "lname"],
-    email:     ["email", "e-mail", "email address", "emailaddress"],
-    mobile:    ["mobile", "phone", "cell", "mobile phone", "telephone"],
-    memberId:  ["member", "memberid", "member id", "member #", "local id", "membership #", "club id"],
-    groups:    ["groups", "tags", "group", "tag", "category", "categories"],
+    firstName: ["firstname", "first name", "given name", "fname", "first"],
+    lastName:  ["lastname", "last name", "surname", "lname", "last"],
+    email:     ["email", "emailaddress", "e-mail", "email address"],
+    mobile:    ["mobile", "mobilenumber", "mobile phone", "phone", "cell", "telephone"],
+    memberId:  ["memberid", "member id", "member #", "local id", "membership #", "club id", "member"],
+    groups:    ["groups", "group", "tags", "tag", "category", "categories"],
   };
 
   const FP_IMPORT_TEMPLATE_HEADERS = [
@@ -821,8 +824,9 @@
   ];
 
   function importShow() {
-    el.list.style.display = "none";
-    el.form.style.display = "none";
+    el.list.style.display   = "none";
+    el.form.style.display   = "none";
+    if (el.controls) el.controls.style.display = "none";
     if (el.importSection) el.importSection.style.display = "";
     _importResetToUpload();
     _importRenderCapacity();
@@ -1100,7 +1104,7 @@
       if (MA.setStatus) MA.setStatus("Template generator not loaded. Please refresh and try again.", "warn");
       return;
     }
-    const sampleRow = ["4821093", "John", "Smith", "john@example.com", "555-0100", "M-0001", "Tuesday Group|Members"];
+    const sampleRow = ["4821093", "John", "Smith", "john@example.com", "555-0100", "M-0001", "Tuesday Group;Members"];
     const ws = XLSX.utils.aoa_to_sheet([FP_IMPORT_TEMPLATE_HEADERS, sampleRow]);
     ws["!cols"] = [
       { wch: 12 }, { wch: 14 }, { wch: 14 },
@@ -1112,6 +1116,11 @@
   }
 
   function _importWireEvents() {
+    // Only show Import button on desktop/tablet
+    if (window.innerWidth >= FP_IMPORT_DESKTOP_MIN && el.importBtnWrap) {
+      el.importBtnWrap.style.display = "";
+    }
+
     el.importBtn?.addEventListener("click", () => importShow());
 
     el.importBrowseBtn?.addEventListener("click", (e) => {
