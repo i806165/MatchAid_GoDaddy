@@ -18,7 +18,6 @@
           <label class="maLabel" for="usFName">First Name</label>
           <input id="usFName" class="maTextInput" type="text" maxlength="60" autocomplete="given-name" />
         </div>
-
         <div class="maField">
           <label class="maLabel" for="usLName">Last Name</label>
           <input id="usLName" class="maTextInput" type="text" maxlength="60" autocomplete="family-name" />
@@ -37,7 +36,6 @@
           <label class="maLabel" for="usMobilePhone">Mobile Phone</label>
           <input id="usMobilePhone" class="maTextInput" type="tel" maxlength="14" autocomplete="tel" placeholder="555-555-5555" />
         </div>
-
         <div class="maField">
           <label class="maLabel" for="usMobileCarrier">Mobile Carrier</label>
           <select id="usMobileCarrier" class="maTextInput">
@@ -63,9 +61,9 @@
             <option value="">Select yardage</option>
           </select>
           <div class="usHint" id="usYardsHint">
-              <strong>USGA Tee Selection Guidance:</strong>
-              7-IRON METHOD— multiply your average 7-iron carry distance by 36 —or—
-              DRIVER METHOD— multiply your average driver carry distance by 28.
+            <strong>USGA Tee Selection Guidance:</strong>
+            7-IRON METHOD— multiply your average 7-iron carry distance by 36 —or—
+            DRIVER METHOD— multiply your average driver carry distance by 28.
           </div>
         </div>
       </div>
@@ -127,6 +125,37 @@
         </div>
       </div>
 
+    </div>
+  </section>
+
+  <!-- DATA USAGE -->
+  <section class="maCard" aria-label="Data Usage">
+    <header class="maCard__hdr">
+      <div class="maCard__title">DATA USAGE</div>
+    </header>
+    <div class="maCard__body">
+      <div class="duRow" id="duRow">
+        <div class="duItem">
+          <span class="maLabel">Total Games</span>
+          <span class="usReadOnly" id="duGames">—</span>
+        </div>
+        <div class="duItem">
+          <span class="maLabel">Favorite Players</span>
+          <span class="usReadOnly" id="duFavPlayers">—</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SYSTEM SETTINGS -->
+  <section class="maCard" aria-label="System Settings">
+    <header class="maCard__hdr">
+      <div class="maCard__title">SYSTEM SETTINGS</div>
+    </header>
+    <div class="maCard__body">
+      <div class="ssGrid" id="ssGrid">
+        <!-- Injected by JS -->
+      </div>
     </div>
   </section>
 

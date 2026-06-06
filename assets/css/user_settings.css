@@ -1,23 +1,66 @@
 /* /assets/css/user_settings.css */
 
-.maCard__hdr{
+/* Card header — overrides shared default with brand colors */
+.maCard__hdr {
   color: var(--brandSecondaryText);
   background: var(--brandSecondary);
   border-bottom-color: color-mix(in srgb, var(--brandPrimary) 70%, black);
 }
 
+/* Profile card note */
 .usNote {
   margin-bottom: 14px;
   font-size: 0.95rem;
   color: var(--mutedText);
 }
 
+/* SMS / yards hint lines */
 .usHint {
   margin-top: 10px;
   font-size: 0.9rem;
   color: var(--mutedText);
 }
 
+/* Read-only field value (Home Club, System Settings) */
+.usReadOnly {
+  font-size: var(--fieldValueSize);
+  color: var(--ink);
+  padding: 2px 0;
+  min-height: 1.2em;
+}
+
+/* Force browser default appearance on carrier select */
 #usMobileCarrier {
   appearance: auto;
+}
+
+/* ── Data Usage card ─────────────────────────────────────────────────────── */
+
+/* Side-by-side KPI pair */
+.duRow {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+/* Single label + value item */
+.duItem {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+/* ── System Settings card ────────────────────────────────────────────────── */
+
+/* Auto-fill responsive grid — new session keys drop in automatically */
+.ssGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px 16px;
+}
+
+/* Empty state fallback */
+.ssEmpty {
+  font-size: var(--fieldValueSize);
+  color: var(--mutedText);
 }

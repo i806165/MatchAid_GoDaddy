@@ -37,42 +37,50 @@
         el.textContent = msg || "";
       };
 
-    const el = {
-      fName: document.getElementById("usFName"),
-      lName: document.getElementById("usLName"),
-      email: document.getElementById("usEMail"),
-      mobilePhone: document.getElementById("usMobilePhone"),
-      mobileCarrier: document.getElementById("usMobileCarrier"),
-      contactMethod: document.getElementById("usContactMethod"),
-      preferenceYards: document.getElementById("usPreferenceYards"),
-      smsHint: document.getElementById("usSmsHint"),
-      hcClubName:  document.getElementById("hcClubName"),
-      hcAssocName: document.getElementById("hcAssocName"),
-      hcLocation:  document.getElementById("hcLocation"),
-      hcStatus:    document.getElementById("hcStatus"),
-      hcHandicap:  document.getElementById("hcHandicap"),
-      hcLowHi:     document.getElementById("hcLowHi"),
-      hcRevDate:   document.getElementById("hcRevDate"),
-      hcCourses:   document.getElementById("hcCourses"),
-    };
-
-  const state = {
-        fields: {
-        dbUser_FName: "",
-        dbUser_LName: "",
-        dbUser_EMail: "",
-        dbUser_MobilePhone: "",
-        dbUser_MobileCarrier: "",
-        dbUser_ContactMethod: "",
-        dbUser_PreferenceYards: null,
-        },
-        carrierOptions: [],
-        contactMethodOptions: [],
-        sourceProfile: {},
-        busy: false,
-        dirty: false,
+  const el = {
+    fName:          document.getElementById("usFName"),
+    lName:          document.getElementById("usLName"),
+    email:          document.getElementById("usEMail"),
+    mobilePhone:    document.getElementById("usMobilePhone"),
+    mobileCarrier:  document.getElementById("usMobileCarrier"),
+    contactMethod:  document.getElementById("usContactMethod"),
+    preferenceYards:document.getElementById("usPreferenceYards"),
+    smsHint:        document.getElementById("usSmsHint"),
+    hcClubName:     document.getElementById("hcClubName"),
+    hcAssocName:    document.getElementById("hcAssocName"),
+    hcLocation:     document.getElementById("hcLocation"),
+    hcStatus:       document.getElementById("hcStatus"),
+    hcHandicap:     document.getElementById("hcHandicap"),
+    hcLowHi:        document.getElementById("hcLowHi"),
+    hcRevDate:      document.getElementById("hcRevDate"),
+    hcCourses:      document.getElementById("hcCourses"),
+    duGames:        document.getElementById("duGames"),
+    duFavPlayers:   document.getElementById("duFavPlayers"),
+    ssGrid:         document.getElementById("ssGrid"),
   };
 
+  const state = {
+    fields: {
+      dbUser_FName:           "",
+      dbUser_LName:           "",
+      dbUser_EMail:           "",
+      dbUser_MobilePhone:     "",
+      dbUser_MobileCarrier:   "",
+      dbUser_ContactMethod:   "",
+      dbUser_PreferenceYards: null,
+    },
+    carrierOptions:        [],
+    contactMethodOptions:  [],
+    sourceProfile:         {},
+    dataUsage:             {},
+    sessionInfo:           [],
+    busy:  false,
+    dirty: false,
+  };
+
+  // -------------------------------------------------------------------------
+  // Chrome
+  // -------------------------------------------------------------------------
   function applyChrome() {
     if (chrome && typeof chrome.setHeaderLines === "function") {
       chrome.setHeaderLines(["User Settings", "Profile & Contact", ""]);
@@ -93,11 +101,9 @@
 
     if (chrome && typeof chrome.setBottomNav === "function") {
       chrome.setBottomNav({
-        visible: ["home", "player"],
-        active: "home",
-        onNavigate: (id) => {
-          if (typeof MA.routerGo === "function") MA.routerGo(id);
-        }
+        visible:    ["home", "player"],
+        active:     "home",
+        onNavigate: (id) => { if (typeof MA.routerGo === "function") MA.routerGo(id); }
       });
     }
   }
@@ -112,7 +118,7 @@
   function setDirty(on) {
     state.dirty = !!on;
     if (state.dirty) setStatus("Unsaved changes.", "warn");
-    else setStatus("", "");
+    else             setStatus("", "");
     applyChrome();
   }
 
@@ -121,14 +127,13 @@
       const ok = confirm("Discard unsaved changes and go back?");
       if (!ok) return;
     }
-
-    if (typeof MA.routerGo === "function") {
-      MA.routerGo("home");
-      return;
-    }
+    if (typeof MA.routerGo === "function") { MA.routerGo("home"); return; }
     window.location.assign("/");
   }
 
+  // -------------------------------------------------------------------------
+  // Phone helpers
+  // -------------------------------------------------------------------------
   function normalizePhoneForStore(raw) {
     return String(raw || "").replace(/\D+/g, "");
   }
@@ -139,12 +144,15 @@
     return `${digits.slice(0,3)}-${digits.slice(3,6)}-${digits.slice(6)}`;
   }
 
+  // -------------------------------------------------------------------------
+  // Dropdown populators
+  // -------------------------------------------------------------------------
   function populateCarrierOptions() {
     const opts = Array.isArray(state.carrierOptions) ? state.carrierOptions : [];
     el.mobileCarrier.innerHTML = `<option value="">Select carrier</option>`;
     opts.forEach(opt => {
       const o = document.createElement("option");
-      o.value = String(opt.value || "");
+      o.value       = String(opt.value || "");
       o.textContent = String(opt.label || opt.value || "");
       el.mobileCarrier.appendChild(o);
     });
@@ -154,19 +162,18 @@
     const opts = Array.isArray(state.contactMethodOptions) ? state.contactMethodOptions : [];
     el.contactMethod.innerHTML = `<option value="">Select method</option>`;
     opts.forEach(opt => {
-        const o = document.createElement("option");
-        o.value = String(opt.value || "");
-        o.textContent = String(opt.label || opt.value || "");
-        el.contactMethod.appendChild(o);
+      const o = document.createElement("option");
+      o.value       = String(opt.value || "");
+      o.textContent = String(opt.label || opt.value || "");
+      el.contactMethod.appendChild(o);
     });
-    }
+  }
 
   function populatePreferenceYardsOptions() {
-    const opts = Array.isArray(PREFERENCE_YARDS_OPTIONS) ? PREFERENCE_YARDS_OPTIONS : [];
     el.preferenceYards.innerHTML = `<option value="">Select yardage</option>`;
-    opts.forEach(opt => {
+    PREFERENCE_YARDS_OPTIONS.forEach(opt => {
       const o = document.createElement("option");
-      o.value = String(opt.value || "");
+      o.value       = String(opt.value || "");
       o.textContent = String(opt.label || opt.value || "");
       el.preferenceYards.appendChild(o);
     });
@@ -177,114 +184,160 @@
     const min = Number(pref.min || 0);
     const max = Number(pref.max || 0);
     if (!min || !max) return "";
-
-    const match = PREFERENCE_YARDS_OPTIONS.find(opt =>
-      Number(opt.min) === min && Number(opt.max) === max
-    );
+    const match = PREFERENCE_YARDS_OPTIONS.find(opt => Number(opt.min) === min && Number(opt.max) === max);
     return match ? String(match.value) : "";
   }
 
   function preferenceYardsObjectFromValue(value) {
     const match = PREFERENCE_YARDS_OPTIONS.find(opt => String(opt.value) === String(value || ""));
     if (!match) return null;
-
-    return {
-      min: Number(match.min),
-      max: Number(match.max),
-    };
+    return { min: Number(match.min), max: Number(match.max) };
   }
 
+  // -------------------------------------------------------------------------
+  // SMS hint
+  // -------------------------------------------------------------------------
   function renderSmsHint() {
     const carrier = String(el.mobileCarrier.value || "");
-    const phone = normalizePhoneForStore(el.mobilePhone.value);
-    const match = (state.carrierOptions || []).find(o => String(o.value || "") === carrier);
-    if (phone && carrier && match && match.gateway) {
-      el.smsHint.textContent = `SMS email gateway: ${phone}${match.gateway}`;
-    } else {
-      el.smsHint.textContent = "";
-    }
+    const phone   = normalizePhoneForStore(el.mobilePhone.value);
+    const match   = (state.carrierOptions || []).find(o => String(o.value || "") === carrier);
+    el.smsHint.textContent = (phone && carrier && match && match.gateway)
+      ? `SMS email gateway: ${phone}${match.gateway}`
+      : "";
   }
 
-    function renderHomeClub(profile) {
-      if (!profile) return;
+  // -------------------------------------------------------------------------
+  // Home Club section
+  // -------------------------------------------------------------------------
+  function renderHomeClub(profile) {
+    if (!profile) return;
 
-      const g0 = profile?.profileJson?.golfers?.[0] ?? profile?.golfers?.[0] ?? profile;
-      const facilities = profile?.facilityJson?.facilities ?? [];
+    const g0         = profile?.profileJson?.golfers?.[0] ?? profile?.golfers?.[0] ?? profile;
+    const facilities = profile?.facilityJson?.facilities ?? [];
 
-      const set = (node, val) => { if (node) node.textContent = val || "—"; };
+    const set = (node, val) => { if (node) node.textContent = val || "—"; };
 
-      set(el.hcClubName,  g0?.club_name);
-      set(el.hcAssocName, g0?.association_name);
-      set(el.hcStatus,    g0?.status);
-      set(el.hcHandicap,  g0?.handicap_index ? `${g0.handicap_index}` : null);
-      set(el.hcLowHi,     g0?.low_hi ? `${g0.low_hi}` : null);
+    set(el.hcClubName,  g0?.club_name);
+    set(el.hcAssocName, g0?.association_name);
+    set(el.hcStatus,    g0?.status);
+    set(el.hcHandicap,  g0?.handicap_index ? `${g0.handicap_index}` : null);
+    set(el.hcLowHi,     g0?.low_hi         ? `${g0.low_hi}`         : null);
 
-      // Location
-      const city  = g0?.city  ?? "";
-      const state = g0?.state ?? "";
-      set(el.hcLocation, [city, state].filter(Boolean).join(", "));
+    const city  = g0?.city  ?? "";
+    const state = g0?.state ?? "";
+    set(el.hcLocation, [city, state].filter(Boolean).join(", "));
 
-      // Rev date — format YYYY-MM-DD to readable
-      const rev = g0?.rev_date ?? "";
-      if (rev && el.hcRevDate) {
-        const d = new Date(rev + "T00:00:00");
-        el.hcRevDate.textContent = isNaN(d) ? rev :
-          d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-      }
+    const rev = g0?.rev_date ?? "";
+    if (rev && el.hcRevDate) {
+      const d = new Date(rev + "T00:00:00");
+      el.hcRevDate.textContent = isNaN(d)
+        ? rev
+        : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    }
 
-      // Home courses — dedupe by course name across all facilities
-      const seen = new Set();
-      const courses = [];
-      facilities.forEach(f => {
-        (f.home_courses ?? []).forEach(c => {
-          if (c.name && !seen.has(c.name)) {
-            seen.add(c.name);
-            courses.push(c.name);
-          }
-        });
+    const seen = new Set();
+    const courses = [];
+    facilities.forEach(f => {
+      (f.home_courses ?? []).forEach(c => {
+        if (c.name && !seen.has(c.name)) { seen.add(c.name); courses.push(c.name); }
       });
-      set(el.hcCourses, courses.length ? courses.join(", ") : null);
+    });
+    set(el.hcCourses, courses.length ? courses.join(", ") : null);
+  }
+
+  // -------------------------------------------------------------------------
+  // Data Usage section
+  // -------------------------------------------------------------------------
+  function renderDataUsage(dataUsage) {
+    if (!dataUsage || !el.duGames || !el.duFavPlayers) return;
+    el.duGames.textContent      = Number.isFinite(dataUsage.totalGames)
+      ? dataUsage.totalGames.toLocaleString()
+      : "—";
+    el.duFavPlayers.textContent = Number.isFinite(dataUsage.favoritePlayers)
+      ? dataUsage.favoritePlayers.toLocaleString()
+      : "—";
+  }
+
+  // -------------------------------------------------------------------------
+  // System Settings section — auto-renders whatever keys arrive in sessionInfo
+  // -------------------------------------------------------------------------
+  function renderSystemSettings(sessionInfo) {
+    if (!el.ssGrid) return;
+    el.ssGrid.innerHTML = "";
+
+    const items = Array.isArray(sessionInfo) ? sessionInfo : [];
+    if (!items.length) {
+      el.ssGrid.innerHTML = '<div class="ssEmpty">No session data available.</div>';
+      return;
     }
 
-    function render() {
-        el.fName.value = state.fields.dbUser_FName || "";
-        el.lName.value = state.fields.dbUser_LName || "";
-        el.email.value = state.fields.dbUser_EMail || "";
-        el.mobilePhone.value = formatPhoneForInput(state.fields.dbUser_MobilePhone || "");
+    items.forEach(({ label, value }) => {
+      const wrap  = document.createElement("div");
+      const lbl   = document.createElement("div");
+      const val   = document.createElement("div");
 
-        populateCarrierOptions();
-        el.mobileCarrier.value = state.fields.dbUser_MobileCarrier || "";
+      lbl.className   = "maLabel";
+      val.className   = "usReadOnly";
+      lbl.textContent = String(label || "");
+      val.textContent = String(value || "—");
 
-        populateContactMethodOptions();
-        el.contactMethod.value = state.fields.dbUser_ContactMethod || "";
-
-        populatePreferenceYardsOptions();
-        el.preferenceYards.value = preferenceYardsValueFromObject(state.fields.dbUser_PreferenceYards);
-
-        renderSmsHint();
-        renderHomeClub(state.sourceProfile?.profile ?? null);
-    }
-
-  function wireInputs() {
-    const markDirty = () => {
-        state.fields.dbUser_FName = String(el.fName.value || "").trim();
-        state.fields.dbUser_LName = String(el.lName.value || "").trim();
-        state.fields.dbUser_EMail = String(el.email.value || "").trim();
-        state.fields.dbUser_MobilePhone = normalizePhoneForStore(el.mobilePhone.value || "");
-        state.fields.dbUser_MobileCarrier = String(el.mobileCarrier.value || "").trim();
-        state.fields.dbUser_ContactMethod = String(el.contactMethod.value || "").trim();
-        state.fields.dbUser_PreferenceYards = preferenceYardsObjectFromValue(el.preferenceYards.value);
-        renderSmsHint();
-        setDirty(true);
-    };
-
-    [el.fName, el.lName, el.email, el.mobilePhone, el.mobileCarrier, el.contactMethod, el.preferenceYards].forEach(node => { 
-        if (!node) return;
-      node.addEventListener("input", markDirty);
-      node.addEventListener("change", markDirty);
+      wrap.appendChild(lbl);
+      wrap.appendChild(val);
+      el.ssGrid.appendChild(wrap);
     });
   }
 
+  // -------------------------------------------------------------------------
+  // Main render
+  // -------------------------------------------------------------------------
+  function render() {
+    el.fName.value        = state.fields.dbUser_FName || "";
+    el.lName.value        = state.fields.dbUser_LName || "";
+    el.email.value        = state.fields.dbUser_EMail || "";
+    el.mobilePhone.value  = formatPhoneForInput(state.fields.dbUser_MobilePhone || "");
+
+    populateCarrierOptions();
+    el.mobileCarrier.value = state.fields.dbUser_MobileCarrier || "";
+
+    populateContactMethodOptions();
+    el.contactMethod.value = state.fields.dbUser_ContactMethod || "";
+
+    populatePreferenceYardsOptions();
+    el.preferenceYards.value = preferenceYardsValueFromObject(state.fields.dbUser_PreferenceYards);
+
+    renderSmsHint();
+    renderHomeClub(state.sourceProfile?.profile ?? null);
+    renderDataUsage(state.dataUsage);
+    renderSystemSettings(state.sessionInfo);
+  }
+
+  // -------------------------------------------------------------------------
+  // Input wiring
+  // -------------------------------------------------------------------------
+  function wireInputs() {
+    const markDirty = () => {
+      state.fields.dbUser_FName           = String(el.fName.value        || "").trim();
+      state.fields.dbUser_LName           = String(el.lName.value        || "").trim();
+      state.fields.dbUser_EMail           = String(el.email.value        || "").trim();
+      state.fields.dbUser_MobilePhone     = normalizePhoneForStore(el.mobilePhone.value || "");
+      state.fields.dbUser_MobileCarrier   = String(el.mobileCarrier.value || "").trim();
+      state.fields.dbUser_ContactMethod   = String(el.contactMethod.value || "").trim();
+      state.fields.dbUser_PreferenceYards = preferenceYardsObjectFromValue(el.preferenceYards.value);
+      renderSmsHint();
+      setDirty(true);
+    };
+
+    [el.fName, el.lName, el.email, el.mobilePhone, el.mobileCarrier, el.contactMethod, el.preferenceYards]
+      .forEach(node => {
+        if (!node) return;
+        node.addEventListener("input",  markDirty);
+        node.addEventListener("change", markDirty);
+      });
+  }
+
+  // -------------------------------------------------------------------------
+  // Load context
+  // -------------------------------------------------------------------------
   function readInit() {
     return window.__MA_INIT__ || window.__INIT__ || null;
   }
@@ -299,10 +352,13 @@
       if (!res || !res.ok) throw new Error(res?.message || "Could not load user settings.");
 
       const payload = res.payload || {};
-        state.fields = Object.assign({}, state.fields, payload.fields || {});
-        state.carrierOptions = Array.isArray(payload.carrierOptions) ? payload.carrierOptions : [];
-        state.contactMethodOptions = Array.isArray(payload.contactMethodOptions) ? payload.contactMethodOptions : [];
-        state.sourceProfile = payload.sourceProfile || {};
+
+      state.fields               = Object.assign({}, state.fields, payload.fields || {});
+      state.carrierOptions       = Array.isArray(payload.carrierOptions)       ? payload.carrierOptions       : [];
+      state.contactMethodOptions = Array.isArray(payload.contactMethodOptions) ? payload.contactMethodOptions : [];
+      state.sourceProfile        = payload.sourceProfile || {};
+      state.dataUsage            = payload.dataUsage     || {};
+      state.sessionInfo          = Array.isArray(payload.sessionInfo)          ? payload.sessionInfo          : [];
 
       render();
       setDirty(false);
@@ -315,17 +371,20 @@
     }
   }
 
-    function buildPatchFromUI() {
-        return {
-            dbUser_FName: String(el.fName.value || "").trim(),
-            dbUser_LName: String(el.lName.value || "").trim(),
-            dbUser_EMail: String(el.email.value || "").trim(),
-            dbUser_MobilePhone: normalizePhoneForStore(el.mobilePhone.value || ""),
-            dbUser_MobileCarrier: String(el.mobileCarrier.value || "").trim(),
-            dbUser_ContactMethod: String(el.contactMethod.value || "").trim(),
-            dbUser_PreferenceYards: preferenceYardsObjectFromValue(el.preferenceYards.value),
-        };
-    }
+  // -------------------------------------------------------------------------
+  // Save
+  // -------------------------------------------------------------------------
+  function buildPatchFromUI() {
+    return {
+      dbUser_FName:           String(el.fName.value         || "").trim(),
+      dbUser_LName:           String(el.lName.value         || "").trim(),
+      dbUser_EMail:           String(el.email.value         || "").trim(),
+      dbUser_MobilePhone:     normalizePhoneForStore(el.mobilePhone.value || ""),
+      dbUser_MobileCarrier:   String(el.mobileCarrier.value  || "").trim(),
+      dbUser_ContactMethod:   String(el.contactMethod.value  || "").trim(),
+      dbUser_PreferenceYards: preferenceYardsObjectFromValue(el.preferenceYards.value),
+    };
+  }
 
   async function doSave() {
     if (state.busy) return;
@@ -336,17 +395,15 @@
     if (!patch.dbUser_LName) return setStatus("Last name is required.", "error");
     if (!patch.dbUser_ContactMethod) return setStatus("Select a preferred contact method.", "error");
 
-    if (patch.dbUser_MobilePhone && !patch.dbUser_MobileCarrier) {
-    return setStatus("Select a mobile carrier.", "error");
-    }
+    if (patch.dbUser_MobilePhone && !patch.dbUser_MobileCarrier)
+      return setStatus("Select a mobile carrier.", "error");
 
-    if (patch.dbUser_ContactMethod === "Email" && !patch.dbUser_EMail) {
-    return setStatus("Email is required when contact method is Email.", "error");
-    }
+    if (patch.dbUser_ContactMethod === "Email" && !patch.dbUser_EMail)
+      return setStatus("Email is required when contact method is Email.", "error");
 
     if (patch.dbUser_ContactMethod === "SMS") {
-    if (!patch.dbUser_MobilePhone) return setStatus("Mobile phone is required when contact method is SMS.", "error");
-    if (!patch.dbUser_MobileCarrier) return setStatus("Mobile carrier is required when contact method is SMS.", "error");
+      if (!patch.dbUser_MobilePhone)   return setStatus("Mobile phone is required when contact method is SMS.", "error");
+      if (!patch.dbUser_MobileCarrier) return setStatus("Mobile carrier is required when contact method is SMS.", "error");
     }
 
     setBusy(true);
@@ -355,16 +412,18 @@
       if (!res || !res.ok) throw new Error(res?.message || "Save failed.");
 
       const payload = res.payload || {};
-        state.fields = Object.assign({}, state.fields, payload.fields || {});
-        state.carrierOptions = Array.isArray(payload.carrierOptions) ? payload.carrierOptions : state.carrierOptions;
-        state.contactMethodOptions = Array.isArray(payload.contactMethodOptions) ? payload.contactMethodOptions : state.contactMethodOptions;
+      state.fields               = Object.assign({}, state.fields, payload.fields || {});
+      state.carrierOptions       = Array.isArray(payload.carrierOptions)       ? payload.carrierOptions       : state.carrierOptions;
+      state.contactMethodOptions = Array.isArray(payload.contactMethodOptions) ? payload.contactMethodOptions : state.contactMethodOptions;
+
       render();
       setDirty(false);
       setStatus("User settings saved.", "success");
+
       const postSaveAction = (window.__MA_INIT__?.postSaveAction) || "home";
       setTimeout(() => {
-            if (typeof MA.routerGo === "function") MA.routerGo(postSaveAction);
-          }, 800);
+        if (typeof MA.routerGo === "function") MA.routerGo(postSaveAction);
+      }, 800);
     } catch (e) {
       console.error(e);
       setStatus(String(e.message || e), "error");
@@ -373,6 +432,9 @@
     }
   }
 
+  // -------------------------------------------------------------------------
+  // Boot
+  // -------------------------------------------------------------------------
   function init() {
     applyChrome();
     wireInputs();
@@ -384,4 +446,5 @@
   } else {
     init();
   }
+
 })();

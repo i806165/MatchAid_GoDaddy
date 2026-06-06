@@ -623,4 +623,21 @@ public static function queryGames(array $args): array {
 
     return json_encode($out);
   }
+
+    public static function getGameCountForAdmin(string $adminGHIN): int
+  {
+      $adminGHIN = trim($adminGHIN);
+      if ($adminGHIN === "") return 0;
+ 
+      try {
+          $pdo = Db::pdo();
+          $sql = "SELECT COUNT(*) FROM db_Games WHERE dbGames_AdminGHIN = :admin";
+          $st  = $pdo->prepare($sql);
+          $st->execute([":admin" => $adminGHIN]);
+          return (int) $st->fetchColumn();
+      } catch (Throwable $e) {
+          Logger::error("SERVICE_DBGAMES_COUNT_FAIL", ["err" => $e->getMessage()]);
+          return 0;
+      }
+  }
 }

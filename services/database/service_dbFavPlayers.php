@@ -453,57 +453,74 @@ final class service_dbFavPlayers
      * @return array             Map of [ lowercased_email => playerGHIN ]
      *                           Emails with no match are absent from the map.
      */
-public static function resolveEmailsToGHINs(array $emails): array
-{
-    if (empty($emails)) return [];
+    public static function resolveEmailsToGHINs(array $emails): array
+    {
+        if (empty($emails)) return [];
 
-    $emails = array_values(array_unique(array_filter(
-        array_map(fn($e) => strtolower(trim((string)$e)), $emails)
-    )));
+        $emails = array_values(array_unique(array_filter(
+            array_map(fn($e) => strtolower(trim((string)$e)), $emails)
+        )));
 
-    if (empty($emails)) return [];
+        if (empty($emails)) return [];
 
-    try {
-        $pdo = Db::pdo();
+        try {
+            $pdo = Db::pdo();
 
-        $placeholders = implode(",", array_fill(0, count($emails), "?"));
+            $placeholders = implode(",", array_fill(0, count($emails), "?"));
 
-        $sql = "SELECT LOWER(dbFav_PlayerEMail) AS email,
-                       dbFav_PlayerGHIN          AS ghin
-                FROM   db_FavPlayers
-                WHERE  LOWER(dbFav_PlayerEMail) IN ($placeholders)
-                  AND  dbFav_PlayerEMail IS NOT NULL
-                  AND  dbFav_PlayerEMail <> ''
-                  AND  dbFav_PlayerGHIN  IS NOT NULL
-                  AND  dbFav_PlayerGHIN  <> ''";
+            $sql = "SELECT LOWER(dbFav_PlayerEMail) AS email,
+                        dbFav_PlayerGHIN          AS ghin
+                    FROM   db_FavPlayers
+                    WHERE  LOWER(dbFav_PlayerEMail) IN ($placeholders)
+                    AND  dbFav_PlayerEMail IS NOT NULL
+                    AND  dbFav_PlayerEMail <> ''
+                    AND  dbFav_PlayerGHIN  IS NOT NULL
+                    AND  dbFav_PlayerGHIN  <> ''";
 
-        $st = $pdo->prepare($sql);
-        $ok = $st->execute(array_values($emails));
+            $st = $pdo->prepare($sql);
+            $ok = $st->execute(array_values($emails));
 
-        $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+            $rows = $st->fetchAll(PDO::FETCH_ASSOC);
 
-        $map = [];
-        foreach ($rows as $row) {
-            $email = (string)($row["email"] ?? "");
-            $ghin  = (string)($row["ghin"]  ?? "");
-            if ($email === "" || $ghin === "") continue;
-            if (!isset($map[$email])) {
-                $map[$email] = $ghin;
+            $map = [];
+            foreach ($rows as $row) {
+                $email = (string)($row["email"] ?? "");
+                $ghin  = (string)($row["ghin"]  ?? "");
+                if ($email === "" || $ghin === "") continue;
+                if (!isset($map[$email])) {
+                    $map[$email] = $ghin;
+                }
             }
+
+            return $map;
+
+        } catch (Throwable $e) {
+            Logger::error("DEBUG_resolveEmailsToGHINs_EXCEPTION", [
+                "error"   => $e->getMessage(),
+                "file"    => $e->getFile(),
+                "line"    => $e->getLine(),
+                "emails"  => $emails,
+            ]);
+            return [];
         }
-
-        return $map;
-
-    } catch (Throwable $e) {
-        Logger::error("DEBUG_resolveEmailsToGHINs_EXCEPTION", [
-            "error"   => $e->getMessage(),
-            "file"    => $e->getFile(),
-            "line"    => $e->getLine(),
-            "emails"  => $emails,
-        ]);
-        return [];
     }
-}
+
+        public static function getFavPlayerCountForUser(string $userGHIN): int
+    {
+        $userGHIN = trim($userGHIN);
+        if ($userGHIN === "") return 0;
+ 
+        try {
+            $pdo = Db::pdo();
+            $sql = "SELECT COUNT(*) FROM db_FavPlayers WHERE dbFav_UserGHIN = :u";
+            $st  = $pdo->prepare($sql);
+            $st->execute([":u" => $userGHIN]);
+            return (int) $st->fetchColumn();
+        } catch (Throwable $e) {
+            error_log("[service_dbFavPlayers::getFavPlayerCountForUser] " . $e->getMessage());
+            return 0;
+        }
+    }
 
     // -------------------------
     // Helpers
