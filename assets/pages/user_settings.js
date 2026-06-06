@@ -101,8 +101,8 @@
 
     if (chrome && typeof chrome.setBottomNav === "function") {
       chrome.setBottomNav({
-        visible:    ["home", "player"],
-        active:     "home",
+        visible:    ["home", "admin","player"],
+        active:     "",
         onNavigate: (id) => { if (typeof MA.routerGo === "function") MA.routerGo(id); }
       });
     }
