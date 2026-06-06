@@ -145,7 +145,7 @@ function isMobileLandscapeLike(){
       items.push({
         label:   postLabel,
         enabled: !postedId,
-        indent:  false,
+        indent:  true,
         action:  () => MA.ghinPostScores.open({
           ggid: game.dbGames_GGID,
           onPosted: (res) => {

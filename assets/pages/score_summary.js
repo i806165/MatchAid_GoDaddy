@@ -319,7 +319,7 @@
       items.push({
         label:   postLabel,
         enabled: !postedId,
-        indent:  true,
+        indent:  false,
         action:  () => MA.ghinPostScores.open({
           ggid:     game.dbGames_GGID,
           onPosted: () => applyChrome(),
