@@ -74,7 +74,7 @@ $maChromeFooterMode = $footerMode;
 <?php include __DIR__ . "/../../includes/chromeHeader.php"; ?>
 
 <!-- Optional Control Area (peer of maPage; does NOT scroll) -->
-<div class="maControlArea" id="fpControls">
+<div class="maControlArea">
   <div class="maFieldRow">
     <div class="maField">
       <div class="maInputWrap">
@@ -86,7 +86,7 @@ $maChromeFooterMode = $footerMode;
         <input id="fpSearchText" class="maTextInput" type="text" placeholder="Search players..." />
       </div>
     </div>
-    <div class="maField" id="fpImportBtnWrap" style="flex:0 0 auto; display:none;">
+    <div class="maField" id="fpImportBtnWrap" style="flex:0 0 auto;">
       <button type="button" class="btn btnSecondary" id="fpBtnImport">
         <i class="ti ti-upload" aria-hidden="true"></i> Import
       </button>

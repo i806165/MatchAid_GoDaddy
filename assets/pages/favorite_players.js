@@ -36,7 +36,6 @@
   const el = {
     list:       document.getElementById("fpList"),
     form:       document.getElementById("fpForm"),
-    controls:   document.getElementById("fpControls"),
     listRows:   document.getElementById("fpListRows"),
     empty:      document.getElementById("fpEmpty"),
     search:     document.getElementById("fpSearchText"),
@@ -269,7 +268,6 @@
     el.form.style.display   = "none";
     if (el.importSection) el.importSection.style.display = "none";
     el.list.style.display   = "";
-    if (el.controls) el.controls.style.display = "";
     setHeaderActionsFor("list");
     setFooterFor("list");
     renderFilters();
@@ -648,7 +646,6 @@
 
     el.list.style.display = "none";
     el.form.style.display = "";
-    if (el.controls) el.controls.style.display = "none";
 
     setHeaderActionsFor("form");
     if (!suppressFooter) setFooterFor("form");
@@ -824,9 +821,8 @@
   ];
 
   function importShow() {
-    el.list.style.display   = "none";
-    el.form.style.display   = "none";
-    if (el.controls) el.controls.style.display = "none";
+    el.list.style.display = "none";
+    el.form.style.display = "none";
     if (el.importSection) el.importSection.style.display = "";
     _importResetToUpload();
     _importRenderCapacity();
@@ -1116,11 +1112,6 @@
   }
 
   function _importWireEvents() {
-    // Only show Import button on desktop/tablet
-    if (window.innerWidth >= FP_IMPORT_DESKTOP_MIN && el.importBtnWrap) {
-      el.importBtnWrap.style.display = "";
-    }
-
     el.importBtn?.addEventListener("click", () => importShow());
 
     el.importBrowseBtn?.addEventListener("click", (e) => {

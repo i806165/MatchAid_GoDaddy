@@ -312,7 +312,13 @@
 
 /* ── Import button — desktop/tablet only ─────────────────────────────────── */
 #fpImportBtnWrap {
-  display: none; /* shown by JS when viewport >= 640px */
+  display: none;
+}
+
+@media (min-width: 640px) {
+  #fpImportBtnWrap {
+    display: block;
+  }
 }
 
 /* ── Drop zone ───────────────────────────────────────────────────────────── */
