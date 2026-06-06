@@ -79,7 +79,7 @@
 <section id="fpImport" style="display:none;">
 
   <!-- UPLOAD CARD -->
-  <div class="maCard">
+  <div class="maCard" id="fpImportUploadCard">
     <header class="maCard__hdr">
       <div class="maCard__title">UPLOAD FILE</div>
       <span id="fpImportCapacity" style="font-size:12px; font-weight:600; color:var(--mutedText);"></span>
@@ -122,9 +122,9 @@
         <i class="ti ti-table-export" style="font-size:20px; color:var(--mutedText); flex:0 0 auto;" aria-hidden="true"></i>
         <div class="maListRow__col" style="flex:1;">
           <div style="font-size:13px; font-weight:800; color:var(--ink);">Download template</div>
-          <div style="font-size:12px; color:var(--mutedText); margin-top:2px;">Works with Excel and Google Sheets — fill it in and upload as .xlsx or .csv</div>
+          <div style="font-size:12px; color:var(--mutedText); margin-top:2px;">Pre-formatted Excel file — fill it in and upload</div>
         </div>
-        <button type="button" class="btn" id="fpImportTemplateBtn" style="flex:0 0 auto;">
+        <button type="button" class="btn btnSecondary" id="fpImportTemplateBtn" style="flex:0 0 auto;">
           <i class="ti ti-download" aria-hidden="true"></i> Download
         </button>
       </div>

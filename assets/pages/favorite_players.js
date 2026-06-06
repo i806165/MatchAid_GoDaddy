@@ -36,7 +36,7 @@
   const el = {
     list:       document.getElementById("fpList"),
     form:       document.getElementById("fpForm"),
-    controls:   document.getElementById("fpControls"),
+    controls:   document.querySelector(".maControlArea"),
     listRows:   document.getElementById("fpListRows"),
     empty:      document.getElementById("fpEmpty"),
     search:     document.getElementById("fpSearchText"),
@@ -57,6 +57,7 @@
     importSection:    document.getElementById("fpImport"),
     importBtnWrap:    document.getElementById("fpImportBtnWrap"),
     importBtn:        document.getElementById("fpBtnImport"),
+    importUploadCard: document.getElementById("fpImportUploadCard"),
     importCapacity:   document.getElementById("fpImportCapacity"),
     importDropZone:   document.getElementById("fpDropZone"),
     importBrowseBtn:  document.getElementById("fpImportBrowseBtn"),
@@ -102,6 +103,13 @@
         right:  { show: false },
         footer: null,
         page:   { label: "+ Add New Favorite", onClick: () => openAddNew() }
+      });
+    } else if (mode === "import") {
+      MA.chrome.setActions({
+        left:   { show: false },
+        right:  { show: false },
+        footer: null,
+        page:   { label: "← Go Back", onClick: () => showList(), className: "btnSecondary" }
       });
     } else {
       MA.chrome.setActions({
@@ -804,38 +812,6 @@
     });
   }
 
-  // ── Import busy overlay ─────────────────────────────────────────────────────
-
-  function _importEnsureOverlay() {
-    if (document.getElementById("fpBusyOverlay")) return;
-    const overlay = document.createElement("div");
-    overlay.id = "fpBusyOverlay";
-    overlay.className = "maModalOverlay";
-    const modal = document.createElement("section");
-    modal.className = "maModal";
-    modal.style.maxWidth = "320px";
-    modal.innerHTML = `
-      <header class="maModal__hdr">
-        <div class="maModal__titles">
-          <div class="maModal__title">Please wait</div>
-          <div class="maModal__subtitle" id="fpBusyMessage">Working...</div>
-        </div>
-      </header>`;
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-  }
-
-  function _importShowOverlay(message) {
-    _importEnsureOverlay();
-    const msg = document.getElementById("fpBusyMessage");
-    if (msg) msg.textContent = message || "Working...";
-    document.getElementById("fpBusyOverlay")?.classList.add("is-open");
-  }
-
-  function _importHideOverlay() {
-    document.getElementById("fpBusyOverlay")?.classList.remove("is-open");
-  }
-
   // ── Import ──────────────────────────────────────────────────────────────────
 
   const FP_IMPORT_BATCH_MAX   = 100;
@@ -856,15 +832,18 @@
   ];
 
   function importShow() {
-    el.list.style.display   = "none";
-    el.form.style.display   = "none";
+    el.list.style.display = "none";
+    el.form.style.display = "none";
     if (el.controls) el.controls.style.display = "none";
     if (el.importSection) el.importSection.style.display = "";
+    setHeaderActionsFor("import");
+    setFooterFor("list");
     _importResetToUpload();
     _importRenderCapacity();
   }
 
   function _importResetToUpload() {
+    if (el.importUploadCard) el.importUploadCard.style.display = "";
     if (el.importReviewCard) el.importReviewCard.style.display = "none";
     if (el.importDropZone)   el.importDropZone.style.display   = "";
     state.importParsedRows    = [];
@@ -979,11 +958,11 @@
       (state.favorites || []).map((f) => String(f.playerGHIN))
     );
 
-    _importShowOverlay(`Validating 1 of ${pending.length}...`);
+    if (MA.showBusyModal) MA.showBusyModal(`Validating 1 of ${pending.length}...`);
 
     for (let i = 0; i < pending.length; i++) {
       const row = pending[i];
-      _importShowOverlay(`Validating ${i + 1} of ${pending.length}...`);
+      if (MA.showBusyModal) MA.showBusyModal(`Validating ${i + 1} of ${pending.length}...`);
 
       try {
         // Reuse the existing fetchGhinById already in this file
@@ -1008,12 +987,13 @@
       if (idx !== -1) rows[idx] = row;
     }
 
-    _importHideOverlay();
+    if (MA.hideBusyModal) MA.hideBusyModal();
     state.importValidatedRows = rows;
     _importRenderReview(rows);
   }
 
   function _importRenderReview(rows) {
+    if (el.importUploadCard) el.importUploadCard.style.display = "none";
     if (el.importDropZone)   el.importDropZone.style.display   = "none";
     if (el.importReviewCard) el.importReviewCard.style.display = "";
 
@@ -1096,11 +1076,11 @@
     );
     if (!actionable.length) return;
 
-    _importShowOverlay("Importing players...");
+    if (MA.showBusyModal) MA.showBusyModal("Importing players...");
 
     try {
       const res = await MA.postJson(MA.paths.favPlayersImport, { rows: actionable });
-      _importHideOverlay();
+      if (MA.hideBusyModal) MA.hideBusyModal();
 
       if (!res?.ok) {
         if (MA.setStatus) MA.setStatus(res?.message ?? "Import failed. Please try again.", "danger");
@@ -1125,7 +1105,7 @@
       showList();
 
     } catch (err) {
-      _importHideOverlay();
+      if (MA.hideBusyModal) MA.hideBusyModal();
       console.error("[fpImport] commit error", err);
       if (MA.setStatus) MA.setStatus("Import failed due to a network error. Please try again.", "danger");
     }
