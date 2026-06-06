@@ -26,6 +26,11 @@
     emailSources: [],       // [{email, source, label, masked, priority}]
     selectedEmail: "",      // currently committed email on the form
     selectedEmailSource: "", // source key for badge display
+
+    // Import
+    importParsedRows:    [],  // raw rows after SheetJS parse + column map
+    importValidatedRows: [],  // rows after GHIN API validation
+    importColumnMap:     {},  // { ourField: csvColumnIndex }
   };
 
   const el = {
@@ -47,6 +52,22 @@
     memberId:   document.getElementById("fpMemberId"),
     chips:      document.getElementById("fpGroupChips"),
     btnAddGroup: document.getElementById("fpBtnAddGroup"),
+
+    // Import section
+    importSection:    document.getElementById("fpImport"),
+    importBtnWrap:    document.getElementById("fpImportBtnWrap"),
+    importBtn:        document.getElementById("fpBtnImport"),
+    importCapacity:   document.getElementById("fpImportCapacity"),
+    importDropZone:   document.getElementById("fpDropZone"),
+    importBrowseBtn:  document.getElementById("fpImportBrowseBtn"),
+    importFileInput:  document.getElementById("fpImportFileInput"),
+    importTemplateBtn:document.getElementById("fpImportTemplateBtn"),
+    importReviewCard: document.getElementById("fpImportReviewCard"),
+    importRetryBtn:   document.getElementById("fpImportRetryBtn"),
+    importCommitBtn:  document.getElementById("fpImportCommitBtn"),
+    importTableBody:  document.getElementById("fpImportTableBody"),
+    importTable:      document.getElementById("fpImportTable"),
+    importSummary:    document.getElementById("fpImportSummary"),
   };
 
   // ── Utilities ───────────────────────────────────────────────────────────────
@@ -245,8 +266,9 @@
   }
 
   function showList() {
-    el.form.style.display = "none";
-    el.list.style.display = "";
+    el.form.style.display   = "none";
+    if (el.importSection) el.importSection.style.display = "none";
+    el.list.style.display   = "";
     if (el.controls) el.controls.style.display = "";
     setHeaderActionsFor("list");
     setFooterFor("list");
@@ -782,6 +804,357 @@
     });
   }
 
+  // ── Import ──────────────────────────────────────────────────────────────────
+
+  const FP_IMPORT_BATCH_MAX   = 100;
+  const FP_IMPORT_DESKTOP_MIN = 640; // px — import hidden below this width
+
+  const FP_IMPORT_SYNONYMS = {
+    ghin:      ["ghin", "golf network", "handicap id", "ghin #", "network #", "ghin number"],
+    firstName: ["first", "firstname", "first name", "given name", "fname"],
+    lastName:  ["last", "lastname", "last name", "surname", "lname"],
+    email:     ["email", "e-mail", "email address", "emailaddress"],
+    mobile:    ["mobile", "phone", "cell", "mobile phone", "telephone"],
+    memberId:  ["member", "memberid", "member id", "member #", "local id", "membership #", "club id"],
+    groups:    ["groups", "tags", "group", "tag", "category", "categories"],
+  };
+
+  const FP_IMPORT_TEMPLATE_HEADERS = [
+    "GHIN", "FirstName", "LastName", "Email", "Mobile", "MemberID", "Groups"
+  ];
+
+  function importShow() {
+    el.list.style.display   = "none";
+    el.form.style.display   = "none";
+    if (el.controls) el.controls.style.display = "none";
+    if (el.importSection) el.importSection.style.display = "";
+    _importResetToUpload();
+    _importRenderCapacity();
+  }
+
+  function _importResetToUpload() {
+    if (el.importReviewCard) el.importReviewCard.style.display = "none";
+    if (el.importDropZone)   el.importDropZone.style.display   = "";
+    state.importParsedRows    = [];
+    state.importValidatedRows = [];
+  }
+
+  function _importRenderCapacity() {
+    if (!el.importCapacity) return;
+    const count = Array.isArray(state.favorites) ? state.favorites.length : 0;
+    const limit = window.__INIT__?.favoritesLimit ?? 200;
+    el.importCapacity.textContent = `You have ${count} of ${limit} maximum favorites`;
+  }
+
+  function _importSniffColumns(headers) {
+    const map = {};
+    const normalise = (s) => String(s).toLowerCase().trim().replace(/[^a-z0-9 ]/g, "");
+    headers.forEach((h, idx) => {
+      const norm = normalise(h);
+      for (const [field, synonyms] of Object.entries(FP_IMPORT_SYNONYMS)) {
+        if (map[field] !== undefined) continue;
+        if (synonyms.some((s) => norm.includes(s))) map[field] = idx;
+      }
+    });
+    return map;
+  }
+
+  function _importHandleFile(file) {
+    const name = file.name.toLowerCase();
+    if (!name.endsWith(".xlsx") && !name.endsWith(".xls") && !name.endsWith(".csv")) {
+      if (MA.setStatus) MA.setStatus("Please upload an .xlsx, .xls, or .csv file.", "warn");
+      return;
+    }
+    if (typeof XLSX === "undefined") {
+      if (MA.setStatus) MA.setStatus("File parser not loaded. Please refresh and try again.", "danger");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data     = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheet    = workbook.Sheets[workbook.SheetNames[0]];
+        const raw      = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+        if (!raw || raw.length < 2) {
+          if (MA.setStatus) MA.setStatus("File appears empty. Please check and try again.", "warn");
+          return;
+        }
+        _importParseRows(raw);
+      } catch (err) {
+        console.error("[fpImport] parse error", err);
+        if (MA.setStatus) MA.setStatus("Could not read the file. Please check the format and try again.", "danger");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function _importParseRows(raw) {
+    const headers = raw[0].map((h) => String(h).trim());
+    state.importColumnMap = _importSniffColumns(headers);
+
+    const get = (row, field) => {
+      const idx = state.importColumnMap[field];
+      return idx !== undefined ? String(row[idx] ?? "").trim() : "";
+    };
+
+    const rows = [];
+    for (let i = 1; i < raw.length; i++) {
+      const row = raw[i];
+      if (row.every((c) => String(c).trim() === "")) continue;
+
+      const ghin     = get(row, "ghin").replace(/\D/g, "");
+      const groups   = get(row, "groups")
+        ? get(row, "groups").split("|").map((g) => g.trim()).filter(Boolean)
+        : [];
+
+      rows.push({
+        rowNum:    i,
+        ghin,
+        firstName: get(row, "firstName"),
+        lastName:  get(row, "lastName"),
+        email:     get(row, "email"),
+        mobile:    get(row, "mobile"),
+        memberId:  get(row, "memberId"),
+        groups,
+        gender:    "",
+        status:    ghin ? "pending" : "error",
+        statusMsg: ghin ? "" : "No GHIN",
+      });
+    }
+
+    if (rows.length === 0) {
+      if (MA.setStatus) MA.setStatus("No data rows found in file.", "warn");
+      return;
+    }
+    if (rows.length > FP_IMPORT_BATCH_MAX) {
+      if (MA.setStatus) MA.setStatus(
+        `File has ${rows.length} rows. Maximum per import is ${FP_IMPORT_BATCH_MAX}. Please split your file.`,
+        "warn"
+      );
+      return;
+    }
+
+    state.importParsedRows = rows;
+    _importValidateGHINs(rows);
+  }
+
+  async function _importValidateGHINs(rows) {
+    const pending = rows.filter((r) => r.status === "pending");
+    if (!pending.length) { _importRenderReview(rows); return; }
+
+    const existingGhins = new Set(
+      (state.favorites || []).map((f) => String(f.playerGHIN))
+    );
+
+    if (MA.showBusyModal) MA.showBusyModal(`Validating 1 of ${pending.length}...`);
+
+    for (let i = 0; i < pending.length; i++) {
+      const row = pending[i];
+      if (MA.showBusyModal) MA.showBusyModal(`Validating ${i + 1} of ${pending.length}...`);
+
+      try {
+        // Reuse the existing fetchGhinById already in this file
+        const result = await fetchGhinById(row.ghin);
+        if (!result) {
+          row.status    = "error";
+          row.statusMsg = "Invalid GHIN";
+        } else {
+          if (!row.firstName) row.firstName = safe(result.name    || "").split(" ")[0] || "";
+          if (!row.lastName)  row.lastName  = safe(result.last_name || "");
+          if (!row.gender)    row.gender    = safe(result.gender  || "");
+          row.status    = existingGhins.has(row.ghin) ? "merge" : "new";
+          row.statusMsg = row.status === "merge" ? "Merge" : "OK";
+        }
+      } catch (err) {
+        console.warn("[fpImport] GHIN lookup failed for", row.ghin, err);
+        row.status    = "error";
+        row.statusMsg = "Lookup failed";
+      }
+
+      const idx = rows.findIndex((r) => r.rowNum === row.rowNum);
+      if (idx !== -1) rows[idx] = row;
+    }
+
+    if (MA.hideBusyModal) MA.hideBusyModal();
+    state.importValidatedRows = rows;
+    _importRenderReview(rows);
+  }
+
+  function _importRenderReview(rows) {
+    if (el.importDropZone)   el.importDropZone.style.display   = "none";
+    if (el.importReviewCard) el.importReviewCard.style.display = "";
+
+    // Add colgroup once
+    if (el.importTable && !el.importTable.querySelector("colgroup")) {
+      const cg = document.createElement("colgroup");
+      [36, 90, 150, 170, 110, 100, null, 80].forEach((w) => {
+        const col = document.createElement("col");
+        if (w) col.style.width = w + "px";
+        cg.appendChild(col);
+      });
+      el.importTable.prepend(cg);
+    }
+
+    let newCount = 0, mergeCount = 0, errCount = 0;
+    const frag = document.createDocumentFragment();
+
+    rows.forEach((row, i) => {
+      const tr = document.createElement("tr");
+      const statusClass =
+        row.status === "new"   ? "fpImport__status--ok"    :
+        row.status === "merge" ? "fpImport__status--merge"  :
+                                 "fpImport__status--err";
+      const statusLabel =
+        row.status === "new"   ? "OK"          :
+        row.status === "merge" ? "Merge"        :
+                                 row.statusMsg;
+
+      const name = [row.firstName, row.lastName].filter(Boolean).join(" ") || "—";
+
+      const cell = (val) => val
+        ? `<td>${escapeHtml(val)}</td>`
+        : `<td class="fpImport__muted">—</td>`;
+
+      tr.innerHTML =
+        `<td class="fpImport__muted">${i + 1}</td>` +
+        `<td>${escapeHtml(row.ghin) || '<span class="fpImport__muted">—</span>'}</td>` +
+        `<td>${escapeHtml(name)}</td>` +
+        cell(row.email) +
+        cell(row.mobile) +
+        cell(row.memberId) +
+        cell(row.groups?.length ? row.groups.join(", ") : "") +
+        `<td class="fpImport__status ${statusClass}">${escapeHtml(statusLabel)}</td>`;
+
+      frag.appendChild(tr);
+
+      if (row.status === "new")   newCount++;
+      if (row.status === "merge") mergeCount++;
+      if (row.status === "error") errCount++;
+    });
+
+    if (el.importTableBody) {
+      el.importTableBody.innerHTML = "";
+      el.importTableBody.appendChild(frag);
+    }
+
+    const actionable = newCount + mergeCount;
+    const parts = [];
+    if (newCount)   parts.push(`${newCount} new`);
+    if (mergeCount) parts.push(`${mergeCount} will merge`);
+    if (errCount)   parts.push(`${errCount} skipped`);
+
+    if (el.importSummary) {
+      el.importSummary.textContent = actionable > 0
+        ? `${parts.join(" · ")}. Ready to import.`
+        : `No valid rows to import. ${errCount} row${errCount !== 1 ? "s" : ""} skipped.`;
+    }
+
+    if (el.importCommitBtn) {
+      el.importCommitBtn.disabled     = actionable === 0;
+      el.importCommitBtn.textContent  = actionable > 0
+        ? `Import ${actionable} player${actionable !== 1 ? "s" : ""}`
+        : "Import";
+    }
+  }
+
+  async function _importCommit() {
+    const actionable = (state.importValidatedRows || []).filter(
+      (r) => r.status === "new" || r.status === "merge"
+    );
+    if (!actionable.length) return;
+
+    if (MA.showBusyModal) MA.showBusyModal("Importing players...");
+
+    try {
+      const res = await MA.postJson(MA.paths.favPlayersImport, { rows: actionable });
+      if (MA.hideBusyModal) MA.hideBusyModal();
+
+      if (!res?.ok) {
+        if (MA.setStatus) MA.setStatus(res?.message ?? "Import failed. Please try again.", "danger");
+        return;
+      }
+
+      if (Array.isArray(res.payload?.favorites)) {
+        state.favorites = res.payload.favorites;
+      }
+      if (Array.isArray(res.payload?.groups)) {
+        state.groups = res.payload.groups;
+      }
+
+      const s   = res.payload?.summary ?? {};
+      const msg = [
+        s.imported ? `${s.imported} added`  : null,
+        s.merged   ? `${s.merged} updated`  : null,
+        s.skipped  ? `${s.skipped} skipped` : null,
+      ].filter(Boolean).join(", ");
+
+      if (MA.setStatus) MA.setStatus(`Import complete — ${msg}.`, "success");
+      showList();
+
+    } catch (err) {
+      if (MA.hideBusyModal) MA.hideBusyModal();
+      console.error("[fpImport] commit error", err);
+      if (MA.setStatus) MA.setStatus("Import failed due to a network error. Please try again.", "danger");
+    }
+  }
+
+  function _importDownloadTemplate() {
+    if (typeof XLSX === "undefined") {
+      if (MA.setStatus) MA.setStatus("Template generator not loaded. Please refresh and try again.", "warn");
+      return;
+    }
+    const sampleRow = ["4821093", "John", "Smith", "john@example.com", "555-0100", "M-0001", "Tuesday Group|Members"];
+    const ws = XLSX.utils.aoa_to_sheet([FP_IMPORT_TEMPLATE_HEADERS, sampleRow]);
+    ws["!cols"] = [
+      { wch: 12 }, { wch: 14 }, { wch: 14 },
+      { wch: 26 }, { wch: 14 }, { wch: 12 }, { wch: 30 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Favorite Players");
+    XLSX.writeFile(wb, "favorite_players_import_template.xlsx");
+  }
+
+  function _importWireEvents() {
+    // Only show Import button on desktop/tablet
+    if (window.innerWidth >= FP_IMPORT_DESKTOP_MIN && el.importBtnWrap) {
+      el.importBtnWrap.style.display = "";
+    }
+
+    el.importBtn?.addEventListener("click", () => importShow());
+
+    el.importBrowseBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      el.importFileInput?.click();
+    });
+
+    el.importDropZone?.addEventListener("click", () => el.importFileInput?.click());
+
+    el.importDropZone?.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      el.importDropZone.classList.add("is-dragover");
+    });
+    el.importDropZone?.addEventListener("dragleave", () => {
+      el.importDropZone.classList.remove("is-dragover");
+    });
+    el.importDropZone?.addEventListener("drop", (e) => {
+      e.preventDefault();
+      el.importDropZone.classList.remove("is-dragover");
+      const file = e.dataTransfer?.files?.[0];
+      if (file) _importHandleFile(file);
+    });
+
+    el.importFileInput?.addEventListener("change", (e) => {
+      const file = e.target?.files?.[0];
+      if (file) _importHandleFile(file);
+      e.target.value = "";
+    });
+
+    el.importTemplateBtn?.addEventListener("click", _importDownloadTemplate);
+    el.importRetryBtn?.addEventListener("click", _importResetToUpload);
+    el.importCommitBtn?.addEventListener("click", _importCommit);
+  }
+
   // ── Wire events ─────────────────────────────────────────────────────────────
 
   function wireEvents() {
@@ -809,6 +1182,9 @@
     if (el.btnAddGroup) {
       el.btnAddGroup.addEventListener("click", openGroupModal);
     }
+
+    // Import
+    _importWireEvents();
   }
 
   // ── Boot ────────────────────────────────────────────────────────────────────

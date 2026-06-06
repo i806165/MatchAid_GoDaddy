@@ -288,3 +288,181 @@
 
 /* ── Add Group modal ─────────────────────────────────────────────────────── */
 .fp-group-modal { max-width: 360px; }
+
+/* ==========================================================================
+   IMPORT SECTION — additions to /assets/css/favorite_players.css
+   Add after the existing .fp-group-modal block.
+
+   Keeps new class surface minimal:
+     - fpImport__ prefix for structural import-only elements
+     - All colors/radii/spacing reference existing tokens
+   ========================================================================== */
+
+/* ── Section desktop width (mirrors #fpForm) ─────────────────────────────── */
+@media (min-width: 980px) {
+  #fpImport {
+    width: min(100%, 1280px);
+    margin-inline: auto;
+    background: rgba(255,255,255,.72);
+    border: 1px solid rgba(0,0,0,.06);
+    border-radius: 18px;
+    padding: 14px;
+  }
+}
+
+/* ── Import button — desktop/tablet only ─────────────────────────────────── */
+#fpImportBtnWrap {
+  display: none; /* shown by JS when viewport >= 640px */
+}
+
+/* ── Drop zone ───────────────────────────────────────────────────────────── */
+.fpImport__dropZone {
+  border: 1.5px dashed var(--borderSubtle);
+  border-radius: var(--radiusLg);
+  padding: 2.5rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  transition: background .15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.fpImport__dropZone:hover,
+.fpImport__dropZone.is-dragover {
+  background: var(--pressedBg);
+  border-color: var(--brandSecondary);
+}
+
+.fpImport__dropIcon {
+  font-size: 34px;
+  color: var(--mutedText);
+}
+
+.fpImport__dropTitle {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.fpImport__dropSub {
+  font-size: 13px;
+  color: var(--mutedText);
+}
+
+/* ── Format pills ────────────────────────────────────────────────────────── */
+.fpImport__formatPills {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: 4px 0;
+}
+
+.fpImport__formatPill {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: var(--pillRadius);
+  border: 1px solid var(--borderSubtle);
+  color: var(--mutedText);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fpImport__formatPill--xlsx { color: var(--success); }
+.fpImport__formatPill--csv  { color: var(--brandAccent); }
+
+/* ── Divider ─────────────────────────────────────────────────────────────── */
+.fpImport__divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0;
+  font-size: 12px;
+  color: var(--mutedText);
+}
+
+.fpImport__divider::before,
+.fpImport__divider::after {
+  content: '';
+  flex: 1;
+  height: 0.5px;
+  background: var(--borderSubtle);
+}
+
+/* ── Review table ────────────────────────────────────────────────────────── */
+.fpImport__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  table-layout: fixed;
+}
+
+.fpImport__table thead tr {
+  background: color-mix(in srgb, var(--cardBg) 92%, black);
+}
+
+.fpImport__table th {
+  padding: 8px 14px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--mutedText);
+  border-bottom: 1px solid var(--borderSubtle);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.fpImport__table td {
+  padding: 9px 14px;
+  border-bottom: 0.5px solid var(--borderSubtle);
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fpImport__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Column widths */
+.fpImport__table colgroup col:nth-child(1) { width: 36px;  } /* # */
+.fpImport__table colgroup col:nth-child(2) { width: 90px;  } /* GHIN */
+.fpImport__table colgroup col:nth-child(3) { width: 150px; } /* Name */
+.fpImport__table colgroup col:nth-child(4) { width: 170px; } /* Email */
+.fpImport__table colgroup col:nth-child(5) { width: 110px; } /* Mobile */
+.fpImport__table colgroup col:nth-child(6) { width: 100px; } /* Member ID */
+.fpImport__table colgroup col:nth-child(7) { width: auto;  } /* Groups */
+.fpImport__table colgroup col:nth-child(8) { width: 80px;  } /* Status */
+
+/* Status cell variants — reuse existing token colors */
+.fpImport__status {
+  font-weight: 800;
+  font-size: 13px;
+  text-align: right;
+}
+
+.fpImport__status--ok    { color: var(--success); }
+.fpImport__status--merge { color: var(--brandAccent); }
+.fpImport__status--err   { color: var(--danger); }
+.fpImport__status--warn  { color: var(--warn); }
+
+/* Muted cell (empty field) */
+.fpImport__muted {
+  color: var(--mutedText);
+  font-weight: 600;
+}
+
+/* ── Summary line ────────────────────────────────────────────────────────── */
+.fpImport__summary {
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mutedText);
+  border-top: 0.5px solid var(--borderSubtle);
+}

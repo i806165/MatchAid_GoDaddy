@@ -30,16 +30,18 @@ $paths = [
   "favPlayersInit"      => "/api/favorite_players/initFavPlayers.php",
   "favPlayersSave"      => "/api/favorite_players/saveFavPlayers.php",
   "favPlayersDelete"    => "/api/favorite_players/deleteFavPlayers.php",
+  "favPlayersImport"    => "/api/favorite_players/importFavPlayers.php",
   "ghinPlayerSearch"    => "/api/GHIN/searchPlayers.php",
   "favPlayersGetEmails" => "/api/favorite_players/getPlayerEmails.php",
 ];
 
 $initPayload = [
-  "ok"         => true,
-  "launchMode" => $launchMode,
-  "playerGHIN" => $playerGhin,
-  "footerMode" => $footerMode,
-  "header"     => [
+  "ok"             => true,
+  "launchMode"     => $launchMode,
+  "playerGHIN"     => $playerGhin,
+  "footerMode"     => $footerMode,
+  "favoritesLimit" => 200,
+  "header"         => [
     "subtitle" => "",
   ],
 ];
@@ -84,6 +86,11 @@ $maChromeFooterMode = $footerMode;
         <input id="fpSearchText" class="maTextInput" type="text" placeholder="Search players..." />
       </div>
     </div>
+    <div class="maField" id="fpImportBtnWrap" style="flex:0 0 auto; display:none;">
+      <button type="button" class="btn btnSecondary" id="fpBtnImport">
+        <i class="ti ti-upload" aria-hidden="true"></i> Import
+      </button>
+    </div>
   </div>
 </div>
 
@@ -112,6 +119,7 @@ if (!empty($pageHelpKey)) {
 
 <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/ghin_player_search.js') ?>"></script>
+<script src="<?= ma_asset('/assets/js/xlsx.full.min.js') ?>"></script>
 <script src="<?= ma_asset('/assets/pages/favorite_players.js') ?>"></script>
 
 </body>
