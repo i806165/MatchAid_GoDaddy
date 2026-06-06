@@ -66,15 +66,16 @@ $merged    = 0;
 $skipped   = 0;
 
 foreach ($rows as $row) {
-    $playerGHIN = trim((string)($row["ghin"]       ?? ""));
-    $status     = trim((string)($row["status"]     ?? ""));
-    $playerName = trim((string)($row["firstName"]  ?? ""));
-    $playerLName= trim((string)($row["lastName"]   ?? ""));
-    $email      = trim((string)($row["email"]      ?? ""));
-    $mobile     = trim((string)($row["mobile"]     ?? ""));
-    $memberId   = trim((string)($row["memberId"]   ?? ""));
-    $groups     = $row["groups"] ?? [];           // already parsed array from JS
-    $playerGender=(string)($row["gender"]          ?? "");
+    $playerGHIN  = trim((string)($row["ghin"]       ?? ""));
+    $status      = trim((string)($row["status"]     ?? ""));
+    $firstName   = trim((string)($row["firstName"]  ?? ""));
+    $playerLName = trim((string)($row["lastName"]   ?? ""));
+    $playerName  = trim($firstName . " " . $playerLName); // "First Last" combined
+    $email       = trim((string)($row["email"]      ?? ""));
+    $mobile      = trim((string)($row["mobile"]     ?? ""));
+    $memberId    = trim((string)($row["memberId"]   ?? ""));
+    $groups      = $row["groups"] ?? [];
+    $playerGender= trim((string)($row["gender"]     ?? ""));
 
     // Skip rows flagged as errors by the client-side validator
     if ($playerGHIN === "" || $status === "error") {
@@ -87,13 +88,13 @@ foreach ($rows as $row) {
         service_dbFavPlayers::upsertFavorite(
             $userGHIN,
             $playerGHIN,
-            $email      !== "" ? $email      : null,
-            $mobile     !== "" ? $mobile     : null,
-            $memberId   !== "" ? $memberId   : null,
-            is_array($groups) ? $groups      : [],
-            $playerName !== "" ? $playerName : null,
-            $playerLName!== "" ? $playerLName: null,
-            null,                                  // HI — not imported
+            $email       !== "" ? $email       : null,
+            $mobile      !== "" ? $mobile      : null,
+            $memberId    !== "" ? $memberId    : null,
+            is_array($groups) ? $groups        : [],
+            $playerName  !== "" ? $playerName  : null,
+            $playerLName !== "" ? $playerLName : null,
+            null,                                   // HI — not imported
             $playerGender !== "" ? $playerGender : null
         );
 
