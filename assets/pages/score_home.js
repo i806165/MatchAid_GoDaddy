@@ -557,7 +557,7 @@
     const isPaired     = pairingId !== '' && pairingId !== '000';
     const groupIsShort = isPaired && state.players.length < Number(state.blindConfig?.target ?? 0);
 
-    MA.ui.openActionsMenu('Actions', [
+    const items = [
       { label: 'View game details', action: () => MA.gameDetails && MA.gameDetails.open(state.game) },
       ...(state.flags.blindConfigured ? [{ separator: true }] : []),
       ...(state.flags.blindConfigured ? [{
@@ -565,7 +565,24 @@
         disabled: !groupIsShort,
         action:   () => invokeBlindPlayer(),
       }] : []),
-    ]);
+    ];
+
+    if (MA.ghinPostScores && state.hasScores) {
+      const postedId  = state.players[0]?.ghinPostId || '';
+      const postLabel = postedId ? 'Score Already Posted to GHIN' : 'Post Score to GHIN';
+      items.push({ separator: true });
+      items.push({
+        label:   postLabel,
+        enabled: !postedId,
+        indent:  true,
+        action:  () => MA.ghinPostScores.open({
+          ggid:     state.game.dbGames_GGID,
+          onPosted: () => applyChrome(),
+        }),
+      });
+    }
+
+    MA.ui.openActionsMenu('Actions', items);
   }
 
   // -------------------------------------------------------------------------

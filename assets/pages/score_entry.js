@@ -761,6 +761,22 @@ function markDirty(playerId, rawScore, declared) {
       }
     ];
 
+    if (MA.ghinPostScores) {
+      const ggid     = state.payload?.gameRow?.dbGames_GGID;
+      const postedId = state.payload?.players?.[0]?.dbPlayers_GHINPostID || '';
+      const postLabel = postedId ? 'Score Already Posted to GHIN' : 'Post Score to GHIN';
+      items.push({ separator: true });
+      items.push({
+        label:   postLabel,
+        enabled: !postedId,
+        indent:  true,
+        action:  () => MA.ghinPostScores.open({
+          ggid,
+          onPosted: () => applyChrome(),
+        }),
+      });
+    }
+
     MA.ui.openActionsMenu("Scoring Actions", items);
   }
 

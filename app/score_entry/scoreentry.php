@@ -84,6 +84,8 @@ $maChromeLogoUrl = null;
 
   <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/ghin_post_scores.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_DisplayGameFormat.js') ?>"></script>
   <script src="<?= ma_asset('/assets/pages/score_entry.js') ?>"></script>
 </body>
 </html>
