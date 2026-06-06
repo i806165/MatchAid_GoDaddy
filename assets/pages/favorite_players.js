@@ -306,7 +306,11 @@
         state.emailSources = res.sources;
       }
     } catch (e) {
-      console.warn("[FP] getPlayerEmails failed:", e);
+      console.warn("[FP] getPlayerEmails failed:", {
+        message:  e?.message || String(e),
+        userGHIN: state.context?.userGHIN || "unknown",
+        userName: state.context?.userName || "unknown",
+      });
     }
     //console.log("[loadEmailSources] emailSources after API:", JSON.stringify(state.emailSources));
 
@@ -722,7 +726,11 @@
       renderList();
       if (MA.setStatus) MA.setStatus("Favorite removed.", "info");
     } catch (e) {
-      console.error(e);
+      console.error("[FP] doDelete failed:", {
+        message:  e?.message || String(e),
+        userGHIN: state.context?.userGHIN || "unknown",
+        userName: state.context?.userName || "unknown",
+      });
       if (MA.setStatus) MA.setStatus(String(e.message || e), "error");
     }
   }
@@ -778,7 +786,11 @@
       }
       showList();
     } catch (e) {
-      console.error(e);
+      console.error("[FP] doSave failed:", {
+        message:  e?.message || String(e),
+        userGHIN: state.context?.userGHIN || "unknown",
+        userName: state.context?.userName || "unknown",
+      });
       if (MA.setStatus) MA.setStatus(String(e.message || e), "error");
     }
   }
@@ -925,7 +937,13 @@
         }
         _importParseRows(raw);
       } catch (err) {
-        console.error("[fpImport] parse error", err);
+        console.error("[fpImport] parse error:", {
+          message:  err?.message || String(err),
+          url:      MA.paths?.favPlayersImport || "path not set",
+          userGHIN: state.context?.userGHIN || "unknown",
+          userName: state.context?.userName || "unknown",
+          stack:    err?.stack || "no stack",
+        });
         if (MA.setStatus) MA.setStatus("Could not read the file. Please check the format and try again.", "danger");
       }
     };
@@ -1010,7 +1028,12 @@
           row.statusMsg = row.status === "merge" ? "Merge" : "OK";
         }
       } catch (err) {
-        console.warn("[fpImport] GHIN lookup failed for", row.ghin, err);
+        console.warn("[fpImport] GHIN lookup failed:", {
+          ghin:     row.ghin,
+          message:  err?.message || String(err),
+          userGHIN: state.context?.userGHIN || "unknown",
+          userName: state.context?.userName || "unknown",
+        });
         row.status    = "error";
         row.statusMsg = "Lookup failed";
       }
@@ -1138,7 +1161,15 @@
 
     } catch (err) {
       _importHideOverlay();
-      console.error("[fpImport] commit error", err);
+      console.error("[fpImport] commit error:", {
+        message:  err?.message || String(err),
+        status:   err?.status  || err?.statusCode || "unknown",
+        url:      MA.paths?.favPlayersImport || "path not set",
+        rowCount: actionable.length,
+        userGHIN: state.context?.userGHIN || "unknown",
+        userName: state.context?.userName || "unknown",
+        stack:    err?.stack || "no stack",
+      });
       if (MA.setStatus) MA.setStatus("Import failed due to a network error. Please try again.", "danger");
     }
   }
@@ -1238,7 +1269,12 @@
       wireEvents();
       await initPage();
     } catch (e) {
-      console.error(e);
+      console.error("[FP] boot failed:", {
+        message:  e?.message || String(e),
+        userGHIN: state.context?.userGHIN || window.__INIT__?.context?.userGHIN || "unknown",
+        userName: state.context?.userName || window.__INIT__?.context?.userName || "unknown",
+        stack:    e?.stack || "no stack",
+      });
       if (MA.setStatus) MA.setStatus(String(e.message || e), "error");
     }
   })();
