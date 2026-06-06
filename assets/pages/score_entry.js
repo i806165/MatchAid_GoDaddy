@@ -769,7 +769,7 @@ function markDirty(playerId, rawScore, declared) {
       items.push({
         label:   postLabel,
         enabled: !postedId,
-        indent:  true,
+        indent:  false,
         action:  () => MA.ghinPostScores.open({
           ggid,
           onPosted: () => applyChrome(),
