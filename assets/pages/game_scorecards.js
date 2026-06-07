@@ -349,6 +349,68 @@ function renderGroup(group) {
   // ==========================================================================
   // 7. Page Actions / Print
   // ==========================================================================
+
+  const PRINT_STEPS = [
+    { icon: "🖨", label: "Orientation",       detail: "Select Landscape in the print dialog" },
+    { icon: "📄", label: "Paper",             detail: "Letter size (8.5 × 11)" },
+    { icon: "☐",  label: "Headers & Footers", detail: 'Uncheck "Headers and Footers" in the print dialog' },
+  ];
+
+  function scEnsurePrintModal() {
+    if (document.getElementById("scPrintOverlay")) return;
+
+    const overlay = document.createElement("div");
+    overlay.id = "scPrintOverlay";
+    overlay.className = "maModalOverlay";
+
+    const stepsHtml = PRINT_STEPS.map(s => `
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.08);">
+        <span style="font-size:18px;flex:0 0 24px;text-align:center;">${s.icon}</span>
+        <div>
+          <div style="font-weight:800;font-size:13px;">${s.label}</div>
+          <div style="font-size:12px;color:rgba(0,0,0,.60);margin-top:2px;">${s.detail}</div>
+        </div>
+      </div>`).join("");
+
+    const modal = document.createElement("section");
+    modal.className = "maModal";
+    modal.style.maxWidth = "360px";
+    modal.innerHTML = `
+      <header class="maModal__hdr">
+        <div class="maModal__titles">
+          <div class="maModal__title">Before You Print</div>
+          <div class="maModal__subtitle">Check these settings first</div>
+        </div>
+      </header>
+      <div class="maModal__body" style="padding:12px 16px 4px;">
+        ${stepsHtml}
+      </div>
+      <div class="maModal__ftrActions">
+        <button class="btn btnCancel" id="scPrintCancel">Cancel</button>
+        <button class="btn btnSecondary" id="scPrintGo">🖨 Print Scorecards</button>
+      </div>`;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    document.getElementById("scPrintCancel").addEventListener("click", scHidePrintModal);
+    document.getElementById("scPrintGo").addEventListener("click", function () {
+      scHidePrintModal();
+      setTimeout(function () { try { window.print(); } catch (e) {} }, 120);
+    });
+  }
+
+  function scShowPrintModal() {
+    scEnsurePrintModal();
+    const overlay = document.getElementById("scPrintOverlay");
+    if (overlay) overlay.classList.add("is-open");
+  }
+
+  function scHidePrintModal() {
+    const overlay = document.getElementById("scPrintOverlay");
+    if (overlay) overlay.classList.remove("is-open");
+  }
+
   function onPrint() { try { window.print(); } catch (e) {} }
 
   function applyChrome() {
@@ -382,4 +444,7 @@ function renderGroup(group) {
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize);
   else initialize();
+
+  // Expose print modal trigger for inline onclick in scorecards_view.php
+  window.scShowPrintModal = scShowPrintModal;
 })();

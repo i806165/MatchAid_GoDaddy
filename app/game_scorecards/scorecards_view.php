@@ -3,7 +3,7 @@
 ?>
 
 <div class="maControlArea" id="scControls">
-  <button class="btn btnSecondary" onclick="window.print()">🖨 Print Scorecards</button>
+  <button class="btn btnSecondary" onclick="scShowPrintModal()">🖨 Print Scorecards</button>
 </div>
 
 <div class="maCards" id="scCards">
