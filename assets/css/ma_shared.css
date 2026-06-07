@@ -177,7 +177,7 @@
   --chipHeight: 34px;
   --chipLabelSize: 12px;
   --chipLabelWeight: 800;
-  --segmentSelectedBg: #F1D7B7;
+  --segmentSelectedBg: #C9B99A; /* #F1D7B7; */
   --segmentSelectedText: var(--ink);
   --segRadius: var(--controlRadius);
   --segBorder: var(--controlBorder);
