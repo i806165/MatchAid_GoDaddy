@@ -351,9 +351,10 @@ function renderGroup(group) {
   // ==========================================================================
 
   const PRINT_STEPS = [
-    { icon: "🖨", label: "Orientation",       detail: "Select Landscape in the print dialog" },
-    { icon: "📄", label: "Paper",             detail: "Letter size (8.5 × 11)" },
-    { icon: "☐",  label: "Headers & Footers", detail: 'Uncheck "Headers and Footers" in the print dialog' },
+    { icon: "🖨", label: "Orientation",       detail: "Select Landscape" },
+    { icon: "📄", label: "Paper",             detail: "Select Letter size (8.5 × 11)" },
+    { icon: "☐",  label: "Headers & Footers", detail: 'Uncheck "Headers and Footers"' },
+    { icon: "📄", label: "Zoom",             detail: "Adjust Zoom settings" },
   ];
 
   function scEnsurePrintModal() {
@@ -379,7 +380,7 @@ function renderGroup(group) {
       <header class="maModal__hdr">
         <div class="maModal__titles">
           <div class="maModal__title">Before You Print</div>
-          <div class="maModal__subtitle">Check these settings first</div>
+          <div class="maModal__subtitle">Verify these print setup settings</div>
         </div>
       </header>
       <div class="maModal__body" style="padding:12px 16px 4px;">
