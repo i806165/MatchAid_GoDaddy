@@ -872,7 +872,7 @@
             <input id="gpGhinLast" class="maTextInput" placeholder="Last name or Golf Network #" value="${esc(state.ghinLast)}">
             <button id="gpGhinLastClear" class="clearBtn ${state.ghinLast ? "" : "isHidden"}" type="button" aria-label="Clear last name">×</button>
           </div>
-          <button id="gpBtnSearchGhin" class="btn btnPrimary" type="button" style="flex-shrink:0;">Search</button>
+          <button id="gpBtnSearchGhin" class="btn btnSecondary" type="button" style="flex-shrink:0;">Search</button>
         </div>
         <div class="maFieldRow" style="gap:6px; align-items:center;">
           <div class="maInputWrap gpInputClearWrap" style="flex:1 1 110px;">
