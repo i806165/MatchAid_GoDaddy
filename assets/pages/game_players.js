@@ -1476,7 +1476,8 @@ function renderTrayBody(){
 
         if (el.trayCount) el.trayCount.textContent = filtered.length ? `${filtered.length} favorites` : "";
 
-        el.trayBody.innerHTML = `<div class="maListRows">${youRow}${favRows || `<div class="gpEmpty">No favorites found.</div>`}</div>`;
+        const favLabel = `<div class="maListRow__group">Favorites</div>`;
+        el.trayBody.innerHTML = `<div class="maListRows">${youRow}${favLabel}${favRows || `<div class="gpEmpty">No favorites found.</div>`}</div>`;
 
         el.trayBody.querySelectorAll("[data-act='addfav']").forEach(r => r.onclick = (e) => {
           if (r.getAttribute("data-disabled") === "1") return;
@@ -1531,7 +1532,7 @@ function renderTrayBody(){
         <div class="gpMultiSelectToggle">
           <span class="gpMultiSelectToggle__text" id="gpToggleAllText">${toggleText}</span>
         </div>
-        <div class="maListRows">${youMultiRow}${favRows || `<div class="gpEmpty">No favorites found.</div>`}</div>`;
+        <div class="maListRows">${youMultiRow}<div class="maListRow__group">Favorites</div>${favRows || `<div class="gpEmpty">No favorites found.</div>`}</div>`;
 
       document.getElementById("gpToggleAllText")?.addEventListener("click", toggleAllVisibleFavorites);
 
