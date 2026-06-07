@@ -12,6 +12,7 @@ declare(strict_types=1);
 //   Tier 3 — Preferred yardage match from dbUsers profile
 //   Tier 4 — Flag as "ReSelect Tee"; admin resolves manually on Game Players page
 
+require_once MA_SERVICES . "/GHIN/GHIN_API_Courses.php";
 require_once __DIR__ . "/workflow_TeeResolution.php";
 require_once __DIR__ . "/../database/service_dbPlayers.php";
 require_once __DIR__ . "/../context/service_ContextUser.php";
