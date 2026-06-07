@@ -1212,11 +1212,11 @@ function renderTrayBody(){
           el.trayBody.innerHTML = `<section class="maPanel gpImportPanel">
             <div class="gpImportCard">
               <div class="gpImportCard__hdr">
-                <div class="gpImportCard__label">Enter Golf Network numbers or email addresses</div>
+                <div class="gpImportCard__label">Enter Golf Network ID's or email addresses.</div>
                 <button id="gpBtnImportEvaluate" class="btn btnSecondary gpImportCard__btn" type="button">Evaluate</button>
               </div>
               <textarea id="gpImportText" class="maTextInput gpImportText" placeholder="123456&#10;player123@gmail.com&#10;987654&#10;player456@aol.com">${esc(state.importText)}</textarea>
-              <div class="maHelpText gpHint" style="margin-top:4px;">Accepts numbers, email addresses, or a mix. Paste directly from Outlook or Gmail.</div>
+              <div class="maHelpText gpHint" style="margin-top:4px;">Accepts numbers, email addresses, or a mix. Paste directly from Document, Spreadsheet or EMail as separate lines, separated by commas or by semi-colons</div>
             </div>
           </section>`;
 
