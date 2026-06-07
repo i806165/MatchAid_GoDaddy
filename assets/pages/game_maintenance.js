@@ -202,15 +202,16 @@
 
     const modal = document.createElement('section');
     modal.className = 'maModal';
-    modal.style.maxWidth = '320px';
 
     modal.innerHTML = `
       <header class="maModal__hdr">
         <div class="maModal__titles">
-          <div class="maModal__title">Please wait</div>
-          <div class="maModal__subtitle" id="gmBusyMessage">Saving...</div>
+          <div class="maModal__title">Change Course and Convert Player Tee-Sets</div>
         </div>
       </header>
+      <div class="maModal__body" id="gmBusyBody">
+        <p id="gmBusyMessage" style="font-size:13px; color:var(--mutedText); line-height:1.6;"></p>
+      </div>
     `;
 
     overlay.appendChild(modal);
@@ -220,8 +221,8 @@
   function showSavingOverlay(message) {
     ensureSavingOverlay();
     const overlay = document.getElementById('gmBusyOverlay');
-    const msg = document.getElementById('gmBusyMessage');
-    if (msg) msg.textContent = message || 'Saving...';
+    const body = document.getElementById('gmBusyBody');
+    if (body) body.innerHTML = `<p style="font-size:13px; color:var(--mutedText); line-height:1.6;">${message || 'Saving...'}</p>`;
     if (overlay) overlay.classList.add('is-open');
   }
 
@@ -882,12 +883,52 @@
 
       if (res.courseChanged && res.resolutionResult) {
         const r = res.resolutionResult;
-        const parts = ["Game saved."];
-        if (r.resolved > 0) parts.push(`${r.resolved} player tee${r.resolved !== 1 ? "s" : ""} updated.`);
-        if (r.reselect > 0) parts.push(`${r.reselect} player${r.reselect !== 1 ? "s" : ""} require manual tee selection on Game Players.`);
-        if (r.skipped  > 0) parts.push(`${r.skipped} non-rated player${r.skipped !== 1 ? "s" : ""} unchanged.`);
-        setStatus(parts.join(" "), r.reselect > 0 ? "warn" : "success");
+        const hasReselect = r.reselect > 0;
+
+        const cards = `
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;">
+            <div style="background:var(--panelControlsBg); border-radius:var(--radiusSq); padding:12px 8px; text-align:center;">
+              <div style="font-size:22px; font-weight:900; color:var(--ink);">${r.resolved}</div>
+              <div style="font-size:11px; color:var(--mutedText); margin-top:3px;">Resolved</div>
+            </div>
+            <div style="background:var(--panelControlsBg); border-radius:var(--radiusSq); padding:12px 8px; text-align:center;">
+              <div style="font-size:22px; font-weight:900; color:${hasReselect ? "var(--warn)" : "var(--mutedText)"};">${r.reselect}</div>
+              <div style="font-size:11px; color:var(--mutedText); margin-top:3px;">Need review</div>
+            </div>
+          </div>`;
+
+        const line1 = `${r.resolved} player${r.resolved !== 1 ? "s" : ""} have been moved to the new course and assigned new tee-sets.`;
+        const line2 = hasReselect
+          ? `${r.reselect} player${r.reselect !== 1 ? "s" : ""} were not converted and require manual tee-set selection.`
+          : "";
+        const line3 = hasReselect
+          ? "Please proceed to the Game Players page and apply the corrections."
+          : "Please proceed to the Game Players page and verify tee-sets were converted correctly.";
+
+        const msgLines = [line1, line2, line3].filter(Boolean).map(l =>
+          `<div style="margin-top:8px;">${l}</div>`
+        ).join("");
+
+        const body = document.getElementById('gmBusyBody');
+        if (body) {
+          body.innerHTML = `
+            ${cards}
+            <div style="font-size:12px; color:var(--mutedText); line-height:1.6; margin-bottom:14px;">
+              <div>${line1}</div>
+              ${line2 ? `<div style="margin-top:8px;">${line2}</div>` : ""}
+              <div style="margin-top:8px;">${line3}</div>
+            </div>
+            <div style="border-top:1px solid var(--border); padding-top:12px; display:flex; justify-content:flex-end;">
+              <button type="button" class="btn btnSecondary" id="gmBusyOkBtn">OK</button>
+            </div>`;
+
+          document.getElementById('gmBusyOkBtn')?.addEventListener('click', () => {
+            hideSavingOverlay();
+            setStatus(hasReselect ? "Course changed — review players needing manual tee selection." : "Game saved.", hasReselect ? "warn" : "success");
+          });
+        }
       } else {
+        hideSavingOverlay();
         setStatus("Game saved.", "success");
       }
 
@@ -895,8 +936,8 @@
     } catch (e) {
       console.error(e);
       setStatus(String(e.message || e), "error");
-    } finally {
       hideSavingOverlay();
+    } finally {
       setBusy(false);
     }
   }

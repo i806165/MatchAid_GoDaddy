@@ -12,11 +12,11 @@ declare(strict_types=1);
 //   Tier 3 — Preferred yardage match from dbUsers profile
 //   Tier 4 — Flag as "ReSelect Tee"; admin resolves manually on Game Players page
 
-require_once MA_SERVICES . "/GHIN/GHIN_API_Courses.php";
 require_once __DIR__ . "/workflow_TeeResolution.php";
 require_once __DIR__ . "/../database/service_dbPlayers.php";
 require_once __DIR__ . "/../context/service_ContextUser.php";
 require_once MA_SERVICES . "/GHIN/GHIN_API_Handicaps.php";
+require_once MA_SERVICES . "/GHIN/GHIN_API_Courses.php";
 
 /**
  * Re-resolve tee assignments for all players in a game after a course change.
@@ -40,7 +40,6 @@ function be_resolveCourseChange(string $ggid, array $game, string $token): array
     $summary = [
         "resolved"  => 0,
         "reselect"  => 0,
-        "skipped"   => 0,
         "total"     => count($players),
         "sources"   => [
             "last_played"       => 0,
@@ -60,10 +59,12 @@ function be_resolveCourseChange(string $ggid, array $game, string $token): array
         $ghin   = trim((string)($player["dbPlayers_PlayerGHIN"] ?? ""));
         $gender = trim((string)($player["dbPlayers_Gender"]     ?? ""));
 
-        // Non-rated players have no GHIN API identity and no profile —
-        // skip tee resolution entirely. They remain as-is.
+        // Non-rated players have no GHIN API identity —
+        // flag for manual tee re-selection.
         if ($ghin === "" || str_starts_with($ghin, "NH")) {
-            $summary["skipped"]++;
+            cc_stamp_reselect($ggid, $ghin);
+            $summary["reselect"]++;
+            $summary["sources"]["reselect"]++;
             continue;
         }
 
@@ -93,7 +94,7 @@ function be_resolveCourseChange(string $ggid, array $game, string $token): array
             // Tier 2 — Last tee played on the NEW course.
             // Queries db_Players for the most recent TeeSetID this player
             // used when their CourseID matched the new course.
-            $lastTeeId = ServiceDbPlayers::getLastPlayedTeeForCourse($ghin, $newCourseId);
+            $lastTeeId = ServiceDbPlayers::getLastPlayedTeeForCourse($ghin, $newCourseId, $ggid);
             if ($lastTeeId !== null) {
                 foreach ($teeSets as $t) {
                     if (trim((string)($t["teeSetID"] ?? $t["value"] ?? "")) === $lastTeeId) {

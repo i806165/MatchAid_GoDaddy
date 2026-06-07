@@ -153,26 +153,35 @@ final class ServiceDbPlayers
     return $st->fetchAll() ?: [];
   }
 
-  public static function getLastPlayedTeeForCourse(string $ghin, string $courseId): ?string
+  public static function getLastPlayedTeeForCourse(string $ghin, string $courseId, string $excludeGgid = ""): ?string
   {
-    $ghin     = trim($ghin);
-    $courseId = trim($courseId);
+    $ghin        = trim($ghin);
+    $courseId    = trim($courseId);
+    $excludeGgid = trim($excludeGgid);
 
     // Non-Rated players (NH prefix) have no persistent identity — skip lookup
     if ($ghin === "" || str_starts_with($ghin, "NH")) return null;
     if ($courseId === "") return null;
 
     $pdo = Db::pdo();
+
+    // Exclude the current game so its own rows don't contaminate the history lookup.
+    // This prevents in-progress resolution writes from being seen as historical evidence.
+    $excludeClause = ($excludeGgid !== "") ? "AND dbPlayers_GGID != :excludeGgid" : "";
+
     $sql = "SELECT dbPlayers_TeeSetID
             FROM db_Players
             WHERE dbPlayers_PlayerGHIN = :ghin
               AND dbPlayers_CourseID   = :courseId
               AND dbPlayers_TeeSetID   IS NOT NULL
               AND dbPlayers_TeeSetID   <> ''
+              {$excludeClause}
             ORDER BY _updatedDate DESC
             LIMIT 1";
     $st = $pdo->prepare($sql);
-    $st->execute([":ghin" => $ghin, ":courseId" => $courseId]);
+    $params = [":ghin" => $ghin, ":courseId" => $courseId];
+    if ($excludeGgid !== "") $params[":excludeGgid"] = $excludeGgid;
+    $st->execute($params);
     $row = $st->fetch();
     return $row ? (string)$row["dbPlayers_TeeSetID"] : null;
   }
