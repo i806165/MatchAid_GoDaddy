@@ -254,6 +254,19 @@
   /* --- Date badge --- */
   --datebadgeTopBg: #E6D39A;
   --datebadgeTopText: #111111;
+
+  /* --- List Row States --- */
+  --rowBgDefault:        #ffffff;
+  --rowBgSelected:       rgba(7,67,42,.16);
+  --rowBgEnrolled:       #ebebeb;
+  --rowPinnedDivider:    rgba(0,0,0,.12);
+
+  /* --- Avatar Colors --- */
+  --avatarMaleBg:        #BDD7EE;
+  --avatarFemaleBg:      #F4C6D0;
+  --avatarUnknownBg:     #E0E0E0;
+  --avatarText:          #111111;
+  --avatarBorder:        #ffffff;
 }
 
 
@@ -1715,6 +1728,13 @@ textarea {
   transform: scale(.98);
 }
 
+/* Indicator usage — non-interactive, fully visible when disabled */
+.iconBtn:disabled {
+  opacity: 1;
+  cursor: default;
+  pointer-events: none;
+}
+
 /* Close button (used in modals) */
 .closeBtn {
   border: 1px solid var(--btnBorder);
@@ -2005,6 +2025,70 @@ textarea {
    17. LIST ROWS
    Lightweight rows for search/recent lists (course picker, etc.)
    ========================================================================== */
+
+/* --- Row state classes --- */
+
+/* Selected row — multi-add active selection */
+.maListRow--selected {
+  background: var(--rowBgSelected);
+}
+
+/* Enrolled / inactive row — player already in game */
+.maListRow--enrolled {
+  background: var(--rowBgEnrolled);
+  cursor: default;
+  pointer-events: none;
+}
+
+/* Pinned row — always-first identity row (e.g. "You") */
+.maListRow--pinned {
+  background: var(--rowBgDefault);
+  border-bottom: 2px solid var(--rowPinnedDivider) !important;
+}
+
+/* Gender-coded avatar colors — extend maListRow__avatar */
+.maListRow__avatar {
+  border: 2px solid var(--avatarBorder);
+  color: var(--avatarText);
+}
+
+.maListRow__avatar--m { background: var(--avatarMaleBg); }
+.maListRow__avatar--f { background: var(--avatarFemaleBg); }
+.maListRow__avatar--u { background: var(--avatarUnknownBg); }
+
+/* Standard muted subline */
+.maListRow__subline {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mutedText);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Empty/missing data subline — italic hint */
+.maListRow__subline--empty {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--mutedText);
+  font-style: italic;
+  margin-top: 2px;
+}
+
+/* Pinned identity label — "You" pill */
+.maListRow__pinnedLabel {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 99px;
+  background: var(--brandSecondary);
+  color: var(--brandSecondaryText);
+  line-height: 1.6;
+  margin-left: 6px;
+  vertical-align: middle;
+}
 
 .maListRows {
   display: flex;

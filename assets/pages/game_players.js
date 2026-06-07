@@ -23,7 +23,6 @@
     pendingPlayer: null,
     teeOptions: [],
     selectedTee: null,
-    selfAutoLaunched: false,
     multiAddMode: false,
     multiAddSelected: [],
     multiAddBusy: false,
@@ -61,7 +60,6 @@
   function getTabs(){
     // Roster is now the permanent canvas — not a tray tab.
     const baseTabs = [
-      { id: "self",     label: "Self"      },
       { id: "favorites",label: "Favorites" },
       { id: "ghin",     label: "GHIN"      },
       { id: "nonrated", label: "Non-Rated" },
@@ -834,7 +832,6 @@
         await ensureImportTeeOptions();
         await ensureImportSourceGames();
       }
-      if (state.activeTab !== "self") state.selfAutoLaunched = false;
       render();
     }));
   }
@@ -1097,9 +1094,6 @@
       return;
     }
 
-    if (state.activeTab === "self") {
-      return;
-    }
   }
 
 function renderTrayBody(){
@@ -1112,17 +1106,17 @@ function renderTrayBody(){
         const gender = safe(r.gender || "");
         const hi = safe(r.hi || "");
         const subParts = [hi && `HI ${hi}`, club].filter(Boolean).join(" · ");
+        const genderTag = gender ? ` <span style="font-weight:400; color:var(--mutedText);">(${esc(gender)})</span>` : "";
+        const indicator = isEnrolled
+          ? `<button class="iconBtn gpIndicator--check" disabled aria-label="Enrolled"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></button>`
+          : `<button class="iconBtn gpIndicator--add" disabled aria-label="Add player"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>`;
 
-        const enrolledBadge = isEnrolled
-          ? `<span class="gpEnrolledMark" style="font-size:10px; font-weight:700; flex-shrink:0;">&#10003; Enrolled</span>`
-          : "";
-
-        return `<div class="maListRow gpRow ${isEnrolled ? "" : "gpRowClickable"}" data-act="ghin-row" data-ghin="${esc(ghin)}" data-disabled="${isEnrolled ? "1" : "0"}" style="${isEnrolled ? "opacity:.65; cursor:default;" : ""}">
+        return `<div class="maListRow gpRow ${isEnrolled ? "maListRow--enrolled" : "gpRowClickable"}" data-act="ghin-row" data-ghin="${esc(ghin)}" data-disabled="${isEnrolled ? "1" : "0"}">
           <div class="maListRow__col" style="flex:1; min-width:0;">
-            <div style="font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(r.name || ghin)} <span style="font-weight:400; font-size:11px; color:var(--mutedText);">${gender ? `(${esc(gender)})` : ""}</span></div>
-            <div class="gpSub">${esc(subParts)}</div>
+            <div class="maListRow__col">${esc(r.name || ghin)}${genderTag}</div>
+            <div class="maListRow__subline">${esc(subParts)}</div>
           </div>
-          ${enrolledBadge}
+          ${indicator}
         </div>`;
       }).join("");
 
@@ -1200,15 +1194,6 @@ function renderTrayBody(){
           }
         };
       });
-      return;
-    }
-
-    if (state.activeTab === "self") {
-      el.trayBody.innerHTML = "";
-      if (!state.selfAutoLaunched) {
-        state.selfAutoLaunched = true;
-        setTimeout(() => { addSelf(); }, 0);
-      }
       return;
     }
 
@@ -1422,81 +1407,133 @@ function renderTrayBody(){
       const hintEl = document.getElementById("gpFavHint");
       if (hintEl) hintEl.classList.toggle("isHidden", !state.favBroadened);
 
+      // ── Shared helpers ──────────────────────────────────────────────────────
+      function avatarClass(gender) {
+        const g = safe(gender).toUpperCase();
+        return g === "M" ? "maListRow__avatar--m" : g === "F" ? "maListRow__avatar--f" : "maListRow__avatar--u";
+      }
+      function avatarInitials(name) {
+        const parts = safe(name).trim().split(/\s+/);
+        if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+        return safe(name).slice(0, 2).toUpperCase();
+      }
+      function buildAvatar(name, gender) {
+        return `<div class="maListRow__avatar ${avatarClass(gender)}" aria-hidden="true">${esc(avatarInitials(name))}</div>`;
+      }
+      function buildIndicator(enrolled) {
+        return enrolled
+          ? `<button class="iconBtn gpIndicator--check" disabled aria-label="Enrolled"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></button>`
+          : `<button class="iconBtn gpIndicator--add" disabled aria-label="Add player"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>`;
+      }
+      function buildTeeSubline(lastTeeName) {
+        const tee = safe(lastTeeName);
+        return tee
+          ? `<div class="maListRow__subline">Previous Tee: ${esc(tee)}</div>`
+          : `<div class="maListRow__subline--empty">No tee history</div>`;
+      }
+      function buildGenderTag(gender) {
+        const g = safe(gender);
+        return g ? ` <span style="font-weight:400; color:var(--mutedText);">(${esc(g)})</span>` : "";
+      }
+
+      // ── "You" pinned row ────────────────────────────────────────────────────
+      const userGHIN = safe(state.context?.userGHIN || "");
+      const userName = safe(state.context?.userName || "");
+      const userGender = safe(state.context?.userGender || state.context?.gender || "M");
+      const youEnrolled = userGHIN ? enrolledSet.has(userGHIN) : false;
+      const youLastTee = userGHIN
+        ? getFavoriteLastTee((state.favorites || []).find(f => safe(f.playerGHIN) === userGHIN) || {})
+        : "";
+
+      const youRow = userGHIN ? `
+        <div class="maListRow gpRow maListRow--pinned ${youEnrolled ? "maListRow--enrolled" : "gpRowClickable"}" data-fav-ghin="${esc(userGHIN)}" data-act="addfav" data-disabled="${youEnrolled ? "1" : "0"}">
+          ${buildAvatar(userName, userGender)}
+          <div class="maListRow__col" style="flex:1; min-width:0;">
+            <div class="maListRow__col">${esc(userName)}${buildGenderTag(userGender)}<span class="maListRow__pinnedLabel">You</span></div>
+            ${buildTeeSubline(youLastTee)}
+          </div>
+          ${buildIndicator(youEnrolled)}
+        </div>` : "";
+
       if (!state.multiAddMode) {
+        // ── Single-add mode ──────────────────────────────────────────────────
         const favRows = filtered.map((f) => {
           const g = safe(f.playerGHIN);
           const n = safe(f.name || f.playerName);
           const enrolled = enrolledSet.has(g);
-          const hi = safe(f.hi || f.HI || "");
-          const lastCourse = safe(f.lastCourse?.courseName || f.courseName || "");
-          const subParts = [hi && `HI ${hi}`, lastCourse].filter(Boolean).join(" · ");
+          const gender = safe(f.gender || "");
+          const lastTee = getFavoriteLastTee(f);
 
-          const enrolledBadge = enrolled
-            ? `<span class="gpEnrolledMark" style="font-size:10px; font-weight:700; flex-shrink:0; color:#1f6fd6;">&#10003; Enrolled</span>`
-            : "";
-
-          return `<div class="maListRow gpRow ${enrolled ? "" : "gpRowClickable"}" data-fav-ghin="${esc(g)}" data-act="addfav" data-disabled="${enrolled ? "1" : "0"}" style="${enrolled ? "opacity:.65; cursor:default;" : ""}">
+          return `<div class="maListRow gpRow ${enrolled ? "maListRow--enrolled" : "gpRowClickable"}" data-fav-ghin="${esc(g)}" data-act="addfav" data-disabled="${enrolled ? "1" : "0"}">
+            ${buildAvatar(n, gender)}
             <div class="maListRow__col" style="flex:1; min-width:0;">
-              <div style="font-size:12px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(n)}</div>
-              <div class="gpSub">${esc(subParts)}</div>
+              <div class="maListRow__col">${esc(n)}${buildGenderTag(gender)}</div>
+              ${buildTeeSubline(lastTee)}
             </div>
-            ${enrolledBadge}
+            ${buildIndicator(enrolled)}
           </div>`;
         }).join("");
 
         if (el.trayCount) el.trayCount.textContent = filtered.length ? `${filtered.length} favorites` : "";
 
-        el.trayBody.innerHTML = `<div class="maListRows">${favRows || `<div class="gpEmpty">No favorites found.</div>`}</div>`;
+        el.trayBody.innerHTML = `<div class="maListRows">${youRow}${favRows || `<div class="gpEmpty">No favorites found.</div>`}</div>`;
 
         el.trayBody.querySelectorAll("[data-act='addfav']").forEach(r => r.onclick = (e) => {
           if (r.getAttribute("data-disabled") === "1") return;
+          if (r.getAttribute("data-fav-ghin") === userGHIN) { addSelf(); return; }
           onAddFavoriteRow(e);
         });
         return;
       }
 
+      // ── Multi-add mode ───────────────────────────────────────────────────────
       const visibleSelectable = filtered
         .map(f => safe(f.playerGHIN))
         .filter(Boolean)
         .filter(ghin => !enrolledSet.has(ghin));
 
       const allSelected = visibleSelectable.length > 0 && visibleSelectable.every(ghin => isFavoriteSelected(ghin));
-      const hdrToggleText = allSelected ? "Clear" : "All";
+      const toggleText = allSelected ? "Clear All" : "Select All";
+
+      // "You" row in multi-add — same as regular favorite row
+      const youSelectedMulti = userGHIN ? isFavoriteSelected(userGHIN) : false;
+      const youMultiRow = userGHIN ? `
+        <div class="maListRow gpRow maListRow--pinned ${youEnrolled ? "maListRow--enrolled" : "gpRowClickable"} ${youSelectedMulti ? "maListRow--selected" : ""}" data-fav-ghin="${esc(userGHIN)}" data-act="multifav" data-disabled="${youEnrolled ? "1" : "0"}">
+          <div class="maCheckbox ${youSelectedMulti ? "is-checked" : ""} ${youEnrolled ? "is-disabled" : ""}"></div>
+          ${buildAvatar(userName, userGender)}
+          <div class="maListRow__col" style="flex:1; min-width:0;">
+            <div class="maListRow__col">${esc(userName)}${buildGenderTag(userGender)}<span class="maListRow__pinnedLabel">You</span></div>
+            ${buildTeeSubline(youLastTee)}
+          </div>
+          ${youEnrolled ? buildIndicator(true) : ""}
+        </div>` : "";
 
       const favRows = filtered.map((f) => {
         const g = safe(f.playerGHIN);
         const n = safe(f.name || f.playerName);
         const enrolled = enrolledSet.has(g);
         const selected = isFavoriteSelected(g);
+        const gender = safe(f.gender || "");
         const lastTee = getFavoriteLastTee(f);
-        const checkIcon = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
-        const checkIconSm = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
 
-        return `<div class="maListRow gpRow gpRow--favMulti ${selected ? "is-multiSelected" : ""} ${enrolled ? "is-multiDisabled" : "gpRowClickable"}" data-fav-ghin="${esc(g)}" data-act="multifav" data-disabled="${enrolled ? "1" : "0"}">
-          <div class="maListRow__col">
-            <button type="button" class="gpMultiCheck ${selected ? "is-on" : ""}" ${enrolled ? "disabled" : ""} aria-label="${selected ? "Deselect player" : "Select player"}">${selected ? checkIconSm : ""}</button>
+        return `<div class="maListRow gpRow ${selected ? "maListRow--selected" : ""} ${enrolled ? "maListRow--enrolled" : "gpRowClickable"}" data-fav-ghin="${esc(g)}" data-act="multifav" data-disabled="${enrolled ? "1" : "0"}">
+          <div class="maCheckbox ${selected ? "is-checked" : ""} ${enrolled ? "is-disabled" : ""}"></div>
+          ${buildAvatar(n, gender)}
+          <div class="maListRow__col" style="flex:1; min-width:0;">
+            <div class="maListRow__col">${esc(n)}${buildGenderTag(gender)}</div>
+            ${buildTeeSubline(lastTee)}
           </div>
-          <div class="maListRow__col">
-            ${esc(n)}
-            <div class="maListRow__col--muted gpLastTee">${esc(lastTee || "—")}</div>
-          </div>
-          <div class="maListRow__col maListRow__col--right">${esc(f.gender || "")}</div>
-          <div class="maListRow__col maListRow__col--right gpEnrolledMark">${enrolled ? checkIcon : ""}</div>
+          ${enrolled ? buildIndicator(true) : ""}
         </div>`;
       }).join("");
 
-      el.trayBody.innerHTML = `<section class="maPanel">
-        <div class="maListRow maListRow--hdr gpRow--favMulti">
-          <div class="maListRow__col"><button type="button" id="gpHdrToggleAll" class="gpMultiHdrToggle">${hdrToggleText}</button></div>
-          <div class="maListRow__col">Favorites</div>
-          <div class="maListRow__col maListRow__col--right">G</div>
-          <div class="maListRow__col maListRow__col--right">In</div>
+      el.trayBody.innerHTML = `
+        <div class="gpMultiSelectToggle">
+          <span class="gpMultiSelectToggle__text" id="gpToggleAllText">${toggleText}</span>
         </div>
-        <div class="maListRows">${favRows || `<div class="gpEmpty">No favorites found.</div>`}</div>
-      </section>`;
+        <div class="maListRows">${youMultiRow}${favRows || `<div class="gpEmpty">No favorites found.</div>`}</div>`;
 
-      const hdrBtn = document.getElementById("gpHdrToggleAll");
-      if (hdrBtn) hdrBtn.onclick = toggleAllVisibleFavorites;
+      document.getElementById("gpToggleAllText")?.addEventListener("click", toggleAllVisibleFavorites);
 
       el.trayBody.querySelectorAll("[data-act='multifav']").forEach(r => {
         r.onclick = () => {
