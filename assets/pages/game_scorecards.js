@@ -354,7 +354,7 @@ function renderGroup(group) {
     { icon: "🖨", label: "Orientation",       detail: "Select Landscape" },
     { icon: "📄", label: "Paper",             detail: "Select Letter size (8.5 × 11)" },
     { icon: "☐",  label: "Headers & Footers", detail: 'Uncheck "Headers and Footers"' },
-    { icon: "📄", label: "Zoom",             detail: "Adjust Zoom settings" },
+    { icon: "🔍", label: "Zoom",             detail: "Adjust Zoom settings (~85%)" },
   ];
 
   function scEnsurePrintModal() {
