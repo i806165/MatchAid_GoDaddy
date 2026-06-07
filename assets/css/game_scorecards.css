@@ -298,8 +298,7 @@
 
   .scHost {
     gap: 0 !important;
-    transform: scale(0.85);
-    transform-origin: top left;
+    width: 100%;
   }
 
   .scPage {
