@@ -73,32 +73,6 @@ return [
             ],
         ],
 
-        // ── SELF ──────────────────────────────────────────────────────────────
-        [
-            'label'    => 'Self',
-            'sections' => [
-                [
-                    'icon'    => 'target',
-                    'heading' => 'Purpose',
-                    'body'    => 'A simple affordance to add yourself to the game. Your player record is pre-filled from your logged-in identity.',
-                ],
-                [
-                    'icon'    => 'list',
-                    'heading' => 'Key Fields',
-                    'bullets' => [
-                        'Each course tee set and its slope, rating, yardage and course handicap are pre-filled automatically.',
-                    ],
-                ],
-                [
-                    'icon'    => 'route',
-                    'heading' => 'Available Actions',
-                    'bullets' => [
-                        'Add yourself — tap Add to trigger the tee picker and confirm your tee assignment before saving.',
-                    ],
-                ],
-            ],
-        ],
-
         // ── FAVORITES ─────────────────────────────────────────────────────────
         [
             'label'    => 'Favorites',
@@ -238,24 +212,27 @@ return [
                     'heading' => 'Key Fields',
                     'bullets' => [
                         [
-                            'bullet'     => 'Import from external list — bulk-add players by entering or pasting GHIN numbers.',
+                            'bullet'     => 'Import from external list — bulk-add players by entering or pasting email or Golf Network IDs.',
                             'subbullets' => [
-                                'Enter one GHIN number per line.',
-                                'Validate the list before committing — invalid or unrecognised numbers are flagged.',
+                                'Enter one Golf Network number or Email Address, separated by semi-colon.',
+                                'EMail addresses are resolved from your Favorite Players. Adjust EMail in the Favorite Player profile if needed.',
+                                'The list is validated before committing — invalid or unrecognised entries are flagged.  Retry and fix if needed',
                             ],
                         ],
                         [
                             'bullet'     => 'Copy from existing game',
                             'subbullets' => [
-                                'select a previous game to copy its entire roster.',
+                                'Select a previous game to copy its entire roster.',
+                                'Same course - The players tee-set selections are brough over like for like.',
+                                'Different course - The players tee-set selections are resolved to new course (see below).',
                             ],
                         ],
                         [
                             'bullet'     => 'Automated tee set resolution rules.',
                             'subbullets' => [
                                 'The tee-set used by the player the last time he/she played the course,',
-                                'The tee-set with the yardage that is the closest to the yardage in the players app settings',
-                                'The fallback tee-set chosen in the tee set selection is applied to any player whose tee cannot be resolved automatically.',
+                                'The tee-set with the yardage that is the closest to the yardage selected by the player (app settings)',
+                                'The fallback tee-set is applied to any player whose tee cannot be resolved.',
                             ],
                         ],
                     ],
@@ -264,7 +241,7 @@ return [
                     'icon'    => 'route',
                     'heading' => 'Available Actions',
                     'bullets' => [
-                        'Import from GHIN list — paste GHIN numbers, tap Validate, then tap Commit to add all valid players in one step.',
+                        'Import from Email or Golf Network list — paste data, tap Validate, then tap Commit to add all valid players in one step.',
                         'Import from existing game — select a source game from the list, review the resolved roster, then confirm to import.',
                         'Force Assign — available in the tee picker during import to override the tee hierarchy and apply one tee to all players.',
                     ],
