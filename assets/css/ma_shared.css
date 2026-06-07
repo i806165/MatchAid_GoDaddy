@@ -95,6 +95,8 @@
   --chromeSubtitleText: rgba(255,255,255,.82);
   --chromeTitleSize: 18px;
   --chromeSubtitleSize: 12px;
+  --modalTitleSize: 16px;
+  --modalSubTitleSize: 12px;
   --chromeBtnFontSize: 18px;
 
   /* --- Chrome Status Line --- */
@@ -1144,14 +1146,14 @@ textarea {
 }
 
 .maModal__title {
-  font-size: var(--chromeSubtitleSize);
+  font-size: var(--modalTitleSize);
   font-weight: 900;
   letter-spacing: .2px;
 }
 
 .maModal__subtitle {
   margin-top: 2px;
-  font-size: 16px;
+  font-size: var(--modalSubTitleSize);
   color: rgba(255,255,255,.92);
   line-height: 1.1;
   white-space: nowrap;
