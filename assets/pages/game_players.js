@@ -735,9 +735,15 @@
       MA.setStatus("Manage Teams module not loaded.", "warn");
       return;
     }
+    const teamConfig = (window.__MA_INIT__ || {}).teamConfig || {
+      teams: [
+        { id: "T1", name: "Red",  color: "red",  sort: 1 },
+        { id: "T2", name: "Blue", color: "blue", sort: 2 },
+      ]
+    };
     MA.manageTeams.open({
       players:    state.players,
-      teamConfig: (window.__MA_INIT__ || {}).teamConfig || null,
+      teamConfig,
       apiBase:    MA.paths?.apiGamePlayers || "/api/game_players",
       onApply: ({ players, teamConfig }) => {
         if (Array.isArray(players) && players.length) {
