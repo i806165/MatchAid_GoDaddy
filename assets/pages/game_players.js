@@ -919,10 +919,10 @@
       gpTc2.className = "gpTrayTabControls";
       el.trayControls.appendChild(gpTc2);
       gpTc2.innerHTML = `<div class="maFieldRow" style="flex-wrap:nowrap; align-items:center;">
-        <div class="maField gpFieldGroup" style="flex:0 0 auto;">
-          <select id="gpFavGroup" class="maTextInput">${opts}</select>
-        </div>
-        <div class="maField" style="flex:1 1 auto; min-width:0;">
+          <div class="maField" style="flex:1 1 0; min-width:0;">
+            <select id="gpFavGroup" class="maTextInput">${opts}</select>
+          </div>
+          <div class="maField" style="flex:1 1 0; min-width:0;">
           <div class="maInputWrap gpInputClearWrap">
             <input id="gpFavFilter" class="maTextInput" placeholder="Player name" value="${esc(state.favNameFilter)}">
             <button id="gpFavSearchClear" class="clearBtn ${state.favNameFilter ? "" : "isHidden"}" type="button" aria-label="Clear filter">×</button>
