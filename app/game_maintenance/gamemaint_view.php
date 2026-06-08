@@ -67,6 +67,8 @@
             </div>
           </div>
 
+          <div class="gmLogisticsDivider" aria-hidden="true"></div>
+
           <div class="gmLogisticsHow">
             <div class="maField gmLogisticsField gmLogisticsField--method">
               <label class="maLabel" for="gmTOMethod">Tee Off Method</label>
