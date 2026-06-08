@@ -67,6 +67,7 @@
             </div>
 
             <div class="maField gmHolesField">
+              <label class="maLabel">Holes</label>
               <div class="gmChoiceRow" id="gmHolesRow" role="group" aria-label="Holes">
                 <button type="button" class="gmChoiceBtn" data-value="All 18">All 18</button>
                 <button type="button" class="gmChoiceBtn" data-value="F9">F9</button>
