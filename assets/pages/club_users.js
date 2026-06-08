@@ -24,6 +24,8 @@
   const state = {
     users:      [],
     nameFilter: "",
+    sortKey:    "name",
+    sortDir:    "asc",
     context:    {
       clubId:       "",
       clubName:     "",
@@ -40,6 +42,7 @@
     tbody:       document.getElementById("cuTbody"),
     mobileList:  document.getElementById("cuMobileList"),
     empty:       document.getElementById("cuEmpty"),
+    cardSub:     document.getElementById("cuCardSub"),
   };
 
   // ── Utility ────────────────────────────────────────────────────
@@ -81,6 +84,58 @@
       : state.users;
   }
 
+  // ── Sort ───────────────────────────────────────────────────────
+  function isNumericKey(key) {
+    return key === "favPlayerCount" || key === "gameCount";
+  }
+
+  function labelForKey(key) {
+    return {
+      name:           "Name",
+      ghin:           "GHIN",
+      email:          "Email",
+      mobilePhone:    "Mobile Phone",
+      contactMethod:  "Contact Method",
+      favPlayerCount: "Favorites",
+      gameCount:      "Games",
+      createdDate:    "Created",
+      updatedDate:    "Last Activity",
+    }[key] || "Value";
+  }
+
+  function applySort(rows) {
+    const key = state.sortKey;
+    const dir = state.sortDir === "desc" ? -1 : 1;
+
+    return [...rows].sort((a, b) => {
+      const av = a[key];
+      const bv = b[key];
+
+      if (isNumericKey(key)) {
+        return (Number(av ?? 0) - Number(bv ?? 0)) * dir;
+      }
+
+      return safeStr(av).localeCompare(safeStr(bv)) * dir;
+    });
+  }
+
+  function setSort(key, dir) {
+    state.sortKey = key;
+    state.sortDir = dir === "desc" ? "desc" : "asc";
+    render();
+  }
+
+  function buildSubtitle(visibleCount, totalCount) {
+    const label    = labelForKey(state.sortKey);
+    const dirLabel = isNumericKey(state.sortKey)
+      ? (state.sortDir === "desc" ? "High to Low" : "Low to High")
+      : (state.sortDir === "desc" ? "Z to A"      : "A to Z");
+    const countStr = visibleCount === totalCount
+      ? `${totalCount} user${totalCount !== 1 ? "s" : ""}`
+      : `${visibleCount} of ${totalCount}`;
+    return `${countStr} · Sorted by ${label} ${dirLabel}`;
+  }
+
   // ── Render desktop table ────────────────────────────────────────
   function renderDesktop(visible) {
     if (!el.tbody) return;
@@ -92,13 +147,15 @@
 
     el.tbody.innerHTML = visible.map(u => `
       <tr>
-        <td>${esc(dash(u.name))}</td>
-        <td class="cuMuted">${esc(dash(u.ghin))}</td>
-        <td>${esc(dash(u.email))}</td>
-        <td class="cuMuted">${esc(fmtPhone(u.mobilePhone))}</td>
-        <td>${esc(dash(u.contactMethod))}</td>
-        <td class="cuMuted">${esc(fmtDateTime(u.createdDate))}</td>
-        <td class="cuMuted">${esc(fmtDateTime(u.updatedDate))}</td>
+        <td data-cu-menu data-sort-key="name"          data-display-value="${esc(dash(u.name))}">${esc(dash(u.name))}</td>
+        <td data-cu-menu data-sort-key="ghin"          data-display-value="${esc(dash(u.ghin))}" class="cuMuted">${esc(dash(u.ghin))}</td>
+        <td data-cu-menu data-sort-key="email"         data-display-value="${esc(dash(u.email))}">${esc(dash(u.email))}</td>
+        <td data-cu-menu data-sort-key="mobilePhone"   data-display-value="${esc(fmtPhone(u.mobilePhone))}" class="cuMuted">${esc(fmtPhone(u.mobilePhone))}</td>
+        <td data-cu-menu data-sort-key="contactMethod" data-display-value="${esc(dash(u.contactMethod))}">${esc(dash(u.contactMethod))}</td>
+        <td data-cu-menu data-sort-key="favPlayerCount" data-display-value="${esc(String(u.favPlayerCount ?? 0))}" class="cuMuted cuRight">${esc(String(u.favPlayerCount ?? 0))}</td>
+        <td data-cu-menu data-sort-key="gameCount"     data-display-value="${esc(String(u.gameCount ?? 0))}" class="cuMuted cuRight">${esc(String(u.gameCount ?? 0))}</td>
+        <td data-cu-menu data-sort-key="createdDate"   data-display-value="${esc(dash(u.createdDate))}" class="cuMuted">${esc(fmtDateTime(u.createdDate))}</td>
+        <td data-cu-menu data-sort-key="updatedDate"   data-display-value="${esc(dash(u.updatedDate))}" class="cuMuted">${esc(fmtDateTime(u.updatedDate))}</td>
       </tr>
     `).join("");
   }
@@ -134,6 +191,14 @@
           <span class="cuCard__label">Contact</span>
           <span class="cuCard__value">${esc(u.contactMethod)}</span>
         </div>` : ""}
+        <div class="cuCard__line">
+          <span class="cuCard__label">Favorites</span>
+          <span class="cuCard__value">${esc(String(u.favPlayerCount ?? 0))}</span>
+        </div>
+        <div class="cuCard__line">
+          <span class="cuCard__label">Games</span>
+          <span class="cuCard__value">${esc(String(u.gameCount ?? 0))}</span>
+        </div>
         <div class="cuCard__date">Last activity: ${esc(fmtDateTime(u.updatedDate))}</div>
       </div>
     `).join("");
@@ -141,13 +206,12 @@
 
   // ── Master render ───────────────────────────────────────────────
   function render() {
-    const visible = getVisible();
+    const filtered = getVisible();
+    const visible  = applySort(filtered);
 
-    // Count
+    // Count / subtitle
     if (el.userCount) {
-      el.userCount.textContent = visible.length === state.users.length
-        ? `${state.users.length} user${state.users.length !== 1 ? "s" : ""}`
-        : `${visible.length} of ${state.users.length}`;
+      el.userCount.textContent = buildSubtitle(visible.length, state.users.length);
     }
 
     // Empty state
@@ -208,6 +272,37 @@
       el.searchClear.classList.add("isHidden");
       render();
     });
+
+    el.tbody?.addEventListener("click", onBodyClick);
+  }
+
+  // ── Cell-click actions menu (mirrors club_demand.js pattern) ───
+  function onBodyClick(e) {
+    const cell = e.target.closest("[data-cu-menu]");
+    if (!cell || !el.tbody?.contains(cell)) return;
+    openCellMenu(cell);
+  }
+
+  function openCellMenu(cell) {
+    const ui = window.MA?.ui;
+    if (typeof ui?.openActionsMenu !== "function") return;
+
+    const sortKey    = safeStr(cell.dataset.sortKey);
+    const displayVal = safeStr(cell.dataset.displayValue) || safeStr(cell.textContent);
+    const label      = labelForKey(sortKey);
+    const actions    = [];
+
+    if (sortKey) {
+      if (isNumericKey(sortKey)) {
+        actions.push({ label: `Sort ${label} Low to High`, action: () => setSort(sortKey, "asc")  });
+        actions.push({ label: `Sort ${label} High to Low`, action: () => setSort(sortKey, "desc") });
+      } else {
+        actions.push({ label: `Sort ${label} A to Z`, action: () => setSort(sortKey, "asc")  });
+        actions.push({ label: `Sort ${label} Z to A`, action: () => setSort(sortKey, "desc") });
+      }
+    }
+
+    ui.openActionsMenu(displayVal || label, actions, label);
   }
 
   // ── Boot ───────────────────────────────────────────────────────

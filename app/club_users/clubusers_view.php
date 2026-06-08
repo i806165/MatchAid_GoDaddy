@@ -33,6 +33,8 @@
           <th>Email</th>
           <th>Mobile Phone</th>
           <th>Contact Method</th>
+          <th class="cuRight">Favorites</th>
+          <th class="cuRight">Games</th>
           <th>Created</th>
           <th>Last Activity</th>
         </tr>
