@@ -15,26 +15,23 @@
 
         <div class="maFieldRow">
           <div class="maField">
-            <label class="maLabel" for="gmTitle">Title</label>
-            <input id="gmTitle" class="maTextInput" type="text" maxlength="120" autocomplete="off" />
-          </div>
-
-          <div class="maField" style="flex:0 0 180px;">
-            <label class="maLabel" for="gmGGID">GGID</label>
-            <input id="gmGGID" class="maTextInput" type="text" readonly />
+            <input id="gmTitle" class="maTextInput" type="text" maxlength="120" autocomplete="off" placeholder="Enter game title" />
           </div>
         </div>
 
         <div class="gmCourseRow" style="margin-top:12px;">
-          <div class="gmCourseSummary" id="gmCourseSummary">
-            <div class="gmCourseLine1" id="gmCourseLine1">No course selected.</div>
-            <div class="gmCourseLine2" id="gmCourseLine2"></div>
-          </div>
-
-          <div class="gmCourseBtns">
-            <button type="button" class="btn btnSecondary" id="gmPickCourseBtn">Change course</button>
-            <button type="button" class="btn btnTentative" id="gmCourseConfirmBtn">Tentative</button>
-          </div>
+          <button type="button" class="gmCoursePicker" id="gmPickCourseBtn" aria-label="Choose course">
+            <div class="gmCoursePickerContent">
+              <div class="gmCourseLine1" id="gmCourseLine1">Click to choose course</div>
+              <div class="gmCourseLine2" id="gmCourseLine2"></div>
+            </div>
+            <div class="gmCoursePickerChevron" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--brandColor3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </div>
+          </button>
+          <button type="button" class="btn btnTentative" id="gmCourseConfirmBtn">Tentative</button>
         </div>
 
 
@@ -49,51 +46,55 @@
 
       <div class="maCard__body">
 
-        <div class="gmDateTimeRow">
-          <div class="maField gmDateField">
-            <label class="maLabel" for="gmPlayDate">Play Date</label>
-            <input id="gmPlayDate" class="maTextInput" type="date" />
+        <div class="gmLogisticsTwoCol">
+
+          <div class="gmLogisticsWhen">
+            <div class="maField gmDateField">
+              <label class="maLabel" for="gmPlayDate">Play Date</label>
+              <input id="gmPlayDate" class="maTextInput" type="date" />
+            </div>
+
+            <div class="maField gmPlayTimeField">
+              <label class="maLabel">Play Time</label>
+              <div class="gmTimeRow">
+                <select id="gmPlayHour" class="maTextInput gmTimeSel" aria-label="Hour"></select>
+                <select id="gmPlayMin" class="maTextInput gmTimeSel" aria-label="Minute"></select>
+                <select id="gmPlayAmpm" class="maTextInput gmTimeSel" aria-label="AM/PM">
+                  <option value="AM">AM</option>
+                  <option value="PM">PM</option>
+                </select>
+              </div>
+            </div>
           </div>
 
-          <div class="maField gmPlayTimeField">
-            <label class="maLabel">Play Time</label>
-            <div class="gmTimeRow">
-              <select id="gmPlayHour" class="maTextInput gmTimeSel" aria-label="Hour"></select>
-              <select id="gmPlayMin" class="maTextInput gmTimeSel" aria-label="Minute"></select>
-              <select id="gmPlayAmpm" class="maTextInput gmTimeSel" aria-label="AM/PM">
-                <option value="AM">AM</option>
-                <option value="PM">PM</option>
+          <div class="gmLogisticsHow">
+            <div class="maField gmLogisticsField gmLogisticsField--method">
+              <label class="maLabel" for="gmTOMethod">Tee Off Method</label>
+              <select id="gmTOMethod" class="maTextInput">
+                <option value="TeeTimes">Tee Times</option>
+                <option value="ShotGun">ShotGun</option>
               </select>
             </div>
-          </div>
-        </div>
 
-        <div class="gmLogisticsRow">
-          <div class="maField gmLogisticsField gmLogisticsField--method">
-            <label class="maLabel" for="gmTOMethod">Tee Off Method</label>
-            <select id="gmTOMethod" class="maTextInput">
-              <option value="TeeTimes">Tee Times</option>
-              <option value="ShotGun">ShotGun</option>
-            </select>
-          </div>
+            <div class="maField gmLogisticsField gmLogisticsField--count">
+              <label class="maLabel" for="gmTeeCount" id="gmCountLabel">Tee Time Count</label>
+              <div class="gmStepper">
+                <button type="button" class="btn btnTertiary gmStepBtn" data-step="-1" data-target="gmTeeCount" aria-label="Decrement">−</button>
+                <input id="gmTeeCount" class="maTextInput gmStepInput" type="number" min="1" max="50" step="1" />
+                <button type="button" class="btn btnTertiary gmStepBtn" data-step="1" data-target="gmTeeCount" aria-label="Increment">+</button>
+              </div>
+            </div>
 
-          <div class="maField gmLogisticsField gmLogisticsField--count">
-            <label class="maLabel" for="gmTeeCount" id="gmCountLabel">Tee Time Count</label>
-            <div class="gmStepper">
-              <button type="button" class="btn btnTertiary gmStepBtn" data-step="-1" data-target="gmTeeCount" aria-label="Decrement">−</button>
-              <input id="gmTeeCount" class="maTextInput gmStepInput" type="number" min="1" max="50" step="1" />
-              <button type="button" class="btn btnTertiary gmStepBtn" data-step="1" data-target="gmTeeCount" aria-label="Increment">+</button>
+            <div class="maField gmLogisticsField gmLogisticsField--interval" id="gmIntervalField">
+              <label class="maLabel" for="gmTeeInterval" id="gmIntervalLabel">Tee Time Interval</label>
+              <div class="gmStepper">
+                <button type="button" class="btn btnTertiary gmStepBtn" data-step="-1" data-target="gmTeeInterval" aria-label="Decrement">−</button>
+                <input id="gmTeeInterval" class="maTextInput gmStepInput" type="number" min="1" max="60" step="1" />
+                <button type="button" class="btn btnTertiary gmStepBtn" data-step="1" data-target="gmTeeInterval" aria-label="Increment">+</button>
+              </div>
             </div>
           </div>
 
-          <div class="maField gmLogisticsField gmLogisticsField--interval" id="gmIntervalField">
-            <label class="maLabel" for="gmTeeInterval" id="gmIntervalLabel">Tee Time Interval</label>
-            <div class="gmStepper">
-              <button type="button" class="btn btnTertiary gmStepBtn" data-step="-1" data-target="gmTeeInterval" aria-label="Decrement">−</button>
-              <input id="gmTeeInterval" class="maTextInput gmStepInput" type="number" min="1" max="60" step="1" />
-              <button type="button" class="btn btnTertiary gmStepBtn" data-step="1" data-target="gmTeeInterval" aria-label="Increment">+</button>
-            </div>
-          </div>
         </div>
 
         <div class="gmHint" id="gmTeePreviewHint"></div>

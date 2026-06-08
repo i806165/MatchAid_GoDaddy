@@ -13,38 +13,54 @@
 }
 
 /* ==========================================================================
-   Game card / course summary
+   Game card / course summary — picker style
    ========================================================================== */
 
 .gmCourseRow {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 8px;
+  flex-wrap: nowrap;
 }
 
-.gmCourseRow .gmCourseSummary {
+.gmCoursePicker {
   flex: 1 1 auto;
   min-width: 0;
-}
-
-.gmCourseBtns {
-  flex: 0 0 auto;
   display: flex;
-  gap: 8px;
-}
-
-.gmCourseSummary{
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 4px;
-  min-height: var(--btnHeight);
-  padding: 10px 12px;
+  align-items: stretch;
+  height: var(--btnHeight);
   border: 1px solid var(--controlBorder);
   border-radius: var(--controlRadius);
   background: #fff;
+  cursor: pointer;
+  padding: 0;
+  font-family: var(--fontFamilyBase);
+  text-align: left;
+  overflow: hidden;
   box-sizing: border-box;
+}
+
+.gmCoursePicker:hover {
+  border-color: rgba(0,0,0,.25);
+}
+
+.gmCoursePickerContent {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 0 12px;
+}
+
+.gmCoursePickerChevron {
+  flex: 0 0 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-left: 1px solid var(--controlBorder);
+  background: #fafaf8;
 }
 
 .gmCourseLine1{
@@ -62,14 +78,34 @@
 }
 
 /* ==========================================================================
-   Logistics — Play Date / Play Time row
+   Logistics — two-column grid (When / How)
    ========================================================================== */
 
-.gmDateTimeRow {
+.gmLogisticsTwoCol {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 16px;
-  align-items: end;
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+  gap: 16px 24px;
+  align-items: start;
+  position: relative;
+}
+
+.gmLogisticsTwoCol::after {
+  content: "";
+  position: absolute;
+  left: calc(50% - 1px);
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--borderSubtle);
+  pointer-events: none;
+}
+
+.gmLogisticsWhen,
+.gmLogisticsHow {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
 }
 
 .gmDateField,
@@ -91,15 +127,8 @@
 }
 
 /* ==========================================================================
-   Logistics — Tee Off / Count / Interval row
+   Logistics — Tee Off / Count / Interval fields
    ========================================================================== */
-
-.gmLogisticsRow{
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-  align-items: end;
-}
 
 .gmLogisticsField{
   min-width: 0;
@@ -304,27 +333,14 @@
    ========================================================================== */
 
 @media (max-width: 560px){
-  .gmDateTimeRow {
+  .gmLogisticsTwoCol {
     grid-template-columns: 1fr;
     gap: 10px;
   }
 
-  .gmLogisticsRow{
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
+  .gmLogisticsTwoCol::after {
+    display: none;
   }
-
-  .gmLogisticsField--method{
-    grid-column: 1 / -1;
-  }
-}
-
-@media (max-width: 640px){
-  .gmLogisticsRow{
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
 }
 
 /* ==========================================================================
