@@ -400,7 +400,7 @@
     background: rgba(255,255,255,.72);
     border: 1px solid rgba(0,0,0,.06);
     border-radius: 18px;
-    padding: 0 14px;
-    /* box-shadow: 0 10px 30px rgba(0,0,0,.08); */
+    padding: 14px 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.08);
   }
 }
