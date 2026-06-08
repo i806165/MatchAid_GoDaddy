@@ -61,7 +61,7 @@
     // Roster is now the permanent canvas — not a tray tab.
     const baseTabs = [
       { id: "favorites",label: "Favorites" },
-      { id: "ghin",     label: "GHIN"      },
+      { id: "ghin",     label: "Search"      },
       { id: "nonrated", label: "Non-Rated" },
     ];
     if (isImportDesktopEnabled()) baseTabs.push({ id: "import", label: "Import" });
