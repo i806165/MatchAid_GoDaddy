@@ -101,6 +101,12 @@
   min-width: 0;
 }
 
+.gmLogisticsWhen .maField,
+.gmLogisticsHow .maField {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
 .gmDateField,
 .gmPlayTimeField{
   min-width: 0;
@@ -108,7 +114,7 @@
 
 .gmTimeRow{
   display: grid;
-  grid-template-columns: repeat(3, minmax(72px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   align-items: center;
 }
