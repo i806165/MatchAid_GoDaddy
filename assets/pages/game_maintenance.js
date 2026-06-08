@@ -206,7 +206,7 @@
     modal.innerHTML = `
       <header class="maModal__hdr">
         <div class="maModal__titles">
-          <div class="maModal__title">Change Course and Convert Player Tee-Sets</div>
+          <div class="maModal__title">Course Changes and Tee-Set Conversions</div>
         </div>
       </header>
       <div class="maModal__body" id="gmBusyBody">
@@ -859,7 +859,7 @@
 
     setBusy(true);
     showSavingOverlay(courseChanging
-      ? "Saving game and updating player tees — please wait..."
+      ? "Saving game and converting player tees — please wait..."
       : "Saving game...");
 
     try {
@@ -917,6 +917,7 @@
               <div>${line1}</div>
               ${line2 ? `<div style="margin-top:8px;">${line2}</div>` : ""}
               <div style="margin-top:8px;">${line3}</div>
+              <div style="margin-top:8px;">You should also select &ldquo;Recalculate Handicaps&rdquo; from the ACTIONS menu after correcting/confirming player tee-sets.</div>
             </div>
             <div style="border-top:1px solid var(--border); padding-top:12px; display:flex; justify-content:flex-end;">
               <button type="button" class="btn btnSecondary" id="gmBusyOkBtn">OK</button>
