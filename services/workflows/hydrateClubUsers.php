@@ -5,6 +5,8 @@ declare(strict_types=1);
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Db.php";
 require_once MA_API_LIB . "/Logger.php";
+require_once MA_SERVICES . "/database/service_dbFavPlayers.php";
+require_once MA_SERVICES . "/database/service_dbGames.php";
 
 /**
  * hydrateClubUsers
@@ -121,16 +123,19 @@ function hydrateClubUsers(array $context): array {
 
     // Normalize — ensure all values are strings, never null
     $normalized = array_map(function (array $row): array {
+      $ghin = trim(strval($row["ghin"] ?? ""));
       return [
-        "ghin"          => trim(strval($row["ghin"]          ?? "")),
-        "name"          => trim(strval($row["name"]          ?? "")),
-        "fName"         => trim(strval($row["fName"]         ?? "")),
-        "lName"         => trim(strval($row["lName"]         ?? "")),
-        "email"         => trim(strval($row["email"]         ?? "")),
-        "mobilePhone"   => trim(strval($row["mobilePhone"]   ?? "")),
-        "contactMethod" => trim(strval($row["contactMethod"] ?? "")),
-        "createdDate"   => trim(strval($row["createdDate"]   ?? "")),
-        "updatedDate"   => trim(strval($row["updatedDate"]   ?? "")),
+        "ghin"           => $ghin,
+        "name"           => trim(strval($row["name"]          ?? "")),
+        "fName"          => trim(strval($row["fName"]         ?? "")),
+        "lName"          => trim(strval($row["lName"]         ?? "")),
+        "email"          => trim(strval($row["email"]         ?? "")),
+        "mobilePhone"    => trim(strval($row["mobilePhone"]   ?? "")),
+        "contactMethod"  => trim(strval($row["contactMethod"] ?? "")),
+        "createdDate"    => trim(strval($row["createdDate"]   ?? "")),
+        "updatedDate"    => trim(strval($row["updatedDate"]   ?? "")),
+        "favPlayerCount" => $ghin !== "" ? service_dbFavPlayers::getFavPlayerCountForUser($ghin) : 0,
+        "gameCount"      => $ghin !== "" ? ServiceDbGames::getGameCountForAdmin($ghin)           : 0,
       ];
     }, $rows);
 
