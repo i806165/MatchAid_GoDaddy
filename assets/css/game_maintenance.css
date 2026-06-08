@@ -108,11 +108,11 @@
 }
 
 .gmDateField,
-.gmPlayTimeField{
+.gmPlayTimeField {
   min-width: 0;
 }
 
-.gmTimeRow{
+.gmTimeRow {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
@@ -205,9 +205,18 @@
   margin: 0;
 }
 
-/* ==========================================================================
-   Choice pills / segmented selections
-   ========================================================================== */
+/* Holes field — inline label + pills on same row */
+.gmHolesField {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gmHolesField .maLabel {
+  margin: 0;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
 
 .gmChoiceRow{
   display: flex;
@@ -243,6 +252,19 @@
   font-size: 12px;
   font-weight: 800;
   color: var(--mutedText);
+}
+
+/* Count + Interval side by side, equal width */
+.gmStepperRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  align-items: start;
+}
+
+.gmStepperRow .maField {
+  flex: 0 0 auto;
+  min-width: 0;
 }
 
 /* ==========================================================================

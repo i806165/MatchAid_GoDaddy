@@ -65,6 +65,14 @@
                 </select>
               </div>
             </div>
+
+            <div class="maField gmHolesField">
+              <div class="gmChoiceRow" id="gmHolesRow" role="group" aria-label="Holes">
+                <button type="button" class="gmChoiceBtn" data-value="All 18">All 18</button>
+                <button type="button" class="gmChoiceBtn" data-value="F9">F9</button>
+                <button type="button" class="gmChoiceBtn" data-value="B9">B9</button>
+              </div>
+            </div>
           </div>
 
           <div class="gmLogisticsDivider" aria-hidden="true"></div>
@@ -78,38 +86,29 @@
               </select>
             </div>
 
-            <div class="maField gmLogisticsField gmLogisticsField--count">
-              <label class="maLabel" for="gmTeeCount" id="gmCountLabel">Tee Time Count</label>
-              <div class="gmStepper">
-                <button type="button" class="btn btnTertiary gmStepBtn" data-step="-1" data-target="gmTeeCount" aria-label="Decrement">−</button>
-                <input id="gmTeeCount" class="maTextInput gmStepInput" type="number" min="1" max="50" step="1" />
-                <button type="button" class="btn btnTertiary gmStepBtn" data-step="1" data-target="gmTeeCount" aria-label="Increment">+</button>
+            <div class="gmStepperRow">
+              <div class="maField gmLogisticsField gmLogisticsField--count">
+                <label class="maLabel" for="gmTeeCount" id="gmCountLabel">Tee Time Count</label>
+                <div class="gmStepper">
+                  <button type="button" class="btn btnTertiary gmStepBtn" data-step="-1" data-target="gmTeeCount" aria-label="Decrement">−</button>
+                  <input id="gmTeeCount" class="maTextInput gmStepInput" type="number" min="1" max="50" step="1" />
+                  <button type="button" class="btn btnTertiary gmStepBtn" data-step="1" data-target="gmTeeCount" aria-label="Increment">+</button>
+                </div>
+              </div>
+
+              <div class="maField gmLogisticsField gmLogisticsField--interval" id="gmIntervalField">
+                <label class="maLabel" for="gmTeeInterval" id="gmIntervalLabel">Tee Time Interval</label>
+                <div class="gmStepper">
+                  <button type="button" class="btn btnTertiary gmStepBtn" data-step="-1" data-target="gmTeeInterval" aria-label="Decrement">−</button>
+                  <input id="gmTeeInterval" class="maTextInput gmStepInput" type="number" min="1" max="60" step="1" />
+                  <button type="button" class="btn btnTertiary gmStepBtn" data-step="1" data-target="gmTeeInterval" aria-label="Increment">+</button>
+                </div>
               </div>
             </div>
 
-            <div class="maField gmLogisticsField gmLogisticsField--interval" id="gmIntervalField">
-              <label class="maLabel" for="gmTeeInterval" id="gmIntervalLabel">Tee Time Interval</label>
-              <div class="gmStepper">
-                <button type="button" class="btn btnTertiary gmStepBtn" data-step="-1" data-target="gmTeeInterval" aria-label="Decrement">−</button>
-                <input id="gmTeeInterval" class="maTextInput gmStepInput" type="number" min="1" max="60" step="1" />
-                <button type="button" class="btn btnTertiary gmStepBtn" data-step="1" data-target="gmTeeInterval" aria-label="Increment">+</button>
-              </div>
-            </div>
+            <div class="gmHint" id="gmTeePreviewHint"></div>
           </div>
 
-        </div>
-
-        <div class="gmHint" id="gmTeePreviewHint"></div>
-
-        <div class="maFieldRow">
-          <div class="maField">
-            <label class="maLabel">Holes</label>
-            <div class="gmChoiceRow" id="gmHolesRow" role="group" aria-label="Holes">
-              <button type="button" class="gmChoiceBtn" data-value="All 18">All 18</button>
-              <button type="button" class="gmChoiceBtn" data-value="F9">F9</button>
-              <button type="button" class="gmChoiceBtn" data-value="B9">B9</button>
-            </div>
-          </div>
         </div>
 
       </div>
