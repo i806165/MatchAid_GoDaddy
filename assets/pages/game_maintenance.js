@@ -210,7 +210,7 @@
         </div>
       </header>
       <div class="maModal__body" id="gmBusyBody">
-        <p id="gmBusyMessage" style="font-size:13px; color:var(--mutedText); line-height:1.6;"></p>
+        <p id="gmBusyMessage" style="line-height:1.6;"></p>
       </div>
     `;
 
@@ -222,7 +222,7 @@
     ensureSavingOverlay();
     const overlay = document.getElementById('gmBusyOverlay');
     const body = document.getElementById('gmBusyBody');
-    if (body) body.innerHTML = `<p style="font-size:13px; color:var(--mutedText); line-height:1.6;">${message || 'Saving...'}</p>`;
+    if (body) body.innerHTML = `<p style="line-height:1.6;">${message || 'Saving...'}</p>`;
     if (overlay) overlay.classList.add('is-open');
   }
 
@@ -892,7 +892,7 @@
               <div style="font-size:11px; color:var(--mutedText); margin-top:3px;">Resolved</div>
             </div>
             <div style="background:var(--panelControlsBg); border-radius:var(--radiusSq); padding:12px 8px; text-align:center;">
-              <div style="font-size:22px; font-weight:900; color:${hasReselect ? "var(--warn)" : "var(--mutedText)"};">${r.reselect}</div>
+              <div style="font-size:22px; font-weight:900; color:${hasReselect ? "var(--danger)" : "var(--mutedText)"};">${r.reselect}</div>
               <div style="font-size:11px; color:var(--mutedText); margin-top:3px;">Need review</div>
             </div>
           </div>`;
@@ -913,7 +913,7 @@
         if (body) {
           body.innerHTML = `
             ${cards}
-            <div style="font-size:12px; color:var(--mutedText); line-height:1.6; margin-bottom:14px;">
+            <div style="line-height:1.6; margin-bottom:14px;">
               <div>${line1}</div>
               ${line2 ? `<div style="margin-top:8px;">${line2}</div>` : ""}
               <div style="margin-top:8px;">${line3}</div>
