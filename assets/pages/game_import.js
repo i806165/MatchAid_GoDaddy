@@ -36,6 +36,7 @@
     btnImport:    document.getElementById("igBtnImport"),
     previewRows:  document.getElementById("igPreviewRows"),
     importHint:   document.getElementById("igImportHint"),
+    controlArea:  document.querySelector(".maControlArea"),
   };
 
   // ---- State ----
@@ -156,6 +157,7 @@
     // Swap cards
     document.getElementById("igPasteCard").style.display  = isEval ? "" : "none";
     document.getElementById("igReviewCard").style.display = isEval ? "none" : "";
+    if (el.controlArea) el.controlArea.style.display = isEval ? "" : "none";
 
     /*    
     // Chrome buttons removed on this page
