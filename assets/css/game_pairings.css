@@ -194,6 +194,22 @@
   flex-direction: column;
 }
 
+/* Edit-target state — mirrors game_slotting.css .gpGroupCard.is-target.
+   Applied by JS when this pairing/flight is the current edit target. */
+.gpGroupCard.is-target {
+  border: 2px solid var(--brandAccent);
+  box-shadow: 0 0 8px rgba(11, 95, 255, 0.2);
+}
+
+/* Active/pressed pencil — instant feedback at the point of click, on both
+   desktop and mobile, before the card highlight (or, on mobile, the tray
+   footer message) catches up. */
+.gpCardActions .iconBtn.is-active {
+  background: var(--brandAccent);
+  border-color: var(--brandAccent);
+  color: #fff;
+}
+
 /* New: Expand/Collapse visibility rules */
 /* Default state (expanded) */
 .gpGroupCard .gpGroupCard__hdr--collapsed {

@@ -31,6 +31,7 @@
     unpairedMasterCheck: document.getElementById("gpUnpairedMasterCheck"),
     unpairedSort: document.getElementById("gpUnpairedSort"),
     hintPair: document.getElementById("gpHintPair"),
+    unpairedFooterLeft: document.getElementById("gpUnpairedFooterLeft"),
     btnAssignToPairing: document.getElementById("gpBtnAssignToPairing"),
     // Match tab
     btnMatchToggleAll: document.querySelector('[data-tab-panel="match"] .gpGlobalToggleBtn'),
@@ -41,6 +42,7 @@
     unmatchedSearchClear: document.getElementById("gpUnmatchedSearchClear"),
     unmatchedMasterCheck: document.getElementById("gpUnmatchedMasterCheck"),
     hintMatch: document.getElementById("gpHintMatch"),
+    unmatchedFooterLeft: document.getElementById("gpUnmatchedFooterLeft"),
     btnAssignToFlight: document.getElementById("gpBtnAssignToFlight"),
     // Drawer
     btnTrayPair: document.getElementById("gpBtnTrayPair"),
@@ -1200,35 +1202,41 @@
 
   function setHints() {
     if (el.hintPair) {
+      let hintPairText;
       if (state.editMode) {
-        el.hintPair.textContent = `EDIT MODE: Selected ${state.selectedPlayerGHINs.size}. Tap Assign >> to add to Pairing ${state.targetPairingId}.`;
+        hintPairText = `EDIT MODE: Selected ${state.selectedPlayerGHINs.size}. Tap Assign >> to add to Pairing ${state.targetPairingId}.`;
       } else {
         if (isMobile()) {
-          el.hintPair.textContent = "Tap Add Pairing to open tray.";
+          hintPairText = "Tap Add Pairing to open tray.";
         } else {
-          el.hintPair.textContent = state.selectedPlayerGHINs.size > 0
+          hintPairText = state.selectedPlayerGHINs.size > 0
             ? `Selected ${state.selectedPlayerGHINs.size}. Tap Assign >> to create new, or tap a card to add.`
             : "Select unpaired players, then tap Assign >>.";
         }
       }
+      el.hintPair.textContent = hintPairText;
+      if (el.unpairedFooterLeft) el.unpairedFooterLeft.textContent = hintPairText;
     }
 
     if (el.hintMatch) {
+      let hintMatchText;
       if (!isPairPair()) {
-        el.hintMatch.textContent = "Matches are disabled for Pair vs Field.";
+        hintMatchText = "Matches are disabled for Pair vs Field.";
       } else {
         if (state.editMode) {
-          el.hintMatch.textContent = `EDIT MODE: Selected ${state.selectedPairingIds.size}. Tap Assign >> to add to Match ${state.targetFlightId}.`;
+          hintMatchText = `EDIT MODE: Selected ${state.selectedPairingIds.size}. Tap Assign >> to add to Match ${state.targetFlightId}.`;
         } else {
           if (isMobile()) {
-            el.hintMatch.textContent = "Tap Add Match to open tray.";
+            hintMatchText = "Tap Add Match to open tray.";
           } else {
-            el.hintMatch.textContent = state.selectedPairingIds.size > 0
+            hintMatchText = state.selectedPairingIds.size > 0
               ? `Selected ${state.selectedPairingIds.size}. Tap a match slot (A/B), then Assign.`
               : "Select an unmatched pairing, then tap a match slot (A/B).";
           }
         }
       }
+      el.hintMatch.textContent = hintMatchText;
+      if (el.unmatchedFooterLeft) el.unmatchedFooterLeft.textContent = hintMatchText;
     }
 
     // Update Master Checkboxes (Clear Only)
@@ -1326,6 +1334,7 @@
 
       const selectedClass = (state.targetPairingId === pid) ? " is-target" : "";
       const collapsedClass = state.allCollapsed ? " is-collapsed" : "";
+      const editActiveClass = (state.editMode && state.targetPairingId === pid) ? " is-active" : "";
       
       // Header Icons: Unpair (broken link), Edit (pencil)
       return `
@@ -1338,7 +1347,7 @@
               <button class="iconBtn btnSecondary" type="button" data-action="unpairGroup" data-pairing-id="${esc(pid)}" title="Unpair">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h2a5 5 0 0 1 0 10h-2m-6 0H7A5 5 0 0 1 7 7h2"></path><line x1="8" y1="12" x2="16" y2="12"></line><line x1="2" y1="2" x2="22" y2="22"></line></svg>
               </button>
-              <button class="iconBtn btnSecondary" type="button" data-action="editPairing" data-pairing-id="${esc(pid)}" title="Edit">
+              <button class="iconBtn btnSecondary${editActiveClass}" type="button" data-action="editPairing" data-pairing-id="${esc(pid)}" title="Edit">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
               </button>
             </div>
@@ -1482,8 +1491,10 @@
       const iconPlus = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
 
       const collapsedClass = state.allCollapsed ? " is-collapsed" : "";
+      const editActiveClass = (state.editMode && state.targetFlightId === fid) ? " is-active" : "";
+      const targetClass = (state.editMode && state.targetFlightId === fid) ? " is-target" : "";
       return `
-        <div class="gpGroupCard${collapsedClass}" data-flight-id="${esc(fid)}">
+        <div class="gpGroupCard${targetClass}${collapsedClass}" data-flight-id="${esc(fid)}">
           <!-- Expanded Header -->
           <div class="gpGroupCard__hdr gpGroupCard__hdr--expanded">
             <button class="iconBtn btnSecondary" type="button" data-action="toggle-collapse" title="Collapse">${iconMinus}</button>
@@ -1492,7 +1503,7 @@
               <button class="iconBtn btnSecondary" type="button" data-action="unmatchFlight" data-flight-id="${esc(fid)}" title="Unmatch">
               <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h2a5 5 0 0 1 0 10h-2m-6 0H7A5 5 0 0 1 7 7h2"></path><line x1="8" y1="12" x2="16" y2="12"></line><line x1="2" y1="2" x2="22" y2="22"></line></svg>
               </button>
-              <button class="iconBtn btnSecondary" type="button" data-action="editFlight" data-flight-id="${esc(fid)}" title="Edit">
+              <button class="iconBtn btnSecondary${editActiveClass}" type="button" data-action="editFlight" data-flight-id="${esc(fid)}" title="Edit">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
               </button>
             </div>
