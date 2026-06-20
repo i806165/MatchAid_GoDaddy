@@ -389,10 +389,11 @@
     background-attachment: fixed;
   }
 
+  /*
   .maPage{
     display: flex;
     justify-content: center;
-  }
+  } */
 
   .maPage > .maCards{
     width: min(980px, 100%);
