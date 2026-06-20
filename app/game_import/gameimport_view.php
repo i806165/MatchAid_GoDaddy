@@ -52,7 +52,7 @@
     <header class="maCard__hdr">
       <div class="maCard__title">REVIEW &amp; IMPORT</div>
       <div class="maCard__actions">
-        <button type="button" class="btn btnPrimary" id="igBtnRetry">Retry</button>
+        <button type="button" class="btn btnPrimary" id="igBtnRetry">Go Back</button>
         <button type="button" class="btn btnSecondary" id="igBtnImport">Import</button>
       </div>
     </header>
