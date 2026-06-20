@@ -31,7 +31,8 @@
     editMode: false,
     allCollapsed: false,
     dirty: new Set(),
-    busy: false
+    busy: false,
+    flash: { strongKey: "", lightKey: "", timer: null }
   };
 
   const AUTO_SLOT_SORT_OPTIONS = [
@@ -741,6 +742,16 @@ function displaceCardOnHole(cards, displacedKey, occupiedAttrs) {
   return true;
 }
 
+function setFlash(strongKey, lightKey) {
+  state.flash.strongKey = strongKey || "";
+  state.flash.lightKey = lightKey || "";
+  clearTimeout(state.flash.timer);
+  state.flash.timer = setTimeout(() => {
+    state.flash.strongKey = "";
+    state.flash.lightKey = "";
+  }, 2200);
+}
+
 function promoteTeeTime(playerKey, direction) {
   const cards = getDisplayedCards();
   const source = findDisplayedCardByKey(cards, playerKey);
@@ -764,6 +775,7 @@ function promoteTeeTime(playerKey, direction) {
     if (MA.setStatus) MA.setStatus(`Swapped tee times with ${direction === "up" ? "previous" : "next"} group.`, "success");
   }
 
+  setFlash(source.key, affected ? affected.key : "");
   render();
 }
 
@@ -790,6 +802,7 @@ function promoteShotgunUp(playerKey) {
     if (MA.setStatus) MA.setStatus("Swapped start positions with previous group.", "success");
   }
 
+  setFlash(source.key, affected ? affected.key : "");
   render();
 }
 
@@ -810,6 +823,7 @@ function promoteShotgunDown(playerKey) {
   if (!affected) {
     moveCardByKey(source.key, targetAttrs);
     if (MA.setStatus) MA.setStatus(`Moved group to Hole ${targetAttrs.hole}${targetAttrs.suffix}.`, "success");
+    setFlash(source.key, "");
     render();
     return;
   }
@@ -823,6 +837,7 @@ function promoteShotgunDown(playerKey) {
 
   moveCardByKey(source.key, targetAttrs);
   if (MA.setStatus) MA.setStatus(`Moved group to Hole ${targetAttrs.hole}${targetAttrs.suffix}.`, "success");
+  setFlash(source.key, affected.key);
   render();
 }
 
@@ -926,7 +941,7 @@ function canPromoteDown(playerKey) {
       }).join("");
 
       return `
-        <div class="gpGroupCard ${isTarget ? "is-target" : ""} ${state.allCollapsed ? "is-collapsed" : ""}" data-playerkey="${esc(card.key)}">
+        <div class="gpGroupCard ${isTarget ? "is-target" : ""} ${state.allCollapsed ? "is-collapsed" : ""} ${card.key === state.flash.strongKey ? "flash-strong" : ""} ${card.key === state.flash.lightKey ? "flash-light" : ""}" data-playerkey="${esc(card.key)}">
           <div class="gpGroupCard__hdr gpGroupCard__hdr--expanded">
             <button class="iconBtn btnSecondary" type="button" data-action="toggle-collapse">
               ${ICONS.minus}

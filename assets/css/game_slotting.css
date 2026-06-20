@@ -216,6 +216,29 @@
   box-shadow: 0 0 8px rgba(11, 95, 255, 0.2);
 }
 
+/* Move/swap feedback — signals which card the user acted on (strong) and
+   which card it swapped or displaced (light), since renderCanvas() re-sorts
+   and rebuilds the list on every move with no transition of its own. */
+@keyframes gsFlashStrong {
+  0%   { background: color-mix(in srgb, var(--brandAccent) 14%, #fff); border-color: var(--brandAccent); }
+  60%  { background: color-mix(in srgb, var(--brandAccent) 14%, #fff); border-color: var(--brandAccent); }
+  100% { background: #fff; border-color: var(--borderSubtle); }
+}
+
+@keyframes gsFlashLight {
+  0%   { border-color: var(--brandAccent); }
+  60%  { border-color: var(--brandAccent); }
+  100% { border-color: var(--borderSubtle); }
+}
+
+.gpGroupCard.flash-strong {
+  animation: gsFlashStrong 2200ms ease-out;
+}
+
+.gpGroupCard.flash-light {
+  animation: gsFlashLight 2200ms ease-out;
+}
+
 .gsMobileAddPlayingGroupBtn {
   display: none;
   width: 100%;
