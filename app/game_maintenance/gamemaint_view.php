@@ -6,7 +6,7 @@
     <!-- CARD 1 — GAME -->
     <section class="maCard" aria-label="Game">
       <header class="maCard__hdr">
-        <div class="maCard__title">GAME</div>
+        <div class="maCard__title">GAME<span id="gmGgidLabel"></span></div>
         <div class="maCard__actions">
         </div>
       </header>

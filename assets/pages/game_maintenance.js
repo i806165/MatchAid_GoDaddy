@@ -41,7 +41,7 @@
   // ---- DOM ----
   const el = {
     title: document.getElementById("gmTitle"),
-    ggid: document.getElementById("gmGGID"),
+    ggidLabel: document.getElementById("gmGgidLabel"),
     tomethod: document.getElementById("gmTOMethod"),
     playDate: document.getElementById("gmPlayDate"),
     hour: document.getElementById("gmPlayHour"),
@@ -592,11 +592,7 @@
     const g = state.game || {};
 
     el.title.value = g.dbGames_Title || "";
-    if (el.ggid) {
-      const val = String(state.ggid || g.dbGames_GGID || "");
-      if (el.ggid.tagName === "INPUT") el.ggid.value = val;
-      else el.ggid.textContent = val;
-    }
+    renderGgidLabel();
 
     if (el.tomethod) el.tomethod.value = String(g.dbGames_TOMethod || "TeeTimes");
     el.playDate.value = (g.playDateISO || g.dbGames_PlayDate || "") || "";
@@ -986,21 +982,10 @@
     }
   }
 
-  function moveGgidToHeader() {
-    if (!el.ggid || el.ggid.tagName !== "INPUT") return;
-    const titleEl = document.querySelector(".maCard__hdr .maCard__title");
-    if (!titleEl) return;
-
-    const span = document.createElement("span");
-    span.style.marginLeft = "10px";
-    span.style.opacity = "0.7";
-    titleEl.appendChild(span);
-
-    const field = el.ggid.closest(".maField");
-    if (field) field.remove();
-    else el.ggid.remove();
-
-    el.ggid = span;
+  function renderGgidLabel() {
+    if (!el.ggidLabel) return;
+    el.ggidLabel.textContent =
+      (state.mode === "edit" && state.ggid) ? `GGID ${state.ggid}` : "";
   }
 
   function readInit() {
@@ -1058,7 +1043,6 @@
   // ---- Init ----
   function init() {
     applyChrome();
-    moveGgidToHeader();
     populateTimeSelects();
     wireInputs();
     loadContext();
