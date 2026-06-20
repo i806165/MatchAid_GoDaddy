@@ -985,7 +985,7 @@
   function renderGgidLabel() {
     if (!el.ggidLabel) return;
     el.ggidLabel.textContent =
-      (state.mode === "edit" && state.ggid) ? `GGID ${state.ggid}` : "";
+      (state.mode === "edit" && state.ggid) ? ` ${state.ggid}` : "";
   }
 
   function readInit() {
