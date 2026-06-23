@@ -1021,20 +1021,22 @@
         ? get(row, "groups").split("|").map((g) => g.trim()).filter(Boolean)
         : [];
 
+      const mobile = get(row, "mobile").replace(/\D/g, "");
+
       rows.push({
         rowNum:    i,
         ghin,
         firstName: get(row, "firstName"),
         lastName:  get(row, "lastName"),
         email:     get(row, "email"),
-        mobile:    get(row, "mobile"),
+        mobile,
+        carrier:   "",   // populated by Twilio during validation
         memberId:  get(row, "memberId"),
         groups,
         gender:    "",
         status:    ghin ? "pending" : "error",
         statusMsg: ghin ? "" : "No GHIN",
       });
-    }
 
     if (rows.length === 0) {
       if (MA.setStatus) MA.setStatus("No data rows found in file.", "warn");
@@ -1060,22 +1062,24 @@
       (state.favorites || []).map((f) => String(f.playerGHIN))
     );
 
+    const validatePath = MA.paths.validateMobile || "";
+
     _importShowOverlay(`Validating 1 of ${pending.length}...`);
 
     for (let i = 0; i < pending.length; i++) {
       const row = pending[i];
       _importShowOverlay(`Validating ${i + 1} of ${pending.length}...`);
 
+      // ── Step 1: GHIN validation ─────────────────────────────────────────
       try {
-        // Reuse the existing fetchGhinById already in this file
         const result = await fetchGhinById(row.ghin);
         if (!result) {
           row.status    = "error";
           row.statusMsg = "Invalid GHIN";
         } else {
-          if (!row.firstName) row.firstName = safe(result.name    || "").split(" ")[0] || "";
+          if (!row.firstName) row.firstName = safe(result.name      || "").split(" ")[0] || "";
           if (!row.lastName)  row.lastName  = safe(result.last_name || "");
-          if (!row.gender)    row.gender    = safe(result.gender  || "");
+          if (!row.gender)    row.gender    = safe(result.gender    || "");
           row.status    = existingGhins.has(row.ghin) ? "merge" : "new";
           row.statusMsg = row.status === "merge" ? "Merge" : "OK";
         }
@@ -1088,6 +1092,30 @@
         });
         row.status    = "error";
         row.statusMsg = "Lookup failed";
+      }
+
+      // ── Step 2: Twilio mobile validation (only if GHIN passed and mobile present) ──
+      if (row.status !== "error" && row.mobile && validatePath) {
+        try {
+          const res = await MA.postJson(validatePath, { mobile: row.mobile });
+
+          if (!res || !res.valid) {
+            row.status    = "error";
+            row.statusMsg = "Invalid mobile";
+          } else {
+            row.carrier = res.carrier || "";
+          }
+        } catch (err) {
+          console.warn("[fpImport] Twilio mobile lookup failed:", {
+            ghin:     row.ghin,
+            mobile:   row.mobile,
+            message:  err?.message || String(err),
+            userGHIN: state.context?.userGHIN || "unknown",
+            userName: state.context?.userName || "unknown",
+          });
+          row.status    = "error";
+          row.statusMsg = "Mobile validation failed";
+        }
       }
 
       const idx = rows.findIndex((r) => r.rowNum === row.rowNum);
