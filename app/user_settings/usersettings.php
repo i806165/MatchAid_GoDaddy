@@ -32,7 +32,7 @@ $paths = [
   "apiSession"      => MA_ROUTE_API_SESSION,
   "routerApi"       => MA_ROUTE_API_ROUTER,
   "apiUserSettings" => "/api/user_settings",
-  "validateMobile"  => "/api/external/validateMobile.php",
+  "validateMobile"  => MA_ROUTE_API_EXTERNAL . "/validateMobile.php",
 ];
 
 $maChromeTitle = "User Settings";

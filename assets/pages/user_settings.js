@@ -458,7 +458,7 @@
         setStatus("Validating mobile number...", "info");
 
         try {
-          const res = await apiCall("validateMobile.php", { mobile: patch.dbUser_MobilePhone });
+          const res = await postJson(MA.paths.validateMobile, { mobile: patch.dbUser_MobilePhone });
 
           if (!res || !res.valid) {
             renderCarrierError();
