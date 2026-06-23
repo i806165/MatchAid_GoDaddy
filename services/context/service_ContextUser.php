@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Db.php";
+require_once MA_SERVICES . "/external/service_Twilio.php";
 
 final class ServiceUserContext {
 
@@ -264,15 +265,6 @@ public static function buildUserSettingsPayload(string $ghinId): array {
             "ghinLName" => $ghinLName,
             "profile"   => $profile,
         ],
-        "carrierOptions" => array_map(
-            static fn(string $gateway, string $name): array => [
-                "value"   => $name,
-                "label"   => $name,
-                "gateway" => $gateway,
-            ],
-            self::getMobileCarrierGateways(),
-            array_keys(self::getMobileCarrierGateways())
-        ),
         "contactMethodOptions" => [
             [ "value" => "Email", "label" => "Email" ],
             [ "value" => "SMS",   "label" => "SMS" ],
@@ -300,7 +292,8 @@ public static function hasCompletedSettings(string $ghinId): bool {
     return false;
 }
 
-public static function saveUserSettings(string $ghinId, array $patch): array {
+public static function saveUserSettings(string $ghinId, array $patch): array
+{
     $ghinId = trim($ghinId);
     if ($ghinId === "") {
         throw new RuntimeException("Missing GHIN.");
@@ -311,14 +304,14 @@ public static function saveUserSettings(string $ghinId, array $patch): array {
         throw new RuntimeException("User record not found.");
     }
 
-    $fName = trim((string)($patch["dbUser_FName"] ?? ""));
-    $lName = trim((string)($patch["dbUser_LName"] ?? ""));
-    $email = trim((string)($patch["dbUser_EMail"] ?? ""));
-    $phone = self::normalizePhone((string)($patch["dbUser_MobilePhone"] ?? ""));
-    $carrier = trim((string)($patch["dbUser_MobileCarrier"] ?? ""));
-    $contactMethod = trim((string)($patch["dbUser_ContactMethod"] ?? ""));
+    $fName   = trim((string)($patch["dbUser_FName"]         ?? ""));
+    $lName   = trim((string)($patch["dbUser_LName"]         ?? ""));
+    $email   = trim((string)($patch["dbUser_EMail"]         ?? ""));
+    $phone   = self::normalizePhone((string)($patch["dbUser_MobilePhone"]   ?? ""));
+    $carrier = trim((string)($patch["dbUser_MobileCarrier"] ?? ""));  // system-resolved by client
+    $contactMethod        = trim((string)($patch["dbUser_ContactMethod"] ?? ""));
     $preferenceYardsPatch = $patch["dbUser_PreferenceYards"] ?? null;
-    $preferenceYards = null;
+    $preferenceYards      = null;
 
     if ($fName === "") throw new RuntimeException("First name is required.");
     if ($lName === "") throw new RuntimeException("Last name is required.");
@@ -331,13 +324,8 @@ public static function saveUserSettings(string $ghinId, array $patch): array {
         throw new RuntimeException("Mobile phone must contain 10 digits.");
     }
 
-    if ($phone !== "" && $carrier === "") {
-        throw new RuntimeException("Select a mobile carrier.");
-    }
-
-    if ($carrier !== "" && !self::isValidMobileCarrier($carrier)) {
-        throw new RuntimeException("Invalid mobile carrier.");
-    }
+    // Carrier validation removed — carrier is Twilio-resolved client-side.
+    // Server trusts the resolved value; no second Twilio call here.
 
     if ($contactMethod !== "Email" && $contactMethod !== "SMS") {
         throw new RuntimeException("Select a preferred contact method.");
@@ -347,13 +335,8 @@ public static function saveUserSettings(string $ghinId, array $patch): array {
         throw new RuntimeException("Email is required when contact method is Email.");
     }
 
-    if ($contactMethod === "SMS") {
-        if ($phone === "") {
-            throw new RuntimeException("Mobile phone is required when contact method is SMS.");
-        }
-        if ($carrier === "") {
-            throw new RuntimeException("Mobile carrier is required when contact method is SMS.");
-        }
+    if ($contactMethod === "SMS" && $phone === "") {
+        throw new RuntimeException("Mobile phone is required when contact method is SMS.");
     }
 
     if ($preferenceYardsPatch !== null && $preferenceYardsPatch !== "") {
@@ -384,24 +367,25 @@ public static function saveUserSettings(string $ghinId, array $patch): array {
 
     $pdo = Db::pdo();
     $sql = "UPDATE db_Users
-            SET dbUser_FName = :fname,
-                dbUser_LName = :lname,
-                dbUser_EMail = :email,
-                dbUser_MobilePhone = :phone,
-                dbUser_MobileCarrier = :carrier,
-                dbUser_ContactMethod = :contactMethod,
+            SET dbUser_FName           = :fname,
+                dbUser_LName           = :lname,
+                dbUser_EMail           = :email,
+                dbUser_MobilePhone     = :phone,
+                dbUser_MobileCarrier   = :carrier,
+                dbUser_ContactMethod   = :contactMethod,
                 dbUser_PreferenceYards = :preferenceYards
             WHERE dbUser_GHIN = :ghin
             LIMIT 1";
+
     $st = $pdo->prepare($sql);
     $st->execute([
-        ":ghin" => $ghinId,
-        ":fname" => $fName,
-        ":lname" => $lName,
-        ":email" => $email,
-        ":phone" => $phone,
-        ":carrier" => $carrier,
-        ":contactMethod" => $contactMethod,
+        ":ghin"            => $ghinId,
+        ":fname"           => $fName,
+        ":lname"           => $lName,
+        ":email"           => $email,
+        ":phone"           => $phone,
+        ":carrier"         => $carrier !== "" ? $carrier : null,
+        ":contactMethod"   => $contactMethod,
         ":preferenceYards" => $preferenceYards,
     ]);
 

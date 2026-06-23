@@ -61,6 +61,7 @@ define('MA_ROUTE_CLUB_DEMAND', '/app/club_demand/clubdemand.php');
 define('MA_ROUTE_CLUB_USERS', '/app/club_users/clubusers.php');
 define('MA_ROUTE_CLUB_HOME', '/app/club_home/clubhome.php');
 define('MA_ROUTE_API_MESSAGING', '/api/messaging/initPlayerNotifications.php');
+define('MA_ROUTE_API_EXTERNAL', '/api/external');
 define("MA_ROUTE_CLUB_MARKETING", "/app/home/clubmarketing.php");
 
 function ma_asset(string $relativePath): string {

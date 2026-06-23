@@ -37,10 +37,12 @@
           <input id="usMobilePhone" class="maTextInput" type="tel" maxlength="14" autocomplete="tel" placeholder="555-555-5555" />
         </div>
         <div class="maField">
-          <label class="maLabel" for="usMobileCarrier">Mobile Carrier</label>
-          <select id="usMobileCarrier" class="maTextInput">
-            <option value="">Select carrier</option>
-          </select>
+          <!-- ── Carrier: read-only, auto-resolved by Twilio on save ── -->
+          <div class="maLabel">Mobile Carrier</div>
+          <div class="usCarrierDisplay" id="usCarrierDisplay">
+            <span id="usCarrierName" class="usCarrierName"></span>
+            <span id="usCarrierEmpty" class="usCarrierEmpty">Detected automatically when mobile is saved</span>
+          </div>
           <div class="usHint" id="usSmsHint"></div>
         </div>
       </div>

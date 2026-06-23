@@ -21,6 +21,35 @@
   color: var(--mutedText);
 }
 
+/* ── Carrier read-only display ───────────────────────────────────────────── */
+.usCarrierDisplay {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  padding: 0 2px;
+}
+
+/* Resolved carrier name — shown when Twilio has detected a carrier */
+.usCarrierName {
+  font-size: var(--fieldValueSize, 14px);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* Placeholder — shown when no carrier is on file yet */
+.usCarrierEmpty {
+  font-size: 13px;
+  color: var(--mutedText);
+  font-style: italic;
+}
+
+/* Error state — shown when Twilio rejects the number */
+.usCarrier--error .usCarrierEmpty {
+  color: var(--danger);
+  font-style: normal;
+  font-weight: 500;
+}
+
 /* Read-only field value (Home Club, System Settings) */
 .usReadOnly {
   font-size: var(--fieldValueSize);
@@ -29,10 +58,6 @@
   min-height: 1.2em;
 }
 
-/* Force browser default appearance on carrier select */
-#usMobileCarrier {
-  appearance: auto;
-}
 
 /* ── Data Usage card ─────────────────────────────────────────────────────── */
 

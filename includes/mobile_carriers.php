@@ -20,7 +20,6 @@ return [
     "Verizon"           => "@vtext.com",        // Verizon legacy email-to-text may be deprecated/limited
     "T-Mobile"          => "@tmomail.net",
     "Sprint PCS"        => "@messaging.sprintpcs.com",
-
     // Common U.S. regional / prepaid / MVNO carriers
     "US Cellular"       => "@email.uscc.net",
     "Google Fi"         => "@msg.fi.google.com",
@@ -34,8 +33,14 @@ return [
     "Visible"           => "@vtext.com",        // Verizon network
     "Xfinity Mobile"    => "@vtext.com",        // Verizon network
     "Spectrum Mobile"   => "@vtext.com",        // Verizon network
-
     // Legacy/common listings
     "Virgin Mobile"     => "@vmobl.com",
     "Nextel"            => "@messaging.nextel.com",
+    // Twilio listings
+    "AT&T Mobility"                => "@txt.att.net",
+    "Verizon Wireless"             => "@vtext.com",
+    "T-Mobile USA"                 => "@tmomail.net",
+    "Sprint Spectrum"              => "@tmomail.net",  // merged into T-Mobile
+    "Nextel Communications"        => "@tmomail.net",  // merged into T-Mobile
+    "United States Cellular Corp"  => "@email.uscc.net",
 ];

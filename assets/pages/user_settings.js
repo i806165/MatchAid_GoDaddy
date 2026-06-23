@@ -42,7 +42,9 @@
     lName:          document.getElementById("usLName"),
     email:          document.getElementById("usEMail"),
     mobilePhone:    document.getElementById("usMobilePhone"),
-    mobileCarrier:  document.getElementById("usMobileCarrier"),
+    carrierDisplay: document.getElementById("usCarrierDisplay"),
+    carrierName:    document.getElementById("usCarrierName"),
+    carrierEmpty:   document.getElementById("usCarrierEmpty"),
     contactMethod:  document.getElementById("usContactMethod"),
     preferenceYards:document.getElementById("usPreferenceYards"),
     smsHint:        document.getElementById("usSmsHint"),
@@ -69,7 +71,12 @@
       dbUser_ContactMethod:   "",
       dbUser_PreferenceYards: null,
     },
-    carrierOptions:        [],
+    // ── Twilio lookup cache ──────────────────────────────────────────────────
+    // Populated on successful mobile validation during doSave().
+    // If phone hasn't changed since last lookup, cached result is reused —
+    // no second Twilio call on retry.
+    twilioResult: null,   // { phone, valid, carrier, gateway, type, error }
+
     contactMethodOptions:  [],
     sourceProfile:         {},
     dataUsage:             {},
@@ -78,9 +85,8 @@
     dirty: false,
   };
 
-  // -------------------------------------------------------------------------
-  // Chrome
-  // -------------------------------------------------------------------------
+  // ── Chrome ──────────────────────────────────────────────────────────────────
+
   function applyChrome() {
     if (chrome && typeof chrome.setHeaderLines === "function") {
       chrome.setHeaderLines(["User Settings", "Profile & Contact", ""]);
@@ -101,7 +107,7 @@
 
     if (chrome && typeof chrome.setBottomNav === "function") {
       chrome.setBottomNav({
-        visible:    ["home", "admin","player"],
+        visible:    ["home", "admin", "player"],
         active:     "",
         onNavigate: (id) => { if (typeof MA.routerGo === "function") MA.routerGo(id); }
       });
@@ -131,9 +137,8 @@
     window.location.assign("/");
   }
 
-  // -------------------------------------------------------------------------
-  // Phone helpers
-  // -------------------------------------------------------------------------
+  // ── Phone helpers ───────────────────────────────────────────────────────────
+
   function normalizePhoneForStore(raw) {
     return String(raw || "").replace(/\D+/g, "");
   }
@@ -144,19 +149,46 @@
     return `${digits.slice(0,3)}-${digits.slice(3,6)}-${digits.slice(6)}`;
   }
 
-  // -------------------------------------------------------------------------
-  // Dropdown populators
-  // -------------------------------------------------------------------------
-  function populateCarrierOptions() {
-    const opts = Array.isArray(state.carrierOptions) ? state.carrierOptions : [];
-    el.mobileCarrier.innerHTML = `<option value="">Select carrier</option>`;
-    opts.forEach(opt => {
-      const o = document.createElement("option");
-      o.value       = String(opt.value || "");
-      o.textContent = String(opt.label || opt.value || "");
-      el.mobileCarrier.appendChild(o);
-    });
+  // ── Carrier display ─────────────────────────────────────────────────────────
+
+  function renderCarrierDisplay(carrier) {
+    if (!el.carrierName || !el.carrierEmpty) return;
+
+    if (carrier && carrier.trim() !== "") {
+      el.carrierName.textContent = carrier;
+      el.carrierName.style.display  = "";
+      el.carrierEmpty.style.display = "none";
+      if (el.carrierDisplay) el.carrierDisplay.classList.remove("usCarrier--error");
+    } else {
+      el.carrierName.textContent    = "";
+      el.carrierName.style.display  = "none";
+      el.carrierEmpty.style.display = "";
+      if (el.carrierDisplay) el.carrierDisplay.classList.remove("usCarrier--error");
+    }
   }
+
+  function renderCarrierError() {
+    if (!el.carrierName || !el.carrierEmpty) return;
+    el.carrierName.textContent    = "";
+    el.carrierName.style.display  = "none";
+    el.carrierEmpty.style.display = "";
+    if (el.carrierDisplay) el.carrierDisplay.classList.add("usCarrier--error");
+  }
+
+  // ── SMS hint ────────────────────────────────────────────────────────────────
+
+  function renderSmsHint() {
+    if (!el.smsHint) return;
+    const phone   = normalizePhoneForStore(el.mobilePhone?.value || "");
+    const carrier = state.fields.dbUser_MobileCarrier || "";
+    const gateway = state.twilioResult?.gateway || "";
+
+    el.smsHint.textContent = (phone && carrier && gateway)
+      ? `SMS gateway: ${phone}${gateway}`
+      : "";
+  }
+
+  // ── Contact method dropdown ─────────────────────────────────────────────────
 
   function populateContactMethodOptions() {
     const opts = Array.isArray(state.contactMethodOptions) ? state.contactMethodOptions : [];
@@ -168,6 +200,8 @@
       el.contactMethod.appendChild(o);
     });
   }
+
+  // ── Preference yards ────────────────────────────────────────────────────────
 
   function populatePreferenceYardsOptions() {
     el.preferenceYards.innerHTML = `<option value="">Select yardage</option>`;
@@ -194,21 +228,8 @@
     return { min: Number(match.min), max: Number(match.max) };
   }
 
-  // -------------------------------------------------------------------------
-  // SMS hint
-  // -------------------------------------------------------------------------
-  function renderSmsHint() {
-    const carrier = String(el.mobileCarrier.value || "");
-    const phone   = normalizePhoneForStore(el.mobilePhone.value);
-    const match   = (state.carrierOptions || []).find(o => String(o.value || "") === carrier);
-    el.smsHint.textContent = (phone && carrier && match && match.gateway)
-      ? `SMS email gateway: ${phone}${match.gateway}`
-      : "";
-  }
+  // ── Home Club section ───────────────────────────────────────────────────────
 
-  // -------------------------------------------------------------------------
-  // Home Club section
-  // -------------------------------------------------------------------------
   function renderHomeClub(profile) {
     if (!profile) return;
 
@@ -224,8 +245,8 @@
     set(el.hcLowHi,     g0?.low_hi         ? `${g0.low_hi}`         : null);
 
     const city  = g0?.city  ?? "";
-    const state = g0?.state ?? "";
-    set(el.hcLocation, [city, state].filter(Boolean).join(", "));
+    const st    = g0?.state ?? "";
+    set(el.hcLocation, [city, st].filter(Boolean).join(", "));
 
     const rev = g0?.rev_date ?? "";
     if (rev && el.hcRevDate) {
@@ -245,9 +266,8 @@
     set(el.hcCourses, courses.length ? courses.join(", ") : null);
   }
 
-  // -------------------------------------------------------------------------
-  // Data Usage section
-  // -------------------------------------------------------------------------
+  // ── Data Usage section ──────────────────────────────────────────────────────
+
   function renderDataUsage(dataUsage) {
     if (!dataUsage || !el.duGames || !el.duFavPlayers) return;
     el.duGames.textContent      = Number.isFinite(dataUsage.totalGames)
@@ -258,9 +278,8 @@
       : "—";
   }
 
-  // -------------------------------------------------------------------------
-  // System Settings section — auto-renders whatever keys arrive in sessionInfo
-  // -------------------------------------------------------------------------
+  // ── System Settings section ─────────────────────────────────────────────────
+
   function renderSystemSettings(sessionInfo) {
     if (!el.ssGrid) return;
     el.ssGrid.innerHTML = "";
@@ -287,17 +306,16 @@
     });
   }
 
-  // -------------------------------------------------------------------------
-  // Main render
-  // -------------------------------------------------------------------------
-  function render() {
-    el.fName.value        = state.fields.dbUser_FName || "";
-    el.lName.value        = state.fields.dbUser_LName || "";
-    el.email.value        = state.fields.dbUser_EMail || "";
-    el.mobilePhone.value  = formatPhoneForInput(state.fields.dbUser_MobilePhone || "");
+  // ── Main render ─────────────────────────────────────────────────────────────
 
-    populateCarrierOptions();
-    el.mobileCarrier.value = state.fields.dbUser_MobileCarrier || "";
+  function render() {
+    el.fName.value       = state.fields.dbUser_FName || "";
+    el.lName.value       = state.fields.dbUser_LName || "";
+    el.email.value       = state.fields.dbUser_EMail || "";
+    el.mobilePhone.value = formatPhoneForInput(state.fields.dbUser_MobilePhone || "");
+
+    // Carrier is read-only — rendered from stored state, not a dropdown
+    renderCarrierDisplay(state.fields.dbUser_MobileCarrier || "");
 
     populateContactMethodOptions();
     el.contactMethod.value = state.fields.dbUser_ContactMethod || "";
@@ -311,23 +329,30 @@
     renderSystemSettings(state.sessionInfo);
   }
 
-  // -------------------------------------------------------------------------
-  // Input wiring
-  // -------------------------------------------------------------------------
+  // ── Input wiring ────────────────────────────────────────────────────────────
+
   function wireInputs() {
     const markDirty = () => {
-      state.fields.dbUser_FName           = String(el.fName.value        || "").trim();
-      state.fields.dbUser_LName           = String(el.lName.value        || "").trim();
-      state.fields.dbUser_EMail           = String(el.email.value        || "").trim();
+      state.fields.dbUser_FName           = String(el.fName.value         || "").trim();
+      state.fields.dbUser_LName           = String(el.lName.value         || "").trim();
+      state.fields.dbUser_EMail           = String(el.email.value         || "").trim();
       state.fields.dbUser_MobilePhone     = normalizePhoneForStore(el.mobilePhone.value || "");
-      state.fields.dbUser_MobileCarrier   = String(el.mobileCarrier.value || "").trim();
-      state.fields.dbUser_ContactMethod   = String(el.contactMethod.value || "").trim();
+      state.fields.dbUser_ContactMethod   = String(el.contactMethod.value  || "").trim();
       state.fields.dbUser_PreferenceYards = preferenceYardsObjectFromValue(el.preferenceYards.value);
+
+      // If phone changed since last Twilio lookup, invalidate cache
+      if (state.twilioResult && state.twilioResult.phone !== state.fields.dbUser_MobilePhone) {
+        state.twilioResult = null;
+        renderCarrierDisplay("");  // clear displayed carrier until re-validated
+        state.fields.dbUser_MobileCarrier = "";
+      }
+
       renderSmsHint();
       setDirty(true);
     };
 
-    [el.fName, el.lName, el.email, el.mobilePhone, el.mobileCarrier, el.contactMethod, el.preferenceYards]
+    // Carrier field removed from dirty tracking — it is system-resolved
+    [el.fName, el.lName, el.email, el.mobilePhone, el.contactMethod, el.preferenceYards]
       .forEach(node => {
         if (!node) return;
         node.addEventListener("input",  markDirty);
@@ -335,9 +360,8 @@
       });
   }
 
-  // -------------------------------------------------------------------------
-  // Load context
-  // -------------------------------------------------------------------------
+  // ── Load context ────────────────────────────────────────────────────────────
+
   function readInit() {
     return window.__MA_INIT__ || window.__INIT__ || null;
   }
@@ -354,11 +378,25 @@
       const payload = res.payload || {};
 
       state.fields               = Object.assign({}, state.fields, payload.fields || {});
-      state.carrierOptions       = Array.isArray(payload.carrierOptions)       ? payload.carrierOptions       : [];
       state.contactMethodOptions = Array.isArray(payload.contactMethodOptions) ? payload.contactMethodOptions : [];
       state.sourceProfile        = payload.sourceProfile || {};
       state.dataUsage            = payload.dataUsage     || {};
-      state.sessionInfo          = Array.isArray(payload.sessionInfo)          ? payload.sessionInfo          : [];
+      state.sessionInfo          = Array.isArray(payload.sessionInfo) ? payload.sessionInfo : [];
+
+      // Seed Twilio cache from stored carrier so save doesn't re-lookup
+      // if the user hasn't changed their phone number
+      const storedPhone   = String(state.fields.dbUser_MobilePhone   || "");
+      const storedCarrier = String(state.fields.dbUser_MobileCarrier || "");
+      if (storedPhone && storedCarrier) {
+        state.twilioResult = {
+          phone:   storedPhone,
+          valid:   true,
+          carrier: storedCarrier,
+          gateway: null,   // gateway not critical for display; resolved server-side on send
+          type:    "mobile",
+          error:   null,
+        };
+      }
 
       render();
       setDirty(false);
@@ -371,16 +409,15 @@
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Save
-  // -------------------------------------------------------------------------
+  // ── Save ────────────────────────────────────────────────────────────────────
+
   function buildPatchFromUI() {
     return {
       dbUser_FName:           String(el.fName.value         || "").trim(),
       dbUser_LName:           String(el.lName.value         || "").trim(),
       dbUser_EMail:           String(el.email.value         || "").trim(),
       dbUser_MobilePhone:     normalizePhoneForStore(el.mobilePhone.value || ""),
-      dbUser_MobileCarrier:   String(el.mobileCarrier.value  || "").trim(),
+      dbUser_MobileCarrier:   state.fields.dbUser_MobileCarrier || "",  // system-resolved
       dbUser_ContactMethod:   String(el.contactMethod.value  || "").trim(),
       dbUser_PreferenceYards: preferenceYardsObjectFromValue(el.preferenceYards.value),
     };
@@ -391,21 +428,80 @@
 
     const patch = buildPatchFromUI();
 
-    if (!patch.dbUser_FName) return setStatus("First name is required.", "error");
-    if (!patch.dbUser_LName) return setStatus("Last name is required.", "error");
-    if (!patch.dbUser_ContactMethod) return setStatus("Select a preferred contact method.", "error");
+    // ── Phase 1: Required field validation (no API calls) ──────────────────
+    if (!patch.dbUser_FName)
+      return setStatus("First name is required.", "error");
 
-    if (patch.dbUser_MobilePhone && !patch.dbUser_MobileCarrier)
-      return setStatus("Select a mobile carrier.", "error");
+    if (!patch.dbUser_LName)
+      return setStatus("Last name is required.", "error");
+
+    if (!patch.dbUser_ContactMethod)
+      return setStatus("Select a preferred contact method.", "error");
 
     if (patch.dbUser_ContactMethod === "Email" && !patch.dbUser_EMail)
       return setStatus("Email is required when contact method is Email.", "error");
 
     if (patch.dbUser_ContactMethod === "SMS") {
-      if (!patch.dbUser_MobilePhone)   return setStatus("Mobile phone is required when contact method is SMS.", "error");
-      if (!patch.dbUser_MobileCarrier) return setStatus("Mobile carrier is required when contact method is SMS.", "error");
+      if (!patch.dbUser_MobilePhone)
+        return setStatus("Mobile phone is required when contact method is SMS.", "error");
     }
 
+    // ── Phase 2: Twilio mobile validation (only if mobile is present) ──────
+    if (patch.dbUser_MobilePhone) {
+
+      // Use cached result if phone hasn't changed since last lookup
+      const cached = state.twilioResult;
+      const needsLookup = !cached || cached.phone !== patch.dbUser_MobilePhone;
+
+      if (needsLookup) {
+        setBusy(true);
+        setStatus("Validating mobile number...", "info");
+
+        try {
+          const res = await apiCall("validateMobile.php", { mobile: patch.dbUser_MobilePhone });
+
+          if (!res || !res.valid) {
+            renderCarrierError();
+            setBusy(false);
+            return setStatus(res?.message || "Mobile number is invalid.", "error");
+          }
+
+          // Cache the result
+          state.twilioResult = {
+            phone:   patch.dbUser_MobilePhone,
+            valid:   true,
+            carrier: res.carrier || "",
+            gateway: res.gateway || "",
+            type:    res.type    || "mobile",
+            error:   null,
+          };
+
+          // Update carrier in fields and display
+          state.fields.dbUser_MobileCarrier = res.carrier || "";
+          patch.dbUser_MobileCarrier        = res.carrier || "";
+          renderCarrierDisplay(res.carrier || "");
+          renderSmsHint();
+
+        } catch (e) {
+          setBusy(false);
+          return setStatus("Mobile validation failed. Please try again.", "error");
+        }
+
+        setBusy(false);
+
+      } else {
+        // Use cached — ensure patch carries the resolved carrier
+        patch.dbUser_MobileCarrier = cached.carrier || "";
+      }
+    } else {
+      // No mobile — clear carrier
+      state.fields.dbUser_MobileCarrier = "";
+      patch.dbUser_MobileCarrier        = "";
+      state.twilioResult                = null;
+      renderCarrierDisplay("");
+    }
+
+    // ── Phase 3: Server save ───────────────────────────────────────────────
     setBusy(true);
     try {
       const res = await apiCall("saveUserSettings.php", { patch });
@@ -413,8 +509,9 @@
 
       const payload = res.payload || {};
       state.fields               = Object.assign({}, state.fields, payload.fields || {});
-      state.carrierOptions       = Array.isArray(payload.carrierOptions)       ? payload.carrierOptions       : state.carrierOptions;
-      state.contactMethodOptions = Array.isArray(payload.contactMethodOptions) ? payload.contactMethodOptions : state.contactMethodOptions;
+      state.contactMethodOptions = Array.isArray(payload.contactMethodOptions)
+        ? payload.contactMethodOptions
+        : state.contactMethodOptions;
 
       render();
       setDirty(false);
@@ -424,6 +521,7 @@
       setTimeout(() => {
         if (typeof MA.routerGo === "function") MA.routerGo(postSaveAction);
       }, 800);
+
     } catch (e) {
       console.error(e);
       setStatus(String(e.message || e), "error");
@@ -432,9 +530,8 @@
     }
   }
 
-  // -------------------------------------------------------------------------
-  // Boot
-  // -------------------------------------------------------------------------
+  // ── Boot ────────────────────────────────────────────────────────────────────
+
   function init() {
     applyChrome();
     wireInputs();
