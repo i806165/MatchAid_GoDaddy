@@ -10,7 +10,7 @@ require_once MA_SERVICES . "/database/service_dbFavPlayers.php";
 
 // Identity from session
 $userGHIN  = (string)($_SESSION["SessionGHINLogonID"] ?? "");
-$userState = (string)($_SESSION["SessionUserState"] ?? "");
+$userState = (string)($_SESSION["SessionUserState"]   ?? "");
 
 if ($userGHIN === "") {
   http_response_code(401);
@@ -21,15 +21,16 @@ if ($userGHIN === "") {
 // Input
 $in = ma_json_in();
 
-$playerGHIN = (string)($in["playerGHIN"] ?? "");
-$email      = (string)($in["email"] ?? "");
-$mobile     = (string)($in["mobile"] ?? "");
-$memberId   = (string)($in["memberId"] ?? "");
-$groups     = $in["groups"] ?? [];
-$playerName = (string)($in["playerName"] ?? "");
-$playerLName= (string)($in["playerLName"] ?? "");
-$playerHI   = (string)($in["playerHI"] ?? "");
-$playerGender=(string)($in["playerGender"] ?? "");
+$playerGHIN   = (string)($in["playerGHIN"]   ?? "");
+$email        = (string)($in["email"]        ?? "");
+$mobile       = preg_replace('/\D/', '', (string)($in["mobile"]  ?? ""));  // digits only
+$carrier      = trim((string)($in["carrier"] ?? ""));                      // ← Twilio-resolved
+$memberId     = (string)($in["memberId"]     ?? "");
+$groups       = $in["groups"]                ?? [];
+$playerName   = (string)($in["playerName"]   ?? "");
+$playerLName  = (string)($in["playerLName"]  ?? "");
+$playerHI     = (string)($in["playerHI"]     ?? "");
+$playerGender = (string)($in["playerGender"] ?? "");
 
 if ($playerGHIN === "") {
   http_response_code(400);
@@ -37,18 +38,22 @@ if ($playerGHIN === "") {
   exit;
 }
 
+// Drop carrier silently if no mobile number present
+if ($mobile === "") $carrier = "";
+
 try {
   $result = service_dbFavPlayers::upsertFavorite(
     $userGHIN,
     $playerGHIN,
-    ($email !== "" ? $email : null),
-    ($mobile !== "" ? $mobile : null),
+    ($email    !== "" ? $email    : null),
+    ($mobile   !== "" ? $mobile   : null),
     ($memberId !== "" ? $memberId : null),
-    (is_array($groups) ? $groups : []),
-    ($playerName !== "" ? $playerName : null),
-    ($playerLName !== "" ? $playerLName : null),
-    ($playerHI !== "" ? $playerHI : null),
-    ($playerGender !== "" ? $playerGender : null)
+    (is_array($groups) ? $groups  : []),
+    ($playerName   !== "" ? $playerName   : null),
+    ($playerLName  !== "" ? $playerLName  : null),
+    ($playerHI     !== "" ? $playerHI     : null),
+    ($playerGender !== "" ? $playerGender : null),
+    ($carrier      !== "" ? $carrier      : null)   // ← carrier added
   );
 } catch (Throwable $e) {
   http_response_code(500);
@@ -56,7 +61,7 @@ try {
   exit;
 }
 
-// Return refreshed payload (JS expects favorites + groups)
+// Return refreshed payload
 $returnAction = (string)($_SESSION["SessionFavReturnAction"] ?? "");
 if ($returnAction === "") $returnAction = "favoritePlayersList";
 
@@ -67,9 +72,9 @@ echo json_encode([
       "userGHIN"  => $userGHIN,
       "userState" => $userState,
     ],
-    "favorites" => service_dbFavPlayers::getFavoritesForUser($userGHIN),
-    "groups"    => service_dbFavPlayers::getGroupsForUser($userGHIN),
+    "favorites"    => service_dbFavPlayers::getFavoritesForUser($userGHIN),
+    "groups"       => service_dbFavPlayers::getGroupsForUser($userGHIN),
     "returnAction" => $returnAction,
-    "result" => $result, // optional; harmless if JS ignores
+    "result"       => $result,
   ]
 ]);

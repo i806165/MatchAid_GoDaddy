@@ -23,14 +23,18 @@
     selectedGroups: new Set(),
     returnAction: "",
     launchMode: String(launch.launchMode || "favorites"),
-    emailSources: [],       // [{email, source, label, masked, priority}]
-    selectedEmail: "",      // currently committed email on the form
-    selectedEmailSource: "", // source key for badge display
+    emailSources: [],
+    selectedEmail: "",
+    selectedEmailSource: "",
+
+    // Twilio mobile lookup cache — { phone, valid, carrier, gateway, type, error }
+    // Keyed on the digits-only phone string. Cleared when mobile field changes.
+    twilioResult: null,
 
     // Import
-    importParsedRows:    [],  // raw rows after SheetJS parse + column map
-    importValidatedRows: [],  // rows after GHIN API validation
-    importColumnMap:     {},  // { ourField: csvColumnIndex }
+    importParsedRows:    [],
+    importValidatedRows: [],
+    importColumnMap:     {},
   };
 
   const el = {
@@ -675,6 +679,7 @@
     if (el.formGhin) el.formGhin.textContent = "GHIN " + maskGHIN(state.current.playerGHIN);
 
     if (el.mobile)   el.mobile.value   = state.current.mobile   || "";
+    state.twilioResult = null;
     if (el.memberId) el.memberId.value = state.current.memberId || "";
 
     // Set email from best available source
@@ -738,9 +743,11 @@
   async function doSave() {
     if (!state.current) return;
 
-    const emailVal  = state.selectedEmail || (el.email ? el.email.value.trim() : "");
-    const mobileVal = el.mobile ? el.mobile.value.trim() : "";
+    const emailVal  = state.selectedEmail || (el.email  ? el.email.value.trim()  : "");
+    const mobileRaw = el.mobile ? el.mobile.value.trim() : "";
+    const mobileVal = mobileRaw.replace(/\D/g, "");  // digits only
 
+    // ── Phase 1: Field validation (no API calls) ──────────────────────────
     if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
       if (MA.setStatus) MA.setStatus("Invalid email address.", "error");
       return;
@@ -751,19 +758,64 @@
       return;
     }
 
-    if (mobileVal) {
-      const digits = mobileVal.replace(/\D/g, "");
-      if (digits.length < 10) {
-        if (MA.setStatus) MA.setStatus("Invalid mobile number (10 digits required).", "error");
-        if (el.mobile) el.mobile.focus();
-        return;
-      }
+    if (mobileVal && mobileVal.length < 10) {
+      if (MA.setStatus) MA.setStatus("Invalid mobile number (10 digits required).", "error");
+      if (el.mobile) el.mobile.focus();
+      return;
     }
 
+    // ── Phase 2: Twilio mobile validation (only if mobile present) ────────
+    let resolvedCarrier = "";
+
+    if (mobileVal) {
+      const cached    = state.twilioResult;
+      const needsLookup = !cached || cached.phone !== mobileVal;
+
+      if (needsLookup) {
+
+        try {
+          const validatePath = MA.paths.validateMobile;
+          if (!validatePath) throw new Error("validateMobile path not configured.");
+
+          const res = await MA.postJson(validatePath, { mobile: mobileVal });
+
+          if (!res || !res.valid) {
+            if (MA.setStatus) MA.setStatus(res?.message || "Mobile number is invalid.", "error");
+            return;
+          }
+
+          // Cache result
+          state.twilioResult = {
+            phone:   mobileVal,
+            valid:   true,
+            carrier: res.carrier || "",
+            gateway: res.gateway || "",
+            type:    res.type    || "mobile",
+            error:   null,
+          };
+
+          resolvedCarrier = res.carrier || "";
+
+        } catch (e) {
+          if (MA.setStatus) MA.setStatus("Mobile validation failed. Please try again.", "error");
+          return;
+        }
+
+      } else {
+        // Use cached result
+        resolvedCarrier = cached.carrier || "";
+      }
+    } else {
+      // Mobile cleared — invalidate cache
+      state.twilioResult = null;
+    }
+
+    // ── Phase 3: Server save ──────────────────────────────────────────────
     const payload = {
       playerGHIN:   state.current.playerGHIN,
       email:        emailVal,
       mobile:       mobileVal,
+      carrier:      resolvedCarrier,            // ← Twilio-resolved
       playerName:   state.current.name,
       playerLName:  state.current.lname,
       playerGender: state.current.gender,

@@ -33,6 +33,7 @@ $paths = [
   "favPlayersImport"    => "/api/favorite_players/importFavPlayers.php",
   "ghinPlayerSearch"    => "/api/GHIN/searchPlayers.php",
   "favPlayersGetEmails" => "/api/favorite_players/getPlayerEmails.php",
+  "validateMobile" => MA_ROUTE_API_EXTERNAL . "/validateMobile.php",
 ];
 
 $initPayload = [
