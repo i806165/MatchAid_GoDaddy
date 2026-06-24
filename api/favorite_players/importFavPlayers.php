@@ -122,7 +122,10 @@ foreach ($rows as $row) {
     $memberId     = trim((string)($row["memberId"]   ?? ""));
 
     // Mobile — digits only
-    $mobile  = preg_replace('/\D/', '', (string)($row["mobile"]  ?? ""));
+    $mobile = trim((string)($row["e164"] ?? ""));
+    if ($mobile === "") {
+        $mobile = preg_replace('/\D/', '', (string)($row["mobile"] ?? ""));
+    }
 
     // Carrier — Twilio-resolved client-side; drop if no mobile
     $carrier = trim((string)($row["carrier"] ?? ""));

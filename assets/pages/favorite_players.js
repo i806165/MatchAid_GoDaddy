@@ -787,6 +787,7 @@
           // Cache result
           state.twilioResult = {
             phone:   mobileVal,
+            e164:    res.e164    || "", 
             valid:   true,
             carrier: res.carrier || "",
             gateway: res.gateway || "",
@@ -814,7 +815,7 @@
     const payload = {
       playerGHIN:   state.current.playerGHIN,
       email:        emailVal,
-      mobile:       mobileVal,
+      mobile:       state.twilioResult?.e164 || mobileVal,
       carrier:      resolvedCarrier,            // ← Twilio-resolved
       playerName:   state.current.name,
       playerLName:  state.current.lname,
@@ -1104,6 +1105,7 @@
             row.statusMsg = "Invalid mobile";
           } else {
             row.carrier = res.carrier || "";
+            row.e164    = res.e164    || "";
           }
         } catch (err) {
           console.warn("[fpImport] Twilio mobile lookup failed:", {
