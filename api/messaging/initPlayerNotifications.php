@@ -12,82 +12,129 @@ $auth     = ma_api_require_auth();
 $userGhin = $auth["ghinId"];
 $body     = ma_json_in();
 $ggid     = isset($body["ggid"]) ? (int)$body["ggid"] : 0;
-$config  = ma_config();
-$siteUrl = $config["app"]["site_url"];
+$config   = ma_config();
+$siteUrl  = $config["app"]["site_url"];
 
 // ── Carrier gateway map ───────────────────────────────────────────────────────
-// Resolves dbUser_MobileCarrier → SMS-to-email gateway domain.
-// Source of truth: ServiceUserContext::USER_SETTINGS_CARRIERS
 $carrierPath = MA_INCLUDES . "/mobile_carriers.php";
 if (!is_file($carrierPath)) {
     throw new RuntimeException("Mobile carrier include not found: " . $carrierPath);
 }
-
 $carriers = require $carrierPath;
-
 if (!is_array($carriers)) {
     throw new RuntimeException("Mobile carrier include did not return an array.");
 }
 
 // ── Contact resolver ──────────────────────────────────────────────────────────
+//
 // Priority:
 //   1. db_Users row exists → use dbUser_ContactMethod (SMS gateway or Email)
-//   2. No db_Users row    → fall back to dbFav_PlayerEMail (Email only, guest players)
-//   3. Neither            → deliveryMethod = null (unreachable — shown grayed in UI)
+//   2. No db_Users row    → Population B — use db_FavPlayers contact info:
+//        a. Has email     → Email delivery (email preferred for Population B)
+//        b. Has mobile + carrier but no email → SMS delivery
+//        c. Neither       → deliveryMethod = null (unreachable)
 //
-// NOTE: NH-prefixed GHINs are non-rated guests; they never have a db_Users row.
-// The LEFT JOIN will return nulls for them and the favEmail fallback applies.
+// Returns:
+//   deliveryEmail        — the address that goes into the mailto: BCC
+//   deliveryEmailAddress — raw email address (for badge/display/override)
+//   deliverySmsAddress   — SMS gateway address (for badge/display/override)
+//   deliveryMethod       — "Email" | "SMS" | null
+//   email                — display email
+//   mobile               — display mobile
+//
 $resolveContact = function (
     ?array $userRow,
-    string $favEmail
+    string $favEmail,
+    string $favMobile,
+    string $favCarrier
 ) use ($carriers): array {
+
+    // ── Population A — db_Users profile exists ────────────────────────────
     if ($userRow !== null) {
         $method  = trim((string)($userRow["dbUser_ContactMethod"]  ?? ""));
         $mobile  = trim((string)($userRow["dbUser_MobilePhone"]    ?? ""));
         $carrier = trim((string)($userRow["dbUser_MobileCarrier"]  ?? ""));
         $email   = trim((string)($userRow["dbUser_EMail"]          ?? ""));
 
-        // Auto-detect preferred method if field is blank
-        if ($method === "") {
-            $method = ($mobile !== "" && $carrier !== "") ? "SMS" : "Email";
+        // Build both delivery addresses for badge switching
+        $smsAddress   = "";
+        $emailAddress = $email;
+
+        if ($mobile !== "" && $carrier !== "" && isset($carriers[$carrier])) {
+            $digits     = preg_replace('/\D/', '', $mobile);
+            $smsAddress = $digits . $carriers[$carrier];
         }
 
-        if ($method === "SMS" && $mobile !== "" && isset($carriers[$carrier])) {
-            $digits = preg_replace('/\D/', '', $mobile);
+        // Auto-detect preferred method if field is blank
+        if ($method === "") {
+            $method = ($smsAddress !== "") ? "SMS" : "Email";
+        }
+
+        // Primary delivery address uses preferred method
+        if ($method === "SMS" && $smsAddress !== "") {
             return [
-                "deliveryEmail"  => $digits . $carriers[$carrier],
-                "deliveryMethod" => "SMS",
-                "email"          => $email,
-                "mobile"         => $mobile,
+                "deliveryEmail"        => $smsAddress,
+                "deliveryEmailAddress" => $emailAddress,
+                "deliverySmsAddress"   => $smsAddress,
+                "deliveryMethod"       => "SMS",
+                "email"                => $email,
+                "mobile"               => $mobile,
             ];
         }
 
-        if ($email !== "") {
+        if ($emailAddress !== "") {
             return [
-                "deliveryEmail"  => $email,
-                "deliveryMethod" => "Email",
-                "email"          => $email,
-                "mobile"         => $mobile,
+                "deliveryEmail"        => $emailAddress,
+                "deliveryEmailAddress" => $emailAddress,
+                "deliverySmsAddress"   => $smsAddress,
+                "deliveryMethod"       => "Email",
+                "email"                => $email,
+                "mobile"               => $mobile,
             ];
         }
     }
 
-    // Fallback: favorites address book email (guest players or missing db_Users contact)
+    // ── Population B — no db_Users profile, use db_FavPlayers ────────────
+
+    // Build SMS gateway address from fav mobile + carrier if available
+    $favSmsAddress = "";
+    if ($favMobile !== "" && $favCarrier !== "" && isset($carriers[$favCarrier])) {
+        $digits        = preg_replace('/\D/', '', $favMobile);
+        $favSmsAddress = $digits . $carriers[$favCarrier];
+    }
+
+    // Email preferred when available
     if ($favEmail !== "") {
         return [
-            "deliveryEmail"  => $favEmail,
-            "deliveryMethod" => "Email",
-            "email"          => $favEmail,
-            "mobile"         => "",
+            "deliveryEmail"        => $favEmail,
+            "deliveryEmailAddress" => $favEmail,
+            "deliverySmsAddress"   => $favSmsAddress,
+            "deliveryMethod"       => "Email",
+            "email"                => $favEmail,
+            "mobile"               => $favMobile,
+        ];
+    }
+
+    // SMS only — no email on file
+    if ($favSmsAddress !== "") {
+        return [
+            "deliveryEmail"        => $favSmsAddress,
+            "deliveryEmailAddress" => "",
+            "deliverySmsAddress"   => $favSmsAddress,
+            "deliveryMethod"       => "SMS",
+            "email"                => "",
+            "mobile"               => $favMobile,
         ];
     }
 
     // Unreachable — no contact info in any source
     return [
-        "deliveryEmail"  => "",
-        "deliveryMethod" => null,
-        "email"          => "",
-        "mobile"         => "",
+        "deliveryEmail"        => "",
+        "deliveryEmailAddress" => "",
+        "deliverySmsAddress"   => "",
+        "deliveryMethod"       => null,
+        "email"                => "",
+        "mobile"               => "",
     ];
 };
 
@@ -101,10 +148,9 @@ try {
         $game = ServiceDbGames::getGameByGGID($ggid);
 
         if ($game) {
-            // Single query: db_Players LEFT JOIN db_Users LEFT JOIN db_FavPlayers
-            // db_FavPlayers join is scoped to the calling user's address book so
-            // favEmail is only populated when the admin has this player as a favorite.
             $pdo = Db::pdo();
+
+            // ← Added dbFav_PlayerMobile and dbFav_PlayerCarrier to the join
             $sql = "SELECT
                         p.dbPlayers_PlayerGHIN  AS ghin,
                         p.dbPlayers_Name        AS name,
@@ -113,7 +159,9 @@ try {
                         u.dbUser_MobilePhone    AS dbUser_MobilePhone,
                         u.dbUser_MobileCarrier  AS dbUser_MobileCarrier,
                         u.dbUser_ContactMethod  AS dbUser_ContactMethod,
-                        f.dbFav_PlayerEMail     AS favEmail
+                        f.dbFav_PlayerEMail     AS favEmail,
+                        f.dbFav_PlayerMobile    AS favMobile,
+                        f.dbFav_PlayerCarrier   AS favCarrier
                     FROM db_Players p
                     LEFT JOIN db_Users u
                         ON  u.dbUser_GHIN       = p.dbPlayers_PlayerGHIN
@@ -128,37 +176,37 @@ try {
             $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
             $gamePlayers = array_map(function (array $r) use ($resolveContact): array {
-                // Treat row as having a db_Users record only if at least one
-                // db_Users column came back non-null from the LEFT JOIN
                 $hasUserRow = (
                     $r["dbUser_EMail"]         !== null ||
                     $r["dbUser_MobilePhone"]   !== null ||
                     $r["dbUser_ContactMethod"] !== null
                 );
-                $userRow = $hasUserRow ? $r : null;
-                $contact = $resolveContact($userRow, (string)($r["favEmail"] ?? ""));
+                $userRow   = $hasUserRow ? $r : null;
+                $favEmail  = (string)($r["favEmail"]  ?? "");
+                $favMobile = (string)($r["favMobile"] ?? "");
+                $favCarrier= (string)($r["favCarrier"] ?? "");
+                $contact   = $resolveContact($userRow, $favEmail, $favMobile, $favCarrier);
 
                 return [
-                    "ghin"           => (string)$r["ghin"],
-                    "name"           => (string)$r["name"],
-                    "lname"          => (string)$r["lname"],
-                    "email"          => $contact["email"],
-                    "mobile"         => $contact["mobile"],
-                    "deliveryEmail"  => $contact["deliveryEmail"],
-                    "deliveryMethod" => $contact["deliveryMethod"],
+                    "ghin"                 => (string)$r["ghin"],
+                    "name"                 => (string)$r["name"],
+                    "lname"                => (string)$r["lname"],
+                    "email"                => $contact["email"],
+                    "mobile"               => $contact["mobile"],
+                    "deliveryEmail"        => $contact["deliveryEmail"],
+                    "deliveryEmailAddress" => $contact["deliveryEmailAddress"],
+                    "deliverySmsAddress"   => $contact["deliverySmsAddress"],
+                    "deliveryMethod"       => $contact["deliveryMethod"],
                 ];
             }, $rows);
         }
     }
 
     // ── Favorites ─────────────────────────────────────────────────────────────
-    // getFavoritesForUser already decodes dbFav_PlayerTags → groups array.
-    // getGroupsForUser returns distinct group names, excluding "_default".
     $favRows   = service_dbFavPlayers::getFavoritesForUser($userGhin);
     $favGroups = service_dbFavPlayers::getGroupsForUser($userGhin);
 
-    // Bulk-fetch db_Users contact rows for all favorite GHINs in one query.
-    // NH-prefix GHINs (non-rated guests) are excluded — they never have a db_Users row.
+    // Bulk-fetch db_Users contact rows for all favorite GHINs in one query
     $favGhins = array_values(array_filter(
         array_column($favRows, "playerGHIN"),
         fn($g) => $g !== "" && !str_starts_with((string)$g, "NH")
@@ -181,29 +229,31 @@ try {
     }
 
     $favorites = array_map(function (array $f) use ($resolveContact, $userMap): array {
-        $ghin    = (string)($f["playerGHIN"] ?? "");
-        $userRow = $userMap[$ghin] ?? null;
-        $contact = $resolveContact($userRow, (string)($f["email"] ?? ""));
+        $ghin       = (string)($f["playerGHIN"] ?? "");
+        $userRow    = $userMap[$ghin] ?? null;
+        $favEmail   = (string)($f["email"]   ?? "");
+        $favMobile  = (string)($f["mobile"]  ?? "");
+        $favCarrier = (string)($f["carrier"] ?? "");
+        $contact    = $resolveContact($userRow, $favEmail, $favMobile, $favCarrier);
 
         return [
-            "ghin"           => $ghin,
-            "name"           => (string)($f["name"]  ?? ""),
-            "lname"          => (string)($f["lname"] ?? ""),
-            "groups"         => $f["groups"],   // already decoded string[] by getFavoritesForUser
-            "email"          => $contact["email"],
-            "mobile"         => $contact["mobile"],
-            "deliveryEmail"  => $contact["deliveryEmail"],
-            "deliveryMethod" => $contact["deliveryMethod"],
+            "ghin"                 => $ghin,
+            "name"                 => (string)($f["name"]  ?? ""),
+            "lname"                => (string)($f["lname"] ?? ""),
+            "groups"               => $f["groups"],
+            "email"                => $contact["email"],
+            "mobile"               => $contact["mobile"],
+            "deliveryEmail"        => $contact["deliveryEmail"],
+            "deliveryEmailAddress" => $contact["deliveryEmailAddress"],
+            "deliverySmsAddress"   => $contact["deliverySmsAddress"],
+            "deliveryMethod"       => $contact["deliveryMethod"],
         ];
     }, $favRows);
 
     // ── Response ──────────────────────────────────────────────────────────────
-    // hasGameContext drives tab visibility in player_notifications.js:
-    //   true  → both "Game players" and "Favorites" tabs rendered
-    //   false → "Game players" tab suppressed entirely
     ma_respond(200, [
         "ok"             => true,
-        "siteUrl"        => $siteUrl, 
+        "siteUrl"        => $siteUrl,
         "hasGameContext" => $game !== null,
         "game"           => $game !== null ? [
             "ggid"         => (int)($game["dbGames_GGID"]        ?? 0),
@@ -213,9 +263,9 @@ try {
             "facilityName" => (string)($game["dbGames_FacilityName"] ?? ""),
             "courseName"   => (string)($game["dbGames_CourseName"]   ?? ""),
         ] : null,
-        "gamePlayers"    => $gamePlayers,   // null when no ggid supplied
+        "gamePlayers"    => $gamePlayers,
         "favorites"      => $favorites,
-        "favGroups"      => $favGroups,     // sorted distinct group names, _default excluded
+        "favGroups"      => $favGroups,
     ]);
 
 } catch (Throwable $e) {
