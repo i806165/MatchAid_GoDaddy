@@ -1038,6 +1038,7 @@
         status:    ghin ? "pending" : "error",
         statusMsg: ghin ? "" : "No GHIN",
       });
+    }
 
     if (rows.length === 0) {
       if (MA.setStatus) MA.setStatus("No data rows found in file.", "warn");
