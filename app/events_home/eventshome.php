@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../bootstrap.php';
 require_once MA_SERVICES . '/context/service_ContextUser.php';
-require_once MA_SERVICES . '/workflows/hydrateEventsList.php';
+require_once MA_SERVICES . '/workflows/workflow_hydrateEventsList.php';
 require_once MA_API_LIB . '/Logger.php';
 
 $config = ma_config();
