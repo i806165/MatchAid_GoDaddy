@@ -78,6 +78,13 @@
       <span class="maNavLabel">Club Users</span>
     </button>
 
+    <button type="button" class="maNavBtn" data-nav="eventhome" aria-label="Events">
+      <span class="maNavIcon" aria-hidden="true">
+        <img src="/assets/images/nav-event.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
+      </span>
+      <span class="maNavLabel">Events</span>
+    </button>
+
     <button type="button" class="maNavBtn" data-nav="admin" aria-label="Admin">
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-admin-home.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">

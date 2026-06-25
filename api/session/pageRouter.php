@@ -77,6 +77,15 @@ $ROUTES = [
     "clubhome" => "/app/club_home/clubhome.php",
     "clubdemand" => "/app/club_demand/clubdemand.php",
     "clubusers" => "/app/club_users/clubusers.php",
+
+    // Add to $ROUTES in /api/session/pageRouter.php:
+    "eventhome" => "/app/events_home/eventshome.php",
+    // Future placeholders when pages exist:
+    "eventsummary"   => "/app/event_summary/eventsummary.php",
+    "eventedit"    => "/app/event_maintenance/eventmaintenance.php",
+    "eventroster"  => "/app/event_roster/eventroster.php",
+    "eventgames"   => "/app/event_games/eventgames.php",
+    "eventscoring" => "/app/event_scoring/eventscoring.php",
 ];
 
 

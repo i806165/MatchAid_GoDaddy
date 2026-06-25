@@ -841,7 +841,7 @@ function wireFiltersModal() {
     // Chrome bottom nav: Home + Favorites only, centered
     if (MA.chrome && typeof MA.chrome.setBottomNav === "function") {
       MA.chrome.setBottomNav({
-        visible: ["home", "admin", "favorites", "import"],
+        visible: ["home", "admin", "favorites", "import", "eventhome"],
         active: "admin",
         onNavigate: (id) => {
           try {

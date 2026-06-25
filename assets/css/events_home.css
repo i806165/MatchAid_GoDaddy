@@ -1,0 +1,81 @@
+/* /assets/css/events_home.css
+   Events Home — page-specific styles
+   ma_shared.css owns global primitives.
+*/
+
+.maPage--eventsHome {
+  overflow-y: auto;
+}
+
+/* Match Admin Games card treatment */
+.maCard__hdr {
+  color: var(--brandSecondaryText);
+  background: var(--brandSecondary);
+  border-bottom-color: color-mix(in srgb, var(--brandPrimary) 70%, black);
+}
+
+.maCard__title {
+  color: var(--brandPrimaryText);
+}
+
+.maCard__titleGgid {
+  margin-left: 6px;
+  color: var(--brandPrimaryTextMuted);
+  font-weight: 800;
+}
+
+.maEventCard {
+  cursor: pointer;
+}
+
+.maEventCard:active {
+  transform: scale(.995);
+}
+
+.maEventCard__hdrAdmin {
+  color: var(--brandPrimaryTextMuted);
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 38%;
+  text-align: right;
+  margin-right: 8px;
+}
+
+.maEventCard__body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.maEventCard__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.maEventCard__line {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.maEventCard__line1 {
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.maEventCard__line2 {
+  font-weight: 800;
+  color: var(--mutedText);
+  font-size: 12px;
+}
+
+.maEventCard__line3 {
+  font-weight: 800;
+  color: var(--mutedText);
+  font-size: 12px;
+}
