@@ -124,13 +124,110 @@ final class ServiceDbEvents
     return $delEvent->rowCount() > 0;
   }
 
-  /**
-   * Placeholder for Event Maintenance page.
-   * Kept here so the service shape is ready.
-   */
   public static function saveEvent(string $mode, array $patch, array $sessionCtx): array
   {
-    throw new RuntimeException("saveEvent is not implemented yet.");
+    $pdo = Db::pdo();
+
+    $mode = strtolower(trim($mode));
+    if ($mode !== "add" && $mode !== "edit") $mode = "edit";
+
+    $eid = (int)($sessionCtx["eid"] ?? 0);
+
+    $allowed = [
+      "dbEvents_Title",
+      "dbEvents_EventType",
+      "dbEvents_StartDate",
+      "dbEvents_EndDate",
+      "dbEvents_Description",
+      "dbEvents_FacilityName",
+      "dbEvents_ScoringMethod",
+      "dbEvents_ScoringConfig",
+      "dbEvents_TiebreakMethod",
+      "dbEvents_TiebreakConfig",
+    ];
+
+    $clean = [];
+    foreach ($allowed as $k) {
+      if (array_key_exists($k, $patch)) {
+        $clean[$k] = $patch[$k];
+      }
+    }
+
+    $title = trim((string)($clean["dbEvents_Title"] ?? ""));
+    if ($title === "") {
+      throw new RuntimeException("Event title is required.");
+    }
+
+    $startDate = trim((string)($clean["dbEvents_StartDate"] ?? ""));
+    $endDate = trim((string)($clean["dbEvents_EndDate"] ?? ""));
+    if ($startDate === "" || $endDate === "") {
+      throw new RuntimeException("Start date and end date are required.");
+    }
+    if ($endDate < $startDate) {
+      throw new RuntimeException("End date cannot be before start date.");
+    }
+
+    if ($mode === "add") {
+      $clean["dbEvents_FacilityID"] = (string)($sessionCtx["facilityId"] ?? "");
+      if (trim((string)($clean["dbEvents_FacilityName"] ?? "")) === "") {
+        $clean["dbEvents_FacilityName"] = (string)($sessionCtx["facilityName"] ?? "");
+      }
+
+      $clean["dbEvents_AdminGHIN"] = (string)($sessionCtx["adminGhin"] ?? "");
+      $clean["dbEvents_AdminName"] = (string)($sessionCtx["adminName"] ?? "");
+      $clean["dbEvents_AdminLName"] = (string)($sessionCtx["adminLName"] ?? "");
+      $clean["dbEvents_AdminAssocID"] = (string)($sessionCtx["adminAssocId"] ?? "");
+      $clean["dbEvents_AdminAssocName"] = (string)($sessionCtx["adminAssocName"] ?? "");
+      $clean["dbEvents_AdminClubID"] = (string)($sessionCtx["adminClubId"] ?? "");
+      $clean["dbEvents_AdminClubName"] = (string)($sessionCtx["adminClubName"] ?? "");
+
+      $cols = array_keys($clean);
+      $phs = array_map(fn($c) => ":" . $c, $cols);
+
+      $sql = "INSERT INTO db_Events (" . implode(",", $cols) . ")
+              VALUES (" . implode(",", $phs) . ")";
+      $stmt = $pdo->prepare($sql);
+
+      $params = [];
+      foreach ($cols as $c) $params[":" . $c] = $clean[$c];
+      $stmt->execute($params);
+
+      $eid = (int)$pdo->lastInsertId();
+    } else {
+      if ($eid <= 0) {
+        throw new RuntimeException("Missing selected event.");
+      }
+
+      $sets = [];
+      $params = [":eid" => $eid];
+
+      foreach ($clean as $col => $val) {
+        $sets[] = "{$col} = :{$col}";
+        $params[":{$col}"] = $val;
+      }
+
+      if (!$sets) {
+        throw new RuntimeException("No event fields to save.");
+      }
+
+      $sql = "UPDATE db_Events
+                 SET " . implode(", ", $sets) . "
+               WHERE dbEvents_EID = :eid
+               LIMIT 1";
+      $stmt = $pdo->prepare($sql);
+      $stmt->execute($params);
+    }
+
+    $event = self::getEventByEID($eid);
+    if (!$event) {
+      throw new RuntimeException("Event save succeeded, but event could not be reloaded.");
+    }
+
+    return [
+      "mode" => "edit",
+      "eid" => $eid,
+      "event" => $event
+    ];
   }
 
   private static function eventVm(array $r): array

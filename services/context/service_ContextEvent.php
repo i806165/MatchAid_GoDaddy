@@ -174,4 +174,36 @@ final class ServiceContextEvent
     }
     return $event;
   }
+
+  public static function defaultEventForAdd(): array
+  {
+    $today = (new DateTimeImmutable("today"))->format("Y-m-d");
+
+    $facilityName = (string)($_SESSION["SessionFacilityName"] ?? $_SESSION["SessionGHINFacilityName"] ?? "");
+
+    return [
+      "dbEvents_EID" => null,
+      "dbEvents_Title" => "",
+      "dbEvents_EventType" => "Tournament",
+      "dbEvents_StartDate" => $today,
+      "dbEvents_EndDate" => $today,
+      "dbEvents_Description" => "",
+
+      "dbEvents_FacilityID" => (string)($_SESSION["SessionFacilityID"] ?? $_SESSION["SessionGHINFacilityID"] ?? ""),
+      "dbEvents_FacilityName" => $facilityName,
+
+      "dbEvents_AdminGHIN" => (string)($_SESSION["SessionGHINLogonID"] ?? ""),
+      "dbEvents_AdminName" => (string)($_SESSION["SessionUserName"] ?? $_SESSION["SessionGHINUserName"] ?? ""),
+      "dbEvents_AdminLName" => (string)($_SESSION["SessionUserLName"] ?? ""),
+      "dbEvents_AdminAssocID" => (string)($_SESSION["SessionAdminAssocID"] ?? ""),
+      "dbEvents_AdminAssocName" => (string)($_SESSION["SessionAdminAssocName"] ?? ""),
+      "dbEvents_AdminClubID" => (string)($_SESSION["SessionAdminClubID"] ?? $_SESSION["SessionClubID"] ?? ""),
+      "dbEvents_AdminClubName" => (string)($_SESSION["SessionAdminClubName"] ?? $_SESSION["SessionClubName"] ?? ""),
+
+      "dbEvents_ScoringMethod" => "",
+      "dbEvents_ScoringConfig" => "",
+      "dbEvents_TiebreakMethod" => "",
+      "dbEvents_TiebreakConfig" => "",
+    ];
+  }
 }

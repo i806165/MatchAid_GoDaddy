@@ -1,0 +1,55 @@
+/* /assets/css/event_maintenance.css
+   Event Maintenance — page-specific rules.
+   Shared tokens/layout live in /assets/css/ma_shared.css.
+*/
+
+.maCard__hdr {
+  color: var(--brandSecondaryText);
+  background: var(--brandSecondary);
+}
+
+.maCard__title {
+  color: var(--brandPrimaryText);
+}
+
+#emEidLabel {
+  margin-left: 6px;
+  color: var(--brandPrimaryTextMuted);
+  font-weight: 800;
+}
+
+.emTwoCol {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.emTextarea {
+  width: 100%;
+  min-height: 72px;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.emHint,
+.emScoringPreview {
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--mutedText);
+  line-height: 1.35;
+}
+
+.emScoringPreview {
+  padding: 10px 12px;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--radiusLg);
+  background: var(--brandPrimaryBg);
+}
+
+@media (max-width: 600px) {
+  .emTwoCol {
+    grid-template-columns: 1fr;
+  }
+}
