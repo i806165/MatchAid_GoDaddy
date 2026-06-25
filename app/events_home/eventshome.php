@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../bootstrap.php';
 require_once MA_SERVICES . '/context/service_ContextUser.php';
-require_once MA_SERVICES . '/workflows/workflow_hydrateEventsList.php';
+require_once MA_SERVICES . '/workflows/hydrateEventsList.php';
 require_once MA_API_LIB . '/Logger.php';
 
 $config = ma_config();
@@ -22,12 +22,14 @@ if (!$ctx || empty($ctx["ok"])) {
 // Gate: use same convention as Admin Games
 ServiceUserContext::requireAccessLevel("MEMBER");
 
+// Pull frequently-used values from session
 $ghinId     = trim((string)($_SESSION["SessionGHINLogonID"] ?? ""));
 $clubId     = trim((string)($_SESSION["SessionClubID"] ?? ""));
 $clubName   = trim((string)($_SESSION["SessionClubName"] ?? ""));
 $userToken  = trim((string)($_SESSION["SessionUserToken"] ?? ""));
 $adminToken = trim((string)($_SESSION["SessionAdminToken"] ?? ""));
 
+// Build the context array expected by hydrateEventsList
 $context = [
   "adminToken"  => $adminToken,
   "userToken"   => $userToken,
@@ -39,11 +41,24 @@ $context = [
 
 // Restore simple Events Home mode, default current
 $mode = strtolower(trim((string)($_SESSION["EH_FILTER_MODE"] ?? "current")));
-if (!in_array($mode, ["current", "past", "all"], true)) $mode = "current";
+if (!in_array($mode, ["current", "past", "all"], true)) {
+  $mode = "current";
+}
 
-$init = hydrateEventsList($context, ["mode" => $mode]);
+// Hydrate INIT payload
+$init = hydrateEventsList($context, [
+  "mode" => $mode,
+]);
 
+// Optional page help key
 $pageHelpKey = "events_home";
+
+// JS path contract expected by ma_shared.js/routerGo()
+$paths = [
+  "routerApi"     => MA_ROUTE_API_ROUTER,
+  "apiEventsHome" => defined('MA_ROUTE_API_EVENTS_HOME') ? MA_ROUTE_API_EVENTS_HOME : "/api/events_home",
+  "apiSession"    => MA_ROUTE_API_SESSION,
+];
 ?>
 <!doctype html>
 <html lang="en">
@@ -51,9 +66,11 @@ $pageHelpKey = "events_home";
   <meta charset="utf-8">
   <title>MatchAid Events</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
   <link rel="stylesheet" href="<?= ma_asset('/assets/css/ma_shared.css') ?>">
   <link rel="stylesheet" href="<?= ma_asset('/assets/css/events_home.css') ?>">
 </head>
+
 <body>
 <?php require MA_INCLUDES . '/chromeHeader.php'; ?>
 
@@ -64,14 +81,29 @@ $pageHelpKey = "events_home";
 <?php require MA_INCLUDES . '/chromeFooter.php'; ?>
 
 <script>
-window.__MA_INIT__ = <?= json_encode($init, JSON_UNESCAPED_SLASHES) ?>;
 window.MA = window.MA || {};
-window.MA.routes = Object.assign(window.MA.routes || {}, {
-  apiEventsHome: "<?= defined('MA_ROUTE_API_EVENTS_HOME') ? MA_ROUTE_API_EVENTS_HOME : '/api/events_home' ?>",
-  apiSession: "<?= MA_ROUTE_API_SESSION ?>"
-});
+
+window.MA.paths = <?= json_encode(
+  $paths,
+  JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+) ?>;
+
+window.__INIT__ = <?= json_encode(
+  $init,
+  JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+) ?>;
+
+window.__MA_INIT__ = window.__INIT__;
+
+window.MA.routes = {
+  router: window.MA.paths.routerApi,
+  apiEventsHome: window.MA.paths.apiEventsHome,
+  apiSession: window.MA.paths.apiSession
+};
 </script>
+
 <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>
 <script src="<?= ma_asset('/assets/pages/events_home.js') ?>"></script>
 </body>
 </html>
