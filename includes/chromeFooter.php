@@ -78,6 +78,7 @@
       <span class="maNavLabel">Club Users</span>
     </button>
 
+/////// EVENT SECTION //////
     <button type="button" class="maNavBtn" data-nav="eventhome" aria-label="Events">
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-event.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
@@ -85,11 +86,38 @@
       <span class="maNavLabel">Events</span>
     </button>
 
+    <button type="button" class="maNavBtn" data-nav="eventedit" aria-label="Edit">
+      <span class="maNavIcon" aria-hidden="true">
+        <img src="/assets/images/nav-edit.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
+      </span>
+      <span class="maNavLabel">Edit</span>
+    </button>
+
+    <button type="button" class="maNavBtn" data-nav="eventroster" aria-label="Roster">
+      <span class="maNavIcon" aria-hidden="true">
+        <img src="/assets/images/nav-players.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
+      </span>
+      <span class="maNavLabel">Event Roster</span>
+    </button>
+
+    <button type="button" class="maNavBtn" data-nav="eventpairings" aria-label="Pairings">
+      <span class="maNavIcon" aria-hidden="true">🔗</span>
+      <span class="maNavLabel">Pairings</span>
+    </button>
+
+/////// ADMIN SECTION //////
     <button type="button" class="maNavBtn" data-nav="admin" aria-label="Admin">
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-admin-home.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
       </span>
       <span class="maNavLabel">Admin Home</span>
+    </button>
+
+    <button type="button" class="maNavBtn" data-nav="eventgames" aria-label="EventGames">
+      <span class="maNavIcon" aria-hidden="true">
+        <img src="/assets/images/nav-gameslist.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
+      </span>
+      <span class="maNavLabel">Event Games</span>
     </button>
 
     <button type="button" class="maNavBtn" data-nav="player" aria-label="Player">
@@ -112,7 +140,9 @@
     </button>
 
     <button type="button" class="maNavBtn" data-nav="roster" aria-label="Roster">
-      <span class="maNavIcon" aria-hidden="true">👥</span>
+      <span class="maNavIcon" aria-hidden="true">
+        <img src="/assets/images/nav-players.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
+      </span>
       <span class="maNavLabel">Roster</span>
     </button>
 
@@ -154,6 +184,7 @@
       <span class="maNavLabel">Import Games</span>
     </button>
   
+/////// SCORE SECTION //////
     <button class="maNavBtn" data-nav="scorehome" aria-label="Score Home">
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-app-home.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">

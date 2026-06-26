@@ -35,5 +35,6 @@ if ($auth["status"] !== "Authorized") {
 }
 
 ServiceContextEvent::setEventContext($eid);
+unset($_SESSION["SessionStoredGGID"]); // clear stale game context on event entry
 
 ma_respond(200, ["ok" => true, "payload" => ["eid" => $eid]]);

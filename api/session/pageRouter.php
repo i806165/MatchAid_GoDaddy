@@ -84,7 +84,7 @@ $ROUTES = [
     // Future placeholders:
     "eventsummary"   => "/app/event_summary/eventsummary.php",
     "eventroster"  => "/app/event_roster/eventroster.php",
-    "eventgames"   => "/app/event_games/eventgames.php",
+    "eventgames"   => "/app/admin_games/adminhome.php",
     "eventscoring" => "/app/event_scoring/eventscoring.php",
 ];
 
