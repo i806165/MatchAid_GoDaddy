@@ -78,7 +78,7 @@
       <span class="maNavLabel">Club Users</span>
     </button>
 
-/////// EVENT SECTION //////
+<!-- /////// EVENT SECTION ////// -->
     <button type="button" class="maNavBtn" data-nav="eventhome" aria-label="Events">
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-event.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
@@ -105,7 +105,7 @@
       <span class="maNavLabel">Pairings</span>
     </button>
 
-/////// ADMIN SECTION //////
+<!-- /////// ADMIN SECTION ////// -->
     <button type="button" class="maNavBtn" data-nav="admin" aria-label="Admin">
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-admin-home.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
@@ -184,7 +184,7 @@
       <span class="maNavLabel">Import Games</span>
     </button>
   
-/////// SCORE SECTION //////
+<!-- /////// SCORE SECTION ////// -->
     <button class="maNavBtn" data-nav="scorehome" aria-label="Score Home">
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-app-home.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
