@@ -144,12 +144,47 @@ $_SESSION['SessionLastActivity'] = $now;
 
 // Load config once (your config is /public_html/api/config.php)
 $MA_CONFIG = require MA_API . '/config.php';
+
 // Expose config via a function (keeps global namespace clean)
 function ma_config(): array {
   global $MA_CONFIG;
   return is_array($MA_CONFIG) ? $MA_CONFIG : [];
 }
-define('MA_SITE_URL', ma_config()['app']['site_url'] ?? 'https://www.matchaid.org');
+
+/**
+ * Detect site URL.
+ *
+ * Preferred:
+ *   - ma_config()['app']['site_url'], if populated
+ *
+ * Fallback:
+ *   - derive from the current request host
+ *
+ * Final fallback:
+ *   - production domain
+ *
+ * This allows config.php to use:
+ *   "site_url" => null
+ *
+ * and still support future domain/subdomain movement.
+ */
+function ma_detect_site_url(): string {
+  $configured = trim((string)(ma_config()['app']['site_url'] ?? ''));
+  if ($configured !== '') {
+    return rtrim($configured, '/');
+  }
+
+  $host = trim((string)($_SERVER['HTTP_HOST'] ?? ''));
+  if ($host !== '') {
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+    $scheme = $https ? 'https' : 'http';
+    return $scheme . '://' . $host;
+  }
+
+  return 'https://www.matchaid.org';
+}
+
+define('MA_SITE_URL', ma_detect_site_url());
 
 require_once MA_API_LIB . '/Db.php';
 require_once MA_API_LIB . '/Logger.php';
