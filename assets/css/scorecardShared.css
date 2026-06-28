@@ -278,7 +278,9 @@ body.scChromeHiddenMode .maChrome__ftr{
 
 /* Pairing total column headers — tinted to match scTotalRow */
 .scTTable thead th.scTTotalCol{
-  background:rgba(0,0,0,0.09);
+  background:color-mix(in srgb, var(--panelControlsBg) 91%, black);
+  white-space:normal;
+  min-width:44px;
 }
 
 /* Frozen left column — hole cells */

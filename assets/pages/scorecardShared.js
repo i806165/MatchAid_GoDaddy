@@ -535,7 +535,9 @@ function renderPlayerRows(players, cardState, row){
         const pairingTotals = totalsForPairing(allColumnTotals, group.pairingId);
         pairingTotals.forEach(t => {
           const label = `${t.label} ${kpiLabel}`.trim();
-          headerCols += `<th class="scTTotalCol">${esc(label)}</th>`;
+          const [totalMain, ...totalRest] = label.split(' ');
+          const totalSub = totalRest.join(' ');
+          headerCols += `<th class="scTTotalCol">TOTAL<span class="scTHdrSub">${esc(totalSub)}</span></th>`;
         });
       }
     });
