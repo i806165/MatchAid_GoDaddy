@@ -674,7 +674,8 @@ function renderPlayerRows(players, cardState, row){
         <div class="scDrawer__handle" aria-hidden="true"></div>
         <header class="maModal__hdr">
           <div>
-            <div class="maModal__title">${esc(drawerTitle)}</div>
+            <div class="maModal__title">${esc(playerKey ? `ScoreCard ${playerKey}` : 'ScoreCard')}</div>
+            <!-- <div class="maModal__title">${esc(drawerTitle)}</div> -->
             <div class="maModal__subtitle">${esc(subtitle)}</div>
           </div>
           <button class="iconBtn btnSecondary" type="button" data-drawer-close="${esc(gid)}" aria-label="Close scorecard drawer">
