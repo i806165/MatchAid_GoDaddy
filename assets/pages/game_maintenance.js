@@ -837,7 +837,8 @@
       dbGames_FacilityState: state.game.dbGames_FacilityState || "",
       dbGames_CourseID: state.game.dbGames_CourseID || "",
       dbGames_CourseName: state.game.dbGames_CourseName || "",
-      dbGames_CourseConfirmed: state.game.dbGames_CourseConfirmed ? 1 : 0
+      dbGames_CourseConfirmed: state.game.dbGames_CourseConfirmed ? 1 : 0,
+      dbGames_EID: state.game.dbGames_EID ? Number(state.game.dbGames_EID) : null
     };
   }
 
