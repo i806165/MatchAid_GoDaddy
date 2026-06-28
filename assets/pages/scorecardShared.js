@@ -535,9 +535,10 @@ function renderPlayerRows(players, cardState, row){
         const pairingTotals = totalsForPairing(allColumnTotals, group.pairingId);
         pairingTotals.forEach(t => {
           const label = `${t.label} ${kpiLabel}`.trim();
-          const [totalMain, ...totalRest] = label.split(' ');
-          const totalSub = totalRest.join(' ');
-          headerCols += `<th class="scTTotalCol">TOTAL<span class="scTHdrSub">${esc(totalSub)}</span></th>`;
+          const totalIdx = label.indexOf('TOTAL');
+          const totalPre = totalIdx > 0 ? label.slice(0, totalIdx).trim() : '';
+          const totalPost = label.slice(totalIdx + 5).trim();
+          headerCols += `<th class="scTTotalCol">${esc(totalPost)}<span class="scTHdrSub">${esc(totalPre)}</span></th>`;
         });
       }
     });
