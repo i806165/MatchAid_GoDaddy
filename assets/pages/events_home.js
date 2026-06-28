@@ -243,11 +243,10 @@
 
   function openEventMenu(eid) {
     const items = [
-      { label: "Open Event", action: () => handleEventAction({ action: "openEvent", eid }) },
       { label: "Edit Event", action: () => handleEventAction({ action: "editEvent", eid }) },
       { separator: true },
-      { label: "Roster", action: () => handleEventAction({ action: "eventRoster", eid }) },
-      { label: "Rounds / Games", action: () => handleEventAction({ action: "eventGames", eid }) },
+      { label: "Event Rounds", action: () => handleEventAction({ action: "eventGames", eid }) },
+      { label: "Event Roster", action: () => handleEventAction({ action: "eventRoster", eid }) },
       { label: "Event Scoring", action: () => handleEventAction({ action: "eventScoring", eid }) },
       { separator: true },
       { label: "Delete Event", action: () => handleEventAction({ action: "deleteEvent", eid }), danger: true }
