@@ -74,6 +74,10 @@
   font-weight:800;
   font-size:14px;
   line-height:1.2;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+  min-width:0;
 }
 
 .scTable td.scName{
@@ -188,10 +192,6 @@
 }
 
 @media (max-width: 820px){
-  .scGroupCard__hdr{
-    flex-direction:column;
-  }
-
   .scBrowserControls{
     align-items:flex-start;
   }

@@ -415,7 +415,7 @@ function renderPlayerRows(players, cardState, row){
     const isPairPair = String(row.gameHeader?.dbGames_Competition || '').trim() === 'PairPair';
 
     const parts = [];
-    if (playerKey) parts.push(`ScoreCard ${playerKey}`);
+    if (playerKey) parts.push(`Card ${playerKey}`);
     if (isPairPair && flightIDs.length) parts.push(`Match ${flightIDs.join(', ')}`);
     if (pairingIDs.length) parts.push(`Pairings ${pairingIDs.join(', ')}`);
 
@@ -690,11 +690,6 @@ function renderPlayerRows(players, cardState, row){
             <tbody>${tbodyRows}</tbody>
           </table>
         </div>
-        <footer class="maModal__ftr">
-          <div class="maModal__ftrActions">
-            <button class="iconBtn btnSecondary" type="button" data-drawer-close="${esc(gid)}">Close</button>
-          </div>
-        </footer>
       </section>
     </div>`;
   }
