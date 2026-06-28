@@ -196,8 +196,8 @@
   --overlayBlur: 2px;
   --modalSurface: var(--surfaceChrome);
   --modalMaxW: 520px;
-  --modalMaxH: 88dvh;
-  --modalViewportGap: 40px;
+  --modalMaxH: 96dvh;
+  --modalViewportGap: 16px;
   --modalRadius: 18px;
   --modalShadow: 0 14px 34px rgba(0,0,0,.18);
   --modalHeaderBg: var(--brandSecondary);
