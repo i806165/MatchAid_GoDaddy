@@ -672,8 +672,8 @@ function renderPlayerRows(players, cardState, row){
     }
     const drawerTitle = [...titleParts, spinText].filter(Boolean).join(' • ');
 
-    return `<div class="maDrawerOverlay" id="scDrawer-${esc(gid)}" role="dialog" aria-modal="true" aria-label="${esc(drawerTitle)}">
-      <section class="maDrawer">
+    return `<div class="maModalOverlay" id="scDrawer-${esc(gid)}" role="dialog" aria-modal="true" aria-label="${esc(drawerTitle)}">
+      <section class="maModal">
         <div class="scDrawer__handle" aria-hidden="true"></div>
         <header class="maModal__hdr">
           <div>
