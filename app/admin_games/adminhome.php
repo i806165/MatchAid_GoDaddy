@@ -47,6 +47,16 @@ $context = [
 // 2) Default filters
 //    - First-time fresh: use hard-coded presets (today → today+30, ME)
 //    - Return to page: if AP_* session filters exist, restore those
+//    - Event mode: if SessionStoredEID is set, bypass all filter logic
+
+// --- EVENT MODE DETECTION ---
+$eid = (int)($_SESSION["SessionStoredEID"] ?? 0);
+if ($eid > 0) {
+  require_once MA_SERVICES . '/context/service_ContextEvent.php';
+  $defaultFilters = ["eid" => $eid];
+  $initPayload = hydrateAdminGamesList($context, $defaultFilters);
+  $initPayload['portal'] = $_SESSION["SessionPortal"];
+} else {
 $today  = new DateTimeImmutable("today");
 $plus30 = $today->modify("+30 days");
 
@@ -104,6 +114,8 @@ if ($isReturn) {
 // 3) Hydrate INIT payload (admins + games + header)
 $initPayload = hydrateAdminGamesList($context, $defaultFilters);
 $initPayload['portal'] = $_SESSION["SessionPortal"];
+
+} // end standalone mode
 
 // Provide path constants to JS
 $paths = [

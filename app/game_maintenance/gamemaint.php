@@ -6,6 +6,7 @@ require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
+require_once MA_SERVICES . "/context/service_ContextEvent.php";
 require_once MA_SERVICES . "/database/service_dbPlayers.php";
 require_once MA_SERVICES . "/database/service_dbFavPlayers.php";
 
@@ -49,6 +50,17 @@ try {
   $adminGhin    = trim((string)($_SESSION["SessionGHINLogonID"] ?? ""));
   $availableTags = service_dbFavPlayers::getGroupsForUser($adminGhin);
 
+  // ---- EVENT CONTEXT ----
+  $eid = (int)($_SESSION["SessionStoredEID"] ?? 0);
+  $eventContext = null;
+  if ($eid > 0) {
+    $eventContext = ServiceContextEvent::getEventContext($eid);
+    // In add mode, pre-stamp EID into the game shell so saveGame writes it
+    if ($mode === "add") {
+      $game["dbGames_EID"] = $eid;
+    }
+  }
+
   $initPayload = [
     "ok"           => true,
     "mode"         => $mode,
@@ -56,6 +68,7 @@ try {
     "game"         => $game,
     "playerCount"  => $playerCount,
     "availableTags" => $availableTags,
+    "eventContext" => $eventContext,
     "authorizations" => ($mode === "edit") ? ($gc["authorizations"] ?? []) : ServiceContextGame::getGameAuthorizations(),
     "header" => [
       "subtitle" => $subtitle

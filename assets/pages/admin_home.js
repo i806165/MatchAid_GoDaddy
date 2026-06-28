@@ -156,6 +156,45 @@ function badgeParts(ymd) {
     cachedInit = payload || {};
     try {
       const header = cachedInit.header || {};
+      const evCtx  = cachedInit.eventContext || null;
+
+      // ---- EVENT MODE ----
+      if (evCtx) {
+        state.isEventMode = true;
+        const ev = evCtx.event || {};
+        const evTitle    = String(ev.dbEvents_Title || "Event Games").trim();
+        const evStart    = String(ev.startDateISO || ev.dbEvents_StartDate || "").slice(0, 10);
+        const evEnd      = String(ev.endDateISO   || ev.dbEvents_EndDate   || "").slice(0, 10);
+        const dateRange  = (evStart && evEnd) ? `${evStart}  →  ${evEnd}` : (evStart || evEnd);
+
+        if (MA.chrome && typeof MA.chrome.setHeaderLines === "function") {
+          MA.chrome.setHeaderLines(["EVENT GAMES", evTitle, dateRange]);
+        }
+        if (MA.chrome && typeof MA.chrome.showBrand === "function") {
+          MA.chrome.showBrand(true);
+        }
+        if (MA.chrome && typeof MA.chrome.setActions === "function") {
+          MA.chrome.setActions({
+            left:  { show: false },
+            right: { show: true, label: "Actions", onClick: openActionsMenu },
+            page:  { label: "+ Add Game to Event", onClick: () => handleGameAction({ action: "addGame" }) }
+          });
+        }
+
+        if (cachedInit.games) {
+          applyRenderGames({
+            header:  cachedInit.header  || {},
+            filters: cachedInit.filters || {},
+            games:   cachedInit.games   || {}
+          });
+        }
+
+        setStatus("", "info");
+        return;
+      }
+
+      // ---- STANDALONE MODE ----
+      state.isEventMode = false;
 
       // Chrome header lines (3 lines available)
       if (MA.chrome && typeof MA.chrome.setHeaderLines === "function") {
@@ -659,6 +698,17 @@ function applyPreset(presetKey) {
       return;
     }
 
+    // Event mode: slimmed menu — no presets, no import, no filters
+    if (state.isEventMode) {
+      const items = [
+        { label: "Add Game to Event", action: () => handleGameAction({ action: "addGame" }) },
+        { separator: true },
+        { label: "Refresh", action: () => refreshGamesAndAdmins() },
+      ];
+      MA.ui.openActionsMenu("Actions", items, "Event Games");
+      return;
+    }
+
     const items = [
       { label: "Add Game", action: () => handleGameAction({ action: "addGame" }) },
       { label: "Import Games", action: () => handleGameAction({ action: "import" }) },
@@ -838,18 +888,20 @@ function wireFiltersModal() {
   document.addEventListener("DOMContentLoaded", () => {
     const initPayload = window.__MA_INIT__ || window.__INIT__ || null;
 
-    // Chrome bottom nav: Home + Favorites only, centered
+    // Chrome bottom nav — varies by event mode (set after applyInit)
     if (MA.chrome && typeof MA.chrome.setBottomNav === "function") {
+      const isEventMode = !!(window.__MA_INIT__?.eventContext || window.__INIT__?.eventContext);
       MA.chrome.setBottomNav({
-        visible: ["home", "admin", "favorites", "import", "eventhome"],
-        active: "admin",
+        visible: isEventMode
+          ? ["home", "eventgames", "eventhome", "favorites"]
+          : ["home", "admin", "favorites", "import", "eventhome"],
+        active: isEventMode ? "eventgames" : "admin",
         onNavigate: (id) => {
           try {
             if (typeof MA.routerGo === "function") {
-              MA.routerGo(id); // expects pageRouter actions: home, admin, import
+              MA.routerGo(id);
               return;
             }
-            // last resort fallback (should not be hit if MA.routerGo is present)
             const router = MA.paths?.routerApi || "/api/session/pageRouter.php";
             window.location.assign(router + "?action=" + encodeURIComponent(id) + "&redirect=1");
           } catch (e) {

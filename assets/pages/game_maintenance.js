@@ -250,8 +250,9 @@
       if (!res || !res.ok) throw new Error(res?.message || "Delete failed.");
 
       setStatus("Game deleted.", "success");
-      if (typeof MA.routerGo === "function") MA.routerGo("admin");
-      else window.location.assign((MA.paths?.routerApi || "/api/session/pageRouter.php") + "?action=admin&redirect=1");
+      const backRoute = state.eventContext ? "eventgames" : "admin";
+      if (typeof MA.routerGo === "function") MA.routerGo(backRoute);
+      else window.location.assign((MA.paths?.routerApi || "/api/session/pageRouter.php") + "?action=" + backRoute + "&redirect=1");
     } catch (e) {
       console.error(e);
       setStatus(String(e.message || e), "error");
@@ -283,9 +284,20 @@
   //     actions are active (via .maChrome__ftr--actions on the footer element).
   // ----------------------------------------------------------------------------
   function applyChrome() {
+    const evCtx = state.eventContext || null;
+
     if (chrome && typeof chrome.setHeaderLines === "function") {
-      const modeText = (state.mode === "add") ? "Add Game" : "Edit Game";
-      chrome.setHeaderLines(["Game Maintenance", modeText, ""]);
+      if (evCtx) {
+        const ev = evCtx.event || {};
+        const evTitle   = String(ev.dbEvents_Title || "Event Games").trim();
+        const evStart   = String(ev.startDateISO || ev.dbEvents_StartDate || "").slice(0, 10);
+        const evEnd     = String(ev.endDateISO   || ev.dbEvents_EndDate   || "").slice(0, 10);
+        const dateRange = (evStart && evEnd) ? `${evStart}  →  ${evEnd}` : (evStart || evEnd);
+        chrome.setHeaderLines(["EVENT GAMES", evTitle, dateRange]);
+      } else {
+        const modeText = (state.mode === "add") ? "Add Game" : "Edit Game";
+        chrome.setHeaderLines(["Game Maintenance", modeText, ""]);
+      }
     }
 
     if (chrome && typeof chrome.setActions === "function") {
@@ -313,8 +325,11 @@
     }
 
     if (chrome && typeof chrome.setBottomNav === "function") {
+      const backRoute = evCtx ? "eventgames" : "admin";
       chrome.setBottomNav({
-        visible: ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"],
+        visible: evCtx
+          ? ["eventgames", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"]
+          : ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"],
         active: "edit",
         disabled: (state.mode === "add") ? ["roster", "pairings", "teetimes", "summary"] : [],
         onNavigate: (id) => MA.routerGo(id)
@@ -327,12 +342,13 @@
       const ok = confirm("Discard unsaved changes and go back?");
       if (!ok) return;
     }
+    const backRoute = (state.eventContext) ? "eventgames" : "admin";
     if (typeof MA.routerGo === "function") {
-      MA.routerGo("admin");
+      MA.routerGo(backRoute);
       return;
     }
     const router = MA.paths?.routerApi || "/api/session/pageRouter.php";
-    window.location.assign(router + "?action=admin&redirect=1");
+    window.location.assign(router + "?action=" + backRoute + "&redirect=1");
   }
 
   function populateTimeSelects() {
@@ -1003,6 +1019,14 @@
       state.game        = init.game || null;
       state.playerCount = typeof init.playerCount === "number" ? init.playerCount : 0;
       state.availableTags = Array.isArray(init.availableTags) ? init.availableTags : [];
+      state.eventContext  = init.eventContext || null;
+
+      // Event mode: hide visibility card, force privacy to "Only Me"
+      if (state.eventContext) {
+        const visCard = document.getElementById("gmVisibilityCard");
+        if (visCard) visCard.style.display = "none";
+        if (state.game) state.game.dbGames_Privacy = "Only Me";
+      }
 
       // Restore committed privacy groups from saved game row.
       // [] = all favorites (no filter); non-empty = specific groups.

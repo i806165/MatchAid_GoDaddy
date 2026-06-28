@@ -115,8 +115,8 @@
       </div>
     </section>
 
-    <!-- CARD 3 — VISIBILITY -->
-    <section class="maCard" aria-label="Visibility">
+    <!-- CARD 3 — VISIBILITY (hidden in event mode) -->
+    <section class="maCard" aria-label="Visibility" id="gmVisibilityCard">
       <header class="maCard__hdr">
         <div class="maCard__title">VISIBILITY</div>
       </header>

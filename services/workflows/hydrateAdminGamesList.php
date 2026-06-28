@@ -19,6 +19,45 @@ function hydrateAdminGamesList(array $context, array $filters): array {
   $userGhin = strval($context["userGHIN"] ?? "");
   $clubId   = strval($context["clubId"] ?? ($context["clubID"] ?? ""));
 
+  // ------------------------------------------------------------------
+  // EVENT MODE: if an EID is present, bypass date/admin filter logic
+  // entirely and scope the games list to this event only.
+  // ------------------------------------------------------------------
+  $eid = (int)($filters["eid"] ?? 0);
+  if ($eid > 0) {
+    require_once __DIR__ . '/../database/service_dbGames.php';
+    require_once __DIR__ . '/../context/service_ContextEvent.php';
+
+    $games = ServiceDbGames::queryEventGames($eid);
+    $eventCtx = ServiceContextEvent::getEventContext($eid);
+    $event = $eventCtx["event"] ?? [];
+
+    $subtitle = trim((string)($event["dbEvents_Title"] ?? "Event Games"));
+
+    return [
+      "currentUserAdminKey" => $userGhin,
+      "filters" => [
+        "mode"               => "event",
+        "dateFrom"           => "",
+        "dateTo"             => "",
+        "selectedAdminKeys"  => [],
+        "adminScope"         => "EVENT",
+        "eid"                => $eid,
+      ],
+      "admins" => [
+        "all"      => [],
+        "favorites"=> [],
+        "selected" => [],
+      ],
+      "games"       => $games["games"] ?? ["raw" => [], "vm" => []],
+      "eventContext"=> $eventCtx,
+      "header"      => [
+        "title"    => "Event Games",
+        "subtitle" => $subtitle,
+      ],
+    ];
+  }
+
   // normalize filters
   $dateFrom = strval($filters["dateFrom"] ?? "");
   $dateTo   = strval($filters["dateTo"] ?? "");

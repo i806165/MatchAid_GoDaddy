@@ -90,6 +90,9 @@ public static function queryGames(array $args): array {
       }
     }
 
+    // Exclude games that belong to an event (those are managed via event mode)
+    $where[] = "(dbGames_EID IS NULL OR dbGames_EID = 0)";
+
     // Use sophisticated weighted sort direction
     $orderDir = self::getSortDirectionForQuery($dateFrom, $dateTo);
 
@@ -111,6 +114,9 @@ public static function queryGames(array $args): array {
       $where[] = "dbGames_PlayDate >= :today";
     }
     $params[":today"] = $today;
+
+    // Exclude games that belong to an event
+    $where[] = "(dbGames_EID IS NULL OR dbGames_EID = 0)";
 
     $sql = "$selectSql FROM db_Games";
     if ($where) $sql .= " WHERE " . implode(" AND ", $where);
@@ -150,6 +156,53 @@ public static function queryGames(array $args): array {
     // Placeholder: admin list is handled elsewhere in your stack.
     $pdo = Db::pdo();
     return [];
+  }
+
+  /**
+   * Query all games belonging to a specific event.
+   * Returns the same shape as queryGames() so hydrateAdminGamesList
+   * can use either path without structural changes.
+   */
+  public static function queryEventGames(int $eid): array
+  {
+    if ($eid <= 0) return ["games" => ["vm" => [], "raw" => []]];
+
+    $pdo = Db::pdo();
+
+    $sql = "SELECT *,
+              (SELECT COUNT(*) FROM db_Players WHERE dbPlayers_GGID = db_Games.dbGames_GGID) AS playerCount
+            FROM db_Games
+            WHERE dbGames_EID = :eid
+            ORDER BY dbGames_EventRoundNo ASC, dbGames_PlayDate ASC, dbGames_PlayTime ASC";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([":eid" => $eid]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    $vm = array_map(function($r) {
+      $playDate = (string)($r["dbGames_PlayDate"] ?? "");
+      $playTime = (string)($r["dbGames_PlayTime"] ?? "");
+      return [
+        "ggid"        => (int)($r["dbGames_GGID"] ?? 0),
+        "title"       => (string)($r["dbGames_Title"] ?? ""),
+        "playDate"    => $playDate,
+        "playTimeText"=> substr($playTime, 0, 5),
+        "facilityName"=> (string)($r["dbGames_FacilityName"] ?? ""),
+        "courseName"  => (string)($r["dbGames_CourseName"] ?? ""),
+        "adminName"   => (string)($r["dbGames_AdminName"] ?? ""),
+        "adminGHIN"   => (string)($r["dbGames_AdminGHIN"] ?? ""),
+        "roundNo"     => (int)($r["dbGames_EventRoundNo"] ?? 0),
+        "playerCount" => (int)($r["playerCount"] ?? 0),
+        "eid"         => (int)($r["dbGames_EID"] ?? 0),
+      ];
+    }, $rows);
+
+    return [
+      "games" => [
+        "vm"  => $vm,
+        "raw" => $rows,
+      ]
+    ];
   }
 
   /**
@@ -415,6 +468,7 @@ public static function queryGames(array $args): array {
       "dbGames_PrivacyGroups",
       "dbGames_Comments",
       "dbGames_HCEffectivity",
+      "dbGames_EID",
       "dbGames_HCEffectivityDate",
       "dbGames_FacilityID",
       "dbGames_FacilityName",
