@@ -450,37 +450,30 @@ final class ServiceScoreCardRotation
         $out = [];
 
         if (count($holes) === 18) {
-            $chunks = array_chunk($holes, 6);
-            $keys = ['6a', '6b', '6c'];
+            $slice = static fn(int $start, int $len) =>
+                array_map(static fn(int $h) => $kpiMap[$h] ?? null, array_slice($holes, $start, $len));
+            // 9-hole segments — Out = holes 1-9, In = holes 10-18
+            $out['9a'] = $sum($slice(0, 9), $diffMode);
+            $out['9b'] = $sum($slice(9, 9), $diffMode);
+            $out['9c'] = $sum($slice(0, 18), $diffMode);
+            // 6-hole segments
+            $out['6a'] = $sum($slice(0, 6), $diffMode);
+            $out['6b'] = $sum($slice(6, 6), $diffMode);
+            $out['6c'] = $sum($slice(12, 6), $diffMode);
+            // 3-hole segments
+            $out['3a'] = $sum($slice(0, 3), $diffMode);
+            $out['3b'] = $sum($slice(3, 3), $diffMode);
+            $out['3c'] = $sum($slice(6, 3), $diffMode);
+            $out['3d'] = $sum($slice(9, 3), $diffMode);
+            $out['3e'] = $sum($slice(12, 3), $diffMode);
+            $out['3f'] = $sum($slice(15, 3), $diffMode);
         } elseif (count($holes) === 9) {
-            $chunks = [array_slice($holes, 0, 9)];
-            $keys = [min($holes) <= 9 ? '9a' : '9b'];
-        } else {
-            $chunks = [array_values($holes)];
-            $keys = [self::segmentKeyForVisibleHoles($holes)];
-        }
-
-        foreach ($chunks as $index => $chunk) {
-            $values = [];
-            foreach ($chunk as $holeNumber) {
-                $values[] = $kpiMap[$holeNumber] ?? null;
-            }
-            $out[$keys[$index]] = $sum($values, $diffMode);
-        }
-
-        if (count($holes) === 18) {
-            $out['9a'] = $out['6a'] !== '-' || $out['6b'] !== '-'
-                ? $sum([self::displayToNumeric($out['6a']), self::displayToNumeric($out['6b'])], $diffMode)
-                : '-';
-            $out['9b'] = $out['6c'] !== '-'
-                ? $sum(array_map(static fn(int $h) => $kpiMap[$h] ?? null, array_slice($holes, 9, 9)), $diffMode)
-                : '-';
-            $out['9c'] = $sum(array_map(static fn(int $h) => $kpiMap[$h] ?? null, $holes), $diffMode);
-        } elseif (count($holes) === 9) {
-            $onlyKey = $keys[0];
+            $onlyKey = min($holes) <= 9 ? '9a' : '9b';
+            $out[$onlyKey] = $sum(array_map(static fn(int $h) => $kpiMap[$h] ?? null, $holes), $diffMode);
             $out['9c'] = $out[$onlyKey];
         } else {
-            $onlyKey = $keys[0];
+            $onlyKey = self::segmentKeyForVisibleHoles($holes);
+            $out[$onlyKey] = $sum(array_map(static fn(int $h) => $kpiMap[$h] ?? null, $holes), $diffMode);
             $out['9c'] = $out[$onlyKey];
         }
 
