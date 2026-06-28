@@ -203,3 +203,167 @@ body.scChromeHiddenMode .maChrome__hdr,
 body.scChromeHiddenMode .maChrome__ftr{
   display:none !important;
 }
+
+
+/* ==========================================================================
+   Transposed scorecard drawer
+   Shell reuses: maDrawerOverlay, maDrawer, maModal__hdr, maModal__title,
+   maModal__subtitle, maModal__controls, maModal__body--flush, maModal__ftr,
+   maModal__ftrActions, iconBtn, btnSecondary, scCtlBtn / scCtlBtn.is-active,
+   scCell shape classes, scCellVal, scCellMarks, scTotalRow.
+   Only the pieces below have no equivalent in the shared files.
+   ========================================================================== */
+
+/* Drag handle pill at the top of the drawer */
+.scDrawer__handle{
+  flex-shrink:0;
+  width:36px;
+  height:4px;
+  background:var(--borderSubtle);
+  border-radius:2px;
+  margin:8px auto 0;
+}
+
+/* Transposed table — does NOT stretch to 100% width so it can overflow
+   horizontally; the maModal__body handles the scroll container. */
+.scTTable{
+  border-collapse:collapse;
+  font-size:12px;
+  table-layout:auto;
+  min-width:100%;
+}
+
+/* Frozen top-left corner: sticky on both axes */
+.scTTable thead th.scTHoleCol{
+  position:sticky;
+  top:0;
+  left:0;
+  z-index:4;
+  min-width:68px;
+  width:68px;
+  text-align:left;
+  padding:5px 6px;
+  background:var(--panelControlsBg);
+  border-right:1.5px solid var(--borderSubtle);
+  border-bottom:1.5px solid var(--borderSubtle);
+  font-size:10px;
+  font-weight:700;
+  color:rgba(0,0,0,.5);
+}
+
+/* Frozen top row — player / total column headers */
+.scTTable thead th{
+  position:sticky;
+  top:0;
+  z-index:3;
+  min-width:54px;
+  padding:5px 5px 4px;
+  text-align:center;
+  background:var(--panelControlsBg);
+  border-right:0.5px solid var(--borderSubtle);
+  border-bottom:1.5px solid var(--borderSubtle);
+  font-size:11px;
+  font-weight:800;
+  line-height:1.3;
+  white-space:nowrap;
+}
+
+/* Sub-label inside player header (HC + tee) */
+.scTTable thead th .scTHdrSub{
+  display:block;
+  font-size:9px;
+  font-weight:600;
+  color:rgba(0,0,0,.5);
+}
+
+/* Pairing total column headers — tinted to match scTotalRow */
+.scTTable thead th.scTTotalCol{
+  background:rgba(0,0,0,0.09);
+}
+
+/* Frozen left column — hole cells */
+.scTTable tbody td.scTHoleCol{
+  position:sticky;
+  left:0;
+  z-index:1;
+  min-width:68px;
+  width:68px;
+  padding:4px 6px;
+  background:var(--panelControlsBg);
+  border-right:1.5px solid var(--borderSubtle);
+  border-bottom:0.5px solid var(--borderSubtle);
+  vertical-align:middle;
+  line-height:1.3;
+}
+
+/* Hole number — same visual weight as Par and SI */
+.scTHoleNum{
+  font-size:13px;
+  font-weight:800;
+  color:#000;
+  line-height:1.3;
+}
+
+/* Par and SI — same size as hole number, muted weight */
+.scTHoleMeta{
+  font-size:13px;
+  font-weight:600;
+  color:rgba(0,0,0,.55);
+  line-height:1.4;
+}
+
+/* Standard body cells */
+.scTTable tbody td{
+  padding:3px 4px;
+  text-align:center;
+  border-right:0.5px solid var(--borderSubtle);
+  border-bottom:0.5px solid var(--borderSubtle);
+  vertical-align:middle;
+}
+
+/* Segment summary rows (Out / In / Tot / 3 / 6 / 9) */
+.scTSegTotal td{
+  background:rgba(0,0,0,0.07);
+  font-weight:800;
+  font-size:12px;
+  border-top:1px solid rgba(0,0,0,0.15);
+  border-bottom:1px solid rgba(0,0,0,0.15);
+  color:#000;
+}
+
+.scTSegTotal td.scTHoleCol{
+  background:rgba(0,0,0,0.09);
+}
+
+/* Pairing / team total rows — reuses scTotalRow background intent but
+   scoped to the transposed table so both can coexist without collision */
+.scTTable .scTotalRow td{
+  background:rgba(0,0,0,0.12);
+  font-weight:800;
+  font-size:11px;
+  border-top:1px solid rgba(0,0,0,0.2);
+  border-bottom:1px solid rgba(0,0,0,0.2);
+  color:#000;
+}
+
+.scTTable .scTotalRow td.scTHoleCol{
+  background:rgba(0,0,0,0.14);
+  font-size:11px;
+  line-height:1.3;
+  white-space:normal;
+}
+
+/* Score cells inside the transposed table — larger than the main card
+   for outdoor legibility; shape classes (scCell--birdie etc.) unchanged */
+.scTTable .scCell{
+  min-width:24px;
+  min-height:24px;
+}
+
+.scTTable .scCell--birdie .scCellVal,
+.scTTable .scCell--eagle .scCellVal,
+.scTTable .scCell--bogey .scCellVal,
+.scTTable .scCell--bogeyplus .scCellVal{
+  min-width:20px;
+  height:20px;
+}

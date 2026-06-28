@@ -94,7 +94,6 @@ function isMobileLandscapeLike(){
 
   function applyChrome(){
     const subtitle = init.header?.subtitle || [game.dbGames_CourseName, formatDate(game.dbGames_PlayDate)].filter(Boolean).join(' • ');
-    // If subtitle exists, it usually contains play date. Let's make it richer
     const chromeSubtitle = [game.dbGames_CourseName, formatDate(game.dbGames_PlayDate)].filter(Boolean).join(' • ');
 
     if (chrome.setHeaderLines) chrome.setHeaderLines(['Scorecard', init.header?.title || 'Scorecards', subtitle]);
@@ -256,11 +255,9 @@ function isMobileLandscapeLike(){
         if (seg.size === 18 && isRangeEnd) {
           key = '9c';
         } else if (seg.size === 18) {
-          // shouldn't normally hit this for 18-hole segment, but keep safe
           const segIndex = Math.floor(idx / seg.size) + 1;
           key = '9' + String.fromCharCode(96 + segIndex);
         } else {
-          // Use absolute hole number to derive segment index, matching PHP's logic
           const segStartHole = seg.holes[Math.floor(idx / seg.size) * seg.size];
           const segIndex = Math.floor((segStartHole - 1) / seg.size) + 1;
           key = String(seg.size) + String.fromCharCode(96 + segIndex);
@@ -435,6 +432,277 @@ function renderPlayerRows(players, cardState, row){
     return label;
   }
 
+  // =========================================================================
+  // Transposed drawer
+  // =========================================================================
+
+  // Build the courseInfo lookup: { h1: { par, hcp }, h2: ... }
+  function buildCourseInfoMap(courseInfo){
+    const map = {};
+    (courseInfo || []).forEach(r => {
+      const label = String(r.label || '').trim();
+      for (let h = 1; h <= 18; h++) {
+        const v = r['h'+h];
+        if (v === undefined || v === null || v === '') continue;
+        if (!map[h]) map[h] = {};
+        if (label === 'Par')      map[h].par = v;
+        else if (label === 'HCP') map[h].hcp = v;
+      }
+    });
+    return map;
+  }
+
+  // Resolve the summary key for a segment boundary — mirrors renderUnifiedRow logic exactly
+  function segKeyForBoundary(idx, seg){
+    if (seg.size === 18) return '9c';
+    const segStartHole = seg.holes[Math.floor(idx / seg.size) * seg.size];
+    const segIndex = Math.floor((segStartHole - 1) / seg.size) + 1;
+    return String(seg.size) + String.fromCharCode(96 + segIndex);
+  }
+
+  // Label for a segment summary key — mirrors renderSummaryCell isHeader logic
+  function segKeyLabel(key){
+    if (key === '9a') return 'Out';
+    if (key === '9b') return 'In';
+    if (key === '9c') return 'Tot';
+    return 'S' + (key.charCodeAt(1) - 96);
+  }
+
+  // Resolve a player's per-hole cell value and shape — mirrors renderPlayerCell
+  function transposedPlayerCell(player, h){
+    const cell = player?.holes?.['h'+h] || {};
+    const classes = ['scCell'];
+    if (cell.declared) classes.push('scCell--declared');
+    let sm = state.valueMode;
+    if (sm === 'grossDiff') sm = 'gross';
+    if (sm === 'netDiff')   sm = 'net';
+    const shape = cell.shapes?.[sm] || cell.shape;
+    if (shape && shape !== 'par') classes.push('scCell--' + shape);
+    const val = valueForCell(cell);
+    const marks = cell.strokeMarks ? `<span class="scCellMarks">${esc(String(cell.strokeMarks))}</span>` : '';
+    return `<td><div class="${classes.join(' ')}"><span class="scCellVal">${esc(val)}</span>${marks}</div></td>`;
+  }
+
+  // Resolve a columnTotal's per-hole cell value — mirrors renderPlayerCell isTotal path
+  function transposedTotalCell(totalRow, h){
+    const cell = totalRow?.cells?.['h'+h];
+    let totalMode = state.valueMode;
+    if (totalMode === 'gross') totalMode = 'grossDiff';
+    if (totalMode === 'net')   totalMode = 'netDiff';
+    const val = (cell && typeof cell === 'object') ? (cell.display?.[totalMode] ?? '-') : (cell ?? '-');
+    return `<td class="scTotalRow"><span class="scCellVal">${esc(val)}</span></td>`;
+  }
+
+  // Resolve a player's segment total — mirrors totalForPlayer
+  function transposedPlayerSegCell(player, key){
+    const val = totalForPlayer(player, key);
+    return `<td>${esc(val)}</td>`;
+  }
+
+  // Resolve a columnTotal's segment value — mirrors renderSummaryCell isTotal path
+  function transposedTotalSegCell(totalRow, key){
+    const cell = totalRow?.cells?.[key] ?? totalRow?.[key];
+    let summaryMode = state.valueMode;
+    if (summaryMode === 'gross') summaryMode = 'grossDiff';
+    if (summaryMode === 'net')   summaryMode = 'netDiff';
+    const val = (cell && typeof cell === 'object') ? (cell.display?.[summaryMode] ?? '-') : (cell ?? '-');
+    return `<td class="scTotalRow">${esc(val)}</td>`;
+  }
+
+  function renderTransposedCard(row){
+    const gid = row.groupId || row.rowId || row.virtualPlayerKey || row.pairingID || row.flightID || 'row';
+    const seg = getSegmentConfig(row);
+    const courseMap = buildCourseInfoMap(row.courseInfo);
+    const groups = groupPlayersByPairing(row.players || []);
+    const allColumnTotals = row.columnTotals || [];
+
+    // kpiLabel for total row header cells — mirrors renderTotalRows
+    const kpiLabel =
+        state.valueMode === 'gross'     ? 'GROSS' :
+        state.valueMode === 'net'       ? 'NET' :
+        state.valueMode === 'grossDiff' ? 'GROSS +/-' :
+        state.valueMode === 'netDiff'   ? 'NET +/-' :
+        state.valueMode === 'points'    ? 'POINTS' : '';
+
+    // --- thead ---
+    // Walk groups in order: players then their pairing totals, left to right
+    let headerCols = '';
+    groups.forEach(group => {
+      group.players.forEach(p => {
+        headerCols += `<th>${esc(p.playerName)}<span class="scTHdrSub">${esc(p.playerHC ? '('+p.playerHC+')' : '')} ${esc(p.tee || '')}</span></th>`;
+      });
+      if (state.mode !== 'player') {
+        const pairingTotals = totalsForPairing(allColumnTotals, group.pairingId);
+        pairingTotals.forEach(t => {
+          const label = `${t.label} ${kpiLabel}`.trim();
+          headerCols += `<th class="scTTotalCol">${esc(label)}</th>`;
+        });
+      }
+    });
+
+    const thead = `<thead><tr><th class="scTHoleCol">Hole</th>${headerCols}</tr></thead>`;
+
+    // --- tbody ---
+    // Walk holes. At each segment boundary, emit a segment summary row then
+    // immediately emit any pairing total rows for that segment — preserving
+    // the same pairing-totals-after-each-pair ordering the main card has.
+    let tbodyRows = '';
+
+    seg.holes.forEach((h, idx) => {
+      const cm = courseMap[h] || {};
+      const parVal = cm.par !== undefined ? `Par ${cm.par}` : '';
+      const hcpVal = cm.hcp !== undefined ? `(${cm.hcp})` : '';
+      const metaLine = [parVal, hcpVal].filter(Boolean).join(' · ');
+
+      // Hole data row
+      let holeCols = '';
+      groups.forEach(group => {
+        group.players.forEach(p => {
+          holeCols += transposedPlayerCell(p, h);
+        });
+        if (state.mode !== 'player') {
+          const pairingTotals = totalsForPairing(allColumnTotals, group.pairingId);
+          pairingTotals.forEach(t => {
+            holeCols += transposedTotalCell(t, h);
+          });
+        }
+      });
+
+      tbodyRows += `<tr>
+        <td class="scTHoleCol"><div class="scTHoleNum">${esc(String(h))}</div><div class="scTHoleMeta">${esc(metaLine)}</div></td>
+        ${holeCols}
+      </tr>`;
+
+      // Segment boundary — emit Out / In / 3 / 6 / 9 summary row
+      const isSegEnd  = (((idx + 1) % seg.size) === 0);
+      const isRangeEnd = (idx === seg.holes.length - 1);
+
+      if (isSegEnd || isRangeEnd) {
+        const key = segKeyForBoundary(idx, seg);
+        const label = segKeyLabel(key);
+        const segPar = (()=>{
+          const startIdx = Math.floor(idx / seg.size) * seg.size;
+          let total = 0;
+          let valid = true;
+          for (let i = startIdx; i <= idx; i++){
+            const p = courseMap[seg.holes[i]]?.par;
+            if (p === undefined){ valid = false; break; }
+            total += Number(p);
+          }
+          return valid ? `Par ${total}` : '';
+        })();
+
+        let segCols = '';
+        groups.forEach(group => {
+          group.players.forEach(p => {
+            segCols += transposedPlayerSegCell(p, key);
+          });
+          if (state.mode !== 'player') {
+            const pairingTotals = totalsForPairing(allColumnTotals, group.pairingId);
+            pairingTotals.forEach(t => {
+              segCols += transposedTotalSegCell(t, key);
+            });
+          }
+        });
+
+        tbodyRows += `<tr class="scTSegTotal">
+          <td class="scTHoleCol"><div class="scTHoleNum">${esc(label)}</div><div class="scTHoleMeta">${esc(segPar)}</div></td>
+          ${segCols}
+        </tr>`;
+      }
+    });
+
+    // Grand total row when hasTot (18-hole game with 9-hole segments)
+    if (seg.hasTot) {
+      const totPar = (()=>{
+        let total = 0; let valid = true;
+        seg.holes.forEach(h => {
+          const p = courseMap[h]?.par;
+          if (p === undefined) valid = false;
+          else total += Number(p);
+        });
+        return valid ? `Par ${total}` : '';
+      })();
+
+      let totCols = '';
+      groups.forEach(group => {
+        group.players.forEach(p => {
+          totCols += transposedPlayerSegCell(p, '9c');
+        });
+        if (state.mode !== 'player') {
+          const pairingTotals = totalsForPairing(allColumnTotals, group.pairingId);
+          pairingTotals.forEach(t => {
+            totCols += transposedTotalSegCell(t, '9c');
+          });
+        }
+      });
+
+      tbodyRows += `<tr class="scTSegTotal">
+        <td class="scTHoleCol"><div class="scTHoleNum">Tot</div><div class="scTHoleMeta">${esc(totPar)}</div></td>
+        ${totCols}
+      </tr>`;
+    }
+
+    // Assemble value-mode pills for the drawer controls — mirrors renderControls
+    const supportsPoints = !!payload.meta?.supportsPoints;
+    const modes = [
+      ['gross','Gross'],['net','Net'],['grossDiff','Gross +/-'],['netDiff','Net +/-']
+    ].concat(supportsPoints ? [['points','Points']] : []);
+    const pillsHtml = modes.map(([key,label]) =>
+      `<button class="scCtlBtn ${state.valueMode===key?'is-active':''}" type="button" data-drawer-mode="${key}">${esc(label)}</button>`
+    ).join('');
+
+    const spinText = getSpinText(row);
+    const subtitle = [game.dbGames_CourseName, formatDate(game.dbGames_PlayDate)].filter(Boolean).join(' • ');
+
+    const playerKey = row.gameHeader?.playerKey || row.groupId || '';
+    const pairingIDs = Array.isArray(row.pairingIDs) ? row.pairingIDs.filter(Boolean) : [];
+    const flightIDs  = Array.isArray(row.flightIDs)  ? row.flightIDs.filter(Boolean)  : [];
+    const isPairPair = String(row.gameHeader?.dbGames_Competition || '').trim() === 'PairPair';
+    const titleParts = [];
+    if (state.mode === 'player') {
+      titleParts.push((row.players && row.players[0]?.playerName) || 'Player Scorecard');
+    } else {
+      if (playerKey) titleParts.push(`ScoreCard ${playerKey}`);
+      if (isPairPair && flightIDs.length) titleParts.push(`Match ${flightIDs.join(', ')}`);
+      if (pairingIDs.length) titleParts.push(`Pairings ${pairingIDs.join(', ')}`);
+    }
+    const drawerTitle = [...titleParts, spinText].filter(Boolean).join(' • ');
+
+    return `<div class="maDrawerOverlay" id="scDrawer-${esc(gid)}" role="dialog" aria-modal="true" aria-label="${esc(drawerTitle)}">
+      <section class="maDrawer">
+        <div class="scDrawer__handle" aria-hidden="true"></div>
+        <header class="maModal__hdr">
+          <div>
+            <div class="maModal__title">${esc(drawerTitle)}</div>
+            <div class="maModal__subtitle">${esc(subtitle)}</div>
+          </div>
+          <button class="iconBtn btnSecondary" type="button" data-drawer-close="${esc(gid)}" aria-label="Close scorecard drawer">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </header>
+        <div class="maModal__controls">
+          <div class="scBrowserControls__group">${pillsHtml}</div>
+        </div>
+        <div class="maModal__body maModal__body--flush">
+          <table class="scTTable" role="table" aria-label="Transposed scorecard">
+            ${thead}
+            <tbody>${tbodyRows}</tbody>
+          </table>
+        </div>
+        <footer class="maModal__ftr">
+          <div class="maModal__ftrActions">
+            <button class="iconBtn btnSecondary" type="button" data-drawer-close="${esc(gid)}">Close</button>
+          </div>
+        </footer>
+      </section>
+    </div>`;
+  }
+
+  // =========================================================================
+  // Main card render (unchanged except magnifying glass button in hdr)
+  // =========================================================================
+
   function renderCard(row){
     const gid = row.groupId || row.rowId || row.virtualPlayerKey || row.pairingID || row.flightID || 'row';
     const cardState = ensureCardState(gid);
@@ -459,6 +727,7 @@ function renderPlayerRows(players, cardState, row){
     
     const iconMinus = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
     const iconPlus = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+    const iconZoom = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
 
     return `<section class="scGroupCard ${cardState.expanded ? '' : 'is-collapsed'}" data-groupid="${esc(gid)}">
       <!-- Expanded Header -->
@@ -467,6 +736,7 @@ function renderPlayerRows(players, cardState, row){
           <button class="iconBtn btnSecondary" type="button" data-card-toggle="${esc(gid)}" title="Collapse Card">${iconMinus}</button>
           <div class="scGroupCard__title">${esc(headerText)}</div>
         </div>
+        <button class="iconBtn btnSecondary" type="button" data-drawer-open="${esc(gid)}" title="View transposed scorecard" aria-label="Open full scorecard drawer">${iconZoom}</button>
       </div>
 
       <!-- Collapsed Header -->
@@ -475,6 +745,7 @@ function renderPlayerRows(players, cardState, row){
           <button class="iconBtn btnSecondary" type="button" data-card-toggle="${esc(gid)}" title="Expand Card">${iconPlus}</button>
           <div class="scGroupCard__title">${esc(summaryTitle)}</div>
         </div>
+        <button class="iconBtn btnSecondary" type="button" data-drawer-open="${esc(gid)}" title="View transposed scorecard" aria-label="Open full scorecard drawer">${iconZoom}</button>
       </div>
 
       <div class="scGroupCard__body">
@@ -483,8 +754,72 @@ function renderPlayerRows(players, cardState, row){
     </section>`;
   }
 
+  // =========================================================================
+  // Drawer open / close
+  // =========================================================================
+
+  function openDrawer(gid){
+    // Remove any existing drawer first
+    document.getElementById('scDrawer-' + gid)?.remove();
+
+    const row = activeRows().find(r =>
+      String(r.groupId || r.rowId || r.virtualPlayerKey || r.pairingID || r.flightID || 'row') === String(gid)
+    );
+    if (!row) return;
+
+    const drawerEl = document.createElement('div');
+    drawerEl.innerHTML = renderTransposedCard(row);
+    const overlay = drawerEl.firstElementChild;
+    document.body.appendChild(overlay);
+
+    // Trigger open state after paint so CSS transition fires
+    requestAnimationFrame(() => overlay.classList.add('is-open'));
+    document.body.classList.add('maOverlayOpen');
+
+    // Close on overlay background click
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeDrawer(gid);
+    });
+
+    // Value-mode pills inside drawer — update shared state and re-render both
+    overlay.querySelectorAll('[data-drawer-mode]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.valueMode = btn.dataset.drawerMode;
+        renderControls();
+        renderBody();
+        closeDrawer(gid);
+        openDrawer(gid);
+      });
+    });
+
+    // Close buttons
+    overlay.querySelectorAll('[data-drawer-close]').forEach(btn => {
+      btn.addEventListener('click', () => closeDrawer(btn.dataset.drawerClose));
+    });
+  }
+
+  function closeDrawer(gid){
+    const overlay = document.getElementById('scDrawer-' + gid);
+    if (!overlay) return;
+    overlay.classList.remove('is-open');
+    overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
+    // Guard: only remove maOverlayOpen if no other overlays remain
+    if (!document.querySelector('.maDrawerOverlay.is-open, .maModalOverlay.is-open')) {
+      document.body.classList.remove('maOverlayOpen');
+    }
+  }
+
+  // =========================================================================
+  // Bind all card interactions
+  // =========================================================================
+
   function bindCardActions(){
     dom.host.querySelectorAll('[data-card-toggle]').forEach((btn)=> btn.addEventListener('click', ()=> { const s = ensureCardState(btn.dataset.cardToggle); s.expanded = !s.expanded; renderBody(); }));
+
+    // Drawer open triggers
+    dom.host.querySelectorAll('[data-drawer-open]').forEach(btn => {
+      btn.addEventListener('click', () => openDrawer(btn.dataset.drawerOpen));
+    });
 
     // Accordion Delegation
     dom.host.querySelectorAll('.scGroupCard').forEach(card => {
