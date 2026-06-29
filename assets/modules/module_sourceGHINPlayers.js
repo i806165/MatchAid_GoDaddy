@@ -204,7 +204,7 @@
   // ═══════════════════════════════════════════════════════════════════════════
 
   let _mounted = false;
-  let _root, _panel, _title, _statusEl, _stateInp, _lastInp, _firstInp,
+  let _root, _panel, _title, _statusEl, _stateInp, _lastInp, _firstInp, _clubInp,
       _btnSearch, _btnClose, _resultsEl;
 
   // Modal-mode state bucket (mirrors panel WeakMap slots)
@@ -226,31 +226,23 @@
     hdr.appendChild(_title);
     hdr.appendChild(_btnClose);
 
-    // Controls
+    // Controls — Row 1: State · Last name · Search button
     const controls = el("div", "maModal__controls");
-    const form     = el("div", "maFieldRow ghinSearchRow");
+    const row1     = el("div", "maFieldRow ghinSearchRow");
+    row1.style.cssText = "gap:6px; align-items:center; flex-wrap:nowrap;";
 
-    const fLast  = el("div", "maField ghinFieldLast");
-    const wLast  = el("div", "maInputWrap");
+    const wState = el("div", "maInputWrap--clearable");
+    wState.style.cssText = "flex:0 0 72px;";
+    _stateInp    = el("input", "maTextInput");
+    _stateInp.placeholder = "State";
+    _stateInp.maxLength   = 2;
+    wState.appendChild(_stateInp);
+
+    const wLast  = el("div", "maInputWrap--clearable");
+    wLast.style.cssText = "flex:1 1 110px;";
     _lastInp     = el("input", "maTextInput");
     _lastInp.placeholder = "Last name or GHIN# (required)";
     wLast.appendChild(_lastInp);
-    fLast.appendChild(wLast);
-
-    const fState = el("div", "maField ghinFieldState");
-    const wState = el("div", "maInputWrap");
-    _stateInp    = el("input", "maTextInput");
-    _stateInp.placeholder = "State (e.g., FL)";
-    _stateInp.maxLength   = 2;
-    wState.appendChild(_stateInp);
-    fState.appendChild(wState);
-
-    const fFirst = el("div", "maField ghinFieldFirst");
-    const wFirst = el("div", "maInputWrap");
-    _firstInp    = el("input", "maTextInput");
-    _firstInp.placeholder = "First name (optional)";
-    wFirst.appendChild(_firstInp);
-    fFirst.appendChild(wFirst);
 
     const fBtn   = el("div", "maField ghinFieldBtn");
     fBtn.style.flex = "0 0 auto";
@@ -258,11 +250,31 @@
     _btnSearch.type = "button";
     fBtn.appendChild(_btnSearch);
 
-    form.appendChild(fLast);
-    form.appendChild(fState);
-    form.appendChild(fFirst);
-    form.appendChild(fBtn);
-    controls.appendChild(form);
+    row1.appendChild(wState);
+    row1.appendChild(wLast);
+    row1.appendChild(fBtn);
+
+    // Row 2: First name · Club name
+    const row2   = el("div", "maFieldRow");
+    row2.style.cssText = "gap:6px; align-items:center; flex-wrap:wrap; margin-top:4px;";
+
+    const wFirst = el("div", "maInputWrap--clearable");
+    wFirst.style.cssText = "flex:1 1 110px;";
+    _firstInp    = el("input", "maTextInput");
+    _firstInp.placeholder = "First name (optional)";
+    wFirst.appendChild(_firstInp);
+
+    const wClub  = el("div", "maInputWrap--clearable");
+    wClub.style.cssText = "flex:1 1 110px;";
+    _clubInp     = el("input", "maTextInput");
+    _clubInp.placeholder = "Club name (optional)";
+    wClub.appendChild(_clubInp);
+
+    row2.appendChild(wFirst);
+    row2.appendChild(wClub);
+
+    controls.appendChild(row1);
+    controls.appendChild(row2);
 
     // Body
     const body = el("div", "maModal__body maModal__body--flush");
@@ -289,7 +301,7 @@
 
     _btnClose.addEventListener("click",  () => close());
     _btnSearch.addEventListener("click", () => _modalDoSearch());
-    [_stateInp, _lastInp, _firstInp].forEach(inp => {
+    [_stateInp, _lastInp, _firstInp, _clubInp].forEach(inp => {
       inp.addEventListener("keydown", e => { if (e.key === "Enter") _modalDoSearch(); });
     });
 
@@ -306,7 +318,7 @@
   function _modalDoSearch() {
     if (!_cfg) return;
     doSearch(
-      { stateInp: _stateInp, lastInp: _lastInp, firstInp: _firstInp },
+      { stateInp: _stateInp, lastInp: _lastInp, firstInp: _firstInp, clubInp: _clubInp },
       _cfg,
       _modalState,
       _resultsEl,
@@ -327,6 +339,7 @@
     _stateInp.value       = safeStr(_cfg.defaultState || "").toUpperCase();
     _lastInp.value        = "";
     _firstInp.value       = "";
+    _clubInp.value        = "";
     _statusEl.textContent = "";
     _resultsEl.innerHTML  = "";
     _modalState.rows      = [];
