@@ -653,13 +653,21 @@
     // ── First mount ──────────────────────────────────────────────────────
     const st = _initState(controlsEl, cfg);
     st.bodyEl     = bodyEl;
-    st._controlsEl = controlsEl;   // stored so cancel button can reference it
+    st._controlsEl = controlsEl;
 
-    // Fetch favorites data
-    try {
-      await _fetchFavorites(st);
-    } catch (e) {
-      MA.setStatus("Unable to load favorites.", "warn");
+    // If the host page already has favorites data (e.g. game_players fetches
+    // at boot for heart icons), accept it directly and skip the API call.
+    if (cfg.initialData) {
+      st.favorites = Array.isArray(cfg.initialData.favorites) ? cfg.initialData.favorites : [];
+      st.groups    = Array.isArray(cfg.initialData.groups)    ? cfg.initialData.groups    : [];
+    } else {
+      // Self-contained fetch — used by pages that don't pre-load favorites
+      // (e.g. Event Roster).
+      try {
+        await _fetchFavorites(st);
+      } catch (e) {
+        MA.setStatus("Unable to load favorites.", "warn");
+      }
     }
 
     _renderControls(controlsEl, st);
