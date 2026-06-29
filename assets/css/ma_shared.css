@@ -2647,3 +2647,219 @@ textarea {
   color: #ffffff;
   border-color: var(--mutedText);
 }
+
+
+/* ==========================================================================
+   21. SOURCE MODULE SHARED VOCABULARY
+   Phase 1 — CSS Foundation
+   Promoted from game_players.css gp* classes.
+   All source modules (MA.ghinSearch, MA.favoritesSource, MA.nonRatedSource,
+   MA.eventRosterSource) and their host pages (game_players, event_roster)
+   reference only these shared names — no gp* class names.
+
+   Sub-sections:
+     21a. List row layout variants
+     21b. Icon button variants (enrollment indicators)
+     21c. Clearable input wrapper
+     21d. Multi-add toggle strip
+     21e. Button modifier variants
+     21f. Inline status / feedback band
+     21g. Utility
+   ========================================================================== */
+
+
+/* ---------- 21a. List row layout variants --------------------------------
+   These extend .maListRow with a grid-template-columns override that
+   matches the column structure each source module renders.
+   Always applied alongside the base .maListRow class.
+   ------------------------------------------------------------------------- */
+
+/* 4-col grid: name │ HI │ gender │ indicator
+   Used by MA.ghinSearch (panel + modal) and MA.eventRosterSource rows
+   that show GHIN-sourced players. */
+.maListRow--player {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56px 46px 34px;
+  align-items: center;
+  column-gap: var(--spaceSm);
+  padding: 8px var(--spaceMd);
+}
+
+/* 3-col grid: avatar │ name+subline │ indicator
+   Used by MA.favoritesSource in single-add mode. */
+.maListRow--favorites {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) 34px;
+  align-items: center;
+  column-gap: var(--spaceSm);
+  padding: 8px var(--spaceMd);
+}
+
+/* 4-col grid: checkbox │ avatar │ name+subline │ indicator
+   Used by MA.favoritesSource in multi-add mode. */
+.maListRow--favoritesMulti {
+  display: grid;
+  grid-template-columns: 34px 34px minmax(0, 1fr) 34px;
+  align-items: center;
+  column-gap: var(--spaceSm);
+  padding: 8px var(--spaceMd);
+}
+
+/* Green tint — marks the row currently loaded into the Non-Rated edit form.
+   Replaces gpNrRow--selected. */
+.maListRow--active {
+  background: color-mix(in srgb, var(--brandPrimary) 6%, white);
+}
+
+
+/* ---------- 21b. Icon button variants — enrollment indicators ------------
+   Applied to .iconBtn elements that serve as enroll / already-enrolled
+   indicators in source module rows. .iconBtn:disabled { opacity: 1 } in
+   Section 14 ensures these remain fully visible when non-interactive.
+   ------------------------------------------------------------------------- */
+
+/* Blue + — player not yet enrolled; tapping initiates enrollment */
+.iconBtn--add {
+  border-color: var(--brandAccent);
+  color: var(--brandAccent);
+}
+
+/* Green checkmark — player already enrolled; non-interactive */
+.iconBtn--check {
+  border-color: var(--brandPrimary);
+  color: var(--brandPrimary);
+}
+
+
+/* ---------- 21c. Clearable input wrapper ---------------------------------
+   Wraps a .maTextInput with an absolutely-positioned × clear button.
+   Replaces gpInputClearWrap / clearBtn.
+
+   Markup pattern:
+     <div class="maInputWrap--clearable">
+       <input class="maTextInput" …>
+       <button class="maClearBtn isHidden" type="button">×</button>
+     </div>
+   ------------------------------------------------------------------------- */
+
+.maInputWrap--clearable {
+  position: relative;
+}
+
+/* Push right padding so text doesn't slide under the × button */
+.maInputWrap--clearable .maTextInput {
+  padding-right: 30px;
+}
+
+/* Position the × button inside the right edge of the input */
+.maInputWrap--clearable .maClearBtn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* The × button itself */
+.maClearBtn {
+  border: 0;
+  background: transparent;
+  color: var(--mutedText);
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0;
+}
+
+.maClearBtn:hover {
+  background: rgba(0, 0, 0, .06);
+}
+
+
+/* ---------- 21d. Multi-add toggle strip ----------------------------------
+   Thin band above the list body showing "Select All / Clear All" actions.
+   Replaces gpMultiSelectToggle / gpMultiSelectToggle__text.
+
+   Markup pattern:
+     <div class="maMultiToggle">
+       <span class="maMultiToggle__action" data-act="select-all">Select All</span>
+       &nbsp;·&nbsp;
+       <span class="maMultiToggle__action" data-act="clear-all">Clear All</span>
+     </div>
+   ------------------------------------------------------------------------- */
+
+.maMultiToggle {
+  padding: 5px 12px;
+  border-bottom: 0.5px solid var(--borderSubtle);
+  background: var(--rowBgDefault);
+}
+
+.maMultiToggle__action {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--brandAccent);
+  cursor: pointer;
+  user-select: none;
+}
+
+.maMultiToggle__action:hover {
+  text-decoration: underline;
+}
+
+
+/* ---------- 21e. Button modifier variants --------------------------------
+   Applied alongside the base .btn class.
+   Replaces inline styles previously used for Update Player / Cancel buttons.
+   ------------------------------------------------------------------------- */
+
+/* Green confirm — primary action (Update Player, Confirm) */
+.btn--confirm {
+  background: var(--brandPrimary);
+  color: #fff;
+  border-color: var(--brandPrimary);
+}
+
+.btn--confirm:active {
+  filter: brightness(.93);
+}
+
+/* Red danger — destructive / cancel action */
+.btn--danger {
+  color: var(--danger);
+  border-color: rgba(198, 40, 40, .3);
+}
+
+.btn--danger:active {
+  background: color-mix(in srgb, var(--danger) 8%, white);
+}
+
+
+/* ---------- 21f. Inline status / feedback band ---------------------------
+   Narrow tinted band rendered below the controls area inside a source
+   module to show result counts, truncation warnings, or search hints.
+   Replaces gpInlineStatus / maInlineAlert--warn.
+   ------------------------------------------------------------------------- */
+
+.maInlineStatus {
+  padding: var(--spaceMd) 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mutedText);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+
+
+/* ---------- 21g. Utility ------------------------------------------------- */
+
+/* Global display:none — replaces the scoped .clearBtn.isHidden pattern.
+   Applied by JS on any element that should be hidden without layout impact.
+   The !important mirrors the intent of the original scoped rule and prevents
+   specificity fights with layout classes. */
+.isHidden {
+  display: none !important;
+}
