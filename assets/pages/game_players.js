@@ -10,7 +10,7 @@
   const apiGHIN = MA.paths?.apiGHIN || "/api/GHIN";
 
   const state = {
-    activeTab: "favorites", // Roster is now the permanent canvas
+    activeTab: (window.__INIT__?.game?.dbGames_EID) ? "eventroster" : "favorites",
     game: init.game || {},
     context: init.context || {},
     portal: init.portal || "",
@@ -43,7 +43,16 @@
     return window.matchMedia("(min-width: 560px)").matches;
   }
 
+  // Event mode — game is linked to an event; only Event Roster tab shown
+  function isEventMode() {
+    return !!(state.game?.dbGames_EID);
+  }
+
   function getTabs(){
+    // In event mode only the Event Roster source tab is shown
+    if (isEventMode()) {
+      return [{ id: "eventroster", label: "Event Roster" }];
+    }
     // Roster is now the permanent canvas — not a tray tab.
     const baseTabs = [
       { id: "favorites",label: "Favorites" },
@@ -765,6 +774,21 @@
       };
     }
 
+    if (state.activeTab === "eventroster") {
+      MA.eventRosterSource.mount({
+        controlsEl:    el.trayControls,
+        bodyEl:        el.trayBody,
+        eventId:       safe(state.game?.dbGames_EID || ""),
+        apiPath:       MA.paths.getEventRoster,
+        existingGHINs: new Set(
+          (state.players || []).map(p => safe(p.dbPlayers_PlayerGHIN))
+        ),
+        onSelect(player)      { beginTeeFlow(player); },
+        onSelectMany(players) { beginBatchTeeFlow(players); }
+      });
+      return;
+    }
+
     if (state.activeTab === "ghin") {
       MA.ghinSearch.mount({
         controlsEl:    el.trayControls,
@@ -852,9 +876,10 @@
 function renderTrayBody(){
     // GHIN, Favorites, and Non-Rated body content is owned by their
     // respective source modules — mount() in renderTrayControls() handles it.
-    if (state.activeTab === "ghin")      return;
-    if (state.activeTab === "favorites") return;
-    if (state.activeTab === "nonrated")  return;
+    if (state.activeTab === "ghin")         return;
+    if (state.activeTab === "favorites")    return;
+    if (state.activeTab === "nonrated")     return;
+    if (state.activeTab === "eventroster")  return;
 
     if (state.activeTab === "import") {
       const isExternal = state.importSourceMode === "external";
@@ -1504,7 +1529,16 @@ function renderTrayBody(){
       wasPaired = (comp === "PairPair") ? (pid !== "000" && fid !== "" && fid !== "0") : (pid !== "000");
     }
 
-    const res = await MA.postJson(MA.paths.gamePlayersUpsert, { player: state.pendingPlayer, selectedTee: state.selectedTee });
+    // When enrolling from the event roster, carry event-specific fields
+    // into the db_Players upsert so TeamKey and PairingID cascade correctly.
+    const player = Object.assign({}, state.pendingPlayer);
+    if (player.source === "eventRoster") {
+      player.teamKey   = safe(player.teamKey   || "");
+      player.pairingId = safe(player.pairingId || "");
+      player.pairingPos= safe(player.pairingPos|| "");
+    }
+
+    const res = await MA.postJson(MA.paths.gamePlayersUpsert, { player, selectedTee: state.selectedTee });
     if (!res?.ok) {
       MA.setStatus(res?.message || "Unable to save player", "danger");
       return;

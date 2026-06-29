@@ -85,6 +85,8 @@ $paths = [
   "ghinGetTeeSets" => MA_ROUTE_API_GHIN . "/getTeeSets.php",
   "apiNotify" => MA_ROUTE_API_MESSAGING,
   "resolveImportIdentifiers" => MA_ROUTE_API_GAME_PLAYERS . "/resolveImportIdentifiers.php",
+  "apiEventRoster"   => MA_ROUTE_API_EVENT_ROSTER,
+  "getEventRoster"   => MA_ROUTE_API_EVENT_ROSTER . "/getEventRoster.php",
 ];
 
 $maChromeTitle    = "Game Players";
@@ -140,6 +142,7 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   <script src="<?= ma_asset('/assets/modules/module_sourceGHINPlayers.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/module_sourceFavorites.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/module_sourceNonRated.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_sourceEventRoster.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/manage_teams.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/recalculate_handicaps.js') ?>"></script>
