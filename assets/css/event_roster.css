@@ -1,0 +1,132 @@
+/* ==========================================================================
+   /assets/css/event_roster.css
+   Event Roster page — two-panel layout.
+   All shared element classes come from ma_shared.css.
+   er* prefix for page-scoped classes only.
+   ========================================================================== */
+
+/* ── Page shell ─────────────────────────────────────────────────────────── */
+
+.erPage {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Panels ─────────────────────────────────────────────────────────────── */
+
+.erCanvasPanel {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--borderSubtle);
+  overflow: hidden;
+}
+
+.erTrayPanel {
+  flex: 0 0 360px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Panel headers ──────────────────────────────────────────────────────── */
+
+.erPage .maPanel__hdr {
+  background: var(--brandSecondary);
+  color: var(--brandSecondaryText);
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 12px;
+  min-height: 44px;
+  flex-shrink: 0;
+}
+
+.erPage .maPanel__title {
+  font-size: 14px;
+  font-weight: 950;
+  letter-spacing: .2px;
+  color: var(--brandSecondaryText);
+}
+
+.erPage .maPanel__count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--brandSecondaryText);
+  opacity: .8;
+}
+
+/* ── Canvas controls ────────────────────────────────────────────────────── */
+
+.erCanvasControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.erCanvasControls__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+/* ── Tray tab strip ─────────────────────────────────────────────────────── */
+
+/* Tab strip lives in its own element — never wiped by module mount() */
+.erTrayTabs {
+  flex-shrink: 0;
+  padding: 6px 8px 0;
+  background: var(--surfaceCard, #fff);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+
+/* ── Roster canvas rows ─────────────────────────────────────────────────── */
+
+/* 5-col grid: avatar | name+HI | team badge | pairing badge | delete */
+.erRosterRow {
+  display: grid;
+  grid-template-columns: 34px minmax(0,1fr) auto auto 34px;
+  align-items: center;
+  column-gap: 8px;
+  padding: 6px 12px;
+}
+
+/* ── Mobile ─────────────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .erPage {
+    flex-direction: column;
+  }
+
+  .erCanvasPanel {
+    border-right: none;
+    border-bottom: 1px solid var(--borderSubtle);
+    flex: 0 0 auto;
+    max-height: 45vh;
+  }
+
+  .erTrayPanel {
+    flex: 1 1 0;
+    min-height: 0;
+  }
+
+  /* Tray panel full width on mobile */
+  .erTrayPanel {
+    flex-basis: auto;
+    width: 100%;
+  }
+}
+
+@media (min-width: 1280px) {
+  .erTrayPanel {
+    flex: 0 0 400px;
+  }
+}
