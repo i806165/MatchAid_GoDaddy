@@ -49,6 +49,7 @@
     canvasControls: document.getElementById("erCanvasControls"),
     rosterBody:     document.getElementById("erRosterBody"),
     rosterCount:    document.getElementById("erRosterCount"),
+    rosterFooter:   document.getElementById("erRosterFooter"),
   };
 
   // ── Utilities ───────────────────────────────────────────────────────────────
