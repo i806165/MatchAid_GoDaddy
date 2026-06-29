@@ -16,6 +16,8 @@
     portal: init.portal || "",
     players: [],
     pendingPlayer: null,
+    favorites: [],
+    groups: [],
     teeOptions: [],
     selectedTee: null,
     importSourceMode: "external",   // external | existing
@@ -457,9 +459,7 @@
 
   // ── Roster canvas — always rendered, independent of active tray tab ────────
   function renderRoster(){
-    // favorites data is now owned by MA.favoritesSource — heart icon shows
-    // outline only; filled state is a future enhancement if needed.
-    const favoriteSet = new Set();
+    const favoriteSet = new Set((state.favorites || []).map((f) => safe(f.playerGHIN)));
     const teamConfig = (window.__MA_INIT__ || {}).teamConfig || null;
 
     const sortedPlayers = [...state.players].sort((a, b) => {
@@ -624,6 +624,7 @@
     applyChrome();
     wirePageEvents();
     await refreshPlayers();
+    await refreshFavorites();
     if (isImportDesktopEnabled()) await ensureImportTeeOptions();
     render();
   }
@@ -714,6 +715,12 @@
     state.players = Array.isArray(res.payload?.players) ? res.payload.players : [];
     state.game = res.payload?.game || state.game;
     state.context = res.payload?.context || state.context;
+  }
+
+  async function refreshFavorites(){
+    const res = await MA.postJson(MA.paths.favPlayersInit, { courseId: safe(state.game?.dbGames_CourseID) });
+    state.favorites = Array.isArray(res?.payload?.favorites) ? res.payload.favorites : [];
+    state.groups    = Array.isArray(res?.payload?.groups)    ? res.payload.groups    : [];
   }
 
   function renderTabs(){
@@ -1066,6 +1073,7 @@ function renderTrayBody(){
     }
     MA.nonRatedSource.clearSelection(el.trayControls);
     await refreshPlayers();
+    await refreshFavorites();
     renderRoster();
     MA.nonRatedSource.mount({
       controlsEl:      el.trayControls,
@@ -1367,6 +1375,7 @@ function renderTrayBody(){
       }
 
       await refreshPlayers();
+      await refreshFavorites();
       renderRoster();
       MA.favoritesSource.refresh(el.trayControls);
       state.importText = "";
@@ -1461,6 +1470,7 @@ function renderTrayBody(){
       }
 
       await refreshPlayers();
+      await refreshFavorites();
       renderRoster();
       MA.favoritesSource.refresh(el.trayControls);
       render();
@@ -1523,6 +1533,7 @@ function renderTrayBody(){
     }
 
     await refreshPlayers();
+    await refreshFavorites();
     MA.favoritesSource.refresh(el.trayControls);
     renderRoster();
     renderTrayBody();
@@ -1629,6 +1640,7 @@ function renderTrayBody(){
     }
 
     await refreshPlayers();
+    await refreshFavorites();
     MA.favoritesSource.refresh(el.trayControls);
     renderRoster();
     renderTrayBody();

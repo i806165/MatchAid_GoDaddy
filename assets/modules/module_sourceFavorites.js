@@ -694,8 +694,8 @@
 
 
   // ── Register public API ─────────────────────────────────────────────────────
-  MA.favoritesSource.mount         = mount;
-  MA.favoritesSource.refresh       = refresh;
+  MA.favoritesSource.mount          = mount;
+  MA.favoritesSource.refresh        = refresh;
   MA.favoritesSource.cancelMultiAdd = cancelMultiAdd;
 
 })();
