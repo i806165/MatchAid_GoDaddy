@@ -161,8 +161,34 @@ try {
       ];
     }
 
-    // Truncation flag for UI banner
-    $truncated = (count($rows) >= 90);
+    // If results are truncated and a club filter was requested, we cannot
+    // reliably filter — records beyond page 1 are unseen.
+    if (count($golfers) >= 90 && $clubName !== "") {
+      echo json_encode([
+        "ok"      => true,
+        "payload" => [
+          "rows"             => [],
+          "truncated"        => true,
+          "truncatedMessage" => "Too many results — please include a first name and try again.",
+        ],
+      ]);
+      exit;
+    }
+
+    // Truncation — too many results regardless of club filter
+    if (count($golfers) >= 90) {
+      echo json_encode([
+        "ok"      => true,
+        "payload" => [
+          "rows"             => [],
+          "truncated"        => true,
+          "truncatedMessage" => "Too many results — please include a first name and try again.",
+        ],
+      ]);
+      exit;
+    }
+
+    $truncated = false;
 
   } else {
     http_response_code(400);

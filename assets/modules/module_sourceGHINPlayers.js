@@ -97,19 +97,31 @@
         throw new Error(res?.message || "Search failed.");
       }
 
-      const rows      = Array.isArray(res.payload?.rows) ? res.payload.rows : [];
-      const truncated = !!res.payload?.truncated || rows.length >= TRUNCATION_THRESHOLD;
+      const rows             = Array.isArray(res.payload?.rows) ? res.payload.rows : [];
+      const truncated        = !!res.payload?.truncated || rows.length >= TRUNCATION_THRESHOLD;
+      const truncatedMessage = safeStr(res.payload?.truncatedMessage || "");
 
       // Store in whichever state bucket was passed in
       state.rows      = rows;
       state.truncated = truncated;
 
+      // If a prominent truncation message is supplied, render it into the
+      // results body directly — more visible than the footer status line.
+      if (truncated && truncatedMessage) {
+        targetEl.innerHTML = "";
+        const msgEl = document.createElement("div");
+        msgEl.className = "maEmptyState";
+        msgEl.style.cssText = "padding:24px 16px; text-align:center; font-weight:600; color:var(--mutedText);";
+        msgEl.textContent = truncatedMessage;
+        targetEl.appendChild(msgEl);
+        setStatus("", "");
+        return;
+      }
+
       renderRows(rows, truncated, cfg.existingGHINs, targetEl, cfg.onSelect);
 
       if (!rows.length) {
         setStatus("Results: 0 found", "info");
-      } else if (truncated) {
-        setStatus(`Results: ${rows.length}+ found (truncated — refine search)`, "warn");
       } else {
         setStatus(`Results: ${rows.length} found`, "info");
       }
@@ -135,12 +147,6 @@
    */
   function renderRows(rows, truncated, existingGHINs, targetEl, onSelect) {
     targetEl.innerHTML = "";
-
-    if (truncated) {
-      const band = el("div", "maInlineStatus",
-        "Results truncated — refine your search.");
-      targetEl.appendChild(band);
-    }
 
     rows.forEach(row => {
       const ghin   = safeStr(row.ghin).trim();
