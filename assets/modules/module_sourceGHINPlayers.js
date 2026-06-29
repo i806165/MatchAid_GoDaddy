@@ -1,4 +1,4 @@
-/* /assets/modules/module_sourceGHINPlayer.js
+/* /assets/modules/module_sourceGHINPlayers.js
  * Shared GHIN search module for MatchAid pages.
  *
  * Exposes two entry points:
