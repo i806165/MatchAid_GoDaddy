@@ -83,14 +83,14 @@
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-event.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
       </span>
-      <span class="maNavLabel">Events</span>
+      <span class="maNavLabel">Events List</span>
     </button>
 
     <button type="button" class="maNavBtn" data-nav="eventedit" aria-label="Edit">
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-edit.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
       </span>
-      <span class="maNavLabel">Edit</span>
+      <span class="maNavLabel">Event Edit</span>
     </button>
 
     <button type="button" class="maNavBtn" data-nav="eventroster" aria-label="Roster">
@@ -102,7 +102,7 @@
 
     <button type="button" class="maNavBtn" data-nav="eventpairings" aria-label="Pairings">
       <span class="maNavIcon" aria-hidden="true">🔗</span>
-      <span class="maNavLabel">Pairings</span>
+      <span class="maNavLabel">Event Pairings</span>
     </button>
 
 <!-- /////// ADMIN SECTION ////// -->
@@ -117,7 +117,7 @@
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-gameslist.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
       </span>
-      <span class="maNavLabel">Event Games</span>
+      <span class="maNavLabel">Event Rounds</span>
     </button>
 
     <button type="button" class="maNavBtn" data-nav="player" aria-label="Player">
@@ -131,7 +131,7 @@
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-edit.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
       </span>
-      <span class="maNavLabel">Edit</span>
+      <span class="maNavLabel">Game Edit</span>
     </button>
 
     <button type="button" class="maNavBtn" data-nav="favorites" aria-label="Favorites">
@@ -143,38 +143,38 @@
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-players.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
       </span>
-      <span class="maNavLabel">Roster</span>
+      <span class="maNavLabel">Game Roster</span>
     </button>
 
     <button type="button" class="maNavBtn" data-nav="settings" aria-label="Game Settings">
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-settings.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
       </span>
-      <span class="maNavLabel">Settings</span>
+      <span class="maNavLabel">Game Settings</span>
     </button>
 
     <button type="button" class="maNavBtn" data-nav="pairings" aria-label="Pairings">
       <span class="maNavIcon" aria-hidden="true">🔗</span>
-      <span class="maNavLabel">Pairings</span>
+      <span class="maNavLabel">Game Pairings</span>
     </button>
 
     <button type="button" class="maNavBtn" data-nav="teetimes" aria-label="Tee Times">
       <span class="maNavIcon" aria-hidden="true">⏱</span>
-      <span class="maNavLabel">Tee Times</span>
+      <span class="maNavLabel">Game TeeTimes</span>
     </button>
 
     <button type="button" class="maNavBtn" data-nav="summary" aria-label="Summary">
       <span class="maNavIcon" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
       </span>
-      <span class="maNavLabel">Summary</span>
+      <span class="maNavLabel">Game Summary</span>
     </button>
 
     <button class="maNavBtn" data-nav="scorecard" aria-label="Scorecard">
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-scorecard.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
       </span>
-      <span class="maNavLabel">Score Card</span>
+      <span class="maNavLabel">Game ScoreCard</span>
     </button>
 
     <button class="maNavBtn" data-nav="import" aria-label="Import Games">
