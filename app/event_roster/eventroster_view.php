@@ -6,21 +6,7 @@
 
 <div class="erPage">
 
-  <!-- LEFT: Canvas — enrolled event roster -->
-  <section class="erCanvasPanel maPanel" aria-label="Event roster">
-
-    <header class="maPanel__hdr">
-      <div class="maPanel__title">Event Roster</div>
-      <span class="maPanel__count" id="erRosterCount"></span>
-    </header>
-
-    <div class="maPanel__controls" id="erCanvasControls"></div>
-    <div class="maPanel__body"     id="erRosterBody"></div>
-    <div class="maPanel__ftr"      id="erRosterFooter"></div>
-
-  </section>
-
-  <!-- RIGHT: Tray — enrollment sources -->
+  <!-- LEFT: Tray — enrollment sources -->
   <section class="erTrayPanel maPanel" aria-label="Add players tray">
 
     <header class="maPanel__hdr">
@@ -34,6 +20,20 @@
     <div class="maPanel__controls" id="erTrayControls"></div>
     <div class="maPanel__body"     id="erTrayBody"></div>
     <div class="maPanel__ftr"      id="erTrayFtr"></div>
+
+  </section>
+
+  <!-- RIGHT: Canvas — enrolled event roster -->
+  <section class="erCanvasPanel maPanel" aria-label="Event roster">
+
+    <header class="maPanel__hdr">
+      <div class="maPanel__title">Event Roster</div>
+      <span class="maPanel__count" id="erRosterCount"></span>
+    </header>
+
+    <div class="maPanel__controls" id="erCanvasControls"></div>
+    <div class="maPanel__body"     id="erRosterBody"></div>
+    <div class="maPanel__ftr"      id="erRosterFooter"></div>
 
   </section>
 
