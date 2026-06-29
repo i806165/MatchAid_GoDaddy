@@ -9,9 +9,7 @@
   border-bottom: 1px solid var(--brandSecondary);
 }
 .maListRow--hdr .maListRow__col,
-.maListRow--hdr .gpMultiHdrToggle{
-  color: var(--brandSecondaryText);
-}
+.maListRow--hdr 
 .maListRow--hdr{
   cursor: default;
 }
@@ -34,8 +32,16 @@
 .gpTabControls{ margin-top: var(--spaceSm); }
 .gpTabControls .maFieldRow{ gap: var(--spaceSm); align-items:center; flex-wrap:wrap; }
 
-.gpHint.isHidden,
-.clearBtn.isHidden{ display:none; }
+/* gpHint — broadened-search hint band; isHidden toggled by JS */
+.gpHint.isHidden { display: none; }
+
+/* gpEmpty — empty state message in tray list areas (Import, roster) */
+.gpEmpty {
+  padding: 10px 8px;
+  font-size: 12px;
+  color: var(--mutedText);
+}
+
 
 .gpFieldGroup{ max-width: 220px; }
 .gpFieldState{ max-width: 90px; }
@@ -46,21 +52,7 @@
 .gpFieldGender{ max-width: 70px; }
 .gpFieldBtn{ flex: 0 0 auto; }
 
-.clearBtn{
-  border: 0;
-  background: transparent;
-  color: var(--mutedText);
-  width: 24px;
-  height: 24px;
-  line-height: 1;
-  border-radius: 12px;
-  cursor: pointer;
-}
-.clearBtn:hover{ background: rgba(0,0,0,.06); }
 
-.gpInputClearWrap{ position:relative; }
-.gpInputClearWrap .maTextInput{ padding-right: 30px; }
-.gpInputClearWrap .clearBtn{ position:absolute; right:4px; top:50%; transform:translateY(-50%); }
 .gpNrRow .maField{ min-width: 0; }
 
 .gpRow--roster{
@@ -102,20 +94,6 @@
   
 }
 
-.gpRow--favs{
-  display: grid;
-  grid-template-columns: minmax(0,1fr) 48px minmax(0,120px) 34px 34px;
-  align-items: center;
-  column-gap: 6px;
-  padding: 8px;
-}
-.gpRow--ghin{
-  display: grid;
-  grid-template-columns: minmax(0,1fr) 56px 46px 34px;
-  align-items: center;
-  column-gap: 6px;
-  padding: 8px;
-}
 
 .gpSub{
   margin-top: 2px;
@@ -127,28 +105,19 @@
   text-overflow: ellipsis;
 }
 
-.gpInlineStatus,
-.gpEmpty{
-  padding: 10px 8px;
-  font-size: 12px;
-  color: var(--mutedText);
-}
-.gpInlineStatus{ border-bottom: 1px solid var(--borderSubtle); }
 
 .gpRowClickable{ cursor:pointer; }
 .gpRowClickable:hover{ background: rgba(0,0,0,.02); }
 
-.gpEnrolledMark{ color:#1f6fd6; font-weight:700; }
-.gpRow[data-disabled="1"]{ cursor:default; opacity:.72; }
 
 @media (max-width: 760px){
-  .gpRow--favs{ grid-template-columns: minmax(0,1fr) 42px minmax(0,96px) 34px 34px; }
+  
   .gpFieldFirst, .gpFieldLast{ min-width: 140px; }
 }
 
 @media (max-width: 560px){
-  .gpRow--favs{ grid-template-columns: minmax(0,1fr) 38px minmax(0,88px) 34px 34px; }
-  .gpRow--ghin{ grid-template-columns: minmax(0,1fr) 50px 42px 34px; }
+  
+  
 
   .gpTabControls .maFieldRow{
     justify-content: center;
@@ -221,82 +190,12 @@
     margin: 0 auto;
   }
 }
-.gpFavBtnRow{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
-  margin-top: 0;
-}
 
-.gpRow--favMulti{
-  display:grid;
-  grid-template-columns: 34px minmax(0,1fr) 46px 34px; /* Already 34px for multi-check */
-  align-items:center;
-  column-gap:6px;
-  padding:8px;
-}
-
-.gpMultiCheck{
-  width: var(--btnHeight);
-  height: var(--btnHeight);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--radiusSq);
-  background:var(--surfaceCard, #fff);
-  color:var(--brandPrimary);
-  font-weight:700;
-  line-height:20px;
-  text-align:center;
-  cursor:pointer;
-  padding:0;
-}
-
-.gpMultiCheck.is-on{
-  border-color:var(--brandPrimary);
-  background:color-mix(in srgb, var(--brandPrimary) 12%, white);
-}
-
-.gpMultiCheck:disabled{
-  cursor:default;
-  opacity:.45;
-}
-
-.gpMultiHdrToggle{
-  border:0;
-  background:transparent;
-  color:inherit;
-  font:inherit;
-  font-weight:700;
-  cursor:pointer;
-  padding:0;
-}
-
-.gpLastTee{
-  margin-top:2px;
-  font-size:11px;
-  color:var(--mutedText);
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-.gpRow.is-multiSelected{
-  background:color-mix(in srgb, var(--brandPrimary) 8%, white);
-}
-
-.gpRow.is-multiDisabled{
-  opacity:.72;
-  cursor:default;
-}
 
 @media (max-width: 560px){
-  .gpRow--favMulti{
-    grid-template-columns: 34px minmax(0,1fr) 42px 34px;
-  }
+  
 
-  .gpFavBtnRow{
-    justify-content:flex-start;
-  }
+  
 }
 .gpBusyMessage{
   text-align: center;
@@ -595,7 +494,7 @@
 
 /* ==========================================================================
    ADDITIONS TO game_players.css
-   Add after the existing .gpRow--ghin block (around line 83).
+
    ========================================================================== */
 
 
@@ -680,7 +579,7 @@
 
 /* ==========================================================================
    ADDITIONS TO game_players.css
-   Add after the existing .gpRow--ghin block (around line 83).
+
    ========================================================================== */
 
 
@@ -874,40 +773,7 @@
 }
 
 /* Tray tab strip inside controls area */
-.gpTrayTabStrip {
-  display: flex;
-  border: 1px solid var(--borderSubtle);
-  border-radius: 6px;
-  overflow: hidden;
-  margin-bottom: 4px;
-}
 
-.gpTrayTabBtn {
-  flex: 1;
-  background: #fff;
-  border: none;
-  border-right: 1px solid var(--borderSubtle);
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--mutedText);
-  padding: 5px 2px;
-  cursor: pointer;
-  font-family: var(--fontFamilyBase);
-}
-
-.gpTrayTabBtn:last-child { border-right: none; }
-
-.gpTrayTabBtn.is-active {
-  background: var(--segmentSelectedBg);
-  color: var(--segmentSelectedText);
-}
-
-/* Tray per-tab controls area */
-.gpTrayTabControls {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
 
 /* Footer tray-open button — hidden on desktop, shown on mobile */
 .gsMobileAddPlayingGroupBtn {
@@ -930,10 +796,6 @@
   transform: translateY(1px);
 }
 
-/* Non-Rated — selected row tint */
-.gpNrRow--selected {
-  background: color-mix(in srgb, var(--brandPrimary) 6%, white);
-}
 
 /* Import panel footer band */
 .gpImportPanelFtr {
@@ -1006,34 +868,4 @@
   .gpImportPanelFtr__actions {
     justify-content: flex-end;
   }
-}
-
-/* ==========================================================================
-   TRAY PANEL REDESIGN — game_players.css additions
-   ========================================================================== */
-
-/* Indicator color variants — scoped to game players page */
-.gpIndicator--add {
-  border-color: var(--brandAccent);
-  color: var(--brandAccent);
-}
-
-.gpIndicator--check {
-  border-color: var(--brandPrimary);
-  color: var(--brandPrimary);
-}
-
-/* Select All / Clear All toggle strip */
-.gpMultiSelectToggle {
-  padding: 5px 12px;
-  border-bottom: 0.5px solid var(--borderSubtle);
-  background: var(--rowBgDefault);
-}
-
-.gpMultiSelectToggle__text {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--brandAccent);
-  cursor: pointer;
-  user-select: none;
 }

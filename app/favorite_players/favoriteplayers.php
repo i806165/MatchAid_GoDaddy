@@ -119,7 +119,7 @@ if (!empty($pageHelpKey)) {
 </script>
 
 <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
-<script src="<?= ma_asset('/assets/modules/ghin_player_search.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_sourceGHINPlayers.js') ?>"></script>
 <script src="<?= ma_asset('/assets/js/xlsx.full.min.js') ?>"></script>
 <script src="<?= ma_asset('/assets/pages/favorite_players.js') ?>"></script>
 
