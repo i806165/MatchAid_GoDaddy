@@ -417,11 +417,11 @@
     // Build controls
     controlsEl.innerHTML = `
       <div class="maFieldRow" style="gap:6px; align-items:center; flex-wrap:nowrap;">
-        <div class="maInputWrap--clearable" style="flex:0 0 52px;">
+        <div class="maInputWrap--clearable" style="flex:0 0 72px;">
           <input class="maTextInput ghinPanelState" maxlength="2"
             placeholder="State" value="${_esc(defaultState)}" autocomplete="off">
         </div>
-        <div class="maInputWrap--clearable" style="flex:1 1 130px;">
+        <div class="maInputWrap--clearable" style="flex:1 1 110px; max-width:160px;">
           <input class="maTextInput ghinPanelLast"
             placeholder="Last name or GHIN#" autocomplete="off">
           <button class="maClearBtn isHidden ghinPanelLastClear"
