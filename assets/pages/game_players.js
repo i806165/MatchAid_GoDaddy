@@ -16,8 +16,8 @@
     portal: init.portal || "",
     players: [],
     pendingPlayer: null,
-    favorites: [],
-    groups: [],
+    favorites: Array.isArray((window.__INIT__ || {}).favorites) ? window.__INIT__.favorites : [],
+    groups:    Array.isArray((window.__INIT__ || {}).groups)    ? window.__INIT__.groups    : [],
     teeOptions: [],
     selectedTee: null,
     importSourceMode: "external",   // external | existing
@@ -625,7 +625,6 @@
     applyChrome();
     wirePageEvents();
     await refreshPlayers();
-    await refreshFavorites();
     if (isImportDesktopEnabled()) await ensureImportTeeOptions();
     render();
   }
@@ -716,12 +715,6 @@
     state.players = Array.isArray(res.payload?.players) ? res.payload.players : [];
     state.game = res.payload?.game || state.game;
     state.context = res.payload?.context || state.context;
-  }
-
-  async function refreshFavorites(){
-    const res = await MA.postJson(MA.paths.favPlayersInit, { courseId: safe(state.game?.dbGames_CourseID) });
-    state.favorites = Array.isArray(res?.payload?.favorites) ? res.payload.favorites : [];
-    state.groups    = Array.isArray(res?.payload?.groups)    ? res.payload.groups    : [];
   }
 
   function renderTabs(){
@@ -1075,7 +1068,6 @@ function renderTrayBody(){
     }
     MA.nonRatedSource.clearSelection(el.trayControls);
     await refreshPlayers();
-    await refreshFavorites();
     renderRoster();
     MA.nonRatedSource.mount({
       controlsEl:      el.trayControls,
@@ -1377,7 +1369,6 @@ function renderTrayBody(){
       }
 
       await refreshPlayers();
-      await refreshFavorites();
       renderRoster();
       MA.favoritesSource.refresh(el.trayControls);
       state.importText = "";
@@ -1472,7 +1463,6 @@ function renderTrayBody(){
       }
 
       await refreshPlayers();
-      await refreshFavorites();
       MA.favoritesSource.refresh(el.trayControls);
       renderRoster();
       render();
@@ -1535,7 +1525,6 @@ function renderTrayBody(){
     }
 
     await refreshPlayers();
-    await refreshFavorites();
     MA.favoritesSource.refresh(el.trayControls);
     renderRoster();
     renderTrayBody();
@@ -1642,7 +1631,6 @@ function renderTrayBody(){
     }
 
     await refreshPlayers();
-    await refreshFavorites();
     MA.favoritesSource.refresh(el.trayControls);
     renderRoster();
     renderTrayBody();

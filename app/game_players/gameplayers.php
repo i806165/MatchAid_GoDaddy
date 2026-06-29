@@ -7,6 +7,7 @@ require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_SERVICES . "/GHIN/GHIN_API_Courses.php";
+require_once MA_SERVICES . "/database/service_dbFavPlayers.php";
 
 $_SESSION["SessionFavLaunchMode"] = "registrations";
 $_SESSION["SessionFavReturnAction"] = "roster";
@@ -38,6 +39,10 @@ try {
   $adminToken = $_SESSION["SessionAdminToken"];
   $courseTeePayload = be_getCourseTeeSets($courseId, $adminToken);
 
+  $userGHIN = (string)($_SESSION["SessionGHINLogonID"] ?? "");
+  $favorites = service_dbFavPlayers::getFavoritesForUser($userGHIN, $courseId);
+  $groups    = service_dbFavPlayers::getGroupsForUser($userGHIN);
+
   $initPayload = [
     "ok" => true,
     "ggid" => $ggid,
@@ -46,9 +51,11 @@ try {
     "teamConfig" => !empty($game["dbGames_TeamConfig"]) ? json_decode((string)$game["dbGames_TeamConfig"], true) : null,
     "context" => [
       "userState" => (string)($_SESSION["SessionUserState"] ?? ""),
-      "userGHIN" => (string)($_SESSION["SessionGHINLogonID"] ?? ""),
+      "userGHIN" => $userGHIN,
       "userName" => (string)($_SESSION["SessionUserName"] ?? $_SESSION["SessionGHINUserName"] ?? ""),
     ],
+    "favorites" => $favorites,
+    "groups"    => $groups,
     "portal" => $_SESSION['SessionPortal'] ?? 'ADMIN PORTAL'
   ];
 } catch (Throwable $e) {
