@@ -204,11 +204,9 @@
   // ═══════════════════════════════════════════════════════════════════════════
 
   let _mounted = false;
-  let _root, _panel, _title, _statusEl, _stateInp, _lastInp, _firstInp, _clubInp,
-      _btnSearch, _btnClose, _resultsEl;
-
-  // Modal-mode state bucket (mirrors panel WeakMap slots)
-  const _modalState = { rows: [], truncated: false, scrollTop: 0 };
+  let _root, _panel, _title, _statusEl, _btnClose;
+  let _modalControlsEl = null;
+  let _modalBodyEl     = null;
 
   function mountModalOnce() {
     if (_mounted) return;
@@ -218,78 +216,28 @@
     _panel = el("div", "maModal");
 
     // Header
-    const hdr   = el("div", "maModal__hdr");
-    _title      = el("div", "maModal__title", "GHIN Player Search");
-    _btnClose   = el("button", "iconBtn btnPrimary");
+    const hdr = el("div", "maModal__hdr");
+    _title    = el("div", "maModal__title", "GHIN Player Search");
+    _btnClose = el("button", "iconBtn btnPrimary");
     _btnClose.type    = "button";
     _btnClose.innerHTML = ICON_CLOSE;
     hdr.appendChild(_title);
     hdr.appendChild(_btnClose);
 
-    // Controls — Row 1: State · Last name · Search button
-    const controls = el("div", "maModal__controls");
-    const row1     = el("div", "maFieldRow ghinSearchRow");
-    row1.style.cssText = "gap:6px; align-items:center; flex-wrap:nowrap;";
+    // Controls — owned by mount()
+    _modalControlsEl = el("div", "maModal__controls");
 
-    const wState = el("div", "maInputWrap--clearable");
-    wState.style.cssText = "flex:0 0 72px;";
-    _stateInp    = el("input", "maTextInput");
-    _stateInp.placeholder = "State";
-    _stateInp.maxLength   = 2;
-    wState.appendChild(_stateInp);
+    // Body — owned by mount()
+    _modalBodyEl = el("div", "maModal__body maModal__body--flush");
 
-    const wLast  = el("div", "maInputWrap--clearable");
-    wLast.style.cssText = "flex:1 1 110px;";
-    _lastInp     = el("input", "maTextInput");
-    _lastInp.placeholder = "Last name or GHIN# (required)";
-    wLast.appendChild(_lastInp);
-
-    const fBtn   = el("div", "maField ghinFieldBtn");
-    fBtn.style.flex = "0 0 auto";
-    _btnSearch   = el("button", "btn btnSecondary", "Search");
-    _btnSearch.type = "button";
-    fBtn.appendChild(_btnSearch);
-
-    row1.appendChild(wState);
-    row1.appendChild(wLast);
-    row1.appendChild(fBtn);
-
-    // Row 2: First name · Club name
-    const row2   = el("div", "maFieldRow");
-    row2.style.cssText = "gap:6px; align-items:center; flex-wrap:wrap; margin-top:4px;";
-
-    const wFirst = el("div", "maInputWrap--clearable");
-    wFirst.style.cssText = "flex:1 1 110px;";
-    _firstInp    = el("input", "maTextInput");
-    _firstInp.placeholder = "First name (optional)";
-    wFirst.appendChild(_firstInp);
-
-    const wClub  = el("div", "maInputWrap--clearable");
-    wClub.style.cssText = "flex:1 1 110px;";
-    _clubInp     = el("input", "maTextInput");
-    _clubInp.placeholder = "Club name (optional)";
-    wClub.appendChild(_clubInp);
-
-    row2.appendChild(wFirst);
-    row2.appendChild(wClub);
-
-    controls.appendChild(row1);
-    controls.appendChild(row2);
-
-    // Body
-    const body = el("div", "maModal__body maModal__body--flush");
-    body.insertAdjacentHTML("beforeend", RESULTS_HDR_HTML);
-    _resultsEl = el("div", "maListRows");
-    body.appendChild(_resultsEl);
-
-    // Footer (local status line)
+    // Footer — local status line
     const ftr = el("footer", "maModal__ftr");
     _statusEl  = el("div", "maHelpText");
     ftr.appendChild(_statusEl);
 
     _panel.appendChild(hdr);
-    _panel.appendChild(controls);
-    _panel.appendChild(body);
+    _panel.appendChild(_modalControlsEl);
+    _panel.appendChild(_modalBodyEl);
     _panel.appendChild(ftr);
     _root.appendChild(_panel);
     document.body.appendChild(_root);
@@ -299,32 +247,12 @@
       if (e.target === _root) { e.preventDefault(); e.stopPropagation(); }
     });
 
-    _btnClose.addEventListener("click",  () => close());
-    _btnSearch.addEventListener("click", () => _modalDoSearch());
-    [_stateInp, _lastInp, _firstInp, _clubInp].forEach(inp => {
-      inp.addEventListener("keydown", e => { if (e.key === "Enter") _modalDoSearch(); });
-    });
+    _btnClose.addEventListener("click", () => close());
 
     _mounted = true;
   }
 
   let _cfg = null;
-
-  function _modalSetStatus(msg, level) {
-    _statusEl.textContent = safeStr(msg);
-    _statusEl.setAttribute("data-level", safeStr(level || ""));
-  }
-
-  function _modalDoSearch() {
-    if (!_cfg) return;
-    doSearch(
-      { stateInp: _stateInp, lastInp: _lastInp, firstInp: _firstInp, clubInp: _clubInp },
-      _cfg,
-      _modalState,
-      _resultsEl,
-      _modalSetStatus
-    );
-  }
 
   function open(cfg) {
     mountModalOnce();
@@ -335,19 +263,31 @@
       onSelect:      null,
     }, cfg || {});
 
-    _title.textContent    = safeStr(_cfg.title || "GHIN Player Search");
-    _stateInp.value       = safeStr(_cfg.defaultState || "").toUpperCase();
-    _lastInp.value        = "";
-    _firstInp.value       = "";
-    _clubInp.value        = "";
+    _title.textContent = safeStr(_cfg.title || "GHIN Player Search");
     _statusEl.textContent = "";
-    _resultsEl.innerHTML  = "";
-    _modalState.rows      = [];
-    _modalState.truncated = false;
+
+    // Delegate all field building and wiring to mount() — single code path
+    mount({
+      controlsEl:    _modalControlsEl,
+      bodyEl:        _modalBodyEl,
+      defaultState:  _cfg.defaultState,
+      existingGHINs: _cfg.existingGHINs,
+      onSelect:      _cfg.onSelect,
+      reset:         true,
+      setStatus:     (msg, level) => {
+        _statusEl.textContent = safeStr(msg);
+        _statusEl.setAttribute("data-level", safeStr(level || ""));
+      },
+    });
 
     _root.classList.add("is-open");
     document.body.classList.add("maOverlayOpen");
-    setTimeout(() => _lastInp && _lastInp.focus(), 0);
+
+    // Focus last name field after mount() has built it
+    setTimeout(() => {
+      const lastInp = _modalControlsEl.querySelector(".ghinPanelLast");
+      if (lastInp) lastInp.focus();
+    }, 0);
   }
 
   function close() {
@@ -369,16 +309,16 @@
 
   /**
    * mount() — safe to call on every parent render cycle.
-   * Detects whether controlsEl is already initialized and updates
-   * existingGHINs without re-rendering the controls or resetting state.
+   * Used by both panel mode (Game Players, Event Roster) and modal mode.
    *
    * @param {object} cfg
    *   controlsEl    {HTMLElement}        host supplies — renders controls here
    *   bodyEl        {HTMLElement}        host supplies — renders rows here
-   *   footerEl      {HTMLElement|null}   not used by ghinSearch (pass null)
-   *   defaultState  {string}             used only on first mount
+   *   defaultState  {string}             used only on first mount (or reset)
    *   existingGHINs {Set}                refreshed on every mount call
    *   onSelect      {function(player)}   callback
+   *   reset         {boolean}            force re-initialization (modal re-open)
+   *   setStatus     {function(msg,level)} optional status callback; defaults to MA.setStatus
    */
   function mount(cfg) {
     const controlsEl = cfg.controlsEl;
@@ -388,6 +328,11 @@
     const existingGHINs = cfg.existingGHINs instanceof Set
       ? cfg.existingGHINs
       : new Set();
+
+    // ── Reset: clear WeakMap entry so modal re-opens fresh ───────────────
+    if (cfg.reset && _panelStates.has(controlsEl)) {
+      _panelStates.delete(controlsEl);
+    }
 
     // ── Already initialized? ─────────────────────────────────────────────
     if (_panelStates.has(controlsEl)) {
@@ -422,10 +367,15 @@
       scrollTop:    0,
       existingGHINs,
       onSelect:     cfg.onSelect || null,
-      _rowsEl:      null,   // assigned below after DOM build
+      _rowsEl:      null,
       _statusEl:    null,
     };
     _panelStates.set(controlsEl, st);
+
+    // Status callback — host-supplied (modal footer) or page chrome default
+    const setStatus = typeof cfg.setStatus === "function"
+      ? cfg.setStatus
+      : (msg) => { if (typeof MA.setStatus === "function") MA.setStatus(msg, "info"); };
 
     // Build controls
     controlsEl.innerHTML = `
@@ -463,12 +413,6 @@
     const rowsEl = el("div", "maListRows");
     bodyEl.appendChild(rowsEl);
     st._rowsEl = rowsEl;
-
-    // Local status uses MA.setStatus so the page chrome gets the feedback,
-    // consistent with how the existing game_players GHIN tab works
-    function panelSetStatus(msg) {
-      if (typeof MA.setStatus === "function") MA.setStatus(msg, "info");
-    }
 
     // Wire inputs
     const stateInp  = controlsEl.querySelector(".ghinPanelState");
@@ -545,7 +489,7 @@
         { existingGHINs: st.existingGHINs, onSelect: st.onSelect },
         st,
         rowsEl,
-        panelSetStatus
+        setStatus
       );
     }
 
