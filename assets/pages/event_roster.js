@@ -302,7 +302,7 @@
     MA.manageTeams.open({
       players:    playersForTeams,
       teamConfig,
-      apiBase:    MA.paths?.apiEventPlayers || "/api/event_players",
+      apiBase:    MA.paths?.apiEventRoster || "/api/event_roster",
       onApply: ({ players, teamConfig: newConfig }) => {
         // Write team keys back to state.roster
         if (Array.isArray(players) && players.length) {

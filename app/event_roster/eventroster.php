@@ -56,11 +56,11 @@ try {
 $paths = [
     "routerApi"              => MA_ROUTE_API_ROUTER,
     "apiGHIN"                => MA_ROUTE_API_GHIN,
-    "apiEventPlayers"        => MA_ROUTE_API_EVENT_PLAYERS,
+    "apiEventRoster"        => MA_ROUTE_API_EVENT_ROSTER,
     "apiFavoritePlayers"     => MA_ROUTE_API_FAVORITE_PLAYERS,
-    "getEventRoster"         => MA_ROUTE_API_EVENT_PLAYERS . "/getEventRoster.php",
-    "saveEventRosterPlayer"  => MA_ROUTE_API_EVENT_PLAYERS . "/saveEventRosterPlayer.php",
-    "deleteEventRosterPlayer"=> MA_ROUTE_API_EVENT_PLAYERS . "/deleteEventRosterPlayer.php",
+    "getEventRoster"         => MA_ROUTE_API_EVENT_ROSTER . "/getEventRoster.php",
+    "saveEventRosterPlayer"  => MA_ROUTE_API_EVENT_ROSTER . "/saveEventRosterPlayer.php",
+    "deleteEventRosterPlayer"=> MA_ROUTE_API_EVENT_ROSTER . "/deleteEventRosterPlayer.php",
     "favPlayersInit"         => MA_ROUTE_API_FAVORITE_PLAYERS . "/initFavPlayers.php",
     "ghinPlayerSearch"       => MA_ROUTE_API_GHIN . "/searchPlayers.php",
 ];
