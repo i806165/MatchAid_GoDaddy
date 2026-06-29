@@ -56,6 +56,7 @@
 
   const el = {
     // Tray
+    trayTabs:        document.getElementById("gpTrayTabs"),
     trayControls:    document.getElementById("gpTrayControls"),
     trayBody:        document.getElementById("gpTrayBody"),
     trayFtr:         document.querySelector(".gpTrayPanel .maPanel__ftr"),
@@ -729,9 +730,9 @@
       tabs.map(t => `<button class="maSegBtn ${state.activeTab === t.id ? "is-active" : ""}" data-tab="${t.id}" role="tab" aria-selected="${state.activeTab === t.id ? "true" : "false"}">${esc(t.label)}</button>`).join("")
     }</div>`;
 
-    el.trayControls.innerHTML = stripHtml;
+    el.trayTabs.innerHTML = stripHtml;
 
-    el.trayControls.querySelectorAll(".maSegBtn").forEach(btn => btn.addEventListener("click", async () => {
+    el.trayTabs.querySelectorAll(".maSegBtn").forEach(btn => btn.addEventListener("click", async () => {
       const leaving = state.activeTab;
 
       // Module cleanup on tab away
@@ -1472,8 +1473,8 @@ function renderTrayBody(){
 
       await refreshPlayers();
       await refreshFavorites();
-      renderRoster();
       MA.favoritesSource.refresh(el.trayControls);
+      renderRoster();
       render();
 
       if (failed) MA.setStatus(`Added ${added} favorites. ${failed} failed.`, "warn");

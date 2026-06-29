@@ -686,6 +686,10 @@
     } catch (e) {
       MA.setStatus("Unable to refresh favorites.", "warn");
     }
+    // Exit multi-add mode on refresh — enrollment state has changed
+    st.multiAddMode     = false;
+    st.multiAddSelected = [];
+    if (st.footerEl) st.footerEl.innerHTML = "";
     _renderControls(controlsEl, st);
     _renderBody(st);
   }

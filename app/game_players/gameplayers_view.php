@@ -23,6 +23,7 @@
         </div>
       </div>
     </header>
+    <div class="maPanel__tabs" id="gpTrayTabs"></div>
     <div class="maPanel__controls" id="gpTrayControls"></div>
     <div class="maPanel__body" id="gpTrayBody"></div>
     <footer class="maPanel__ftr"></footer>
