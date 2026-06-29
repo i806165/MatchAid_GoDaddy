@@ -246,7 +246,7 @@
 
     const fBtn   = el("div", "maField ghinFieldBtn");
     fBtn.style.flex = "0 0 auto";
-    _btnSearch   = el("button", "btn btnPrimary", "Search");
+    _btnSearch   = el("button", "btn btnSecondary", "Search");
     _btnSearch.type = "button";
     fBtn.appendChild(_btnSearch);
 
