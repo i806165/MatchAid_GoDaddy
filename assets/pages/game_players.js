@@ -1523,22 +1523,8 @@ function renderTrayBody(){
     }
 
     await refreshPlayers();
-    MA.favoritesSource.mount({
-      controlsEl:    el.trayControls,
-      bodyEl:        el.trayBody,
-      footerEl:      el.trayFtr,
-      apiPath:       MA.paths.favPlayersInit,
-      courseId:      safe(state.game?.dbGames_CourseID),
-      context:       state.context,
-      initialData:   { favorites: state.favorites, groups: state.groups },
-      existingGHINs: new Set(
-        (state.players || []).map(p => safe(p.dbPlayers_PlayerGHIN))
-      ),
-      onSelect(player)      { beginTeeFlow(player); },
-      onSelectMany(players) { beginBatchTeeFlow(players); }
-    });
     renderRoster();
-    renderTrayBody();
+    render();
     MA.setStatus("Player added/updated.", "success");
   }
 
@@ -1642,22 +1628,8 @@ function renderTrayBody(){
     }
 
     await refreshPlayers();
-    MA.favoritesSource.mount({
-      controlsEl:    el.trayControls,
-      bodyEl:        el.trayBody,
-      footerEl:      el.trayFtr,
-      apiPath:       MA.paths.favPlayersInit,
-      courseId:      safe(state.game?.dbGames_CourseID),
-      context:       state.context,
-      initialData:   { favorites: state.favorites, groups: state.groups },
-      existingGHINs: new Set(
-        (state.players || []).map(p => safe(p.dbPlayers_PlayerGHIN))
-      ),
-      onSelect(player)      { beginTeeFlow(player); },
-      onSelectMany(players) { beginBatchTeeFlow(players); }
-    });
     renderRoster();
-    renderTrayBody();
+    render();
     MA.setStatus("Player removed.", "success");
   }
 

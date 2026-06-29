@@ -421,7 +421,7 @@
           <input class="maTextInput ghinPanelState" maxlength="2"
             placeholder="State" value="${_esc(defaultState)}" autocomplete="off">
         </div>
-        <div class="maInputWrap--clearable" style="flex:1 1 110px; max-width:160px;">
+        <div class="maInputWrap--clearable" style="flex:1 1 110px;">
           <input class="maTextInput ghinPanelLast"
             placeholder="Last name or GHIN#" autocomplete="off">
           <button class="maClearBtn isHidden ghinPanelLastClear"
@@ -430,7 +430,7 @@
         <button class="btn btnSecondary ghinPanelSearch"
           type="button" style="flex-shrink:0;">Search</button>
       </div>
-      <div class="maFieldRow" style="gap:6px; align-items:center; flex-wrap:nowrap; margin-top:4px;">
+      <div class="maFieldRow" style="gap:6px; align-items:center; flex-wrap:wrap; margin-top:4px;">
         <div class="maInputWrap--clearable" style="flex:1 1 110px;">
           <input class="maTextInput ghinPanelFirst"
             placeholder="First name (optional)" autocomplete="off">
