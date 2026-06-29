@@ -314,7 +314,7 @@
 
     if (chrome && typeof chrome.setBottomNav === "function") {
       chrome.setBottomNav({
-        visible: ["admin", "eventhome", "eventedit", "eventroster", "eventgames", "eventscoring"],
+        visible: ["eventhome", "eventedit", "eventroster", "eventgames", "eventscoring"],
         active: "eventedit",
         disabled: (state.mode === "add") ? ["eventroster", "eventgames", "eventscoring"] : [],
         onNavigate: id => MA.routerGo(id)
