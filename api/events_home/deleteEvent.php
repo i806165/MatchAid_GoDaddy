@@ -1,6 +1,13 @@
 <?php
 // /public_html/api/events_home/deleteEvent.php
 declare(strict_types=1);
+//
+// Status code convention: matches the rest of the app (admin_games) —
+// expected business outcomes (invalid input, not authorized, not found)
+// always return HTTP 200 with {ok:false, message}, since MA.postJson()
+// throws on any non-2xx status and these are outcomes the UI displays
+// inline, not exceptional failures. Only 401 (auth) and 500 (genuine
+// server fault) use real non-2xx status codes.
 
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_SERVICES . "/context/service_ContextEvent.php";
@@ -13,7 +20,7 @@ $payload = is_array($in["payload"] ?? null) ? $in["payload"] : $in;
 $eid = (int)($payload["eid"] ?? 0);
 
 if ($eid <= 0) {
-  ma_respond(400, ["ok" => false, "message" => "Invalid EID."]);
+  ma_respond(200, ["ok" => false, "message" => "Invalid EID."]);
 }
 
 $userGHIN = trim((string)($_SESSION["SessionGHINLogonID"] ?? ""));
@@ -27,7 +34,7 @@ $auth = ServiceContextEvent::computeEventAuthorizations([
 ]);
 
 if (!$auth["canDelete"]) {
-  ma_respond(403, ["ok" => false, "message" => "Not authorized to delete this event."]);
+  ma_respond(200, ["ok" => false, "message" => "Not authorized to delete this event."]);
 }
 
 try {
@@ -39,7 +46,7 @@ try {
     ma_respond(200, ["ok" => true, "message" => "Event deleted successfully."]);
   }
 
-  ma_respond(404, ["ok" => false, "message" => "Event not found or could not be deleted."]);
+  ma_respond(200, ["ok" => false, "message" => "Event not found or could not be deleted."]);
 } catch (Throwable $e) {
   error_log("[events_home/deleteEvent] EX " . $e->getMessage());
   ma_respond(500, ["ok" => false, "message" => $e->getMessage() ?: "Server error deleting event."]);

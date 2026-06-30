@@ -186,12 +186,18 @@
   }
 
   async function setEventSession(eid) {
-    const res = await postJson(`${apiBase}/setEventSession.php`, { eid });
-    if (!res?.ok) {
-      setStatus(res?.message || res?.error || "Unable to open event.", "danger");
+    try {
+      const res = await postJson(`${apiBase}/setEventSession.php`, { eid });
+      if (!res?.ok) {
+        setStatus(res?.message || res?.error || "Unable to open event.", "danger");
+        return false;
+      }
+      return true;
+    } catch (e) {
+      console.error(e);
+      setStatus(String(e.message || e), "danger");
       return false;
     }
-    return true;
   }
 
   async function handleEventAction(args) {
@@ -212,12 +218,17 @@
 
     if (action === "deleteEvent") {
       if (!confirm("Delete this event? This cannot be undone.")) return;
-      const res = await postJson(`${apiBase}/deleteEvent.php`, { eid });
-      if (res?.ok) {
-        setStatus("Event deleted.", "success");
-        await refreshEvents(state.filters.mode);
-      } else {
-        setStatus(res?.message || "Unable to delete event.", "danger");
+      try {
+        const res = await postJson(`${apiBase}/deleteEvent.php`, { eid });
+        if (res?.ok) {
+          setStatus("Event deleted.", "success");
+          await refreshEvents(state.filters.mode);
+        } else {
+          setStatus(res?.message || "Unable to delete event.", "danger");
+        }
+      } catch (e) {
+        console.error(e);
+        setStatus(String(e.message || e), "danger");
       }
       return;
     }
