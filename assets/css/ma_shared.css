@@ -39,7 +39,7 @@
   /* --- Brand colors --- */
   --brandPrimary: #07432A;
   --brandSecondary: #3F7652;
-  --brandTertiary: #1B4F8A;       /* Event-context navy — card/panel/chrome headers */
+  --brandTertiary: #073B4C;       /* Event-context navy — card/panel/chrome headers */
   --brandTertiaryText: #ffffff;   /* White text on navy — same as brandSecondaryText */
   --brandColor3: #0066CC;
   --brandAccent: #0b5fff; /* 24a0ed or #0b5fff or 0066CC */

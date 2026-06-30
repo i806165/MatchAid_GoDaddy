@@ -235,11 +235,22 @@
   position: relative;
 }
 
-.maPage--adminHome .gpPanelHdr__title{
+/* Games panel outer header title — green on white */
+.maPage--adminHome .maPanel--primary .gpPanelHdr__title{
   font-size: 14px;
   font-weight: 950;
   letter-spacing: .2px;
   color: var(--brandSecondary);
+  flex: 1;
+  text-align: center;
+}
+
+/* Events panel outer header title — brandTertiary on white */
+.maPage--adminHome .maPanel--secondary .gpPanelHdr__title{
+  font-size: 14px;
+  font-weight: 950;
+  letter-spacing: .2px;
+  color: var(--brandTertiary);
   flex: 1;
   text-align: center;
 }
