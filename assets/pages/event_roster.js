@@ -438,7 +438,7 @@
 
     if (MA.chrome && MA.chrome.setBottomNav) {
       MA.chrome.setBottomNav({
-        visible:    ["eventhome", "eventedit", "eventroster","eventgames", "eventscoring"],
+        visible:    ["eventhome", "eventedit", "eventroster","eventrounds", "eventscoring"],
         active:     "eventroster",
         onNavigate: id => MA.routerGo(id),
       });

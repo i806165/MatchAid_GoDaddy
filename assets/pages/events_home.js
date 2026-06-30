@@ -229,7 +229,7 @@
       openEvent: "event",
       editEvent: "eventedit",
       eventRoster: "eventroster",
-      eventGames: "eventgames",
+      eventGames: "eventrounds",
       eventScoring: "eventscoring"
     };
 

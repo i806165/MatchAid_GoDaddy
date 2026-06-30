@@ -699,8 +699,9 @@
     const course = String(g.dbGames_CourseName || "");
     const date = formatDate(g.dbGames_PlayDate);
     const subTitle = [course, date].filter(Boolean).join(" • ");
+    const isEvent = isEventMode();
 
-    if (MA.chrome && MA.chrome.setHeaderLines) MA.chrome.setHeaderLines(["Game Players", title, subTitle]);
+    if (MA.chrome && MA.chrome.setHeaderLines) MA.chrome.setHeaderLines([isEvent ? "Round Roster" : "Game Players", title, subTitle]);
     if (MA.chrome && MA.chrome.setActions) {
       MA.chrome.setActions({
         right: { show: true, label: "Actions", onClick: openActionsMenu },
@@ -712,9 +713,11 @@
       const isPlayer = (state.portal === "PLAYER PORTAL");
       const visible = isPlayer
         ? ["player", "roster", "summary"]
-        : ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"];
+        : isEvent
+          ? ["eventrounds", "roundedit", "roundsettings", "roundroster", "roundpairings", "roundteetimes", "roundsummary", "roundscorecard"]
+          : ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"];
 
-      MA.chrome.setBottomNav({ visible: visible, active:"roster", onNavigate:(id)=>MA.routerGo(id) });
+      MA.chrome.setBottomNav({ visible: visible, active: isEvent ? "roundroster" : "roster", onNavigate:(id)=>MA.routerGo(id) });
     }
   }
 

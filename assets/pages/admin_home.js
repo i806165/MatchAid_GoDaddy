@@ -893,9 +893,9 @@ function wireFiltersModal() {
       const isEventMode = !!(window.__MA_INIT__?.eventContext || window.__INIT__?.eventContext);
       MA.chrome.setBottomNav({
         visible: isEventMode
-          ? ["home", "eventgames", "eventhome", "favorites"]
+          ? ["home", "eventhome", "eventedit", "eventroster", "eventrounds"]
           : ["home", "admin", "favorites", "import", "eventhome"],
-        active: isEventMode ? "eventgames" : "admin",
+        active: isEventMode ? "eventrounds" : "admin",
         onNavigate: (id) => {
           try {
             if (typeof MA.routerGo === "function") {

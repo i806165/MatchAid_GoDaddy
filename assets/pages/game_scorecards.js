@@ -416,7 +416,8 @@ function renderGroup(group) {
 
   function applyChrome() {
     const subtitle = [game.dbGames_CourseName, formatDate(game.dbGames_PlayDate)].filter(Boolean).join(" • ");
-    if (chrome.setHeaderLines) chrome.setHeaderLines(["Scorecard", game.dbGames_Title || "Game", subtitle]);
+    const isEvent = !!(game?.dbGames_EID);
+    if (chrome.setHeaderLines) chrome.setHeaderLines([isEvent ? "Round Scorecard" : "Game Scorecard", game.dbGames_Title || "Game", subtitle]);
     if (chrome.setActions) chrome.setActions({
       left:  { show: false },
       right: { show: false }
@@ -424,8 +425,10 @@ function renderGroup(group) {
     });
 
     if (chrome.setBottomNav) chrome.setBottomNav( {
-        visible: ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"], 
-        active: "scorecard", onNavigate: (id) => MA.routerGo?.(id) 
+        visible: isEvent
+          ? ["eventrounds", "roundedit", "roundsettings", "roundroster", "roundpairings", "roundteetimes", "roundsummary", "roundscorecard"]
+          : ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"],
+        active: isEvent ? "roundscorecard" : "scorecard", onNavigate: (id) => MA.routerGo?.(id) 
       });
   }
 

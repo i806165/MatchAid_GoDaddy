@@ -517,7 +517,8 @@
       const gameTitle = String(g.dbGames_Title || `GGID ${state.ggid || ""}`).trim();
       const course = String(g.dbGames_CourseName || "");
       const date = formatDate(g.dbGames_PlayDate);
-      chrome.setHeaderLines(["Game Settings", gameTitle, [course, date].filter(Boolean).join(" • ")]);
+      const isEvent = !!(state.game?.dbGames_EID);
+      chrome.setHeaderLines([isEvent ? "Round Settings" : "Game Settings", gameTitle, [course, date].filter(Boolean).join(" • ")]);
     }
     if (chrome && typeof chrome.setActions === "function") {
       chrome.setActions({
@@ -533,8 +534,10 @@
     }
     if (chrome && typeof chrome.setBottomNav === "function") {
       chrome.setBottomNav({
-        visible: ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"],
-        active: "settings",
+        visible: isEvent
+          ? ["eventrounds", "roundedit", "roundsettings", "roundroster", "roundpairings", "roundteetimes", "roundsummary", "roundscorecard"]
+          : ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"],
+        active: isEvent ? "roundsettings" : "settings",
         onNavigate: id => (typeof MA.routerGo === "function" ? MA.routerGo(id) : null),
       });
     }

@@ -105,21 +105,60 @@
       <span class="maNavLabel">Event Pairings</span>
     </button>
 
-<!-- /////// ADMIN SECTION ////// -->
-    <button type="button" class="maNavBtn" data-nav="admin" aria-label="Admin">
-      <span class="maNavIcon" aria-hidden="true">
-        <img src="/assets/images/nav-admin-home.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
-      </span>
-      <span class="maNavLabel">Admin Home</span>
-    </button>
-
-    <button type="button" class="maNavBtn" data-nav="eventgames" aria-label="EventGames">
+<!-- /////// ROUND ADMIN SECTION ////// -->
+    <button type="button" class="maNavBtn" data-nav="eventrounds" aria-label="Event Rounds">
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-gameslist.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
       </span>
       <span class="maNavLabel">Event Rounds</span>
     </button>
 
+    <button type="button" class="maNavBtn" data-nav="roundedit" aria-label="Round Edit">
+      <span class="maNavIcon" aria-hidden="true">
+        <img src="/assets/images/nav-edit.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
+      </span>
+      <span class="maNavLabel">Round Edit</span>
+    </button>
+
+    <button type="button" class="maNavBtn" data-nav="roundroster" aria-label="Round Roster">
+      <span class="maNavIcon" aria-hidden="true">
+        <img src="/assets/images/nav-players.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
+      </span>
+      <span class="maNavLabel">Round Roster</span>
+    </button>
+
+    <button type="button" class="maNavBtn" data-nav="roundsettings" aria-label="Round Settings">
+      <span class="maNavIcon" aria-hidden="true">
+        <img src="/assets/images/nav-settings.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
+      </span>
+      <span class="maNavLabel">Round Settings</span>
+    </button>
+
+    <button type="button" class="maNavBtn" data-nav="roundpairings" aria-label="Round Pairings">
+      <span class="maNavIcon" aria-hidden="true">🔗</span>
+      <span class="maNavLabel">Round Pairings</span>
+    </button>
+
+    <button type="button" class="maNavBtn" data-nav="roundteetimes" aria-label="Round TeeTimes">
+      <span class="maNavIcon" aria-hidden="true">⏱</span>
+      <span class="maNavLabel">Round TeeTimes</span>
+    </button>
+
+    <button type="button" class="maNavBtn" data-nav="roundsummary" aria-label="Round Summary">
+      <span class="maNavIcon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+      </span>
+      <span class="maNavLabel">Round Summary</span>
+    </button>
+
+    <button class="maNavBtn" data-nav="roundscorecard" aria-label="Round Scorecard">
+      <span class="maNavIcon" aria-hidden="true">
+        <img src="/assets/images/nav-scorecard.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
+      </span>
+      <span class="maNavLabel">Round ScoreCard</span>
+    </button>
+ 
+<!-- /////// PLAYER SECTION ////// -->
     <button type="button" class="maNavBtn" data-nav="player" aria-label="Player">
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-player-home.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
@@ -127,16 +166,24 @@
       <span class="maNavLabel">Player Home</span>
     </button>
 
+<!-- /////// GAME ADMIN SECTION ////// -->
+    <button type="button" class="maNavBtn" data-nav="favorites" aria-label="Favorites">
+      <span class="maNavIcon" aria-hidden="true">★</span>
+      <span class="maNavLabel">Favorites</span>
+    </button>
+
+    <button type="button" class="maNavBtn" data-nav="admin" aria-label="Admin">
+      <span class="maNavIcon" aria-hidden="true">
+        <img src="/assets/images/nav-admin-home.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
+      </span>
+      <span class="maNavLabel">Admin Home</span>
+    </button>
+
     <button type="button" class="maNavBtn" data-nav="edit" aria-label="Edit">
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-edit.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
       </span>
       <span class="maNavLabel">Game Edit</span>
-    </button>
-
-    <button type="button" class="maNavBtn" data-nav="favorites" aria-label="Favorites">
-      <span class="maNavIcon" aria-hidden="true">★</span>
-      <span class="maNavLabel">Favorites</span>
     </button>
 
     <button type="button" class="maNavBtn" data-nav="roster" aria-label="Roster">

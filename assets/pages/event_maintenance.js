@@ -314,9 +314,9 @@
 
     if (chrome && typeof chrome.setBottomNav === "function") {
       chrome.setBottomNav({
-        visible: ["eventhome", "eventedit", "eventroster", "eventgames", "eventscoring"],
+        visible: ["eventhome", "eventedit", "eventroster", "eventrounds", "eventscoring"],
         active: "eventedit",
-        disabled: (state.mode === "add") ? ["eventroster", "eventgames", "eventscoring"] : [],
+        disabled: (state.mode === "add") ? ["eventroster", "eventrounds", "eventscoring"] : [],
         onNavigate: id => MA.routerGo(id)
       });
     }

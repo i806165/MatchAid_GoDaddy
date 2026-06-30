@@ -1531,8 +1531,9 @@ function onResetChanges() {
 
   function applyChrome() {
     if (chrome.setHeaderLines) {
+      const isEvent = !!(init.game?.dbGames_EID);
       chrome.setHeaderLines([
-        "Tee Assignments",
+        isEvent ? "Round TeeTimes" : "Game TeeTimes",
         init.game?.dbGames_Title || "Slotting Board",
         init.game?.dbGames_CourseName || ""
       ]);
@@ -1554,8 +1555,10 @@ function onResetChanges() {
 
     if (chrome.setBottomNav) {
       chrome.setBottomNav({
-        visible: ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"],
-        active: "teetimes",
+        visible: isEvent
+          ? ["eventrounds", "roundedit", "roundsettings", "roundroster", "roundpairings", "roundteetimes", "roundsummary", "roundscorecard"]
+          : ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"],
+        active: isEvent ? "roundteetimes" : "teetimes",
         onNavigate: (id) => MA.routerGo?.(id)
       });
     }

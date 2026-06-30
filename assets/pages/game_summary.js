@@ -1067,7 +1067,8 @@
     const subTitle = [course, date].filter(Boolean).join(" • ");
 
     if (chrome && typeof chrome.setHeaderLines === "function") {
-      chrome.setHeaderLines(["Game Summary", title, subTitle]);
+      const isEventGame = !!(state.game?.dbGames_EID);
+      chrome.setHeaderLines([isEventGame ? "Round Summary" : "Game Summary", title, subTitle]);
     }
 
     if (chrome && typeof chrome.setActions === "function") {
@@ -1083,11 +1084,13 @@
 
       const visible = isPlayerPortal
         ? [homeRoute, "scoreentry", "scorecardPlayer", "scorecardGame", "scoreskins"]
-        : [homeRoute, "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"];
+        : isEventGame
+          ? ["eventrounds", "roundedit", "roundsettings", "roundroster", "roundpairings", "roundteetimes", "roundsummary", "roundscorecard"]
+          : [homeRoute, "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"];
 
       chrome.setBottomNav({
         visible: visible,
-        active: "summary",
+        active: isEventGame ? "roundsummary" : "summary",
         onNavigate: (id) => (typeof MA.routerGo === "function" ? MA.routerGo(id) : null),
       });
     }

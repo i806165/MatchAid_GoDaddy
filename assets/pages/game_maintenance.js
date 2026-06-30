@@ -250,7 +250,7 @@
       if (!res || !res.ok) throw new Error(res?.message || "Delete failed.");
 
       setStatus("Game deleted.", "success");
-      const backRoute = state.eventContext ? "eventgames" : "admin";
+      const backRoute = state.eventContext ? "eventrounds" : "admin";
       if (typeof MA.routerGo === "function") MA.routerGo(backRoute);
       else window.location.assign((MA.paths?.routerApi || "/api/session/pageRouter.php") + "?action=" + backRoute + "&redirect=1");
     } catch (e) {
@@ -325,10 +325,10 @@
     }
 
     if (chrome && typeof chrome.setBottomNav === "function") {
-      const backRoute = evCtx ? "eventgames" : "admin";
+      const backRoute = evCtx ? "eventrounds" : "admin";
       chrome.setBottomNav({
         visible: evCtx
-          ? ["eventgames", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"]
+          ? ["eventrounds", "roundedit", "roundsettings", "roundroster", "roundpairings", "roundteetimes", "roundsummary", "roundscorecard"]
           : ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"],
         active: "edit",
         disabled: (state.mode === "add") ? ["roster", "pairings", "teetimes", "summary"] : [],

@@ -1109,7 +1109,8 @@
     const subTitle = [course, date].filter(Boolean).join(" • ");
 
     if (chrome && typeof chrome.setHeaderLines === "function") {
-      chrome.setHeaderLines(["Game Pairings", title, subTitle]);
+      const isEvent = !!(state.game?.dbGames_EID);
+      chrome.setHeaderLines([isEvent ? "Round Pairings" : "Game Pairings", title, subTitle]);
     }
 
     if (chrome && typeof chrome.setActions === "function") {
@@ -1128,8 +1129,10 @@
 
     if (chrome && typeof chrome.setBottomNav === "function") {
       chrome.setBottomNav({
-        visible: ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"],
-        active: "pairings",
+        visible: isEvent
+          ? ["eventrounds", "roundedit", "roundsettings", "roundroster", "roundpairings", "roundteetimes", "roundsummary", "roundscorecard"]
+          : ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"],
+        active: isEvent ? "roundpairings" : "pairings",
         onNavigate: (id) => {
           if (typeof MA.routerGo === "function") MA.routerGo(id);
         }

@@ -48,18 +48,33 @@ $ROUTES = [
     // General
     "home"  => "/",
     "login" => "/app/login/login.php",
+    "usersettings"   => "/app/user_settings/usersettings.php",
 
     "admin"    => "/app/admin_games/adminhome.php",
     "edit"     => "/app/game_maintenance/gamemaint.php",   // expects mode=add|edit (if your router appends it)
     "settings"    => "/app/game_settings/gamesettings.php",
     "roster"   => "/app/game_players/gameplayers.php",
     "pairings" => "/app/game_pairings/gamepairings.php",
-    //"teetimes" => "/app/game_times/gametimes.php",
+    //"teetimes" => "/app/game_times/gametimes.php",  DEPRICATED
     "teetimes" => "/app/game_slotting/gameslotting.php",
     "summary"  => "/app/game_summary/gamesummary.php",
-    
-    "scorecard"   => "/app/game_scorecards/scorecards.php",
 
+    // These mirror the game admin pages, with button text changed to "Round" rather than "Game":
+    "eventrounds" => "/app/admin_games/adminhome.php",
+    "roundedit"      => "/app/game_maintenance/gamemaint.php",
+    "roundroster"    => "/app/game_players/gameplayers.php",
+    "roundsettings"  => "/app/game_settings/gamesettings.php",
+    "roundpairings"  => "/app/game_pairings/gamepairings.php",
+    "roundteetimes"  => "/app/game_slotting/gameslotting.php",
+    "roundsummary"   => "/app/game_summary/gamesummary.php",
+    "roundscorecard" => "/app/game_scorecards/scorecards.php",
+
+    // Admin Portal Affordances
+    "import"   => "/app/game_import/gameimport.php",
+    "favorites"   => "/app/favorite_players/favoriteplayers.php",
+    
+    // Scoring Portal Routes
+    "scorecard"   => "/app/game_scorecards/scorecards.php",
     "scorehome"   => "/app/score_home/scorehome.php",
     "scoreentry"    => "/app/score_entry/scoreentry.php",
     "scorecardPlayer" => "/app/scorecardShared/scorecardPlayer.php",
@@ -68,23 +83,21 @@ $ROUTES = [
     "scoreskins" => "/app/score_skins/scoreskins.php",
     "scoresummary" => "/app/score_summary/scoresummary.php",
 
+    // Player Portal Routes
     "player"    => "/app/player_home/playerhome.php",
-    "import"   => "/app/game_import/gameimport.php",
-
-    "favorites"   => "/app/favorite_players/favoriteplayers.php",
-    "usersettings"   => "/app/user_settings/usersettings.php",
-
+  
+    // Club Admin Routes
     "clubhome" => "/app/club_home/clubhome.php",
     "clubdemand" => "/app/club_demand/clubdemand.php",
     "clubusers" => "/app/club_users/clubusers.php",
 
+    // Event Admininstration Routes
     "eventhome"    => "/app/events_home/eventshome.php",
     "eventedit"    => "/app/event_maintenance/eventmaint.php",
-
-    // Future placeholders:
     "eventsummary"   => "/app/event_summary/eventsummary.php",
     "eventroster"  => "/app/event_roster/eventroster.php",
-    "eventgames"   => "/app/admin_games/adminhome.php",
+    // Future placeholders:
+    "eventgames"   => "/app/admin_games/adminhome.php",  //DEPRICATED
     "eventscoring" => "/app/event_scoring/eventscoring.php",
 ];
 
