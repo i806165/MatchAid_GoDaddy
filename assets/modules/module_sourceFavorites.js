@@ -656,18 +656,22 @@
   }
 
   /**
-   * refresh(controlsEl) — re-fetches favorites data and re-renders.
-   * Called by the host page after a player is enrolled.
+   * refresh(controlsEl) — exits multi-add mode and re-renders.
+   * Called by the host page after a successful multi-add enrollment to
+   * clear the stale selection/footer state that mount() intentionally
+   * preserves on re-invocation.
+   *
+   * Does NOT re-fetch favorites from the server. Both current host pages
+   * (Game Players, Event Roster) preload favorites server-side and pass
+   * them via mount()'s initialData — st.favorites is already current.
+   * A fetch here was previously included but caused an unnecessary
+   * network round-trip on every enroll; the host page's own state.favorites
+   * stays the single source of truth and is what initialData reflects.
    */
-  async function refresh(controlsEl) {
+  function refresh(controlsEl) {
     const st = _getState(controlsEl);
     if (!st) return;
-    try {
-      await _fetchFavorites(st);
-    } catch (e) {
-      MA.setStatus("Unable to refresh favorites.", "warn");
-    }
-    // Exit multi-add mode on refresh — enrollment state has changed
+    // Exit multi-add mode — enrollment state has changed
     st.multiAddMode     = false;
     st.multiAddSelected = [];
     if (st.footerEl) st.footerEl.innerHTML = "";

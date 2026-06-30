@@ -101,14 +101,7 @@
 
     await refreshRoster();
     renderRoster();
-    if (state.activeTab === "favorites") {
-      // Use the module's own reset hook rather than a blind re-mount —
-      // refresh() re-fetches favorites AND exits multi-add mode/clears
-      // selection, which a plain mount() call intentionally preserves.
-      await MA.favoritesSource.refresh(el.trayControls);
-    } else {
-      renderTrayControls();
-    }
+    renderTrayControls();
     renderTrayBody();
     MA.setStatus("Player enrolled.", "success");
   }
@@ -129,10 +122,9 @@
     await refreshRoster();
     renderRoster();
     if (state.activeTab === "favorites") {
-      // Use the module's own reset hook rather than a blind re-mount —
-      // refresh() re-fetches favorites AND exits multi-add mode/clears
-      // selection, which a plain mount() call intentionally preserves.
-      await MA.favoritesSource.refresh(el.trayControls);
+      // Multi-add only: clear the module's multiAddMode/selection state,
+      // which a plain re-mount intentionally leaves untouched.
+      MA.favoritesSource.refresh(el.trayControls);
     } else {
       renderTrayControls();
     }
