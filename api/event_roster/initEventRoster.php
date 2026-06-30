@@ -7,6 +7,12 @@ declare(strict_types=1);
 //
 // Output:
 //   { ok, eid, event, roster, context }
+//
+// Status code convention: matches the rest of the app (admin_games) —
+// expected business outcomes (no event selected) always return HTTP 200
+// with {ok:false, message}, since MA.postJson() throws on any non-2xx
+// status. Only 405 (bad method), 401 (auth), and 500 (genuine server
+// fault) use real non-2xx status codes.
 
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
@@ -35,7 +41,6 @@ try {
     $eid   = (int)($ec["eid"] ?? 0);
 
     if ($eid <= 0) {
-        http_response_code(400);
         echo json_encode(["ok" => false, "message" => "No event selected."]);
         exit;
     }

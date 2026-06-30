@@ -9,7 +9,14 @@ declare(strict_types=1);
 // Input:  { player: normalizedPlayerObject }
 // Output: { ok, payload: { player: savedRow } }
 //
-// 409 if player is already enrolled.
+// ok:false with message "already enrolled" if player is already on the roster.
+//
+// Status code convention: matches the rest of the app (admin_games) —
+// expected business outcomes (bad input, already enrolled) always return
+// HTTP 200 with {ok:false, message}, since MA.postJson() throws on any
+// non-2xx status and these are outcomes the UI displays inline, not
+// exceptional failures. Only 405 (bad method), 401 (auth), and 500
+// (genuine server fault) use real non-2xx status codes.
 
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
@@ -37,7 +44,6 @@ $player = is_array($in["player"] ?? null) ? $in["player"] : [];
 
 $ghin = trim((string)($player["ghin"] ?? ""));
 if ($ghin === "") {
-    http_response_code(400);
     echo json_encode(["ok" => false, "message" => "Missing player GHIN."]);
     exit;
 }
@@ -47,14 +53,13 @@ try {
     $eid = (int)($ec["eid"] ?? 0);
 
     if ($eid <= 0) {
-        http_response_code(400);
         echo json_encode(["ok" => false, "message" => "No event selected."]);
         exit;
     }
 
-    // 409 if already enrolled
+    // Already enrolled — ok:false with message, no exception status code
+    // (see header comment on status code convention)
     if (ServiceDbEventPlayers::isEnrolled($eid, $ghin)) {
-        http_response_code(409);
         echo json_encode([
             "ok"      => false,
             "message" => "Player is already enrolled in this event.",

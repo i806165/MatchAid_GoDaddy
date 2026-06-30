@@ -6,10 +6,17 @@ declare(strict_types=1);
 // EID always from session. GHIN from request body.
 //
 // Safety check: if the event has any linked games and the player exists
-// in any of those games' db_Players rows, deletion is blocked with 409.
+// in any of those games' db_Players rows, deletion is blocked.
 //
 // Input:  { playerGHIN: string }
 // Output: { ok }
+//
+// Status code convention: matches the rest of the app (admin_games) —
+// expected business outcomes (bad input, conflict, not found) always
+// return HTTP 200 with {ok:false, message}, since MA.postJson() throws
+// on any non-2xx status and these are outcomes the UI displays inline,
+// not exceptional failures. Only 405 (bad method), 401 (auth), and 500
+// (genuine server fault) use real non-2xx status codes.
 
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
@@ -38,7 +45,6 @@ $in   = ma_json_in();
 $ghin = trim((string)($in["playerGHIN"] ?? ""));
 
 if ($ghin === "") {
-    http_response_code(400);
     echo json_encode(["ok" => false, "message" => "Missing playerGHIN."]);
     exit;
 }
@@ -48,7 +54,6 @@ try {
     $eid = (int)($ec["eid"] ?? 0);
 
     if ($eid <= 0) {
-        http_response_code(400);
         echo json_encode(["ok" => false, "message" => "No event selected."]);
         exit;
     }
@@ -77,7 +82,8 @@ try {
             ? "{$firstTitle} and {$extraCount} more round" . ($extraCount === 1 ? "" : "s")
             : $firstTitle;
 
-        http_response_code(409);
+        // Default HTTP status (200) — business outcome carried via "ok", per
+        // the app-wide convention (see header comment).
         echo json_encode([
             "ok"        => false,
             "message"   => "This player is enrolled in {$summary}. "
@@ -90,7 +96,6 @@ try {
     $deleted = ServiceDbEventPlayers::deleteEventPlayer($eid, $ghin);
 
     if (!$deleted) {
-        http_response_code(404);
         echo json_encode(["ok" => false, "message" => "Player not found in event roster."]);
         exit;
     }
