@@ -12,17 +12,21 @@ if (isset($_GET['portal'])) {
     if ($portal === 'admin') {
         $_SESSION['SessionPortal'] = 'ADMIN PORTAL';
         session_write_close();
-        header('Location: ' . MA_ROUTE_ADMIN_GAMES);
+        // Routed through pageRouter so clearEventContext() fires centrally
+        header('Location: ' . MA_ROUTE_API_ROUTER . '?action=admin&redirect=1');
+        // header('Location: ' . MA_ROUTE_ADMIN_GAMES);
         exit;
     } elseif ($portal === 'player') {
         $_SESSION['SessionPortal'] = 'PLAYER PORTAL';
         session_write_close();
-        header('Location: ' . MA_ROUTE_PLAYER_HOME);
+        header('Location: ' . MA_ROUTE_API_ROUTER . '?action=player&redirect=1');
+        // header('Location: ' . MA_ROUTE_PLAYER_HOME);
         exit;
     } elseif ($portal === 'clubhome') {
         $_SESSION['SessionPortal'] = 'CLUBADMIN PORTAL';
         session_write_close();
-        header('Location: ' . MA_ROUTE_CLUB_HOME);
+        header('Location: ' . MA_ROUTE_API_ROUTER . '?action=clubhome&redirect=1');
+        // header('Location: ' . MA_ROUTE_CLUB_HOME);
         exit;
     }
 }
