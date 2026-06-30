@@ -1108,8 +1108,8 @@
     const date = formatDate(g.dbGames_PlayDate);
     const subTitle = [course, date].filter(Boolean).join(" • ");
 
+    const isEvent = !!(state.game?.dbGames_EID);
     if (chrome && typeof chrome.setHeaderLines === "function") {
-      const isEvent = !!(state.game?.dbGames_EID);
       chrome.setHeaderLines([isEvent ? "Round Pairings" : "Game Pairings", title, subTitle]);
     }
 

@@ -162,7 +162,7 @@ function badgeParts(ymd) {
       if (evCtx) {
         state.isEventMode = true;
         const ev = evCtx.event || {};
-        const evTitle    = String(ev.dbEvents_Title || "Event Games").trim();
+        const evTitle    = String(ev.dbEvents_Title || "Event Rounds").trim();
         const evStart    = String(ev.startDateISO || ev.dbEvents_StartDate || "").slice(0, 10);
         const evEnd      = String(ev.endDateISO   || ev.dbEvents_EndDate   || "").slice(0, 10);
         const dateRange  = (evStart && evEnd) ? `${evStart}  →  ${evEnd}` : (evStart || evEnd);
@@ -730,25 +730,26 @@ function applyPreset(presetKey) {
     const dateLine = dt ? dt.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "2-digit", year: "numeric" }) : "";
     const subtitle = [dateLine, g.dbGames_PlayTime || ""].filter(Boolean).join(" ");
 
-    MA.ui.openActionsMenu(g.dbGames_Title || "Game", [
-      { category: "GAME SETUP" },
-      { label: "Edit Game",               indent: true, action: () => handleGameAction({ action: "editGame",   ggid: g.dbGames_GGID }) },
-      { label: "Define Game Format & Handicapping", indent: true, action: () => handleGameAction({ action: "settings",   ggid: g.dbGames_GGID }) },
+    const gMode = state.isEventMode ? "Round" : "Game";
+    MA.ui.openActionsMenu(g.dbGames_Title || gMode, [
+      { category: `${gMode.toUpperCase()} SETUP` },
+      { label: `Edit ${gMode}`,               indent: true, action: () => handleGameAction({ action: "editGame",   ggid: g.dbGames_GGID }) },
+      { label: `Define ${gMode} Settings`,    indent: true, action: () => handleGameAction({ action: "settings",   ggid: g.dbGames_GGID }) },
 
-      { category: "GAME ADMINISTRATION" },
-      { label: "Select Players",          indent: true, action: () => handleGameAction({ action: "roster",     ggid: g.dbGames_GGID }) },
-      { label: "Pair Players",            indent: true, action: () => handleGameAction({ action: "pairings",   ggid: g.dbGames_GGID }) },
-      { label: "Assign Tee Times",        indent: true, action: () => handleGameAction({ action: "teetimes",   ggid: g.dbGames_GGID }) },
-      { label: "View Game Summary",       indent: true, action: () => handleGameAction({ action: "summary",    ggid: g.dbGames_GGID }) },
-      { label: "Pre-Game Scorecards",     indent: true, action: () => handleGameAction({ action: "scorecard",  ggid: g.dbGames_GGID }) },
+      { category: `${gMode.toUpperCase()} ADMINISTRATION` },
+      { label: `Select ${gMode} Players`,              indent: true, action: () => handleGameAction({ action: "roster",     ggid: g.dbGames_GGID }) },
+      { label: `Pair ${gMode} Players`,               indent: true, action: () => handleGameAction({ action: "pairings",   ggid: g.dbGames_GGID }) },
+      { label: `Assign ${gMode} TeeTimes`,           indent: true, action: () => handleGameAction({ action: "teetimes",   ggid: g.dbGames_GGID }) },
+      { label: `View ${gMode} Summary`,      indent: true, action: () => handleGameAction({ action: "summary",    ggid: g.dbGames_GGID }) },
+      { label: `Pre-${gMode} Scorecards`,    indent: true, action: () => handleGameAction({ action: "scorecard",  ggid: g.dbGames_GGID }) },
 
-      { category: "ADMIN SERVICES"},
-      { label: "View Players",       indent: true, action: () => handleGameAction({ action: "rosterView", ggid: g.dbGames_GGID }) },
-      { label: "Send Message to Players", indent: true, action: () => handleGameAction({ action: "notify",     ggid: g.dbGames_GGID }) },
-      { label: "Add Game to Calendar",    indent: true, action: () => handleGameAction({ action: "calendar",   ggid: g.dbGames_GGID }) },
+      { category: "ADMIN SERVICES" },
+      { label: "View Players",               indent: true, action: () => handleGameAction({ action: "rosterView", ggid: g.dbGames_GGID }) },
+      { label: "Send Message to Players",    indent: true, action: () => handleGameAction({ action: "notify",     ggid: g.dbGames_GGID }) },
+      { label: `Add ${gMode} to Calendar`,   indent: true, action: () => handleGameAction({ action: "calendar",  ggid: g.dbGames_GGID }) },
 
       { separator: true },
-      { label: "Delete the Game", danger: true, action: () => handleGameAction({ action: "deleteGame", ggid: g.dbGames_GGID }) },
+      { label: `Delete the ${gMode}`, danger: true, action: () => handleGameAction({ action: "deleteGame", ggid: g.dbGames_GGID }) },
     ], subtitle);
   }
 

@@ -1066,8 +1066,8 @@
     const date     = formatDate(g.dbGames_PlayDate);
     const subTitle = [course, date].filter(Boolean).join(" • ");
 
+    const isEventGame = !!(state.game?.dbGames_EID);
     if (chrome && typeof chrome.setHeaderLines === "function") {
-      const isEventGame = !!(state.game?.dbGames_EID);
       chrome.setHeaderLines([isEventGame ? "Round Summary" : "Game Summary", title, subTitle]);
     }
 

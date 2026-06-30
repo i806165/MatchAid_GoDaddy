@@ -512,12 +512,12 @@
   // =========================================================================
 
   function applyChrome() {
+    const isEvent = !!(state.game?.dbGames_EID);
     if (chrome && typeof chrome.setHeaderLines === "function") {
       const g = state.game || {};
       const gameTitle = String(g.dbGames_Title || `GGID ${state.ggid || ""}`).trim();
       const course = String(g.dbGames_CourseName || "");
       const date = formatDate(g.dbGames_PlayDate);
-      const isEvent = !!(state.game?.dbGames_EID);
       chrome.setHeaderLines([isEvent ? "Round Settings" : "Game Settings", gameTitle, [course, date].filter(Boolean).join(" • ")]);
     }
     if (chrome && typeof chrome.setActions === "function") {

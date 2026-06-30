@@ -1530,8 +1530,8 @@ function onResetChanges() {
   }
 
   function applyChrome() {
+    const isEvent = !!(init.game?.dbGames_EID);
     if (chrome.setHeaderLines) {
-      const isEvent = !!(init.game?.dbGames_EID);
       chrome.setHeaderLines([
         isEvent ? "Round TeeTimes" : "Game TeeTimes",
         init.game?.dbGames_Title || "Slotting Board",
