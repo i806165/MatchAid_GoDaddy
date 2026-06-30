@@ -101,7 +101,14 @@
 
     await refreshRoster();
     renderRoster();
-    renderTrayControls();
+    if (state.activeTab === "favorites") {
+      // Use the module's own reset hook rather than a blind re-mount —
+      // refresh() re-fetches favorites AND exits multi-add mode/clears
+      // selection, which a plain mount() call intentionally preserves.
+      await MA.favoritesSource.refresh(el.trayControls);
+    } else {
+      renderTrayControls();
+    }
     renderTrayBody();
     MA.setStatus("Player enrolled.", "success");
   }
@@ -121,7 +128,14 @@
 
     await refreshRoster();
     renderRoster();
-    renderTrayControls();
+    if (state.activeTab === "favorites") {
+      // Use the module's own reset hook rather than a blind re-mount —
+      // refresh() re-fetches favorites AND exits multi-add mode/clears
+      // selection, which a plain mount() call intentionally preserves.
+      await MA.favoritesSource.refresh(el.trayControls);
+    } else {
+      renderTrayControls();
+    }
     renderTrayBody();
 
     if (failed) MA.setStatus(`Enrolled ${added} players. ${failed} failed.`, "warn");
@@ -362,6 +376,7 @@
         context:       state.context,
         initialData:   { favorites: state.favorites, groups: state.groups },
         existingGHINs: enrolledGHINs(),
+        source:        "eventroster",
         onSelect(player)       { enrollPlayer(player); },
         onSelectMany(players)  { enrollMany(players);  }
       });

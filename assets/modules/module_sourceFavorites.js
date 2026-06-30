@@ -17,6 +17,14 @@
  *   courseId      {string}             passed to favPlayersInit for tee history
  *   context       {object}             { userGHIN, userName, userGender }
  *   existingGHINs {Set}                refreshed on every mount call
+ *   source        {string}             host page identifier: "gameplayers" | "eventroster"
+ *                                      Drives copy/behavior differences between hosts:
+ *                                      - "eventroster": suppresses the tee-history subline
+ *                                        (no tee concept on this page) and labels the
+ *                                        multi-add confirm button "Enroll Players"
+ *                                      - "gameplayers" (default): unchanged legacy behavior,
+ *                                        shows tee-history subline, confirm button reads
+ *                                        "Select Tee" (enrollment is staged behind tee pick)
  *   onSelect      {function(player)}   single-add callback
  *   onSelectMany  {function(players)}  multi-add confirm callback
  *
@@ -73,6 +81,7 @@
       bodyEl:           cfg.bodyEl        || null,
       apiPath:          cfg.apiPath       || "",
       courseId:         cfg.courseId      || "",
+      source:           cfg.source        || "gameplayers",
     };
     _states.set(controlsEl, st);
     return st;
@@ -173,7 +182,8 @@
       : `<button class="iconBtn iconBtn--add"   disabled aria-label="Add player">${ICON_ADD}</button>`;
   }
 
-  function _buildTeeSubline(lastTeeName) {
+  function _buildTeeSubline(st, lastTeeName) {
+    if (st && st.source === "eventroster") return "";
     const tee = safe(lastTeeName);
     return tee
       ? `<div class="maListRow__subline">Previous Tee: ${esc(tee)}</div>`
@@ -314,11 +324,14 @@
     }
 
     const count = st.multiAddSelected.length;
+    const confirmLabel = st.source === "eventroster"
+      ? `Enroll Players${count ? ` (${count})` : ""}`
+      : `Select Tee${count ? ` (${count})` : ""}`;
     footerEl.innerHTML = `
       <div style="display:flex; gap:8px; align-items:center;">
         <button class="btn btnSecondary favSrcConfirmBtn"
           type="button" ${count ? "" : "disabled"}>
-          Select Tee${count ? ` (${count})` : ""}
+          ${confirmLabel}
         </button>
         <button class="btn favSrcCancelBtn" type="button">Cancel</button>
       </div>`;
@@ -376,7 +389,7 @@
               ${esc(userName)}${_buildGenderTag(userGender)}
               <span class="maListRow__pinnedLabel">You</span>
             </div>
-            ${_buildTeeSubline(youLastTee)}
+            ${_buildTeeSubline(st, youLastTee)}
           </div>
           ${_buildIndicator(youEnrolled)}
         </div>` : "";
@@ -396,7 +409,7 @@
           ${_buildAvatar(n, gender)}
           <div style="min-width:0;">
             <div class="maListRow__col">${esc(n)}${_buildGenderTag(gender)}</div>
-            ${_buildTeeSubline(lastTee)}
+            ${_buildTeeSubline(st, lastTee)}
           </div>
           ${_buildIndicator(enrolled)}
         </div>`;
@@ -461,7 +474,7 @@
               ${esc(userName)}${_buildGenderTag(userGender)}
               <span class="maListRow__pinnedLabel">You</span>
             </div>
-            ${_buildTeeSubline(youLastTee)}
+            ${_buildTeeSubline(st, youLastTee)}
           </div>
           ${youEnrolled ? _buildIndicator(true) : ""}
         </div>` : "";
@@ -485,7 +498,7 @@
           ${_buildAvatar(n, gender)}
           <div style="min-width:0;">
             <div class="maListRow__col">${esc(n)}${_buildGenderTag(gender)}</div>
-            ${_buildTeeSubline(lastTee)}
+            ${_buildTeeSubline(st, lastTee)}
           </div>
           ${enrolled ? _buildIndicator(true) : ""}
         </div>`;
@@ -553,44 +566,11 @@
   }
 
   function _renderFooterFromState(st) {
-    // Re-render footer without needing controlsEl reference
-    const footerEl = st.footerEl;
-    if (!footerEl || !st.multiAddMode) return;
-
-    const count = st.multiAddSelected.length;
-    footerEl.innerHTML = `
-      <div style="display:flex; gap:8px; align-items:center;">
-        <button class="btn btnSecondary favSrcConfirmBtn"
-          type="button" ${count ? "" : "disabled"}>
-          Select Tee${count ? ` (${count})` : ""}
-        </button>
-        <button class="btn favSrcCancelBtn" type="button">Cancel</button>
-      </div>`;
-
-    const confirmBtn = footerEl.querySelector(".favSrcConfirmBtn");
-    const cancelBtn  = footerEl.querySelector(".favSrcCancelBtn");
-
-    if (confirmBtn) {
-      confirmBtn.addEventListener("click", () => {
-        if (!count) return;
-        const filtered = _getFilteredFavorites(st);
-        const selected = filtered.filter(f => {
-          const g = safe(f.playerGHIN);
-          return st.multiAddSelected.includes(g) && !st.existingGHINs.has(g);
-        });
-        if (typeof st.onSelectMany === "function") {
-          st.onSelectMany(selected.map(_normalize));
-        }
-      });
-    }
-
-    if (cancelBtn) {
-      cancelBtn.addEventListener("click", () => {
-        // Find controlsEl — we need it for _cancelMultiAdd
-        // Store it on state at mount time
-        if (st._controlsEl) _cancelMultiAdd(st, st._controlsEl);
-      });
-    }
+    // Re-render footer without needing a controlsEl param from the caller.
+    // Delegates to _renderFooter (single source of truth for footer markup/labels)
+    // using the controlsEl captured on state at mount time.
+    if (!st.footerEl || !st.multiAddMode) return;
+    _renderFooter(st, st._controlsEl);
   }
 
   // ── Multi-add mode transitions ──────────────────────────────────────────────
@@ -639,6 +619,7 @@
       st.onSelect      = cfg.onSelect      || st.onSelect;
       st.onSelectMany  = cfg.onSelectMany  || st.onSelectMany;
       st.footerEl      = cfg.footerEl      || st.footerEl;
+      st.source        = cfg.source        || st.source;
 
       // Re-render body so checkmarks update from fresh existingGHINs
       _renderBody(st);
