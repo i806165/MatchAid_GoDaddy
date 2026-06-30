@@ -1,5 +1,5 @@
 <?php
-// /public_html/api/admin_games/games.php
+// /public_html/api/admin_home/games.php
 declare(strict_types=1);
 
 

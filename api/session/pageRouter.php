@@ -50,7 +50,7 @@ $ROUTES = [
     "login" => "/app/login/login.php",
     "usersettings"   => "/app/user_settings/usersettings.php",
 
-    "admin"    => "/app/admin_games/adminhome.php",
+    "admin"    => "/app/admin_home/adminhome.php",
     "edit"     => "/app/game_maintenance/gamemaint.php",   // expects mode=add|edit (if your router appends it)
     "settings"    => "/app/game_settings/gamesettings.php",
     "roster"   => "/app/game_players/gameplayers.php",
@@ -60,7 +60,7 @@ $ROUTES = [
     "summary"  => "/app/game_summary/gamesummary.php",
 
     // These mirror the game admin pages, with button text changed to "Round" rather than "Game":
-    "eventrounds" => "/app/admin_games/adminhome.php",
+    "eventrounds" => "/app/admin_home/adminhome.php",
     "roundedit"      => "/app/game_maintenance/gamemaint.php",
     "roundroster"    => "/app/game_players/gameplayers.php",
     "roundsettings"  => "/app/game_settings/gamesettings.php",
@@ -92,12 +92,12 @@ $ROUTES = [
     "clubusers" => "/app/club_users/clubusers.php",
 
     // Event Admininstration Routes
-    "eventhome"    => "/app/events_home/eventshome.php",
+    "eventhome"    => "/app/admin_home/adminhome.php",
     "eventedit"    => "/app/event_maintenance/eventmaint.php",
     "eventsummary"   => "/app/event_summary/eventsummary.php",
     "eventroster"  => "/app/event_roster/eventroster.php",
     // Future placeholders:
-    "eventgames"   => "/app/admin_games/adminhome.php",  //DEPRICATED
+    "eventgames"   => "/app/admin_home/adminhome.php",  //DEPRICATED
     "eventscoring" => "/app/event_scoring/eventscoring.php",
 ];
 

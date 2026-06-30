@@ -3,6 +3,9 @@
  * - Hydrates from window.__MA_INIT__
  * - Lists events for logged-in admin
  * - Uses /assets/js/ma_shared.js
+ * - Card markup, click wiring, and the per-card menu now live in
+ *   module_sourceEvents.js (MA.eventsSource); this file keeps state,
+ *   filters/mode, and the action dispatcher (handleEventAction).
  */
 (function () {
   "use strict";
@@ -25,37 +28,6 @@
     else if (message) console.log("[STATUS]", level || "info", message);
   }
 
-  function esc(s) {
-    return String(s ?? "").replace(/[&<>"']/g, c => ({
-      "&": "&amp;",
-      "<": "&lt;",
-      ">": "&gt;",
-      '"': "&quot;",
-      "'": "&#39;"
-    }[c]));
-  }
-
-  function parseYmd(ymd) {
-    if (!ymd) return null;
-    const [y, m, d] = String(ymd).slice(0, 10).split("-").map(n => parseInt(n, 10));
-    if (!y || !m || !d) return null;
-    return new Date(y, m - 1, d);
-  }
-
-  function formatDate(ymd) {
-    const d = parseYmd(ymd);
-    if (!d) return "";
-    return d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-  }
-
-  function formatDateRange(start, end) {
-    const s = formatDate(start);
-    const e = formatDate(end);
-    if (!s && !e) return "";
-    if (s && e && s !== e) return `${s} – ${e}`;
-    return s || e;
-  }
-
   async function postJson(url, payload) {
     if (typeof MA.postJson === "function") return MA.postJson(url, payload);
     const res = await fetch(url, {
@@ -65,6 +37,17 @@
       body: JSON.stringify({ payload })
     });
     return res.json();
+  }
+
+  // Mounts MA.eventsSource once against the #eventCards container.
+  // mount() is idempotent — safe to call repeatedly.
+  function mountEventsSource() {
+    if (!MA.eventsSource || typeof MA.eventsSource.mount !== "function") return;
+    MA.eventsSource.mount({
+      cardsElId: "eventCards",
+      emptyElId: "eventsEmptyState",
+      onAction: (action, eid) => handleEventAction({ action, eid })
+    });
   }
 
   function applyInit(payload) {
@@ -103,59 +86,20 @@
       });
     }
 
+    mountEventsSource();
     renderEvents(payload.events || { raw: [], vm: [] });
     setStatus("", "info");
   }
 
   function renderEvents(eventsPayload) {
-    const cardsEl = document.getElementById("eventCards");
-    const emptyEl = document.getElementById("eventsEmptyState");
-    if (!cardsEl) return;
-
     const rows = Array.isArray(eventsPayload.raw) ? eventsPayload.raw : [];
     state.events.raw = rows;
 
-    if (!rows.length) {
-      cardsEl.innerHTML = "";
-      if (emptyEl) emptyEl.style.display = "block";
-      return;
+    if (MA.eventsSource && typeof MA.eventsSource.render === "function") {
+      MA.eventsSource.render(rows, "eventCards");
+    } else {
+      console.warn("[events_home] MA.eventsSource module not loaded.");
     }
-
-    if (emptyEl) emptyEl.style.display = "none";
-
-    cardsEl.innerHTML = rows.map(r => {
-      const eid = String(r.dbEvents_EID ?? "").trim();
-      const title = String(r.dbEvents_Title || "").trim() || "Untitled Event";
-      const adminName = String(r.dbEvents_AdminName || r.dbEvents_AdminGHIN || "").trim();
-      const facility = String(r.dbEvents_FacilityName || "").trim();
-      const eventType = String(r.dbEvents_EventType || "").trim();
-      const scoringMethod = String(r.dbEvents_ScoringMethod || "").trim();
-      const rosterCount = Number(r.rosterCount ?? 0);
-      const gameCount = Number(r.gameCount ?? 0);
-      const range = formatDateRange(r.dbEvents_StartDate, r.dbEvents_EndDate);
-
-      const line1 = [range, eventType].filter(Boolean).join(" • ");
-      const line2 = facility || "Facility not set";
-      const line3 = [`Roster ${rosterCount}`, `Games ${gameCount}`, scoringMethod ? `Scoring: ${scoringMethod}` : "Scoring: Not configured"].join(" • ");
-
-      return `
-        <div class="maCard maEventCard" data-eid="${esc(eid)}">
-          <div class="maCard__hdr">
-            <div class="maCard__title">
-              <span class="maCard__titleText">${esc(title)}</span>
-              <span class="maCard__titleGgid">${esc(eid)}</span>
-            </div>
-            <div class="maEventCard__hdrAdmin">${esc(adminName)}</div>
-          </div>
-          <div class="maCard__body maEventCard__body">
-            <div class="maEventCard__meta">
-              <div class="maEventCard__line maEventCard__line1">${esc(line1)}</div>
-              <div class="maEventCard__line maEventCard__line2">${esc(line2)}</div>
-              <div class="maEventCard__line maEventCard__line3">${esc(line3)}</div>
-            </div>
-          </div>
-        </div>`;
-    }).join("");
   }
 
   async function refreshEvents(mode) {
@@ -252,29 +196,9 @@
     }
   }
 
-  function openEventMenu(eid) {
-    const items = [
-      { label: "Edit Event", action: () => handleEventAction({ action: "editEvent", eid }) },
-      { separator: true },
-      { label: "Event Rounds", action: () => handleEventAction({ action: "eventGames", eid }) },
-      { label: "Event Roster", action: () => handleEventAction({ action: "eventRoster", eid }) },
-      { label: "Event Scoring", action: () => handleEventAction({ action: "eventScoring", eid }) },
-      { separator: true },
-      { label: "Delete Event", action: () => handleEventAction({ action: "deleteEvent", eid }), danger: true }
-    ];
-
-    if (MA.ui && typeof MA.ui.openActionsMenu === "function") {
-      MA.ui.openActionsMenu("Event", items);
-    }
-  }
-
-  document.addEventListener("click", e => {
-    const card = e.target.closest(".maEventCard");
-    if (card) {
-      const eid = card.dataset.eid || "";
-      if (eid) openEventMenu(eid);
-    }
-  });
+  // Card markup, click wiring, and the per-card menu (openEventMenu) now live
+  // in module_sourceEvents.js, invoked via the onAction callback passed to
+  // MA.eventsSource.mount() above, which routes back into handleEventAction().
 
   applyInit(init);
 })();

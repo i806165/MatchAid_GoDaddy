@@ -1,5 +1,5 @@
 <?php
-// /api/admin_games/queryGames.php
+// /api/admin_home/queryGames.php
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../bootstrap.php';

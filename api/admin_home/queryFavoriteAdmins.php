@@ -1,5 +1,5 @@
 <?php
-// /api/admin_games/queryFavoriteAdmins.php
+// /api/admin_home/queryFavoriteAdmins.php
 declare(strict_types=1);
 
 

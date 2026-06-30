@@ -1,5 +1,5 @@
 <?php
-// /api/admin_games/init.php (optional fallback; primary INIT is server-embedded in games list.php)
+// /api/admin_home/init.php (optional fallback; primary INIT is server-embedded in games list.php)
 declare(strict_types=1);
 
 

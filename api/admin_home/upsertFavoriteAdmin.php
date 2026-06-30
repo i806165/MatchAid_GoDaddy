@@ -1,5 +1,5 @@
 <?php
-// /public_html/api/admin_games/toggleFavoriteAdmin.php
+// /public_html/api/admin_home/upsertFavoriteAdmin.php
 declare(strict_types=1);
 
 require_once __DIR__ . "/../../bootstrap.php";
@@ -25,13 +25,11 @@ if ($adminKey === "") {
 }
 
 $res = ServiceDbFavAdmins::upsertFavoriteAdmin([
-  "userGHIN"      => $userGHIN,
-  "adminKey"      => $adminKey,
-  "adminLName"    => strval($payload["adminLName"] ?? ""),
-  "facilityId"    => strval($payload["facilityId"] ?? ""),
-  "facilityName"  => strval($payload["facilityName"] ?? ""),
-  "adminAssocId"  => strval($payload["adminAssocId"] ?? ""),
-  "adminAssocName"=> strval($payload["adminAssocName"] ?? "")
+  "userGHIN"    => $userGHIN,
+  "adminKey"    => $adminKey,
+  "adminLName"  => strval($payload["adminLName"] ?? ""),
+  "facilityId"  => strval($payload["facilityId"] ?? ""),
+  "facilityName"=> strval($payload["facilityName"] ?? "")
 ]);
 
 echo json_encode([

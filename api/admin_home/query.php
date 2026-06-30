@@ -1,5 +1,5 @@
 <?php
-// /public_html/api/admin_games/query.php
+// /public_html/api/admin_home/query.php
 declare(strict_types=1);
 
 require_once __DIR__ . "/../../bootstrap.php";
@@ -34,6 +34,6 @@ try {
   $payload = hydrateAdminGamesList($context, $filters);
   ma_respond(200, ["ok" => true, "data" => $payload]);
 } catch (Throwable $e) {
-  error_log("[admin_games/query] EX=" . $e->getMessage());
+  error_log("[admin_home/query] EX=" . $e->getMessage());
   ma_respond(500, ["ok" => false, "error" => "Server error"]);
 }

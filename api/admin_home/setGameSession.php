@@ -1,5 +1,5 @@
 <?php
-// /public_html/api/admin_games/setGameSession.php
+// /public_html/api/admin_home/setGameSession.php
 declare(strict_types=1);
 
 require_once __DIR__ . "/../../bootstrap.php";

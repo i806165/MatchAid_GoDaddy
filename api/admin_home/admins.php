@@ -1,5 +1,5 @@
 <?php
-// /public_html/api/admin_games/admins.php
+// /public_html/api/admin_home/admins.php
 declare(strict_types=1);
 
 

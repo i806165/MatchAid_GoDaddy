@@ -170,3 +170,164 @@
   .maCard__actionBtn{ display: none; }     /* if MANAGE is rendered as actionBtn */
   .maGameCard__admin{ max-width: 45%; }
 }
+
+/* ==========================================================================
+   6) Doorway two-panel layout (Games + Events) — Phase 3 (reworked)
+   Follows the established .maPanels/.maPanel multi-panel pattern already
+   defined in ma_shared.css (Section 9) — this file does NOT redefine
+   .maPanel itself (an earlier draft did, and clobbered the shared shell
+   used by game_players.php and other multi-panel pages — fixed here).
+
+   Expected markup (adminhome_view.php, standalone/doorway mode only):
+     <main class="maPage maPage--multi maPage--adminHome ...">
+       <div class="maPanels maPanels--2">
+         <section class="maPanel maPanel--primary">   Games  </section>
+         <section class="maPanel maPanel--secondary"> Events </section>
+       </div>
+     </main>
+
+   Desktop (>=900px, matching maPanels--2's own breakpoint in ma_shared.css):
+   both panels show side-by-side via the shared grid automatically.
+
+   Mobile (<900px): Games (.maPanel--primary) shows by default; Events
+   (.maPanel--secondary) is hidden until .is-events-open is added to
+   .maPage--adminHome — toggled by the panel header/footer buttons below,
+   or pre-set server-side when ?mode=events routes in via pageRouter's
+   "eventhome" action. This mirrors game_players.css's
+   .maPage--players.is-tray-open pattern exactly, renamed for this page's
+   two named panels instead of a generic tray.
+   ========================================================================== */
+
+.maPage--adminHome{
+  overflow: hidden;
+}
+
+.maPage--adminHome .maPanels{
+  height: 100%;
+  min-height: 0;
+}
+
+/* Panel header bar — green brand background, matches the rest of the
+   Admin Portal chrome (same treatment as the card header in Section 1). */
+.maPage--adminHome .maPanel__hdr{
+  background: var(--brandSecondary);
+  color: var(--brandSecondaryText);
+  border-bottom: 1px solid rgba(0,0,0,.1);
+}
+
+.maPage--adminHome .gpPanelHdr{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  position: relative;
+}
+
+.maPage--adminHome .gpPanelHdr__title{
+  font-size: 14px;
+  font-weight: 950;
+  letter-spacing: .2px;
+  color: var(--brandSecondaryText);
+  flex: 1;
+  text-align: center;
+}
+
+.maPage--adminHome .gpPanelHdr__left{
+  position: absolute;
+  left: 10px;
+}
+
+/* Footer "View Events" affordance — mobile only; mirrors the
+   gsMobileAddPlayingGroupBtn pattern from game_players.css. */
+.maPage--adminHome .maDoorwayOpenBtn{
+  display: none;
+  width: 100%;
+  min-height: var(--btnHeight);
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--brandPrimary);
+  border-radius: var(--radiusMd);
+  background: transparent;
+  color: var(--brandPrimary);
+  font-family: var(--fontFamilyBase);
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.maPage--adminHome .maDoorwayOpenBtn:active{
+  transform: translateY(1px);
+}
+
+@media (max-width: 900px){
+  .maPage--adminHome .maPanel--secondary{
+    display: none;
+  }
+
+  .maPage--adminHome.is-events-open .maPanel--secondary{
+    display: flex; /* .maPanel base is already flex-column; just toggling visibility */
+  }
+
+  .maPage--adminHome.is-events-open .maPanel--primary{
+    display: none;
+  }
+
+  .maPage--adminHome .maDoorwayOpenBtn{
+    display: inline-flex;
+  }
+}
+
+/* ==========================================================================
+   7) Per-panel Actions controls row
+   - Renders inside each panel's .maPanel__controls (shared shell from
+     ma_shared.css Section 9), using the already-shared .maCanvasControls /
+     .maCanvasControls__right classes (ma_shared.css Section 21h) — no new
+     structural CSS needed here, just confirming the pairing. Each panel
+     now owns its own Actions + "+ Add" buttons, replacing the single
+     chrome-level Actions button the old single-panel page used.
+   ========================================================================== */
+
+
+   8) Event cards (module_sourceEvents.js output)
+   - Reuses the shared .maCard shell (header bar override in Section 1
+     above applies equally here, since both maGameCard and maEventCard
+     extend the same .maCard base).
+   - Promoted from events_home.css per the file-naming correction: both
+     modules now style through admin_home.css, no separate stylesheet.
+   ========================================================================== */
+
+.maEventCard__hdrAdmin{
+  color: var(--brandPrimaryTextMuted);
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 45%;
+  text-align: right;
+}
+
+.maEventCard__body{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.maEventCard__meta{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.maEventCard__line{
+  color: var(--mutedText);
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.maEventCard__line1{
+  color: var(--ink);
+  font-weight: 900;
+}

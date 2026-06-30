@@ -187,6 +187,7 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   <script src="/assets/modules/player_notifications.js?v=1"></script>
   <script src="/assets/modules/game_players_display.js?v=1"></script>
   <script src="/assets/modules/pageHelp.js?v=1"></script>
+  <script src="/assets/modules/module_sourceGames.js?v=1"></script>
   <script src="/assets/pages/admin_home.js"></script>
 </body>
 </html>

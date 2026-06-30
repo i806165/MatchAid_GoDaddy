@@ -3,6 +3,15 @@
  * - Renders games + admins
  * - Supports Advanced Filters modal + header Actions menu presets
  * - Uses /assets/js/ma_shared.js (MA.apiAdminGames, MA.apiSession, MA.routerGo, MA.setStatus)
+ *
+ * Phase 3: this file is now the outer container for the two-panel doorway —
+ * it mounts MA.gamesSource (module_sourceGames.js) against #cards (inside
+ * .maPanel--primary) AND MA.eventsSource (module_sourceEvents.js) against
+ * #eventCards (inside .maPanel--secondary), and owns the mobile open/close
+ * toggle between them (.is-events-open on .maPage--adminHome — see
+ * wireDoorwayControls()). In Event Rounds mode (state.isEventMode,
+ * eid-scoped), only the Games panel exists in the DOM — no .maPanels
+ * wrapper, no Events panel — so all events-side code below is a no-op there.
  */
 (function () {
   "use strict";
@@ -10,6 +19,7 @@
   const MA = window.MA || {};
   const apiAdmin = MA.apiAdminGames;
   const apiSession = MA.apiSession;
+  const apiEventsBase = MA.routes?.apiEventsHome || "/api/events_home";
   const routerGo = MA.routerGo;
   const chromeStatus = MA.setStatus;
 
@@ -50,17 +60,6 @@
     setOverlayLock(modalOpen || actionOpen);
   }
 
-function badgeParts(ymd) {
-  const dt = parseYmd(ymd);
-  if (!dt) return { top: "", day: "", bot: "" };
-  const mon = dt.toLocaleDateString(undefined, { month: "short" }).toUpperCase();
-  const yy = String(dt.getFullYear()).slice(-2);
-  const top = `${mon}'${yy}`; // matches legacy "JAN'26"
-  const day = String(dt.getDate());
-  const bot = dt.toLocaleDateString(undefined, { weekday: "short" }); // "Thu"
-  return { top, day, bot };
-}
-
   // INIT cache (server payload)
   let cachedInit = null;
 
@@ -80,6 +79,13 @@ function badgeParts(ymd) {
       dateTo: "",
       // ME | ALL | CUSTOM
       adminScope: "ME"
+    },
+    // ---- Events panel (Phase 3 doorway) ----
+    events: {
+      raw: []
+    },
+    eventsFilters: {
+      mode: "current"
     }
   };
 
@@ -182,6 +188,7 @@ function badgeParts(ymd) {
         }
 
         if (cachedInit.games) {
+          mountGamesSource();
           applyRenderGames({
             header:  cachedInit.header  || {},
             filters: cachedInit.filters || {},
@@ -210,11 +217,14 @@ function badgeParts(ymd) {
         MA.chrome.showBrand(true);
       }
 
+      // Doorway: no chrome-level Actions/page button — each panel now owns
+      // its own (see #btnGamesActions/#btnAddGame and #btnEventsActions/
+      // #btnAddEvent in adminhome_view.php, wired via wireDoorwayControls()).
       if (MA.chrome && typeof MA.chrome.setActions === "function") {
         MA.chrome.setActions({
           left:  { show: false },
-          right: { show: true, label: "Actions" },
-          page:  { label: "+ Add New Game", onClick: () => handleGameAction({ action: "addGame" }) }
+          right: { show: false },
+          page:  { show: false }
         });
       }
 
@@ -252,12 +262,22 @@ function badgeParts(ymd) {
       }
 
       if (cachedInit.games) {
+        mountGamesSource();
         applyRenderGames({
           header: cachedInit.header || {},
           filters: cachedInit.filters || {},
           games: cachedInit.games || {}
         });
       }
+
+      // Events panel (doorway only — these elements don't exist in Event
+      // Rounds mode, and mountEventsSource()/wireDoorwayControls() no-op
+      // safely when their target elements aren't in the DOM).
+      mountEventsSource();
+      if (cachedInit.eventsInit) {
+        renderEventsPanel(cachedInit.eventsInit.events || { raw: [] });
+      }
+      wireDoorwayControls();
 
       setStatus("", "info");
     } catch (e) {
@@ -275,135 +295,197 @@ function badgeParts(ymd) {
   }
 
 function renderGames(payload) {
-  const cardsEl = document.getElementById("cards");
-  const emptyEl = document.getElementById("emptyState");
-  if (!cardsEl) return;
+  const dbRows = Array.isArray(payload?.games?.raw) ? payload.games.raw : [];
+  state.games.dbRows = dbRows;
 
-const dbRows = Array.isArray(payload?.games?.raw) ? payload.games.raw : [];
-state.games.dbRows = dbRows;
-
-if (!state.games.dbRows.length) {
-  cardsEl.innerHTML = "";
-  if (emptyEl) emptyEl.style.display = "block";
-  return;
+  // Card markup, date badge, and click/menu wiring now live in module_sourceGames.js
+  // (MA.gamesSource), shared with the Event Rounds context. mountGamesSource() below
+  // is called once at boot; here we just hand it the latest rows to re-render.
+  if (MA.gamesSource && typeof MA.gamesSource.render === "function") {
+    MA.gamesSource.render(dbRows, "cards");
+  } else {
+    console.warn("[admin_home] MA.gamesSource module not loaded.");
+  }
 }
-if (emptyEl) emptyEl.style.display = "none";
 
-cardsEl.innerHTML = state.games.dbRows
-  .map((r) => {
-    const playDate = String(r.dbGames_PlayDate || "").trim();
-    const b = badgeParts(playDate);
-
-    const course = String(r.dbGames_CourseName || "").trim();
-    const facility = String(r.dbGames_FacilityName || "").trim();
-    const adminName = String(r.dbGames_AdminName || r.dbGames_AdminGHIN || "").trim();
-
-    const playTimeDb = String(r.dbGames_PlayTime || "").trim();      // "09:51:00"
-    const playTime = playTimeDb ? playTimeDb.substring(0, 5) : "";   // "09:51"
-
-    const privacy = String(r.dbGames_Privacy || "").trim();
-    const holes = String(r.dbGames_Holes || "").trim();
-
-    // playerCount may or may not exist in raw depending on your SQL.
-    // Use it if present; otherwise 0.
-    const playerCount = Number(r.playerCount ?? r.dbGames_PlayerCount ?? 0);
-
-    const teeCnt = Number(r.dbGames_TeeTimeCnt ?? 0);
-    const totalSlots = teeCnt > 0 ? teeCnt * 4 : 0;
-    const playersText = totalSlots > 0 ? `${playerCount}/${totalSlots}` : `${playerCount}`;
-
-    const line2 = [playTime, holes].filter(Boolean).join(" • ");
-
-    const line3 = [
-      (playersText ? `Registered ${playersText}` : null),
-      (privacy ? `Accessible by ${privacy}` : null),
-    ].filter(Boolean).join(" • ");
-
-    const title = String(r.dbGames_Title || "").trim();
-    const ggid = String(r.dbGames_GGID ?? "").trim();
-    const courseConfirmed = r.dbGames_CourseConfirmed == 1 || r.dbGames_CourseConfirmed === true;
-    const provisionalHtml = !courseConfirmed
-      ? `<div class="maGameCard__provisional">⚠ Course is not yet confirmed</div>`
-      : ``;
-
-    return `
-      <div class="maCard maGameCard" data-ggid="${esc(ggid)}">
-        <div class="maCard__hdr">
-          <div class="maCard__title">
-            <span class="maCard__titleText">${esc(title)}</span>
-            <span class="maCard__titleGgid">${esc(ggid)}</span>
-          </div>
-
-          <div class="maCard__actions">
-            <div class="maGameCard__hdrAdmin" title="${esc(adminName)}">${esc(adminName)}</div>
-          </div>
-        </div>
-
-        <div class="maCard__body maGameCard__body">
-          <div class="maGameCard__top">
-            <div class="maDateBadge">
-              <div class="maDateBadge__top">${esc(b.top)}</div>
-              <div class="maDateBadge__mid">${esc(b.day)}</div>
-              <div class="maDateBadge__bot">${esc(b.bot)}</div>
-            </div>
-            
-            <div class="maGameCard__meta">
-                <div class="maGameCard__line1">
-                  <div class="maGameCard__courseWrap" title="${esc([course, facility].filter(Boolean).join(" • "))}">
-                    <span class="maGameCard__courseName">${esc(course)}</span>
-                    ${facility ? `<span class="maGameCard__facilityName"> • ${esc(facility)}</span>` : ``}
-                  </div>
-
-                  <!-- Desktop-only visual affordance; mobile hides this -->
-                  <button
-                    type="button"
-                    class="maCard__actionBtn maGameCard__manageBtn"
-                    data-game-action="menu"
-                    data-ggid="${esc(ggid)}"
-                    aria-label="Manage"
-                  >MANAGE</button>
-                </div>
-
-                ${provisionalHtml}
-
-                <div class="maGameCard__line2">
-                  <div class="maGameCard__facts" title="${esc(line2)}">${esc(line2)}</div>
-                </div>
-                <div class="maGameCard__line3">
-                  <div class="maGameCard__facts" title="${esc(line3)}">${esc(line3)}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-    })
-    .join("");
-
-  // 1) Card tap opens menu (ALL devices)
-  cardsEl.querySelectorAll(".maGameCard").forEach((card) => {
-    card.addEventListener("click", (e) => {
-      // if a real control was clicked, let it handle itself
-      if (e.target.closest("button,a,input,label")) return;
-
-      const ggid = card.getAttribute("data-ggid");
-      const r = state.games.dbRows.find((x) => String(x.dbGames_GGID) === String(ggid)) || null;
-      if (!r) return;
-      openGameMenu(r);
-    });
+// Mounts MA.gamesSource once against the #cards container. Safe to call repeatedly
+// (mount() is idempotent) — kept as its own function so applyInit() can call it
+// after state.isEventMode is known, in both standalone and event-mode branches.
+function mountGamesSource() {
+  if (!MA.gamesSource || typeof MA.gamesSource.mount !== "function") return;
+  MA.gamesSource.mount({
+    cardsElId: "cards",
+    emptyElId: "emptyState",
+    isEventMode: !!state.isEventMode,
+    onAction: (action, ggid) => handleGameAction({ action, ggid })
   });
+}
 
-  // 2) MANAGE button: same behavior as card tap, but stop bubbling
-  cardsEl.querySelectorAll('button[data-game-action="menu"]').forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const ggid = btn.getAttribute("data-ggid");
-      const r = state.games.dbRows.find((x) => String(x.dbGames_GGID) === String(ggid)) || null;
-      if (!r) return;
-      openGameMenu(r);
-    });
+// ============================================================
+// Events panel (Phase 3 doorway) — ported from events_home.js
+// Only relevant when !state.isEventMode (i.e. #eventCards/.maPanel--secondary
+// exist in the DOM — they don't in Event Rounds mode).
+// ============================================================
+
+async function postJsonEvents(path, payload) {
+  const url = `${apiEventsBase}/${path}`;
+  if (typeof MA.postJson === "function") return MA.postJson(url, payload);
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify({ payload })
   });
+  return res.json();
+}
+
+function mountEventsSource() {
+  if (!MA.eventsSource || typeof MA.eventsSource.mount !== "function") return;
+  if (!document.getElementById("eventCards")) return; // not present in Event Rounds mode
+  MA.eventsSource.mount({
+    cardsElId: "eventCards",
+    emptyElId: "eventsEmptyState",
+    onAction: (action, eid) => handleEventAction({ action, eid })
+  });
+}
+
+function renderEventsPanel(eventsPayload) {
+  const rows = Array.isArray(eventsPayload?.raw) ? eventsPayload.raw : [];
+  state.events.raw = rows;
+
+  if (MA.eventsSource && typeof MA.eventsSource.render === "function") {
+    MA.eventsSource.render(rows, "eventCards");
+  } else {
+    console.warn("[admin_home] MA.eventsSource module not loaded.");
+  }
+}
+
+async function refreshEvents(mode) {
+  if (mode) state.eventsFilters.mode = mode;
+  const res = await postJsonEvents("queryEvents.php", { mode: state.eventsFilters.mode });
+  if (res?.ok && res?.payload) {
+    renderEventsPanel(res.payload.events || res.payload);
+    setStatus("", "info");
+  } else {
+    setStatus(res?.message || "Unable to refresh events.", "error");
+  }
+}
+
+async function setEventSession(eid) {
+  try {
+    const res = await postJsonEvents("setEventSession.php", { eid });
+    if (!res?.ok) {
+      setStatus(res?.message || res?.error || "Unable to open event.", "error");
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error(e);
+    setStatus(String(e.message || e), "error");
+    return false;
+  }
+}
+
+async function handleEventAction(args) {
+  const action = args?.action || "";
+  const eid = String(args?.eid || "");
+
+  if (action === "addEvent") {
+    if (typeof routerGo === "function") {
+      await routerGo("eventedit", { mode: "add" });
+    } else {
+      setStatus("Event Maintenance route is not available yet.", "warn");
+    }
+    return;
+  }
+
+  if (!eid) return;
+
+  if (action === "deleteEvent") {
+    if (!confirm("Delete this event? This cannot be undone.")) return;
+    try {
+      const res = await postJsonEvents("deleteEvent.php", { eid });
+      if (res?.ok) {
+        setStatus("Event deleted.", "success");
+        await refreshEvents(state.eventsFilters.mode);
+      } else {
+        setStatus(res?.message || "Unable to delete event.", "error");
+      }
+    } catch (e) {
+      console.error(e);
+      setStatus(String(e.message || e), "error");
+    }
+    return;
+  }
+
+  // Routes that require event context to be set in session first
+  // (mirrors setGameSession before Games actions).
+  const ok = await setEventSession(eid);
+  if (!ok) return;
+
+  // "eventGames" (Event Rounds) is the drill-in: it sets SessionStoredEID
+  // server-side via setEventSession above, then this page (adminhome.php)
+  // re-renders itself in Event Rounds mode — sourceGames scoped to the eid.
+  const routeMap = {
+    openEvent: "event",
+    editEvent: "eventedit",
+    eventRoster: "eventroster",
+    eventGames: "eventrounds",
+    eventScoring: "eventscoring"
+  };
+
+  const route = routeMap[action];
+  if (route && typeof routerGo === "function") {
+    await routerGo(route);
+  } else {
+    setStatus("That event page is not available yet.", "warn");
+  }
+}
+
+function openEventsActionsMenu() {
+  if (!MA.ui || !MA.ui.openActionsMenu) {
+    console.warn("MA.ui.openActionsMenu not found.");
+    return;
+  }
+  const items = [
+    { label: "My Current Events", action: () => refreshEvents("current") },
+    { label: "My Past Events", action: () => refreshEvents("past") },
+    { label: "All My Events", action: () => refreshEvents("all") },
+    { separator: true },
+    { label: "Refresh", action: () => refreshEvents(state.eventsFilters.mode) }
+  ];
+  MA.ui.openActionsMenu("Actions", items, "Events");
+}
+
+// Wires each panel's own controls-row buttons (#btnGamesActions/#btnAddGame,
+// #btnEventsActions/#btnAddEvent) — these replace the single chrome-level
+// Actions/page button the old single-panel page used; each panel now owns
+// its own. Also wires the mobile open/close toggle (#btnViewEvents /
+// #btnCloseEvents) that swaps which panel is visible below 900px, by
+// toggling .is-events-open on .maPage--adminHome — mirrors game_players.css's
+// .maPage--players.is-tray-open pattern. No-op (and safe) in Event Rounds
+// mode, where none of these elements exist in the DOM.
+function wireDoorwayControls() {
+  const mainEl = document.querySelector(".maPage--adminHome");
+
+  const btnGamesActions = document.getElementById("btnGamesActions");
+  const btnAddGame = document.getElementById("btnAddGame");
+  const btnEventsActions = document.getElementById("btnEventsActions");
+  const btnAddEvent = document.getElementById("btnAddEvent");
+  const btnViewEvents = document.getElementById("btnViewEvents");
+  const btnCloseEvents = document.getElementById("btnCloseEvents");
+
+  if (btnGamesActions) btnGamesActions.addEventListener("click", () => openActionsMenu());
+  if (btnAddGame) btnAddGame.addEventListener("click", () => handleGameAction({ action: "addGame" }));
+  if (btnEventsActions) btnEventsActions.addEventListener("click", () => openEventsActionsMenu());
+  if (btnAddEvent) btnAddEvent.addEventListener("click", () => handleEventAction({ action: "addEvent" }));
+
+  if (mainEl && btnViewEvents) {
+    btnViewEvents.addEventListener("click", () => mainEl.classList.add("is-events-open"));
+  }
+  if (mainEl && btnCloseEvents) {
+    btnCloseEvents.addEventListener("click", () => mainEl.classList.remove("is-events-open"));
+  }
 }
 
 
@@ -725,33 +807,9 @@ function applyPreset(presetKey) {
     MA.ui.openActionsMenu("Actions", items, "Admin Games List");
   }
 
-  function openGameMenu(g) {
-    const dt = parseYmd(g.dbGames_PlayDate);
-    const dateLine = dt ? dt.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "2-digit", year: "numeric" }) : "";
-    const subtitle = [dateLine, g.dbGames_PlayTime || ""].filter(Boolean).join(" ");
-
-    const gMode = state.isEventMode ? "Round" : "Game";
-    MA.ui.openActionsMenu(g.dbGames_Title || gMode, [
-      { category: `${gMode.toUpperCase()} SETUP` },
-      { label: `Edit ${gMode}`,               indent: true, action: () => handleGameAction({ action: "editGame",   ggid: g.dbGames_GGID }) },
-      { label: `Define ${gMode} Settings`,    indent: true, action: () => handleGameAction({ action: "settings",   ggid: g.dbGames_GGID }) },
-
-      { category: `${gMode.toUpperCase()} ADMINISTRATION` },
-      { label: `Select ${gMode} Players`,              indent: true, action: () => handleGameAction({ action: "roster",     ggid: g.dbGames_GGID }) },
-      { label: `Pair ${gMode} Players`,               indent: true, action: () => handleGameAction({ action: "pairings",   ggid: g.dbGames_GGID }) },
-      { label: `Assign ${gMode} TeeTimes`,           indent: true, action: () => handleGameAction({ action: "teetimes",   ggid: g.dbGames_GGID }) },
-      { label: `View ${gMode} Summary`,      indent: true, action: () => handleGameAction({ action: "summary",    ggid: g.dbGames_GGID }) },
-      { label: `Pre-${gMode} Scorecards`,    indent: true, action: () => handleGameAction({ action: "scorecard",  ggid: g.dbGames_GGID }) },
-
-      { category: "ADMIN SERVICES" },
-      { label: "View Players",               indent: true, action: () => handleGameAction({ action: "rosterView", ggid: g.dbGames_GGID }) },
-      { label: "Send Message to Players",    indent: true, action: () => handleGameAction({ action: "notify",     ggid: g.dbGames_GGID }) },
-      { label: `Add ${gMode} to Calendar`,   indent: true, action: () => handleGameAction({ action: "calendar",  ggid: g.dbGames_GGID }) },
-
-      { separator: true },
-      { label: `Delete the ${gMode}`, danger: true, action: () => handleGameAction({ action: "deleteGame", ggid: g.dbGames_GGID }) },
-    ], subtitle);
-  }
+  // Per-card actions menu now lives in module_sourceGames.js (buildGameMenu),
+  // invoked internally by MA.gamesSource on card-tap / MANAGE click, which then
+  // calls back into handleGameAction() via the onAction callback passed to mount().
 
   // ---- Filters modal wiring ----
 function wireFiltersModal() {
@@ -895,16 +953,24 @@ function wireFiltersModal() {
       MA.chrome.setBottomNav({
         visible: isEventMode
           ? ["home", "eventhome", "eventedit", "eventroster", "eventrounds"]
-          : ["home", "admin", "favorites", "import", "eventhome"],
+          : ["home", "favorites", "import"],
         active: isEventMode ? "eventrounds" : "admin",
         onNavigate: (id) => {
           try {
             if (typeof MA.routerGo === "function") {
-              MA.routerGo(id);
+              // "eventhome" now routes to this same adminhome.php (the retired
+              // standalone eventshome.php is gone) — pass mode=events so the
+              // doorway opens with the Events tab pre-selected instead of Games.
+              if (id === "eventhome") {
+                MA.routerGo(id, { mode: "events" });
+              } else {
+                MA.routerGo(id);
+              }
               return;
             }
             const router = MA.paths?.routerApi || "/api/session/pageRouter.php";
-            window.location.assign(router + "?action=" + encodeURIComponent(id) + "&redirect=1");
+            const extra = (id === "eventhome") ? "&mode=events" : "";
+            window.location.assign(router + "?action=" + encodeURIComponent(id) + "&redirect=1" + extra);
           } catch (e) {
             console.error(e);
           }
