@@ -16,7 +16,8 @@ declare(strict_types=1);
  */
 return [
     // Major U.S. carriers
-    "AT&T"              => "@txt.att.net",      // AT&T email-to-text support may be deprecated/limited
+    "AT&T"              => "@txt.att.net", 
+    "AT&T Wireless"     => "@txt.att.net",       // AT&T email-to-text support may be deprecated/limited
     "Verizon"           => "@vtext.com",        // Verizon legacy email-to-text may be deprecated/limited
     "T-Mobile"          => "@tmomail.net",
     "Sprint PCS"        => "@messaging.sprintpcs.com",
