@@ -140,9 +140,6 @@
     const ghin = row?.getAttribute("data-ghin");
     if (!ghin) return;
 
-    const name = row?.querySelector(".erRosterName")?.textContent || "this player";
-    if (!confirm(`Remove ${name} from the event roster?`)) return;
-
     const res = await MA.postJson(MA.paths.deleteEventRosterPlayer, { playerGHIN: ghin });
     if (!res?.ok) {
       MA.setStatus(res?.message || "Unable to remove player.", "warn");
