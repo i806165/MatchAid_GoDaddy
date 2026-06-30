@@ -207,12 +207,23 @@
   min-height: 0;
 }
 
-/* Panel header bar — green brand background, matches the rest of the
-   Admin Portal chrome (same treatment as the card header in Section 1). */
+/* Panel header bar — outer structural frame.
+   Inverted from inner card headers: white background, brand green text.
+   This creates clear hierarchy: panel = frame (light), card = content (dark). */
 .maPage--adminHome .maPanel__hdr{
-  background: var(--brandSecondary);
-  color: var(--brandSecondaryText);
-  border-bottom: 1px solid rgba(0,0,0,.1);
+  background: var(--brandSecondaryBg);
+  color: var(--brandSecondary);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+
+/* Events panel card headers — navy (--brandTertiary) in doorway mode.
+   In Event Rounds mode the is-event-context cascade (ma_shared.css) handles
+   this globally, since EID is in session. In doorway mode there's no EID,
+   so we target the Events panel's cards directly. */
+.maPage--adminHome .maPanel--secondary .maCard__hdr{
+  background: var(--brandTertiary);
+  color: var(--brandTertiaryText);
+  border-bottom-color: color-mix(in srgb, var(--brandTertiary) 70%, black);
 }
 
 .maPage--adminHome .gpPanelHdr{
@@ -228,7 +239,7 @@
   font-size: 14px;
   font-weight: 950;
   letter-spacing: .2px;
-  color: var(--brandSecondaryText);
+  color: var(--brandSecondary);
   flex: 1;
   text-align: center;
 }

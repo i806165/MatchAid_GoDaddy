@@ -39,6 +39,8 @@
   /* --- Brand colors --- */
   --brandPrimary: #07432A;
   --brandSecondary: #3F7652;
+  --brandTertiary: #1B4F8A;       /* Event-context navy — card/panel/chrome headers */
+  --brandTertiaryText: #ffffff;   /* White text on navy — same as brandSecondaryText */
   --brandColor3: #0066CC;
   --brandAccent: #0b5fff; /* 24a0ed or #0b5fff or 0066CC */
   --brandPrimaryText: #ffffff;
@@ -343,6 +345,26 @@ textarea {
   border-bottom: 1px solid var(--chromeBorder);
   box-shadow: var(--chromeShadow);
   padding: var(--chromePad);
+}
+
+/* ── Event context — navy chrome + panel/card headers ────────────────────
+   Applied server-side by chromeHeader.php when SessionStoredEID is set.
+   Cascades from the <header> down to any .maPanel__hdr and .maCard__hdr
+   on the page, so every event-context page (Event Rounds, Event Roster,
+   Event Edit, Event Scoring etc.) gets consistent navy coloring without
+   per-page CSS. The --chromeHdrBg token override drives the header itself;
+   the panel/card rules use --brandTertiary directly.
+   ──────────────────────────────────────────────────────────────────────── */
+.maChrome__hdr.is-event-context {
+  background: var(--brandTertiary);
+}
+
+/* Panel and card headers on any event-context page */
+.is-event-context ~ main .maPanel__hdr,
+.is-event-context ~ main .maCard__hdr {
+  background: var(--brandTertiary);
+  color: var(--brandTertiaryText);
+  border-bottom-color: color-mix(in srgb, var(--brandTertiary) 70%, black);
 }
 
 .maChrome__hdrRow {

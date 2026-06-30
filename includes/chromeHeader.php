@@ -1,8 +1,11 @@
 <?php
 // /includes/chromeHeader.php
 // Chrome header: brand + left/right action slots + 3 header lines (collapsible)
+// is-event-context class is added when SessionStoredEID is set in session —
+// drives the navy brand color cascade via ma_shared.css without any JS.
+$_maIsEventContext = !empty($_SESSION['SessionStoredEID']);
 ?>
-<header class="maChrome__hdr" role="banner">
+<header class="maChrome__hdr<?= $_maIsEventContext ? ' is-event-context' : '' ?>" role="banner">
   <div class="maChrome__hdrRow">
 
     <div id="chromeBrandSlot" class="maChrome__brand" aria-label="MatchAid Brand">
