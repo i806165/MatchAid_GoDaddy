@@ -1,19 +1,28 @@
 <!-- /app/admin_home/adminhome_view.php
      Notes:
-     - Styles preserved (Games card/filters markup unchanged from the original page).
-     - Phase 3 rework: follows the established multi-panel pattern from
-       ma_shared.css (.maPanels/.maPanel, Section 9) and the mobile tray-toggle
-       convention from game_players.css (.maPage--players.is-tray-open), instead
-       of a bespoke tab strip. See admin_home.css Section 6 for the CSS half.
+     - Phase 3 rework: follows .maPanels/.maPanel multi-panel pattern from
+       ma_shared.css. Mobile panel switching uses a .maSeg tab strip (#ahTabs)
+       above the panels — same pattern as game_pairings.js. Desktop shows both
+       panels side by side, tab strip hidden.
      - In Event Rounds mode ($isEventMode), only the single Games panel
-       markup renders — no .maPanels wrapper, no Events panel — matching
-       today's drilled-in behavior exactly.
+       markup renders — no .maPanels wrapper, no Events panel, no tab strip.
 -->
 
 <?php if (!$isEventMode): ?>
+
+<!-- Page-level tab strip — mobile only (hidden >=900px via admin_home.css).
+     Lives in its own container, never inside a panel, so re-rendering panel
+     contents never touches this element — same sticky-state rule as pairings. -->
+<div id="ahTabs" class="maCanvasControls">
+  <div class="maSeg" role="tablist" aria-label="Switch panel">
+    <button class="maSegBtn is-active" data-tab="games" type="button" role="tab" aria-selected="true">Games</button>
+    <button class="maSegBtn" data-tab="events" type="button" role="tab" aria-selected="false">Events</button>
+  </div>
+</div>
+
 <div class="maPanels maPanels--2">
 
-  <!-- PRIMARY: Games canvas — always visible by default -->
+  <!-- PRIMARY: Games canvas -->
   <section class="maPanel maPanel--primary" aria-label="Games">
     <header class="maPanel__hdr">
       <div class="gpPanelHdr">
@@ -21,14 +30,11 @@
       </div>
     </header>
 
-    <!-- Controls area: each panel owns its own Actions/+Add buttons now,
-         replacing the single chrome-level Actions button the old
-         single-panel page used. -->
     <div class="maPanel__controls">
       <div class="maCanvasControls">
+        <button id="btnAddGame" class="btn btnPrimary" type="button">+ Add Game</button>
         <div class="maCanvasControls__right">
           <button id="btnGamesActions" class="btn btnSecondary" type="button">Actions</button>
-          <button id="btnAddGame" class="btn btnPrimary" type="button">+ Add Game</button>
         </div>
       </div>
     </div>
@@ -40,34 +46,22 @@
       <div id="cards" class="maCards"></div>
     </div>
 
-    <footer class="maPanel__ftr">
-      <button class="maDoorwayOpenBtn" id="btnViewEvents" type="button">
-        View Events →
-      </button>
-    </footer>
+    <footer class="maPanel__ftr"></footer>
   </section>
 
-  <!-- SECONDARY: Events tray — hidden on mobile until opened -->
+  <!-- SECONDARY: Events panel -->
   <section class="maPanel maPanel--secondary" aria-label="Events">
     <header class="maPanel__hdr">
       <div class="gpPanelHdr">
-        <div class="gpPanelHdr__left gpMobileCloseBtn">
-          <button id="btnCloseEvents" class="iconBtn btnSecondary" type="button" aria-label="Close Events">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
         <div class="gpPanelHdr__title">Events</div>
       </div>
     </header>
 
     <div class="maPanel__controls">
       <div class="maCanvasControls">
+        <button id="btnAddEvent" class="btn btnPrimary" type="button">+ Add Event</button>
         <div class="maCanvasControls__right">
           <button id="btnEventsActions" class="btn btnSecondary" type="button">Actions</button>
-          <button id="btnAddEvent" class="btn btnPrimary" type="button">+ Add Event</button>
         </div>
       </div>
     </div>
@@ -85,7 +79,7 @@
 </div>
 <?php else: ?>
 
-<!-- Event Rounds mode (eid-scoped): single-panel markup, unchanged. -->
+<!-- Event Rounds mode: single-panel, unchanged. -->
 <div id="emptyState" class="maEmptyState" style="display:none;">
   No games match your current filters.
 </div>
@@ -93,7 +87,7 @@
 
 <?php endif; ?>
 
-<!-- Filters Modal (Games) — shared by both modes -->
+<!-- Filters Modal (Games) -->
 <div id="modalOverlay" class="maModalOverlay" aria-hidden="true">
   <section class="maModal" role="dialog" aria-modal="true" aria-label="Filters">
     <header class="maModal__hdr">
@@ -128,31 +122,23 @@
           </div>
         </div>
 
-        <!-- Collapsible inline calendar -->
         <div id="calWrap" class="maCalWrap" aria-label="Calendar" aria-hidden="true">
           <div class="maCalHeader">
-
             <div id="calHint" class="maCalHint">Select From Date</div>
-
             <div class="maCalLeft">
               <button id="calPrev" class="btn btnPrimary maCalNavBtn" type="button" aria-label="Previous month">‹</button>
               <div id="calMonthLabel" class="maCalMonthLabel">Month YYYY</div>
               <button id="calNext" class="btn btnPrimary maCalNavBtn" type="button" aria-label="Next month">›</button>
-
               <button id="calToday" class="btn btnPrimary maCalMiniBtn" type="button">Today</button>
             </div>
-
             <div class="maCalRight">
-              <!-- Keep these in DOM (JS references) but hidden via CSS -->
               <button id="calTargetFrom" class="maCalTargetPill is-active" type="button">Set From</button>
               <button id="calTargetTo" class="maCalTargetPill" type="button">Set To</button>
             </div>
           </div>
-
           <div class="maCalDow">
             <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
           </div>
-
           <div id="calGrid" class="maCalGrid"></div>
         </div>
       </div>
@@ -162,14 +148,12 @@
         <div class="maAdminPick__top">
           <input id="adminSearch" class="maTextInput maAdminPick__search" type="text" placeholder="Search admins by name…" />
         </div>
-
         <div id="adminList" class="maAdminPick">
           <div class="maAdminPick__hdr">
             <button id="btnAdminToggleAll" class="maAdminPick__hdrBtn" type="button" aria-label="Select all / none">☐</button>
             <div class="maAdminPick__hdrName">Name</div>
             <button id="btnAdminToggleFavs" class="maAdminPick__hdrBtn" type="button" aria-label="Select favorites / clear favorites">♥</button>
           </div>
-
           <div id="adminRows" class="maAdminPick__rows"></div>
         </div>
       </div>

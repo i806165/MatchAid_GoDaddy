@@ -457,35 +457,51 @@ function openEventsActionsMenu() {
   MA.ui.openActionsMenu("Actions", items, "Events");
 }
 
-// Wires each panel's own controls-row buttons (#btnGamesActions/#btnAddGame,
-// #btnEventsActions/#btnAddEvent) — these replace the single chrome-level
-// Actions/page button the old single-panel page used; each panel now owns
-// its own. Also wires the mobile open/close toggle (#btnViewEvents /
-// #btnCloseEvents) that swaps which panel is visible below 900px, by
-// toggling .is-events-open on .maPage--adminHome — mirrors game_players.css's
-// .maPage--players.is-tray-open pattern. No-op (and safe) in Event Rounds
-// mode, where none of these elements exist in the DOM.
+// Wires each panel's controls-row buttons and the #ahTabs mobile tab strip.
+// Tab strip mirrors game_pairings.js's setActiveTab pattern exactly:
+// - delegated click on #ahTabs container
+// - toggles is-active on .maSegBtn[data-tab] buttons
+// - toggles is-events-open on .maPage--adminHome for CSS panel visibility
+// No-op (and safe) in Event Rounds mode — none of these elements exist in DOM.
 function wireDoorwayControls() {
   const mainEl = document.querySelector(".maPage--adminHome");
 
+  // Per-panel controls buttons
   const btnGamesActions = document.getElementById("btnGamesActions");
-  const btnAddGame = document.getElementById("btnAddGame");
+  const btnAddGame      = document.getElementById("btnAddGame");
   const btnEventsActions = document.getElementById("btnEventsActions");
-  const btnAddEvent = document.getElementById("btnAddEvent");
-  const btnViewEvents = document.getElementById("btnViewEvents");
-  const btnCloseEvents = document.getElementById("btnCloseEvents");
+  const btnAddEvent     = document.getElementById("btnAddEvent");
 
   if (btnGamesActions) btnGamesActions.addEventListener("click", () => openActionsMenu());
-  if (btnAddGame) btnAddGame.addEventListener("click", () => handleGameAction({ action: "addGame" }));
+  if (btnAddGame)      btnAddGame.addEventListener("click", () => handleGameAction({ action: "addGame" }));
   if (btnEventsActions) btnEventsActions.addEventListener("click", () => openEventsActionsMenu());
-  if (btnAddEvent) btnAddEvent.addEventListener("click", () => handleEventAction({ action: "addEvent" }));
+  if (btnAddEvent)     btnAddEvent.addEventListener("click", () => handleEventAction({ action: "addEvent" }));
 
-  if (mainEl && btnViewEvents) {
-    btnViewEvents.addEventListener("click", () => mainEl.classList.add("is-events-open"));
+  // Tab strip — mobile panel switcher
+  const tabsEl = document.getElementById("ahTabs");
+  if (!tabsEl || !mainEl) return;
+
+  function setActiveTab(tab) {
+    state.activePanel = tab;
+    const isEvents = tab === "events";
+
+    tabsEl.querySelectorAll(".maSegBtn").forEach(btn => {
+      const on = btn.dataset.tab === tab;
+      btn.classList.toggle("is-active", on);
+      btn.setAttribute("aria-selected", String(on));
+    });
+
+    mainEl.classList.toggle("is-events-open", isEvents);
   }
-  if (mainEl && btnCloseEvents) {
-    btnCloseEvents.addEventListener("click", () => mainEl.classList.remove("is-events-open"));
-  }
+
+  tabsEl.addEventListener("click", e => {
+    const btn = e.target.closest(".maSegBtn");
+    if (btn && btn.dataset.tab) setActiveTab(btn.dataset.tab);
+  });
+
+  // Set initial tab state from server-side initialPanel
+  const initialPanel = (window.__MA_INIT__ || window.__INIT__ || {}).initialPanel || "games";
+  setActiveTab(initialPanel);
 }
 
 

@@ -54,7 +54,7 @@
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-app-home.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
       </span>
-      <span class="maNavLabel">MatchAid</span>
+      <span class="maNavLabel">MatchAid Home</span>
     </button>
 
     <button type="button" class="maNavBtn" data-nav="clubhome" aria-label="Club Home">

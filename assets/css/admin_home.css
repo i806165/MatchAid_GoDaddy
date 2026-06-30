@@ -273,43 +273,38 @@
   left: 10px;
 }
 
-/* Footer "View Events" affordance — mobile only; mirrors the
-   gsMobileAddPlayingGroupBtn pattern from game_players.css. */
-.maPage--adminHome .maDoorwayOpenBtn{
-  display: none;
-  width: 100%;
-  min-height: var(--btnHeight);
-  align-items: center;
-  justify-content: center;
-  border: 1px dashed var(--brandPrimary);
-  border-radius: var(--radiusMd);
-  background: transparent;
-  color: var(--brandPrimary);
-  font-family: var(--fontFamilyBase);
-  font-size: 14px;
-  font-weight: 900;
-  cursor: pointer;
+/* Tab strip (#ahTabs) — mobile only panel switcher.
+   Uses shared .maCanvasControls / .maSeg / .maSegBtn from ma_shared.css.
+   Hidden on desktop where both panels show side by side via maPanels--2 grid.
+   On mobile, switching tabs toggles .is-active on the panels via
+   wireDoorwayControls() in admin_home.js — same pattern as game_pairings.js. */
+#ahTabs{
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--borderSubtle);
+  padding: 6px 8px;
+  background: var(--surfaceChrome);
 }
 
-.maPage--adminHome .maDoorwayOpenBtn:active{
-  transform: translateY(1px);
+@media (min-width: 901px){
+  #ahTabs{
+    display: none;
+  }
 }
 
+/* Mobile panel visibility — toggled by tab strip.
+   On desktop both panels show via maPanels--2 grid (no JS needed).
+   On mobile only the active panel shows. */
 @media (max-width: 900px){
   .maPage--adminHome .maPanel--secondary{
     display: none;
   }
 
   .maPage--adminHome.is-events-open .maPanel--secondary{
-    display: flex; /* .maPanel base is already flex-column; just toggling visibility */
+    display: flex;
   }
 
   .maPage--adminHome.is-events-open .maPanel--primary{
     display: none;
-  }
-
-  .maPage--adminHome .maDoorwayOpenBtn{
-    display: inline-flex;
   }
 }
 
