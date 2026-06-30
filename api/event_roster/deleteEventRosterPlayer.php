@@ -55,21 +55,36 @@ try {
 
     // Safety check — block deletion if player is enrolled in any linked round
     $linkedGames = ServiceDbGames::getGamesByEID($eid);
+    $conflicts   = [];
+
     foreach ($linkedGames as $game) {
         $ggid = (string)($game["dbGames_GGID"] ?? "");
         if ($ggid === "") continue;
 
         $playerRow = ServiceDbPlayers::getPlayerByGGIDGHIN($ggid, $ghin);
         if ($playerRow) {
-            $gameTitle = trim((string)($game["dbGames_Title"] ?? "")) ?: "a linked round";
-            http_response_code(409);
-            echo json_encode([
-                "ok"      => false,
-                "message" => "This player is enrolled in {$gameTitle}. "
-                           . "Remove them from all linked rounds before deleting from the event roster.",
-            ]);
-            exit;
+            $conflicts[] = [
+                "ggid"  => $ggid,
+                "title" => trim((string)($game["dbGames_Title"] ?? "")) ?: "a linked round",
+            ];
         }
+    }
+
+    if (!empty($conflicts)) {
+        $firstTitle  = $conflicts[0]["title"];
+        $extraCount  = count($conflicts) - 1;
+        $summary     = $extraCount > 0
+            ? "{$firstTitle} and {$extraCount} more round" . ($extraCount === 1 ? "" : "s")
+            : $firstTitle;
+
+        http_response_code(409);
+        echo json_encode([
+            "ok"        => false,
+            "message"   => "This player is enrolled in {$summary}. "
+                         . "Remove them from all linked rounds before deleting from the event roster.",
+            "conflicts" => $conflicts,
+        ]);
+        exit;
     }
 
     $deleted = ServiceDbEventPlayers::deleteEventPlayer($eid, $ghin);

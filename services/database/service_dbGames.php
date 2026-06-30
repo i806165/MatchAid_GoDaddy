@@ -694,4 +694,12 @@ public static function queryGames(array $args): array {
           return 0;
       }
   }
+    public static function getGamesByEID(int $eid): array
+  {
+      if ($eid <= 0) return [];
+      $pdo = Db::pdo();
+      $stmt = $pdo->prepare("SELECT * FROM db_Games WHERE dbGames_EID = :eid");
+      $stmt->execute([":eid" => $eid]);
+      return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+  }
 }
