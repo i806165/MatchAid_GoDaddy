@@ -46,7 +46,9 @@ $resolveContact = function (
     ?array $userRow,
     string $favEmail,
     string $favMobile,
-    string $favCarrier
+    string $favCarrier,
+    string $ghin = "",
+    string $name = ""
 ) use ($carriers): array {
 
     // ── Population A — db_Users profile exists ────────────────────────────
@@ -60,9 +62,19 @@ $resolveContact = function (
         $smsAddress   = "";
         $emailAddress = $email;
 
-        if ($mobile !== "" && $carrier !== "" && isset($carriers[$carrier])) {
-            $digits     = preg_replace('/\D/', '', $mobile);
-            $smsAddress = $digits . $carriers[$carrier];
+        if ($mobile !== "" && $carrier !== "") {
+            if (isset($carriers[$carrier])) {
+                $digits     = preg_replace('/\D/', '', $mobile);
+                $smsAddress = $digits . $carriers[$carrier];
+            } else {
+                error_log(sprintf(
+                    "[initPlayerNotifications] Unmapped carrier (db_Users): ghin=%s name=%s carrier=%s mobile=%s",
+                    $ghin !== "" ? $ghin : ($userRow["ghin"] ?? $userRow["dbUser_GHIN"] ?? "unknown"),
+                    $name !== "" ? $name : ($userRow["name"] ?? "unknown"),
+                    $carrier,
+                    $mobile
+                ));
+            }
         }
 
         // Auto-detect preferred method if field is blank
@@ -98,9 +110,19 @@ $resolveContact = function (
 
     // Build SMS gateway address from fav mobile + carrier if available
     $favSmsAddress = "";
-    if ($favMobile !== "" && $favCarrier !== "" && isset($carriers[$favCarrier])) {
-        $digits        = preg_replace('/\D/', '', $favMobile);
-        $favSmsAddress = $digits . $carriers[$favCarrier];
+    if ($favMobile !== "" && $favCarrier !== "") {
+        if (isset($carriers[$favCarrier])) {
+            $digits        = preg_replace('/\D/', '', $favMobile);
+            $favSmsAddress = $digits . $carriers[$favCarrier];
+        } else {
+            error_log(sprintf(
+                "[initPlayerNotifications] Unmapped carrier (db_FavPlayers): ghin=%s name=%s carrier=%s mobile=%s",
+                $ghin !== "" ? $ghin : "unknown",
+                $name !== "" ? $name : "unknown",
+                $favCarrier,
+                $favMobile
+            ));
+        }
     }
 
     // Email preferred when available
@@ -185,7 +207,10 @@ try {
                 $favEmail  = (string)($r["favEmail"]  ?? "");
                 $favMobile = (string)($r["favMobile"] ?? "");
                 $favCarrier= (string)($r["favCarrier"] ?? "");
-                $contact   = $resolveContact($userRow, $favEmail, $favMobile, $favCarrier);
+                $contact   = $resolveContact(
+                    $userRow, $favEmail, $favMobile, $favCarrier,
+                    (string)$r["ghin"], (string)$r["name"]
+                );
 
                 return [
                     "ghin"                 => (string)$r["ghin"],
@@ -234,7 +259,10 @@ try {
         $favEmail   = (string)($f["email"]   ?? "");
         $favMobile  = (string)($f["mobile"]  ?? "");
         $favCarrier = (string)($f["carrier"] ?? "");
-        $contact    = $resolveContact($userRow, $favEmail, $favMobile, $favCarrier);
+        $contact    = $resolveContact(
+            $userRow, $favEmail, $favMobile, $favCarrier,
+            $ghin, (string)($f["name"] ?? "")
+        );
 
         return [
             "ghin"                 => $ghin,
