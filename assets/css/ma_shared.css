@@ -2218,6 +2218,13 @@ textarea {
   margin-top: 2px;
 }
 
+/* Indented past a swatch — used under team name inputs in MA.manageTeams
+   to align the player-count label past the 10px swatch + 8px gap = 18px.
+   Replaces gpSub--indented. */
+.maListRow__subline--indented {
+  padding-left: 18px;
+}
+
 /* Pinned identity label — "You" pill */
 .maListRow__pinnedLabel {
   display: inline-block;
@@ -2705,6 +2712,16 @@ textarea {
   padding: 8px var(--spaceMd);
 }
 
+/* 3-col grid: avatar │ name+subline │ badge group
+   Used by MA.manageTeams roster rows. Replaces gpRow--teams. */
+.maListRow--teams {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 8px;
+  padding: 8px;
+}
+
 /* Green tint — marks the row currently loaded into the Non-Rated edit form.
    Replaces gpNrRow--selected. */
 .maListRow--active {
@@ -2862,4 +2879,29 @@ textarea {
    specificity fights with layout classes. */
 .isHidden {
   display: none !important;
+}
+
+
+/* ---------- 21h. Canvas controls row — sort strip + action group ---------
+   Generic "controls row, space-between, right-aligned action cluster"
+   layout. Used above the main roster/canvas list on both Game Players
+   and Event Roster (sort buttons left, Manage Teams / other actions
+   right). Promoted from page-scoped gpCanvasControls — purely
+   structural, no page-specific values, so it belongs here rather than
+   duplicated per page.
+   ------------------------------------------------------------------------- */
+
+.maCanvasControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.maCanvasControls__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
 }

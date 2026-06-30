@@ -358,12 +358,15 @@
       teamConfig,
       apiBase:    MA.paths?.apiEventRoster || "/api/event_roster",
       onApply: ({ players, teamConfig: newConfig }) => {
-        // Write team keys back to state.roster
+        // Write team keys back to state.roster.
+        // saveTeamAssignments.php returns ServiceDbEventPlayers::getEventRoster()
+        // rows — dbEventPlayers_*-keyed, not the dbPlayers_* shape Game Players'
+        // endpoint returns. Read the actual key the endpoint sends.
         if (Array.isArray(players) && players.length) {
           players.forEach(saved => {
-            const ghin = safe(saved.dbPlayers_PlayerGHIN || saved.ghin || "");
+            const ghin = safe(saved.dbEventPlayers_GHIN || "");
             const p = state.roster.find(x => safe(x.dbEventPlayers_GHIN) === ghin);
-            if (p) p.dbEventPlayers_TeamKey = safe(saved.dbPlayers_TeamKey || saved.team || "");
+            if (p) p.dbEventPlayers_TeamKey = safe(saved.dbEventPlayers_TeamKey || "");
           });
         }
         if (window.__MA_INIT__) window.__MA_INIT__.teamConfig = newConfig;

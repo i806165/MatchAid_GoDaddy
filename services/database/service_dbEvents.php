@@ -103,6 +103,36 @@ final class ServiceDbEvents
     return (int)$stmt->fetchColumn();
   }
 
+  /**
+   * updateEvent(eid, fields)
+   * Generic dynamic-column updater for db_Events.
+   * Mirrors ServiceDbGames::updateGame() exactly — only keys prefixed
+   * "dbEvents_" are applied; the PK column is always skipped.
+   *
+   * @param  int   $eid
+   * @param  array $fields  keyed by db column name (dbEvents_*)
+   * @return bool
+   */
+  public static function updateEvent(int $eid, array $fields): bool
+  {
+    $pdo = Db::pdo();
+    $sets = [];
+    $params = [":eid" => $eid];
+
+    foreach ($fields as $k => $v) {
+      if ($k === "dbEvents_EID") continue;
+      if (!str_starts_with($k, "dbEvents_")) continue;
+      $sets[] = "$k = :" . $k;
+      $params[":" . $k] = $v;
+    }
+
+    if (!$sets) return true;
+
+    $sql = "UPDATE db_Events SET " . implode(", ", $sets) . " WHERE dbEvents_EID = :eid LIMIT 1";
+    $stmt = $pdo->prepare($sql);
+    return $stmt->execute($params);
+  }
+
   public static function deleteEvent(int $eid): bool
   {
     if ($eid <= 0) return false;
@@ -126,14 +156,79 @@ final class ServiceDbEvents
 
   public static function saveEvent(string $mode, array $patch, array $sessionCtx): array
   {
-    $pdo = Db::pdo();
+    $mode = strtolower(trim($mode)) === "add" ? "add" : "edit";
 
-    $mode = strtolower(trim($mode));
-    if ($mode !== "add" && $mode !== "edit") $mode = "edit";
+    // Load existing or create shell — mirrors ServiceDbGames::saveGame()
+    if ($mode === "edit") {
+      $eid = (int)($sessionCtx["eid"] ?? 0);
+      if ($eid <= 0) throw new RuntimeException("Missing selected event.");
+      $existing = self::getEventByEID($eid);
+      if (!$existing) throw new RuntimeException("Event not found.");
+      $base = $existing;
+    } else {
+      $eid = 0;
+      $base = [];
+    }
 
-    $eid = (int)($sessionCtx["eid"] ?? 0);
+    // Apply patch (allowlist) — mirrors ServiceDbGames::applyPatch()
+    $updated = self::applyEventPatch($base, $patch);
 
-    $allowed = [
+    $title = trim((string)($updated["dbEvents_Title"] ?? ""));
+    if ($title === "") {
+      throw new RuntimeException("Event title is required.");
+    }
+
+    $startDate = trim((string)($updated["dbEvents_StartDate"] ?? ""));
+    $endDate = trim((string)($updated["dbEvents_EndDate"] ?? ""));
+    if ($startDate === "" || $endDate === "") {
+      throw new RuntimeException("Start date and end date are required.");
+    }
+    if ($endDate < $startDate) {
+      throw new RuntimeException("End date cannot be before start date.");
+    }
+
+    if ($mode === "add") {
+      $updated["dbEvents_FacilityID"] = (string)($sessionCtx["facilityId"] ?? "");
+      if (trim((string)($updated["dbEvents_FacilityName"] ?? "")) === "") {
+        $updated["dbEvents_FacilityName"] = (string)($sessionCtx["facilityName"] ?? "");
+      }
+
+      $updated["dbEvents_AdminGHIN"] = (string)($sessionCtx["adminGhin"] ?? "");
+      $updated["dbEvents_AdminName"] = (string)($sessionCtx["adminName"] ?? "");
+      $updated["dbEvents_AdminLName"] = (string)($sessionCtx["adminLName"] ?? "");
+      $updated["dbEvents_AdminAssocID"] = (string)($sessionCtx["adminAssocId"] ?? "");
+      $updated["dbEvents_AdminAssocName"] = (string)($sessionCtx["adminAssocName"] ?? "");
+      $updated["dbEvents_AdminClubID"] = (string)($sessionCtx["adminClubId"] ?? "");
+      $updated["dbEvents_AdminClubName"] = (string)($sessionCtx["adminClubName"] ?? "");
+
+      $newEID = self::insertEvent($updated);
+      $saved = self::getEventByEID($newEID) ?? $updated;
+      $saved["dbEvents_EID"] = $newEID;
+      return ["eid" => $newEID, "event" => $saved, "mode" => "edit"];
+    }
+
+    // edit
+    self::updateEvent($eid, $updated);
+    $saved = self::getEventByEID($eid);
+    if (!$saved) {
+      throw new RuntimeException("Event save succeeded, but event could not be reloaded.");
+    }
+
+    return [
+      "mode" => "edit",
+      "eid" => $eid,
+      "event" => $saved
+    ];
+  }
+
+  /**
+   * applyEventPatch(base, patch)
+   * Mirrors ServiceDbGames::applyPatch() — overlays only allowlisted
+   * keys present in $patch onto $base, returning the merged array.
+   */
+  private static function applyEventPatch(array $base, array $patch): array
+  {
+    $allow = [
       "dbEvents_Title",
       "dbEvents_EventType",
       "dbEvents_StartDate",
@@ -146,88 +241,45 @@ final class ServiceDbEvents
       "dbEvents_TiebreakConfig",
     ];
 
-    $clean = [];
-    foreach ($allowed as $k) {
+    foreach ($allow as $k) {
       if (array_key_exists($k, $patch)) {
-        $clean[$k] = $patch[$k];
+        $base[$k] = $patch[$k];
       }
     }
 
-    $title = trim((string)($clean["dbEvents_Title"] ?? ""));
-    if ($title === "") {
-      throw new RuntimeException("Event title is required.");
+    return $base;
+  }
+
+  /**
+   * insertEvent(e)
+   * Mirrors ServiceDbGames::insertGame() — dynamic INSERT built from
+   * any dbEvents_-prefixed keys present in $e, excluding the PK.
+   *
+   * @param  array $e
+   * @return int   newly inserted EID
+   */
+  private static function insertEvent(array $e): int
+  {
+    $pdo = Db::pdo();
+    $cols = [];
+    $vals = [];
+    $params = [];
+
+    foreach ($e as $k => $v) {
+      if ($k === "dbEvents_EID") continue;
+      if (!str_starts_with($k, "dbEvents_")) continue;
+      $cols[] = $k;
+      $vals[] = ":" . $k;
+      $params[":" . $k] = $v;
     }
 
-    $startDate = trim((string)($clean["dbEvents_StartDate"] ?? ""));
-    $endDate = trim((string)($clean["dbEvents_EndDate"] ?? ""));
-    if ($startDate === "" || $endDate === "") {
-      throw new RuntimeException("Start date and end date are required.");
-    }
-    if ($endDate < $startDate) {
-      throw new RuntimeException("End date cannot be before start date.");
-    }
+    if (!$cols) throw new RuntimeException("No fields to insert.");
 
-    if ($mode === "add") {
-      $clean["dbEvents_FacilityID"] = (string)($sessionCtx["facilityId"] ?? "");
-      if (trim((string)($clean["dbEvents_FacilityName"] ?? "")) === "") {
-        $clean["dbEvents_FacilityName"] = (string)($sessionCtx["facilityName"] ?? "");
-      }
+    $sql = "INSERT INTO db_Events (" . implode(",", $cols) . ") VALUES (" . implode(",", $vals) . ")";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
 
-      $clean["dbEvents_AdminGHIN"] = (string)($sessionCtx["adminGhin"] ?? "");
-      $clean["dbEvents_AdminName"] = (string)($sessionCtx["adminName"] ?? "");
-      $clean["dbEvents_AdminLName"] = (string)($sessionCtx["adminLName"] ?? "");
-      $clean["dbEvents_AdminAssocID"] = (string)($sessionCtx["adminAssocId"] ?? "");
-      $clean["dbEvents_AdminAssocName"] = (string)($sessionCtx["adminAssocName"] ?? "");
-      $clean["dbEvents_AdminClubID"] = (string)($sessionCtx["adminClubId"] ?? "");
-      $clean["dbEvents_AdminClubName"] = (string)($sessionCtx["adminClubName"] ?? "");
-
-      $cols = array_keys($clean);
-      $phs = array_map(fn($c) => ":" . $c, $cols);
-
-      $sql = "INSERT INTO db_Events (" . implode(",", $cols) . ")
-              VALUES (" . implode(",", $phs) . ")";
-      $stmt = $pdo->prepare($sql);
-
-      $params = [];
-      foreach ($cols as $c) $params[":" . $c] = $clean[$c];
-      $stmt->execute($params);
-
-      $eid = (int)$pdo->lastInsertId();
-    } else {
-      if ($eid <= 0) {
-        throw new RuntimeException("Missing selected event.");
-      }
-
-      $sets = [];
-      $params = [":eid" => $eid];
-
-      foreach ($clean as $col => $val) {
-        $sets[] = "{$col} = :{$col}";
-        $params[":{$col}"] = $val;
-      }
-
-      if (!$sets) {
-        throw new RuntimeException("No event fields to save.");
-      }
-
-      $sql = "UPDATE db_Events
-                 SET " . implode(", ", $sets) . "
-               WHERE dbEvents_EID = :eid
-               LIMIT 1";
-      $stmt = $pdo->prepare($sql);
-      $stmt->execute($params);
-    }
-
-    $event = self::getEventByEID($eid);
-    if (!$event) {
-      throw new RuntimeException("Event save succeeded, but event could not be reloaded.");
-    }
-
-    return [
-      "mode" => "edit",
-      "eid" => $eid,
-      "event" => $event
-    ];
+    return (int)$pdo->lastInsertId();
   }
 
   private static function eventVm(array $r): array

@@ -80,8 +80,26 @@
   padding: 5px 8px;
 }
 
-/* ── Canvas controls — gpCanvasControls reused from game_players.css ─────── */
-/* gpCanvasControls and gpCanvasControls__right are already global */
+/* ── Canvas controls — sort strip + Manage Teams button ───────────────────
+   Independent copy of game_players.css's .gpCanvasControls/__right.
+   Intentionally duplicated rather than shared — both pages render this
+   row identically today, but Event Roster's layout may diverge later
+   and shouldn't be coupled to Game Players' definition. ──────────────── */
+
+.gpCanvasControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gpCanvasControls__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
 
 /* ── Sort buttons — defined in game_players.css but not loaded here ──────── */
 

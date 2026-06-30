@@ -1,17 +1,22 @@
 /* /assets/modules/manage_teams.js
  *
- * MA.manageTeams — Manage Teams module for the Game Players page.
+ * MA.manageTeams — Manage Teams module.
+ * Shared by Game Players and Event Roster.
  *
- * Zero injected CSS. All classes come from:
- *   ma_shared.css     — modal, buttons, list rows, pills, controls
- *   game_players.css  — gpRow--teams, gpAvatar, gpSub, gpTeamBadge, gpEmpty
+ * Zero injected CSS, zero page-specific CSS dependency. All classes
+ * come from ma_shared.css — modal, buttons, list rows, pills, controls.
+ * Previously depended on game_players.css for gpRow--teams, gpAvatar,
+ * gpSub, gpTeamBadge, gpEmpty — those are now unified into ma_shared.css
+ * equivalents (see mapping below) so the module works identically on
+ * any host page without a per-page CSS dependency.
  *
- * New classes added to each file:
- *   ma_shared.css    → .maSwatch, .maSwatch--red/blue (Section 1 tokens)
- *                    → .maTeamBadge, .maTeamBadge--red/blue/none + .is-active (Section 13)
- *   game_players.css → .gpRow--teams, .gpAvatar
- *                    → .gpSub--indented
- *                    → .gpTeamBadge, .gpTeamBadge--red/blue
+ * Class mapping (old page-scoped → current shared):
+ *   .gpRow--teams        → .maListRow--teams
+ *   .gpAvatar             → .maListRow__avatar
+ *   .gpSub                → .maListRow__subline
+ *   .gpSub--indented       → .maListRow__subline--indented
+ *   .gpTeamBadge/--red/--blue → .maTeamBadge/--red/--blue (+ --none, + .is-active)
+ *   .gpEmpty               → .maEmptyState
  *
  * Public API:
  *   MA.manageTeams.open(options)
@@ -21,7 +26,7 @@
  *   {
  *     players    : array        — raw player rows from state.players (db field names)
  *     teamConfig : object|null  — current window.__MA_INIT__.teamConfig value
- *     apiBase    : string       — e.g. "/api/game_players"
+ *     apiBase    : string       — e.g. "/api/game_players" or "/api/event_roster"
  *     onApply    : function({ players, teamConfig })
  *   }
  */
@@ -194,7 +199,7 @@
   function _renderStateA() {
     return `
       <div class="maModal__controls" id="mtTeamCfgStrip">
-        <div class="gpSub" style="margin-bottom:10px;">Get started by naming your teams.</div>
+        <div class="maListRow__subline" style="margin-bottom:10px;">Get started by naming your teams.</div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
           ${_renderTeamNameInput("T1", "Red")}
           ${_renderTeamNameInput("T2", "Blue")}
@@ -261,7 +266,7 @@
     const color = slot?.color || "red";
     const count = countByTeam(slotId);
     const countHtml = hasTeams()
-      ? `<div class="gpSub gpSub--indented" data-team-count="${esc(slotId)}">${count} player${count !== 1 ? "s" : ""}</div>`
+      ? `<div class="maListRow__subline maListRow__subline--indented" data-team-count="${esc(slotId)}">${count} player${count !== 1 ? "s" : ""}</div>`
       : "";
     return `
       <div>
@@ -282,7 +287,7 @@
 
   function _renderRosterRows() {
     const players = sortedPlayers();
-    if (!players.length) return `<div class="gpEmpty">No players in this game.</div>`;
+    if (!players.length) return `<div class="maEmptyState">No players in this game.</div>`;
     const t1Name = getTeamName("T1");
     const t2Name = getTeamName("T2");
     return players.map(p => _renderPlayerRow(p, t1Name, t2Name)).join("");
@@ -295,11 +300,11 @@
     const t    = p.team;
 
     return `
-      <div class="maListRow gpRow gpRow--teams" data-ghin="${esc(p.ghin)}">
-        <div class="gpAvatar" aria-hidden="true">${ini}</div>
+      <div class="maListRow maListRow--teams" data-ghin="${esc(p.ghin)}">
+        <div class="maListRow__avatar" aria-hidden="true">${ini}</div>
         <div class="maListRow__col">
           ${name}
-          ${hi ? `<div class="gpSub">${esc(hi)}</div>` : ""}
+          ${hi ? `<div class="maListRow__subline">${esc(hi)}</div>` : ""}
         </div>
         <div style="display:flex; gap:4px;"
              role="group" aria-label="Team assignment for ${name}">
@@ -407,7 +412,7 @@
   function _refreshPlayerRow(ghin) {
     const overlay = document.getElementById(OVERLAY_ID);
     if (!overlay) return;
-    const row    = overlay.querySelector(`.gpRow--teams[data-ghin="${CSS.escape(ghin)}"]`);
+    const row    = overlay.querySelector(`.maListRow--teams[data-ghin="${CSS.escape(ghin)}"]`);
     const player = _players.find(p => p.ghin === ghin);
     if (!row || !player) return;
     row.outerHTML = _renderPlayerRow(player, getTeamName("T1"), getTeamName("T2"));
