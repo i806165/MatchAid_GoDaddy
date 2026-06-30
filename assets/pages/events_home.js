@@ -75,8 +75,8 @@
 
     if (MA.chrome && typeof MA.chrome.setHeaderLines === "function") {
       MA.chrome.setHeaderLines([
-        "ADMIN PORTAL",
-        header.title || "Events",
+        "EVENT PORTAL",
+        header.title || "Event List",
         header.subtitle || ""
       ]);
     }
