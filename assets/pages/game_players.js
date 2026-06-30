@@ -818,6 +818,7 @@
         existingGHINs: new Set(
           (state.players || []).map(p => safe(p.dbPlayers_PlayerGHIN))
         ),
+        source:        "gameplayers",
         onSelect(player)       { beginTeeFlow(player); },
         onSelectMany(players)  { beginBatchTeeFlow(players); }
       });
@@ -1492,6 +1493,13 @@ function renderTrayBody(){
       await refreshPlayers();
       renderRoster();
       render();
+
+      if (state.activeTab === "favorites") {
+        // Multi-add only: clear the favorites module's multiAddMode/selection
+        // state, which a plain re-mount (already done inside render() above)
+        // intentionally leaves untouched. Mirrors event_roster.js enrollMany.
+        MA.favoritesSource.refresh(el.trayControls);
+      }
 
       if (failed) MA.setStatus(`Added ${added} favorites. ${failed} failed.`, "warn");
       else MA.setStatus(`Added ${added} favorites.`, "success");
