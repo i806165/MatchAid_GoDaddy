@@ -323,7 +323,7 @@
      chrome-level Actions button the old single-panel page used.
    ========================================================================== */
 
-
+/*
    8) Event cards (module_sourceEvents.js output)
    - Reuses the shared .maCard shell (header bar override in Section 1
      above applies equally here, since both maGameCard and maEventCard
