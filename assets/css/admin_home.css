@@ -243,6 +243,7 @@
   color: var(--brandSecondary);
   flex: 1;
   text-align: center;
+  text-transform: uppercase;
 }
 
 /* Events panel outer header title — brandTertiary on white */
@@ -253,6 +254,18 @@
   color: var(--brandTertiary);
   flex: 1;
   text-align: center;
+  text-transform: uppercase;
+}
+
+/* Mobile close button — hidden on desktop where both panels show at once */
+.maPage--adminHome .gpMobileCloseBtn{
+  display: none;
+}
+
+@media (max-width: 900px){
+  .maPage--adminHome .gpMobileCloseBtn{
+    display: flex;
+  }
 }
 
 .maPage--adminHome .gpPanelHdr__left{
@@ -327,6 +340,7 @@
   text-overflow: ellipsis;
   max-width: 45%;
   text-align: right;
+  margin-right: 8px;
 }
 
 .maEventCard__body{
