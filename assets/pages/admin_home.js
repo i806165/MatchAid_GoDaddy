@@ -174,7 +174,7 @@
         const dateRange  = (evStart && evEnd) ? `${evStart}  →  ${evEnd}` : (evStart || evEnd);
 
         if (MA.chrome && typeof MA.chrome.setHeaderLines === "function") {
-          MA.chrome.setHeaderLines(["EVENT GAMES", evTitle, dateRange]);
+          MA.chrome.setHeaderLines(["Event Rounds", evTitle, dateRange]);
         }
         if (MA.chrome && typeof MA.chrome.showBrand === "function") {
           MA.chrome.showBrand(true);
@@ -952,7 +952,7 @@ function wireFiltersModal() {
       const isEventMode = !!(window.__MA_INIT__?.eventContext || window.__INIT__?.eventContext);
       MA.chrome.setBottomNav({
         visible: isEventMode
-          ? ["home", "eventhome", "eventedit", "eventroster", "eventrounds"]
+          ? ["eventhome", "eventedit", "eventroster", "eventrounds"]
           : ["home", "favorites", "import"],
         active: isEventMode ? "eventrounds" : "admin",
         onNavigate: (id) => {

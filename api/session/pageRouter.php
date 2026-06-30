@@ -122,8 +122,11 @@ if ($action === "favorites") {
     $_SESSION["SessionFavReturnAction"] = ($returnTo !== "") ? $returnTo : "favorites";
     $_SESSION["SessionFavPlayerGHIN"] = $favPlayerGHIN;
 }
-// Clear event context when returning to standalone game admin
-if ($action === "admin") {
+// Clear event context when returning to the Admin Portal doorway (standalone
+// game admin or via the eventhome nav button from Event Rounds mode).
+// Both actions land on adminhome.php — without clearing SessionStoredEID here,
+// $isEventMode would stay true and the doorway would re-render as Event Rounds.
+if ($action === "admin" || $action === "eventhome") {
     require_once MA_SERVICES . "/context/service_ContextEvent.php";
     ServiceContextEvent::clearEventContext();
 }
