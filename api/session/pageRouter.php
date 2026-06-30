@@ -122,6 +122,11 @@ if ($action === "favorites") {
     $_SESSION["SessionFavReturnAction"] = ($returnTo !== "") ? $returnTo : "favorites";
     $_SESSION["SessionFavPlayerGHIN"] = $favPlayerGHIN;
 }
+// Clear event context when returning to standalone game admin
+if ($action === "admin") {
+    require_once MA_SERVICES . "/context/service_ContextEvent.php";
+    ServiceContextEvent::clearEventContext();
+}
 
 // ----------------------------
 // 3) Build redirect URL (carry params like mode/ggid)
