@@ -466,20 +466,27 @@ function openEventsActionsMenu() {
 function wireDoorwayControls() {
   const mainEl = document.querySelector(".maPage--adminHome");
 
-  // Per-panel controls buttons
-  const btnGamesActions = document.getElementById("btnGamesActions");
-  const btnAddGame      = document.getElementById("btnAddGame");
-  const btnEventsActions = document.getElementById("btnEventsActions");
-  const btnAddEvent     = document.getElementById("btnAddEvent");
+  // Per-panel controls buttons.
+  // openModal comes from wireFiltersModal() — passed into openActionsMenu()
+  // so the "Advanced Filters…" menu item can open the filters modal.
+  const openModal = wireFiltersModal();
 
-  if (btnGamesActions) btnGamesActions.addEventListener("click", () => openActionsMenu());
-  if (btnAddGame)      btnAddGame.addEventListener("click", () => handleGameAction({ action: "addGame" }));
+  const btnGamesActions  = document.getElementById("btnGamesActions");
+  const btnAddGame       = document.getElementById("btnAddGame");
+  const btnEventsActions = document.getElementById("btnEventsActions");
+  const btnAddEvent      = document.getElementById("btnAddEvent");
+
+  if (btnGamesActions)  btnGamesActions.addEventListener("click", () => openActionsMenu(openModal));
+  if (btnAddGame)       btnAddGame.addEventListener("click", () => handleGameAction({ action: "addGame" }));
   if (btnEventsActions) btnEventsActions.addEventListener("click", () => openEventsActionsMenu());
-  if (btnAddEvent)     btnAddEvent.addEventListener("click", () => handleEventAction({ action: "addEvent" }));
+  if (btnAddEvent)      btnAddEvent.addEventListener("click", () => handleEventAction({ action: "addEvent" }));
 
   // Tab strip — mobile panel switcher
   const tabsEl = document.getElementById("ahTabs");
-  if (!tabsEl || !mainEl) return;
+  if (!tabsEl || !mainEl) {
+    if (!tabsEl) console.warn("[admin_home] #ahTabs not found — tab strip not wired.");
+    return;
+  }
 
   function setActiveTab(tab) {
     state.activePanel = tab;
@@ -494,9 +501,9 @@ function wireDoorwayControls() {
     mainEl.classList.toggle("is-events-open", isEvents);
   }
 
-  tabsEl.addEventListener("click", e => {
-    const btn = e.target.closest(".maSegBtn");
-    if (btn && btn.dataset.tab) setActiveTab(btn.dataset.tab);
+  // Wire directly to each button — avoids any closest() traversal ambiguity
+  tabsEl.querySelectorAll(".maSegBtn[data-tab]").forEach(btn => {
+    btn.addEventListener("click", () => setActiveTab(btn.dataset.tab));
   });
 
   // Set initial tab state from server-side initialPanel
@@ -829,19 +836,19 @@ function applyPreset(presetKey) {
 
   // ---- Filters modal wiring ----
 function wireFiltersModal() {
-    const btnActions = document.getElementById('chromeBtnRight') || document.getElementById('btnOpenFilter');
+  // btnActions (old chrome right button) no longer drives the modal — the
+  // panel's #btnGamesActions does via openActionsMenu(openModal). We keep
+  // the element lookup for legacy callers but don't block on it.
   const modalOverlay = document.getElementById('modalOverlay');
+  if (!modalOverlay) return null;
 
-  const btnCloseX = document.getElementById('btnCloseModal');
-  const btnCancel = document.getElementById('btnCancelFilters');
-  const btnApply = document.getElementById('btnApplyFilters');
-
-  const segDate = document.getElementById('segDate');
-  const segAdmin = document.getElementById('segAdmin');
-  const panelDate = document.getElementById('panelDate');
+  const btnCloseX  = document.getElementById('btnCloseModal');
+  const btnCancel  = document.getElementById('btnCancelFilters');
+  const btnApply   = document.getElementById('btnApplyFilters');
+  const segDate    = document.getElementById('segDate');
+  const segAdmin   = document.getElementById('segAdmin');
+  const panelDate  = document.getElementById('panelDate');
   const panelAdmin = document.getElementById('panelAdmin');
-
-  if (!btnActions || !modalOverlay) return;
 
   // ------------------------------------------------------------
   // Segmented control
@@ -956,6 +963,10 @@ function wireFiltersModal() {
           await refreshGamesAndAdmins({ dateFrom, dateTo, selectedAdminKeys, adminScope: state.filters.adminScope });
         });
   }
+
+  // Return openModal so wireDoorwayControls() can pass it to openActionsMenu()
+  // for the "Advanced Filters…" menu item.
+  return openModal;
 
 }
 
