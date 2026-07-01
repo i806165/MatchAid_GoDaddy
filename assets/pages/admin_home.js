@@ -1023,13 +1023,13 @@ function wireFiltersModal() {
       });
     }
 
-    const btnAll = document.getElementById("btnAdminToggleAll");
-    if (btnAll) {
-      btnAll.addEventListener("click", () => {
+    // ---- ADMINS: Select all ----
+    const btnSelectAll = document.getElementById("btnAdminSelectAll");
+    if (btnSelectAll) {
+      btnSelectAll.addEventListener("click", () => {
         const allKeys = state.admins.all.map((a) => a.key).filter(Boolean);
-        const allSelected = allKeys.length && allKeys.every((k) => state.admins.selectedKeys.has(k));
         state.filters.adminScope = "CUSTOM";
-        state.admins.selectedKeys = new Set(allSelected ? [] : allKeys);
+        state.admins.selectedKeys = new Set(allKeys);
         renderAdmins({
           adminsAll: state.admins.all,
           favoriteAdminKeys: Array.from(state.admins.favoriteKeys),
@@ -1038,13 +1038,30 @@ function wireFiltersModal() {
       });
     }
 
+    // ---- ADMINS: Clear all ----
+    const btnClearAll = document.getElementById("btnAdminClearAll");
+    if (btnClearAll) {
+      btnClearAll.addEventListener("click", () => {
+        state.filters.adminScope = "CUSTOM";
+        state.admins.selectedKeys = new Set();
+        renderAdmins({
+          adminsAll: state.admins.all,
+          favoriteAdminKeys: Array.from(state.admins.favoriteKeys),
+          selectedAdminKeys: []
+        });
+      });
+    }
+
+    // ---- ADMINS: Favorites — select only favorited admins ----
     const btnFavs = document.getElementById("btnAdminToggleFavs");
     if (btnFavs) {
       btnFavs.addEventListener("click", () => {
-        const favKeys = Array.from(state.admins.favoriteKeys);
-        const favSelected = favKeys.length && favKeys.every((k) => state.admins.selectedKeys.has(k));
+        const favKeys = Array.from(state.admins.favoriteKeys).filter(Boolean);
+        // Fall back to all if no favorites exist
+        const keys = favKeys.length ? favKeys
+          : state.admins.all.map((a) => a.key).filter(Boolean);
         state.filters.adminScope = "CUSTOM";
-        state.admins.selectedKeys = new Set(favSelected ? [] : favKeys);
+        state.admins.selectedKeys = new Set(keys);
         renderAdmins({
           adminsAll: state.admins.all,
           favoriteAdminKeys: Array.from(state.admins.favoriteKeys),

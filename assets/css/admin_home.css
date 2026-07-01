@@ -341,3 +341,39 @@
   color: var(--ink);
   font-weight: 900;
 }
+
+/* ==========================================================================
+   9) Admin picker header — text link pattern
+   Replaces the old icon-button grid (44px 1fr 44px) with a label + link row.
+   Matches the Select all / Clear all / Favorites pattern from player_home.js.
+   ========================================================================== */
+
+/* Override the shared grid layout */
+.maAdminPick__hdr{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.maAdminPick__hdrLabel{
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  color: var(--mutedText);
+  flex: 0 0 auto;
+}
+
+.maAdminPick__hdrLinks{
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.maAdminPick__hdrDiv{
+  color: var(--borderSubtle);
+  font-size: 12px;
+  user-select: none;
+}

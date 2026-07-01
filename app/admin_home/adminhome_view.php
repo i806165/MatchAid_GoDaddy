@@ -140,13 +140,14 @@
         </div>
         <div id="adminList" class="maAdminPick">
           <div class="maAdminPick__hdr">
-            <button id="btnAdminToggleAll" class="maAdminPick__hdrBtn" type="button" aria-label="Select all / none">
-              <div class="maCheckbox"></div>
-            </button>
-            <div class="maAdminPick__hdrName">Name</div>
-            <button id="btnAdminToggleFavs" class="maAdminPick__hdrBtn" type="button" aria-label="Select favorites / clear favorites">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#0066CC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.84-8.84 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
-            </button>
+            <div class="maAdminPick__hdrLabel">Admins</div>
+            <div class="maAdminPick__hdrLinks">
+              <button id="btnAdminSelectAll" class="btnLink" type="button">Select all</button>
+              <span class="maAdminPick__hdrDiv">|</span>
+              <button id="btnAdminClearAll" class="btnLink" type="button">Clear all</button>
+              <span class="maAdminPick__hdrDiv">|</span>
+              <button id="btnAdminToggleFavs" class="btnLink" type="button">Favorites</button>
+            </div>
           </div>
           <div id="adminRows" class="maAdminPick__rows"></div>
         </div>
