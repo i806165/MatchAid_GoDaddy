@@ -936,11 +936,8 @@ function wireFiltersModal() {
   // ------------------------------------------------------------
   // wire open + segmented control + buttons
   // ------------------------------------------------------------
-  btnActions.addEventListener('click', (e) => {
-    e.preventDefault();
-    openActionsMenu(openModal);   // <-- opens interim Actions menu; menu item "filters" opens modal
-  });
-
+  // Note: modal open is now triggered via openActionsMenu(openModal) in
+  // wireDoorwayControls() — no direct button listener needed here.
 
   if (segDate) segDate.addEventListener('click', () => setPanel('date'));
   if (segAdmin) segAdmin.addEventListener('click', () => setPanel('admin'));
