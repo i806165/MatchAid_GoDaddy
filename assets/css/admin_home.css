@@ -210,12 +210,7 @@
 /* Tab strip (#ahTabs .maControlArea) — lives outside <main> as a peer of
    the scrollable body, same pattern as #gpTabs/.maControlArea in
    gamepairings.php. .maControlArea from ma_shared.css handles padding/bg.
-   Mobile only — hidden on desktop where maPanels--2 shows both panels. */
-@media (min-width: 901px){
-  #ahTabs{
-    display: none;
-  }
-}
+   Always visible — handles Games/Events/Both on desktop, Games/Events on mobile. */
    Inverted from inner card headers: white background, brand green text.
    This creates clear hierarchy: panel = frame (light), card = content (dark). */
 .maPage--adminHome .maPanel__hdr{
