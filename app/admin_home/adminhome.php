@@ -184,6 +184,15 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
 <body>
   <?php include __DIR__ . '/../../includes/chromeHeader.php'; ?>
 
+  <?php if (!$isEventMode): ?>
+  <div class="maControlArea" id="ahTabs" role="region" aria-label="Portal panels">
+    <div class="maSeg" role="tablist" aria-label="Switch panel">
+      <button class="maSegBtn<?= $initialPanel !== 'events' ? ' is-active' : '' ?>" data-tab="games" type="button" role="tab" aria-selected="<?= $initialPanel !== 'events' ? 'true' : 'false' ?>">Games</button>
+      <button class="maSegBtn<?= $initialPanel === 'events' ? ' is-active' : '' ?>" data-tab="events" type="button" role="tab" aria-selected="<?= $initialPanel === 'events' ? 'true' : 'false' ?>">Events</button>
+    </div>
+  </div>
+  <?php endif; ?>
+
   <main class="maPage<?= !$isEventMode ? ' maPage--multi maPage--adminHome' : '' ?><?= ($initialPanel === 'events') ? ' is-events-open' : '' ?>" role="main">
     <?php include __DIR__ . '/adminhome_view.php'; ?>
   </main>

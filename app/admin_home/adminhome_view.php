@@ -1,24 +1,14 @@
 <!-- /app/admin_home/adminhome_view.php
      Notes:
      - Phase 3 rework: follows .maPanels/.maPanel multi-panel pattern from
-       ma_shared.css. Mobile panel switching uses a .maSeg tab strip (#ahTabs)
-       above the panels — same pattern as game_pairings.js. Desktop shows both
-       panels side by side, tab strip hidden.
+       ma_shared.css. Mobile panel switching is handled by #ahTabs in
+       adminhome.php (outside <main>, peer of the scrollable body) — same
+       pattern as gamepairings.php's #gpTabs in .maControlArea.
      - In Event Rounds mode ($isEventMode), only the single Games panel
-       markup renders — no .maPanels wrapper, no Events panel, no tab strip.
+       markup renders — no .maPanels wrapper, no Events panel.
 -->
 
 <?php if (!$isEventMode): ?>
-
-<!-- Page-level tab strip — mobile only (hidden >=900px via admin_home.css).
-     Lives in its own container, never inside a panel, so re-rendering panel
-     contents never touches this element — same sticky-state rule as pairings. -->
-<div id="ahTabs" class="maCanvasControls">
-  <div class="maSeg" role="tablist" aria-label="Switch panel">
-    <button class="maSegBtn is-active" data-tab="games" type="button" role="tab" aria-selected="true">Games</button>
-    <button class="maSegBtn" data-tab="events" type="button" role="tab" aria-selected="false">Events</button>
-  </div>
-</div>
 
 <div class="maPanels maPanels--2">
 
