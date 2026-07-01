@@ -42,6 +42,8 @@
     scheduleHint: document.getElementById("emScheduleHint"),
     scoringMethod: document.getElementById("emScoringMethod"),
     tiebreakMethod: document.getElementById("emTiebreakMethod"),
+    pairingMode: document.getElementById("emPairingMode"),
+    pairingModeHint: document.getElementById("emPairingModeHint"),
     scoringPreview: document.getElementById("emScoringPreview"),
   };
 
@@ -159,6 +161,16 @@
     if (el.scoringPreview) el.scoringPreview.textContent = msg;
   }
 
+  function renderPairingModeHint() {
+    if (!el.pairingModeHint) return;
+    const mode = el.pairingMode?.value || "none";
+    if (mode === "fixed") {
+      el.pairingModeHint.textContent = "Pairings set on the Event Roster will be applied to all rounds. Round-level pairing changes will be locked.";
+    } else {
+      el.pairingModeHint.textContent = "Players will be paired independently for each round.";
+    }
+  }
+
   function renderScheduleHint() {
     const s = el.startDate.value || "";
     const e = el.endDate.value || "";
@@ -185,9 +197,11 @@
     el.endDate.value = String(ev.dbEvents_EndDate || ev.endDateISO || el.startDate.value || todayYmd()).slice(0, 10);
     el.scoringMethod.value = ev.dbEvents_ScoringMethod || "";
     el.tiebreakMethod.value = ev.dbEvents_TiebreakMethod || "";
+    if (el.pairingMode) el.pairingMode.value = ev.dbEvents_PairingMode || "none";
 
     renderScheduleHint();
     renderScoringPreview();
+    renderPairingModeHint();
   }
 
   function collectPatch() {
@@ -204,7 +218,8 @@
       dbEvents_ScoringMethod: method,
       dbEvents_ScoringConfig: method ? JSON.stringify(defaultScoringConfig(method)) : "",
       dbEvents_TiebreakMethod: tb,
-      dbEvents_TiebreakConfig: tb ? JSON.stringify(defaultTiebreakConfig(tb)) : ""
+      dbEvents_TiebreakConfig: tb ? JSON.stringify(defaultTiebreakConfig(tb)) : "",
+      dbEvents_PairingMode: el.pairingMode?.value || "none"
     };
   }
 
@@ -331,17 +346,20 @@
       el.startDate,
       el.endDate,
       el.scoringMethod,
-      el.tiebreakMethod
+      el.tiebreakMethod,
+      el.pairingMode
     ].forEach(node => {
       if (!node) return;
       node.addEventListener("input", () => {
         renderScheduleHint();
         renderScoringPreview();
+        renderPairingModeHint();
         setDirty(true);
       });
       node.addEventListener("change", () => {
         renderScheduleHint();
         renderScoringPreview();
+        renderPairingModeHint();
         setDirty(true);
       });
     });

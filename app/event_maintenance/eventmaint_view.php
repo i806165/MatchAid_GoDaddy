@@ -101,6 +101,18 @@
         </div>
       </div>
 
+      <div class="maFieldRow">
+        <div class="maField">
+          <label class="maLabel" for="emPairingMode">Pairing Mode</label>
+          <select id="emPairingMode" class="maTextInput">
+            <option value="none">Round Level — pairings set independently per round</option>
+            <option value="fixed">Event Level — fixed pairings set on the Event Roster, applied to all rounds</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="emHint" id="emPairingModeHint"></div>
+
       <div class="emScoringPreview" id="emScoringPreview"></div>
     </div>
   </section>

@@ -239,6 +239,7 @@ final class ServiceDbEvents
       "dbEvents_ScoringConfig",
       "dbEvents_TiebreakMethod",
       "dbEvents_TiebreakConfig",
+      "dbEvents_PairingMode",
     ];
 
     foreach ($allow as $k) {
