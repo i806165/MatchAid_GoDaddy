@@ -211,6 +211,8 @@
    the scrollable body, same pattern as #gpTabs/.maControlArea in
    gamepairings.php. .maControlArea from ma_shared.css handles padding/bg.
    Always visible — handles Games/Events/Both on desktop, Games/Events on mobile. */
+
+/* Panel header bar — outer structural frame.
    Inverted from inner card headers: white background, brand green text.
    This creates clear hierarchy: panel = frame (light), card = content (dark). */
 .maPage--adminHome .maPanel__hdr{
