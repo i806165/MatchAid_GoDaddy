@@ -124,6 +124,7 @@
     if (!_state.selected.size) return;
 
     const selected = [..._state.selected];
+    const hadExplicitTarget = !!_state.targetPairing;
     const targetId = _state.targetPairing || nextPairingId();
 
     // Find next available position within this pairing
@@ -138,7 +139,11 @@
     });
 
     _state.selected.clear();
-    _state.targetPairing = targetId; // keep targeting the same card
+    // Only keep targeting if the user explicitly clicked a card.
+    // If we auto-created a new pairing, clear target so the
+    // next Assign creates another new pairing rather than adding
+    // to this one.
+    if (!hadExplicitTarget) _state.targetPairing = "";
     markDirty();
     renderAll();
   }
