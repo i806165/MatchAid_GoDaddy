@@ -240,6 +240,8 @@ final class ServiceDbEvents
       "dbEvents_TiebreakMethod",
       "dbEvents_TiebreakConfig",
       "dbEvents_PairingMode",
+      "dbEvents_HCEffectivity",
+      "dbEvents_HCEffectivityDate",
     ];
 
     foreach ($allow as $k) {

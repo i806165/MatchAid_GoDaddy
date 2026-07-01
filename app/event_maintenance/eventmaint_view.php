@@ -101,6 +101,19 @@
         </div>
       </div>
 
+      <div class="emScoringPreview" id="emScoringPreview"></div>
+    </div>
+  </section>
+
+  <!-- CARD 4 — EVENT SETTINGS -->
+  <section class="maCard" aria-label="Event Settings">
+    <header class="maCard__hdr">
+      <div class="maCard__title">EVENT SETTINGS</div>
+    </header>
+
+    <div class="maCard__body">
+
+      <!-- Pairing Mode -->
       <div class="maFieldRow">
         <div class="maField">
           <label class="maLabel" for="emPairingMode">Pairing Mode</label>
@@ -110,10 +123,32 @@
           </select>
         </div>
       </div>
-
       <div class="emHint" id="emPairingModeHint"></div>
 
-      <div class="emScoringPreview" id="emScoringPreview"></div>
+      <!-- Handicap Effectivity -->
+      <div class="maFieldRow" style="margin-top: 14px;">
+        <div class="maField">
+          <label class="maLabel" for="emHCEffectivity">Handicap Effectivity</label>
+          <select id="emHCEffectivity" class="maTextInput">
+            <option value="PlayDate">Play Date — handicap index as of the event start date</option>
+            <option value="Low3">3-Month Low — lowest index over the past 3 months</option>
+            <option value="Low6">6-Month Low — lowest index over the past 6 months</option>
+            <option value="Low12">12-Month Low — lowest index over the past 12 months</option>
+            <option value="Date">Choose Date — specify an exact date to lock the index</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Effectivity Date — shown only when "Choose Date" is selected -->
+      <div class="maFieldRow" id="emHCEffectivityDateWrap" style="display:none;">
+        <div class="maField">
+          <label class="maLabel" for="emHCEffectivityDate">Effectivity Date</label>
+          <input id="emHCEffectivityDate" class="maTextInput" type="date" />
+        </div>
+      </div>
+
+      <div class="emHint" id="emHCEffectivityHint"></div>
+
     </div>
   </section>
 

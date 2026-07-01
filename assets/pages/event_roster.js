@@ -21,6 +21,8 @@
     event:      init.event   || {},
     context:    init.context || {},
     portal:     init.portal  || "",
+    pairingMode:   String(init.pairingMode   || "none"),
+    hcEffectivity: String(init.hcEffectivity || "PlayDate"),
     roster:     [],                            // db_EventPlayers rows
     favorites:  Array.isArray(init.favorites) ? init.favorites : [],
     groups:     Array.isArray(init.groups)    ? init.groups    : [],
@@ -305,6 +307,10 @@
       ${sorts.map(s => `<button class="maSeg--sortBtn ${state.rosterSort === s.id ? "is-active" : ""}" type="button" data-roster-sort="${esc(s.id)}">${esc(s.label)}</button>`).join("")}
     </div>`;
 
+    const pairingsBtn = state.pairingMode === "fixed"
+      ? `<button id="erBtnManagePairings" class="btn btnSecondary" type="button">Manage Pairings</button>`
+      : "";
+
     el.canvasControls.innerHTML = `
       <div class="gpCanvasControls">
         <div style="display:flex; align-items:center; gap:6px;">
@@ -312,7 +318,9 @@
           ${sortStrip}
         </div>
         <div class="gpCanvasControls__right">
+          <button id="erBtnRefreshHI" class="btn btnSecondary" type="button">Refresh Handicaps</button>
           <button id="erBtnManageTeams" class="btn btnSecondary" type="button">Manage Teams</button>
+          ${pairingsBtn}
         </div>
       </div>`;
 
@@ -326,6 +334,67 @@
 
     const teamsBtn = document.getElementById("erBtnManageTeams");
     if (teamsBtn) teamsBtn.onclick = onManageTeams;
+
+    const refreshBtn = document.getElementById("erBtnRefreshHI");
+    if (refreshBtn) refreshBtn.onclick = onRefreshHandicaps;
+
+    const pairBtn = document.getElementById("erBtnManagePairings");
+    if (pairBtn) pairBtn.onclick = onManagePairings;
+  }
+
+  // ── Refresh Handicaps ────────────────────────────────────────────────────────
+  async function onRefreshHandicaps() {
+    MA.setStatus("Refreshing handicaps…", "info");
+    try {
+      const res = await MA.postJson(MA.paths.refreshEventRosterHI, {});
+      if (!res?.ok) {
+        MA.setStatus(res?.message || "Unable to refresh handicaps.", "warn");
+        return;
+      }
+      state.roster = Array.isArray(res.payload?.roster) ? res.payload.roster : state.roster;
+      renderRoster();
+      MA.setStatus(res.message || "Handicaps refreshed.", "success");
+    } catch (e) {
+      console.error(e);
+      MA.setStatus(String(e.message || e), "danger");
+    }
+  }
+
+  // ── Manage Pairings ──────────────────────────────────────────────────────────
+  function onManagePairings() {
+    if (!MA.createEventPairings || typeof MA.createEventPairings.open !== "function") {
+      MA.setStatus("Manage Pairings module not loaded.", "warn");
+      return;
+    }
+
+    // Map roster rows to the shape the module expects
+    const players = (state.roster || []).map(p => ({
+      ghin:       safe(p.dbEventPlayers_GHIN),
+      name:       safe(p.dbEventPlayers_Name),
+      lname:      safe(p.dbEventPlayers_LName),
+      gender:     safe(p.dbEventPlayers_Gender),
+      hi:         safe(p.dbEventPlayers_HI),
+      teamKey:    safe(p.dbEventPlayers_TeamKey),
+      pairingId:  safe(p.dbEventPlayers_PairingID  || "000"),
+      pairingPos: safe(p.dbEventPlayers_PairingPos || ""),
+    }));
+
+    MA.createEventPairings.open({
+      players,
+      apiSavePairings: MA.paths.saveEventRosterPairings,
+      onApply(updatedPlayers) {
+        // Write updated pairingId/pairingPos back to state.roster
+        updatedPlayers.forEach(up => {
+          const row = state.roster.find(r => safe(r.dbEventPlayers_GHIN) === up.ghin);
+          if (row) {
+            row.dbEventPlayers_PairingID  = up.pairingId;
+            row.dbEventPlayers_PairingPos = up.pairingPos;
+          }
+        });
+        renderRoster();
+        MA.setStatus("Pairings saved.", "success");
+      }
+    });
   }
 
   // ── Manage Teams ────────────────────────────────────────────────────────────

@@ -34,6 +34,8 @@ try {
         "roster"   => $roster,
         "favorites" => $favorites,
         "groups"    => $groups,
+        "pairingMode"   => trim((string)($event["dbEvents_PairingMode"]   ?? "none")),
+        "hcEffectivity" => trim((string)($event["dbEvents_HCEffectivity"] ?? "PlayDate")),
         "context"  => [
             "userGHIN"   => $userGHIN,
             "userName"   => (string)($_SESSION["SessionUserName"] ?? $_SESSION["SessionGHINUserName"] ?? ""),
@@ -61,6 +63,8 @@ $paths = [
     "getEventRoster"         => MA_ROUTE_API_EVENT_ROSTER . "/getEventRoster.php",
     "saveEventRosterPlayer"  => MA_ROUTE_API_EVENT_ROSTER . "/saveEventRosterPlayer.php",
     "deleteEventRosterPlayer"=> MA_ROUTE_API_EVENT_ROSTER . "/deleteEventRosterPlayer.php",
+    "refreshEventRosterHI"   => MA_ROUTE_API_EVENT_ROSTER . "/refreshEventRosterHI.php",
+    "saveEventRosterPairings"=> MA_ROUTE_API_EVENT_ROSTER . "/saveEventRosterPairings.php",
     "favPlayersInit"         => MA_ROUTE_API_FAVORITE_PLAYERS . "/initFavPlayers.php",
     "ghinPlayerSearch"       => MA_ROUTE_API_GHIN . "/searchPlayers.php",
 ];
@@ -116,6 +120,7 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
     <script src="<?= ma_asset('/assets/modules/manage_teams.js') ?>"></script>
     <script src="<?= ma_asset('/assets/modules/pageHelp.js') ?>"></script>
     <script src="<?= ma_asset('/assets/modules/module_parseImportPlayers.js') ?>"></script>
+    <script src="<?= ma_asset('/assets/modules/module_createEventPairings.js') ?>"></script>
     <script src="<?= ma_asset('/assets/pages/event_roster.js') ?>"></script>
 </body>
 </html>

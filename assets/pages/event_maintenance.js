@@ -42,9 +42,14 @@
     scheduleHint: document.getElementById("emScheduleHint"),
     scoringMethod: document.getElementById("emScoringMethod"),
     tiebreakMethod: document.getElementById("emTiebreakMethod"),
+    scoringPreview: document.getElementById("emScoringPreview"),
+    // EVENT SETTINGS
     pairingMode: document.getElementById("emPairingMode"),
     pairingModeHint: document.getElementById("emPairingModeHint"),
-    scoringPreview: document.getElementById("emScoringPreview"),
+    hcEffectivity: document.getElementById("emHCEffectivity"),
+    hcEffectivityDate: document.getElementById("emHCEffectivityDate"),
+    hcEffectivityDateWrap: document.getElementById("emHCEffectivityDateWrap"),
+    hcEffectivityHint: document.getElementById("emHCEffectivityHint"),
   };
 
   const init = window.__MA_INIT__ || window.__INIT__ || {};
@@ -164,10 +169,25 @@
   function renderPairingModeHint() {
     if (!el.pairingModeHint) return;
     const mode = el.pairingMode?.value || "none";
-    if (mode === "fixed") {
-      el.pairingModeHint.textContent = "Pairings set on the Event Roster will be applied to all rounds. Round-level pairing changes will be locked.";
-    } else {
-      el.pairingModeHint.textContent = "Players will be paired independently for each round.";
+    el.pairingModeHint.textContent = mode === "fixed"
+      ? "Pairings set on the Event Roster will be applied to all rounds. Round-level pairing changes will be locked."
+      : "Players will be paired independently for each round.";
+  }
+
+  function renderHCEffectivityHint() {
+    if (!el.hcEffectivityHint) return;
+    const eff = el.hcEffectivity?.value || "PlayDate";
+    const hints = {
+      PlayDate: "Handicap index as of the event start date.",
+      Low3:     "Lowest index over the past 3 months.",
+      Low6:     "Lowest index over the past 6 months.",
+      Low12:    "Lowest index over the past 12 months.",
+      Date:     "Specify an exact date to lock the index.",
+    };
+    el.hcEffectivityHint.textContent = hints[eff] || "";
+    // Show/hide the date field
+    if (el.hcEffectivityDateWrap) {
+      el.hcEffectivityDateWrap.style.display = (eff === "Date") ? "" : "none";
     }
   }
 
@@ -197,11 +217,17 @@
     el.endDate.value = String(ev.dbEvents_EndDate || ev.endDateISO || el.startDate.value || todayYmd()).slice(0, 10);
     el.scoringMethod.value = ev.dbEvents_ScoringMethod || "";
     el.tiebreakMethod.value = ev.dbEvents_TiebreakMethod || "";
+    // EVENT SETTINGS
     if (el.pairingMode) el.pairingMode.value = ev.dbEvents_PairingMode || "none";
+    if (el.hcEffectivity) el.hcEffectivity.value = ev.dbEvents_HCEffectivity || "PlayDate";
+    if (el.hcEffectivityDate && ev.dbEvents_HCEffectivityDate) {
+      el.hcEffectivityDate.value = String(ev.dbEvents_HCEffectivityDate).slice(0, 10);
+    }
 
     renderScheduleHint();
     renderScoringPreview();
     renderPairingModeHint();
+    renderHCEffectivityHint();
   }
 
   function collectPatch() {
@@ -219,7 +245,12 @@
       dbEvents_ScoringConfig: method ? JSON.stringify(defaultScoringConfig(method)) : "",
       dbEvents_TiebreakMethod: tb,
       dbEvents_TiebreakConfig: tb ? JSON.stringify(defaultTiebreakConfig(tb)) : "",
-      dbEvents_PairingMode: el.pairingMode?.value || "none"
+      // EVENT SETTINGS
+      dbEvents_PairingMode: el.pairingMode?.value || "none",
+      dbEvents_HCEffectivity: el.hcEffectivity?.value || "PlayDate",
+      dbEvents_HCEffectivityDate: (el.hcEffectivity?.value === "Date")
+        ? (el.hcEffectivityDate?.value || "")
+        : ""
     };
   }
 
@@ -347,19 +378,23 @@
       el.endDate,
       el.scoringMethod,
       el.tiebreakMethod,
-      el.pairingMode
+      el.pairingMode,
+      el.hcEffectivity,
+      el.hcEffectivityDate
     ].forEach(node => {
       if (!node) return;
       node.addEventListener("input", () => {
         renderScheduleHint();
         renderScoringPreview();
         renderPairingModeHint();
+        renderHCEffectivityHint();
         setDirty(true);
       });
       node.addEventListener("change", () => {
         renderScheduleHint();
         renderScoringPreview();
         renderPairingModeHint();
+        renderHCEffectivityHint();
         setDirty(true);
       });
     });
