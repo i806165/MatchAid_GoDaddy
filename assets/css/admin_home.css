@@ -270,19 +270,36 @@
   left: 10px;
 }
 
-/* Mobile panel visibility — toggled by tab strip.
-   On desktop both panels show via maPanels--2 grid (no JS needed).
-   On mobile only the active panel shows. */
+/* Desktop single-panel states — user chose Games or Events tab.
+   "Both" is the default: no class needed, maPanels--2 grid shows both. */
+.maPage--adminHome.is-games-only .maPanel--secondary{
+  display: none;
+}
+
+.maPage--adminHome.is-events-only .maPanel--primary{
+  display: none;
+}
+
+/* Mobile panel visibility — three states driven by tab strip.
+   "both" is desktop-only; on mobile only games or events shows.
+   Default (no class) = games visible, matches server-side "both" default
+   which renders correctly on desktop via the maPanels--2 grid. */
 @media (max-width: 900px){
+  /* Hide Both tab on mobile — not a valid option at this width */
+  .ahTabBoth{
+    display: none;
+  }
+
+  /* Default mobile state: Games visible, Events hidden */
   .maPage--adminHome .maPanel--secondary{
     display: none;
   }
 
-  .maPage--adminHome.is-events-open .maPanel--secondary{
+  /* Events tab selected */
+  .maPage--adminHome.is-events-only .maPanel--secondary{
     display: flex;
   }
-
-  .maPage--adminHome.is-events-open .maPanel--primary{
+  .maPage--adminHome.is-events-only .maPanel--primary{
     display: none;
   }
 }

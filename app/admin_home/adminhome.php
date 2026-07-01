@@ -134,15 +134,22 @@ $eventsContext = [
 $eventsInitPayload = hydrateEventsList($eventsContext, ["mode" => $evMode]);
 $initPayload['eventsInit'] = $eventsInitPayload;
 
-// 5) Initial panel selection — the "eventhome" pageRouter action now lands here
-//    (instead of the retired standalone eventshome.php) and passes ?mode=events
-//    so the doorway opens with the Events panel pre-opened on mobile (desktop
-//    always shows both). "admin"/bottom-nav default lands on Games. This
-//    $_GET['mode'] is unrelated to the dateFrom/dateTo $mode used above for
-//    AP_FILTER* restore — that's session-scoped, this is a one-shot query
-//    param read only at initial render.
+// 5) Initial panel selection.
+//    Priority order:
+//    a) ?mode=events query param (pageRouter "eventhome" action) — one-shot
+//    b) ADMIN_PANEL_VIEW session var (user's persisted preference)
+//    c) Default: "both"
+$savedPanelView = strtolower(trim((string)($_SESSION["ADMIN_PANEL_VIEW"] ?? "")));
+if (!in_array($savedPanelView, ["games", "events", "both"], true)) {
+  $savedPanelView = "both";
+}
+
+// ?mode=events overrides the saved preference for this load only
+// (used by pageRouter "eventhome" action to land on the Events panel)
 if (strtolower(trim((string)($_GET['mode'] ?? ''))) === 'events') {
   $initialPanel = 'events';
+} else {
+  $initialPanel = $savedPanelView;
 }
 $initPayload['initialPanel'] = $initialPanel;
 
@@ -150,13 +157,14 @@ $initPayload['initialPanel'] = $initialPanel;
 
 // Provide path constants to JS
 $paths = [
-  "apiAdminGames" => MA_ROUTE_API_ADMIN_GAMES,
-  "apiEventsHome" => defined('MA_ROUTE_API_EVENTS_HOME') ? MA_ROUTE_API_EVENTS_HOME : "/api/events_home",
-  "apiSession"    => MA_ROUTE_API_SESSION,
-  "routerApi"     => MA_ROUTE_API_ROUTER,
-  "apiNotify"     => MA_ROUTE_API_MESSAGING,
-  "apiRosterView" => MA_ROUTE_API_ROSTER_VIEW,
-  "siteUrl"       => MA_SITE_URL,
+  "apiAdminGames"   => MA_ROUTE_API_ADMIN_GAMES,
+  "apiEventsHome"   => defined('MA_ROUTE_API_EVENTS_HOME') ? MA_ROUTE_API_EVENTS_HOME : "/api/events_home",
+  "apiSetPanelView" => MA_ROUTE_API_ADMIN_GAMES . "/setPanelView.php",
+  "apiSession"      => MA_ROUTE_API_SESSION,
+  "routerApi"       => MA_ROUTE_API_ROUTER,
+  "apiNotify"       => MA_ROUTE_API_MESSAGING,
+  "apiRosterView"   => MA_ROUTE_API_ROSTER_VIEW,
+  "siteUrl"         => MA_SITE_URL,
 ];
 
 // Chrome values
@@ -185,10 +193,11 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   <?php include __DIR__ . '/../../includes/chromeHeader.php'; ?>
 
   <?php if (!$isEventMode): ?>
-  <div class="maControlArea" id="ahTabs" role="region" aria-label="Portal panels">
+  <div id="ahTabs" class="maControlArea" role="region" aria-label="Portal panels">
     <div class="maSeg" role="tablist" aria-label="Switch panel">
-      <button class="maSegBtn<?= $initialPanel !== 'events' ? ' is-active' : '' ?>" data-tab="games" type="button" role="tab" aria-selected="<?= $initialPanel !== 'events' ? 'true' : 'false' ?>">Games</button>
+      <button class="maSegBtn<?= $initialPanel === 'games' ? ' is-active' : '' ?>" data-tab="games" type="button" role="tab" aria-selected="<?= $initialPanel === 'games' ? 'true' : 'false' ?>">Games</button>
       <button class="maSegBtn<?= $initialPanel === 'events' ? ' is-active' : '' ?>" data-tab="events" type="button" role="tab" aria-selected="<?= $initialPanel === 'events' ? 'true' : 'false' ?>">Events</button>
+      <button class="maSegBtn ahTabBoth<?= $initialPanel === 'both' ? ' is-active' : '' ?>" data-tab="both" type="button" role="tab" aria-selected="<?= $initialPanel === 'both' ? 'true' : 'false' ?>">Both</button>
     </div>
   </div>
   <?php endif; ?>
@@ -218,7 +227,8 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   window.MA.routes = {
     router: window.MA.paths.routerApi,
     apiAdminGames: window.MA.paths.apiAdminGames,
-    apiEventsHome: window.MA.paths.apiEventsHome
+    apiEventsHome: window.MA.paths.apiEventsHome,
+    apiSetPanelView: window.MA.paths.apiSetPanelView
   };
 </script>
 

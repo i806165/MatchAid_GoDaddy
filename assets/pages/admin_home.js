@@ -8,7 +8,7 @@
  * it mounts MA.gamesSource (module_sourceGames.js) against #cards (inside
  * .maPanel--primary) AND MA.eventsSource (module_sourceEvents.js) against
  * #eventCards (inside .maPanel--secondary), and owns the mobile open/close
- * toggle between them (.is-events-open on .maPage--adminHome — see
+ * toggle between them (.is-games-only / .is-events-only on .maPage--adminHome — see
  * wireDoorwayControls()). In Event Rounds mode (state.isEventMode,
  * eid-scoped), only the Games panel exists in the DOM — no .maPanels
  * wrapper, no Events panel — so all events-side code below is a no-op there.
@@ -457,18 +457,15 @@ function openEventsActionsMenu() {
   MA.ui.openActionsMenu("Actions", items, "Events");
 }
 
-// Wires each panel's controls-row buttons and the #ahTabs mobile tab strip.
-// Tab strip mirrors game_pairings.js's setActiveTab pattern exactly:
-// - delegated click on #ahTabs container
-// - toggles is-active on .maSegBtn[data-tab] buttons
-// - toggles is-events-open on .maPage--adminHome for CSS panel visibility
+// Wires each panel's controls-row buttons and the #ahTabs mobile/desktop
+// tab strip. Three states: "games", "events", "both".
+// "Both" is desktop-only (hidden on mobile via CSS .ahTabBoth).
+// Persists the user's choice to ADMIN_PANEL_VIEW via setPanelView.php.
 // No-op (and safe) in Event Rounds mode — none of these elements exist in DOM.
 function wireDoorwayControls() {
   const mainEl = document.querySelector(".maPage--adminHome");
 
-  // Per-panel controls buttons.
-  // openModal comes from wireFiltersModal() — passed into openActionsMenu()
-  // so the "Advanced Filters…" menu item can open the filters modal.
+  // Per-panel controls buttons
   const openModal = wireFiltersModal();
 
   const btnGamesActions  = document.getElementById("btnGamesActions");
@@ -481,33 +478,60 @@ function wireDoorwayControls() {
   if (btnEventsActions) btnEventsActions.addEventListener("click", () => openEventsActionsMenu());
   if (btnAddEvent)      btnAddEvent.addEventListener("click", () => handleEventAction({ action: "addEvent" }));
 
-  // Tab strip — mobile panel switcher
+  // Tab strip
   const tabsEl = document.getElementById("ahTabs");
   if (!tabsEl || !mainEl) {
     if (!tabsEl) console.warn("[admin_home] #ahTabs not found — tab strip not wired.");
     return;
   }
 
+  const apiSetPanelView = MA.routes?.apiSetPanelView || "/api/admin_home/setPanelView.php";
+
+  async function persistPanelView(view) {
+    try {
+      if (typeof MA.postJson === "function") {
+        await MA.postJson(apiSetPanelView, { view });
+      } else {
+        await fetch(apiSetPanelView, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ payload: { view } })
+        });
+      }
+    } catch (e) {
+      console.warn("[admin_home] setPanelView failed:", e);
+    }
+  }
+
   function setActiveTab(tab) {
     state.activePanel = tab;
-    const isEvents = tab === "events";
 
+    // Update tab button states
     tabsEl.querySelectorAll(".maSegBtn").forEach(btn => {
       const on = btn.dataset.tab === tab;
       btn.classList.toggle("is-active", on);
       btn.setAttribute("aria-selected", String(on));
     });
 
-    mainEl.classList.toggle("is-events-open", isEvents);
+    // Apply panel visibility via CSS classes on the page root
+    mainEl.classList.remove("is-games-only", "is-events-only");
+    if (tab === "games")  mainEl.classList.add("is-games-only");
+    if (tab === "events") mainEl.classList.add("is-events-only");
+    // "both" — no class needed, default grid shows both panels
   }
 
-  // Wire directly to each button — avoids any closest() traversal ambiguity
+  // Wire directly to each button
   tabsEl.querySelectorAll(".maSegBtn[data-tab]").forEach(btn => {
-    btn.addEventListener("click", () => setActiveTab(btn.dataset.tab));
+    btn.addEventListener("click", () => {
+      const tab = btn.dataset.tab;
+      setActiveTab(tab);
+      persistPanelView(tab);
+    });
   });
 
-  // Set initial tab state from server-side initialPanel
-  const initialPanel = (window.__MA_INIT__ || window.__INIT__ || {}).initialPanel || "games";
+  // Set initial state from server-side initialPanel (baked in from session)
+  const initialPanel = (window.__MA_INIT__ || window.__INIT__ || {}).initialPanel || "both";
   setActiveTab(initialPanel);
 }
 
