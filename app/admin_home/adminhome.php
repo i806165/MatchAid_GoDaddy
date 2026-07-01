@@ -185,8 +185,8 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/assets/css/ma_shared.css">
-  <link rel="stylesheet" href="/assets/css/admin_home.css?v=1">
+  <link rel="stylesheet" href="<?= ma_asset('/assets/css/ma_shared.css') ?>">
+  <link rel="stylesheet" href="<?= ma_asset('/assets/css/admin_home.css') ?>">
 
 </head>
 <body>
@@ -202,7 +202,7 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   </div>
   <?php endif; ?>
 
-  <main class="maPage<?= !$isEventMode ? ' maPage--multi maPage--adminHome' : '' ?><?= ($initialPanel === 'events') ? ' is-events-open' : '' ?>" role="main">
+  <main class="maPage<?= !$isEventMode ? ' maPage--multi maPage--adminHome' : '' ?><?= ($initialPanel === 'games') ? ' is-games-only' : ($initialPanel === 'events' ? ' is-events-only' : '') ?>" role="main">
     <?php include __DIR__ . '/adminhome_view.php'; ?>
   </main>
 
@@ -232,15 +232,15 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   };
 </script>
 
-  <script src="/assets/js/ma_shared.js"></script>
-  <script src="/assets/modules/actions_menu.js?v=1"></script>
-  <script src="/assets/modules/addCalendar.js?v=1"></script>
-  <script src="/assets/modules/composeEmail.js?v=1"></script>
-  <script src="/assets/modules/player_notifications.js?v=1"></script>
-  <script src="/assets/modules/game_players_display.js?v=1"></script>
-  <script src="/assets/modules/pageHelp.js?v=1"></script>
-  <script src="/assets/modules/module_sourceGames.js?v=1"></script>
-  <script src="/assets/modules/module_sourceEvents.js?v=1"></script>
-  <script src="/assets/pages/admin_home.js"></script>
+  <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/addCalendar.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/composeEmail.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/player_notifications.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/game_players_display.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/pageHelp.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_sourceGames.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_sourceEvents.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/pages/admin_home.js') ?>"></script>
 </body>
 </html>
