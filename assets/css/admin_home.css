@@ -268,13 +268,17 @@
 }
 
 /* Desktop single-panel states — user chose Games or Events tab.
-   "Both" is the default: no class needed, maPanels--2 grid shows both. */
-.maPage--adminHome.is-games-only .maPanel--secondary{
+   "Both" is the default: no class needed, maPanels--2 grid shows both.
+   When one panel is hidden, collapse the grid to a single column so the
+   remaining panel fills the full available width. */
+.maPage--adminHome.is-games-only .maPanel--secondary,
+.maPage--adminHome.is-events-only .maPanel--primary{
   display: none;
 }
 
-.maPage--adminHome.is-events-only .maPanel--primary{
-  display: none;
+.maPage--adminHome.is-games-only .maPanels,
+.maPage--adminHome.is-events-only .maPanels{
+  grid-template-columns: 1fr;
 }
 
 /* Mobile panel visibility — three states driven by tab strip.
