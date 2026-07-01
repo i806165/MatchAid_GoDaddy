@@ -589,14 +589,24 @@ function wireDoorwayControls() {
   async function toggleFavoriteAdmin(adminKey) {
     try {
       await apiAdmin("toggleFavoriteAdmin.php", { adminKey });
-      setStatus("Favorites updated.", "success");
-      // refresh admins + games with current state
-      await refreshGamesAndAdmins({
-        dateFrom: document.getElementById("dateFrom")?.value || state.filters.dateFrom,
-        dateTo: document.getElementById("dateTo")?.value || state.filters.dateTo,
-        selectedAdminKeys: Array.from(state.admins.selectedKeys),
-        adminScope: state.filters.adminScope
+
+      // Toggle local favorite state and re-render the admin list only —
+      // no full refresh needed. The server already persisted the change;
+      // re-fetching games or overwriting selectedAdminKeys from the server
+      // would wipe the user's current checkbox selections.
+      if (state.admins.favoriteKeys.has(adminKey)) {
+        state.admins.favoriteKeys.delete(adminKey);
+      } else {
+        state.admins.favoriteKeys.add(adminKey);
+      }
+
+      renderAdmins({
+        adminsAll: state.admins.all,
+        favoriteAdminKeys: Array.from(state.admins.favoriteKeys),
+        selectedAdminKeys: Array.from(state.admins.selectedKeys)
       });
+
+      setStatus("Favorites updated.", "success");
     } catch (e) {
       console.error("toggleFavoriteAdmin failed:", e);
       setStatus("Could not update favorites.", "error");
