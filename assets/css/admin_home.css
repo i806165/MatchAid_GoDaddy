@@ -245,7 +245,7 @@
   font-size: 14px;
   font-weight: 950;
   letter-spacing: .2px;
-  color: var(--brandSecondary);
+  color: var(--brandPrimary);
   flex: 1;
   text-align: center;
   text-transform: uppercase;
