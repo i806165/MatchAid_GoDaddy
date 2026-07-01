@@ -207,7 +207,15 @@
   min-height: 0;
 }
 
-/* Panel header bar — outer structural frame.
+/* Tab strip (#ahTabs .maControlArea) — lives outside <main> as a peer of
+   the scrollable body, same pattern as #gpTabs/.maControlArea in
+   gamepairings.php. .maControlArea from ma_shared.css handles padding/bg.
+   Mobile only — hidden on desktop where maPanels--2 shows both panels. */
+@media (min-width: 901px){
+  #ahTabs{
+    display: none;
+  }
+}
    Inverted from inner card headers: white background, brand green text.
    This creates clear hierarchy: panel = frame (light), card = content (dark). */
 .maPage--adminHome .maPanel__hdr{
@@ -257,38 +265,9 @@
   text-transform: uppercase;
 }
 
-/* Mobile close button — hidden on desktop where both panels show at once */
-.maPage--adminHome .gpMobileCloseBtn{
-  display: none;
-}
-
-@media (max-width: 900px){
-  .maPage--adminHome .gpMobileCloseBtn{
-    display: flex;
-  }
-}
-
 .maPage--adminHome .gpPanelHdr__left{
   position: absolute;
   left: 10px;
-}
-
-/* Tab strip (#ahTabs) — mobile only panel switcher.
-   Uses shared .maCanvasControls / .maSeg / .maSegBtn from ma_shared.css.
-   Hidden on desktop where both panels show side by side via maPanels--2 grid.
-   On mobile, switching tabs toggles .is-active on the panels via
-   wireDoorwayControls() in admin_home.js — same pattern as game_pairings.js. */
-#ahTabs{
-  flex-shrink: 0;
-  border-bottom: 1px solid var(--borderSubtle);
-  padding: 6px 8px;
-  background: var(--surfaceChrome);
-}
-
-@media (min-width: 901px){
-  #ahTabs{
-    display: none;
-  }
 }
 
 /* Mobile panel visibility — toggled by tab strip.
