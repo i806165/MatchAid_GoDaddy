@@ -1536,7 +1536,7 @@ function renderTrayBody(){
     if (existing) {
       const comp = state.game?.dbGames_Competition || "PairField";
       const pid = safe(existing.dbPlayers_PairingID || "000");
-      const fid = safe(existing.dbPlayers_FlightID || "");
+      const fid = safe(existing.dbPlayers_MatchID || "");
       wasPaired = (comp === "PairPair") ? (pid !== "000" && fid !== "" && fid !== "0") : (pid !== "000");
     }
 
@@ -1586,7 +1586,7 @@ function renderTrayBody(){
     if (p) {
       comp = state.game?.dbGames_Competition || "PairField";
       pid = safe(p.dbPlayers_PairingID || "000");
-      fid = safe(p.dbPlayers_FlightID || "");
+      fid = safe(p.dbPlayers_MatchID || "");
       wasPaired = (comp === "PairPair") ? (pid !== "000" && fid !== "" && fid !== "0") : (pid !== "000");
     }
 

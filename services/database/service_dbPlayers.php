@@ -143,8 +143,8 @@ final class ServiceDbPlayers
             WHERE dbPlayers_GGID = :ggid
             ORDER BY dbPlayers_PairingID ASC,
                     dbPlayers_PairingPos ASC,
-                    dbPlayers_FlightID ASC,
-                    dbPlayers_FlightPos ASC,
+                    dbPlayers_MatchID ASC,
+                    dbPlayers_MatchPos ASC,
                     dbPlayers_LName ASC,
                     dbPlayers_Name ASC,
                     dbPlayers_PlayerGHIN ASC";

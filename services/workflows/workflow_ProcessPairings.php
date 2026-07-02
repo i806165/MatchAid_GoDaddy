@@ -61,8 +61,8 @@ final class ServiceProcessPairings
   {
     $pairingId  = self::pad3($a['pairingId']  ?? ($row['dbPlayers_PairingID']       ?? '000'));
     $pairingPos = strval($a['pairingPos']      ?? ($row['dbPlayers_PairingPos']      ?? ''));
-    $flightId   = trim(strval($a['flightId']   ?? ($row['dbPlayers_FlightID']        ?? '')));
-    $flightPos  = self::normFlightPos($a['flightPos'] ?? ($row['dbPlayers_FlightPos'] ?? ''));
+    $flightId   = trim(strval($a['flightId']   ?? ($row['dbPlayers_MatchID']        ?? '')));
+    $flightPos  = self::normFlightPos($a['flightPos'] ?? ($row['dbPlayers_MatchPos'] ?? ''));
     $teeTime    = trim(strval($a['teeTime']    ?? ($row['dbPlayers_TeeTime']         ?? '')));
     $startHole  = trim(strval($a['startHole']  ?? ($row['dbPlayers_StartHole']       ?? '')));
     $startHoleS = trim(strval($a['startHoleSuffix'] ?? ($row['dbPlayers_StartHoleSuffix'] ?? '')));
@@ -94,8 +94,8 @@ final class ServiceProcessPairings
 
     $row['dbPlayers_PairingID']         = $pairingId;
     $row['dbPlayers_PairingPos']        = $pairingPos;
-    $row['dbPlayers_FlightID']          = $flightId;
-    $row['dbPlayers_FlightPos']         = $flightPos;
+    $row['dbPlayers_MatchID']          = $flightId;
+    $row['dbPlayers_MatchPos']         = $flightPos;
     $row['dbPlayers_TeeTime']           = $teeTime;
     $row['dbPlayers_StartHole']         = $startHole;
     $row['dbPlayers_StartHoleSuffix']   = $startHoleS;
@@ -121,7 +121,7 @@ final class ServiceProcessPairings
 
     foreach ($players as $r) {
       $pid = self::pad3($r['dbPlayers_PairingID'] ?? '000');
-      $fid = trim(strval($r['dbPlayers_FlightID'] ?? ''));
+      $fid = trim(strval($r['dbPlayers_MatchID'] ?? ''));
       $k   = trim(strval($r['dbPlayers_PlayerKey'] ?? ''));
       $tt  = trim(strval($r['dbPlayers_TeeTime'] ?? ''));
       $sh  = trim(strval($r['dbPlayers_StartHole'] ?? ''));
@@ -158,7 +158,7 @@ final class ServiceProcessPairings
 
     foreach ($players as &$r) {
       if ($isPairPair) {
-        $fid = trim(strval($r['dbPlayers_FlightID'] ?? ''));
+        $fid = trim(strval($r['dbPlayers_MatchID'] ?? ''));
         if ($fid === '') {
           $r['dbPlayers_TeeTime']           = '';
           $r['dbPlayers_StartHole']         = '';
@@ -186,8 +186,8 @@ final class ServiceProcessPairings
           $r['dbPlayers_PlayerKey']         = $pairingKey[$pid] ?? '';
         }
         // PairField: flight fields are not used
-        $r['dbPlayers_FlightID']  = '';
-        $r['dbPlayers_FlightPos'] = '';
+        $r['dbPlayers_MatchID']  = '';
+        $r['dbPlayers_MatchPos'] = '';
       }
     }
     unset($r);

@@ -3201,7 +3201,7 @@
 
             players.forEach(p => {
                 const pairingId = String(p.dbPlayers_PairingID || p.pairingId || "").trim();
-                const flightId = String(p.dbPlayers_FlightID || p.flightId || "").trim();
+                const flightId = String(p.dbPlayers_MatchID || p.flightId || "").trim();
 
                 if (!pairingId) return;                 // not paired into a group
                 if (pairingId === "000" || pairingId === "0") return; // EXCLUDE unpaired bucket group

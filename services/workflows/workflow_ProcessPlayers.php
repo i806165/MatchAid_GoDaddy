@@ -103,8 +103,8 @@ final class WorkflowProcessPlayers
       "dbPlayers_TeeSetDetails"=> json_encode($richTeeDetails),
       "dbPlayers_PairingID"    => (string)($existing["dbPlayers_PairingID"]  ?? "000"),
       "dbPlayers_PairingPos"   => (string)($existing["dbPlayers_PairingPos"] ?? ""),
-      "dbPlayers_FlightID"     => (string)($existing["dbPlayers_FlightID"]   ?? ""),
-      "dbPlayers_FlightPos"    => (string)($existing["dbPlayers_FlightPos"]  ?? ""),
+      "dbPlayers_MatchID"     => (string)($existing["dbPlayers_MatchID"]   ?? ""),
+      "dbPlayers_MatchPos"    => (string)($existing["dbPlayers_MatchPos"]  ?? ""),
       "dbPlayers_PlayerKey"    => (string)($existing["dbPlayers_PlayerKey"]  ?? ""),
       // Team key: caller-supplied value takes priority (copy-from-game carries source team assignment).
       // Falls back to existing row value on re-enrollment so team is never overwritten by a tee update.

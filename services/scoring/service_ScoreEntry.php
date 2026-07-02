@@ -152,7 +152,7 @@ final class ServiceScoreEntry
         $scoreEntryRow = is_array($wrapper['scoreEntryRow'] ?? null) ? $wrapper['scoreEntryRow'] : [];
 
         $baselinePlayerKey = trim((string)($activeRow['baselinePlayerKey'] ?? $playerRow['dbPlayers_PlayerKey'] ?? ''));
-        $baselineFlightID = trim((string)($activeRow['baselineFlightID'] ?? $playerRow['dbPlayers_FlightID'] ?? ''));
+        $baselineFlightID = trim((string)($activeRow['baselineFlightID'] ?? $playerRow['dbPlayers_MatchID'] ?? ''));
         $baselinePairingID = trim((string)($activeRow['baselinePairingID'] ?? $playerRow['dbPlayers_PairingID'] ?? ''));
         $virtualPlayerKey = trim((string)($activeRow['virtualPlayerKey'] ?? $baselinePlayerKey));
         $virtualFlightID = trim((string)($activeRow['virtualFlightID'] ?? $baselineFlightID));
@@ -160,7 +160,7 @@ final class ServiceScoreEntry
         $effectivePlayerKey = trim((string)($activeRow['effectivePlayerKey'] ?? $virtualPlayerKey));
         $effectiveFlightID = trim((string)($activeRow['effectiveFlightID'] ?? $virtualFlightID));
         $effectivePairingID = trim((string)($activeRow['effectivePairingID'] ?? $virtualPairingID));
-        $virtualFlightPos = trim((string)($activeRow['virtualFlightPos'] ?? $playerRow['dbPlayers_FlightPos'] ?? ''));
+        $virtualFlightPos = trim((string)($activeRow['virtualFlightPos'] ?? $playerRow['dbPlayers_MatchPos'] ?? ''));
 
         // Keep original persisted row intact for DB identity, but mirror active context fields onto it
         $playerRow['baselinePlayerKey'] = $baselinePlayerKey;
@@ -203,7 +203,7 @@ final class ServiceScoreEntry
         $scoreEntryRow = is_array($wrapper['scoreEntryRow'] ?? null) ? $wrapper['scoreEntryRow'] : [];
 
         $baselinePlayerKey = trim((string)($playerRow['dbPlayers_PlayerKey'] ?? ''));
-        $baselineFlightID = trim((string)($playerRow['dbPlayers_FlightID'] ?? ''));
+        $baselineFlightID = trim((string)($playerRow['dbPlayers_MatchID'] ?? ''));
         $baselinePairingID = trim((string)($playerRow['dbPlayers_PairingID'] ?? ''));
 
         $playerRow['baselinePlayerKey'] = $baselinePlayerKey;
@@ -215,7 +215,7 @@ final class ServiceScoreEntry
         $playerRow['effectivePlayerKey'] = $baselinePlayerKey;
         $playerRow['effectiveFlightID'] = $baselineFlightID;
         $playerRow['effectivePairingID'] = $baselinePairingID;
-        $playerRow['virtualFlightPos'] = (string)($playerRow['dbPlayers_FlightPos'] ?? '');
+        $playerRow['virtualFlightPos'] = (string)($playerRow['dbPlayers_MatchPos'] ?? '');
 
         $scoreEntryRow['baselinePlayerKey'] = $baselinePlayerKey;
         $scoreEntryRow['baselineFlightID'] = $baselineFlightID;
@@ -226,7 +226,7 @@ final class ServiceScoreEntry
         $scoreEntryRow['effectivePlayerKey'] = $baselinePlayerKey;
         $scoreEntryRow['effectiveFlightID'] = $baselineFlightID;
         $scoreEntryRow['effectivePairingID'] = $baselinePairingID;
-        $scoreEntryRow['virtualFlightPos'] = (string)($playerRow['dbPlayers_FlightPos'] ?? '');
+        $scoreEntryRow['virtualFlightPos'] = (string)($playerRow['dbPlayers_MatchPos'] ?? '');
         $scoreEntryRow['spinNumber'] = 1;
         $scoreEntryRow['spinKey'] = 'S1';
         $scoreEntryRow['spinLabel'] = 'Round';
@@ -275,7 +275,7 @@ final class ServiceScoreEntry
         $gameFormat = trim((string)($gameRow['dbGames_GameFormat'] ?? ''));
         $startHole = trim((string)($launchedPlayer['dbPlayers_StartHole'] ?? ''));
         $teeTime = trim((string)($launchedPlayer['dbPlayers_TeeTime'] ?? ''));
-        $flightId = trim((string)($launchedPlayer['dbPlayers_FlightID'] ?? ''));
+        $flightId = trim((string)($launchedPlayer['dbPlayers_MatchID'] ?? ''));
         $pairingId = trim((string)($launchedPlayer['dbPlayers_PairingID'] ?? '000'));
 
         if (strcasecmp($toMethod, 'ShotGun') === 0 && $startHole !== '') {
@@ -624,7 +624,7 @@ final class ServiceScoreEntry
             'playerKey' => (string)($playerRow['dbPlayers_PlayerKey'] ?? ''),
             'playerName' => (string)($playerRow['dbPlayers_Name'] ?? ''),
             'teeTime' => (string)($playerRow['dbPlayers_TeeTime'] ?? ''),
-            'flightId' => (string)($playerRow['dbPlayers_FlightID'] ?? ''),
+            'flightId' => (string)($playerRow['dbPlayers_MatchID'] ?? ''),
             'pairingId' => (string)($playerRow['dbPlayers_PairingID'] ?? ''),
             'pairingPos' => (string)($playerRow['dbPlayers_PairingPos'] ?? ''),
             'startHole' => (string)($playerRow['dbPlayers_StartHole'] ?? ''),
@@ -1007,14 +1007,14 @@ final class ServiceScoreEntry
           $pairPosB = (int)($b['dbPlayers_PairingPos'] ?? 999);
 
           if ($competition === 'PairPair') {
-              $flightA = trim((string)($a['dbPlayers_FlightID'] ?? ''));
-              $flightB = trim((string)($b['dbPlayers_FlightID'] ?? ''));
+              $flightA = trim((string)($a['dbPlayers_MatchID'] ?? ''));
+              $flightB = trim((string)($b['dbPlayers_MatchID'] ?? ''));
               if ($flightA !== $flightB) {
                   return strnatcmp($flightA, $flightB);
               }
 
-              $fPosA = trim((string)($a['dbPlayers_FlightPos'] ?? ''));
-              $fPosB = trim((string)($b['dbPlayers_FlightPos'] ?? ''));
+              $fPosA = trim((string)($a['dbPlayers_MatchPos'] ?? ''));
+              $fPosB = trim((string)($b['dbPlayers_MatchPos'] ?? ''));
               if ($fPosA !== $fPosB) {
                   return strcmp($fPosA, $fPosB);
               }

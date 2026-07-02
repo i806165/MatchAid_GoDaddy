@@ -25,7 +25,7 @@ try {
     SELECT *
       FROM db_Players
      WHERE dbPlayers_GGID = :ggid
-     ORDER BY dbPlayers_PairingID, dbPlayers_PairingPos, dbPlayers_FlightID, dbPlayers_FlightPos
+     ORDER BY dbPlayers_PairingID, dbPlayers_PairingPos, dbPlayers_MatchID, dbPlayers_MatchPos
   ");
   $stmtP->execute([":ggid" => (string)$ggid]);
   $players = $stmtP->fetchAll(PDO::FETCH_ASSOC) ?: [];

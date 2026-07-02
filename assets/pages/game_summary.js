@@ -168,12 +168,12 @@
 
     copy.sort((a, b) => {
       if (pairPair) {
-        const flightA = pairingSortValue(a.dbPlayers_FlightID) || "—";
-        const flightB = pairingSortValue(b.dbPlayers_FlightID) || "—";
+        const flightA = pairingSortValue(a.dbPlayers_MatchID) || "—";
+        const flightB = pairingSortValue(b.dbPlayers_MatchID) || "—";
         if (flightA !== flightB) return flightA.localeCompare(flightB, undefined, { numeric: true });
 
-        const teamA = pairingSortValue(a.dbPlayers_FlightPos) || "—";
-        const teamB = pairingSortValue(b.dbPlayers_FlightPos) || "—";
+        const teamA = pairingSortValue(a.dbPlayers_MatchPos) || "—";
+        const teamB = pairingSortValue(b.dbPlayers_MatchPos) || "—";
         if (teamA !== teamB) return numericOrTextCompare(teamA, teamB);
       }
 
@@ -257,12 +257,12 @@
       if (groupA !== groupB) return groupA.localeCompare(groupB, undefined, { numeric: true });
 
       if (pairPair) {
-        const flightA = pairingSortValue(a.dbPlayers_FlightID) || "—";
-        const flightB = pairingSortValue(b.dbPlayers_FlightID) || "—";
+        const flightA = pairingSortValue(a.dbPlayers_MatchID) || "—";
+        const flightB = pairingSortValue(b.dbPlayers_MatchID) || "—";
         if (flightA !== flightB) return flightA.localeCompare(flightB, undefined, { numeric: true });
 
-        const teamA = pairingSortValue(a.dbPlayers_FlightPos) || "—";
-        const teamB = pairingSortValue(b.dbPlayers_FlightPos) || "—";
+        const teamA = pairingSortValue(a.dbPlayers_MatchPos) || "—";
+        const teamB = pairingSortValue(b.dbPlayers_MatchPos) || "—";
         if (teamA !== teamB) return numericOrTextCompare(teamA, teamB);
       }
 
@@ -291,8 +291,8 @@
     const groupMap = new Map();
 
     sortedRoster.forEach((p) => {
-      const flightId = pairPair ? (pairingSortValue(p.dbPlayers_FlightID) || "—") : "";
-      const flightPos = pairPair ? (pairingSortValue(p.dbPlayers_FlightPos) || "—") : "";
+      const flightId = pairPair ? (pairingSortValue(p.dbPlayers_MatchID) || "—") : "";
+      const flightPos = pairPair ? (pairingSortValue(p.dbPlayers_MatchPos) || "—") : "";
       const pairingId = pairingSortValue(p.dbPlayers_PairingID) || "—";
 
       const key = pairPair
@@ -315,8 +315,8 @@
 
     sortedRoster.forEach((p) => {
       const playerKey = pairingSortValue(p.dbPlayers_PlayerKey) || "—";
-      const flightId = pairPair ? (pairingSortValue(p.dbPlayers_FlightID) || "—") : "";
-      const flightPos = pairPair ? (pairingSortValue(p.dbPlayers_FlightPos) || "—") : "";
+      const flightId = pairPair ? (pairingSortValue(p.dbPlayers_MatchID) || "—") : "";
+      const flightPos = pairPair ? (pairingSortValue(p.dbPlayers_MatchPos) || "—") : "";
       const pairingId = pairingSortValue(p.dbPlayers_PairingID) || "—";
 
       if (!groupMap.has(playerKey)) {
@@ -458,8 +458,8 @@
         const so      = numberOrDash(p.dbPlayers_SO);
         const time    = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
         const start   = valueOrDash(getFormattedStartHole(p));
-        const flight  = valueOrDash(p.dbPlayers_FlightID);
-        const fPos    = valueOrDash(p.dbPlayers_FlightPos);
+        const flight  = valueOrDash(p.dbPlayers_MatchID);
+        const fPos    = valueOrDash(p.dbPlayers_MatchPos);
         const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
         const pair    = valueOrDash(p.dbPlayers_PairingID);
         const pos     = valueOrDash(p.dbPlayers_PairingPos);
@@ -513,8 +513,8 @@
         const so      = numberOrDash(p.dbPlayers_SO);
         const time    = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
         const start   = valueOrDash(getFormattedStartHole(p));
-        const match   = valueOrDash(p.dbPlayers_FlightID);
-        const team    = valueOrDash(p.dbPlayers_FlightPos);
+        const match   = valueOrDash(p.dbPlayers_MatchID);
+        const team    = valueOrDash(p.dbPlayers_MatchPos);
         const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
         const pair    = valueOrDash(p.dbPlayers_PairingID);
         const pos     = valueOrDash(p.dbPlayers_PairingPos);
@@ -575,8 +575,8 @@
         const so      = numberOrDash(p.dbPlayers_SO);
         const time    = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
         const start   = valueOrDash(getFormattedStartHole(p));
-        const match   = valueOrDash(p.dbPlayers_FlightID);
-        const team    = valueOrDash(p.dbPlayers_FlightPos);
+        const match   = valueOrDash(p.dbPlayers_MatchID);
+        const team    = valueOrDash(p.dbPlayers_MatchPos);
         const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
         const pair    = valueOrDash(p.dbPlayers_PairingID);
         const pos     = valueOrDash(p.dbPlayers_PairingPos);
@@ -664,8 +664,8 @@
         `"` + safeString(p.dbPlayers_Name).replace(/"/g, '""') + `"`,
         teeName.includes('/') ? `="` + teeName.replace(/"/g, '""') + `"` : `"` + teeName.replace(/"/g, '""') + `"`,
         `"` + safeString(resolveTeamName(p.dbPlayers_TeamKey)).replace(/"/g, '""') + `"`,
-        `"` + safeString(p.dbPlayers_FlightID).replace(/"/g, '""') + `"`,
-        `"` + safeString(p.dbPlayers_FlightPos).replace(/"/g, '""') + `"`,
+        `"` + safeString(p.dbPlayers_MatchID).replace(/"/g, '""') + `"`,
+        `"` + safeString(p.dbPlayers_MatchPos).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_PairingID).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_PairingPos).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_HI).replace(/"/g, '""') + `"`,
@@ -736,8 +736,8 @@
         <td>${esc(p.dbPlayers_Name)}</td>
         <td>${esc(p.dbPlayers_TeeSetName)}</td>
         <td align="center">${esc(resolveTeamName(p.dbPlayers_TeamKey))}</td>
-        <td align="center">${esc(p.dbPlayers_FlightID)}</td>
-        <td align="center">${esc(p.dbPlayers_FlightPos)}</td>
+        <td align="center">${esc(p.dbPlayers_MatchID)}</td>
+        <td align="center">${esc(p.dbPlayers_MatchPos)}</td>
         <td align="center">${esc(p.dbPlayers_PairingID)}</td>
         <td align="center">${esc(p.dbPlayers_PairingPos)}</td>
         <td align="center">${esc(p.dbPlayers_HI)}</td>

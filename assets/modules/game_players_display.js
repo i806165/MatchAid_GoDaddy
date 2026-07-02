@@ -41,8 +41,8 @@
  *   dbPlayers_PlayerKey  play-group key (grouping field for "Play Group" sort)
  *   dbPlayers_PairingID  pairing group number
  *   dbPlayers_PairingPos position within pairing
- *   dbPlayers_FlightID   flight/match group (PairPair mode only)
- *   dbPlayers_FlightPos  position within flight (PairPair mode only)
+ *   dbPlayers_MatchID   flight/match group (PairPair mode only)
+ *   dbPlayers_MatchPos  position within flight (PairPair mode only)
  *
  * Sort tab rules:
  *   "Name"       always shown   — alpha by LName/Name, letter dividers
@@ -485,14 +485,14 @@
     } else {
       // PairPair → "Match" view
       const sorted = players.slice().sort((a, b) =>
-        (Number(a.dbPlayers_FlightID)   || 0) - (Number(b.dbPlayers_FlightID)   || 0) ||
-        (Number(a.dbPlayers_FlightPos)  || 0) - (Number(b.dbPlayers_FlightPos)  || 0) ||
+        (Number(a.dbPlayers_MatchID)   || 0) - (Number(b.dbPlayers_MatchID)   || 0) ||
+        (Number(a.dbPlayers_MatchPos)  || 0) - (Number(b.dbPlayers_MatchPos)  || 0) ||
         (Number(a.dbPlayers_PairingID)  || 0) - (Number(b.dbPlayers_PairingID)  || 0) ||
         (Number(a.dbPlayers_PairingPos) || 0) - (Number(b.dbPlayers_PairingPos) || 0)
       );
       let lastFlight = null;
       for (const p of sorted) {
-        const fid = safeStr(p.dbPlayers_FlightID);
+        const fid = safeStr(p.dbPlayers_MatchID);
         if (fid !== lastFlight) { html += _groupLabel(`Match ${fid || "—"}`); lastFlight = fid; }
         html += _row(p);
       }

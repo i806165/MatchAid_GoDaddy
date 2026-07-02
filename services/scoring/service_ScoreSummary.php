@@ -680,7 +680,7 @@ final class ServiceScoreSummary
             $flightPos = trim((string)(
                 $player['flightPos']
                 ?? $player['virtualFlightPos']
-                ?? $player['dbPlayers_FlightPos']
+                ?? $player['dbPlayers_MatchPos']
                 ?? ''
             ));
             if ($flightPos === '') continue;
@@ -828,13 +828,13 @@ final class ServiceScoreSummary
             'flightId' => trim((string)(
                 $first['flightID']
                 ?? $first['effectiveFlightID']
-                ?? $first['dbPlayers_FlightID']
+                ?? $first['dbPlayers_MatchID']
                 ?? ''
             )),
             'flightPos' => trim((string)(
                 $first['flightPos']
                 ?? $first['virtualFlightPos']
-                ?? $first['dbPlayers_FlightPos']
+                ?? $first['dbPlayers_MatchPos']
                 ?? ''
             )),
             'pairingId' => trim((string)(

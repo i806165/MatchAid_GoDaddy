@@ -298,14 +298,14 @@ final class ServiceScoreCardRotation
     private static function sortPlayersForContext(array $players): array
     {
         usort($players, static function (array $a, array $b): int {
-            $aFlight = self::normStr($a['flightID'] ?? $a['effectiveFlightID'] ?? $a['dbPlayers_FlightID'] ?? '', 'ZZZ');
-            $bFlight = self::normStr($b['flightID'] ?? $b['effectiveFlightID'] ?? $b['dbPlayers_FlightID'] ?? '', 'ZZZ');
+            $aFlight = self::normStr($a['flightID'] ?? $a['effectiveFlightID'] ?? $a['dbPlayers_MatchID'] ?? '', 'ZZZ');
+            $bFlight = self::normStr($b['flightID'] ?? $b['effectiveFlightID'] ?? $b['dbPlayers_MatchID'] ?? '', 'ZZZ');
             if ($aFlight !== $bFlight) {
                 return strcmp($aFlight, $bFlight);
             }
 
-            $aSide = self::normStr($a['flightPos'] ?? $a['virtualFlightPos'] ?? $a['dbPlayers_FlightPos'] ?? '', 'Z');
-            $bSide = self::normStr($b['flightPos'] ?? $b['virtualFlightPos'] ?? $b['dbPlayers_FlightPos'] ?? '', 'Z');
+            $aSide = self::normStr($a['flightPos'] ?? $a['virtualFlightPos'] ?? $a['dbPlayers_MatchPos'] ?? '', 'Z');
+            $bSide = self::normStr($b['flightPos'] ?? $b['virtualFlightPos'] ?? $b['dbPlayers_MatchPos'] ?? '', 'Z');
             if ($aSide !== $bSide) {
                 return strcmp($aSide, $bSide);
             }

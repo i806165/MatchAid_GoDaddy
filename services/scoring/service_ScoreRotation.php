@@ -309,7 +309,7 @@ public static function buildEffectiveBaselinePlayers(array $players, array $seat
     private static function buildBaselineContext(array $effectivePlayers): array
     {
         $basePlayerKey = self::normStr($effectivePlayers[0]['dbPlayers_PlayerKey'] ?? '', '000');
-        $baseFlightId = self::normStr($effectivePlayers[0]['dbPlayers_FlightID'] ?? '', '000');
+        $baseFlightId = self::normStr($effectivePlayers[0]['dbPlayers_MatchID'] ?? '', '000');
         $baselinePairingIds = self::baselinePairingIds($effectivePlayers);
 
         return [
@@ -332,7 +332,7 @@ public static function buildEffectiveBaselinePlayers(array $players, array $seat
             $row['virtualPlayerKey'] = $baseline['playerKey'];
             $row['virtualFlightID'] = $baseline['flightID'];
             $row['virtualPairingID'] = self::normStr($player['dbPlayers_PairingID'] ?? '', '000');
-            $row['virtualFlightPos'] = self::normStr($player['dbPlayers_FlightPos'] ?? '', '');
+            $row['virtualFlightPos'] = self::normStr($player['dbPlayers_MatchPos'] ?? '', '');
             $row['effectivePlayerKey'] = $row['virtualPlayerKey'];
             $row['effectiveFlightID'] = $row['virtualFlightID'];
             $row['effectivePairingID'] = $row['virtualPairingID'];

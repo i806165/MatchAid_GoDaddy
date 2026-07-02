@@ -1498,7 +1498,7 @@ function onResetChanges() {
         name: String(r.dbPlayers_Name || ""),
         lName: String(r.dbPlayers_LName || ""),
         pairingId: String(r.dbPlayers_PairingID || "000"),
-        flightId: String(r.dbPlayers_FlightID || ""),
+        flightId: String(r.dbPlayers_MatchID || ""),
         teeTime: teeTimeMinutes != null ? formatMinutesToTime(teeTimeMinutes) : rawTeeTime,
         teeTimeMinutes: teeTimeMinutes,
         startHole: String(r.dbPlayers_StartHole || "").trim(),

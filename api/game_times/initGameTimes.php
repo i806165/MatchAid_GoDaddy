@@ -96,7 +96,7 @@ function gt_buildGroups(array $players, array $game): array {
   $groups = [];
   foreach ($players as $p) {
     $pid = strval($p["dbPlayers_PairingID"] ?? "");
-    $fid = strval($p["dbPlayers_FlightID"] ?? "");
+    $fid = strval($p["dbPlayers_MatchID"] ?? "");
     $ghin = strval($p["dbPlayers_PlayerGHIN"] ?? "");
     
     // 1. Unpaired (Singleton) -> Group by GHIN
@@ -132,8 +132,8 @@ function gt_buildGroups(array $players, array $game): array {
     usort($rows, function($a, $b) use ($isPairPair) {
         if ($isPairPair) {
             // Match Play: FlightPos (A vs B), then PairingID, then PairingPos
-            $fpA = strtoupper(trim(strval($a["dbPlayers_FlightPos"] ?? "")));
-            $fpB = strtoupper(trim(strval($b["dbPlayers_FlightPos"] ?? "")));
+            $fpA = strtoupper(trim(strval($a["dbPlayers_MatchPos"] ?? "")));
+            $fpB = strtoupper(trim(strval($b["dbPlayers_MatchPos"] ?? "")));
             if ($fpA !== $fpB) return strcmp($fpA, $fpB);
 
             $pidA = (int)($a["dbPlayers_PairingID"] ?? 0);
@@ -176,7 +176,7 @@ function gt_buildGroups(array $players, array $game): array {
 
       // Populate Teams for Match Play
       if ($isPairPair) {
-          $fp = strtoupper(trim(strval($r["dbPlayers_FlightPos"] ?? "")));
+          $fp = strtoupper(trim(strval($r["dbPlayers_MatchPos"] ?? "")));
           // Heuristic: A/1 => Team A; B/2 => Team B
           if ($fp === "A" || $fp === "1") $teamA[] = $ln;
           else if ($fp === "B" || $fp === "2") $teamB[] = $ln;

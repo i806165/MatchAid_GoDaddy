@@ -248,8 +248,8 @@ function mapGamePlayer(p) {
         // pairing/match positioning (for hydration)
         pairingId: p.dbPlayers_PairingID || "000",
         pairingPos: numOrNull(p.dbPlayers_PairingPos), // (your schema uses PairingPos)
-        flightId: p.dbPlayers_FlightID,
-        flightPos: p.dbPlayers_FlightPos,
+        flightId: p.dbPlayers_MatchID,
+        flightPos: p.dbPlayers_MatchPos,
         startHole: p.dbPlayers_StartHole,
 
         // tee time preservation considerations later
@@ -319,8 +319,8 @@ async function savePairings(assignments) {
             a.pairingId === "000" ? "" : String(a.pairingPos || "");
 
         // Apply scheduling + match fields (already inherited in HTML)
-        updated.dbPlayers_FlightID = a.flightId || "";
-        updated.dbPlayers_FlightPos = a.flightPos || "";
+        updated.dbPlayers_MatchID = a.flightId || "";
+        updated.dbPlayers_MatchPos = a.flightPos || "";
         updated.dbPlayers_TeeTime = a.teeTime || "";
         updated.dbPlayers_StartHole = a.startHole || "";
         updated.dbPlayers_StartHoleSuffix = a.startHoleSuffix || "";

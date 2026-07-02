@@ -200,9 +200,9 @@ function be_calculateGamePHSO(string $action, ?string $id, array $parmGameData, 
         }
         if ($target) {
             if ($txtCompetition === "PairPair") {
-                $fid = (string)($target["dbPlayers_FlightID"] ?? "");
+                $fid = (string)($target["dbPlayers_MatchID"] ?? "");
                 if ($fid !== "" && $fid !== "0") {
-                    $players = array_filter($allPlayers, fn($p) => ((string)($p["dbPlayers_FlightID"] ?? "") === $fid));
+                    $players = array_filter($allPlayers, fn($p) => ((string)($p["dbPlayers_MatchID"] ?? "") === $fid));
                 }
             } else {
                 // PairField (or others) use PairingID
@@ -217,7 +217,7 @@ function be_calculateGamePHSO(string $action, ?string $id, array $parmGameData, 
         $players = array_filter($allPlayers, fn($p) => ((string)($p["dbPlayers_PairingID"] ?? "") === $id));
     }
     elseif ($action === "flight" && $id) {
-        $players = array_filter($allPlayers, fn($p) => ((string)($p["dbPlayers_FlightID"] ?? "") === $id));
+        $players = array_filter($allPlayers, fn($p) => ((string)($p["dbPlayers_MatchID"] ?? "") === $id));
     }
 
     // If scoped lookup found nothing (e.g. player not in a group), return early
@@ -237,7 +237,7 @@ function be_calculateGamePHSO(string $action, ?string $id, array $parmGameData, 
         $key = "ALL";
 
         if ($txtCompetition === "PairPair") {
-            $flight = trim((string)($p["dbPlayers_FlightID"] ?? ""));
+            $flight = trim((string)($p["dbPlayers_MatchID"] ?? ""));
             if ($flight !== "" && $flight !== "0") $key = $flight; else continue;
         } elseif ($txtCompetition === "PairField") {
             $pair = trim((string)($p["dbPlayers_PairingID"] ?? ""));

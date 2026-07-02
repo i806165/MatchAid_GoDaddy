@@ -240,12 +240,12 @@ final class ServiceScoreCard {
       $bPairPos = self::normInt($b["dbPlayers_PairingPos"] ?? null, 999);
 
       if ($competition === "PairPair") {
-        $aFlight = self::normStr($a["dbPlayers_FlightID"] ?? "", "ZZZ");
-        $bFlight = self::normStr($b["dbPlayers_FlightID"] ?? "", "ZZZ");
+        $aFlight = self::normStr($a["dbPlayers_MatchID"] ?? "", "ZZZ");
+        $bFlight = self::normStr($b["dbPlayers_MatchID"] ?? "", "ZZZ");
         if ($aFlight !== $bFlight) return strcmp($aFlight, $bFlight);
 
-        $aFlightPos = self::normStr($a["dbPlayers_FlightPos"] ?? "", "Z");
-        $bFlightPos = self::normStr($b["dbPlayers_FlightPos"] ?? "", "Z");
+        $aFlightPos = self::normStr($a["dbPlayers_MatchPos"] ?? "", "Z");
+        $bFlightPos = self::normStr($b["dbPlayers_MatchPos"] ?? "", "Z");
         if ($aFlightPos !== $bFlightPos) return strcmp($aFlightPos, $bFlightPos);
       }
 
@@ -654,7 +654,7 @@ final class ServiceScoreCard {
         $pairingSet[$pairingId] = true;
       }
 
-      $flightId = trim((string)($p["dbPlayers_FlightID"] ?? ""));
+      $flightId = trim((string)($p["dbPlayers_MatchID"] ?? ""));
       if ($flightId !== "") {
         $flightSet[$flightId] = true;
       }
@@ -672,7 +672,7 @@ final class ServiceScoreCard {
 
       // legacy singular fields retained for compatibility
       "pairingID" => (string)($first["dbPlayers_PairingID"] ?? ""),
-      "flightID" => (string)($first["dbPlayers_FlightID"] ?? ""),
+      "flightID" => (string)($first["dbPlayers_MatchID"] ?? ""),
 
       // new plural fields for accurate footer rendering
       "pairingIDs" => $pairingIDs,
@@ -1080,7 +1080,7 @@ final class ServiceScoreCard {
       $label = "PAIR " . $pairingId . " TOTAL";
 
       if ($competition === "PairPair") {
-        $flightPos = self::normStr($pairPlayers[0]["dbPlayers_FlightPos"] ?? "", "");
+        $flightPos = self::normStr($pairPlayers[0]["dbPlayers_MatchPos"] ?? "", "");
         if ($flightPos !== "") {
           $label = "TEAM " . $flightPos . " · PAIR " . $pairingId . " TOTAL";
         }
