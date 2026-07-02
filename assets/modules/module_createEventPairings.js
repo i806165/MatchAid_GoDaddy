@@ -203,24 +203,24 @@
       : `Assign >> New Pairing`;
 
     el.innerHTML = `
-      <div class="maCanvasControls" style="gap:6px;">
-        <div style="display:flex;gap:4px;align-items:center;">
-          <button class="maSeg--sortBtn ${_state.sortMode === "name" ? "is-active" : ""}" data-sort="name" type="button">Name</button>
-          <button class="maSeg--sortBtn ${_state.sortMode === "hi"   ? "is-active" : ""}" data-sort="hi"   type="button">HI</button>
+      <div class="maCanvasControls">
+        <div style="display:flex;gap:4px;">
+          <button class="maSegBtn ${_state.sortMode === "name" ? "is-active" : ""}" data-sort="name" type="button">Name</button>
+          <button class="maSegBtn ${_state.sortMode === "hi"   ? "is-active" : ""}" data-sort="hi"   type="button">HI</button>
         </div>
         <div class="maCanvasControls__right">
           <button id="cepBtnAssign" class="btn btnSecondary" type="button" ${!selCount ? "disabled" : ""}>${esc(btnLabel)}</button>
         </div>
       </div>
-      <div style="padding:4px 0;font-size:11px;font-weight:700;color:var(--mutedText)">
-        ${selCount ? `${selCount} selected · ` : ""}${unCount} unassigned
-        ${hasTarget ? ` · targeting Pairing ${esc(_state.targetPairing)}` : ""}
+      <div style="padding:4px 0 6px;font-size:11px;font-weight:700;color:var(--mutedText);">
+        ${selCount ? `${selCount} selected · ` : ""}${unCount} unassigned${hasTarget ? ` · targeting Pairing ${esc(_state.targetPairing)}` : ""}
       </div>
-      <div style="margin-top:6px;">
-        <input id="cepSearch" class="maTextInput" type="text" placeholder="Search players…" value="${esc(_state.searchText)}" autocomplete="off" style="width:100%;" />
+      <div class="maInputWrap maInputWrap--clearable">
+        <input id="cepSearch" class="maTextInput" type="text" placeholder="Search players…" value="${esc(_state.searchText)}" autocomplete="off" />
+        <button id="cepSearchClear" class="maClearBtn ${_state.searchText ? "" : "isHidden"}" type="button" aria-label="Clear search">×</button>
       </div>`;
 
-    el.querySelector("[data-sort]")?.parentElement.querySelectorAll("[data-sort]").forEach(btn => {
+    el.querySelectorAll("[data-sort]").forEach(btn => {
       btn.addEventListener("click", () => {
         _state.sortMode = btn.dataset.sort;
         renderTray();
@@ -228,16 +228,27 @@
       });
     });
 
-    const assignBtn = el.querySelector("#cepBtnAssign");
-    if (assignBtn) assignBtn.addEventListener("click", assignSelected);
+    el.querySelector("#cepBtnAssign")?.addEventListener("click", assignSelected);
 
     const searchEl = el.querySelector("#cepSearch");
     if (searchEl) {
       searchEl.addEventListener("input", () => {
         _state.searchText = searchEl.value;
         renderTray();
+        renderTrayControls();
       });
+      if (_state.searchText) {
+        searchEl.focus();
+        const len = searchEl.value.length;
+        searchEl.setSelectionRange(len, len);
+      }
     }
+
+    el.querySelector("#cepSearchClear")?.addEventListener("click", () => {
+      _state.searchText = "";
+      renderTray();
+      renderTrayControls();
+    });
   }
 
   function renderTray() {
@@ -247,21 +258,23 @@
     const rows = getUnassigned();
 
     if (!rows.length) {
-      el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--mutedText);font-size:12px;font-weight:700;">All players have been assigned.</div>`;
+      el.innerHTML = `<div class="maEmptyState">All players have been assigned.</div>`;
       return;
     }
 
     el.innerHTML = rows.map(p => {
-      const on  = _state.selected.has(p.ghin);
-      const hi  = safe(p.hi) || "—";
+      const selected = _state.selected.has(p.ghin);
+      const hi = safe(p.hi) || "";
+      const subline = [hi ? `HI ${esc(hi)}` : "", p.gender ? esc(p.gender) : ""].filter(Boolean).join(" · ");
+
       return `
-        <div class="maListRow" data-ghin="${esc(p.ghin)}" style="display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:8px;padding:7px 8px;cursor:pointer;${on ? "background:rgba(63,118,82,.08);" : ""}">
-          <div class="maCheckbox ${on ? "is-checked" : ""}"></div>
-          <div>
-            <div style="font-size:12px;font-weight:700;color:var(--ink)">${esc(p.name)}</div>
-            <div style="font-size:10px;font-weight:600;color:var(--mutedText)">HI ${esc(hi)}${p.gender ? " · " + esc(p.gender) : ""}</div>
+        <div class="maListRow ${selected ? "is-selected" : ""}" data-ghin="${esc(p.ghin)}">
+          <div class="maCheckbox ${selected ? "is-checked" : ""}"></div>
+          <div class="maListRow__col">
+            <div>${esc(p.name)}</div>
+            ${subline ? `<div class="maListRow__subline">${subline}</div>` : ""}
           </div>
-          <div style="font-size:11px;font-weight:700;color:var(--mutedText);white-space:nowrap;">${esc(hi)}</div>
+          <div class="maListRow__col maListRow__col--right" style="font-size:11px;font-weight:700;color:var(--mutedText);">${hi ? esc(hi) : "—"}</div>
         </div>`;
     }).join("");
 
@@ -283,73 +296,85 @@
     const ids = getPairingIds();
 
     if (!ids.length) {
-      el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--mutedText);font-size:12px;font-weight:700;">No pairings yet. Select players in the tray, then click Assign.</div>`;
+      el.innerHTML = `<div class="maEmptyState">No pairings yet.<br>Select players in the tray and click Assign.</div>`;
       return;
     }
 
-    const iconMinus = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
-    const iconPlus  = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+    const iconMinus  = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+    const iconPlus   = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+    const iconUnpair = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h2a5 5 0 0 1 0 10h-2m-6 0H7A5 5 0 0 1 7 7h2"></path><line x1="8" y1="12" x2="16" y2="12"></line><line x1="2" y1="2" x2="22" y2="22"></line></svg>`;
+    const iconDel    = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
 
     el.innerHTML = ids.map(pid => {
-      const members  = playersInPairing(pid);
-      const hiVals   = members.map(p => parseFloat(p.hi) || 0).filter(n => n > 0);
-      const sumHI    = hiVals.reduce((a, b) => a + b, 0).toFixed(1);
-      const avgHI    = hiVals.length ? (sumHI / hiVals.length).toFixed(1) : "—";
+      const members = playersInPairing(pid);
+      const hiVals  = members.map(p => parseFloat(p.hi) || 0).filter(n => n > 0);
+      const sumHI   = hiVals.reduce((a, b) => a + b, 0).toFixed(1);
+      const avgHI   = hiVals.length ? (hiVals.reduce((a, b) => a + b, 0) / hiVals.length).toFixed(1) : "—";
       const isTarget = _state.targetPairing === pid;
-      const collapsed = _state.allCollapsed;
+      const title    = `Pairing ${pid} · Sum HI: ${sumHI} · Avg: ${avgHI}`;
+      const summary  = `Pairing ${pid}: ${members.map(p => esc(p.lname)).join(" · ")}`;
 
-      const bodyHtml = members.map(p => `
-        <div class="cep-card-row" style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-bottom:1px solid var(--borderSubtle);">
-          <button type="button" class="iconBtn btnPrimary" data-action="remove" data-ghin="${esc(p.ghin)}" aria-label="Remove ${esc(p.name)}" style="width:24px;height:24px;color:var(--danger);">
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      const body = members.map(p => `
+        <div class="maListRow" data-ghin="${esc(p.ghin)}" style="cursor:default;">
+          <button type="button" class="maCard__actionBtn" data-action="removeFromPair" data-ghin="${esc(p.ghin)}" aria-label="Remove ${esc(p.name)}" style="color:var(--danger);">
+            ${iconDel}
           </button>
-          <div style="flex:1;min-width:0;">
-            <div style="font-size:12px;font-weight:700;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(p.name)}</div>
+          <div class="maListRow__col">
+            <div>${esc(p.name)}</div>
           </div>
-          <div style="font-size:10px;font-weight:700;color:var(--mutedText);white-space:nowrap;">HI ${esc(safe(p.hi) || "—")}</div>
+          <div class="maListRow__col maListRow__col--right" style="font-size:11px;font-weight:700;color:var(--mutedText);">
+            ${safe(p.hi) ? `HI ${esc(safe(p.hi))}` : "—"}
+          </div>
         </div>`).join("");
 
+      const collapsed = _state.allCollapsed;
+
       return `
-        <div class="maCard cep-pairing-card" data-pid="${esc(pid)}" style="margin-bottom:8px;${isTarget ? "border:2px solid var(--brandSecondary);" : ""}">
-          <div class="maCard__hdr" style="display:flex;align-items:center;gap:6px;padding:6px 10px;cursor:pointer;" data-action="target">
-            <button type="button" class="iconBtn btnSecondary" data-action="collapse" style="width:24px;height:24px;color:rgba(255,255,255,.8);">
-              ${collapsed ? iconPlus : iconMinus}
-            </button>
-            <div style="flex:1;font-size:12px;font-weight:900;color:#fff;">
-              Pairing ${esc(pid)}${isTarget ? ' <span style="font-size:9px;background:rgba(255,255,255,.25);padding:1px 5px;border-radius:3px;margin-left:4px;">TARGET</span>' : ""}
+        <div class="maCard" data-pairing-id="${esc(pid)}" style="margin-bottom:8px;${isTarget ? "border:2px solid var(--brandSecondary);box-shadow:0 0 8px rgba(63,118,82,.2);" : ""}">
+          <!-- Expanded header -->
+          <div class="maCard__hdr" data-action="target" style="background:var(--brandSecondary);color:#fff;cursor:pointer;${collapsed ? "display:none;" : ""}">
+            <button class="maCard__actionBtn" type="button" data-action="toggle-collapse" title="Collapse" style="background:rgba(255,255,255,.15);color:#fff;">${iconMinus}</button>
+            <div class="maCard__title" style="color:#fff;" title="${esc(title)}">${esc(title)}${isTarget ? ` <span style="font-size:9px;background:rgba(255,255,255,.25);padding:1px 5px;border-radius:3px;margin-left:4px;vertical-align:middle;">TARGET</span>` : ""}</div>
+            <div class="maCard__actions">
+              <button class="maCard__actionBtn" type="button" data-action="unpairGroup" title="Unpair all" style="background:rgba(255,255,255,.15);color:#fff;">${iconUnpair}</button>
             </div>
-            <div style="font-size:10px;color:rgba(255,255,255,.78);font-weight:700;white-space:nowrap;">
-              Σ ${esc(sumHI)} · Avg ${esc(avgHI)}
-            </div>
-            <button type="button" class="btn" data-action="unpair" style="font-size:10px;font-weight:800;padding:2px 6px;background:rgba(255,255,255,.2);color:#fff;border:0;border-radius:3px;">
-              Unpair
-            </button>
           </div>
-          ${collapsed ? "" : `<div class="maCard__body" style="padding:0;">${bodyHtml}</div>`}
+          <!-- Collapsed header -->
+          <div class="maCard__hdr" data-action="target" style="background:var(--brandSecondary);color:#fff;cursor:pointer;${!collapsed ? "display:none;" : ""}">
+            <button class="maCard__actionBtn" type="button" data-action="toggle-collapse" title="Expand" style="background:rgba(255,255,255,.15);color:#fff;">${iconPlus}</button>
+            <div class="maCard__title" style="color:#fff;" title="${esc(summary)}">${esc(summary)}</div>
+          </div>
+          <!-- Body -->
+          <div class="maCard__body" style="padding:0;${collapsed ? "display:none;" : ""}">${body}</div>
         </div>`;
     }).join("");
 
-    // Wire card actions
-    el.querySelectorAll(".cep-pairing-card").forEach(card => {
-      const pid = card.dataset.pid;
+    // Wire card events
+    el.querySelectorAll(".maCard[data-pairing-id]").forEach(card => {
+      const pid = card.dataset.pairingId;
 
-      card.querySelector("[data-action='target']")?.addEventListener("click", (e) => {
-        if (e.target.closest("button")) return;
-        setTarget(pid);
+      card.querySelectorAll("[data-action='target']").forEach(hdr => {
+        hdr.addEventListener("click", e => {
+          if (e.target.closest("button")) return;
+          setTarget(pid);
+        });
       });
 
-      card.querySelector("[data-action='collapse']")?.addEventListener("click", () => {
-        _state.allCollapsed = !_state.allCollapsed;
-        renderCanvas();
+      card.querySelectorAll("[data-action='toggle-collapse']").forEach(btn => {
+        btn.addEventListener("click", e => {
+          e.stopPropagation();
+          _state.allCollapsed = !_state.allCollapsed;
+          renderCanvas();
+        });
       });
 
-      card.querySelector("[data-action='unpair']")?.addEventListener("click", (e) => {
+      card.querySelector("[data-action='unpairGroup']")?.addEventListener("click", e => {
         e.stopPropagation();
         if (confirm(`Remove all players from Pairing ${pid}?`)) unpairGroup(pid);
       });
 
-      card.querySelectorAll("[data-action='remove']").forEach(btn => {
-        btn.addEventListener("click", (e) => {
+      card.querySelectorAll("[data-action='removeFromPair']").forEach(btn => {
+        btn.addEventListener("click", e => {
           e.stopPropagation();
           removeFromPairing(btn.dataset.ghin);
         });
@@ -679,7 +704,7 @@
   // ── Public API ───────────────────────────────────────────────────────────────
 
   function open(config) {
-    if (_overlay) close(); // safety — close any stale instance
+    if (_overlay) close();
 
     if (!config?.players?.length) {
       setStatus("No players available for pairing.", "warn");
