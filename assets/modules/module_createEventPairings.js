@@ -274,7 +274,6 @@
             <div>${esc(p.name)}</div>
             ${subline ? `<div class="maListRow__subline">${subline}</div>` : ""}
           </div>
-          <div class="maListRow__col maListRow__col--right" style="font-size:11px;font-weight:700;color:var(--mutedText);">${hi ? esc(hi) : "—"}</div>
         </div>`;
     }).join("");
 
@@ -638,9 +637,9 @@
 
             <!-- LEFT: Tray — unassigned players -->
             <section class="maPanel maPanel--secondary cepTrayPanel" aria-label="Unassigned players">
-              <header class="maPanel__hdr">
+              <header class="maPanel__hdr" style="background:var(--surfaceChrome);color:var(--brandTertiary);border-bottom:1px solid var(--borderSubtle);">
                 <div style="display:flex;align-items:center;justify-content:center;width:100%;position:relative;">
-                  <div style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.3px;color:#fff;">Unassigned</div>
+                  <div style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.3px;">Unassigned</div>
                   <button class="iconBtn cepMobileCloseBtn" type="button" aria-label="Close tray"
                     style="position:absolute;right:0;display:none;width:28px;height:28px;border:1px solid rgba(255,255,255,.4);background:transparent;color:#fff;border-radius:var(--radiusMd);">
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -654,9 +653,9 @@
 
             <!-- RIGHT: Canvas — pairing cards -->
             <section class="maPanel maPanel--primary" aria-label="Pairings">
-              <header class="maPanel__hdr">
+              <header class="maPanel__hdr" style="background:var(--surfaceChrome);color:var(--brandTertiary);border-bottom:1px solid var(--borderSubtle);">
                 <div style="display:flex;align-items:center;justify-content:center;width:100%;position:relative;">
-                  <div style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.3px;color:#fff;">Pairings</div>
+                  <div style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.3px;">Pairings</div>
                 </div>
               </header>
               <div class="maPanel__controls">
