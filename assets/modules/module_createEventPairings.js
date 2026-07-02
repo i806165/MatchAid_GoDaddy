@@ -36,6 +36,14 @@
     return String(n).padStart(3, "0");
   }
 
+  // Resolve team display name from teamConfig by team key ('T1'/'T2')
+  // Mirrors game_pairings.js resolveTeamName() exactly
+  function resolveTeamName(teamKey, teamConfig) {
+    if (!teamConfig || !Array.isArray(teamConfig.teams)) return teamKey || "";
+    const t = teamConfig.teams.find(t => t.id === teamKey);
+    return t ? String(t.name || t.id || teamKey) : (teamKey || "");
+  }
+
   function setStatus(msg, level) {
     if (typeof MA.setStatus === "function") MA.setStatus(msg, level || "info");
   }
@@ -64,12 +72,12 @@
   // ── State helpers ────────────────────────────────────────────────────────────
 
   function initState(config) {
-    // Deep-copy players so we mutate our own copy, not the host's array
     _state = {
       players:       config.players.map(p => ({ ...p })),
-      selected:      new Set(),      // GHINs selected in tray
-      targetPairing: "",             // pairingId of the targeted canvas card
-      sortMode:      "name",         // "name" | "hi"
+      teamConfig:    config.teamConfig || null,
+      selected:      new Set(),
+      targetPairing: "",
+      sortMode:      "name",
       searchText:    "",
       allCollapsed:  false,
       dirty:         false,
@@ -262,10 +270,22 @@
       return;
     }
 
-    el.innerHTML = rows.map(p => {
+    // Sort comparator — shared by grouped and flat paths
+    const sortCmp = (a, b) => {
+      if (_state.sortMode === "hi") {
+        return (parseFloat(a.hi) || 999) - (parseFloat(b.hi) || 999)
+            || safe(a.lname).localeCompare(safe(b.lname));
+      }
+      return safe(a.lname).localeCompare(safe(b.lname))
+          || safe(a.name).localeCompare(safe(b.name));
+    };
+
+    // Row renderer — shared by grouped and flat paths
+    const renderRow = (p) => {
       const selected = _state.selected.has(p.ghin);
       const hi = safe(p.hi) || "";
-      const subline = [hi ? `HI ${esc(hi)}` : "", p.gender ? esc(p.gender) : ""].filter(Boolean).join(" · ");
+      const subParts = [hi ? `HI ${esc(hi)}` : "", p.gender ? esc(p.gender) : ""].filter(Boolean);
+      const subline = subParts.join(" · ");
 
       return `
         <div class="maListRow ${selected ? "is-selected" : ""}" data-ghin="${esc(p.ghin)}">
@@ -275,7 +295,40 @@
             ${subline ? `<div class="maListRow__subline">${subline}</div>` : ""}
           </div>
         </div>`;
-    }).join("");
+    };
+
+    // Group header renderer — matches game_pairings.js renderGroupHeader exactly
+    const renderGroupHeader = (label, count) =>
+      `<div style="padding:4px 10px;font-size:11px;font-weight:800;color:var(--mutedText);background:var(--surfaceApp);border-bottom:1px solid var(--borderSubtle);">${esc(label)} — ${count} player${count !== 1 ? "s" : ""}</div>`;
+
+    // Detect teams — valid only when 2+ distinct non-empty teamKey values exist
+    const teamIds = [...new Set(rows.map(p => safe(p.teamKey)).filter(Boolean))].sort();
+    const hasTeams = teamIds.length > 1;
+
+    if (!hasTeams) {
+      // No teams — flat sorted list
+      el.innerHTML = [...rows].sort(sortCmp).map(renderRow).join("");
+    } else {
+      // Teams active — unassigned first, then team groups sorted by display name
+      const noTeam = rows.filter(p => !safe(p.teamKey)).sort(sortCmp);
+      const groups = teamIds.map(tid => ({
+        label:   resolveTeamName(tid, _state.teamConfig),
+        players: rows.filter(p => safe(p.teamKey) === tid).sort(sortCmp)
+      })).sort((a, b) => a.label.localeCompare(b.label));
+
+      let html = "";
+      if (noTeam.length) {
+        html += renderGroupHeader("No Team", noTeam.length);
+        html += noTeam.map(renderRow).join("");
+      }
+      groups.forEach(g => {
+        if (!g.players.length) return;
+        html += renderGroupHeader(g.label, g.players.length);
+        html += g.players.map(renderRow).join("");
+      });
+
+      el.innerHTML = html || `<div class="maEmptyState">No unassigned players.</div>`;
+    }
 
     el.querySelectorAll(".maListRow[data-ghin]").forEach(row => {
       row.addEventListener("click", () => {

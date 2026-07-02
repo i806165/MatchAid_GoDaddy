@@ -367,6 +367,20 @@
       return;
     }
 
+    // Parse teamConfig from the event record so the module can show
+    // display names (e.g. "Red", "Blue") instead of raw T1/T2 keys
+    let teamConfig = null;
+    try {
+      const raw = state.event?.dbEvents_TeamConfig;
+      if (raw && typeof raw === "string" && raw !== "") {
+        teamConfig = JSON.parse(raw);
+      } else if (raw && typeof raw === "object") {
+        teamConfig = raw;
+      }
+    } catch (_) {
+      teamConfig = null;
+    }
+
     // Map roster rows to the shape the module expects
     const players = (state.roster || []).map(p => ({
       ghin:       safe(p.dbEventPlayers_GHIN),
@@ -381,9 +395,9 @@
 
     MA.createEventPairings.open({
       players,
+      teamConfig,
       apiSavePairings: MA.paths.saveEventRosterPairings,
       onApply(updatedPlayers) {
-        // Write updated pairingId/pairingPos back to state.roster
         updatedPlayers.forEach(up => {
           const row = state.roster.find(r => safe(r.dbEventPlayers_GHIN) === up.ghin);
           if (row) {
