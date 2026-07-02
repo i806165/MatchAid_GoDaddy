@@ -304,6 +304,7 @@
     const iconPlus   = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
     const iconUnpair = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 7h2a5 5 0 0 1 0 10h-2m-6 0H7A5 5 0 0 1 7 7h2"></path><line x1="8" y1="12" x2="16" y2="12"></line><line x1="2" y1="2" x2="22" y2="22"></line></svg>`;
     const iconDel    = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+    const iconPencil = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>`;
 
     el.innerHTML = ids.map(pid => {
       const members = playersInPairing(pid);
@@ -316,7 +317,8 @@
 
       const body = members.map(p => `
         <div class="maListRow" data-ghin="${esc(p.ghin)}" style="cursor:default;">
-          <button type="button" class="maCard__actionBtn" data-action="removeFromPair" data-ghin="${esc(p.ghin)}" aria-label="Remove ${esc(p.name)}" style="color:var(--danger);">
+          <button type="button" class="iconBtn btnSecondary" data-action="removeFromPair" data-ghin="${esc(p.ghin)}"
+            aria-label="Remove ${esc(p.name)}" style="color:var(--danger);">
             ${iconDel}
           </button>
           <div class="maListRow__col">
@@ -328,21 +330,28 @@
         </div>`).join("");
 
       const collapsed = _state.allCollapsed;
+      // Card header uses the same light green tint as game_pairings.css .gpGroupCard__hdr
+      const hdrStyle = "background:rgba(7,67,42,.05);";
+      const targetBorder = isTarget ? "border:2px solid var(--brandSecondary);box-shadow:0 0 8px rgba(63,118,82,.2);" : "";
 
       return `
-        <div class="maCard" data-pairing-id="${esc(pid)}" style="margin-bottom:8px;${isTarget ? "border:2px solid var(--brandSecondary);box-shadow:0 0 8px rgba(63,118,82,.2);" : ""}">
+        <div class="maCard" data-pairing-id="${esc(pid)}" style="margin-bottom:8px;${targetBorder}">
           <!-- Expanded header -->
-          <div class="maCard__hdr" data-action="target" style="background:var(--brandSecondary);color:#fff;cursor:pointer;${collapsed ? "display:none;" : ""}">
-            <button class="maCard__actionBtn" type="button" data-action="toggle-collapse" title="Collapse" style="background:rgba(255,255,255,.15);color:#fff;">${iconMinus}</button>
-            <div class="maCard__title" style="color:#fff;" title="${esc(title)}">${esc(title)}${isTarget ? ` <span style="font-size:9px;background:rgba(255,255,255,.25);padding:1px 5px;border-radius:3px;margin-left:4px;vertical-align:middle;">TARGET</span>` : ""}</div>
+          <div class="maCard__hdr" style="${hdrStyle}${collapsed ? "display:none;" : ""}">
+            <button class="iconBtn btnSecondary" type="button" data-action="toggle-collapse" title="Collapse">${iconMinus}</button>
+            <div class="maCard__title" title="${esc(title)}">${esc(title)}</div>
             <div class="maCard__actions">
-              <button class="maCard__actionBtn" type="button" data-action="unpairGroup" title="Unpair all" style="background:rgba(255,255,255,.15);color:#fff;">${iconUnpair}</button>
+              <button class="iconBtn btnSecondary" type="button" data-action="unpairGroup" title="Unpair all">${iconUnpair}</button>
+              <button class="iconBtn btnSecondary ${isTarget ? "is-active" : ""}" type="button" data-action="setTarget" title="${isTarget ? "Targeted" : "Set as target"}">${iconPencil}</button>
             </div>
           </div>
           <!-- Collapsed header -->
-          <div class="maCard__hdr" data-action="target" style="background:var(--brandSecondary);color:#fff;cursor:pointer;${!collapsed ? "display:none;" : ""}">
-            <button class="maCard__actionBtn" type="button" data-action="toggle-collapse" title="Expand" style="background:rgba(255,255,255,.15);color:#fff;">${iconPlus}</button>
-            <div class="maCard__title" style="color:#fff;" title="${esc(summary)}">${esc(summary)}</div>
+          <div class="maCard__hdr" style="${hdrStyle}${!collapsed ? "display:none;" : ""}">
+            <button class="iconBtn btnSecondary" type="button" data-action="toggle-collapse" title="Expand">${iconPlus}</button>
+            <div class="maCard__title" title="${esc(summary)}">${esc(summary)}</div>
+            <div class="maCard__actions">
+              <button class="iconBtn btnSecondary ${isTarget ? "is-active" : ""}" type="button" data-action="setTarget" title="${isTarget ? "Targeted" : "Set as target"}">${iconPencil}</button>
+            </div>
           </div>
           <!-- Body -->
           <div class="maCard__body" style="padding:0;${collapsed ? "display:none;" : ""}">${body}</div>
@@ -353,13 +362,15 @@
     el.querySelectorAll(".maCard[data-pairing-id]").forEach(card => {
       const pid = card.dataset.pairingId;
 
-      card.querySelectorAll("[data-action='target']").forEach(hdr => {
-        hdr.addEventListener("click", e => {
-          if (e.target.closest("button")) return;
+      // Pencil button sets/clears target
+      card.querySelectorAll("[data-action='setTarget']").forEach(btn => {
+        btn.addEventListener("click", e => {
+          e.stopPropagation();
           setTarget(pid);
         });
       });
 
+      // Collapse toggle
       card.querySelectorAll("[data-action='toggle-collapse']").forEach(btn => {
         btn.addEventListener("click", e => {
           e.stopPropagation();
@@ -368,11 +379,13 @@
         });
       });
 
+      // Unpair group
       card.querySelector("[data-action='unpairGroup']")?.addEventListener("click", e => {
         e.stopPropagation();
         if (confirm(`Remove all players from Pairing ${pid}?`)) unpairGroup(pid);
       });
 
+      // Remove player
       card.querySelectorAll("[data-action='removeFromPair']").forEach(btn => {
         btn.addEventListener("click", e => {
           e.stopPropagation();
@@ -664,8 +677,8 @@
         <!-- Footer -->
         <footer class="maModal__ftr" style="flex-shrink:0;">
           <div style="flex:1;font-size:11px;font-weight:700;color:var(--mutedText);" id="cepFooterHint"></div>
-          <button id="cepBtnCancel" class="btn btnPrimary"    type="button">Cancel</button>
-          <button id="cepBtnSave"   class="btn btnSecondary"  type="button">Save Pairings</button>
+          <button id="cepBtnCancel" class="maFtrBtn maFtrBtn--cancel" type="button">Cancel</button>
+          <button id="cepBtnSave"   class="maFtrBtn maFtrBtn--save"   type="button">Save Pairings</button>
         </footer>
 
       </div>`;
