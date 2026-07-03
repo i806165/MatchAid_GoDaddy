@@ -40,9 +40,6 @@
     startDate: document.getElementById("emStartDate"),
     endDate: document.getElementById("emEndDate"),
     scheduleHint: document.getElementById("emScheduleHint"),
-    scoringMethod: document.getElementById("emScoringMethod"),
-    tiebreakMethod: document.getElementById("emTiebreakMethod"),
-    scoringPreview: document.getElementById("emScoringPreview"),
     // EVENT SETTINGS
     pairingMode: document.getElementById("emPairingMode"),
     pairingModeHint: document.getElementById("emPairingModeHint"),
@@ -50,6 +47,10 @@
     hcEffectivityDate: document.getElementById("emHCEffectivityDate"),
     hcEffectivityDateWrap: document.getElementById("emHCEffectivityDateWrap"),
     hcEffectivityHint: document.getElementById("emHCEffectivityHint"),
+    // EVENT COMPETITION
+    btnDefineKPI: document.getElementById("emBtnDefineKPI"),
+    kpiCountLabel: document.getElementById("emKPICountLabel"),
+    kpiHint: document.getElementById("emKPIHint"),
   };
 
   const init = window.__MA_INIT__ || window.__INIT__ || {};
@@ -58,6 +59,8 @@
     mode: String(init.mode || "edit"),
     eid: init.eid || null,
     event: init.event || {},
+    kpiCatalog: init.kpiCatalog || {},
+    kpiConfig: null,   // parsed JSON object — set from event record or module onApply
     dirty: false,
     busy: false
   };
@@ -151,21 +154,6 @@
     }
   }
 
-  function renderScoringPreview() {
-    const method = el.scoringMethod.value || "";
-    const tb = el.tiebreakMethod.value || "";
-
-    let msg = "Event scoring has not been configured.";
-    if (method === "AggregatePoints") msg = "Event standings will sum each participant's points across linked games.";
-    if (method === "PlacementPoints") msg = "Each linked game will award event points by finishing position.";
-    if (method === "MatchPoints") msg = "Event standings will use match outcomes from linked games.";
-    if (method === "ManualPoints") msg = "Event points will be entered or adjusted manually.";
-
-    if (tb) msg += ` Tiebreak: ${tb}.`;
-
-    if (el.scoringPreview) el.scoringPreview.textContent = msg;
-  }
-
   function renderPairingModeHint() {
     if (!el.pairingModeHint) return;
     const mode = el.pairingMode?.value || "none";
@@ -185,11 +173,31 @@
       Date:     "Specify an exact date to lock the index.",
     };
     el.hcEffectivityHint.textContent = hints[eff] || "";
-    // Show/hide the date field
     if (el.hcEffectivityDateWrap) {
       el.hcEffectivityDateWrap.style.display = (eff === "Date") ? "" : "none";
     }
   }
+
+  function renderKPIHint() {
+    if (!state.kpiConfig) {
+      if (el.kpiHint)       el.kpiHint.textContent = "No competitions configured for this event.";
+      if (el.kpiCountLabel) el.kpiCountLabel.textContent = "";
+      return;
+    }
+    const active = Object.entries(state.kpiConfig)
+      .filter(([, v]) => v?.active)
+      .map(([k]) => (state.kpiCatalog[k]?.label || k));
+    const count = active.length;
+    if (el.kpiCountLabel) el.kpiCountLabel.textContent = count ? `${count} active` : "";
+    if (el.kpiHint)       el.kpiHint.textContent = count
+      ? active.join(" · ")
+      : "No competitions configured for this event.";
+    if (el.btnDefineKPI)  el.btnDefineKPI.textContent = count
+      ? `Configure Competitions (${count} active)`
+      : "Configure Competitions";
+  }
+
+  function renderScoringPreview() { /* removed — replaced by KPI module */ }
 
   function renderScheduleHint() {
     const s = el.startDate.value || "";
@@ -209,48 +217,49 @@
     const ev = state.event || {};
 
     if (el.eidLabel) el.eidLabel.textContent = state.eid ? ` ${state.eid}` : "";
-    el.title.value = ev.dbEvents_Title || "";
-    el.eventType.value = ev.dbEvents_EventType || "Tournament";
-    el.facilityName.value = ev.dbEvents_FacilityName || "";
-    el.description.value = ev.dbEvents_Description || "";
-    el.startDate.value = String(ev.dbEvents_StartDate || ev.startDateISO || todayYmd()).slice(0, 10);
-    el.endDate.value = String(ev.dbEvents_EndDate || ev.endDateISO || el.startDate.value || todayYmd()).slice(0, 10);
-    el.scoringMethod.value = ev.dbEvents_ScoringMethod || "";
-    el.tiebreakMethod.value = ev.dbEvents_TiebreakMethod || "";
+    el.title.value        = ev.dbEvents_Title       || "";
+    el.eventType.value    = ev.dbEvents_EventType   || "Tournament";
+    el.facilityName.value = ev.dbEvents_FacilityName|| "";
+    el.description.value  = ev.dbEvents_Description || "";
+    el.startDate.value    = String(ev.dbEvents_StartDate || ev.startDateISO || todayYmd()).slice(0, 10);
+    el.endDate.value      = String(ev.dbEvents_EndDate   || ev.endDateISO   || el.startDate.value || todayYmd()).slice(0, 10);
+
     // EVENT SETTINGS
-    if (el.pairingMode) el.pairingMode.value = ev.dbEvents_PairingMode || "none";
-    if (el.hcEffectivity) el.hcEffectivity.value = ev.dbEvents_HCEffectivity || "PlayDate";
+    if (el.pairingMode)       el.pairingMode.value       = ev.dbEvents_PairingMode    || "none";
+    if (el.hcEffectivity)     el.hcEffectivity.value     = ev.dbEvents_HCEffectivity  || "PlayDate";
     if (el.hcEffectivityDate && ev.dbEvents_HCEffectivityDate) {
       el.hcEffectivityDate.value = String(ev.dbEvents_HCEffectivityDate).slice(0, 10);
     }
 
+    // KPI config
+    try {
+      const raw = ev.dbEvents_KPIConfig;
+      state.kpiConfig = raw ? JSON.parse(raw) : null;
+    } catch (_) {
+      state.kpiConfig = null;
+    }
+
     renderScheduleHint();
-    renderScoringPreview();
     renderPairingModeHint();
     renderHCEffectivityHint();
+    renderKPIHint();
   }
 
   function collectPatch() {
-    const method = el.scoringMethod.value || "";
-    const tb = el.tiebreakMethod.value || "";
-
     return {
-      dbEvents_Title: el.title.value.trim(),
-      dbEvents_EventType: el.eventType.value,
-      dbEvents_StartDate: el.startDate.value,
-      dbEvents_EndDate: el.endDate.value,
-      dbEvents_Description: el.description.value.trim(),
-      dbEvents_FacilityName: el.facilityName.value.trim(),
-      dbEvents_ScoringMethod: method,
-      dbEvents_ScoringConfig: method ? JSON.stringify(defaultScoringConfig(method)) : "",
-      dbEvents_TiebreakMethod: tb,
-      dbEvents_TiebreakConfig: tb ? JSON.stringify(defaultTiebreakConfig(tb)) : "",
+      dbEvents_Title:              el.title.value.trim(),
+      dbEvents_EventType:          el.eventType.value,
+      dbEvents_StartDate:          el.startDate.value,
+      dbEvents_EndDate:            el.endDate.value,
+      dbEvents_Description:        el.description.value.trim(),
+      dbEvents_FacilityName:       el.facilityName.value.trim(),
       // EVENT SETTINGS
-      dbEvents_PairingMode: el.pairingMode?.value || "none",
-      dbEvents_HCEffectivity: el.hcEffectivity?.value || "PlayDate",
-      dbEvents_HCEffectivityDate: (el.hcEffectivity?.value === "Date")
-        ? (el.hcEffectivityDate?.value || "")
-        : ""
+      dbEvents_PairingMode:        el.pairingMode?.value        || "none",
+      dbEvents_HCEffectivity:      el.hcEffectivity?.value      || "PlayDate",
+      dbEvents_HCEffectivityDate:  (el.hcEffectivity?.value === "Date")
+        ? (el.hcEffectivityDate?.value || "") : "",
+      // KPI config — serialized from state
+      dbEvents_KPIConfig: state.kpiConfig ? JSON.stringify(state.kpiConfig) : "",
     };
   }
 
@@ -369,6 +378,7 @@
   }
 
   function wireDom() {
+    // Field change listeners — re-render hints and mark dirty
     [
       el.title,
       el.eventType,
@@ -376,8 +386,6 @@
       el.description,
       el.startDate,
       el.endDate,
-      el.scoringMethod,
-      el.tiebreakMethod,
       el.pairingMode,
       el.hcEffectivity,
       el.hcEffectivityDate
@@ -385,19 +393,42 @@
       if (!node) return;
       node.addEventListener("input", () => {
         renderScheduleHint();
-        renderScoringPreview();
         renderPairingModeHint();
         renderHCEffectivityHint();
         setDirty(true);
       });
       node.addEventListener("change", () => {
         renderScheduleHint();
-        renderScoringPreview();
         renderPairingModeHint();
         renderHCEffectivityHint();
         setDirty(true);
       });
     });
+
+    // KPI Competition button
+    if (el.btnDefineKPI) {
+      el.btnDefineKPI.addEventListener("click", () => {
+        if (!MA.defineEventKPI || typeof MA.defineEventKPI.open !== "function") {
+          setStatus("Event KPI module not loaded.", "warn");
+          return;
+        }
+        const hasTeams = !!(state.event?.dbEvents_TeamConfig);
+        MA.defineEventKPI.open({
+          kpiCatalog: state.kpiCatalog,
+          kpiConfig:  state.kpiConfig,
+          hasTeams,
+          onApply(jsonStr) {
+            try {
+              state.kpiConfig = JSON.parse(jsonStr);
+            } catch (_) {
+              state.kpiConfig = null;
+            }
+            renderKPIHint();
+            setDirty(true);
+          }
+        });
+      });
+    }
   }
 
   wireDom();

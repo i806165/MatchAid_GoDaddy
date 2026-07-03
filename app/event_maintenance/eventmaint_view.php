@@ -69,43 +69,7 @@
     </div>
   </section>
 
-  <!-- CARD 3 — EVENT SCORING -->
-  <section class="maCard" aria-label="Event Scoring">
-    <header class="maCard__hdr">
-      <div class="maCard__title">EVENT SCORING</div>
-    </header>
-
-    <div class="maCard__body">
-      <div class="maFieldRow emTwoCol">
-        <div class="maField">
-          <label class="maLabel" for="emScoringMethod">Scoring Method</label>
-          <select id="emScoringMethod" class="maTextInput">
-            <option value="">Not configured</option>
-            <option value="AggregatePoints">Aggregate Points</option>
-            <option value="PlacementPoints">Placement Points</option>
-            <option value="MatchPoints">Match Points</option>
-            <option value="ManualPoints">Manual Points</option>
-          </select>
-        </div>
-
-        <div class="maField">
-          <label class="maLabel" for="emTiebreakMethod">Tiebreak Method</label>
-          <select id="emTiebreakMethod" class="maTextInput">
-            <option value="">Not configured</option>
-            <option value="TotalEventPoints">Total Event Points</option>
-            <option value="TeamPoints">Team Points</option>
-            <option value="BestFinalRound">Best Final Round</option>
-            <option value="MostRoundsPlayed">Most Rounds Played</option>
-            <option value="ManualReview">Manual Review</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="emScoringPreview" id="emScoringPreview"></div>
-    </div>
-  </section>
-
-  <!-- CARD 4 — EVENT SETTINGS -->
+  <!-- CARD 3 — EVENT SETTINGS -->
   <section class="maCard" aria-label="Event Settings">
     <header class="maCard__hdr">
       <div class="maCard__title">EVENT SETTINGS</div>
@@ -125,8 +89,8 @@
       </div>
       <div class="emHint" id="emPairingModeHint"></div>
 
-      <!-- Handicap Effectivity -->
-      <div class="maFieldRow" style="margin-top: 14px;">
+      <!-- HC Effectivity -->
+      <div class="maFieldRow" style="margin-top:14px;">
         <div class="maField">
           <label class="maLabel" for="emHCEffectivity">Handicap Effectivity</label>
           <select id="emHCEffectivity" class="maTextInput">
@@ -139,15 +103,29 @@
         </div>
       </div>
 
-      <!-- Effectivity Date — shown only when "Choose Date" is selected -->
+      <!-- HC Effectivity Date — shown only when "Choose Date" is selected -->
       <div class="maFieldRow" id="emHCEffectivityDateWrap" style="display:none;">
         <div class="maField">
           <label class="maLabel" for="emHCEffectivityDate">Effectivity Date</label>
           <input id="emHCEffectivityDate" class="maTextInput" type="date" />
         </div>
       </div>
-
       <div class="emHint" id="emHCEffectivityHint"></div>
+
+      <!-- Event Competition -->
+      <div class="maFieldRow" style="margin-top:18px;padding-top:14px;border-top:0.5px solid var(--borderSubtle);">
+        <div class="maField">
+          <label class="maLabel">Event Competition</label>
+          <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
+            <button id="emBtnDefineKPI" class="btn btnSecondary" type="button">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:4px;vertical-align:-2px;"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
+              Configure Competitions
+            </button>
+            <span id="emKPICountLabel" class="emHint" style="margin:0;"></span>
+          </div>
+          <div class="emHint" id="emKPIHint" style="margin-top:6px;">No competitions configured for this event.</div>
+        </div>
+      </div>
 
     </div>
   </section>

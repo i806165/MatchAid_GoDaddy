@@ -45,13 +45,19 @@ try {
     ? "Add New Event"
     : ("EID " . (string)$eid);
 
+  // Load KPI catalog include — passed to JS for the defineEventKPI module
+  $kpiCatalog = file_exists(MA_INCLUDES . "/kpi_catalog.php")
+    ? require MA_INCLUDES . "/kpi_catalog.php"
+    : [];
+
   $initPayload = [
-    "ok" => true,
-    "mode" => $mode,
-    "eid" => $eid,
-    "event" => $event,
+    "ok"             => true,
+    "mode"           => $mode,
+    "eid"            => $eid,
+    "event"          => $event,
+    "kpiCatalog"     => $kpiCatalog,
     "authorizations" => $authorizations,
-    "header" => [
+    "header"         => [
       "subtitle" => $subtitle
     ]
   ];
@@ -112,6 +118,7 @@ $pageHelpKey = "event_maintenance";
 
   <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_defineEventKPI.js') ?>"></script>
   <script src="<?= ma_asset('/assets/pages/event_maintenance.js') ?>"></script>
 </body>
 </html>

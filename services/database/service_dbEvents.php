@@ -235,13 +235,17 @@ final class ServiceDbEvents
       "dbEvents_EndDate",
       "dbEvents_Description",
       "dbEvents_FacilityName",
+      // Scoring fields kept for backward compat but no longer set via event maintenance UI
       "dbEvents_ScoringMethod",
       "dbEvents_ScoringConfig",
       "dbEvents_TiebreakMethod",
       "dbEvents_TiebreakConfig",
+      // EVENT SETTINGS
       "dbEvents_PairingMode",
       "dbEvents_HCEffectivity",
       "dbEvents_HCEffectivityDate",
+      // EVENT COMPETITION
+      "dbEvents_KPIConfig",
     ];
 
     foreach ($allow as $k) {
