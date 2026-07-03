@@ -355,98 +355,103 @@
 
   // ── Styles ───────────────────────────────────────────────────────────────────
 
+  // ── Styles — checklist interior only; modal shell uses ma_shared.css ──────────
+
   function injectStyles() {
     if (document.getElementById("dekStyles")) return;
     const s = document.createElement("style");
     s.id = "dekStyles";
     s.textContent = `
-      #dekOverlay{position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.5);display:flex;align-items:stretch;}
-      #dekOverlay .dek-modal{display:flex;flex-direction:column;width:100%;max-width:680px;margin:auto;max-height:100vh;background:var(--surface-2);border-radius:12px;overflow:hidden;}
-      @media(max-width:700px){#dekOverlay .dek-modal{border-radius:0;max-height:100vh;}}
-      .dek-hdr{flex-shrink:0;background:#073B4C;color:#fff;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;}
-      .dek-hdr-title{font-size:13px;font-weight:500;letter-spacing:.2px;text-transform:uppercase;}
-      .dek-hdr-sub{font-size:11px;color:rgba(255,255,255,.7);}
-      .dek-hdr-close{border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;border-radius:var(--radius);padding:4px 12px;font-size:12px;font-weight:500;cursor:pointer;}
-      .dek-body{flex:1 1 auto;overflow-y:auto;min-height:0;}
-      .dek-section-hdr{font-size:10px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);padding:10px 16px 6px;background:var(--surface-1);border-bottom:0.5px solid var(--border);border-top:0.5px solid var(--border);}
-      .dek-kpi-row{display:flex;align-items:flex-start;gap:12px;padding:10px 16px;border-bottom:0.5px solid var(--border);}
+      /* Widen modal slightly for the KPI checklist */
+      #dekOverlay .maModal{ max-width:min(640px,calc(100vw - 16px)); }
+      /* Sections */
+      .dek-section-hdr{font-size:10px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;color:var(--mutedText);padding:10px 16px 6px;background:var(--surfaceChrome);border-bottom:0.5px solid var(--borderSubtle);border-top:0.5px solid var(--borderSubtle);}
+      .dek-kpi-row{display:flex;align-items:flex-start;gap:12px;padding:10px 16px;border-bottom:0.5px solid var(--borderSubtle);}
       .dek-kpi-row:last-child{border-bottom:none;}
-      .dek-check{width:18px;height:18px;border:1.5px solid var(--border-strong);border-radius:4px;flex-shrink:0;margin-top:2px;background:var(--surface-2);cursor:pointer;position:relative;}
-      .dek-check.on{background:var(--fill-accent);border-color:var(--fill-accent);}
-      .dek-check.on::after{content:'';position:absolute;left:4px;top:1px;width:6px;height:10px;border:1.5px solid #fff;border-top:0;border-left:0;transform:rotate(45deg);}
+      /* Checkbox — same pattern as .maCheckbox */
+      .dek-check{width:18px;height:18px;border:1.5px solid var(--borderStrong,#bbb);border-radius:4px;flex-shrink:0;margin-top:2px;background:var(--surface);cursor:pointer;position:relative;}
+      .dek-check.on{background:var(--brandSecondary);border-color:var(--brandSecondary);}
+      .dek-check.on::after{content:"";position:absolute;left:4px;top:1px;width:6px;height:10px;border:1.5px solid #fff;border-top:0;border-left:0;transform:rotate(45deg);}
+      /* KPI text */
       .dek-kpi-body{flex:1;min-width:0;}
-      .dek-kpi-label{font-size:13px;font-weight:500;color:var(--text-primary);}
-      .dek-kpi-desc{font-size:12px;color:var(--text-muted);margin-top:2px;line-height:1.4;}
+      .dek-kpi-label{font-size:13px;font-weight:500;color:var(--ink);}
+      .dek-kpi-desc{font-size:12px;color:var(--mutedText);margin-top:2px;line-height:1.4;}
+      /* Segment tags */
       .dek-segments{margin-top:5px;display:flex;gap:4px;flex-wrap:wrap;}
-      .dek-seg-tag{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:500;border:0.5px solid var(--border);background:var(--surface-1);color:var(--text-secondary);}
-      .dek-config-toggle{display:inline-flex;align-items:center;gap:4px;margin-top:7px;font-size:11px;color:var(--text-accent);background:transparent;border:none;cursor:pointer;padding:0;font-family:inherit;}
+      .dek-seg-tag{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:500;border:0.5px solid var(--borderSubtle);background:var(--surfaceChrome);color:var(--mutedText);}
+      /* Config toggle */
+      .dek-config-toggle{display:inline-flex;align-items:center;gap:4px;margin-top:7px;font-size:11px;color:var(--brandAccent);background:transparent;border:none;cursor:pointer;padding:0;font-family:inherit;}
       .dek-config-toggle .dek-chevron{font-size:11px;transition:transform .15s;}
       .dek-config-toggle.open .dek-chevron{transform:rotate(180deg);}
-      .dek-editor{margin-top:10px;background:var(--surface-1);border:0.5px solid var(--border);border-radius:8px;padding:12px;}
-      .dek-editor-title{font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:8px;}
+      /* Points editor */
+      .dek-editor{margin-top:10px;background:var(--surfaceChrome);border:0.5px solid var(--borderSubtle);border-radius:var(--radiusMd,6px);padding:12px;}
+      .dek-editor-title{font-size:11px;font-weight:500;color:var(--mutedText);margin-bottom:8px;}
       .dek-pts-table{width:100%;border-collapse:collapse;font-size:12px;}
-      .dek-pts-table th{text-align:left;color:var(--text-muted);font-weight:500;padding:4px 8px;border-bottom:0.5px solid var(--border);}
-      .dek-pts-table td{padding:4px 8px;border-bottom:0.5px solid var(--border);}
+      .dek-pts-table th{text-align:left;color:var(--mutedText);font-weight:500;padding:4px 8px;border-bottom:0.5px solid var(--borderSubtle);}
+      .dek-pts-table td{padding:4px 8px;border-bottom:0.5px solid var(--borderSubtle);}
       .dek-pts-table tr:last-child td{border-bottom:none;}
-      .dek-pts-input{width:64px;border:0.5px solid var(--border-strong);border-radius:4px;padding:2px 6px;font-size:12px;text-align:right;background:var(--surface-2);color:var(--text-primary);}
-      .dek-add-btn{font-size:11px;color:var(--text-accent);background:transparent;border:none;cursor:pointer;padding:4px 0;display:flex;align-items:center;gap:3px;margin-top:6px;font-family:inherit;}
-      .dek-tie-row{display:flex;align-items:center;gap:8px;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border);}
-      .dek-tie-label{font-size:11px;font-weight:500;color:var(--text-secondary);white-space:nowrap;}
-      .dek-tie-select{border:0.5px solid var(--border-strong);border-radius:4px;padding:3px 8px;font-size:12px;background:var(--surface-2);color:var(--text-primary);flex:1;}
-      .dek-config-summary{display:flex;align-items:center;gap:4px;margin-top:6px;font-size:11px;font-style:italic;color:var(--text-muted);}
-      .dek-footer{flex-shrink:0;border-top:0.5px solid var(--border);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface-1);}
-      .dek-footer-info{min-width:0;}
-      .dek-footer-count{font-size:12px;font-weight:500;color:var(--text-success);}
-      .dek-footer-list{font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
-      .dek-footer-actions{display:flex;gap:8px;flex-shrink:0;}
-      .dek-btn-cancel{border:0.5px solid var(--border-strong);background:var(--surface-2);color:var(--text-primary);border-radius:var(--radius);padding:6px 14px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;}
-      .dek-btn-apply{border:0;background:var(--fill-accent);color:#fff;border-radius:var(--radius);padding:6px 18px;font-size:13px;font-weight:500;cursor:pointer;font-family:inherit;}
-      .dek-btn-apply:disabled{opacity:.5;cursor:default;}
+      .dek-pts-input{width:64px;border:0.5px solid var(--borderStrong,#bbb);border-radius:var(--radiusSq,4px);padding:2px 6px;font-size:12px;text-align:right;background:var(--surface);color:var(--ink);}
+      .dek-add-btn{font-size:11px;color:var(--brandAccent);background:transparent;border:none;cursor:pointer;padding:4px 0;display:flex;align-items:center;gap:3px;margin-top:6px;font-family:inherit;}
+      .dek-tie-row{display:flex;align-items:center;gap:8px;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--borderSubtle);}
+      .dek-tie-label{font-size:11px;font-weight:500;color:var(--mutedText);white-space:nowrap;}
+      .dek-tie-select{border:0.5px solid var(--borderStrong,#bbb);border-radius:var(--radiusSq,4px);padding:3px 8px;font-size:12px;background:var(--surface);color:var(--ink);flex:1;}
+      .dek-config-summary{display:flex;align-items:center;gap:4px;margin-top:6px;font-size:11px;font-style:italic;color:var(--mutedText);}
+      /* Footer info */
+      .dek-footer-info{flex:1;min-width:0;}
+      .dek-footer-count{font-size:12px;font-weight:700;color:var(--ink);}
+      .dek-footer-list{font-size:11px;color:var(--mutedText);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
     `;
     document.head.appendChild(s);
   }
 
-  // ── Build overlay ────────────────────────────────────────────────────────────
+  // ── Build overlay — uses maModalOverlay / maModal from ma_shared.css ─────────
 
   function buildOverlay() {
     const overlay = document.createElement("div");
-    overlay.id = "dekOverlay";
+    overlay.id        = "dekOverlay";
+    overlay.className = "maModalOverlay is-open";
 
     overlay.innerHTML = `
-      <div class="dek-modal" role="dialog" aria-modal="true" aria-label="Event Competition">
-        <div class="dek-hdr">
-          <div>
-            <div class="dek-hdr-title">Event Competition</div>
-            <div class="dek-hdr-sub">Select which competitions are active for this event</div>
+      <div class="maModal" role="dialog" aria-modal="true" aria-label="Event Competition">
+
+        <div class="maModal__hdr" style="background:var(--brandTertiary);">
+          <div class="maModal__titles">
+            <div class="maModal__title">Event Competition</div>
+            <div class="maModal__subtitle">Select which competitions are active for this event</div>
           </div>
-          <button id="dekBtnClose" class="dek-hdr-close" type="button">Close</button>
+          <button id="dekBtnClose" class="iconBtn btnSecondary" type="button" aria-label="Close">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+              stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
         </div>
 
-        <div class="dek-body" id="dekBody"></div>
+        <div class="maModal__body maModal__body--flush" id="dekBody"></div>
 
-        <div class="dek-footer">
+        <div class="maModal__ftr">
           <div class="dek-footer-info">
             <div class="dek-footer-count" id="dekActiveCount">0 competitions active</div>
             <div class="dek-footer-list"  id="dekActiveList">None selected</div>
           </div>
-          <div class="dek-footer-actions">
-            <button id="dekBtnCancel" class="dek-btn-cancel" type="button">Cancel</button>
-            <button id="dekBtnApply"  class="dek-btn-apply"  type="button">Save</button>
+          <div class="maModal__ftrActions" style="flex:0 0 auto;width:auto;">
+            <button id="dekBtnCancel" class="maFtrBtn maFtrBtn--cancel" type="button">Cancel</button>
+            <button id="dekBtnApply"  class="maFtrBtn maFtrBtn--save"   type="button">Save</button>
           </div>
         </div>
+
       </div>`;
 
     overlay.querySelector("#dekBtnClose")?.addEventListener("click",  close);
     overlay.querySelector("#dekBtnCancel")?.addEventListener("click", close);
     overlay.querySelector("#dekBtnApply")?.addEventListener("click",  doApply);
-
-    // Close on backdrop click
     overlay.addEventListener("click", e => { if (e.target === overlay) close(); });
 
     return overlay;
   }
 
-  // ── Apply ────────────────────────────────────────────────────────────────────
+    // ── Apply ────────────────────────────────────────────────────────────────────
 
   function doApply() {
     if (!_config?.onApply) { close(); return; }
