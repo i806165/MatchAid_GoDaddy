@@ -363,7 +363,7 @@
     s.id = "dekStyles";
     s.textContent = `
       /* Widen modal slightly for the KPI checklist */
-      #dekOverlay .maModal{ max-width:min(640px,calc(100vw - 16px)); }
+      #dekOverlay .maModal{ max-width:min(640px,calc(100vw - 16px)); font-family:var(--fontFamilyBase); }
       /* Sections */
       .dek-section-hdr{font-size:10px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;color:var(--mutedText);padding:10px 16px 6px;background:var(--surfaceChrome);border-bottom:0.5px solid var(--borderSubtle);border-top:0.5px solid var(--borderSubtle);}
       .dek-kpi-row{display:flex;align-items:flex-start;gap:12px;padding:10px 16px;border-bottom:0.5px solid var(--borderSubtle);}

@@ -235,11 +235,6 @@ final class ServiceDbEvents
       "dbEvents_EndDate",
       "dbEvents_Description",
       "dbEvents_FacilityName",
-      // Scoring fields kept for backward compat but no longer set via event maintenance UI
-      "dbEvents_ScoringMethod",
-      "dbEvents_ScoringConfig",
-      "dbEvents_TiebreakMethod",
-      "dbEvents_TiebreakConfig",
       // EVENT SETTINGS
       "dbEvents_PairingMode",
       "dbEvents_HCEffectivity",
@@ -300,7 +295,6 @@ final class ServiceDbEvents
       "facilityName" => (string)($r["dbEvents_FacilityName"] ?? ""),
       "adminName" => (string)($r["dbEvents_AdminName"] ?? ""),
       "adminGHIN" => (string)($r["dbEvents_AdminGHIN"] ?? ""),
-      "scoringMethod" => (string)($r["dbEvents_ScoringMethod"] ?? ""),
       "rosterCount" => (int)($r["rosterCount"] ?? 0),
       "gameCount" => (int)($r["gameCount"] ?? 0),
     ];
