@@ -39,7 +39,15 @@
 
   const DEFAULT_PAIRFIELD_TABLE = { pointsConfig: { "1": 100, "2": 75, "3": 50 }, tieRule: "split" };
   const DEFAULT_OUTCOME = { win: 1, halve: 0.5, loss: 0 };
-  const SEGMENT_LABELS = { "1": "Front 9", "2": "Back 9", "3": "Overall" };
+  const SEGMENT_LABELS_MULTI = { "1": "Front 9", "2": "Back 9", "3": "Overall" };
+
+  function segmentLabel(key, segCount) {
+    // A single-segment match is scored as one whole-round result — "Overall,"
+    // not "Front 9." The Front 9 / Back 9 split only makes sense once there
+    // are 3 independently-scored segments.
+    if (segCount === 1) return "Overall";
+    return SEGMENT_LABELS_MULTI[key] || `Segment ${key}`;
+  }
 
   // ── Singleton ────────────────────────────────────────────────────────────────
 
@@ -158,7 +166,7 @@
     const segCount = _state.scoringSegments;
     const segKeys = Object.keys(_state.segments);
 
-    const headerCells = segKeys.map(k => `<th>${esc(SEGMENT_LABELS[k] || `Segment ${k}`)}</th>`).join("");
+    const headerCells = segKeys.map(k => `<th>${esc(segmentLabel(k, segCount))}</th>`).join("");
 
     const outcomeRows = ["win", "halve", "loss"].map(outcome => {
       const label = outcome === "win" ? "Win" : outcome === "halve" ? "Halve" : "Loss";
