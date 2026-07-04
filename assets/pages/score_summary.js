@@ -86,6 +86,26 @@
     return scoringBasis() === 'Points';
   }
 
+  // PairPair only — 1 (default, one overall result) or 3 (front 9 / back 9 /
+  // overall, scored independently). Backend already normalizes to 1 or 3.
+  function scoringSegments() {
+    return Number(payload.meta?.scoringSegments || 1) === 3 ? 3 : 1;
+  }
+
+  // Formats a raw segment number, distinguishing "genuinely not applicable"
+  // (null — e.g. a 9-hole round has no back-9 segment) from a real zero.
+  function segNumDisplay(n) {
+    return (n === null || n === undefined) ? '—' : String(n);
+  }
+
+  // Formats a {value, display} shaped segment cell (gameSegments,
+  // grossDiffSegments/netDiffSegments) the same way — null means not
+  // applicable, not a real zero.
+  function segCellDisplay(cell) {
+    const d = cell?.display;
+    return (d === null || d === undefined) ? '—' : d;
+  }
+
   // Derives the skins count for a row or side from the correct field
   // based on scoringMethod — gross skins for ADJ GROSS, net skins otherwise.
   function skinsValue(rowOrSide) {
@@ -98,6 +118,17 @@
   function skinsDisplay(rowOrSide) {
     const n = skinsValue(rowOrSide);
     return n === 1 ? '1 Skin' : `${n} Skins`;
+  }
+
+  function skinsSegments(rowOrSide) {
+    const sk = scoringMethod() === 'ADJ GROSS'
+      ? rowOrSide?.grossSkins
+      : rowOrSide?.netSkins;
+    return {
+      front:   segNumDisplay(sk?.front),
+      back:    segNumDisplay(sk?.back),
+      overall: segNumDisplay(sk?.total),
+    };
   }
 
   // Derives the points total for a row or side from the correct field
@@ -114,14 +145,27 @@
       ? rowOrSide?.grossPoints
       : rowOrSide?.netPoints;
     return {
-      front:   pts?.front   ?? 0,
-      back:    pts?.back    ?? 0,
-      overall: pts?.total   ?? 0,
+      front:   segNumDisplay(pts?.front),
+      back:    segNumDisplay(pts?.back),
+      overall: segNumDisplay(pts?.total),
     };
   }
 
   function pointsDisplay(rowOrSide) {
     return String(pointsValue(rowOrSide));
+  }
+
+  // Medal Match (Strokes basis) front/back/overall — new fields, only present
+  // when scoringSegments() === 3. {value, display} shaped, same as gameSegments.
+  function strokeDiffSegments(rowOrSide) {
+    const seg = scoringMethod() === 'ADJ GROSS'
+      ? rowOrSide?.grossDiffSegments
+      : rowOrSide?.netDiffSegments;
+    return {
+      front:   segCellDisplay(seg?.front),
+      back:    segCellDisplay(seg?.back),
+      overall: segCellDisplay(seg?.total),
+    };
   }
 
   // PairField — total points for the row
@@ -183,9 +227,9 @@
   function pairPairSegmentLines(row, side) {
     const seg = row?.[side]?.gameSegments || {};
     return {
-      front: seg?.front?.display ?? '0',
-      back: seg?.back?.display ?? '0',
-      overall: seg?.total?.display ?? '0'
+      front: segCellDisplay(seg?.front),
+      back: segCellDisplay(seg?.back),
+      overall: segCellDisplay(seg?.total)
     };
   }
 
@@ -269,6 +313,40 @@
 
   function pairFieldLeaderClass(row) {
     return row?.isLeader ? 'is-leading' : '';
+  }
+
+  // Renders the "game" value-mode content for one side of a PairPair card —
+  // one line when scoringSegments() is 1 (or basis doesn't apply), three lines
+  // (Front / Back / Overall) when it's 3. Consolidates what used to be three
+  // separate, unconditionally-3-line inline blocks (the pre-existing bug: every
+  // non-Skins format always showed Front/Back/Overall regardless of any
+  // segments concept, since none existed in the payload before now).
+  function renderPairPairGameModeBlock(row, side) {
+    const label = esc(currentMetricLabel());
+    const oneLine = (value) => `<div><span class="ssSideBox__label">${label}</span> <span class="ssSideBox__value">${esc(value)}</span></div>`;
+    const threeLine = (seg) => `
+      <div><span class="ssSideBox__label">Front:</span> <span class="ssSideBox__value">${esc(seg.front)}</span></div>
+      <div><span class="ssSideBox__label">Back:</span> <span class="ssSideBox__value">${esc(seg.back)}</span></div>
+      <div><span class="ssSideBox__label">Overall:</span> <span class="ssSideBox__value">${esc(seg.overall)}</span></div>
+    `;
+    const segments3 = (scoringSegments() === 3);
+
+    if (isSkinsBasis()) {
+      return segments3 ? threeLine(skinsSegments(row?.[side])) : oneLine(skinsDisplay(row?.[side]));
+    }
+    if (isPointsBasis()) {
+      return segments3 ? threeLine(pointsSegments(row?.[side])) : oneLine(pointsDisplay(row?.[side]));
+    }
+    if (scoringBasis() === 'Holes') {
+      return segments3 ? threeLine(pairPairSegmentLines(row, side)) : oneLine(row?.[side]?.gameDisplay ?? '—');
+    }
+    // Strokes basis (Medal Match) — the native metric here IS the gross/net
+    // differential, so the segmented breakdown comes from grossDiffSegments/
+    // netDiffSegments rather than gameSegments (which stays all-zero for
+    // Strokes basis — it's only ever populated for Holes/Points).
+    if (segments3) return threeLine(strokeDiffSegments(row?.[side]));
+    const overallKey = (scoringMethod() === 'ADJ GROSS') ? 'grossDiffDisplay' : 'netDiffDisplay';
+    return oneLine(row?.[side]?.[overallKey] ?? '—');
   }
 
   function applyChrome() {
@@ -516,13 +594,6 @@
     return `
       <div class="ssPairPairGrid">
         ${dataRows.map((row) => {
-          const leftSeg   = pairPairSegmentLines(row, 'left');
-          const rightSeg  = pairPairSegmentLines(row, 'right');
-          const isSkins   = isSkinsBasis();
-          const isPoints  = isPointsBasis();
-          const leftPts   = pointsSegments(row?.left);
-          const rightPts  = pointsSegments(row?.right);
-
           return `
             <article class="maCard ssMatchCard" aria-label="${esc(row.matchLabel || 'Matchup')}">
               <div class="maCard__hdr ssMatchCard__hdr">
@@ -547,19 +618,7 @@
 
                     <div class="ssSideBox__values">
                       ${state.valueMode === 'game'
-                        ? isSkins
-                          ? `<div><span class="ssSideBox__label">${esc(currentMetricLabel())}</span> <span class="ssSideBox__value">${esc(skinsDisplay(row?.left))}</span></div>`
-                          : isPoints
-                            ? `
-                              <div><span class="ssSideBox__label">Front:</span> <span class="ssSideBox__value">${esc(leftPts.front)}</span></div>
-                              <div><span class="ssSideBox__label">Back:</span> <span class="ssSideBox__value">${esc(leftPts.back)}</span></div>
-                              <div><span class="ssSideBox__label">Overall:</span> <span class="ssSideBox__value">${esc(leftPts.overall)}</span></div>
-                            `
-                            : `
-                              <div><span class="ssSideBox__label">Front:</span> <span class="ssSideBox__value">${esc(leftSeg.front)}</span></div>
-                              <div><span class="ssSideBox__label">Back:</span> <span class="ssSideBox__value">${esc(leftSeg.back)}</span></div>
-                              <div><span class="ssSideBox__label">Overall:</span> <span class="ssSideBox__value">${esc(leftSeg.overall)}</span></div>
-                            `
+                        ? renderPairPairGameModeBlock(row, 'left')
                         : `<div><span class="ssSideBox__label">${esc(currentMetricLabel())}</span> <span class="ssSideBox__value">${esc(currentMetricValue(row, 'left'))}</span></div>`
                       }
                     </div>
@@ -573,19 +632,7 @@
 
                     <div class="ssSideBox__values">
                       ${state.valueMode === 'game'
-                        ? isSkins
-                          ? `<div><span class="ssSideBox__label">${esc(currentMetricLabel())}</span> <span class="ssSideBox__value">${esc(skinsDisplay(row?.right))}</span></div>`
-                          : isPoints
-                            ? `
-                              <div><span class="ssSideBox__label">Front:</span> <span class="ssSideBox__value">${esc(rightPts.front)}</span></div>
-                              <div><span class="ssSideBox__label">Back:</span> <span class="ssSideBox__value">${esc(rightPts.back)}</span></div>
-                              <div><span class="ssSideBox__label">Overall:</span> <span class="ssSideBox__value">${esc(rightPts.overall)}</span></div>
-                            `
-                            : `
-                              <div><span class="ssSideBox__label">Front:</span> <span class="ssSideBox__value">${esc(rightSeg.front)}</span></div>
-                              <div><span class="ssSideBox__label">Back:</span> <span class="ssSideBox__value">${esc(rightSeg.back)}</span></div>
-                              <div><span class="ssSideBox__label">Overall:</span> <span class="ssSideBox__value">${esc(rightSeg.overall)}</span></div>
-                            `
+                        ? renderPairPairGameModeBlock(row, 'right')
                         : `<div><span class="ssSideBox__label">${esc(currentMetricLabel())}</span> <span class="ssSideBox__value">${esc(currentMetricValue(row, 'right'))}</span></div>`
                       }
                     </div>

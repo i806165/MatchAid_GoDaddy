@@ -24,6 +24,15 @@ final class ServiceScoreSummary
         $scoringBasis = trim((string)($meta['scoringBasis'] ?? $gameRow['dbGames_ScoringBasis'] ?? 'Strokes'));
         $defaultValueMode = in_array($scoringBasis, ['Holes', 'Skins', 'Points'], true) ? 'game' : 'net';
 
+        // PairPair only — 1 (default) or 3. Always normalized to 1 for PairField,
+        // since the field has no meaning there (mirrors the save-side normalization
+        // in ServiceDbGames::saveGameSettings).
+        $scoringSegments = 1;
+        if ($competition === 'PairPair') {
+            $scoringSegments = (int)($gameRow['dbGames_ScoringSegments'] ?? 1);
+            if (!in_array($scoringSegments, [1, 3], true)) $scoringSegments = 1;
+        }
+
         return [
             'mode' => 'game',
             'competition' => $competition,
@@ -32,6 +41,7 @@ final class ServiceScoreSummary
                 'rowCount' => count($rows),
                 'scoringBasis' => $scoringBasis,
                 'defaultValueMode' => $defaultValueMode,
+                'scoringSegments' => $scoringSegments,
             ]),
         ];
     }
@@ -299,6 +309,16 @@ final class ServiceScoreSummary
         $scoringBasis = trim((string)($meta['scoringBasis'] ?? $gameRow['dbGames_ScoringBasis'] ?? 'Strokes'));
         $isSkins = (strtolower($scoringBasis) === 'skins');
 
+        // Scoring Segments — PairPair only. 1 = one overall match result (default),
+        // 3 = front 9 / back 9 / overall scored independently. Independent of
+        // Playing Segments (dbGames_Segments) — no relationship between the two.
+        $scoringSegments = (int)($gameRow['dbGames_ScoringSegments'] ?? 1);
+        if (!in_array($scoringSegments, [1, 3], true)) $scoringSegments = 1;
+
+        // Which of front/back are structurally real for this game's hole range —
+        // a 9-hole round (F9/B9) only ever has one, never both.
+        $validSeg = self::validSegmentKeys($gameRow);
+
         foreach ($scorecardRows as $row) {
             $players = is_array($row['players'] ?? null) ? $row['players'] : [];
             if (!$players) continue;
@@ -330,6 +350,36 @@ final class ServiceScoreSummary
 
             $rightGross = self::metricFromTotalRow($rightTotal, 'grossDiff', $metricKey);
             $rightNet   = self::metricFromTotalRow($rightTotal, 'netDiff', $metricKey);
+
+            // Medal Match (Strokes basis) front/back — only computed when 3-segment
+            // scoring is on. The 9a/9b cells already exist in columnTotals (same
+            // splitTotalFromMap() every other metric uses); this just reads them,
+            // no new calculation. Nulled per $validSeg on a 9-hole round.
+            $leftGrossSegments = $leftNetSegments = null;
+            $rightGrossSegments = $rightNetSegments = null;
+            if ($scoringSegments === 3) {
+                $nullCell = ['value' => null, 'display' => null];
+                $leftGrossSegments = [
+                    'front' => $validSeg['front'] ? self::metricFromTotalRow($leftTotal, 'grossDiff', '9a') : $nullCell,
+                    'back'  => $validSeg['back']  ? self::metricFromTotalRow($leftTotal, 'grossDiff', '9b') : $nullCell,
+                    'total' => $leftGross,
+                ];
+                $leftNetSegments = [
+                    'front' => $validSeg['front'] ? self::metricFromTotalRow($leftTotal, 'netDiff', '9a') : $nullCell,
+                    'back'  => $validSeg['back']  ? self::metricFromTotalRow($leftTotal, 'netDiff', '9b') : $nullCell,
+                    'total' => $leftNet,
+                ];
+                $rightGrossSegments = [
+                    'front' => $validSeg['front'] ? self::metricFromTotalRow($rightTotal, 'grossDiff', '9a') : $nullCell,
+                    'back'  => $validSeg['back']  ? self::metricFromTotalRow($rightTotal, 'grossDiff', '9b') : $nullCell,
+                    'total' => $rightGross,
+                ];
+                $rightNetSegments = [
+                    'front' => $validSeg['front'] ? self::metricFromTotalRow($rightTotal, 'netDiff', '9a') : $nullCell,
+                    'back'  => $validSeg['back']  ? self::metricFromTotalRow($rightTotal, 'netDiff', '9b') : $nullCell,
+                    'total' => $rightNet,
+                ];
+            }
 
             $gameKpi = self::buildPairPairGameKpi($leftPlayers, $rightPlayers, $gameRow, $scoringBasis, $scopedHoles);
 
@@ -454,13 +504,15 @@ final class ServiceScoreSummary
                     'grossDiffDisplay'=> $leftGross['display'],
                     'netDiffValue'    => $leftNet['value'],
                     'netDiffDisplay'  => $leftNet['display'],
+                    'grossDiffSegments' => $leftGrossSegments,
+                    'netDiffSegments'   => $leftNetSegments,
                     'gameValue'       => $gameKpi['left']['total']['value'],
                     'gameDisplay'     => $gameKpi['left']['total']['display'],
                     'gameSegments'    => $gameKpi['left'],
-                    'grossSkins'      => $pairPairSkins['gross'][(string)$leftPairingId]  ?? 0,
-                    'netSkins'        => $pairPairSkins['net'][(string)$leftPairingId]    ?? 0,
-                    'grossPoints'     => $pairPairPoints['gross'][(string)$leftPairingId] ?? ['front' => 0, 'back' => 0, 'total' => 0],
-                    'netPoints'       => $pairPairPoints['net'][(string)$leftPairingId]   ?? ['front' => 0, 'back' => 0, 'total' => 0],
+                    'grossSkins'      => self::nullInvalidScalarSegments($pairPairSkins['gross'][(string)$leftPairingId]  ?? ['front' => 0, 'back' => 0, 'total' => 0], $validSeg),
+                    'netSkins'        => self::nullInvalidScalarSegments($pairPairSkins['net'][(string)$leftPairingId]    ?? ['front' => 0, 'back' => 0, 'total' => 0], $validSeg),
+                    'grossPoints'     => self::nullInvalidScalarSegments($pairPairPoints['gross'][(string)$leftPairingId] ?? ['front' => 0, 'back' => 0, 'total' => 0], $validSeg),
+                    'netPoints'       => self::nullInvalidScalarSegments($pairPairPoints['net'][(string)$leftPairingId]   ?? ['front' => 0, 'back' => 0, 'total' => 0], $validSeg),
                 ],
                 'right' => [
                     'flightPos'       => (string)$rightKey,
@@ -470,13 +522,15 @@ final class ServiceScoreSummary
                     'grossDiffDisplay'=> $rightGross['display'],
                     'netDiffValue'    => $rightNet['value'],
                     'netDiffDisplay'  => $rightNet['display'],
+                    'grossDiffSegments' => $rightGrossSegments,
+                    'netDiffSegments'   => $rightNetSegments,
                     'gameValue'       => $gameKpi['right']['total']['value'],
                     'gameDisplay'     => $gameKpi['right']['total']['display'],
                     'gameSegments'    => $gameKpi['right'],
-                    'grossSkins'      => $pairPairSkins['gross'][(string)$rightPairingId] ?? 0,
-                    'netSkins'        => $pairPairSkins['net'][(string)$rightPairingId]   ?? 0,
-                    'grossPoints'     => $pairPairPoints['gross'][(string)$rightPairingId] ?? ['front' => 0, 'back' => 0, 'total' => 0],
-                    'netPoints'       => $pairPairPoints['net'][(string)$rightPairingId]   ?? ['front' => 0, 'back' => 0, 'total' => 0],
+                    'grossSkins'      => self::nullInvalidScalarSegments($pairPairSkins['gross'][(string)$rightPairingId] ?? ['front' => 0, 'back' => 0, 'total' => 0], $validSeg),
+                    'netSkins'        => self::nullInvalidScalarSegments($pairPairSkins['net'][(string)$rightPairingId]   ?? ['front' => 0, 'back' => 0, 'total' => 0], $validSeg),
+                    'grossPoints'     => self::nullInvalidScalarSegments($pairPairPoints['gross'][(string)$rightPairingId] ?? ['front' => 0, 'back' => 0, 'total' => 0], $validSeg),
+                    'netPoints'       => self::nullInvalidScalarSegments($pairPairPoints['net'][(string)$rightPairingId]   ?? ['front' => 0, 'back' => 0, 'total' => 0], $validSeg),
                 ],
                 'thru' => max(
                     self::deriveThru($leftPlayers, $scopedHoles),
@@ -554,6 +608,10 @@ final class ServiceScoreSummary
 
         self::finalizeGameSegments($left);
         self::finalizeGameSegments($right);
+
+        $valid = self::validSegmentKeys($gameRow);
+        $left  = self::nullInvalidValueDisplaySegments($left,  $valid);
+        $right = self::nullInvalidValueDisplaySegments($right, $valid);
 
         return [
             'left'  => $left,
@@ -819,6 +877,45 @@ final class ServiceScoreSummary
         if ($holesLabel === 'F9') return range(1, 9);
         if ($holesLabel === 'B9') return range(10, 18);
         return range(1, 18);
+    }
+
+    /**
+     * Which of the front/back segment slices are structurally real for this game's
+     * hole range. On a 9-hole round (F9 or B9), only one of front/back actually
+     * corresponds to holes that were played — the other has no data at all, and
+     * treating it as a legitimate 0 would silently misrepresent it as a real tie.
+     * 'Overall' is always valid — it's just whatever holes were actually played.
+     */
+    private static function validSegmentKeys(array $gameRow): array
+    {
+        $holesLabel = trim((string)($gameRow['dbGames_Holes'] ?? 'All 18'));
+        if ($holesLabel === 'F9') return ['front' => true,  'back' => false];
+        if ($holesLabel === 'B9') return ['front' => false, 'back' => true];
+        return ['front' => true, 'back' => true];
+    }
+
+    /**
+     * Null out front/back on a {value, display} shaped segment structure
+     * (gameSegments, and the new Medal Match segment extraction) when this
+     * game's hole range doesn't actually cover that segment.
+     */
+    private static function nullInvalidValueDisplaySegments(array $segments, array $valid): array
+    {
+        if (!$valid['front']) $segments['front'] = ['value' => null, 'display' => null];
+        if (!$valid['back'])  $segments['back']  = ['value' => null, 'display' => null];
+        return $segments;
+    }
+
+    /**
+     * Null out front/back on a plain-scalar shaped segment structure
+     * (grossSkins/netSkins, grossPoints/netPoints front/back values) when this
+     * game's hole range doesn't actually cover that segment.
+     */
+    private static function nullInvalidScalarSegments(array $segments, array $valid): array
+    {
+        if (!$valid['front']) $segments['front'] = null;
+        if (!$valid['back'])  $segments['back']  = null;
+        return $segments;
     }
 
     private static function pairPairSortSeed(array $players): array
