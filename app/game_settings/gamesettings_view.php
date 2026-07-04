@@ -80,12 +80,20 @@
         </header>
         <div class="maCard__body">
 
-          <!-- Segments — PairPair only -->
+          <!-- Playing Segments — PairPair only -->
           <div class="gsWizFieldGroup hidden" id="gsWizGroupSegments">
             <div class="gsWizEyebrow">How is the round segmented?</div>
-            <div class="gsWizFieldLabel">Segments</div>
+            <div class="gsWizFieldLabel">Playing Segments</div>
             <div class="wizChips" id="gsWizSegChips"></div>
             <div class="gsWizHint">Segments split the round into independent scoring periods. 3's play three 3-hole segments (9-hole games only). 6's plays three 6-hole segments and 9's plays as two 9-hole segments (18 hole games).</div>
+          </div>
+
+          <!-- Scoring Segments — PairPair only -->
+          <div class="gsWizFieldGroup hidden" id="gsWizGroupScoringSegments">
+            <div class="gsWizDivider"></div>
+            <div class="gsWizFieldLabel">Scoring Segments</div>
+            <div class="wizChips" id="gsWizScoringSegChips"></div>
+            <div class="gsWizHint">Choose whether the match is scored as one overall result or as three independent results — front 9, back 9, and overall.</div>
           </div>
 
           <!-- Rotation Method — PairPair only -->
@@ -280,6 +288,20 @@
             </div>
           </div>
 
+          <!-- Placement Points — opens as a modal, both competition types -->
+          <div class="gsWizFieldGroup" id="gsWizGroupPlacementPoints">
+            <div class="gsWizDivider"></div>
+            <div class="gsWizFieldLabel">Placement Points</div>
+            <div class="gsWizHint" id="gsWizPlacementPointsHint">
+              Define how points are awarded to winning teams or finishing positions.
+            </div>
+            <button type="button" class="btn btnPrimary" id="gsWizPlacementPointsBtn"
+                    onclick="window.gsWiz.openPlacementPointsConfigurator()">
+              Configure Placement Points
+            </button>
+            <div class="gsWizHint" id="gsWizPlacementPointsSummary"></div>
+          </div>
+
         </div>
       </div>
 
@@ -358,7 +380,8 @@
           <div class="gsWizSummary__row"><span class="gsWizSummary__key">Game Label</span>   <span class="wizSummary__val empty" id="gsWizSvLabel">—</span></div>
           <div class="gsWizSummary__row"><span class="gsWizSummary__key">Game Format</span>  <span class="wizSummary__val empty" id="gsWizSvFormat">—</span></div>
           <div class="gsWizSummary__row"><span class="gsWizSummary__key">Competition</span>  <span class="wizSummary__val empty" id="gsWizSvCompetition">—</span></div>
-          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Segments</span>     <span class="wizSummary__val empty" id="gsWizSvSegments">—</span></div>
+          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Playing Segments</span><span class="wizSummary__val empty" id="gsWizSvSegments">—</span></div>
+          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Scoring Segments</span><span class="wizSummary__val empty" id="gsWizSvScoringSegments">—</span></div>
           <div class="gsWizSummary__row"><span class="gsWizSummary__key">Rotation</span>     <span class="wizSummary__val empty" id="gsWizSvRotation">—</span></div>
           <div class="gsWizSummary__row"><span class="gsWizSummary__key">Blind Player</span> <span class="wizSummary__val empty" id="gsWizSvBlind">—</span></div>
 
@@ -368,6 +391,7 @@
           <div class="gsWizSummary__row"><span class="gsWizSummary__key">System</span>       <span class="wizSummary__val empty" id="gsWizSvSystem">—</span></div>
           <div class="gsWizSummary__row"><span class="gsWizSummary__key">Best Ball</span>    <span class="wizSummary__val empty" id="gsWizSvBB">—</span></div>
           <div class="gsWizSummary__row"><span class="gsWizSummary__key">Pts Strategy</span> <span class="wizSummary__val empty" id="gsWizSvPointsStrategy">—</span></div>
+          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Placement Pts</span><span class="wizSummary__val empty" id="gsWizSvPlacementPoints">—</span></div>
 
           <div class="gsWizSummary__section">Handicaps</div>
           <div class="gsWizSummary__row"><span class="gsWizSummary__key">HC Method</span>    <span class="wizSummary__val empty" id="gsWizSvHCMethod">—</span></div>

@@ -506,7 +506,7 @@
       }
       return { active: true, segments };
     }
-    const defaultTable = { pointsConfig: { "1": 100, "2": 75, "3": 50 }, tieRule: "split" };
+    const defaultTable = { pointsConfig: { "1": 100, "2": 75, "3": 50, "4": 25, "5": 10 }, tieRule: "split" };
     return { active: true, gross: { ...defaultTable, pointsConfig: { ...defaultTable.pointsConfig } }, net: { ...defaultTable, pointsConfig: { ...defaultTable.pointsConfig } } };
   }
 

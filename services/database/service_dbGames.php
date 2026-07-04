@@ -389,12 +389,12 @@ public static function queryGames(array $args): array {
     $allow = [
       "dbGames_GameLabel",                                          // NEW — user-facing game label
       "dbGames_GameFormat", "dbGames_TOMethod", "dbGames_ScoringBasis",
-      "dbGames_Competition", "dbGames_Segments", "dbGames_RotationMethod",
+      "dbGames_Competition", "dbGames_Segments", "dbGames_ScoringSegments", "dbGames_RotationMethod",
       "dbGames_ScoringMethod", "dbGames_ScoringSystem", "dbGames_BestBall",
       "dbGames_PlayerDeclaration", "dbGames_HCMethod", "dbGames_Allowance",
       "dbGames_StrokeDistribution", "dbGames_HCEffectivity", "dbGames_HCEffectivityDate",
       // Array fields (will be json_encoded)
-      "dbGames_BlindPlayers", "dbGames_PointsConfig", "dbGames_HoleDeclaration",
+      "dbGames_BlindPlayers", "dbGames_PointsConfig", "dbGames_PlacementPoints", "dbGames_HoleDeclaration",
       "dbGames_CustomScores"
     ];
 
@@ -407,6 +407,32 @@ public static function queryGames(array $args): array {
           $val = json_encode($val);
         }
         $clean[$field] = $val;
+      }
+    }
+
+    // Normalize dbGames_ScoringSegments — must be 1 or 3; anything else falls back to 1.
+    // PairField games are normalized to 1 regardless of what was posted, since the
+    // field is PairPair-only and should never carry stale segmentation from a prior edit.
+    if (array_key_exists("dbGames_ScoringSegments", $clean)) {
+      $ss = (int)$clean["dbGames_ScoringSegments"];
+      if (!in_array($ss, [1, 3], true)) $ss = 1;
+      $competition = $clean["dbGames_Competition"] ?? ($existing["dbGames_Competition"] ?? "PairField");
+      if ($competition !== "PairPair") $ss = 1;
+      $clean["dbGames_ScoringSegments"] = $ss;
+    }
+
+    // Validate dbGames_PlacementPoints as JSON before persisting — reject rather than
+    // silently save corrupt configuration.
+    if (array_key_exists("dbGames_PlacementPoints", $clean)) {
+      $raw = $clean["dbGames_PlacementPoints"];
+      if ($raw === null || trim((string)$raw) === "") {
+        $clean["dbGames_PlacementPoints"] = null;
+      } else {
+        $decoded = is_array($raw) ? $raw : json_decode((string)$raw, true);
+        if (!is_array($decoded)) {
+          throw new RuntimeException("Invalid Placement Points JSON.");
+        }
+        $clean["dbGames_PlacementPoints"] = json_encode($decoded, JSON_UNESCAPED_SLASHES);
       }
     }
 
@@ -509,6 +535,15 @@ public static function queryGames(array $args): array {
     $g["dbGames_BestBall"] = $g["dbGames_BestBall"] ?? "4";
     $g["dbGames_PlayerDeclaration"] = $g["dbGames_PlayerDeclaration"] ?? "11";
     $g["dbGames_Segments"] = $g["dbGames_Segments"] ?? "9";
+    $g["dbGames_ScoringSegments"] = $g["dbGames_ScoringSegments"] ?? 1;
+    // New games always default to StrokePlay / PairField, so prime a real
+    // 1st/2nd/3rd placement table rather than leaving this null until someone
+    // opens the Placement Points configurator for the first time.
+    $g["dbGames_PlacementPoints"] = $g["dbGames_PlacementPoints"] ?? json_encode([
+      "active" => true,
+      "gross"  => ["pointsConfig" => ["1" => 100, "2" => 75, "3" => 50], "tieRule" => "split"],
+      "net"    => ["pointsConfig" => ["1" => 100, "2" => 75, "3" => 50], "tieRule" => "split"],
+    ], JSON_UNESCAPED_SLASHES);
 
     // Ensure stepper fields exist (stored as text in schema)
     $g["dbGames_TeeTimeCnt"] = $g["dbGames_TeeTimeCnt"] ?? "16";
