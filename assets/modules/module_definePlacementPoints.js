@@ -10,9 +10,14 @@
  * Usage:
  *   MA.definePlacementPoints.open({
  *     competition:     "PairField" | "PairPair",
- *     scoringSegments: 1 | 3,             // PairPair only; controls visible segment columns
+ *     scoringSegments: 1 | 3,             // PairPair only; initial value — editable inline for PairPair
  *     placementPoints: currentJsonValue,  // parsed object or JSON string from dbGames_PlacementPoints
- *     onApply: (jsonString) => { ... }    // called with serialized JSON string on Save
+ *     onApply: (jsonString, scoringSegments) => { ... }
+ *       // jsonString       — serialized dbGames_PlacementPoints
+ *       // scoringSegments  — the effective value (1 or 3) after any inline change made in this modal;
+ *       //                    always 1 for PairField. The page should sync this back into its own
+ *       //                    wizard state (Step 2 chips, summary) since it may differ from what was
+ *       //                    passed in.
  *   });
  */
 (function (global) {
@@ -99,6 +104,24 @@
     };
   }
 
+  // Change the segment count from inside the modal — expands by cloning segment
+  // "1" into the new keys, or shrinks by dropping keys beyond the new count.
+  // Only meaningful for PairPair; never called for PairField.
+  function setScoringSegments(count) {
+    const target = count === 3 ? 3 : 1;
+    if (target === _state.scoringSegments) return;
+
+    const seg1 = _state.segments["1"] || { ...DEFAULT_OUTCOME };
+    const next = {};
+    for (let i = 1; i <= target; i++) {
+      const key = String(i);
+      next[key] = _state.segments[key] || { ...seg1 };
+    }
+    _state.segments = next;
+    _state.scoringSegments = target;
+    renderBody();
+  }
+
   function collectState() {
     if (_state.competition === "PairField") {
       return {
@@ -182,9 +205,13 @@
     return `
       <div class="dpp-hdr-line">Define the points awarded for each match outcome by scoring segment.</div>
 
-      <div class="dpp-info-banner">
-        <i class="ti ti-info-circle" aria-hidden="true"></i>
-        Scoring Segments: ${segCount}
+      <div class="dpp-seg-control">
+        <span class="dpp-seg-control-label">Scoring Segments</span>
+        <div class="maChoiceChips" id="dppScoringSegChips">
+          <button class="maChoiceChip ${segCount === 1 ? "is-selected" : ""}" data-seg-count="1" type="button">1</button>
+          <button class="maChoiceChip ${segCount === 3 ? "is-selected" : ""}" data-seg-count="3" type="button">3</button>
+        </div>
+        <span class="dpp-seg-control-hint">${segCount === 1 ? "One overall result" : "Front 9 / Back 9 / Overall, scored independently"}</span>
       </div>
 
       <div class="dpp-card">
@@ -247,6 +274,11 @@
         if (_state.segments[seg]) _state.segments[seg][outcome] = numOrZero(inp.value);
       });
     });
+
+    // PairPair — inline Scoring Segments control
+    body.querySelectorAll("[data-seg-count]").forEach(btn => {
+      btn.addEventListener("click", () => setScoringSegments(parseInt(btn.dataset.segCount, 10)));
+    });
   }
 
   function renderBody() {
@@ -266,6 +298,9 @@
       #dppOverlay .maModal{ max-width:min(640px,calc(100vw - 16px)); }
       .dpp-hdr-line{font-size:13px;color:var(--mutedText);padding:12px 16px 0;}
       .dpp-info-banner{display:flex;align-items:center;gap:8px;margin:12px 16px 0;padding:8px 12px;background:var(--brandAccent,#0b5fff);background:color-mix(in srgb, var(--brandAccent) 10%, transparent);border-radius:var(--radiusMd,6px);font-size:12px;color:var(--ink);}
+      .dpp-seg-control{display:flex;align-items:center;gap:10px;margin:12px 16px 0;flex-wrap:wrap;}
+      .dpp-seg-control-label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.3px;color:var(--mutedText);white-space:nowrap;}
+      .dpp-seg-control-hint{font-size:11px;color:var(--mutedText);}
       .dpp-card{margin:12px 16px 16px;background:var(--surfaceChrome);border:0.5px solid var(--borderSubtle);border-radius:var(--radiusMd,6px);padding:12px;}
       .dpp-card-title{font-size:11px;font-weight:500;letter-spacing:.3px;text-transform:uppercase;color:var(--mutedText);margin-bottom:8px;}
       .dpp-pts-table{width:100%;border-collapse:collapse;font-size:13px;}
@@ -336,7 +371,8 @@
   function doApply() {
     if (!_config?.onApply) { close(); return; }
     const result = collectState();
-    _config.onApply(JSON.stringify(result));
+    const effectiveScoringSegments = (_state.competition === "PairPair") ? _state.scoringSegments : 1;
+    _config.onApply(JSON.stringify(result), effectiveScoringSegments);
     close();
   }
 

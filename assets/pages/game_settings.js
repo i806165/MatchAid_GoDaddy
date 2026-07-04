@@ -251,8 +251,6 @@
 
     // Step 2 — Setup
     wizGroupSegments:    document.getElementById("gsWizGroupSegments"),
-    wizGroupScoringSegments: document.getElementById("gsWizGroupScoringSegments"),
-    wizScoringSegChips:  document.getElementById("gsWizScoringSegChips"),
     wizGroupRotation:    document.getElementById("gsWizGroupRotation"),
     wizSegChips:         document.getElementById("gsWizSegChips"),
     wizRotChips:         document.getElementById("gsWizRotChips"),
@@ -297,7 +295,6 @@
       format:         document.getElementById("gsWizSvFormat"),
       competition:    document.getElementById("gsWizSvCompetition"),
       segments:       document.getElementById("gsWizSvSegments"),
-      scoringSegments: document.getElementById("gsWizSvScoringSegments"),
       rotation:       document.getElementById("gsWizSvRotation"),
       blind:          document.getElementById("gsWizSvBlind"),
       basis:          document.getElementById("gsWizSvBasis"),
@@ -914,55 +911,12 @@
     }
   }
 
-  // Scoring Segments — PairPair only. Independent of Playing Segments (dbGames_Segments);
-  // 1 = one overall match result, 3 = front 9 / back 9 / overall scored independently (Nassau).
-  const SCORING_SEGMENTS_OPTIONS = [
-    { label: "1", value: "1" },
-    { label: "3", value: "3" },
-  ];
-
-  function wizRenderScoringSegChips() {
-    if (!el.wizScoringSegChips) return;
-    el.wizScoringSegChips.innerHTML = "";
-    const validVals = SCORING_SEGMENTS_OPTIONS.map(o => o.value);
-    if (!validVals.includes(wiz.scoringSegments)) wiz.scoringSegments = "1";
-
-    SCORING_SEGMENTS_OPTIONS.forEach(opt => {
-      const b = document.createElement("button");
-      b.className = "wizChip" + (wiz.scoringSegments === opt.value ? " selected" : "");
-      b.dataset.val = opt.value;
-      b.textContent = opt.label;
-      b.addEventListener("click", () => wizSelectScoringSegments(opt.value));
-      el.wizScoringSegChips.appendChild(b);
-    });
-  }
-
-  function wizSelectScoringSegments(val) {
-    wiz.scoringSegments = val;
-    if (el.wizScoringSegChips) {
-      el.wizScoringSegChips.querySelectorAll(".wizChip").forEach(b =>
-        b.classList.toggle("selected", b.dataset.val === val)
-      );
-    }
-    // Scoring Segments changed — the previously configured Placement Points may now
-    // have the wrong number of segment columns. Re-normalize so a save without
-    // reopening the configurator doesn't persist a stale shape.
-    wiz.placementPoints = normalizePlacementPointsForSave({
-      competition:     wiz.pairing || "PairField",
-      scoringSegments: wiz.scoringSegments,
-      placementPoints: wiz.placementPoints,
-    });
-    wizRenderPlacementPointsSummary();
-    setDirty(true); wizUpdateSummary(); wizCheckComplete();
-  }
-
   // ---- Step 2: Setup — Segments + Rotation + Blind Player ----
   function wizRenderStep2() {
     const isPairPair = (wiz.pairing === "PairPair");
 
-    // Segments + Scoring Segments + Rotation — PairPair only
+    // Segments + Rotation — PairPair only
     show(el.wizGroupSegments, isPairPair);
-    show(el.wizGroupScoringSegments, isPairPair);
     show(el.wizGroupRotation, isPairPair);
 
     if (isPairPair) {
@@ -992,7 +946,6 @@
           el.wizSegChips.appendChild(b);
         });
       }
-      wizRenderScoringSegChips();
       wizRenderRotChips();
     }
 
@@ -1175,8 +1128,16 @@
       competition:     wiz.pairing || "PairField",
       scoringSegments: parseInt(wiz.scoringSegments || "1", 10) === 3 ? 3 : 1,
       placementPoints: wiz.placementPoints || null,
-      onApply: (jsonString) => {
+      onApply: (jsonString, effectiveScoringSegments) => {
         wiz.placementPoints = jsonString;
+
+        // Scoring Segments may have changed inline inside the modal (PairPair only) —
+        // sync it back into wiz state. There's no Step 2 control for it anymore
+        // (the module is the single place this is edited), but wiz.scoringSegments
+        // still needs to stay correct for the save patch.
+        const newSeg = String(parseInt(effectiveScoringSegments, 10) === 3 ? "3" : "1");
+        if (wiz.pairing === "PairPair") wiz.scoringSegments = newSeg;
+
         setDirty(true);
         wizRenderPlacementPointsSummary();
         wizUpdateSummary();
@@ -1931,7 +1892,6 @@
     sv(s.format,         wiz.selectedFormat,    true);
     sv(s.competition,    wiz.pairing,           true);
     sv(s.segments,       wiz.pairing === "PairPair" && wiz.segments ? wiz.segments + "'s" : null, true);
-    sv(s.scoringSegments, wiz.pairing === "PairPair" ? (wiz.scoringSegments === "3" ? "3 (Nassau)" : "1") : null, true);
     sv(s.rotation,       wiz.pairing === "PairPair" ? wiz.rotation : null, true);
     let blindLabel = null;
     if (wiz.useBlind && wiz.blindGHIN) {
@@ -2047,7 +2007,6 @@
       selectPairing:         wizSelectPairing,
       selectGame:            wizSelectGame,
       selectSegments:        wizSelectSegments,
-      selectScoringSegments: wizSelectScoringSegments,
       openPlacementPointsConfigurator: openPlacementPointsConfigurator,
       selectRotation:        wizSelectRotation,
       toggleBlind:           wizToggleBlind,
