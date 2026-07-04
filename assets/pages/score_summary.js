@@ -89,9 +89,10 @@
   // Derives the skins count for a row or side from the correct field
   // based on scoringMethod — gross skins for ADJ GROSS, net skins otherwise.
   function skinsValue(rowOrSide) {
-    return scoringMethod() === 'ADJ GROSS'
-      ? Number(rowOrSide?.grossSkins ?? 0)
-      : Number(rowOrSide?.netSkins ?? 0);
+    const sk = scoringMethod() === 'ADJ GROSS'
+      ? rowOrSide?.grossSkins
+      : rowOrSide?.netSkins;
+    return Number(sk?.total ?? 0);
   }
 
   function skinsDisplay(rowOrSide) {
