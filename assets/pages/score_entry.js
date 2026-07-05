@@ -148,6 +148,7 @@
       });
       state.currentHole = json.payload.currentHole || 1;
       state.dirty = false;
+      reconcileDeclaredState();
 
       const ggid = state.payload?.gameRow?.dbGames_GGID;
       await apiAdmin("setGameSession.php", { ggid });
@@ -205,6 +206,8 @@
   async function transitionHole(nextHole) {
     if (nextHole === state.currentHole) return;
 
+    let holeDeclareRecalculated = false;
+
     try {
       showSavingOverlay(`Saving Hole ${state.currentHole} scores...`);
 
@@ -239,6 +242,7 @@
               wrapper.originalScoresJson = deepClone(wrapper.scoresJson || null);
             }
           });
+          holeDeclareRecalculated = reconcileDeclaredState();
         }
       }
 
@@ -247,7 +251,9 @@
       state.currentHole = nextHole;
       renderHoleOptions();
       renderRows();
-      setPageStatus(`Moved to Hole ${nextHole}.`, 'info');
+      if (!holeDeclareRecalculated) {
+        setPageStatus(`Moved to Hole ${nextHole}.`, 'info');
+      }
     } catch (err) {
       setPageStatus(err.message || 'Unable to change holes.', 'error');
       el.holeSelect.value = String(state.currentHole);
@@ -320,6 +326,45 @@
 
     // Refresh the UI to show new checkboxes/net values
     renderRows();
+  }
+
+  /**
+   * Detects whether a hole's saved declare flags are stale relative to the
+   * game's *current* settings (BestBall count, ScoringSystem, HoleDeclaration,
+   * ScoringMethod — whatever resolveDeclaredScores() depends on). Does not
+   * re-derive that logic independently; it runs the same existing function
+   * and compares its answer against what was actually stored.
+   *
+   * Call this right after a hole's payload loads from the server (initial
+   * load and hole transition), before the user has touched anything. If
+   * resolveDeclaredScores() changes any player's declared value, the stored
+   * data was computed under different rules than are in effect now — flag
+   * dirty so the correction actually gets saved on the next navigation,
+   * instead of silently reverting because nothing was "dirty."
+   */
+  function reconcileDeclaredState() {
+    const before = new Map();
+    activePlayers().forEach((wrapper) => {
+      const playerId = wrapper.scoreEntryRow?.playerId;
+      if (playerId != null) before.set(playerId, !!wrapper.scoreEntryRow?.declared);
+    });
+
+    resolveDeclaredScores(); // existing, unmodified — also re-renders
+
+    let changed = false;
+    activePlayers().forEach((wrapper) => {
+      const playerId = wrapper.scoreEntryRow?.playerId;
+      if (playerId != null && before.get(playerId) !== !!wrapper.scoreEntryRow?.declared) {
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      state.dirty = true;
+      setPageStatus('Declared scores were recalculated for this hole based on current game settings.', 'info');
+    }
+
+    return changed;
   }
 
     function isTeamScoreFormat() {
