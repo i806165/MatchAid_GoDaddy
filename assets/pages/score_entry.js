@@ -272,8 +272,6 @@
 
     const g = payload.gameRow || {};
     const scoringSystem = g.dbGames_ScoringSystem || 'BestBall';
-    const competition = g.dbGames_Competition || 'PairField';
-    const scoringMethod = g.dbGames_ScoringMethod || 'NET';
 
     if (['DeclareManual', 'DeclarePlayer'].includes(scoringSystem)) return;
 
@@ -290,30 +288,11 @@
     });
 
     Object.values(partitions).forEach(rows => {
-      const validRows = rows.filter(r => typeof r.raw === 'number');
-      
-      let n = 1;
-      if (scoringSystem === 'AllScores') {
-        n = validRows.length;
-      } else if (scoringSystem === 'DeclareHole') {
-        let holeDecls = g.dbGames_HoleDeclaration ?? [];
-        if (typeof holeDecls === 'string') { try { holeDecls = JSON.parse(holeDecls); } catch(e) { holeDecls = []; } }
-        if (!Array.isArray(holeDecls)) holeDecls = [];
-        const found = holeDecls.find(h => parseInt(h.hole, 10) === state.currentHole);
-        n = parseInt(found?.count || '1', 10);
-      } else if (scoringSystem === 'BestBall') {
-        n = parseInt(g.dbGames_BestBall || '1', 10);
-      }
-
-      validRows.sort((a, b) => {
-        const metricA = (scoringMethod === 'ADJ GROSS') ? a.raw : a.net;
-        const metricB = (scoringMethod === 'ADJ GROSS') ? b.raw : b.net;
-        if (metricA !== metricB) return metricA - metricB;
-        if (a.raw !== b.raw) return a.raw - b.raw;
-        return a.pos - b.pos;
-      });
-
-      const declaredIndices = validRows.slice(0, n).map(r => r.idx);
+      // The actual "who's declared" algorithm lives in one place —
+      // declare_logic.js — shared with refresh_scores.js so score entry's
+      // live per-hole view and the headless whole-game/scorecard sweep can
+      // never compute a different answer from the same underlying scores.
+      const declaredIndices = MA.resolveDeclaredIndices(rows, g, state.currentHole) || [];
 
       rows.forEach(row => {
         const wrapper = payload.players[row.idx];

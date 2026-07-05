@@ -9,8 +9,14 @@ require_once __DIR__ . "/../GHIN/GHIN_API_Handicaps.php";
 /**
  * Port of Wix:
  * export async function be_recalculateGameHandicaps(parmGGID, parmPlayerGHIN, parmGameData, parmToken)
+ *
+ * $parmScorecardKey (new, optional): when non-empty, scopes to the playing
+ * group sharing that dbPlayers_PlayerKey — "who's riding together" — rather
+ * than a single golfer or the whole game. Takes precedence over
+ * $parmPlayerGHIN when both are supplied. Existing callers passing only the
+ * first four args are unaffected.
  */
-function be_recalculateGameHandicaps(string $parmGGID, string $parmPlayerGHIN, array $parmGameData, string $parmToken): array
+function be_recalculateGameHandicaps(string $parmGGID, string $parmPlayerGHIN, array $parmGameData, string $parmToken, string $parmScorecardKey = ""): array
 {
     $repo = new ServiceDbPlayers();
 
@@ -22,9 +28,14 @@ function be_recalculateGameHandicaps(string $parmGGID, string $parmPlayerGHIN, a
         $ggid = trim($parmGGID);
         if ($ggid === "") throw new RuntimeException("Missing GGID");
 
-        $players = ($parmPlayerGHIN !== "allPlayers")
-            ? [$repo->getPlayerByGGIDGHIN($ggid, $parmPlayerGHIN)]
-            : $repo->getGamePlayers($ggid);
+        $scorecardKey = trim($parmScorecardKey);
+        if ($scorecardKey !== "") {
+            $players = $repo->getPlayersByPlayerKey($scorecardKey);
+        } elseif ($parmPlayerGHIN !== "allPlayers") {
+            $players = [$repo->getPlayerByGGIDGHIN($ggid, $parmPlayerGHIN)];
+        } else {
+            $players = $repo->getGamePlayers($ggid);
+        }
 
         // Exclude non-rated players "NH..."
         $rated = array_values(array_filter($players, function($p){
@@ -185,13 +196,24 @@ function be_calculateGamePHSO(string $action, ?string $id, array $parmGameData, 
     }
 
     // 1) Acquire players based on Action/Scope
-    // Actions: "all" (or "game"), "player", "pairing", "flight"
+    // Actions: "all" (or "game"), "player", "pairing", "flight", "scorecard" (new)
     $allPlayers = $repo->getGamePlayers($txtGGID);
     $players = [];
 
     if ($action === "all" || $action === "game") {
         $players = $allPlayers;
-    } 
+    }
+    elseif ($action === "scorecard" && $id) {
+        // Scorecard/PlayerKey scope — "who's riding together," a physical
+        // grouping distinct from competitive PairingID/MatchID. A Four Ball
+        // scorecard, for example, can hold two separate competitive pairs
+        // on one card. Queried directly rather than filtering $allPlayers,
+        // since PlayerKey isn't guaranteed to be unique only within this GGID.
+        $players = array_filter(
+            $repo->getPlayersByPlayerKey($id),
+            fn($p) => ((string)($p["dbPlayers_GGID"] ?? "") === $txtGGID)
+        );
+    }
     elseif ($action === "player" && $id) {
         // Smart Scope: Find player's group based on competition type
         $target = null;

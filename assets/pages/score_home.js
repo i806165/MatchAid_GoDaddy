@@ -641,6 +641,24 @@
         state.scorerGHIN = state.autoScorerGhin;
       }
 
+      // Refresh Scores — always, regardless of game day. Purely local
+      // recompute against already-entered scores, no external dependency,
+      // no reason to gate it. Scoped to this playing group only.
+      const ggidStr = String(state.game?.dbGames_GGID || '');
+      if (ggidStr) {
+        await MA.refreshScores({ ggid: ggidStr, gameRow: state.game, scorecardKey: key });
+      }
+
+      // Handicap refresh — game-day only. Real GHIN network calls; gated to
+      // bound latency/reliability/rate-limit exposure to the one window it
+      // actually matters, and to avoid re-fetching an HI that hasn't moved
+      // for someone previewing/testing a game days out. Also scoped to this
+      // playing group only — never the whole field, regardless of how many
+      // groups are launching at once.
+      if (state.isGameDay && ggidStr) {
+        await MA.recalculateHandicaps(null, { scorecardKey: key });
+      }
+
       // Show group card, hide launch card
       el.launchCard.classList.add('isHidden');
       el.groupCard.classList.remove('isHidden');

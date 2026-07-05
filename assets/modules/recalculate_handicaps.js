@@ -47,9 +47,22 @@
     document.body.classList.remove("maOverlayOpen");
   }
 
-  MA.recalculateHandicaps = async function(apiBase) {
+  /**
+   * @param {string} apiBase
+   * @param {{ scorecardKey?: string }} [scope] - omit for whole-game (existing
+   *   "all" behavior, unchanged). Pass scorecardKey to scope both passes to
+   *   one playing group's dbPlayers_PlayerKey.
+   *
+   * NOTE: this only threads the scope through to refreshHandicaps.php /
+   * calcPHSO.php — those two endpoint files still need to accept a
+   * scorecardKey param and forward it to workflow_Handicaps.php's
+   * be_recalculateGameHandicaps()/be_calculateGamePHSO(), which already
+   * support it. Not yet confirmed those endpoint files have been updated.
+   */
+  MA.recalculateHandicaps = async function(apiBase, scope) {
     const base = apiBase || (MA.paths && MA.paths.apiGHIN) || "/api/GHIN";
-    
+    const scorecardKey = scope?.scorecardKey || "";
+
     if (typeof MA.postJson !== "function") {
       alert("System Error: MA.postJson not found.");
       return false;
@@ -60,12 +73,18 @@
       
       // Pass 1: Refresh from GHIN (HI, CH)
       updateModal("(Step 1 OF 2) Refreshing Player Handicaps (HI/CH)...");
-      const res1 = await MA.postJson(`${base}/refreshHandicaps.php`, { ghin: "all" });
+      const res1 = await MA.postJson(`${base}/refreshHandicaps.php`, {
+        ghin: scorecardKey ? undefined : "all",
+        scorecardKey: scorecardKey || undefined,
+      });
       if (!res1 || !res1.ok) throw new Error(res1?.message || "Refresh failed.");
 
       // Pass 2: Calculate Competition (PH, SO)
       updateModal("(Step 2 OF 2) Refreshing Handicap Competition Values (PH/SO)...");
-      const res2 = await MA.postJson(`${base}/calcPHSO.php`, { action: "all" });
+      const res2 = await MA.postJson(`${base}/calcPHSO.php`, {
+        action: scorecardKey ? "scorecard" : "all",
+        id: scorecardKey || undefined,
+      });
       if (!res2 || !res2.ok) throw new Error(res2?.message || "Calculation failed.");
 
       hideModal();

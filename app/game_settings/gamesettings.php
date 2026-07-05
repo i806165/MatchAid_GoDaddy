@@ -131,6 +131,8 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
 
   <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/recalculate_handicaps.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/declare_logic.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/refresh_scores.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/addCalendar.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/pageHelp.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/module_definePlacementPoints.js') ?>"></script>

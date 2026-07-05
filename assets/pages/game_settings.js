@@ -709,6 +709,18 @@
       state.game = res.payload?.game || state.game;
       setDirty(false);
       setStatus("Settings saved successfully.", "success");
+
+      const ggidStr = String(state.game?.dbGames_GGID || "");
+
+      // Both refreshes run unconditionally on every save — no relevance
+      // check, no "did a field that matters actually change" gate. Refresh
+      // Scores is a cheap local recompute regardless; the handicap passes
+      // are the more expensive ones (real GHIN calls), but per-game-settings
+      // save frequency doesn't justify the complexity of guessing when it's
+      // "needed" versus just doing it every time. Both scoped whole-game.
+      if (ggidStr) {
+        await MA.refreshScores({ ggid: ggidStr, gameRow: state.game });
+      }
       if (MA.recalculateHandicaps) await MA.recalculateHandicaps(apiGHIN);
     } catch (e) {
       console.error(e);

@@ -100,6 +100,9 @@ $maChromeSubtitle = "Score Entry";
   window.__INIT__ = <?= json_encode($initPayload) ?>;
 </script>
 <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/recalculate_handicaps.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/declare_logic.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/refresh_scores.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/module_DisplayGameFormat.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/ghin_post_scores.js') ?>"></script>
