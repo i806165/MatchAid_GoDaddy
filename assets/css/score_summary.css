@@ -4,6 +4,14 @@
  * while keeping score-summary-specific styling here.
  */
 
+/* Outer Score Summary / Leaderboard tab visibility — mirrors admin_home's
+   is-games-only / is-events-only pattern exactly, just page-specific here
+   since it isn't shared across pages. Only one .maPanel shows at a time;
+   no side-by-side state (unlike admin_home's "Both") since the two panels
+   are different views of the same result, not complementary content. */
+#ssMain.is-summary-only .maPanel--secondary { display: none; }
+#ssMain.is-leaderboard-only .maPanel--primary { display: none; }
+
 /* Carry over scorecard browser-shell patterns */
 .ssHost--browser {
   gap: 12px;
@@ -375,5 +383,172 @@
   .ssPointsHint {
     width: 100%;
     margin-top: 2px;
+  }
+}
+/* ==========================================================================
+   Leaderboard panel — pills, table, PairPair scoreboard-row layout
+   Merged from what was originally score_leaderboard.css — one page, one
+   CSS file, matching admin_home.css's single-file pattern for its two panels.
+   ========================================================================== */
+
+
+.lbControlsRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.lbPillGroup {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.lbPill {
+  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--borderSubtle, #ccc);
+  background: #fff;
+  color: var(--ink, #222);
+  cursor: pointer;
+}
+
+.lbPill.is-active {
+  background: var(--brandPrimary, #0b5fff);
+  color: #fff;
+  border-color: var(--brandPrimary, #0b5fff);
+}
+
+.lbPill.is-disabled,
+.lbPill:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+/* ---------- Shared table (PairField Pairing/Team, PairPair Team) ------- */
+
+.lbTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.lbTable th {
+  text-align: left;
+  font-weight: 700;
+  color: var(--mutedText, #666);
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--borderSubtle, #ddd);
+}
+
+.lbTable td {
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--borderSubtle, #eee);
+}
+
+.lbTable tr:last-child td {
+  border-bottom: none;
+}
+
+.lbCellRank { width: 32px; font-weight: 700; }
+.lbCellThru { width: 60px; color: var(--mutedText, #666); }
+.lbCellKpi { text-align: right; font-weight: 700; white-space: nowrap; }
+.lbCellPts { text-align: right; width: 72px; color: var(--mutedText, #666); }
+.lbCellRecord { text-align: center; width: 90px; }
+
+.lbRow--leader {
+  background: color-mix(in srgb, var(--success, #1a7f37) 8%, white);
+}
+
+.lbTeamDot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.lbEmptyRow {
+  text-align: center;
+  color: var(--mutedText, #666);
+  padding: 16px 8px;
+  font-size: 13px;
+}
+
+/* ---------- PairPair scoreboard-row layout ------------------------------ */
+
+.lbMatchRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid var(--borderSubtle, #ddd);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+}
+
+.lbMatchRow:last-child {
+  margin-bottom: 0;
+}
+
+.lbMatchSide {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+.lbMatchSide--leading {
+  background: color-mix(in srgb, var(--success, #1a7f37) 10%, white);
+}
+
+.lbMatchSideName {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lbMatchSideStats {
+  font-size: 12px;
+  color: var(--mutedText, #666);
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.lbMatchSide--leading .lbMatchSideStats {
+  color: var(--success, #1a7f37);
+}
+
+.lbMatchVs {
+  font-size: 11px;
+  color: var(--mutedText, #999);
+  flex: 0 0 auto;
+}
+
+@media (max-width: 700px) {
+  .lbMatchRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .lbMatchSide {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+  .lbMatchSideStats {
+    margin-left: 0;
+  }
+  .lbMatchVs {
+    text-align: center;
   }
 }

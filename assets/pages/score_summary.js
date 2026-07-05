@@ -7,6 +7,8 @@
   const init = window.__INIT__ || window.__MA_INIT__ || {};
   const payload = init.summary || {};
   const game = init.game || {};
+  const competition = String(payload.competition || 'PairField');
+  const teamRollup = Array.isArray(payload.teamRollup) ? payload.teamRollup : [];
 
   const SCORE_SHAPE_ORDER = [
     ['eaglePlus', 'Eagle+'],
@@ -17,13 +19,18 @@
   ];
 
   const state = {
-    valueMode: String(payload.meta?.defaultValueMode || 'game')
+    valueMode: String(payload.meta?.defaultValueMode || 'game'),
+    lbKpi: (['Holes', 'Skins', 'Points'].includes(scoringBasis())) ? 'game' : 'net',
+    lbAggregate: 'pairing',
   };
 
   const dom = {
     controls: document.getElementById('ssControls'),
     host: document.getElementById('ssHost'),
     empty: document.getElementById('ssEmpty'),
+    lbControls: document.getElementById('lbControls'),
+    lbHost: document.getElementById('lbHost'),
+    lbEmpty: document.getElementById('lbEmpty'),
   };
 
   function esc(s) {
@@ -686,6 +693,264 @@
     `;
   }
 
+  // ==========================================================================
+  // Leaderboard panel (#lbPanel) — reads the exact same payload/rows as the
+  // card grid above. Reuses scoringBasis()/scoringMethod()/scoringSegments()/
+  // skinsDisplay()/pointsDisplay()/skinsSegments()/pointsSegments()/
+  // strokeDiffSegmentsByMode()/pairPairSegmentLines()/esc() throughout —
+  // no separate reimplementation of anything already established above.
+  // ==========================================================================
+
+  function fmtNum(v) {
+    return (v === null || v === undefined) ? '—' : String(v);
+  }
+
+  function lbTeamDotHtml(color) {
+    return color ? `<span class="lbTeamDot" style="background:${esc(color)}"></span>` : '';
+  }
+
+  function lbRenderControls() {
+    if (!dom.lbControls) return;
+
+    const teamGrain = (state.lbAggregate === 'team');
+    const showKpiPills = !(competition === 'PairPair' && teamGrain);
+    const gameDisabled = (competition === 'PairField' && teamGrain);
+
+    const kpiPillsHtml = showKpiPills ? `
+      <button class="lbPill ${state.lbKpi === 'net' ? 'is-active' : ''}" data-lbkpi="net" type="button">Net</button>
+      <button class="lbPill ${state.lbKpi === 'gross' ? 'is-active' : ''}" data-lbkpi="gross" type="button">Gross</button>
+      <button class="lbPill ${state.lbKpi === 'game' ? 'is-active' : ''} ${gameDisabled ? 'is-disabled' : ''}" data-lbkpi="game" type="button" ${gameDisabled ? 'disabled' : ''}>${esc(gameTabLabel())}</button>
+    ` : '';
+
+    dom.lbControls.innerHTML = `
+      <div class="lbControlsRow">
+        <div class="lbPillGroup">${kpiPillsHtml}</div>
+        <div class="lbPillGroup">
+          <button class="lbPill is-disabled" data-lbagg="individual" type="button" disabled title="Not yet available">Individual</button>
+          <button class="lbPill ${state.lbAggregate === 'pairing' ? 'is-active' : ''}" data-lbagg="pairing" type="button">Pairing</button>
+          <button class="lbPill ${state.lbAggregate === 'team' ? 'is-active' : ''}" data-lbagg="team" type="button">Team</button>
+        </div>
+      </div>
+    `;
+
+    dom.lbControls.querySelectorAll('[data-lbkpi]').forEach((btn) => {
+      if (btn.disabled) return;
+      btn.addEventListener('click', () => {
+        state.lbKpi = btn.dataset.lbkpi;
+        lbRenderControls();
+        lbRenderBody();
+      });
+    });
+    dom.lbControls.querySelectorAll('[data-lbagg]').forEach((btn) => {
+      if (btn.disabled) return;
+      btn.addEventListener('click', () => {
+        state.lbAggregate = btn.dataset.lbagg;
+        if (state.lbAggregate === 'team' && competition === 'PairField' && state.lbKpi === 'game') {
+          state.lbKpi = 'net';
+        }
+        lbRenderControls();
+        lbRenderBody();
+      });
+    });
+  }
+
+  // ---------- PairField ----------
+
+  function lbPairFieldKpiDisplay(row) {
+    if (state.lbKpi === 'gross') return row.grossDiffDisplay ?? '—';
+    if (state.lbKpi === 'net') return row.netDiffDisplay ?? '—';
+    if (isSkinsBasis()) return skinsDisplay(row);
+    if (isPointsBasis()) return pointsDisplay(row);
+    return (scoringMethod() === 'ADJ GROSS') ? (row.grossDiffDisplay ?? '—') : (row.netDiffDisplay ?? '—');
+  }
+
+  // Distinct from the existing pairFieldPointsDisplay() above, which shows
+  // the game's own Points-basis score — this shows dbGames_PlacementPoints
+  // ranking points, a different concept that happens to share the word
+  // "points." Kept as two clearly-named functions on purpose, not merged.
+  function lbPlacementPointsDisplay(row) {
+    const useGross = (state.lbKpi === 'gross') || (state.lbKpi === 'game' && scoringMethod() === 'ADJ GROSS');
+    const v = useGross ? row.placementPointsGross : row.placementPointsNet;
+    return fmtNum(v);
+  }
+
+  function lbRenderPairFieldPairingRows() {
+    const sorted = rows().slice().sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999));
+
+    const body = sorted.map((row) => `
+      <tr class="${row.isLeader ? 'lbRow--leader' : ''}">
+        <td class="lbCellRank">${esc(row.rank ?? '')}</td>
+        <td class="lbCellName">${lbTeamDotHtml(row.teamColor)}${esc(row.pairingLabel || '')}</td>
+        <td class="lbCellThru">${esc(formatThru(row.thru))}</td>
+        <td class="lbCellKpi">${esc(lbPairFieldKpiDisplay(row))}</td>
+        <td class="lbCellPts">${esc(lbPlacementPointsDisplay(row))}</td>
+      </tr>
+    `).join('');
+
+    return `
+      <table class="lbTable">
+        <thead>
+          <tr>
+            <th class="lbCellRank">#</th>
+            <th class="lbCellName">Pairing</th>
+            <th class="lbCellThru">Thru</th>
+            <th class="lbCellKpi">${esc(state.lbKpi === 'game' ? gameTabLabel() : (state.lbKpi === 'gross' ? 'Gross' : 'Net'))}</th>
+            <th class="lbCellPts">Points</th>
+          </tr>
+        </thead>
+        <tbody>${body || `<tr><td colspan="5" class="lbEmptyRow">No standings available.</td></tr>`}</tbody>
+      </table>
+    `;
+  }
+
+  function lbRenderPairFieldTeamRows() {
+    const sorted = teamRollup.slice().sort((a, b) => (a.teamSort ?? 999) - (b.teamSort ?? 999));
+
+    const body = sorted.map((team) => {
+      const kpiVal = (state.lbKpi === 'gross') ? team.grossDiffTotal : team.netDiffTotal;
+      const ptsVal = (state.lbKpi === 'gross') ? team.placementPointsGrossTotal : team.placementPointsNetTotal;
+      return `
+        <tr>
+          <td class="lbCellName">${lbTeamDotHtml(team.teamColor)}${esc(team.teamName || team.teamKey)}</td>
+          <td class="lbCellKpi">${esc(fmtNum(kpiVal))}</td>
+          <td class="lbCellPts">${esc(fmtNum(ptsVal))}</td>
+        </tr>
+      `;
+    }).join('');
+
+    return `
+      <table class="lbTable">
+        <thead>
+          <tr>
+            <th class="lbCellName">Team</th>
+            <th class="lbCellKpi">${esc(state.lbKpi === 'gross' ? 'Gross' : 'Net')}</th>
+            <th class="lbCellPts">Points</th>
+          </tr>
+        </thead>
+        <tbody>${body || `<tr><td colspan="3" class="lbEmptyRow">No team config set for this game.</td></tr>`}</tbody>
+      </table>
+    `;
+  }
+
+  // ---------- PairPair ----------
+
+  // Delegates entirely to the existing segment-accessor functions defined
+  // above (skinsSegments/pointsSegments/strokeDiffSegmentsByMode/
+  // pairPairSegmentLines) — no duplicate segment-reading logic here.
+  function lbPairPairKpiSegments(row, side) {
+    const sideData = row[side] || {};
+
+    if (state.lbKpi === 'gross' || state.lbKpi === 'net') {
+      if (scoringSegments() === 1) {
+        const d = (state.lbKpi === 'gross') ? sideData.grossDiffDisplay : sideData.netDiffDisplay;
+        return { overall: d ?? '—' };
+      }
+      return strokeDiffSegmentsByMode(sideData, state.lbKpi);
+    }
+
+    // 'game'
+    if (scoringBasis() === 'Holes') {
+      if (scoringSegments() === 1) return { overall: sideData.gameDisplay ?? '—' };
+      return pairPairSegmentLines(row, side);
+    }
+    if (isSkinsBasis()) {
+      return (scoringSegments() === 1) ? { overall: skinsDisplay(sideData) } : skinsSegments(sideData);
+    }
+    if (isPointsBasis()) {
+      return (scoringSegments() === 1) ? { overall: pointsDisplay(sideData) } : pointsSegments(sideData);
+    }
+    // Strokes basis — 'game' means the same thing as Gross/Net per scoringMethod
+    if (scoringSegments() === 1) {
+      const d = (scoringMethod() === 'ADJ GROSS') ? sideData.grossDiffDisplay : sideData.netDiffDisplay;
+      return { overall: d ?? '—' };
+    }
+    return strokeDiffSegments(sideData);
+  }
+
+  function lbSegmentsInlineString(segs) {
+    const parts = [];
+    if (scoringSegments() === 3) {
+      parts.push(`Front: ${esc(segs.front)}`);
+      parts.push(`Back: ${esc(segs.back)}`);
+    }
+    parts.push(`Overall: ${esc(segs.overall)}`);
+    return parts.join(' · ');
+  }
+
+  function lbSidePointsLabel(side) {
+    const overall = side.matchStatus?.total;
+    if (!overall || overall.points === null || overall.points === undefined) return '';
+    return ` · ${fmtNum(overall.points)} pts`;
+  }
+
+  function lbSideIsLeading(side) {
+    return side.matchStatus?.total?.status === 'W';
+  }
+
+  function lbRenderPairPairPairingRows() {
+    const dataRows = rows();
+    if (!dataRows.length) return `<div class="lbEmptyRow">No standings available.</div>`;
+
+    return dataRows.map((row) => {
+      const left = row.left || {};
+      const right = row.right || {};
+      const leftSegs = lbPairPairKpiSegments(row, 'left');
+      const rightSegs = lbPairPairKpiSegments(row, 'right');
+
+      return `
+        <div class="lbMatchRow">
+          <div class="lbMatchSide ${lbSideIsLeading(left) ? 'lbMatchSide--leading' : ''}">
+            <span class="lbMatchSideName">${lbTeamDotHtml(left.teamColor)}${esc(row.matchLabelTop || '')}</span>
+            <span class="lbMatchSideStats">${lbSegmentsInlineString(leftSegs)}${lbSidePointsLabel(left)}</span>
+          </div>
+          <span class="lbMatchVs">vs</span>
+          <div class="lbMatchSide ${lbSideIsLeading(right) ? 'lbMatchSide--leading' : ''}">
+            <span class="lbMatchSideName">${lbTeamDotHtml(right.teamColor)}${esc(row.matchLabelBottom || '')}</span>
+            <span class="lbMatchSideStats">${lbSegmentsInlineString(rightSegs)}${lbSidePointsLabel(right)}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function lbRenderPairPairTeamRows() {
+    const sorted = teamRollup.slice().sort((a, b) => (a.teamSort ?? 999) - (b.teamSort ?? 999));
+
+    const body = sorted.map((team) => `
+      <tr>
+        <td class="lbCellName">${lbTeamDotHtml(team.teamColor)}${esc(team.teamName || team.teamKey)}</td>
+        <td class="lbCellRecord">${team.record.w}-${team.record.l}-${team.record.h}</td>
+        <td class="lbCellPts">${esc(fmtNum(team.pointsTotal))}</td>
+      </tr>
+    `).join('');
+
+    return `
+      <table class="lbTable">
+        <thead>
+          <tr>
+            <th class="lbCellName">Team</th>
+            <th class="lbCellRecord">Record</th>
+            <th class="lbCellPts">Points</th>
+          </tr>
+        </thead>
+        <tbody>${body || `<tr><td colspan="3" class="lbEmptyRow">No team config set for this game, or this game is rotation-aware (Team is not shown for COD/1324/1423 games).</td></tr>`}</tbody>
+      </table>
+    `;
+  }
+
+  function lbRenderBody() {
+    if (!dom.lbHost) return;
+
+    const html = (competition === 'PairPair')
+      ? ((state.lbAggregate === 'team') ? lbRenderPairPairTeamRows() : lbRenderPairPairPairingRows())
+      : ((state.lbAggregate === 'team') ? lbRenderPairFieldTeamRows() : lbRenderPairFieldPairingRows());
+
+    dom.lbHost.innerHTML = html;
+
+    const isEmpty = !rows().length && !teamRollup.length;
+    if (dom.lbEmpty) dom.lbEmpty.style.display = isEmpty ? '' : 'none';
+  }
+
   function renderBody() {
     if (!dom.host) return;
 
@@ -698,7 +963,7 @@
 
     if (dom.empty) dom.empty.style.display = 'none';
 
-    if (String(payload.competition || 'PairField') === 'PairPair') {
+    if (competition === 'PairPair') {
       dom.host.innerHTML = renderPairPairCards(dataRows);
       return;
     }
@@ -710,6 +975,34 @@
     applyChrome();
     renderControls();
     renderBody();
+    lbRenderControls();
+    lbRenderBody();
+    wireOuterTabs();
+  }
+
+  // Score Summary / Leaderboard tab strip (#ssTabs) — a pure visibility
+  // toggle between the two .maPanel sections. Both panels' render functions
+  // already ran during initialize() above, against the same window.__INIT__
+  // payload — switching tabs never re-fetches or re-renders anything.
+  function wireOuterTabs() {
+    const tabsEl = document.getElementById('ssTabs');
+    const mainEl = document.getElementById('ssMain');
+    if (!tabsEl || !mainEl) return;
+
+    tabsEl.querySelectorAll('.maSegBtn[data-tab]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const tab = btn.dataset.tab;
+
+        tabsEl.querySelectorAll('.maSegBtn').forEach((b) => {
+          const on = b.dataset.tab === tab;
+          b.classList.toggle('is-active', on);
+          b.setAttribute('aria-selected', String(on));
+        });
+
+        mainEl.classList.remove('is-summary-only', 'is-leaderboard-only');
+        mainEl.classList.add(tab === 'leaderboard' ? 'is-leaderboard-only' : 'is-summary-only');
+      });
+    });
   }
 
   if (document.readyState === 'loading') {

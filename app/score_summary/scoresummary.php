@@ -49,8 +49,13 @@ $maChromeSubtitle = $initPayload["header"]["subtitle"] ?? "";
 <link rel="stylesheet" href="<?= ma_asset('/assets/css/score_summary.css') ?>" />
 </head><body>
 <?php require_once MA_INCLUDES . '/chromeHeader.php'; ?>
-<div id="ssControls" class="maControlArea"></div>
-<main class="maPage"><?php require __DIR__ . '/scoresummary_view.php'; ?></main>
+<div id="ssTabs" class="maControlArea" role="region" aria-label="Score views">
+  <div class="maSeg" role="tablist" aria-label="Switch view">
+    <button class="maSegBtn is-active" data-tab="summary" type="button" role="tab" aria-selected="true">Score Summary</button>
+    <button class="maSegBtn" data-tab="leaderboard" type="button" role="tab" aria-selected="false">Leaderboard</button>
+  </div>
+</div>
+<main class="maPage maPage--multi is-summary-only" id="ssMain"><?php require __DIR__ . '/scoresummary_view.php'; ?></main>
 <?php require_once MA_INCLUDES . '/chromeFooter.php'; ?>
 <script>
   window.MA = window.MA || {};

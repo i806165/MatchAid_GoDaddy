@@ -37,6 +37,13 @@ final class ServiceScoreSummary
             'mode' => 'game',
             'competition' => $competition,
             'rows' => $rows,
+            // Team rollup — computed server-side, not client-side, specifically
+            // so event-level scoring (a separate, likely server-side aggregation
+            // across multiple games) can consume this same data without
+            // reimplementing the summation itself. Points are the field that
+            // actually generalizes across rounds/formats for that purpose;
+            // raw KPI sums are included for this page's own display only.
+            'teamRollup' => self::buildTeamRollupRows($rows, $competition),
             'meta' => array_merge($meta, [
                 'rowCount' => count($rows),
                 'scoringBasis' => $scoringBasis,
@@ -44,6 +51,93 @@ final class ServiceScoreSummary
                 'scoringSegments' => $scoringSegments,
             ]),
         ];
+    }
+
+    /**
+     * Sums Pairing-grain rows into Team-grain rows. Server-side by design —
+     * see the call site's comment for why this can't just be client-side
+     * arithmetic in score_leaderboard.js: event-level scoring needs to
+     * consume this same rollup without a second implementation of it.
+     *
+     * PairField: sums raw KPI values (gross/net diff) and both Placement
+     * Points rankings across every pairing sharing a team.
+     *
+     * PairPair: sums each side's overall matchStatus points across every
+     * match, plus a Record (W-L-H tally) — the same Ryder-Cup-style
+     * aggregation from §7.3. Segment-level (front/back) team sums are
+     * deliberately not computed — only 'total' rolls up to Team, per the
+     * still-open §3.8 question about whether segment-level Team sums are
+     * even meaningful; skip rather than guess.
+     *
+     * Teams with no dbGames_TeamConfig entry (teamKey null) are excluded
+     * entirely — an empty teamRollup array means "no team config," not zero
+     * teams meaningfully computed to nothing.
+     */
+    private static function buildTeamRollupRows(array $rows, string $competition): array
+    {
+        $teams = [];
+
+        if ($competition === 'PairPair') {
+            foreach ($rows as $row) {
+                foreach (['left', 'right'] as $side) {
+                    $sideData = $row[$side] ?? [];
+                    $teamKey = $sideData['teamKey'] ?? null;
+                    if ($teamKey === null || $teamKey === '') continue;
+
+                    if (!isset($teams[$teamKey])) {
+                        $teams[$teamKey] = [
+                            'teamKey' => $teamKey,
+                            'teamName' => $sideData['teamName'] ?? null,
+                            'teamColor' => $sideData['teamColor'] ?? null,
+                            'teamSort' => $sideData['teamSort'] ?? null,
+                            'record' => ['w' => 0, 'l' => 0, 'h' => 0],
+                            'pointsTotal' => 0.0,
+                        ];
+                    }
+
+                    $overall = $sideData['matchStatus']['total'] ?? null;
+                    $status = $overall['status'] ?? null;
+                    if ($status === 'W') $teams[$teamKey]['record']['w']++;
+                    elseif ($status === 'L') $teams[$teamKey]['record']['l']++;
+                    elseif ($status === 'H') $teams[$teamKey]['record']['h']++;
+
+                    $teams[$teamKey]['pointsTotal'] += (float)($overall['points'] ?? 0);
+                }
+            }
+        } else {
+            foreach ($rows as $row) {
+                $teamKey = $row['teamKey'] ?? null;
+                if ($teamKey === null || $teamKey === '') continue;
+
+                if (!isset($teams[$teamKey])) {
+                    $hasGrossPts = ($row['placementPointsGross'] !== null);
+                    $hasNetPts = ($row['placementPointsNet'] !== null);
+                    $teams[$teamKey] = [
+                        'teamKey' => $teamKey,
+                        'teamName' => $row['teamName'] ?? null,
+                        'teamColor' => $row['teamColor'] ?? null,
+                        'teamSort' => $row['teamSort'] ?? null,
+                        'grossDiffTotal' => 0.0,
+                        'netDiffTotal' => 0.0,
+                        'placementPointsGrossTotal' => $hasGrossPts ? 0.0 : null,
+                        'placementPointsNetTotal' => $hasNetPts ? 0.0 : null,
+                    ];
+                }
+
+                $teams[$teamKey]['grossDiffTotal'] += (float)($row['grossDiffValue'] ?? 0);
+                $teams[$teamKey]['netDiffTotal'] += (float)($row['netDiffValue'] ?? 0);
+                if ($teams[$teamKey]['placementPointsGrossTotal'] !== null) {
+                    $teams[$teamKey]['placementPointsGrossTotal'] += (float)($row['placementPointsGross'] ?? 0);
+                }
+                if ($teams[$teamKey]['placementPointsNetTotal'] !== null) {
+                    $teams[$teamKey]['placementPointsNetTotal'] += (float)($row['placementPointsNet'] ?? 0);
+                }
+            }
+        }
+
+        $out = array_values($teams);
+        usort($out, fn($a, $b) => ($a['teamSort'] ?? 999) <=> ($b['teamSort'] ?? 999));
+        return $out;
     }
 
     private static function extractRowContext(array $row): array
@@ -104,6 +198,7 @@ final class ServiceScoreSummary
     private static function buildPairFieldRows(array $scorecardRows, array $gameRow, array $meta): array
     {
         $out = [];
+        $teamConfigById = self::parseTeamConfig($gameRow);
 
         foreach ($scorecardRows as $row) {
             $ctx = self::extractRowContext($row);
@@ -126,6 +221,12 @@ final class ServiceScoreSummary
                 $points = self::metricFromTotalRow($totalRow, 'points', $metricKey);
                 $shapeStats = self::buildPairFieldShapeStats($pairPlayers);
 
+                // Team — resolved from the first player's dbPlayers_TeamKey.
+                // Upstream player/pairing alignment guarantees every player in
+                // a pairing shares the same team, so no mismatch handling here.
+                $teamKey = trim((string)($pairPlayers[0]['dbPlayers_TeamKey'] ?? ''));
+                $teamInfo = $teamConfigById[$teamKey] ?? null;
+
                 $out[] = [
                     'pairingId' => (string)$pairingId,
                     'pairingLabel' => self::buildPairFieldLabel($pairPlayers),
@@ -137,6 +238,13 @@ final class ServiceScoreSummary
                     'pointsValue' => $points['value'],
                     'pointsDisplay' => $points['display'],
                     'thru' => self::deriveThru($pairPlayers, $scopedHoles),
+
+                    // Team — null fields when no dbGames_TeamConfig is set,
+                    // meaning the leaderboard's Team pill has nothing to show.
+                    'teamKey' => $teamKey !== '' ? $teamKey : null,
+                    'teamName' => $teamInfo['name'] ?? null,
+                    'teamColor' => $teamInfo['color'] ?? null,
+                    'teamSort' => $teamInfo['sort'] ?? null,
 
                     // Stat buckets for PairField leaderboard cards
                     'countedGrossStats' => $shapeStats['countedGrossStats'],
@@ -214,6 +322,39 @@ final class ServiceScoreSummary
             unset($row);
         }
 
+        // ── Placement Points (§4.2) — ranks the field twice, once by gross,
+        // once by net, independent of dbGames_ScoringBasis. Null (not 0) when
+        // dbGames_PlacementPoints isn't configured/active, so the UI can show
+        // a dash rather than a false zero.
+        $placementConfig = self::parsePlacementPointsPairField($gameRow);
+        if ($placementConfig !== null) {
+            $grossConfig = is_array($placementConfig['gross']['pointsConfig'] ?? null) ? $placementConfig['gross']['pointsConfig'] : [];
+            $grossTieRule = (string)($placementConfig['gross']['tieRule'] ?? 'split');
+            $netConfig = is_array($placementConfig['net']['pointsConfig'] ?? null) ? $placementConfig['net']['pointsConfig'] : [];
+            $netTieRule = (string)($placementConfig['net']['tieRule'] ?? 'split');
+
+            $grossRankInput = [];
+            $netRankInput = [];
+            foreach ($out as $idx => $row) {
+                $grossRankInput[] = ['idx' => $idx, 'value' => (float)($row['grossDiffValue'] ?? 0)];
+                $netRankInput[] = ['idx' => $idx, 'value' => (float)($row['netDiffValue'] ?? 0)];
+            }
+            $grossPts = self::assignPlacementPoints($grossRankInput, $grossConfig, $grossTieRule);
+            $netPts = self::assignPlacementPoints($netRankInput, $netConfig, $netTieRule);
+
+            foreach ($out as $idx => &$row) {
+                $row['placementPointsGross'] = $grossPts[$idx] ?? 0.0;
+                $row['placementPointsNet'] = $netPts[$idx] ?? 0.0;
+            }
+            unset($row);
+        } else {
+            foreach ($out as &$row) {
+                $row['placementPointsGross'] = null;
+                $row['placementPointsNet'] = null;
+            }
+            unset($row);
+        }
+
         return $out;
     }
 
@@ -234,6 +375,101 @@ final class ServiceScoreSummary
         if ($cmp !== 0) return $cmp;
 
         return strnatcmp((string)$a['pairingId'], (string)$b['pairingId']);
+    }
+
+    /**
+     * Parses dbGames_TeamConfig into an id-keyed lookup:
+     * {"teams":[{"id":"T1","name":"Red","color":"red","sort":1}, ...]}
+     * -> ["T1" => {"id":"T1","name":"Red","color":"red","sort":1}, ...]
+     * Empty array when unset — callers treat a missing lookup entry as
+     * "no team config," not an error.
+     */
+    private static function parseTeamConfig(array $gameRow): array
+    {
+        $raw = $gameRow['dbGames_TeamConfig'] ?? null;
+        if ($raw === null || $raw === '') return [];
+
+        $decoded = is_array($raw) ? $raw : json_decode((string)$raw, true);
+        $teams = is_array($decoded['teams'] ?? null) ? $decoded['teams'] : [];
+
+        $byId = [];
+        foreach ($teams as $t) {
+            if (!is_array($t)) continue;
+            $id = trim((string)($t['id'] ?? ''));
+            if ($id !== '') $byId[$id] = $t;
+        }
+        return $byId;
+    }
+
+    /**
+     * Parses dbGames_PlacementPoints's PairField shape:
+     * {"active":true,"gross":{"pointsConfig":{"1":100,...},"tieRule":"split"},
+     *  "net":{"pointsConfig":{...},"tieRule":"..."}}
+     * Returns null when unset/inactive — the leaderboard shows a dash rather
+     * than a fabricated zero in that case (§4.2/§4.3).
+     */
+    private static function parsePlacementPointsPairField(array $gameRow): ?array
+    {
+        $raw = $gameRow['dbGames_PlacementPoints'] ?? null;
+        if ($raw === null || $raw === '') return null;
+
+        $decoded = is_array($raw) ? $raw : json_decode((string)$raw, true);
+        if (!is_array($decoded) || empty($decoded['active'])) return null;
+        if (!isset($decoded['gross']) && !isset($decoded['net'])) return null;
+
+        return $decoded;
+    }
+
+    /**
+     * Ranks $rows (each ['idx' => original array key, 'value' => float, lower
+     * is better]) and maps rank position to a points value via $pointsConfig
+     * (keyed by string position, e.g. "1"=>100), applying $tieRule when two
+     * or more rows share a value. Returns [idx => points].
+     *
+     * tieRule:
+     *   'split' (default) — tied rows split the average of the positions they occupy
+     *   'high'             — tied rows all receive the better (higher-points) position's value
+     *   'low'              — tied rows all receive the worse (lower-points) position's value
+     */
+    private static function assignPlacementPoints(array $rows, array $pointsConfig, string $tieRule): array
+    {
+        usort($rows, fn($a, $b) => $a['value'] <=> $b['value']);
+
+        $result = [];
+        $n = count($rows);
+        $i = 0;
+        while ($i < $n) {
+            $j = $i;
+            while ($j + 1 < $n && $rows[$j + 1]['value'] === $rows[$i]['value']) {
+                $j++;
+            }
+
+            $ptsForPositions = [];
+            for ($p = $i + 1; $p <= $j + 1; $p++) {
+                $ptsForPositions[] = (float)($pointsConfig[(string)$p] ?? 0);
+            }
+
+            switch ($tieRule) {
+                case 'high':
+                    $assigned = max($ptsForPositions);
+                    break;
+                case 'low':
+                    $assigned = min($ptsForPositions);
+                    break;
+                case 'split':
+                default:
+                    $assigned = array_sum($ptsForPositions) / count($ptsForPositions);
+                    break;
+            }
+
+            for ($k = $i; $k <= $j; $k++) {
+                $result[$rows[$k]['idx']] = $assigned;
+            }
+
+            $i = $j + 1;
+        }
+
+        return $result;
     }
 
     private static function buildPairFieldShapeStats(array $pairPlayers): array
@@ -307,6 +543,7 @@ final class ServiceScoreSummary
     {
         $out = [];
         $scoringBasis = trim((string)($meta['scoringBasis'] ?? $gameRow['dbGames_ScoringBasis'] ?? 'Strokes'));
+        $scoringMethod = trim((string)($gameRow['dbGames_ScoringMethod'] ?? 'NET'));
         $isSkins = (strtolower($scoringBasis) === 'skins');
 
         // Scoring Segments — PairPair only. 1 = one overall match result (default),
@@ -318,6 +555,7 @@ final class ServiceScoreSummary
         // Which of front/back are structurally real for this game's hole range —
         // a 9-hole round (F9/B9) only ever has one, never both.
         $validSeg = self::validSegmentKeys($gameRow);
+        $teamConfigById = self::parseTeamConfig($gameRow);
 
         foreach ($scorecardRows as $row) {
             $players = is_array($row['players'] ?? null) ? $row['players'] : [];
@@ -481,6 +719,24 @@ final class ServiceScoreSummary
 
             $leftSort = self::pairPairSortSeed($leftPlayers);
 
+            // Team — ignored entirely for rotation-aware games (COD/1324/1423),
+            // per explicit decision: a static per-player TeamKey can't rotate
+            // with the match, so rotation games fall back to plain Side A/B
+            // with no named/colored team at all, rather than a stale or
+            // half-correct team label.
+            $leftTeamKey = null;
+            $rightTeamKey = null;
+            $leftTeamInfo = null;
+            $rightTeamInfo = null;
+            if (!$ctx['isRotationAware']) {
+                $leftTeamKey = trim((string)($leftPlayers[0]['dbPlayers_TeamKey'] ?? ''));
+                $rightTeamKey = trim((string)($rightPlayers[0]['dbPlayers_TeamKey'] ?? ''));
+                $leftTeamInfo = $teamConfigById[$leftTeamKey] ?? null;
+                $rightTeamInfo = $teamConfigById[$rightTeamKey] ?? null;
+                if ($leftTeamKey === '') $leftTeamKey = null;
+                if ($rightTeamKey === '') $rightTeamKey = null;
+            }
+
             $out[] = [
                 'flightId'       => $flightId,
                 'matchLabel'     => $pairingLabel,
@@ -499,6 +755,10 @@ final class ServiceScoreSummary
                 'left' => [
                     'flightPos'       => (string)$leftKey,
                     'pairingId'       => (string)$leftPairingId,
+                    'teamKey'         => $leftTeamKey,
+                    'teamName'        => $leftTeamInfo['name'] ?? null,
+                    'teamColor'       => $leftTeamInfo['color'] ?? null,
+                    'teamSort'        => $leftTeamInfo['sort'] ?? null,
                     'scoreCount'      => self::countDeclaredScores($leftPlayers, $scopedHoles),
                     'grossDiffValue'  => $leftGross['value'],
                     'grossDiffDisplay'=> $leftGross['display'],
@@ -517,6 +777,10 @@ final class ServiceScoreSummary
                 'right' => [
                     'flightPos'       => (string)$rightKey,
                     'pairingId'       => (string)$rightPairingId,
+                    'teamKey'         => $rightTeamKey,
+                    'teamName'        => $rightTeamInfo['name'] ?? null,
+                    'teamColor'       => $rightTeamInfo['color'] ?? null,
+                    'teamSort'        => $rightTeamInfo['sort'] ?? null,
                     'scoreCount'      => self::countDeclaredScores($rightPlayers, $scopedHoles),
                     'grossDiffValue'  => $rightGross['value'],
                     'grossDiffDisplay'=> $rightGross['display'],
@@ -564,7 +828,142 @@ final class ServiceScoreSummary
         }
         unset($row);
 
+        // ── matchStatus / points (§3.3-3.4) — the actual normalized W/L/H result
+        // per side, per segment. This is net-new: today's leaderboard-adjacent
+        // code only ever computes a transient comparison for a CSS highlight
+        // class (pairPairLeaderClass in score_summary.js) and throws it away.
+        // Segment-aware: one 'total' pair when scoringSegments=1, three
+        // independent pairs (front/back/total) when =3.
+        $segmentKeys = ($scoringSegments === 3) ? ['front', 'back', 'total'] : ['total'];
+        // Maps a segment key to dbGames_PlacementPoints's segment index.
+        // "1"=front, "2"=back, "3"=overall when segments=3; "1"=overall (the
+        // only segment) when segments=1 — matches module_definePlacementPoints.js's
+        // convention exactly.
+        $segmentIndexMap = ($scoringSegments === 3)
+            ? ['front' => '1', 'back' => '2', 'total' => '3']
+            : ['total' => '1'];
+        $lowerWins = (strtolower($scoringBasis) === 'strokes');
+        $placementConfig = self::parsePlacementPointsPairPair($gameRow);
+
+        foreach ($out as &$row) {
+            $leftMatch = [];
+            $rightMatch = [];
+            foreach ($segmentKeys as $segKey) {
+                $lv = self::pairPairComparisonValue($row['left'], $scoringBasis, $scoringMethod, $segKey);
+                $rv = self::pairPairComparisonValue($row['right'], $scoringBasis, $scoringMethod, $segKey);
+                $statusPair = self::determineMatchStatus($lv, $rv, $lowerWins);
+                $segIdx = $segmentIndexMap[$segKey];
+
+                $leftStatus = $statusPair['left'] ?? null;
+                $rightStatus = $statusPair['right'] ?? null;
+
+                $leftMatch[$segKey] = [
+                    'status' => $leftStatus,
+                    'points' => self::placementPointsForStatus($leftStatus, $placementConfig, $segIdx),
+                ];
+                $rightMatch[$segKey] = [
+                    'status' => $rightStatus,
+                    'points' => self::placementPointsForStatus($rightStatus, $placementConfig, $segIdx),
+                ];
+            }
+            $row['left']['matchStatus'] = $leftMatch;
+            $row['right']['matchStatus'] = $rightMatch;
+        }
+        unset($row);
+
         return $out;
+    }
+
+    /**
+     * Reads the per-side KPI value for one segment ('front'|'back'|'total'),
+     * picking the right underlying field for the game's basis and scoring
+     * method. Returns null when the value isn't applicable (mirrors the
+     * null-for-invalid-segment convention from validSegmentKeys/nullInvalid*
+     * — a 9-hole round's missing segment, or segments=1 asking for
+     * 'front'/'back' at all, correctly yields null rather than a fabricated
+     * number).
+     */
+    private static function pairPairComparisonValue(array $side, string $scoringBasis, string $scoringMethod, string $segmentKey): ?float
+    {
+        $basis = strtolower($scoringBasis);
+        $isGross = ($scoringMethod === 'ADJ GROSS');
+
+        switch ($basis) {
+            case 'strokes':
+                if ($segmentKey === 'total') {
+                    $v = $isGross ? ($side['grossDiffValue'] ?? null) : ($side['netDiffValue'] ?? null);
+                    return ($v !== null) ? (float)$v : null;
+                }
+                $segs = $isGross ? ($side['grossDiffSegments'] ?? null) : ($side['netDiffSegments'] ?? null);
+                $cell = $segs[$segmentKey] ?? null;
+                return (is_array($cell) && $cell['value'] !== null) ? (float)$cell['value'] : null;
+
+            case 'holes':
+                $segs = $side['gameSegments'] ?? null;
+                $cell = $segs[$segmentKey] ?? null;
+                return (is_array($cell) && $cell['value'] !== null) ? (float)$cell['value'] : null;
+
+            case 'skins':
+                $arr = $isGross ? ($side['grossSkins'] ?? null) : ($side['netSkins'] ?? null);
+                $v = is_array($arr) ? ($arr[$segmentKey] ?? null) : null;
+                return ($v !== null) ? (float)$v : null;
+
+            case 'points':
+                $arr = $isGross ? ($side['grossPoints'] ?? null) : ($side['netPoints'] ?? null);
+                $v = is_array($arr) ? ($arr[$segmentKey] ?? null) : null;
+                return ($v !== null) ? (float)$v : null;
+
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * W/L/H for one segment from both sides' comparison values. Null in
+     * either input (segment not applicable — e.g. back-9 on an F9 round)
+     * propagates to null status on both sides, not a fabricated result.
+     */
+    private static function determineMatchStatus(?float $leftVal, ?float $rightVal, bool $lowerWins): array
+    {
+        if ($leftVal === null || $rightVal === null) {
+            return ['left' => null, 'right' => null];
+        }
+        if ($leftVal == $rightVal) {
+            return ['left' => 'H', 'right' => 'H'];
+        }
+        $leftWins = $lowerWins ? ($leftVal < $rightVal) : ($leftVal > $rightVal);
+        return $leftWins ? ['left' => 'W', 'right' => 'L'] : ['left' => 'L', 'right' => 'W'];
+    }
+
+    /**
+     * Parses dbGames_PlacementPoints's PairPair shape:
+     * {"active":true,"segments":{"1":{"win":1,"halve":0.5,"loss":0}, ...}}
+     * Defaults to a single win=1/halve=0.5/loss=0 segment "1" when unset or
+     * invalid — matches module_definePlacementPoints.js's own default.
+     */
+    private static function parsePlacementPointsPairPair(array $gameRow): array
+    {
+        $default = ['active' => true, 'segments' => ['1' => ['win' => 1, 'halve' => 0.5, 'loss' => 0]]];
+        $raw = $gameRow['dbGames_PlacementPoints'] ?? null;
+        if ($raw === null || $raw === '') return $default;
+
+        $decoded = is_array($raw) ? $raw : json_decode((string)$raw, true);
+        if (!is_array($decoded) || !isset($decoded['segments']) || !is_array($decoded['segments'])) {
+            return $default;
+        }
+        return $decoded;
+    }
+
+    private static function placementPointsForStatus(?string $status, array $placementConfig, string $segmentIndex): float
+    {
+        if ($status === null) return 0.0;
+        $seg = $placementConfig['segments'][$segmentIndex] ?? ['win' => 1, 'halve' => 0.5, 'loss' => 0];
+        switch ($status) {
+            case 'W': return (float)($seg['win'] ?? 1);
+            case 'H': return (float)($seg['halve'] ?? 0.5);
+            case 'L': return (float)($seg['loss'] ?? 0);
+            default: return 0.0;
+        }
     }
 
     private static function buildPairPairGameKpi(array $leftPlayers, array $rightPlayers, array $gameRow, string $scoringBasis, array $scopedHoles): array
