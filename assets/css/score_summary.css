@@ -97,7 +97,7 @@
   color: var(--brandSecondaryText);
 }
 
-.ssMatchCard__hdr .ssThruPill {
+.ssMatchCard__hdr .maPill {
   background: #fff;
 }
 
@@ -377,8 +377,8 @@
 .lbColRank { flex: 0 0 28px; }
 .lbColName { flex: 1 1 auto; min-width: 0; }
 .lbColThru { flex: 0 0 50px; }
-.lbColKpi { flex: 0 0 72px; }
-.lbColPts { flex: 0 0 64px; }
+.lbColKpi { flex: 0 0 72px; text-align: right; }
+.lbColPts { flex: 0 0 64px; text-align: right; }
 .lbColRecord { flex: 0 0 80px; text-align: center; }
 
 /* Genuinely unique — no shared equivalent. .maTeamBadge is an interactive

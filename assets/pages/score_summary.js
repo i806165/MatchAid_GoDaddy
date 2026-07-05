@@ -506,9 +506,9 @@
 
     dom.controls.innerHTML = `
       <div class="scBrowserControls">
-        <div class="maSeg">
+        <div class="maChoiceChips">
           ${modes.map(([key, label]) =>
-            `<button class="maSegBtn ${state.valueMode === key ? 'is-active' : ''}" type="button" data-mode="${key}">${label}</button>`
+            `<button class="maChoiceChip ${state.valueMode === key ? 'is-selected' : ''}" type="button" data-mode="${key}">${label}</button>`
           ).join('')}
         </div>
         ${hint ? `<div class="ssPointsHint">${esc(hint)}</div>` : ''}
@@ -716,18 +716,18 @@
     const gameDisabled = (competition === 'PairField' && teamGrain);
 
     const kpiPillsHtml = showKpiPills ? `
-      <button class="maSegBtn ${state.lbKpi === 'net' ? 'is-active' : ''}" data-lbkpi="net" type="button">Net</button>
-      <button class="maSegBtn ${state.lbKpi === 'gross' ? 'is-active' : ''}" data-lbkpi="gross" type="button">Gross</button>
-      <button class="maSegBtn ${state.lbKpi === 'game' ? 'is-active' : ''}" data-lbkpi="game" type="button" ${gameDisabled ? 'disabled' : ''}>${esc(gameTabLabel())}</button>
+      <button class="maChoiceChip ${state.lbKpi === 'net' ? 'is-selected' : ''}" data-lbkpi="net" type="button">Net</button>
+      <button class="maChoiceChip ${state.lbKpi === 'gross' ? 'is-selected' : ''}" data-lbkpi="gross" type="button">Gross</button>
+      <button class="maChoiceChip ${state.lbKpi === 'game' ? 'is-selected' : ''} ${gameDisabled ? 'is-disabled' : ''}" data-lbkpi="game" type="button" ${gameDisabled ? 'disabled' : ''}>${esc(gameTabLabel())}</button>
     ` : '';
 
     dom.lbControls.innerHTML = `
       <div class="lbControlsRow">
-        <div class="maSeg">${kpiPillsHtml}</div>
-        <div class="maSeg">
-          <button class="maSegBtn" data-lbagg="individual" type="button" disabled title="Not yet available">Individual</button>
-          <button class="maSegBtn ${state.lbAggregate === 'pairing' ? 'is-active' : ''}" data-lbagg="pairing" type="button">Pairing</button>
-          <button class="maSegBtn ${state.lbAggregate === 'team' ? 'is-active' : ''}" data-lbagg="team" type="button">Team</button>
+        <div class="maChoiceChips">${kpiPillsHtml}</div>
+        <div class="maChoiceChips">
+          <button class="maChoiceChip is-disabled" data-lbagg="individual" type="button" disabled title="Not yet available">Individual</button>
+          <button class="maChoiceChip ${state.lbAggregate === 'pairing' ? 'is-selected' : ''}" data-lbagg="pairing" type="button">Pairing</button>
+          <button class="maChoiceChip ${state.lbAggregate === 'team' ? 'is-selected' : ''}" data-lbagg="team" type="button">Team</button>
         </div>
       </div>
     `;
@@ -791,7 +791,7 @@
         <span class="maListRow__col lbColRank">${esc(row.rank ?? '')}</span>
         <span class="maListRow__col lbColName">${lbTeamDotHtml(row.teamColor)}${esc(row.pairingLabel || '')}</span>
         <span class="maListRow__col--muted lbColThru">${esc(formatThru(row.thru))}</span>
-        <span class="maListRow__col--right lbColKpi">${esc(lbPairFieldKpiDisplay(row))}</span>
+        <span class="maListRow__col lbColKpi">${esc(lbPairFieldKpiDisplay(row))}</span>
         <span class="maListRow__col--muted lbColPts">${esc(lbPlacementPointsDisplay(row))}</span>
       </div>
     `).join('');
@@ -816,7 +816,7 @@
       return `
         <div class="maListRow maListRow--static">
           <span class="maListRow__col lbColName">${lbTeamDotHtml(team.teamColor)}${esc(team.teamName || team.teamKey)}</span>
-          <span class="maListRow__col--right lbColKpi">${esc(fmtNum(kpiVal))}</span>
+          <span class="maListRow__col lbColKpi">${esc(fmtNum(kpiVal))}</span>
           <span class="maListRow__col--muted lbColPts">${esc(fmtNum(ptsVal))}</span>
         </div>
       `;
