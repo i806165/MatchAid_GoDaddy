@@ -251,7 +251,7 @@ final class ServiceScoreCardRotation
         foreach ($contextPlayers as $contextPlayer) {
             $ghin      = self::normStr($contextPlayer['dbPlayers_PlayerGHIN'] ?? '', '');
             $pairingId = self::normStr(
-                $contextPlayer['effectivePairingID']
+                $contextPlayer['baselinePairingID']
                 ?? $contextPlayer['dbPlayers_PairingID']
                 ?? '', ''
             );
