@@ -8,9 +8,13 @@
    is-games-only / is-events-only pattern exactly, just page-specific here
    since it isn't shared across pages. Only one .maPanel shows at a time;
    no side-by-side state (unlike admin_home's "Both") since the two panels
-   are different views of the same result, not complementary content. */
+   are different views of the same result, not complementary content.
+   Same toggle also controls which panel's own controls show in
+   #ssPanelControls (outside <main>, so it never scrolls out of view). */
 #ssMain.is-summary-only .maPanel--secondary { display: none; }
 #ssMain.is-leaderboard-only .maPanel--primary { display: none; }
+#ssPanelControls.is-summary-only #lbControls { display: none; }
+#ssPanelControls.is-leaderboard-only #ssControls { display: none; }
 
 /* Carry over scorecard browser-shell patterns */
 .ssHost--browser {
@@ -23,30 +27,6 @@
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-}
-
-.scBrowserControls__group {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.scCtlBtn {
-  border: 1px solid var(--borderSubtle);
-  background: #fff;
-  border-radius: 999px;
-  padding: 8px 12px;
-  font-weight: 700;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.scCtlBtn.is-active {
-  background: var(--brandPrimary);
-  color: #fff;
-  border-color: var(--brandPrimary);
 }
 
 .ssHost {
@@ -85,23 +65,10 @@
   margin-top: 2px;
 }
 
-.ssThruPill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 24px;
-  padding: 0 10px;
-  border-radius: 999px;
-  background: var(--pillBg);
-  color: var(--pillText);
-  font-size: 11px;
-  font-weight: 900;
-  white-space: nowrap;
-}
-
+/* Layout modifier only — base pill look (background/color/radius/padding)
+   comes from .maPill directly; markup is class="maPill ssThruPill--stacked" */
 .ssThruPill--stacked {
   min-width: 68px;
-  min-height: auto;
   padding: 6px 10px;
   border-radius: 16px;
   flex-direction: column;
@@ -392,6 +359,8 @@
    ========================================================================== */
 
 
+/* Pure two-group flex layout — KPI pills left, Aggregate pills right.
+   No component styling here; the pills themselves are .maSeg/.maSegBtn. */
 .lbControlsRow {
   display: flex;
   justify-content: space-between;
@@ -400,69 +369,22 @@
   flex-wrap: wrap;
 }
 
-.lbPillGroup {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
+/* Column widths only — .maListRow__col/--right/--muted already provide all
+   font/color/weight styling. This is purely "how wide is each column,"
+   which .maListRow itself doesn't define since it's a plain flex row, not
+   a fixed-column table. */
+.lbHeaderRow { cursor: default; }
+.lbColRank { flex: 0 0 28px; }
+.lbColName { flex: 1 1 auto; min-width: 0; }
+.lbColThru { flex: 0 0 50px; }
+.lbColKpi { flex: 0 0 72px; }
+.lbColPts { flex: 0 0 64px; }
+.lbColRecord { flex: 0 0 80px; text-align: center; }
 
-.lbPill {
-  font-size: 13px;
-  padding: 6px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--borderSubtle, #ccc);
-  background: #fff;
-  color: var(--ink, #222);
-  cursor: pointer;
-}
-
-.lbPill.is-active {
-  background: var(--brandPrimary, #0b5fff);
-  color: #fff;
-  border-color: var(--brandPrimary, #0b5fff);
-}
-
-.lbPill.is-disabled,
-.lbPill:disabled {
-  opacity: .5;
-  cursor: default;
-}
-
-/* ---------- Shared table (PairField Pairing/Team, PairPair Team) ------- */
-
-.lbTable {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.lbTable th {
-  text-align: left;
-  font-weight: 700;
-  color: var(--mutedText, #666);
-  padding: 8px 6px;
-  border-bottom: 1px solid var(--borderSubtle, #ddd);
-}
-
-.lbTable td {
-  padding: 8px 6px;
-  border-bottom: 1px solid var(--borderSubtle, #eee);
-}
-
-.lbTable tr:last-child td {
-  border-bottom: none;
-}
-
-.lbCellRank { width: 32px; font-weight: 700; }
-.lbCellThru { width: 60px; color: var(--mutedText, #666); }
-.lbCellKpi { text-align: right; font-weight: 700; white-space: nowrap; }
-.lbCellPts { text-align: right; width: 72px; color: var(--mutedText, #666); }
-.lbCellRecord { text-align: center; width: 90px; }
-
-.lbRow--leader {
-  background: color-mix(in srgb, var(--success, #1a7f37) 8%, white);
-}
-
+/* Genuinely unique — no shared equivalent. .maTeamBadge is an interactive
+   assignment button hardcoded to Red/Blue/None; dbGames_TeamConfig allows
+   arbitrary colors, so a passive swatch matching any configured color has
+   no existing counterpart. Color is set inline per-team at render time. */
 .lbTeamDot {
   display: inline-block;
   width: 8px;
@@ -472,11 +394,12 @@
   vertical-align: middle;
 }
 
-.lbEmptyRow {
-  text-align: center;
-  color: var(--mutedText, #666);
-  padding: 16px 8px;
-  font-size: 13px;
+/* .maListRow has .is-selected/--active (brand blue) but no win/leader state —
+   this page's own convention is green (.ssSideBox.is-leading,
+   .ssFieldCard.is-leading already use this exact tint). Applying the same
+   state name to the shared row component, not inventing a new one. */
+.maListRow.is-leading {
+  background: color-mix(in srgb, var(--success) 8%, white);
 }
 
 /* ---------- PairPair scoreboard-row layout ------------------------------ */
@@ -485,7 +408,7 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  border: 1px solid var(--borderSubtle, #ddd);
+  border: 1px solid var(--borderSubtle);
   border-radius: 12px;
   padding: 10px 14px;
   margin-bottom: 10px;
@@ -505,12 +428,15 @@
   border-radius: 8px;
 }
 
-.lbMatchSide--leading {
-  background: color-mix(in srgb, var(--success, #1a7f37) 10%, white);
+/* Matches this page's own existing convention exactly — .ssSideBox.is-leading
+   / .ssFieldCard.is-leading both use this same --success tint. Not a new
+   pattern, just applied to a new element. */
+.lbMatchSide.is-leading {
+  background: color-mix(in srgb, var(--success) 10%, white);
 }
 
 .lbMatchSideName {
-  font-size: 13px;
+  font-size: var(--fieldValueSize);
   font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
@@ -518,19 +444,19 @@
 }
 
 .lbMatchSideStats {
-  font-size: 12px;
-  color: var(--mutedText, #666);
+  font-size: var(--chromeSubtitleSize);
+  color: var(--mutedText);
   margin-left: auto;
   white-space: nowrap;
 }
 
-.lbMatchSide--leading .lbMatchSideStats {
-  color: var(--success, #1a7f37);
+.lbMatchSide.is-leading .lbMatchSideStats {
+  color: var(--success);
 }
 
 .lbMatchVs {
-  font-size: 11px;
-  color: var(--mutedText, #999);
+  font-size: var(--pillLabelSize);
+  color: var(--mutedText);
   flex: 0 0 auto;
 }
 

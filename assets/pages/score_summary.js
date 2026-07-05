@@ -30,7 +30,6 @@
     empty: document.getElementById('ssEmpty'),
     lbControls: document.getElementById('lbControls'),
     lbHost: document.getElementById('lbHost'),
-    lbEmpty: document.getElementById('lbEmpty'),
   };
 
   function esc(s) {
@@ -507,9 +506,9 @@
 
     dom.controls.innerHTML = `
       <div class="scBrowserControls">
-        <div class="scBrowserControls__group">
+        <div class="maSeg">
           ${modes.map(([key, label]) =>
-            `<button class="scCtlBtn ${state.valueMode === key ? 'is-active' : ''}" type="button" data-mode="${key}">${label}</button>`
+            `<button class="maSegBtn ${state.valueMode === key ? 'is-active' : ''}" type="button" data-mode="${key}">${label}</button>`
           ).join('')}
         </div>
         ${hint ? `<div class="ssPointsHint">${esc(hint)}</div>` : ''}
@@ -604,7 +603,7 @@
                 <div class="maCard__title ssMatchCardTitle">
                   <div class="ssMatchCell__top">${esc(row.pairingLabel || '')}</div>
                 </div>
-                <div class="ssThruPill ssThruPill--stacked">
+                <div class="maPill ssThruPill--stacked">
                   <span>Thru</span>
                   <span>${esc(formatThru(row.thru))}</span>
                 </div>
@@ -649,7 +648,7 @@
                   <div class="ssMatchCell__bottom">${esc(pairPairBottomName(row))}</div>
                   ${pairPairSpinText(row) ? `<div class="ssMatchCell__sub">${esc(pairPairSpinText(row))}</div>` : ''}
                 </div>
-                <div class="ssThruPill ssThruPill--stacked">
+                <div class="maPill ssThruPill--stacked">
                   <span>Thru</span>
                   <span>${esc(formatThru(row.thru))}</span>
                 </div>
@@ -717,18 +716,18 @@
     const gameDisabled = (competition === 'PairField' && teamGrain);
 
     const kpiPillsHtml = showKpiPills ? `
-      <button class="lbPill ${state.lbKpi === 'net' ? 'is-active' : ''}" data-lbkpi="net" type="button">Net</button>
-      <button class="lbPill ${state.lbKpi === 'gross' ? 'is-active' : ''}" data-lbkpi="gross" type="button">Gross</button>
-      <button class="lbPill ${state.lbKpi === 'game' ? 'is-active' : ''} ${gameDisabled ? 'is-disabled' : ''}" data-lbkpi="game" type="button" ${gameDisabled ? 'disabled' : ''}>${esc(gameTabLabel())}</button>
+      <button class="maSegBtn ${state.lbKpi === 'net' ? 'is-active' : ''}" data-lbkpi="net" type="button">Net</button>
+      <button class="maSegBtn ${state.lbKpi === 'gross' ? 'is-active' : ''}" data-lbkpi="gross" type="button">Gross</button>
+      <button class="maSegBtn ${state.lbKpi === 'game' ? 'is-active' : ''}" data-lbkpi="game" type="button" ${gameDisabled ? 'disabled' : ''}>${esc(gameTabLabel())}</button>
     ` : '';
 
     dom.lbControls.innerHTML = `
       <div class="lbControlsRow">
-        <div class="lbPillGroup">${kpiPillsHtml}</div>
-        <div class="lbPillGroup">
-          <button class="lbPill is-disabled" data-lbagg="individual" type="button" disabled title="Not yet available">Individual</button>
-          <button class="lbPill ${state.lbAggregate === 'pairing' ? 'is-active' : ''}" data-lbagg="pairing" type="button">Pairing</button>
-          <button class="lbPill ${state.lbAggregate === 'team' ? 'is-active' : ''}" data-lbagg="team" type="button">Team</button>
+        <div class="maSeg">${kpiPillsHtml}</div>
+        <div class="maSeg">
+          <button class="maSegBtn" data-lbagg="individual" type="button" disabled title="Not yet available">Individual</button>
+          <button class="maSegBtn ${state.lbAggregate === 'pairing' ? 'is-active' : ''}" data-lbagg="pairing" type="button">Pairing</button>
+          <button class="maSegBtn ${state.lbAggregate === 'team' ? 'is-active' : ''}" data-lbagg="team" type="button">Team</button>
         </div>
       </div>
     `;
@@ -777,59 +776,53 @@
   function lbRenderPairFieldPairingRows() {
     const sorted = rows().slice().sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999));
 
+    const header = `
+      <div class="maListRow maListRow--static lbHeaderRow">
+        <span class="maListRow__col--muted lbColRank">#</span>
+        <span class="maListRow__col--muted lbColName">Pairing</span>
+        <span class="maListRow__col--muted lbColThru">Thru</span>
+        <span class="maListRow__col--muted lbColKpi">${esc(state.lbKpi === 'game' ? gameTabLabel() : (state.lbKpi === 'gross' ? 'Gross' : 'Net'))}</span>
+        <span class="maListRow__col--muted lbColPts">Points</span>
+      </div>
+    `;
+
     const body = sorted.map((row) => `
-      <tr class="${row.isLeader ? 'lbRow--leader' : ''}">
-        <td class="lbCellRank">${esc(row.rank ?? '')}</td>
-        <td class="lbCellName">${lbTeamDotHtml(row.teamColor)}${esc(row.pairingLabel || '')}</td>
-        <td class="lbCellThru">${esc(formatThru(row.thru))}</td>
-        <td class="lbCellKpi">${esc(lbPairFieldKpiDisplay(row))}</td>
-        <td class="lbCellPts">${esc(lbPlacementPointsDisplay(row))}</td>
-      </tr>
+      <div class="maListRow maListRow--static ${row.isLeader ? 'is-leading' : ''}">
+        <span class="maListRow__col lbColRank">${esc(row.rank ?? '')}</span>
+        <span class="maListRow__col lbColName">${lbTeamDotHtml(row.teamColor)}${esc(row.pairingLabel || '')}</span>
+        <span class="maListRow__col--muted lbColThru">${esc(formatThru(row.thru))}</span>
+        <span class="maListRow__col--right lbColKpi">${esc(lbPairFieldKpiDisplay(row))}</span>
+        <span class="maListRow__col--muted lbColPts">${esc(lbPlacementPointsDisplay(row))}</span>
+      </div>
     `).join('');
 
-    return `
-      <table class="lbTable">
-        <thead>
-          <tr>
-            <th class="lbCellRank">#</th>
-            <th class="lbCellName">Pairing</th>
-            <th class="lbCellThru">Thru</th>
-            <th class="lbCellKpi">${esc(state.lbKpi === 'game' ? gameTabLabel() : (state.lbKpi === 'gross' ? 'Gross' : 'Net'))}</th>
-            <th class="lbCellPts">Points</th>
-          </tr>
-        </thead>
-        <tbody>${body || `<tr><td colspan="5" class="lbEmptyRow">No standings available.</td></tr>`}</tbody>
-      </table>
-    `;
+    return `${header}${body || `<div class="maEmptyState">No standings available.</div>`}`;
   }
 
   function lbRenderPairFieldTeamRows() {
     const sorted = teamRollup.slice().sort((a, b) => (a.teamSort ?? 999) - (b.teamSort ?? 999));
 
+    const header = `
+      <div class="maListRow maListRow--static lbHeaderRow">
+        <span class="maListRow__col--muted lbColName">Team</span>
+        <span class="maListRow__col--muted lbColKpi">${esc(state.lbKpi === 'gross' ? 'Gross' : 'Net')}</span>
+        <span class="maListRow__col--muted lbColPts">Points</span>
+      </div>
+    `;
+
     const body = sorted.map((team) => {
       const kpiVal = (state.lbKpi === 'gross') ? team.grossDiffTotal : team.netDiffTotal;
       const ptsVal = (state.lbKpi === 'gross') ? team.placementPointsGrossTotal : team.placementPointsNetTotal;
       return `
-        <tr>
-          <td class="lbCellName">${lbTeamDotHtml(team.teamColor)}${esc(team.teamName || team.teamKey)}</td>
-          <td class="lbCellKpi">${esc(fmtNum(kpiVal))}</td>
-          <td class="lbCellPts">${esc(fmtNum(ptsVal))}</td>
-        </tr>
+        <div class="maListRow maListRow--static">
+          <span class="maListRow__col lbColName">${lbTeamDotHtml(team.teamColor)}${esc(team.teamName || team.teamKey)}</span>
+          <span class="maListRow__col--right lbColKpi">${esc(fmtNum(kpiVal))}</span>
+          <span class="maListRow__col--muted lbColPts">${esc(fmtNum(ptsVal))}</span>
+        </div>
       `;
     }).join('');
 
-    return `
-      <table class="lbTable">
-        <thead>
-          <tr>
-            <th class="lbCellName">Team</th>
-            <th class="lbCellKpi">${esc(state.lbKpi === 'gross' ? 'Gross' : 'Net')}</th>
-            <th class="lbCellPts">Points</th>
-          </tr>
-        </thead>
-        <tbody>${body || `<tr><td colspan="3" class="lbEmptyRow">No team config set for this game.</td></tr>`}</tbody>
-      </table>
-    `;
+    return `${header}${body || `<div class="maEmptyState">No team config set for this game.</div>`}`;
   }
 
   // ---------- PairPair ----------
@@ -889,7 +882,7 @@
 
   function lbRenderPairPairPairingRows() {
     const dataRows = rows();
-    if (!dataRows.length) return `<div class="lbEmptyRow">No standings available.</div>`;
+    if (!dataRows.length) return `<div class="maEmptyState">No standings available.</div>`;
 
     return dataRows.map((row) => {
       const left = row.left || {};
@@ -899,12 +892,12 @@
 
       return `
         <div class="lbMatchRow">
-          <div class="lbMatchSide ${lbSideIsLeading(left) ? 'lbMatchSide--leading' : ''}">
+          <div class="lbMatchSide ${lbSideIsLeading(left) ? 'is-leading' : ''}">
             <span class="lbMatchSideName">${lbTeamDotHtml(left.teamColor)}${esc(row.matchLabelTop || '')}</span>
             <span class="lbMatchSideStats">${lbSegmentsInlineString(leftSegs)}${lbSidePointsLabel(left)}</span>
           </div>
           <span class="lbMatchVs">vs</span>
-          <div class="lbMatchSide ${lbSideIsLeading(right) ? 'lbMatchSide--leading' : ''}">
+          <div class="lbMatchSide ${lbSideIsLeading(right) ? 'is-leading' : ''}">
             <span class="lbMatchSideName">${lbTeamDotHtml(right.teamColor)}${esc(row.matchLabelBottom || '')}</span>
             <span class="lbMatchSideStats">${lbSegmentsInlineString(rightSegs)}${lbSidePointsLabel(right)}</span>
           </div>
@@ -916,39 +909,35 @@
   function lbRenderPairPairTeamRows() {
     const sorted = teamRollup.slice().sort((a, b) => (a.teamSort ?? 999) - (b.teamSort ?? 999));
 
+    const header = `
+      <div class="maListRow maListRow--static lbHeaderRow">
+        <span class="maListRow__col--muted lbColName">Team</span>
+        <span class="maListRow__col--muted lbColRecord">Record</span>
+        <span class="maListRow__col--muted lbColPts">Points</span>
+      </div>
+    `;
+
     const body = sorted.map((team) => `
-      <tr>
-        <td class="lbCellName">${lbTeamDotHtml(team.teamColor)}${esc(team.teamName || team.teamKey)}</td>
-        <td class="lbCellRecord">${team.record.w}-${team.record.l}-${team.record.h}</td>
-        <td class="lbCellPts">${esc(fmtNum(team.pointsTotal))}</td>
-      </tr>
+      <div class="maListRow maListRow--static">
+        <span class="maListRow__col lbColName">${lbTeamDotHtml(team.teamColor)}${esc(team.teamName || team.teamKey)}</span>
+        <span class="maListRow__col--muted lbColRecord">${team.record.w}-${team.record.l}-${team.record.h}</span>
+        <span class="maListRow__col--muted lbColPts">${esc(fmtNum(team.pointsTotal))}</span>
+      </div>
     `).join('');
 
-    return `
-      <table class="lbTable">
-        <thead>
-          <tr>
-            <th class="lbCellName">Team</th>
-            <th class="lbCellRecord">Record</th>
-            <th class="lbCellPts">Points</th>
-          </tr>
-        </thead>
-        <tbody>${body || `<tr><td colspan="3" class="lbEmptyRow">No team config set for this game, or this game is rotation-aware (Team is not shown for COD/1324/1423 games).</td></tr>`}</tbody>
-      </table>
-    `;
+    return `${header}${body || `<div class="maEmptyState">No team config set for this game, or this game is rotation-aware (Team is not shown for COD/1324/1423 games).</div>`}`;
   }
 
   function lbRenderBody() {
     if (!dom.lbHost) return;
 
-    const html = (competition === 'PairPair')
+    // Each render function returns its own context-specific .maEmptyState
+    // message when empty (e.g. "No team config" vs "No standings available")
+    // — more useful than one generic message, so there's no separate
+    // dom.lbEmpty toggle here; #lbEmpty in the view is unused by design.
+    dom.lbHost.innerHTML = (competition === 'PairPair')
       ? ((state.lbAggregate === 'team') ? lbRenderPairPairTeamRows() : lbRenderPairPairPairingRows())
       : ((state.lbAggregate === 'team') ? lbRenderPairFieldTeamRows() : lbRenderPairFieldPairingRows());
-
-    dom.lbHost.innerHTML = html;
-
-    const isEmpty = !rows().length && !teamRollup.length;
-    if (dom.lbEmpty) dom.lbEmpty.style.display = isEmpty ? '' : 'none';
   }
 
   function renderBody() {
@@ -987,6 +976,7 @@
   function wireOuterTabs() {
     const tabsEl = document.getElementById('ssTabs');
     const mainEl = document.getElementById('ssMain');
+    const controlsEl = document.getElementById('ssPanelControls');
     if (!tabsEl || !mainEl) return;
 
     tabsEl.querySelectorAll('.maSegBtn[data-tab]').forEach((btn) => {
@@ -999,8 +989,12 @@
           b.setAttribute('aria-selected', String(on));
         });
 
-        mainEl.classList.remove('is-summary-only', 'is-leaderboard-only');
-        mainEl.classList.add(tab === 'leaderboard' ? 'is-leaderboard-only' : 'is-summary-only');
+        const activeClass = (tab === 'leaderboard') ? 'is-leaderboard-only' : 'is-summary-only';
+        [mainEl, controlsEl].forEach((el) => {
+          if (!el) return;
+          el.classList.remove('is-summary-only', 'is-leaderboard-only');
+          el.classList.add(activeClass);
+        });
       });
     });
   }

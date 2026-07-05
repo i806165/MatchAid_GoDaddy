@@ -55,6 +55,10 @@ $maChromeSubtitle = $initPayload["header"]["subtitle"] ?? "";
     <button class="maSegBtn" data-tab="leaderboard" type="button" role="tab" aria-selected="false">Leaderboard</button>
   </div>
 </div>
+<div id="ssPanelControls" class="maControlArea is-summary-only">
+  <div id="ssControls"></div>
+  <div id="lbControls"></div>
+</div>
 <main class="maPage maPage--multi is-summary-only" id="ssMain"><?php require __DIR__ . '/scoresummary_view.php'; ?></main>
 <?php require_once MA_INCLUDES . '/chromeFooter.php'; ?>
 <script>
