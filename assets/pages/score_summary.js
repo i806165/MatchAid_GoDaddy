@@ -157,10 +157,24 @@
 
   // Medal Match (Strokes basis) front/back/overall — new fields, only present
   // when scoringSegments() === 3. {value, display} shaped, same as gameSegments.
+  // Used by the "game"/"Strokes" tab, which follows the game's configured
+  // scoringMethod (NET vs ADJ GROSS) rather than a manually-selected tab.
   function strokeDiffSegments(rowOrSide) {
     const seg = scoringMethod() === 'ADJ GROSS'
       ? rowOrSide?.grossDiffSegments
       : rowOrSide?.netDiffSegments;
+    return {
+      front:   segCellDisplay(seg?.front),
+      back:    segCellDisplay(seg?.back),
+      overall: segCellDisplay(seg?.total),
+    };
+  }
+
+  // Same data, but picked by an explicit 'gross' | 'net' mode rather than the
+  // game's scoringMethod — for the Gross/Net tabs, where the person is
+  // manually choosing which to view regardless of how the game is configured.
+  function strokeDiffSegmentsByMode(rowOrSide, mode) {
+    const seg = (mode === 'gross') ? rowOrSide?.grossDiffSegments : rowOrSide?.netDiffSegments;
     return {
       front:   segCellDisplay(seg?.front),
       back:    segCellDisplay(seg?.back),
@@ -315,6 +329,21 @@
     return row?.isLeader ? 'is-leading' : '';
   }
 
+  // Shared Front/Back/Overall template — used by both the "game" tab and,
+  // for Medal Match specifically, the Gross/Net tabs (since a Medal Match's
+  // native scored metric IS the gross/net differential, not something separate).
+  function threeLineSegBlock(seg) {
+    return `
+      <div><span class="ssSideBox__label">Front:</span> <span class="ssSideBox__value">${esc(seg.front)}</span></div>
+      <div><span class="ssSideBox__label">Back:</span> <span class="ssSideBox__value">${esc(seg.back)}</span></div>
+      <div><span class="ssSideBox__label">Overall:</span> <span class="ssSideBox__value">${esc(seg.overall)}</span></div>
+    `;
+  }
+
+  function oneLineLabelBlock(label, value) {
+    return `<div><span class="ssSideBox__label">${esc(label)}</span> <span class="ssSideBox__value">${esc(value)}</span></div>`;
+  }
+
   // Renders the "game" value-mode content for one side of a PairPair card —
   // one line when scoringSegments() is 1 (or basis doesn't apply), three lines
   // (Front / Back / Overall) when it's 3. Consolidates what used to be three
@@ -322,13 +351,9 @@
   // non-Skins format always showed Front/Back/Overall regardless of any
   // segments concept, since none existed in the payload before now).
   function renderPairPairGameModeBlock(row, side) {
-    const label = esc(currentMetricLabel());
-    const oneLine = (value) => `<div><span class="ssSideBox__label">${label}</span> <span class="ssSideBox__value">${esc(value)}</span></div>`;
-    const threeLine = (seg) => `
-      <div><span class="ssSideBox__label">Front:</span> <span class="ssSideBox__value">${esc(seg.front)}</span></div>
-      <div><span class="ssSideBox__label">Back:</span> <span class="ssSideBox__value">${esc(seg.back)}</span></div>
-      <div><span class="ssSideBox__label">Overall:</span> <span class="ssSideBox__value">${esc(seg.overall)}</span></div>
-    `;
+    const label = currentMetricLabel();
+    const oneLine = (value) => oneLineLabelBlock(label, value);
+    const threeLine = threeLineSegBlock;
     const segments3 = (scoringSegments() === 3);
 
     if (isSkinsBasis()) {
@@ -347,6 +372,21 @@
     if (segments3) return threeLine(strokeDiffSegments(row?.[side]));
     const overallKey = (scoringMethod() === 'ADJ GROSS') ? 'grossDiffDisplay' : 'netDiffDisplay';
     return oneLine(row?.[side]?.[overallKey] ?? '—');
+  }
+
+  // Renders the Gross/Net tab content for one side of a PairPair card.
+  // For every basis except Strokes, this is unchanged — a flat single line.
+  // Medal Match (Strokes basis) is the one case where Gross/Net IS the native
+  // scored metric (not separate context alongside it, like Four Ball's holes-up
+  // or Points Match's points total) — a Medal Match can be played gross or net,
+  // so both tabs need the same three-line treatment the "game"/Strokes tab gets,
+  // picked by whichever tab is actually active rather than the game's configured
+  // scoringMethod.
+  function renderPairPairMetricBlock(row, side) {
+    if (scoringBasis() === 'Strokes' && scoringSegments() === 3) {
+      return threeLineSegBlock(strokeDiffSegmentsByMode(row?.[side], state.valueMode));
+    }
+    return oneLineLabelBlock(currentMetricLabel(), currentMetricValue(row, side));
   }
 
   function applyChrome() {
@@ -619,7 +659,7 @@
                     <div class="ssSideBox__values">
                       ${state.valueMode === 'game'
                         ? renderPairPairGameModeBlock(row, 'left')
-                        : `<div><span class="ssSideBox__label">${esc(currentMetricLabel())}</span> <span class="ssSideBox__value">${esc(currentMetricValue(row, 'left'))}</span></div>`
+                        : renderPairPairMetricBlock(row, 'left')
                       }
                     </div>
                   </div>
@@ -633,7 +673,7 @@
                     <div class="ssSideBox__values">
                       ${state.valueMode === 'game'
                         ? renderPairPairGameModeBlock(row, 'right')
-                        : `<div><span class="ssSideBox__label">${esc(currentMetricLabel())}</span> <span class="ssSideBox__value">${esc(currentMetricValue(row, 'right'))}</span></div>`
+                        : renderPairPairMetricBlock(row, 'right')
                       }
                     </div>
                   </div>
