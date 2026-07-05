@@ -28,7 +28,8 @@
     courseName:         'Course',
     playDate:           'Play Date',
     rotationMethod:     'Rotation',
-    segments:           'Segments',
+    segments:           'Playing segments',
+    scoringSegments:    'Scoring segments',
     blindPlayer:        'Blind player',
 
     // Scoring
@@ -73,6 +74,15 @@
     'LowBallHighBall': 'Low-Ball / High-Ball',
     'Vegas':           'Vegas',
     'Chicago':         'Chicago',
+  };
+
+  // -------------------------------------------------------------------------
+  // Scoring segments display map — PairPair only (1 = Overall, 3 = Front/Back/Overall)
+  // -------------------------------------------------------------------------
+
+  const SCORING_SEGMENTS_DISPLAY = {
+    '1': 'Overall',
+    '3': 'Front 9 / Back 9 / Overall',
   };
 
   // -------------------------------------------------------------------------
@@ -190,6 +200,12 @@
       ? (COMPETITION_DISPLAY[competition] || competition)
       : null;
 
+    // Scoring Segments — PairPair only; has no meaning for PairField.
+    const scoringSegments = competition === 'PairPair' ? val(g.dbGames_ScoringSegments) : null;
+    const scoringSegmentsDisplay = scoringSegments
+      ? (SCORING_SEGMENTS_DISPLAY[scoringSegments] || scoringSegments)
+      : null;
+
     return sectionHeader('sectionGeneral') +
       row('gameLabel',      g.dbGames_GameLabel || g.dbGames_Title) +
       row('gameFormat',     g.dbGames_GameFormat) +
@@ -199,6 +215,7 @@
       row('playDate',       formatDate(g.dbGames_PlayDate)) +
       (rotation && rotation !== 'None' ? row('rotationMethod', rotation) : '') +
       (segments ? row('segments', segments) : '') +
+      (scoringSegmentsDisplay ? row('scoringSegments', scoringSegmentsDisplay) : '') +
       (blind    ? row('blindPlayer', blind) : '');
   }
 

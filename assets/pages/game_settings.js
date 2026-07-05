@@ -648,6 +648,15 @@
     let effDate   = (eff === "Date") ? (wiz.hcEffectivityDate || null) : null;
     if (effDate && playIso && effDate > playIso) effDate = playIso;
 
+    // Scoring Segments (front9/back9/overall) only makes sense when Playing
+    // Segments spans a full 9 (or None) — a 3 or 6-hole rotation segment
+    // doesn't line up with a front/back split, so it's locked to 1 (Overall).
+    const playingSegments = wiz.segments || "9";
+    const segmentsLockScoringTo1 = playingSegments === "3" || playingSegments === "6";
+    const effectiveScoringSegments = (wiz.pairing === "PairPair" && !segmentsLockScoringTo1)
+      ? (parseInt(wiz.scoringSegments || "1", 10) === 3 ? 3 : 1)
+      : 1;
+
     return {
       dbGames_GGID:               state.ggid,
       dbGames_GameLabel:          wiz.selectedLabel          || "",
@@ -656,13 +665,11 @@
       dbGames_ScoringBasis:       wiz.selectedBasis          || "Strokes",
       dbGames_Competition:        wiz.pairing                || "PairField",
       dbGames_Segments:           wiz.segments               || "9",
-      dbGames_ScoringSegments:    wiz.pairing === "PairPair"
-        ? (parseInt(wiz.scoringSegments || "1", 10) === 3 ? 3 : 1)
-        : 1,
+      dbGames_ScoringSegments:    effectiveScoringSegments,
       dbGames_RotationMethod:     wiz.rotation               || "None",
       dbGames_PlacementPoints:    normalizePlacementPointsForSave({
         competition:      wiz.pairing || "PairField",
-        scoringSegments:  wiz.scoringSegments || "1",
+        scoringSegments:  String(effectiveScoringSegments),
         placementPoints:  wiz.placementPoints,
       }),
       dbGames_BlindPlayers:       (() => {
@@ -1124,9 +1131,13 @@
       setStatus("Placement Points module not loaded.", "warn");
       return;
     }
+    // Scoring Segments (front9/back9/overall) can't apply on top of a 3 or
+    // 6-hole playing rotation — lock the modal to Overall (1) in that case.
+    const segmentsLockScoringTo1 = wiz.segments === "3" || wiz.segments === "6";
+
     MA.definePlacementPoints.open({
       competition:     wiz.pairing || "PairField",
-      scoringSegments: parseInt(wiz.scoringSegments || "1", 10) === 3 ? 3 : 1,
+      scoringSegments: segmentsLockScoringTo1 ? 1 : (parseInt(wiz.scoringSegments || "1", 10) === 3 ? 3 : 1),
       placementPoints: wiz.placementPoints || null,
       onApply: (jsonString, effectiveScoringSegments) => {
         wiz.placementPoints = jsonString;
@@ -1135,7 +1146,9 @@
         // sync it back into wiz state. There's no Step 2 control for it anymore
         // (the module is the single place this is edited), but wiz.scoringSegments
         // still needs to stay correct for the save patch.
-        const newSeg = String(parseInt(effectiveScoringSegments, 10) === 3 ? "3" : "1");
+        const newSeg = segmentsLockScoringTo1
+          ? "1"
+          : String(parseInt(effectiveScoringSegments, 10) === 3 ? "3" : "1");
         if (wiz.pairing === "PairPair") wiz.scoringSegments = newSeg;
 
         setDirty(true);
@@ -1601,6 +1614,9 @@
 
   function wizSelectSegments(val) {
     wiz.segments = val;
+    // Scoring Segments (front9/back9/overall) can't apply on top of a 3 or
+    // 6-hole playing rotation — force it back to Overall (1) when locked.
+    if (val === "3" || val === "6") wiz.scoringSegments = "1";
     if (el.wizSegChips) el.wizSegChips.querySelectorAll(".wizChip").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
     wizRenderRotChips();
     setDirty(true); wizUpdateSummary(); wizCheckComplete();
