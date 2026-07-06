@@ -304,6 +304,7 @@
         <div class="dpp-row-body">
           <div class="dpp-row-label">${esc(def.label)}</div>
           <div class="dpp-row-desc">${esc(def.desc)}</div>
+          ${def.kind === "segments" ? renderScoringSegmentsControl() : ""}
           ${checked ? `
             <button class="dpp-toggle ${expanded ? "open" : ""}" data-toggle-cat="${esc(def.key)}" type="button"
               aria-expanded="${expanded}">
@@ -342,10 +343,6 @@
   function renderContent() {
     const competition = _state.competition;
     let html = `<div class="dpp-hdr-line">Choose which categories award points, and how.</div>`;
-
-    if (competition === "PairPair") {
-      html += renderScoringSegmentsControl();
-    }
 
     html += `<div class="dpp-section-hdr">Pairing</div>`;
     CATEGORY_DEFS.filter(def => def.scope !== "individual" && isShown(def, competition))
@@ -432,8 +429,8 @@
       #dppOverlay .maModal{ max-width:min(640px,calc(100vw - 16px)); }
       .dpp-hdr-line{font-size:13px;color:var(--mutedText);padding:12px 16px 0;}
       .dpp-section-hdr{font-size:11px;font-weight:500;letter-spacing:.3px;text-transform:uppercase;color:var(--mutedText);padding:14px 16px 4px;}
-      .dpp-info-banner{display:flex;align-items:center;gap:8px;margin:12px 16px 0;padding:8px 12px;background:color-mix(in srgb, var(--brandAccent) 10%, transparent);border-radius:var(--radiusMd,6px);font-size:12px;color:var(--ink);}
-      .dpp-seg-control{display:flex;align-items:center;gap:10px;margin:12px 16px 0;flex-wrap:wrap;}
+      .dpp-info-banner{display:flex;align-items:center;gap:8px;margin:10px 0 0;padding:8px 12px;background:color-mix(in srgb, var(--brandAccent) 10%, transparent);border-radius:var(--radiusMd,6px);font-size:12px;color:var(--ink);}
+      .dpp-seg-control{display:flex;align-items:center;gap:10px;margin:8px 0 0;flex-wrap:wrap;}
       .dpp-seg-control-label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.3px;color:var(--mutedText);white-space:nowrap;}
       .dpp-seg-control-hint{font-size:11px;color:var(--mutedText);}
       .dpp-row{display:flex;align-items:flex-start;gap:10px;padding:10px 16px;border-bottom:0.5px solid var(--borderSubtle);}
