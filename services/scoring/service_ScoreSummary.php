@@ -62,6 +62,9 @@ final class ServiceScoreSummary
                 'scoringBasis' => $scoringBasis,
                 'defaultValueMode' => $defaultValueMode,
                 'scoringSegments' => $scoringSegments,
+                // Surfaced as a blocking pop-up by score_summary.js — see
+                // checkTeamIntegrity()'s own comment for what it catches and why.
+                'teamIntegrityWarning' => self::checkTeamIntegrity($scorecards['rows'] ?? [], $gameRow, $competition),
                 // The one thing score_summary.js reads to decide column
                 // headers ("Points" vs "Default Points"), pill-disabling, and
                 // Leaderboard-tab suppression. Never consulted server-side to
@@ -903,17 +906,23 @@ final class ServiceScoreSummary
             // with the match, so rotation games fall back to plain Side A/B
             // with no named/colored team at all, rather than a stale or
             // half-correct team label.
+            //
+            // The same principle now also covers a side whose own partners
+            // don't agree on TeamKey (e.g. Side A's two players recorded as
+            // T1 and T2) — sideTeamKey() requires every player on a side to
+            // share one TeamKey before trusting it; a disagreement falls
+            // back to no team/color, same as the rotation-aware case, rather
+            // than silently trusting whichever player happens to be first in
+            // the array and mislabeling the whole side with one partner's team.
             $leftTeamKey = null;
             $rightTeamKey = null;
             $leftTeamInfo = null;
             $rightTeamInfo = null;
             if (!$ctx['isRotationAware']) {
-                $leftTeamKey = trim((string)($leftPlayers[0]['dbPlayers_TeamKey'] ?? ''));
-                $rightTeamKey = trim((string)($rightPlayers[0]['dbPlayers_TeamKey'] ?? ''));
-                $leftTeamInfo = $teamConfigById[$leftTeamKey] ?? null;
-                $rightTeamInfo = $teamConfigById[$rightTeamKey] ?? null;
-                if ($leftTeamKey === '') $leftTeamKey = null;
-                if ($rightTeamKey === '') $rightTeamKey = null;
+                $leftTeamKey = self::sideTeamKey($leftPlayers);
+                $rightTeamKey = self::sideTeamKey($rightPlayers);
+                $leftTeamInfo = ($leftTeamKey !== null) ? ($teamConfigById[$leftTeamKey] ?? null) : null;
+                $rightTeamInfo = ($rightTeamKey !== null) ? ($teamConfigById[$rightTeamKey] ?? null) : null;
             }
 
             $out[] = [
@@ -1306,6 +1315,107 @@ final class ServiceScoreSummary
             $out[$flightPos][] = $player;
         }
         return $out;
+    }
+
+    /**
+     * Detects team-assignment data problems and returns an admin-facing
+     * message directing them to check Team Configuration — surfaced as a
+     * blocking pop-up by score_summary.js. Returns null when everything's
+     * consistent, including when there's no team config at all (nothing to
+     * check against).
+     *
+     * Two independent checks, because they catch different mistakes:
+     *   1. Headcount — does the full roster split evenly across every
+     *      configured team? Catches a lopsided or incomplete assignment
+     *      (e.g. 3 players on one team, 1 on another).
+     *   2. Side agreement (PairPair only) — do the two partners on each
+     *      match side actually agree on TeamKey? Catches partners recorded
+     *      on different teams even when the game-wide headcount happens to
+     *      still be perfectly even — this is what an even 2-and-2 split can
+     *      hide, and is exactly the failure mode this check exists for: two
+     *      players correctly split 2-and-2 game-wide, but paired up wrong,
+     *      so each side silently borrowed one partner's team for the whole
+     *      side (see sideTeamKey()).
+     */
+    private static function checkTeamIntegrity(array $scorecardRows, array $gameRow, string $competition): ?string
+    {
+        $teamConfigById = self::parseTeamConfig($gameRow);
+        $teamCount = count($teamConfigById);
+        if ($teamCount < 2) return null;
+
+        // ── 1. Headcount ──────────────────────────────────────────────────
+        $countsByTeam = [];
+        $seenPlayerIds = [];
+        $totalAssigned = 0;
+        foreach ($scorecardRows as $row) {
+            $players = is_array($row['players'] ?? null) ? $row['players'] : [];
+            foreach ($players as $player) {
+                $playerId = (string)($player['playerId'] ?? $player['dbPlayers_PlayerGHIN'] ?? $player['dbPlayers_PlayerKey'] ?? '');
+                if ($playerId !== '' && isset($seenPlayerIds[$playerId])) continue;
+                if ($playerId !== '') $seenPlayerIds[$playerId] = true;
+
+                $teamKey = trim((string)($player['dbPlayers_TeamKey'] ?? ''));
+                if ($teamKey === '') continue;
+                $countsByTeam[$teamKey] = ($countsByTeam[$teamKey] ?? 0) + 1;
+                $totalAssigned++;
+            }
+        }
+        if ($totalAssigned > 0) {
+            $counts = array_values($countsByTeam);
+            $allEqual = (count(array_unique($counts)) <= 1);
+            $allTeamsPresent = (count($countsByTeam) === $teamCount);
+            if (!$allEqual || !$allTeamsPresent) {
+                $parts = [];
+                foreach ($countsByTeam as $key => $count) {
+                    $name = $teamConfigById[$key]['name'] ?? $key;
+                    $parts[] = "{$name}: {$count}";
+                }
+                return 'Players are not split evenly across the configured teams ('
+                    . implode(', ', $parts)
+                    . '). Check Team Configuration for this game.';
+            }
+        }
+
+        // ── 2. Side agreement (PairPair only) ────────────────────────────
+        if ($competition === 'PairPair') {
+            foreach ($scorecardRows as $row) {
+                $players = is_array($row['players'] ?? null) ? $row['players'] : [];
+                if (!$players) continue;
+                foreach (self::groupPlayersByFlightPos($players) as $sidePlayers) {
+                    if (count($sidePlayers) < 2) continue;
+                    $keys = [];
+                    foreach ($sidePlayers as $p) {
+                        $k = trim((string)($p['dbPlayers_TeamKey'] ?? ''));
+                        if ($k !== '') $keys[$k] = true;
+                    }
+                    if (count($keys) > 1) {
+                        return 'Partners on the same side of a match are assigned to different teams. '
+                            . 'Check Team Configuration for this game.';
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * A side's team is only trusted when every player on that side actually
+     * agrees on dbPlayers_TeamKey. Returns null on disagreement (or if
+     * nobody has a TeamKey at all) rather than silently picking one
+     * player's value to represent the whole side — see the "no stale or
+     * half-correct team label" principle this shares with the
+     * rotation-aware fallback in buildPairPairRows().
+     */
+    private static function sideTeamKey(array $sidePlayers): ?string
+    {
+        $keys = [];
+        foreach ($sidePlayers as $p) {
+            $k = trim((string)($p['dbPlayers_TeamKey'] ?? ''));
+            if ($k !== '') $keys[$k] = true;
+        }
+        $distinct = array_keys($keys);
+        return (count($distinct) === 1) ? $distinct[0] : null;
     }
 
     private static function firstPairingId(array $players): string
