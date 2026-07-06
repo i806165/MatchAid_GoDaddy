@@ -44,6 +44,15 @@ final class ServiceScoreSummary
             // actually generalizes across rounds/formats for that purpose;
             // raw KPI sums are included for this page's own display only.
             'teamRollup' => self::buildTeamRollupRows($rows, $competition),
+            // Individual rows — PairField only (PairPair has no individual
+            // match-level data; matches are decided pairing vs. pairing).
+            // Reads totals.grossDiff/netDiff.9c already attached to every
+            // player by ServiceScoreCard::decorateScoredPlayers() upstream —
+            // no new per-hole computation here, just surfacing an existing
+            // field that was never read by this file before.
+            'individualRows' => ($competition === 'PairField')
+                ? self::buildIndividualRows($scorecards['rows'] ?? [], $gameRow)
+                : [],
             'meta' => array_merge($meta, [
                 'rowCount' => count($rows),
                 'scoringBasis' => $scoringBasis,
@@ -51,6 +60,56 @@ final class ServiceScoreSummary
                 'scoringSegments' => $scoringSegments,
             ]),
         ];
+    }
+
+    /**
+     * One row per player — PairField's Individual aggregate grain. Reads
+     * totals.grossDiff/netDiff.9c (a plain formatted string, e.g. "+3"/"E"/"-",
+     * per splitTotalFromMap()'s actual return shape — not a {value,display}
+     * object like metricFromTotalRow's output) already attached upstream by
+     * ServiceScoreCard::decorateScoredPlayers(). displayToNumeric() is the
+     * same existing fallback parser already used elsewhere in this file for
+     * the identical display-string-only situation.
+     *
+     * No Points field — Individual has no ranking/PlacementPoints concept,
+     * per the locked design (§4.3).
+     */
+    private static function buildIndividualRows(array $scorecardRows, array $gameRow): array
+    {
+        $out = [];
+        $teamConfigById = self::parseTeamConfig($gameRow);
+
+        foreach ($scorecardRows as $row) {
+            $players = is_array($row['players'] ?? null) ? $row['players'] : [];
+            if (!$players) continue;
+
+            $ctx = self::extractRowContext($row);
+            $scopedHoles = self::scopedHolesForRow($ctx, $gameRow);
+
+            foreach ($players as $player) {
+                $teamKey = trim((string)($player['dbPlayers_TeamKey'] ?? ''));
+                $teamInfo = $teamConfigById[$teamKey] ?? null;
+
+                $grossDisplay = $player['totals']['grossDiff']['9c'] ?? null;
+                $netDisplay = $player['totals']['netDiff']['9c'] ?? null;
+
+                $out[] = [
+                    'playerId' => (string)($player['playerId'] ?? $player['dbPlayers_PlayerGHIN'] ?? ''),
+                    'playerName' => self::buildPairFieldLabel([$player]),
+                    'grossDiffValue' => ($grossDisplay !== null) ? self::displayToNumeric((string)$grossDisplay) : null,
+                    'grossDiffDisplay' => $grossDisplay ?? '—',
+                    'netDiffValue' => ($netDisplay !== null) ? self::displayToNumeric((string)$netDisplay) : null,
+                    'netDiffDisplay' => $netDisplay ?? '—',
+                    'thru' => self::deriveThru([$player], $scopedHoles),
+                    'teamKey' => $teamKey !== '' ? $teamKey : null,
+                    'teamName' => $teamInfo['name'] ?? null,
+                    'teamColor' => $teamInfo['color'] ?? null,
+                    'teamSort' => $teamInfo['sort'] ?? null,
+                ];
+            }
+        }
+
+        return $out;
     }
 
     /**

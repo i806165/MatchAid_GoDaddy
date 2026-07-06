@@ -712,8 +712,17 @@
     if (!dom.lbControls) return;
 
     const teamGrain = (state.lbAggregate === 'team');
+    const individualGrain = (state.lbAggregate === 'individual');
     const showKpiPills = !(competition === 'PairPair' && teamGrain);
-    const gameDisabled = (competition === 'PairField' && teamGrain);
+    // Game is disabled at Team grain (teamRollup has no summed native-metric
+    // total, only Gross/Net) and at Individual grain (decorateScoredPlayers()
+    // only computes grossDiff/netDiff per player — no per-player skins/points/
+    // holes-differential exists). Both are honest gaps, not bugs — the pills
+    // reflect what data actually exists.
+    const gameDisabled = (competition === 'PairField' && (teamGrain || individualGrain));
+    // Individual is PairField only — matches decided pairing vs. pairing have
+    // no individual-player result to show.
+    const individualDisabled = (competition === 'PairPair');
 
     const kpiPillsHtml = showKpiPills ? `
       <button class="maChoiceChip ${state.lbKpi === 'net' ? 'is-selected' : ''}" data-lbkpi="net" type="button">Net</button>
@@ -725,7 +734,7 @@
       <div class="lbControlsRow">
         <div class="maChoiceChips">${kpiPillsHtml}</div>
         <div class="maChoiceChips">
-          <button class="maChoiceChip is-disabled" data-lbagg="individual" type="button" disabled title="Not yet available">Individual</button>
+          <button class="maChoiceChip ${state.lbAggregate === 'individual' ? 'is-selected' : ''} ${individualDisabled ? 'is-disabled' : ''}" data-lbagg="individual" type="button" ${individualDisabled ? 'disabled title="Not available for PairPair"' : ''}>Individual</button>
           <button class="maChoiceChip ${state.lbAggregate === 'pairing' ? 'is-selected' : ''}" data-lbagg="pairing" type="button">Pairing</button>
           <button class="maChoiceChip ${state.lbAggregate === 'team' ? 'is-selected' : ''}" data-lbagg="team" type="button">Team</button>
         </div>
@@ -744,9 +753,9 @@
       if (btn.disabled) return;
       btn.addEventListener('click', () => {
         state.lbAggregate = btn.dataset.lbagg;
-        if (state.lbAggregate === 'team' && competition === 'PairField' && state.lbKpi === 'game') {
-          state.lbKpi = 'net';
-        }
+        const gameNowInvalid = (state.lbAggregate === 'team' || state.lbAggregate === 'individual')
+          && competition === 'PairField' && state.lbKpi === 'game';
+        if (gameNowInvalid) state.lbKpi = 'net';
         lbRenderControls();
         lbRenderBody();
       });
@@ -797,6 +806,36 @@
     `).join('');
 
     return `${header}${body || `<div class="maEmptyState">No standings available.</div>`}`;
+  }
+
+  function lbRenderPairFieldIndividualRows() {
+    const list = Array.isArray(payload.individualRows) ? payload.individualRows : [];
+
+    const header = `
+      <div class="maListRow maListRow--static lbHeaderRow">
+        <span class="maListRow__col--muted lbColName">Player</span>
+        <span class="maListRow__col--muted lbColThru">Thru</span>
+        <span class="maListRow__col--muted lbColKpi">${esc(state.lbKpi === 'game' ? gameTabLabel() : (state.lbKpi === 'gross' ? 'Gross' : 'Net'))}</span>
+      </div>
+    `;
+
+    const body = list.map((p) => {
+      // 'game' has no separate per-player metric (no individual skins/points/
+      // holes-differential exists) — falls back to gross/net per the game's
+      // scoringMethod, same resolution Pairing already uses for Strokes basis.
+      const useGross = (state.lbKpi === 'gross') || (state.lbKpi === 'game' && scoringMethod() === 'ADJ GROSS');
+      const kpiDisplay = useGross ? p.grossDiffDisplay : p.netDiffDisplay;
+
+      return `
+        <div class="maListRow maListRow--static">
+          <span class="maListRow__col lbColName">${lbTeamDotHtml(p.teamColor)}${esc(p.playerName || '')}</span>
+          <span class="maListRow__col--muted lbColThru">${esc(formatThru(p.thru))}</span>
+          <span class="maListRow__col lbColKpi">${esc(kpiDisplay ?? '—')}</span>
+        </div>
+      `;
+    }).join('');
+
+    return `${header}${body || `<div class="maEmptyState">No individual scores available.</div>`}`;
   }
 
   function lbRenderPairFieldTeamRows() {
@@ -937,7 +976,9 @@
     // dom.lbEmpty toggle here; #lbEmpty in the view is unused by design.
     dom.lbHost.innerHTML = (competition === 'PairPair')
       ? ((state.lbAggregate === 'team') ? lbRenderPairPairTeamRows() : lbRenderPairPairPairingRows())
-      : ((state.lbAggregate === 'team') ? lbRenderPairFieldTeamRows() : lbRenderPairFieldPairingRows());
+      : (state.lbAggregate === 'team') ? lbRenderPairFieldTeamRows()
+      : (state.lbAggregate === 'individual') ? lbRenderPairFieldIndividualRows()
+      : lbRenderPairFieldPairingRows();
   }
 
   function renderBody() {
