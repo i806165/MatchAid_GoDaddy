@@ -384,9 +384,15 @@
    a fixed-column table. */
 .lbHeaderRow { cursor: default; }
 /* Individual grain only — club_users.js's tap-cell-for-sort-menu pattern,
-   replicated here. Header cells stay non-interactive (lbHeaderRow above);
-   only body cells carrying [data-lb-menu] respond. */
-[data-lb-menu] { cursor: pointer; }
+   replicated here. .maListRow--static sets pointer-events:none on the whole
+   row (correct — rows aren't clickable as a unit), but that also silently
+   blocks every descendant, including these cells. Explicitly re-enabling
+   pointer-events here is required, not optional — without it the browser's
+   hit-test falls through the entire row to #lbHost itself. */
+[data-lb-menu] {
+  cursor: pointer;
+  pointer-events: auto;
+}
 .lbColRank { flex: 0 0 28px; }
 .lbColName { flex: 1 1 auto; min-width: 0; }
 .lbColThru { flex: 0 0 50px; }
