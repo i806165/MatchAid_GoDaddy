@@ -89,12 +89,18 @@ final class ServiceScoreSummary
         // not new or different data, and must be skipped rather than appended.
         $seenPlayerIds = [];
 
+        // thru is the opposite situation from grossDiff/netDiff — it is NOT
+        // safe to take from just the first-seen spin-context row. Each spin
+        // row's scopedHoles is that spin's own narrow hole range (e.g. holes
+        // 1-6 for spin 1), so deriveThru() computed against it would cap at
+        // that spin's range even if the player has actually completed every
+        // hole across all spins. Individual's thru needs the whole game's
+        // hole range, computed once here, not per spin-context row.
+        $fullGameHoles = self::holesForGame($gameRow);
+
         foreach ($scorecardRows as $row) {
             $players = is_array($row['players'] ?? null) ? $row['players'] : [];
             if (!$players) continue;
-
-            $ctx = self::extractRowContext($row);
-            $scopedHoles = self::scopedHolesForRow($ctx, $gameRow);
 
             foreach ($players as $player) {
                 $playerId = (string)($player['playerId'] ?? $player['dbPlayers_PlayerGHIN'] ?? '');
@@ -125,7 +131,7 @@ final class ServiceScoreSummary
                     'grossDiffDisplay' => $grossDisplay ?? '—',
                     'netDiffValue' => ($netDisplay !== null) ? self::displayToNumeric((string)$netDisplay) : null,
                     'netDiffDisplay' => $netDisplay ?? '—',
-                    'thru' => self::deriveThru([$player], $scopedHoles),
+                    'thru' => self::deriveThru([$player], $fullGameHoles),
                     'teamKey' => $teamKey !== '' ? $teamKey : null,
                     'teamName' => $teamInfo['name'] ?? null,
                     'teamColor' => $teamInfo['color'] ?? null,
