@@ -93,14 +93,16 @@ final class ServiceScoreSummary
                 $grossDisplay = $player['totals']['grossDiff']['9c'] ?? null;
                 $netDisplay = $player['totals']['netDiff']['9c'] ?? null;
 
+                $fullName = trim((string)($player['dbPlayers_Name'] ?? ''));
+                $lastName = trim((string)($player['dbPlayers_LName'] ?? ''));
+
                 $out[] = [
                     'playerId' => (string)($player['playerId'] ?? $player['dbPlayers_PlayerGHIN'] ?? ''),
-                    // Full name, not buildPairFieldLabel() — that function is
-                    // tuned for compact multi-person pairing labels (last name
-                    // only, joined by "•"). A single player's own row should
-                    // show their real full name. Falls back to the pairing
-                    // label helper only if PlayerName is somehow empty.
-                    'playerName' => trim((string)($player['dbPlayers_PlayerName'] ?? '')) ?: self::buildPairFieldLabel([$player]),
+                    // Full name for display; last name kept separately since
+                    // it's the more natural sort key for a leaderboard list —
+                    // avoids re-deriving it from playerName later.
+                    'playerName' => $fullName ?: self::buildPairFieldLabel([$player]),
+                    'playerLastName' => $lastName,
                     'grossDiffValue' => ($grossDisplay !== null) ? self::displayToNumeric((string)$grossDisplay) : null,
                     'grossDiffDisplay' => $grossDisplay ?? '—',
                     'netDiffValue' => ($netDisplay !== null) ? self::displayToNumeric((string)$netDisplay) : null,

@@ -911,8 +911,8 @@
 
   function lbSidePointsLabel(side) {
     const overall = side.matchStatus?.total;
-    if (!overall || overall.points === null || overall.points === undefined) return '';
-    return ` · ${fmtNum(overall.points)} pts`;
+    if (!overall || overall.points === null || overall.points === undefined) return '—';
+    return `${fmtNum(overall.points)} pts`;
   }
 
   function lbSideIsLeading(side) {
@@ -932,13 +932,19 @@
       return `
         <div class="lbMatchRow">
           <div class="lbMatchSide ${lbSideIsLeading(left) ? 'is-leading' : ''}">
-            <span class="lbMatchSideName">${lbTeamDotHtml(left.teamColor)}${esc(row.matchLabelTop || '')}</span>
-            <span class="lbMatchSideStats">${lbSegmentsInlineString(leftSegs)}${lbSidePointsLabel(left)}</span>
+            <div class="lbMatchSideTop">
+              <span class="lbMatchSideName">${lbTeamDotHtml(left.teamColor)}${esc(row.matchLabelTop || '')}</span>
+              <span class="lbMatchSidePoints">${esc(lbSidePointsLabel(left))}</span>
+            </div>
+            <div class="lbMatchSideSegments">${lbSegmentsInlineString(leftSegs)}</div>
           </div>
           <span class="lbMatchVs">vs</span>
           <div class="lbMatchSide ${lbSideIsLeading(right) ? 'is-leading' : ''}">
-            <span class="lbMatchSideName">${lbTeamDotHtml(right.teamColor)}${esc(row.matchLabelBottom || '')}</span>
-            <span class="lbMatchSideStats">${lbSegmentsInlineString(rightSegs)}${lbSidePointsLabel(right)}</span>
+            <div class="lbMatchSideTop">
+              <span class="lbMatchSideName">${lbTeamDotHtml(right.teamColor)}${esc(row.matchLabelBottom || '')}</span>
+              <span class="lbMatchSidePoints">${esc(lbSidePointsLabel(right))}</span>
+            </div>
+            <div class="lbMatchSideSegments">${lbSegmentsInlineString(rightSegs)}</div>
           </div>
         </div>
       `;
