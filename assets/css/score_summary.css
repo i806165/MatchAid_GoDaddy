@@ -383,6 +383,10 @@
    which .maListRow itself doesn't define since it's a plain flex row, not
    a fixed-column table. */
 .lbHeaderRow { cursor: default; }
+/* Individual grain only — club_users.js's tap-cell-for-sort-menu pattern,
+   replicated here. Header cells stay non-interactive (lbHeaderRow above);
+   only body cells carrying [data-lb-menu] respond. */
+[data-lb-menu] { cursor: pointer; }
 .lbColRank { flex: 0 0 28px; }
 .lbColName { flex: 1 1 auto; min-width: 0; }
 .lbColThru { flex: 0 0 50px; }

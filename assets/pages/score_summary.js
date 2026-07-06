@@ -22,6 +22,11 @@
     valueMode: String(payload.meta?.defaultValueMode || 'game'),
     lbKpi: (['Holes', 'Skins', 'Points'].includes(scoringBasis())) ? 'game' : 'net',
     lbAggregate: 'pairing',
+    // Individual grain only — the one place with no server-provided order at
+    // all (Pairing has rank, Team has teamSort). Defaults to KPI value,
+    // low to high — the natural "who's leading" order for this grain.
+    lbSortKey: 'kpi',
+    lbSortDir: 'asc',
   };
 
   const dom = {
@@ -806,29 +811,102 @@
     return `${header}${body || `<div class="maEmptyState">No standings available.</div>`}`;
   }
 
+  // Shared by display and sort — 'game' has no separate per-player metric
+  // (no individual skins/points/holes-differential exists), falls back to
+  // gross/net per the game's scoringMethod, same resolution Pairing already
+  // uses for Strokes basis.
+  function lbIndividualKpiField() {
+    return ((state.lbKpi === 'gross') || (state.lbKpi === 'game' && scoringMethod() === 'ADJ GROSS'))
+      ? 'gross' : 'net';
+  }
+
+  function lbIndividualSortLabel(key) {
+    return { playerLastName: 'Player', thru: 'Thru', kpi: gameTabLabelForKpiColumn() }[key] || 'Value';
+  }
+
+  function gameTabLabelForKpiColumn() {
+    return state.lbKpi === 'game' ? gameTabLabel() : (state.lbKpi === 'gross' ? 'Gross' : 'Net');
+  }
+
+  function lbApplyIndividualSort(list) {
+    const key = state.lbSortKey;
+    const dir = (state.lbSortDir === 'desc') ? -1 : 1;
+    const kpiField = lbIndividualKpiField();
+
+    return [...list].sort((a, b) => {
+      if (key === 'thru') return ((a.thru ?? 0) - (b.thru ?? 0)) * dir;
+      if (key === 'kpi') {
+        // grossDiffValue/netDiffValue resolve to 0.0, not null, for a player
+        // who hasn't started (backend's displayToNumeric("-") falls through
+        // to its numeric-or-zero default) — 0.0 would otherwise rank an
+        // unplayed round as if it were "even par," landing it mid-pack.
+        // thru === 0 is the reliable "hasn't started" signal instead.
+        // Empty always sorts last, regardless of asc/desc — only real scores
+        // are ordered by dir.
+        const aEmpty = (a.thru ?? 0) === 0;
+        const bEmpty = (b.thru ?? 0) === 0;
+        if (aEmpty && bEmpty) return 0;
+        if (aEmpty) return 1;
+        if (bEmpty) return -1;
+
+        const av = (kpiField === 'gross') ? a.grossDiffValue : a.netDiffValue;
+        const bv = (kpiField === 'gross') ? b.grossDiffValue : b.netDiffValue;
+        return ((av ?? 0) - (bv ?? 0)) * dir;
+      }
+      // playerLastName — per explicit decision, sort by last name, not the
+      // full display name.
+      return String(a.playerLastName || '').localeCompare(String(b.playerLastName || '')) * dir;
+    });
+  }
+
+  function lbSetIndividualSort(key, dir) {
+    state.lbSortKey = key;
+    state.lbSortDir = (dir === 'desc') ? 'desc' : 'asc';
+    lbRenderBody();
+  }
+
+  function lbOpenIndividualCellMenu(cell) {
+    const ui = window.MA?.ui;
+    if (typeof ui?.openActionsMenu !== 'function') return;
+
+    const sortKey = cell.dataset.sortKey || '';
+    const displayVal = cell.dataset.displayValue || cell.textContent.trim();
+    const label = lbIndividualSortLabel(sortKey);
+    const isNumeric = (sortKey === 'thru' || sortKey === 'kpi');
+    const actions = isNumeric
+      ? [
+          { label: `Sort ${label} Low to High`, action: () => lbSetIndividualSort(sortKey, 'asc') },
+          { label: `Sort ${label} High to Low`, action: () => lbSetIndividualSort(sortKey, 'desc') },
+        ]
+      : [
+          { label: `Sort ${label} A to Z`, action: () => lbSetIndividualSort(sortKey, 'asc') },
+          { label: `Sort ${label} Z to A`, action: () => lbSetIndividualSort(sortKey, 'desc') },
+        ];
+
+    ui.openActionsMenu(displayVal || label, actions, label);
+  }
+
   function lbRenderPairFieldIndividualRows() {
-    const list = Array.isArray(payload.individualRows) ? payload.individualRows : [];
+    const list = lbApplyIndividualSort(Array.isArray(payload.individualRows) ? payload.individualRows : []);
+    const kpiField = lbIndividualKpiField();
+    const kpiLabel = gameTabLabelForKpiColumn();
 
     const header = `
       <div class="maListRow maListRow--static lbHeaderRow">
         <span class="maListRow__col--muted lbColName">Player</span>
         <span class="maListRow__col--muted lbColThru">Thru</span>
-        <span class="maListRow__col--muted lbColKpi">${esc(state.lbKpi === 'game' ? gameTabLabel() : (state.lbKpi === 'gross' ? 'Gross' : 'Net'))}</span>
+        <span class="maListRow__col--muted lbColKpi">${esc(kpiLabel)}</span>
       </div>
     `;
 
     const body = list.map((p) => {
-      // 'game' has no separate per-player metric (no individual skins/points/
-      // holes-differential exists) — falls back to gross/net per the game's
-      // scoringMethod, same resolution Pairing already uses for Strokes basis.
-      const useGross = (state.lbKpi === 'gross') || (state.lbKpi === 'game' && scoringMethod() === 'ADJ GROSS');
-      const kpiDisplay = useGross ? p.grossDiffDisplay : p.netDiffDisplay;
+      const kpiDisplay = (kpiField === 'gross') ? p.grossDiffDisplay : p.netDiffDisplay;
 
       return `
         <div class="maListRow maListRow--static">
-          <span class="maListRow__col lbColName">${lbTeamDotHtml(p.teamColor)}${esc(p.playerName || '')}</span>
-          <span class="maListRow__col--muted lbColThru">${esc(formatThru(p.thru))}</span>
-          <span class="maListRow__col lbColKpi">${esc(kpiDisplay ?? '—')}</span>
+          <span class="maListRow__col lbColName" data-lb-menu data-sort-key="playerLastName" data-display-value="${esc(p.playerName || '')}">${lbTeamDotHtml(p.teamColor)}${esc(p.playerName || '')}</span>
+          <span class="maListRow__col--muted lbColThru" data-lb-menu data-sort-key="thru" data-display-value="${esc(formatThru(p.thru))}">${esc(formatThru(p.thru))}</span>
+          <span class="maListRow__col lbColKpi" data-lb-menu data-sort-key="kpi" data-display-value="${esc(kpiDisplay ?? '—')}">${esc(kpiDisplay ?? '—')}</span>
         </div>
       `;
     }).join('');
@@ -1012,6 +1090,20 @@
     lbRenderControls();
     lbRenderBody();
     wireOuterTabs();
+    wireIndividualSortMenu();
+  }
+
+  // Delegated once on the container — dom.lbHost's innerHTML is replaced on
+  // every render, but the element itself persists, so this only needs
+  // binding once. Only Individual's cells carry [data-lb-menu]; Pairing/Team
+  // markup never sets that attribute, so this is a no-op for them by
+  // construction, not a grain check.
+  function wireIndividualSortMenu() {
+    dom.lbHost?.addEventListener('click', (e) => {
+      const cell = e.target.closest('[data-lb-menu]');
+      if (!cell || !dom.lbHost.contains(cell)) return;
+      lbOpenIndividualCellMenu(cell);
+    });
   }
 
   // Score Summary / Leaderboard tab strip (#ssTabs) — a pure visibility
