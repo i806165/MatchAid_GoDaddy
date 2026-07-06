@@ -25,7 +25,11 @@
 
   const state = {
     valueMode: String(payload.meta?.defaultValueMode || 'game'),
-    lbKpi: (['Holes', 'Skins', 'Points'].includes(scoringBasis())) ? 'game' : 'net',
+    // Individual-grain-only from here on — Pairing/Team have no viewer toggle
+    // (see officialMetricIsGross()). Defaults to the game's official metric
+    // rather than a fixed 'net', so Individual opens already showing the
+    // metric that actually decided the game, same as everywhere else.
+    lbKpi: officialMetricIsGross() ? 'gross' : 'net',
     lbAggregate: 'pairing',
     // Individual grain only — the one place with no server-provided order at
     // all (Pairing has rank, Team has teamSort). Defaults to KPI value,
@@ -89,6 +93,20 @@
 
   function scoringMethod() {
     return String(game.dbGames_ScoringMethod || '').trim().toUpperCase();
+  }
+
+  // Pairing/Team grain has no Gross/Net viewer toggle — there is exactly one
+  // official competitive result, decided by the game's own dbGames_ScoringMethod,
+  // for either competition type (PairPair's matchResult already resolves this
+  // way too, via pairPairComparisonValue()'s identical $isGross check
+  // server-side). Only Individual grain retains a real Gross/Net choice —
+  // that's a genuine "inspect this player's own stat" affordance, not a
+  // second official result.
+  function officialMetricIsGross() {
+    return scoringMethod() === 'ADJ GROSS';
+  }
+  function officialMetricLabel() {
+    return officialMetricIsGross() ? 'Gross' : 'Net';
   }
 
   function bestBallCount() {
@@ -720,70 +738,49 @@
     return color ? `<span class="lbTeamDot" style="background:${esc(color)}"></span>` : '';
   }
 
-  // ── Placement Points display helpers — read placementStates only, never
-  // recompute or reinterpret it; service_ScoreSummary.php is the single
-  // source of truth for what each category's state actually is. ──────────
-
-  // Which category's state governs the Points column/pill currently on
-  // screen, given the current grain + KPI selection. Mirrors the exact
-  // useGross resolution lbPlacementPointsDisplay() already uses for PairField,
-  // so the column header and the values it labels always agree on which
-  // category they're describing.
+  // Which category's state governs the Points column currently on screen.
+  // Individual grain still has a real Gross/Net choice; Pairing/Team never
+  // does — it's always whichever category matches the game's official
+  // metric (see officialMetricIsGross()), for either competition type.
   function activePlacementCategoryKey() {
     if (state.lbAggregate === 'individual') {
       return (lbIndividualKpiField() === 'gross') ? 'individualGross' : 'individualNet';
     }
     if (competition === 'PairPair') return 'matchResult';
-    const useGross = (state.lbKpi === 'gross') || (state.lbKpi === 'game' && scoringMethod() === 'ADJ GROSS');
-    return useGross ? 'gross' : 'net';
+    return officialMetricIsGross() ? 'gross' : 'net';
   }
 
   // "Points" vs "Default Points" — the only two column-header variants.
-  // "disabled" categories never reach this: PairField/Individual disable the
-  // whole pill instead (so the column showing them is unreachable), and
-  // matchResult (no corresponding pill — see lbNetGrossDisabled) falls back
-  // to dash-per-value via matchResultDisplay() instead of a header change.
   function pointsColumnLabel(categoryKey) {
     return (placementStates[categoryKey] === 'default') ? 'Default Points' : 'Points';
   }
 
-  // matchResult has no Gross/Net-style pill to disable — PairPair match
-  // points aren't chosen via a toggle, they're always shown alongside the
-  // match, computed from the game's own scoring method. So "disabled" for
-  // matchResult specifically means dash-in-place-of-value, not pill-disabling.
-  function matchResultDisplay(rawPoints) {
-    return (placementStates.matchResult === 'disabled') ? '—' : fmtNum(rawPoints);
+  // Pairing/Team grain has no pill left to disable for ANY category —
+  // there's no viewer toggle there at all anymore, just the one official
+  // metric. So "disabled" at this grain can only ever mean dash-in-place-
+  // of-value, never pill-disabling. (Individual grain is different: its
+  // Gross/Net pills are a real, still-interactive choice, so
+  // individualGross/individualNet "disabled" states still disable a pill —
+  // see lbIndividualPillDisabled() below.)
+  function officialCategoryDisplay(rawPoints) {
+    return (placementStates[activePlacementCategoryKey()] === 'disabled') ? '—' : fmtNum(rawPoints);
   }
 
-  // Net/Gross pill-disabling (Option 1) only applies where a Gross/Net
-  // toggle actually exists and actually governs the Points column: PairField
-  // Pairing/Team (gross/net categories) and Individual grain, for either
-  // competition (individualGross/individualNet). PairPair's Pairing/Team
-  // grains have no gross/net-specific points category — matchResult isn't
-  // split by gross/net — so neither pill is disabled there.
-  function lbNetGrossDisabled() {
-    if (state.lbAggregate === 'individual') {
-      return { net: placementStates.individualNet === 'disabled', gross: placementStates.individualGross === 'disabled' };
-    }
-    if (competition === 'PairField') {
-      return { net: placementStates.net === 'disabled', gross: placementStates.gross === 'disabled' };
-    }
-    return { net: false, gross: false };
+  // Individual grain's Gross/Net pills are the one remaining real toggle —
+  // disable whichever one its category marks disabled.
+  function lbIndividualPillDisabled() {
+    return { gross: placementStates.individualGross === 'disabled', net: placementStates.individualNet === 'disabled' };
   }
 
-  // If the currently-selected KPI pill would be disabled for the (possibly
-  // just-changed) grain, fall back to the first still-enabled pill in
-  // net -> gross -> game priority order, rather than leaving state.lbKpi
-  // pointing at something the person can no longer click.
+  // If Individual's currently-selected pill is now disabled (e.g. an admin
+  // disabled that category since this page loaded), fall back to the other
+  // one rather than leaving state.lbKpi pointing at something unclickable.
   function correctLbKpiIfDisabled() {
-    const teamGrain = (state.lbAggregate === 'team');
-    const individualGrain = (state.lbAggregate === 'individual');
-    const nd = lbNetGrossDisabled();
-    const gameDisabled = individualGrain || (competition === 'PairField' && teamGrain);
-    const disabledMap = { net: nd.net, gross: nd.gross, game: gameDisabled };
-    if (!disabledMap[state.lbKpi]) return;
-    const fallback = ['net', 'gross', 'game'].find((k) => !disabledMap[k]);
-    if (fallback) state.lbKpi = fallback;
+    if (state.lbAggregate !== 'individual') return;
+    const d = lbIndividualPillDisabled();
+    if (!d[state.lbKpi]) return;
+    const fallback = (state.lbKpi === 'gross') ? 'net' : 'gross';
+    if (!d[fallback]) state.lbKpi = fallback;
   }
 
   // Top-level "disabled" suppresses the Leaderboard tab entirely; "default"
@@ -805,23 +802,19 @@
   function lbRenderControls() {
     if (!dom.lbControls) return;
 
-    const teamGrain = (state.lbAggregate === 'team');
     const individualGrain = (state.lbAggregate === 'individual');
-    const showKpiPills = !(competition === 'PairPair' && teamGrain);
-    // Game is disabled at Individual grain for EITHER competition type —
-    // individualRows only ever carries grossDiff/netDiff (§4.3's "no
-    // ranking/points at this grain" applies to the native-metric concept
-    // too, not just Points). Also disabled at PairField's Team grain, since
-    // teamRollup only sums Gross/Net there. PairPair's Team grain hides KPI
-    // pills entirely (see showKpiPills above), so this doesn't apply to it.
-    const gameDisabled = individualGrain || (competition === 'PairField' && teamGrain);
-    const nd = lbNetGrossDisabled();
+    const d = lbIndividualPillDisabled();
 
-    const kpiPillsHtml = showKpiPills ? `
-      <button class="maChoiceChip ${state.lbKpi === 'net' ? 'is-selected' : ''} ${nd.net ? 'is-disabled' : ''}" data-lbkpi="net" type="button" ${nd.net ? 'disabled' : ''}>Net</button>
-      <button class="maChoiceChip ${state.lbKpi === 'gross' ? 'is-selected' : ''} ${nd.gross ? 'is-disabled' : ''}" data-lbkpi="gross" type="button" ${nd.gross ? 'disabled' : ''}>Gross</button>
-      <button class="maChoiceChip ${state.lbKpi === 'game' ? 'is-selected' : ''} ${gameDisabled ? 'is-disabled' : ''}" data-lbkpi="game" type="button" ${gameDisabled ? 'disabled' : ''}>${esc(gameTabLabel())}</button>
-    ` : '';
+    // Individual: a real, interactive Gross/Net choice — inspecting a
+    // player's own stat either way. Pairing/Team: no choice at all, just a
+    // single disabled label naming the one official metric that actually
+    // decided the game (see officialMetricIsGross()).
+    const kpiPillsHtml = individualGrain ? `
+      <button class="maChoiceChip ${state.lbKpi === 'net' ? 'is-selected' : ''} ${d.net ? 'is-disabled' : ''}" data-lbkpi="net" type="button" ${d.net ? 'disabled' : ''}>Net</button>
+      <button class="maChoiceChip ${state.lbKpi === 'gross' ? 'is-selected' : ''} ${d.gross ? 'is-disabled' : ''}" data-lbkpi="gross" type="button" ${d.gross ? 'disabled' : ''}>Gross</button>
+    ` : `
+      <button class="maChoiceChip is-selected is-disabled" type="button" disabled>${esc(officialMetricLabel())}</button>
+    `;
 
     dom.lbControls.innerHTML = `
       <div class="lbControlsRow">
@@ -856,11 +849,9 @@
   // ---------- PairField ----------
 
   function lbPairFieldKpiDisplay(row) {
-    if (state.lbKpi === 'gross') return row.grossDiffDisplay ?? '—';
-    if (state.lbKpi === 'net') return row.netDiffDisplay ?? '—';
     if (isSkinsBasis()) return skinsDisplay(row);
     if (isPointsBasis()) return pointsDisplay(row);
-    return (scoringMethod() === 'ADJ GROSS') ? (row.grossDiffDisplay ?? '—') : (row.netDiffDisplay ?? '—');
+    return officialMetricIsGross() ? (row.grossDiffDisplay ?? '—') : (row.netDiffDisplay ?? '—');
   }
 
   // Distinct from the existing pairFieldPointsDisplay() above, which shows
@@ -868,9 +859,8 @@
   // ranking points, a different concept that happens to share the word
   // "points." Kept as two clearly-named functions on purpose, not merged.
   function lbPlacementPointsDisplay(row) {
-    const useGross = (state.lbKpi === 'gross') || (state.lbKpi === 'game' && scoringMethod() === 'ADJ GROSS');
-    const v = useGross ? row.placementPointsGross : row.placementPointsNet;
-    return fmtNum(v);
+    const v = officialMetricIsGross() ? row.placementPointsGross : row.placementPointsNet;
+    return officialCategoryDisplay(v);
   }
 
   function lbRenderPairFieldPairingRows() {
@@ -881,7 +871,7 @@
         <span class="maListRow__col--muted lbColRank">#</span>
         <span class="maListRow__col--muted lbColName">Pairing</span>
         <span class="maListRow__col--muted lbColThru">Thru</span>
-        <span class="maListRow__col--muted lbColKpi">${esc(state.lbKpi === 'game' ? gameTabLabel() : (state.lbKpi === 'gross' ? 'Gross' : 'Net'))}</span>
+        <span class="maListRow__col--muted lbColKpi">${esc(officialMetricLabel())}</span>
         <span class="maListRow__col--muted lbColPts">${esc(pointsColumnLabel(activePlacementCategoryKey()))}</span>
       </div>
     `;
@@ -899,13 +889,10 @@
     return `${header}${body || `<div class="maEmptyState">No standings available.</div>`}`;
   }
 
-  // Shared by display and sort — 'game' has no separate per-player metric
-  // (no individual skins/points/holes-differential exists), falls back to
-  // gross/net per the game's scoringMethod, same resolution Pairing already
-  // uses for Strokes basis.
+  // Individual grain only ever has Gross/Net now — no 'game' option exists
+  // in its pill row anymore, so this is a direct read, not a resolution.
   function lbIndividualKpiField() {
-    return ((state.lbKpi === 'gross') || (state.lbKpi === 'game' && scoringMethod() === 'ADJ GROSS'))
-      ? 'gross' : 'net';
+    return (state.lbKpi === 'gross') ? 'gross' : 'net';
   }
 
   function lbIndividualSortLabel(key) {
@@ -913,7 +900,7 @@
   }
 
   function gameTabLabelForKpiColumn() {
-    return state.lbKpi === 'game' ? gameTabLabel() : (state.lbKpi === 'gross' ? 'Gross' : 'Net');
+    return (state.lbKpi === 'gross') ? 'Gross' : 'Net';
   }
 
   function lbApplyIndividualSort(list) {
@@ -1012,19 +999,19 @@
     const header = `
       <div class="maListRow maListRow--static lbHeaderRow">
         <span class="maListRow__col--muted lbColName">Team</span>
-        <span class="maListRow__col--muted lbColKpi">${esc(state.lbKpi === 'gross' ? 'Gross' : 'Net')}</span>
+        <span class="maListRow__col--muted lbColKpi">${esc(officialMetricLabel())}</span>
         <span class="maListRow__col--muted lbColPts">${esc(pointsColumnLabel(activePlacementCategoryKey()))}</span>
       </div>
     `;
 
     const body = sorted.map((team) => {
-      const kpiVal = (state.lbKpi === 'gross') ? team.grossDiffTotal : team.netDiffTotal;
-      const ptsVal = (state.lbKpi === 'gross') ? team.placementPointsGrossTotal : team.placementPointsNetTotal;
+      const kpiVal = officialMetricIsGross() ? team.grossDiffTotal : team.netDiffTotal;
+      const ptsVal = officialMetricIsGross() ? team.placementPointsGrossTotal : team.placementPointsNetTotal;
       return `
         <div class="maListRow maListRow--static">
           <span class="maListRow__col lbColName">${lbTeamDotHtml(team.teamColor)}${esc(team.teamName || team.teamKey)}</span>
           <span class="maListRow__col lbColKpi">${esc(fmtNum(kpiVal))}</span>
-          <span class="maListRow__col--muted lbColPts">${esc(fmtNum(ptsVal))}</span>
+          <span class="maListRow__col--muted lbColPts">${esc(officialCategoryDisplay(ptsVal))}</span>
         </div>
       `;
     }).join('');
@@ -1040,15 +1027,8 @@
   function lbPairPairKpiSegments(row, side) {
     const sideData = row[side] || {};
 
-    if (state.lbKpi === 'gross' || state.lbKpi === 'net') {
-      if (scoringSegments() === 1) {
-        const d = (state.lbKpi === 'gross') ? sideData.grossDiffDisplay : sideData.netDiffDisplay;
-        return { overall: d ?? '—' };
-      }
-      return strokeDiffSegmentsByMode(sideData, state.lbKpi);
-    }
-
-    // 'game'
+    // No viewer toggle at Pairing grain — always the game's official metric,
+    // by basis, same resolution as everywhere else on this grain now.
     if (scoringBasis() === 'Holes') {
       if (scoringSegments() === 1) return { overall: sideData.gameDisplay ?? '—' };
       return pairPairSegmentLines(row, side);
@@ -1059,9 +1039,9 @@
     if (isPointsBasis()) {
       return (scoringSegments() === 1) ? { overall: pointsDisplay(sideData) } : pointsSegments(sideData);
     }
-    // Strokes basis — 'game' means the same thing as Gross/Net per scoringMethod
+    // Strokes basis
     if (scoringSegments() === 1) {
-      const d = (scoringMethod() === 'ADJ GROSS') ? sideData.grossDiffDisplay : sideData.netDiffDisplay;
+      const d = officialMetricIsGross() ? sideData.grossDiffDisplay : sideData.netDiffDisplay;
       return { overall: d ?? '—' };
     }
     return strokeDiffSegments(sideData);
@@ -1080,7 +1060,7 @@
   function lbSidePointsLabel(side) {
     const overall = side.matchStatus?.total;
     if (!overall || overall.points === null || overall.points === undefined) return '—';
-    const display = matchResultDisplay(overall.points);
+    const display = officialCategoryDisplay(overall.points);
     return (display === '—') ? '—' : `${display} pts`;
   }
 
@@ -1135,7 +1115,7 @@
       <div class="maListRow maListRow--static">
         <span class="maListRow__col lbColName">${lbTeamDotHtml(team.teamColor)}${esc(team.teamName || team.teamKey)}</span>
         <span class="maListRow__col--muted lbColRecord">${team.record.w}-${team.record.l}-${team.record.h}</span>
-        <span class="maListRow__col--muted lbColPts">${esc(matchResultDisplay(team.pointsTotal))}</span>
+        <span class="maListRow__col--muted lbColPts">${esc(officialCategoryDisplay(team.pointsTotal))}</span>
       </div>
     `).join('');
 
