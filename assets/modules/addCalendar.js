@@ -246,7 +246,9 @@
     const ics = buildIcsFromCalendarObject(obj);
 
     const safeId = sanitizeUidPart(obj.id || Date.now());
-    downloadIcsText(ics, `matchaid-${safeId}.ics`);
+    const stamp = Date.now();
+
+    downloadIcsText(ics, `matchaid-${safeId}-${stamp}.ics`);
   };
 
   // ===========================================================================
