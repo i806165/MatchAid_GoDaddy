@@ -44,15 +44,16 @@ final class ServiceScoreSummary
             // actually generalizes across rounds/formats for that purpose;
             // raw KPI sums are included for this page's own display only.
             'teamRollup' => self::buildTeamRollupRows($rows, $competition),
-            // Individual rows — PairField only (PairPair has no individual
-            // match-level data; matches are decided pairing vs. pairing).
-            // Reads totals.grossDiff/netDiff.9c already attached to every
-            // player by ServiceScoreCard::decorateScoredPlayers() upstream —
-            // no new per-hole computation here, just surfacing an existing
-            // field that was never read by this file before.
-            'individualRows' => ($competition === 'PairField')
-                ? self::buildIndividualRows($scorecards['rows'] ?? [], $gameRow)
-                : [],
+            // Individual rows — every player's own gross/net-to-par, from
+            // totals.grossDiff/netDiff.9c already attached by
+            // ServiceScoreCard::decorateScoredPlayers() upstream, for EVERY
+            // game regardless of competition type. No individual match
+            // outcome exists for PairPair (matches are decided pairing vs.
+            // pairing), but each player's own score is still real data —
+            // that's exactly why PairField's Individual grain has no Points
+            // column either (§4.3): the constraint is "no ranking/points at
+            // this grain," not "no data at this grain."
+            'individualRows' => self::buildIndividualRows($scorecards['rows'] ?? [], $gameRow),
             'meta' => array_merge($meta, [
                 'rowCount' => count($rows),
                 'scoringBasis' => $scoringBasis,

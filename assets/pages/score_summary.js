@@ -714,15 +714,13 @@
     const teamGrain = (state.lbAggregate === 'team');
     const individualGrain = (state.lbAggregate === 'individual');
     const showKpiPills = !(competition === 'PairPair' && teamGrain);
-    // Game is disabled at Team grain (teamRollup has no summed native-metric
-    // total, only Gross/Net) and at Individual grain (decorateScoredPlayers()
-    // only computes grossDiff/netDiff per player — no per-player skins/points/
-    // holes-differential exists). Both are honest gaps, not bugs — the pills
-    // reflect what data actually exists.
-    const gameDisabled = (competition === 'PairField' && (teamGrain || individualGrain));
-    // Individual is PairField only — matches decided pairing vs. pairing have
-    // no individual-player result to show.
-    const individualDisabled = (competition === 'PairPair');
+    // Game is disabled at Individual grain for EITHER competition type —
+    // individualRows only ever carries grossDiff/netDiff (§4.3's "no
+    // ranking/points at this grain" applies to the native-metric concept
+    // too, not just Points). Also disabled at PairField's Team grain, since
+    // teamRollup only sums Gross/Net there. PairPair's Team grain hides KPI
+    // pills entirely (see showKpiPills above), so this doesn't apply to it.
+    const gameDisabled = individualGrain || (competition === 'PairField' && teamGrain);
 
     const kpiPillsHtml = showKpiPills ? `
       <button class="maChoiceChip ${state.lbKpi === 'net' ? 'is-selected' : ''}" data-lbkpi="net" type="button">Net</button>
@@ -734,7 +732,7 @@
       <div class="lbControlsRow">
         <div class="maChoiceChips">${kpiPillsHtml}</div>
         <div class="maChoiceChips">
-          <button class="maChoiceChip ${state.lbAggregate === 'individual' ? 'is-selected' : ''} ${individualDisabled ? 'is-disabled' : ''}" data-lbagg="individual" type="button" ${individualDisabled ? 'disabled title="Not available for PairPair"' : ''}>Individual</button>
+          <button class="maChoiceChip ${state.lbAggregate === 'individual' ? 'is-selected' : ''}" data-lbagg="individual" type="button">Individual</button>
           <button class="maChoiceChip ${state.lbAggregate === 'pairing' ? 'is-selected' : ''}" data-lbagg="pairing" type="button">Pairing</button>
           <button class="maChoiceChip ${state.lbAggregate === 'team' ? 'is-selected' : ''}" data-lbagg="team" type="button">Team</button>
         </div>
@@ -753,9 +751,9 @@
       if (btn.disabled) return;
       btn.addEventListener('click', () => {
         state.lbAggregate = btn.dataset.lbagg;
-        const gameNowInvalid = (state.lbAggregate === 'team' || state.lbAggregate === 'individual')
-          && competition === 'PairField' && state.lbKpi === 'game';
-        if (gameNowInvalid) state.lbKpi = 'net';
+        const gameNowInvalid = (state.lbAggregate === 'individual')
+          || (state.lbAggregate === 'team' && competition === 'PairField');
+        if (gameNowInvalid && state.lbKpi === 'game') state.lbKpi = 'net';
         lbRenderControls();
         lbRenderBody();
       });
@@ -980,10 +978,10 @@
     // message when empty (e.g. "No team config" vs "No standings available")
     // — more useful than one generic message, so there's no separate
     // dom.lbEmpty toggle here; #lbEmpty in the view is unused by design.
-    dom.lbHost.innerHTML = (competition === 'PairPair')
+    dom.lbHost.innerHTML = (state.lbAggregate === 'individual') ? lbRenderPairFieldIndividualRows()
+      : (competition === 'PairPair')
       ? ((state.lbAggregate === 'team') ? lbRenderPairPairTeamRows() : lbRenderPairPairPairingRows())
       : (state.lbAggregate === 'team') ? lbRenderPairFieldTeamRows()
-      : (state.lbAggregate === 'individual') ? lbRenderPairFieldIndividualRows()
       : lbRenderPairFieldPairingRows();
   }
 
