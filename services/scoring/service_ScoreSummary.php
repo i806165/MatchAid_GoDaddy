@@ -360,10 +360,16 @@ final class ServiceScoreSummary
                 $points = self::metricFromTotalRow($totalRow, 'points', $metricKey);
                 $shapeStats = self::buildPairFieldShapeStats($pairPlayers);
 
-                // Team — resolved from the first player's dbPlayers_TeamKey.
-                // Upstream player/pairing alignment guarantees every player in
-                // a pairing shares the same team, so no mismatch handling here.
-                $teamKey = trim((string)($pairPlayers[0]['dbPlayers_TeamKey'] ?? ''));
+                // Team — every player in the pairing must actually agree on
+                // dbPlayers_TeamKey before it's trusted; see sideTeamKey()'s
+                // own comment. (This function used to assume upstream
+                // alignment guaranteed agreement and read only
+                // $pairPlayers[0] — the same assumption that produced the
+                // PairPair "everyone shows one team" incident, just not yet
+                // known to affect this sibling code path until a PairField
+                // game surfaced the identical pattern: TeamKey assigned by
+                // position within the pairing rather than by pairing.)
+                $teamKey = self::sideTeamKey($pairPlayers) ?? '';
                 $teamInfo = $teamConfigById[$teamKey] ?? null;
 
                 $out[] = [
@@ -1328,14 +1334,14 @@ final class ServiceScoreSummary
      *   1. Headcount — does the full roster split evenly across every
      *      configured team? Catches a lopsided or incomplete assignment
      *      (e.g. 3 players on one team, 1 on another).
-     *   2. Side agreement (PairPair only) — do the two partners on each
-     *      match side actually agree on TeamKey? Catches partners recorded
-     *      on different teams even when the game-wide headcount happens to
-     *      still be perfectly even — this is what an even 2-and-2 split can
-     *      hide, and is exactly the failure mode this check exists for: two
-     *      players correctly split 2-and-2 game-wide, but paired up wrong,
-     *      so each side silently borrowed one partner's team for the whole
-     *      side (see sideTeamKey()).
+     *   2. Partners/pairing agreement (both competition types) — do the
+     *      players grouped together on one side/pairing actually agree on
+     *      TeamKey? Catches players recorded on different teams even when
+     *      the game-wide headcount happens to still be perfectly even —
+     *      this is what an even split can hide, and is exactly the failure
+     *      mode this check exists for: players correctly split evenly
+     *      game-wide, but grouped wrong, so the group silently borrowed one
+     *      member's team for the whole group (see sideTeamKey()).
      */
     private static function checkTeamIntegrity(array $scorecardRows, array $gameRow, string $competition): ?string
     {
@@ -1376,22 +1382,32 @@ final class ServiceScoreSummary
             }
         }
 
-        // ── 2. Side agreement (PairPair only) ────────────────────────────
-        if ($competition === 'PairPair') {
-            foreach ($scorecardRows as $row) {
-                $players = is_array($row['players'] ?? null) ? $row['players'] : [];
-                if (!$players) continue;
-                foreach (self::groupPlayersByFlightPos($players) as $sidePlayers) {
-                    if (count($sidePlayers) < 2) continue;
-                    $keys = [];
-                    foreach ($sidePlayers as $p) {
-                        $k = trim((string)($p['dbPlayers_TeamKey'] ?? ''));
-                        if ($k !== '') $keys[$k] = true;
-                    }
-                    if (count($keys) > 1) {
-                        return 'Partners on the same side of a match are assigned to different teams. '
+        // ── 2. Partners/pairing agreement (both competition types) ───────
+        // PairPair: the two partners on each match side must agree.
+        // PairField: the two players in each pairing must agree — this
+        // check used to be PairPair-only, on the theory that PairField
+        // pairings couldn't have this problem; a real PairField game then
+        // showed the identical pattern (TeamKey assigned by position within
+        // the pairing rather than by pairing), so this now covers both.
+        foreach ($scorecardRows as $row) {
+            $players = is_array($row['players'] ?? null) ? $row['players'] : [];
+            if (!$players) continue;
+            $groups = ($competition === 'PairPair')
+                ? self::groupPlayersByFlightPos($players)
+                : self::groupPlayersByPairing($players);
+            foreach ($groups as $groupPlayers) {
+                if (count($groupPlayers) < 2) continue;
+                $keys = [];
+                foreach ($groupPlayers as $p) {
+                    $k = trim((string)($p['dbPlayers_TeamKey'] ?? ''));
+                    if ($k !== '') $keys[$k] = true;
+                }
+                if (count($keys) > 1) {
+                    return ($competition === 'PairPair')
+                        ? 'Partners on the same side of a match are assigned to different teams. '
+                            . 'Check Team Configuration for this game.'
+                        : 'The two players in a pairing are assigned to different teams. '
                             . 'Check Team Configuration for this game.';
-                    }
                 }
             }
         }
