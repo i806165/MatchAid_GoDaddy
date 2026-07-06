@@ -198,7 +198,7 @@
     setTimeout(function () {
       URL.revokeObjectURL(url);
       a.remove();
-    }, 3000);
+    }, 10000);
   }
   
   function buildIcsFromCalendarObject(calendarObject) {

@@ -746,7 +746,7 @@ function getGameAdminMeta(g){
       }
     }
   */
-  function downloadIcsForGame(g) {
+  function OLDdownloadIcsForGame(g) {
     if (!MA.calendar || !MA.calendar.addCalendarEventFromGame) {
       setStatus("Calendar module not loaded.", "error");
       return;
@@ -765,6 +765,20 @@ function getGameAdminMeta(g){
     };
 
     MA.calendar.addCalendarEventFromGame(gameForCalendar);
+  }
+  
+  function downloadIcsForGame(g) {
+    const ggid = String(g?.ggid || g?.dbGames_GGID || "").trim();
+
+    if (!ggid) {
+      setStatus("Unable to identify selected game for calendar.", "error");
+      return;
+    }
+
+    const url = `/api/messaging/createCalendarICS.php?ggid=${encodeURIComponent(ggid)}&t=${Date.now()}`;
+
+    // Use a real server URL for iOS reliability.
+    window.location.href = url;
   }
 
   async function postJson(url, payload){
