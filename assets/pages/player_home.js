@@ -737,7 +737,7 @@ function getGameAdminMeta(g){
       return;
     }
   }
-
+  /*
   function downloadIcsForGame(g) {
     if (MA.calendar && MA.calendar.addCalendarEventFromGame) {
         MA.calendar.addCalendarEventFromGame(g);
@@ -745,6 +745,27 @@ function getGameAdminMeta(g){
         setStatus("Calendar module not loaded.", "error");
       }
     }
+  */
+  function downloadIcsForGame(g) {
+    if (!MA.calendar || !MA.calendar.addCalendarEventFromGame) {
+      setStatus("Calendar module not loaded.", "error");
+      return;
+    }
+
+    const ggid = String(g?.ggid || g?.dbGames_GGID || "").trim();
+
+    const raw = (state.rawGames || []).find(r =>
+      String(r?.dbGames_GGID || r?.ggid || "").trim() === ggid
+    ) || null;
+
+    const gameForCalendar = {
+      ...(g || {}),
+      ...(raw || {}),
+      ggid
+    };
+
+    MA.calendar.addCalendarEventFromGame(gameForCalendar);
+  }
 
   async function postJson(url, payload){
     if (typeof MA.postJson === 'function') return MA.postJson(url, { payload });
