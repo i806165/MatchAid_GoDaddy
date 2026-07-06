@@ -278,7 +278,6 @@
     wizGroupPlacementPoints:      document.getElementById("gsWizGroupPlacementPoints"),
     wizPlacementPointsHint:       document.getElementById("gsWizPlacementPointsHint"),
     wizPlacementPointsBtn:        document.getElementById("gsWizPlacementPointsBtn"),
-    wizPlacementPointsSummary:    document.getElementById("gsWizPlacementPointsSummary"),
 
     // Step 4 — Handicaps
     wizHCMethodChips:   document.getElementById("gsWizHCMethodChips"),
@@ -302,7 +301,6 @@
       system:         document.getElementById("gsWizSvSystem"),
       bb:             document.getElementById("gsWizSvBB"),
       pointsStrategy: document.getElementById("gsWizSvPointsStrategy"),
-      placementPoints: document.getElementById("gsWizSvPlacementPoints"),
       hcmethod:       document.getElementById("gsWizSvHCMethod"),
       allowance:      document.getElementById("gsWizSvAllowance"),
       strokedist:     document.getElementById("gsWizSvStrokeDist"),
@@ -492,77 +490,31 @@
   }
 
   /**
-   * Default Placement Points shape for a given competition type.
+   * game_settings.js is NEVER a writer of Placement Points data — it only
+   * ever carries wiz.placementPoints through unchanged, exactly as the
+   * module (module_definePlacementPoints.js) produced it via onApply(), or
+   * exactly as it was hydrated from the loaded game. The only two legitimate
+   * writers are that module (a human explicitly configuring it) and
+   * service_dbGames.php's applyDefaultsForAdd() (seeding at game creation).
+   * No defaulting, no reshaping, no per-competition normalization here.
+   *
+   * null is a legitimate value for older games that predate this shape —
+   * service_ScoreSummary.php's read path already falls back to the same
+   * five-category defaults for a null/malformed value, so there is nothing
+   * for this file to paper over by inventing a default of its own.
    */
-  function defaultPlacementPoints(competition, scoringSegments) {
-    if (competition === "PairPair") {
-      const segCount = (parseInt(scoringSegments || "1", 10) === 3) ? 3 : 1;
-      const segments = {};
-      for (let i = 1; i <= segCount; i++) {
-        segments[String(i)] = { win: 1, halve: 0.5, loss: 0 };
-      }
-      return { active: true, segments };
-    }
-    const defaultTable = { pointsConfig: { "1": 100, "2": 75, "3": 50 }, tieRule: "split" };
-    return { active: true, gross: { ...defaultTable, pointsConfig: { ...defaultTable.pointsConfig } }, net: { ...defaultTable, pointsConfig: { ...defaultTable.pointsConfig } } };
+  function normalizePlacementPointsForSave({ placementPoints }) {
+    if (placementPoints === null || placementPoints === undefined) return null;
+    if (typeof placementPoints === "string") return placementPoints;
+    try { return JSON.stringify(placementPoints); } catch (e) { return null; }
   }
 
   /**
-   * Normalize wiz.placementPoints against the current competition + scoringSegments
-   * before it goes into the save patch. Guards against stale shape left over from
-   * switching PairField <-> PairPair, or a scoringSegments count change made without
-   * reopening the configurator.
+   * Removed: placementPointsSummary(). With five independently-toggleable
+   * categories (Pairing Gross/Net or Match Result, plus Individual
+   * Gross/Net), there's no longer a one-line summary that reads clearly —
+   * the full picture only makes sense inside the configurator itself.
    */
-  function normalizePlacementPointsForSave({ competition, scoringSegments, placementPoints }) {
-    let parsed = placementPoints;
-    if (typeof parsed === "string") {
-      try { parsed = JSON.parse(parsed); } catch (e) { parsed = null; }
-    }
-    if (!parsed || typeof parsed !== "object") {
-      return JSON.stringify(defaultPlacementPoints(competition, scoringSegments));
-    }
-
-    if (competition === "PairPair") {
-      if (!parsed.segments || typeof parsed.segments !== "object") {
-        return JSON.stringify(defaultPlacementPoints(competition, scoringSegments));
-      }
-      const segCount = (parseInt(scoringSegments || "1", 10) === 3) ? 3 : 1;
-      const seg1 = parsed.segments["1"] || { win: 1, halve: 0.5, loss: 0 };
-      const segments = {};
-      for (let i = 1; i <= segCount; i++) {
-        segments[String(i)] = parsed.segments[String(i)] || seg1;
-      }
-      return JSON.stringify({ active: parsed.active !== false, segments });
-    }
-
-    // PairField — ensure both gross and net tables exist
-    const def = defaultPlacementPoints("PairField");
-    const gross = (parsed.gross && parsed.gross.pointsConfig) ? parsed.gross : def.gross;
-    const net   = (parsed.net   && parsed.net.pointsConfig)   ? parsed.net   : def.net;
-    return JSON.stringify({ active: parsed.active !== false, gross, net });
-  }
-
-  /**
-   * Compact one-line summary of the current Placement Points config, for the
-   * wizard's Step 3 hint and the Current Settings aside.
-   */
-  function placementPointsSummary(competition, scoringSegments, placementPoints) {
-    let parsed = placementPoints;
-    if (typeof parsed === "string") {
-      try { parsed = JSON.parse(parsed); } catch (e) { parsed = null; }
-    }
-    if (!parsed) return "Not configured";
-
-    if (competition === "PairPair") {
-      const segCount = (parseInt(scoringSegments || "1", 10) === 3) ? 3 : 1;
-      const seg1 = (parsed.segments && parsed.segments["1"]) || { win: 1, halve: 0.5, loss: 0 };
-      return `${segCount} segment${segCount !== 1 ? "s" : ""} — W/H/L: ${seg1.win} / ${seg1.halve} / ${seg1.loss}`;
-    }
-
-    const grossPlaces = parsed.gross?.pointsConfig ? Object.keys(parsed.gross.pointsConfig).length : 0;
-    const netPlaces   = parsed.net?.pointsConfig   ? Object.keys(parsed.net.pointsConfig).length   : 0;
-    return `Gross: ${grossPlaces} places / Net: ${netPlaces} places`;
-  }
 
   /**
    * Returns GAME_LABELS filtered to the current pairing strategy.
@@ -1124,13 +1076,6 @@
   }
 
   function wizRenderPlacementPointsSummary() {
-    if (el.wizPlacementPointsSummary) {
-      el.wizPlacementPointsSummary.textContent = placementPointsSummary(
-        wiz.pairing || "PairField",
-        wiz.scoringSegments,
-        wiz.placementPoints
-      );
-    }
     if (el.wizPlacementPointsHint) {
       el.wizPlacementPointsHint.textContent = (wiz.pairing === "PairPair")
         ? "Define the points awarded for each match outcome by scoring segment."
@@ -1568,14 +1513,12 @@
       wiz.blindTarget = null;
     }
 
-    // Placement Points shape is competition-specific (gross/net tables for PairField,
-    // segments matrix for PairPair) — re-normalize now so a stale shape from the
-    // previous competition doesn't survive a save without reopening the configurator.
-    wiz.placementPoints = normalizePlacementPointsForSave({
-      competition:     wiz.pairing || "PairField",
-      scoringSegments: wiz.scoringSegments,
-      placementPoints: wiz.placementPoints,
-    });
+    // Placement Points is untouched by a competition switch — the new shape
+    // primes both PairField's and PairPair's categories simultaneously, so
+    // wiz.placementPoints stays exactly as it was (whatever the module last
+    // produced, or whatever was hydrated from the loaded game). Nothing here
+    // needs re-normalizing per competition; game_settings.js never writes or
+    // reshapes this value (see normalizePlacementPointsForSave()'s comment).
 
     // Re-render Step 1 in place
     wizRenderStep1();
@@ -1933,7 +1876,6 @@
     sv(s.bb,             wiz.scoringSystemVal === "BestBall" ? wiz.bestBall : null, true);
     const psLabel = wiz.pointsStrategy ? (POINTS_STRATEGIES.find(p => p.strategy === wiz.pointsStrategy)?.label || wiz.pointsStrategy) : null;
     sv(s.pointsStrategy, wiz.selectedBasis === "Points" ? psLabel : null, true);
-    sv(s.placementPoints, placementPointsSummary(wiz.pairing || "PairField", wiz.scoringSegments, wiz.placementPoints), false);
     sv(s.hcmethod,       wiz.hcMethod,          true);
     sv(s.allowance,      wiz.allowance ? wiz.allowance + "%" : null, true);
     sv(s.strokedist,     wiz.strokeDistribution, true);
@@ -2094,4 +2036,4 @@
 
   document.addEventListener("DOMContentLoaded", initialize);
 
-})();
+})();

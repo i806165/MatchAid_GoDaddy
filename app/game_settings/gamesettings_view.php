@@ -291,7 +291,6 @@
                     onclick="window.gsWiz.openPlacementPointsConfigurator()">
               Configure Placement Points
             </button>
-            <div class="gsWizHint" id="gsWizPlacementPointsSummary"></div>
           </div>
 
         </div>
@@ -382,7 +381,6 @@
           <div class="gsWizSummary__row"><span class="gsWizSummary__key">System</span>       <span class="wizSummary__val empty" id="gsWizSvSystem">—</span></div>
           <div class="gsWizSummary__row"><span class="gsWizSummary__key">Best Ball</span>    <span class="wizSummary__val empty" id="gsWizSvBB">—</span></div>
           <div class="gsWizSummary__row"><span class="gsWizSummary__key">Pts Strategy</span> <span class="wizSummary__val empty" id="gsWizSvPointsStrategy">—</span></div>
-          <div class="gsWizSummary__row"><span class="gsWizSummary__key">Placement Pts</span><span class="wizSummary__val empty" id="gsWizSvPlacementPoints">—</span></div>
 
           <div class="gsWizSummary__section">Handicaps</div>
           <div class="gsWizSummary__row"><span class="gsWizSummary__key">HC Method</span>    <span class="wizSummary__val empty" id="gsWizSvHCMethod">—</span></div>
@@ -446,4 +444,4 @@
     </footer>
 
   </section>
-</div>
+</div>
