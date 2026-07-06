@@ -536,13 +536,31 @@ public static function queryGames(array $args): array {
     $g["dbGames_PlayerDeclaration"] = $g["dbGames_PlayerDeclaration"] ?? "11";
     $g["dbGames_Segments"] = $g["dbGames_Segments"] ?? "9";
     $g["dbGames_ScoringSegments"] = $g["dbGames_ScoringSegments"] ?? 1;
-    // New games always default to StrokePlay / PairField, so prime a real
-    // 1st/2nd/3rd placement table rather than leaving this null until someone
-    // opens the Placement Points configurator for the first time.
+    // Prime all five categories at "default" from the moment a game exists,
+    // regardless of which competition it actually starts as — this is what
+    // lets an admin flip PairField <-> PairPair later without ever landing on
+    // an unconfigured category. dbGames_ScoringSegments is always 1 at this
+    // point (set immediately above, and PairPair/3-segment selection only
+    // happens later via the Settings page), so matchResult is seeded with
+    // exactly one segment; module_definePlacementPoints.js expands it to 3
+    // on demand if the game is later switched to a 3-segment PairPair match.
+    // "default" behaves identically to "active" everywhere this is read —
+    // it's provenance only (has a human ever consciously saved this?), not a
+    // second on/off gate.
     $g["dbGames_PlacementPoints"] = $g["dbGames_PlacementPoints"] ?? json_encode([
-      "active" => true,
-      "gross"  => ["pointsConfig" => ["1" => 100, "2" => 75, "3" => 50], "tieRule" => "split"],
-      "net"    => ["pointsConfig" => ["1" => 100, "2" => 75, "3" => 50], "tieRule" => "split"],
+      "top" => "default",
+      "categories" => [
+        ["key" => "gross", "kind" => "placement", "scope" => "pairfield", "state" => "default",
+          "pointsConfig" => ["1" => 100, "2" => 75, "3" => 50], "tieRule" => "split"],
+        ["key" => "net", "kind" => "placement", "scope" => "pairfield", "state" => "default",
+          "pointsConfig" => ["1" => 100, "2" => 75, "3" => 50], "tieRule" => "split"],
+        ["key" => "matchResult", "kind" => "segments", "scope" => "pairpair", "state" => "default",
+          "segments" => ["1" => ["win" => 1, "halve" => 0.5, "loss" => 0]]],
+        ["key" => "individualGross", "kind" => "placement", "scope" => "individual", "state" => "default",
+          "pointsConfig" => ["1" => 100, "2" => 75, "3" => 50], "tieRule" => "split"],
+        ["key" => "individualNet", "kind" => "placement", "scope" => "individual", "state" => "default",
+          "pointsConfig" => ["1" => 100, "2" => 75, "3" => 50], "tieRule" => "split"],
+      ],
     ], JSON_UNESCAPED_SLASHES);
 
     // Ensure stepper fields exist (stored as text in schema)

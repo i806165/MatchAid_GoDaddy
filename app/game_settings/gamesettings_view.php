@@ -287,7 +287,7 @@
             <div class="gsWizHint" id="gsWizPlacementPointsHint">
               Define how points are awarded to winning teams or finishing positions.
             </div>
-            <button type="button" class="btn btnPrimary" id="gsWizPlacementPointsBtn"
+            <button type="button" class="btn btnSecondary" id="gsWizPlacementPointsBtn"
                     onclick="window.gsWiz.openPlacementPointsConfigurator()">
               Configure Placement Points
             </button>
