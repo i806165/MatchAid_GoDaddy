@@ -166,20 +166,34 @@
     return s;
   }
 
-  function downloadIcsText(icsText, fileName) {
-    const blob = new Blob([icsText], { type: "text/calendar;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
+  function downloadIcsForGame(g) {
+    if (!MA.calendar || !MA.calendar.addCalendarEventFromGame) {
+      setStatus("Calendar module not loaded.", "error");
+      return;
+    }
 
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName || "matchaid-game.ics";
-    document.body.appendChild(a);
-    a.click();
+    const ggid = String(g?.ggid || g?.dbGames_GGID || "").trim();
 
-    setTimeout(function () {
-      URL.revokeObjectURL(url);
-      a.remove();
-    }, 0);
+    const raw = (state.rawGames || []).find(r =>
+      String(r?.dbGames_GGID || r?.ggid || "").trim() === ggid
+    ) || null;
+
+    // Merge VM + raw. Raw should win for canonical DB fields, but VM can fill display fields.
+    const gameForCalendar = {
+      ...(g || {}),
+      ...(raw || {}),
+      ggid: ggid || raw?.dbGames_GGID || g?.ggid || "",
+    };
+
+    console.log("[MA][CALENDAR_GAME]", {
+      clickedGgid: ggid,
+      calendarGgid: gameForCalendar.ggid || gameForCalendar.dbGames_GGID,
+      title: gameForCalendar.title || gameForCalendar.dbGames_Title,
+      playDate: gameForCalendar.playDate || gameForCalendar.dbGames_PlayDate,
+      playTime: gameForCalendar.playTimeText || gameForCalendar.dbGames_PlayTime
+    });
+
+    MA.calendar.addCalendarEventFromGame(gameForCalendar);
   }
 
   function buildIcsFromCalendarObject(calendarObject) {
