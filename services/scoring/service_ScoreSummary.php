@@ -79,6 +79,15 @@ final class ServiceScoreSummary
     {
         $out = [];
         $teamConfigById = self::parseTeamConfig($gameRow);
+        // Rotation games (COD/1324/1423) produce one $scorecardRows entry per
+        // spin, not per physical scorecard — the same physical players get
+        // re-stamped with a different effectivePairingID in each spin's
+        // context. totals.grossDiff/netDiff are computed once upstream,
+        // independent of spin/pairing, and carried along unchanged on every
+        // re-stamped copy — so the first occurrence of a given player is
+        // already correct; later spin-context copies are pure duplicates,
+        // not new or different data, and must be skipped rather than appended.
+        $seenPlayerIds = [];
 
         foreach ($scorecardRows as $row) {
             $players = is_array($row['players'] ?? null) ? $row['players'] : [];
@@ -88,6 +97,14 @@ final class ServiceScoreSummary
             $scopedHoles = self::scopedHolesForRow($ctx, $gameRow);
 
             foreach ($players as $player) {
+                $playerId = (string)($player['playerId'] ?? $player['dbPlayers_PlayerGHIN'] ?? '');
+                if ($playerId !== '' && isset($seenPlayerIds[$playerId])) {
+                    continue;
+                }
+                if ($playerId !== '') {
+                    $seenPlayerIds[$playerId] = true;
+                }
+
                 $teamKey = trim((string)($player['dbPlayers_TeamKey'] ?? ''));
                 $teamInfo = $teamConfigById[$teamKey] ?? null;
 
@@ -98,7 +115,7 @@ final class ServiceScoreSummary
                 $lastName = trim((string)($player['dbPlayers_LName'] ?? ''));
 
                 $out[] = [
-                    'playerId' => (string)($player['playerId'] ?? $player['dbPlayers_PlayerGHIN'] ?? ''),
+                    'playerId' => $playerId,
                     // Full name for display; last name kept separately since
                     // it's the more natural sort key for a leaderboard list —
                     // avoids re-deriving it from playerName later.
