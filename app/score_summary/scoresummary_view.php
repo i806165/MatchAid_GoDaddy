@@ -31,7 +31,7 @@
 
 <section class="maPanel maPanel--secondary" aria-label="Leaderboard" id="lbPanel">
   <header class="maPanel__hdr">
-    <div class="maCard__title">LEADERBOARD</div>
+    <div class="maCard__title" id="lbSectionTitle">LEADERBOARD</div>
   </header>
 
   <div class="maPanel__body">

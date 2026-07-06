@@ -9,6 +9,11 @@
   const game = init.game || {};
   const competition = String(payload.competition || 'PairField');
   const teamRollup = Array.isArray(payload.teamRollup) ? payload.teamRollup : [];
+  // { top, gross, net, matchResult, individualGross, individualNet } — each
+  // "default"|"active"|"disabled". Read-only signal for display decisions
+  // (column headers, pill-disabling, tab suppression); never re-derived
+  // client-side — service_ScoreSummary.php is the single source of truth.
+  const placementStates = (payload.meta && typeof payload.meta.placementPointsStates === 'object' && payload.meta.placementPointsStates) || {};
 
   const SCORE_SHAPE_ORDER = [
     ['eaglePlus', 'Eagle+'],
@@ -35,6 +40,8 @@
     empty: document.getElementById('ssEmpty'),
     lbControls: document.getElementById('lbControls'),
     lbHost: document.getElementById('lbHost'),
+    lbSectionTitle: document.getElementById('lbSectionTitle'),
+    ssTabs: document.getElementById('ssTabs'),
   };
 
   function esc(s) {
@@ -713,6 +720,88 @@
     return color ? `<span class="lbTeamDot" style="background:${esc(color)}"></span>` : '';
   }
 
+  // ── Placement Points display helpers — read placementStates only, never
+  // recompute or reinterpret it; service_ScoreSummary.php is the single
+  // source of truth for what each category's state actually is. ──────────
+
+  // Which category's state governs the Points column/pill currently on
+  // screen, given the current grain + KPI selection. Mirrors the exact
+  // useGross resolution lbPlacementPointsDisplay() already uses for PairField,
+  // so the column header and the values it labels always agree on which
+  // category they're describing.
+  function activePlacementCategoryKey() {
+    if (state.lbAggregate === 'individual') {
+      return (lbIndividualKpiField() === 'gross') ? 'individualGross' : 'individualNet';
+    }
+    if (competition === 'PairPair') return 'matchResult';
+    const useGross = (state.lbKpi === 'gross') || (state.lbKpi === 'game' && scoringMethod() === 'ADJ GROSS');
+    return useGross ? 'gross' : 'net';
+  }
+
+  // "Points" vs "Default Points" — the only two column-header variants.
+  // "disabled" categories never reach this: PairField/Individual disable the
+  // whole pill instead (so the column showing them is unreachable), and
+  // matchResult (no corresponding pill — see lbNetGrossDisabled) falls back
+  // to dash-per-value via matchResultDisplay() instead of a header change.
+  function pointsColumnLabel(categoryKey) {
+    return (placementStates[categoryKey] === 'default') ? 'Default Points' : 'Points';
+  }
+
+  // matchResult has no Gross/Net-style pill to disable — PairPair match
+  // points aren't chosen via a toggle, they're always shown alongside the
+  // match, computed from the game's own scoring method. So "disabled" for
+  // matchResult specifically means dash-in-place-of-value, not pill-disabling.
+  function matchResultDisplay(rawPoints) {
+    return (placementStates.matchResult === 'disabled') ? '—' : fmtNum(rawPoints);
+  }
+
+  // Net/Gross pill-disabling (Option 1) only applies where a Gross/Net
+  // toggle actually exists and actually governs the Points column: PairField
+  // Pairing/Team (gross/net categories) and Individual grain, for either
+  // competition (individualGross/individualNet). PairPair's Pairing/Team
+  // grains have no gross/net-specific points category — matchResult isn't
+  // split by gross/net — so neither pill is disabled there.
+  function lbNetGrossDisabled() {
+    if (state.lbAggregate === 'individual') {
+      return { net: placementStates.individualNet === 'disabled', gross: placementStates.individualGross === 'disabled' };
+    }
+    if (competition === 'PairField') {
+      return { net: placementStates.net === 'disabled', gross: placementStates.gross === 'disabled' };
+    }
+    return { net: false, gross: false };
+  }
+
+  // If the currently-selected KPI pill would be disabled for the (possibly
+  // just-changed) grain, fall back to the first still-enabled pill in
+  // net -> gross -> game priority order, rather than leaving state.lbKpi
+  // pointing at something the person can no longer click.
+  function correctLbKpiIfDisabled() {
+    const teamGrain = (state.lbAggregate === 'team');
+    const individualGrain = (state.lbAggregate === 'individual');
+    const nd = lbNetGrossDisabled();
+    const gameDisabled = individualGrain || (competition === 'PairField' && teamGrain);
+    const disabledMap = { net: nd.net, gross: nd.gross, game: gameDisabled };
+    if (!disabledMap[state.lbKpi]) return;
+    const fallback = ['net', 'gross', 'game'].find((k) => !disabledMap[k]);
+    if (fallback) state.lbKpi = fallback;
+  }
+
+  // Top-level "disabled" suppresses the Leaderboard tab entirely; "default"
+  // labels the section header so it's clear these are seeded, un-configured
+  // values rather than something a human actively set up.
+  function applyPlacementTopLevelState() {
+    const lbTabBtn = dom.ssTabs?.querySelector('[data-tab="leaderboard"]');
+    if (lbTabBtn && placementStates.top === 'disabled') {
+      lbTabBtn.disabled = true;
+      lbTabBtn.classList.add('is-disabled');
+    }
+    if (dom.lbSectionTitle) {
+      dom.lbSectionTitle.textContent = (placementStates.top === 'default')
+        ? 'LEADERBOARD using Default Points'
+        : 'LEADERBOARD';
+    }
+  }
+
   function lbRenderControls() {
     if (!dom.lbControls) return;
 
@@ -726,10 +815,11 @@
     // teamRollup only sums Gross/Net there. PairPair's Team grain hides KPI
     // pills entirely (see showKpiPills above), so this doesn't apply to it.
     const gameDisabled = individualGrain || (competition === 'PairField' && teamGrain);
+    const nd = lbNetGrossDisabled();
 
     const kpiPillsHtml = showKpiPills ? `
-      <button class="maChoiceChip ${state.lbKpi === 'net' ? 'is-selected' : ''}" data-lbkpi="net" type="button">Net</button>
-      <button class="maChoiceChip ${state.lbKpi === 'gross' ? 'is-selected' : ''}" data-lbkpi="gross" type="button">Gross</button>
+      <button class="maChoiceChip ${state.lbKpi === 'net' ? 'is-selected' : ''} ${nd.net ? 'is-disabled' : ''}" data-lbkpi="net" type="button" ${nd.net ? 'disabled' : ''}>Net</button>
+      <button class="maChoiceChip ${state.lbKpi === 'gross' ? 'is-selected' : ''} ${nd.gross ? 'is-disabled' : ''}" data-lbkpi="gross" type="button" ${nd.gross ? 'disabled' : ''}>Gross</button>
       <button class="maChoiceChip ${state.lbKpi === 'game' ? 'is-selected' : ''} ${gameDisabled ? 'is-disabled' : ''}" data-lbkpi="game" type="button" ${gameDisabled ? 'disabled' : ''}>${esc(gameTabLabel())}</button>
     ` : '';
 
@@ -756,9 +846,7 @@
       if (btn.disabled) return;
       btn.addEventListener('click', () => {
         state.lbAggregate = btn.dataset.lbagg;
-        const gameNowInvalid = (state.lbAggregate === 'individual')
-          || (state.lbAggregate === 'team' && competition === 'PairField');
-        if (gameNowInvalid && state.lbKpi === 'game') state.lbKpi = 'net';
+        correctLbKpiIfDisabled();
         lbRenderControls();
         lbRenderBody();
       });
@@ -794,7 +882,7 @@
         <span class="maListRow__col--muted lbColName">Pairing</span>
         <span class="maListRow__col--muted lbColThru">Thru</span>
         <span class="maListRow__col--muted lbColKpi">${esc(state.lbKpi === 'game' ? gameTabLabel() : (state.lbKpi === 'gross' ? 'Gross' : 'Net'))}</span>
-        <span class="maListRow__col--muted lbColPts">Points</span>
+        <span class="maListRow__col--muted lbColPts">${esc(pointsColumnLabel(activePlacementCategoryKey()))}</span>
       </div>
     `;
 
@@ -890,23 +978,27 @@
     const list = lbApplyIndividualSort(Array.isArray(payload.individualRows) ? payload.individualRows : []);
     const kpiField = lbIndividualKpiField();
     const kpiLabel = gameTabLabelForKpiColumn();
+    const ptsLabel = pointsColumnLabel(activePlacementCategoryKey());
 
     const header = `
       <div class="maListRow maListRow--static lbHeaderRow">
         <span class="maListRow__col--muted lbColName">Player</span>
         <span class="maListRow__col--muted lbColThru">Thru</span>
         <span class="maListRow__col--muted lbColKpi">${esc(kpiLabel)}</span>
+        <span class="maListRow__col--muted lbColPts">${esc(ptsLabel)}</span>
       </div>
     `;
 
     const body = list.map((p) => {
       const kpiDisplay = (kpiField === 'gross') ? p.grossDiffDisplay : p.netDiffDisplay;
+      const ptsValue = (kpiField === 'gross') ? p.placementPointsGross : p.placementPointsNet;
 
       return `
         <div class="maListRow maListRow--static">
           <span class="maListRow__col lbColName" data-lb-menu data-sort-key="playerLastName" data-display-value="${esc(p.playerName || '')}">${lbTeamDotHtml(p.teamColor)}${esc(p.playerName || '')}</span>
           <span class="maListRow__col--muted lbColThru" data-lb-menu data-sort-key="thru" data-display-value="${esc(formatThru(p.thru))}">${esc(formatThru(p.thru))}</span>
           <span class="maListRow__col lbColKpi" data-lb-menu data-sort-key="kpi" data-display-value="${esc(kpiDisplay ?? '—')}">${esc(kpiDisplay ?? '—')}</span>
+          <span class="maListRow__col--muted lbColPts">${esc(fmtNum(ptsValue))}</span>
         </div>
       `;
     }).join('');
@@ -921,7 +1013,7 @@
       <div class="maListRow maListRow--static lbHeaderRow">
         <span class="maListRow__col--muted lbColName">Team</span>
         <span class="maListRow__col--muted lbColKpi">${esc(state.lbKpi === 'gross' ? 'Gross' : 'Net')}</span>
-        <span class="maListRow__col--muted lbColPts">Points</span>
+        <span class="maListRow__col--muted lbColPts">${esc(pointsColumnLabel(activePlacementCategoryKey()))}</span>
       </div>
     `;
 
@@ -988,7 +1080,8 @@
   function lbSidePointsLabel(side) {
     const overall = side.matchStatus?.total;
     if (!overall || overall.points === null || overall.points === undefined) return '—';
-    return `${fmtNum(overall.points)} pts`;
+    const display = matchResultDisplay(overall.points);
+    return (display === '—') ? '—' : `${display} pts`;
   }
 
   function lbSideIsLeading(side) {
@@ -1034,7 +1127,7 @@
       <div class="maListRow maListRow--static lbHeaderRow">
         <span class="maListRow__col--muted lbColName">Team</span>
         <span class="maListRow__col--muted lbColRecord">Record</span>
-        <span class="maListRow__col--muted lbColPts">Points</span>
+        <span class="maListRow__col--muted lbColPts">${esc(pointsColumnLabel('matchResult'))}</span>
       </div>
     `;
 
@@ -1042,7 +1135,7 @@
       <div class="maListRow maListRow--static">
         <span class="maListRow__col lbColName">${lbTeamDotHtml(team.teamColor)}${esc(team.teamName || team.teamKey)}</span>
         <span class="maListRow__col--muted lbColRecord">${team.record.w}-${team.record.l}-${team.record.h}</span>
-        <span class="maListRow__col--muted lbColPts">${esc(fmtNum(team.pointsTotal))}</span>
+        <span class="maListRow__col--muted lbColPts">${esc(matchResultDisplay(team.pointsTotal))}</span>
       </div>
     `).join('');
 
@@ -1084,11 +1177,13 @@
   }
 
   function initialize() {
+    correctLbKpiIfDisabled();
     applyChrome();
     renderControls();
     renderBody();
     lbRenderControls();
     lbRenderBody();
+    applyPlacementTopLevelState();
     wireOuterTabs();
     wireIndividualSortMenu();
   }
@@ -1118,6 +1213,7 @@
 
     tabsEl.querySelectorAll('.maSegBtn[data-tab]').forEach((btn) => {
       btn.addEventListener('click', () => {
+        if (btn.disabled) return;
         const tab = btn.dataset.tab;
 
         tabsEl.querySelectorAll('.maSegBtn').forEach((b) => {
@@ -1141,4 +1237,4 @@
   } else {
     initialize();
   }
-})();
+})();

@@ -49,16 +49,24 @@ final class ServiceScoreSummary
             // ServiceScoreCard::decorateScoredPlayers() upstream, for EVERY
             // game regardless of competition type. No individual match
             // outcome exists for PairPair (matches are decided pairing vs.
-            // pairing), but each player's own score is still real data —
-            // that's exactly why PairField's Individual grain has no Points
-            // column either (§4.3): the constraint is "no ranking/points at
-            // this grain," not "no data at this grain."
-            'individualRows' => self::buildIndividualRows($scorecards['rows'] ?? [], $gameRow),
+            // pairing), but each player's own score is still real data — and,
+            // as of individualGross/individualNet, real ranking/points too:
+            // the original §4.3 constraint ("no ranking/points at this grain")
+            // has been reversed on purpose; see applyIndividualPlacementPoints().
+            'individualRows' => self::applyIndividualPlacementPoints(
+                self::buildIndividualRows($scorecards['rows'] ?? [], $gameRow),
+                $gameRow
+            ),
             'meta' => array_merge($meta, [
                 'rowCount' => count($rows),
                 'scoringBasis' => $scoringBasis,
                 'defaultValueMode' => $defaultValueMode,
                 'scoringSegments' => $scoringSegments,
+                // The one thing score_summary.js reads to decide column
+                // headers ("Points" vs "Default Points"), pill-disabling, and
+                // Leaderboard-tab suppression. Never consulted server-side to
+                // decide whether to compute — see parsePlacementPoints().
+                'placementPointsStates' => self::placementPointsStatesMap(self::parsePlacementPoints($gameRow)),
             ]),
         ];
     }
@@ -72,8 +80,12 @@ final class ServiceScoreSummary
      * same existing fallback parser already used elsewhere in this file for
      * the identical display-string-only situation.
      *
-     * No Points field — Individual has no ranking/PlacementPoints concept,
-     * per the locked design (§4.3).
+     * placementPointsGross/placementPointsNet are attached separately, after
+     * this function returns, by applyIndividualPlacementPoints() — kept out
+     * of this function so the "one row per player" data-assembly concern
+     * stays separate from the "rank them" concern, the same separation
+     * buildPairFieldRows already has between its own row-building and its
+     * own placement-points block.
      */
     private static function buildIndividualRows(array $scorecardRows, array $gameRow): array
     {
@@ -141,6 +153,40 @@ final class ServiceScoreSummary
         }
 
         return $out;
+    }
+
+    /**
+     * Ranks individualRows twice — once by gross, once by net — via the same
+     * assignPlacementPoints() tie-aware rank-to-points mapper Pairing already
+     * uses; it has no idea whether it's ranking pairings or individuals, per
+     * the original handoff's scoping. Always computed regardless of the
+     * individualGross/individualNet categories' active/disabled/default
+     * state — state is display-only (score_summary.js), never a gate here.
+     * A player who hasn't started (grossDiffValue/netDiffValue null) ranks as
+     * if even-par, the same convention buildPairFieldRows already uses.
+     */
+    private static function applyIndividualPlacementPoints(array $individualRows, array $gameRow): array
+    {
+        $placement = self::parsePlacementPoints($gameRow);
+        $grossCat = $placement['categories']['individualGross'];
+        $netCat = $placement['categories']['individualNet'];
+
+        $grossRankInput = [];
+        $netRankInput = [];
+        foreach ($individualRows as $idx => $row) {
+            $grossRankInput[] = ['idx' => $idx, 'value' => (float)($row['grossDiffValue'] ?? 0)];
+            $netRankInput[] = ['idx' => $idx, 'value' => (float)($row['netDiffValue'] ?? 0)];
+        }
+        $grossPts = self::assignPlacementPoints($grossRankInput, $grossCat['pointsConfig'], $grossCat['tieRule']);
+        $netPts = self::assignPlacementPoints($netRankInput, $netCat['pointsConfig'], $netCat['tieRule']);
+
+        foreach ($individualRows as $idx => &$row) {
+            $row['placementPointsGross'] = $grossPts[$idx] ?? 0.0;
+            $row['placementPointsNet'] = $netPts[$idx] ?? 0.0;
+        }
+        unset($row);
+
+        return $individualRows;
     }
 
     /**
@@ -412,38 +458,29 @@ final class ServiceScoreSummary
             unset($row);
         }
 
-        // ── Placement Points (§4.2) — ranks the field twice, once by gross,
-        // once by net, independent of dbGames_ScoringBasis. Null (not 0) when
-        // dbGames_PlacementPoints isn't configured/active, so the UI can show
-        // a dash rather than a false zero.
-        $placementConfig = self::parsePlacementPointsPairField($gameRow);
-        if ($placementConfig !== null) {
-            $grossConfig = is_array($placementConfig['gross']['pointsConfig'] ?? null) ? $placementConfig['gross']['pointsConfig'] : [];
-            $grossTieRule = (string)($placementConfig['gross']['tieRule'] ?? 'split');
-            $netConfig = is_array($placementConfig['net']['pointsConfig'] ?? null) ? $placementConfig['net']['pointsConfig'] : [];
-            $netTieRule = (string)($placementConfig['net']['tieRule'] ?? 'split');
+        // ── Placement Points (§4.2, extended for Individual/Pairing category
+        // states) — ranks the field twice, once by gross, once by net,
+        // independent of dbGames_ScoringBasis. Always computed regardless of
+        // the gross/net categories' active/disabled/default state — state is
+        // display-only (score_summary.js), never a gate on acquisition.
+        $placement = self::parsePlacementPoints($gameRow);
+        $grossCat = $placement['categories']['gross'];
+        $netCat = $placement['categories']['net'];
 
-            $grossRankInput = [];
-            $netRankInput = [];
-            foreach ($out as $idx => $row) {
-                $grossRankInput[] = ['idx' => $idx, 'value' => (float)($row['grossDiffValue'] ?? 0)];
-                $netRankInput[] = ['idx' => $idx, 'value' => (float)($row['netDiffValue'] ?? 0)];
-            }
-            $grossPts = self::assignPlacementPoints($grossRankInput, $grossConfig, $grossTieRule);
-            $netPts = self::assignPlacementPoints($netRankInput, $netConfig, $netTieRule);
-
-            foreach ($out as $idx => &$row) {
-                $row['placementPointsGross'] = $grossPts[$idx] ?? 0.0;
-                $row['placementPointsNet'] = $netPts[$idx] ?? 0.0;
-            }
-            unset($row);
-        } else {
-            foreach ($out as &$row) {
-                $row['placementPointsGross'] = null;
-                $row['placementPointsNet'] = null;
-            }
-            unset($row);
+        $grossRankInput = [];
+        $netRankInput = [];
+        foreach ($out as $idx => $row) {
+            $grossRankInput[] = ['idx' => $idx, 'value' => (float)($row['grossDiffValue'] ?? 0)];
+            $netRankInput[] = ['idx' => $idx, 'value' => (float)($row['netDiffValue'] ?? 0)];
         }
+        $grossPts = self::assignPlacementPoints($grossRankInput, $grossCat['pointsConfig'], $grossCat['tieRule']);
+        $netPts = self::assignPlacementPoints($netRankInput, $netCat['pointsConfig'], $netCat['tieRule']);
+
+        foreach ($out as $idx => &$row) {
+            $row['placementPointsGross'] = $grossPts[$idx] ?? 0.0;
+            $row['placementPointsNet'] = $netPts[$idx] ?? 0.0;
+        }
+        unset($row);
 
         return $out;
     }
@@ -492,22 +529,74 @@ final class ServiceScoreSummary
     }
 
     /**
-     * Parses dbGames_PlacementPoints's PairField shape:
-     * {"active":true,"gross":{"pointsConfig":{"1":100,...},"tieRule":"split"},
-     *  "net":{"pointsConfig":{...},"tieRule":"..."}}
-     * Returns null when unset/inactive — the leaderboard shows a dash rather
-     * than a fabricated zero in that case (§4.2/§4.3).
+     * The five categories every game carries from creation onward (see
+     * service_dbGames.php's applyDefaultsForAdd and module_definePlacementPoints.js).
+     * Used both as the ultimate fallback when dbGames_PlacementPoints is null/
+     * malformed, and to backfill any category missing from an otherwise-valid
+     * decoded value — every read of this column is guaranteed to return all
+     * five, fully populated, regardless of what's actually stored.
      */
-    private static function parsePlacementPointsPairField(array $gameRow): ?array
+    private static function defaultPlacementCategories(): array
     {
+        $placementTable = ['pointsConfig' => ['1' => 100, '2' => 75, '3' => 50], 'tieRule' => 'split'];
+        return [
+            'gross' => ['key' => 'gross', 'kind' => 'placement', 'scope' => 'pairfield', 'state' => 'default'] + $placementTable,
+            'net' => ['key' => 'net', 'kind' => 'placement', 'scope' => 'pairfield', 'state' => 'default'] + $placementTable,
+            'matchResult' => ['key' => 'matchResult', 'kind' => 'segments', 'scope' => 'pairpair', 'state' => 'default',
+                'segments' => ['1' => ['win' => 1, 'halve' => 0.5, 'loss' => 0]]],
+            'individualGross' => ['key' => 'individualGross', 'kind' => 'placement', 'scope' => 'individual', 'state' => 'default'] + $placementTable,
+            'individualNet' => ['key' => 'individualNet', 'kind' => 'placement', 'scope' => 'individual', 'state' => 'default'] + $placementTable,
+        ];
+    }
+
+    /**
+     * Parses dbGames_PlacementPoints's unified shape:
+     * {"top":"default"|"active"|"disabled","categories":[{key,kind,scope,state,...}, ...]}
+     * Always returns all five categories, fully populated — "default",
+     * "active", and "disabled" are all computed identically here; state is
+     * never consulted to decide whether to compute (§ design decision:
+     * suppress at rendering, not at acquisition, so a future event-level
+     * aggregator can still read a category's points even on a game where
+     * this page hides them). Only score_summary.js reads state, to decide
+     * what to display.
+     */
+    private static function parsePlacementPoints(array $gameRow): array
+    {
+        $defaults = self::defaultPlacementCategories();
         $raw = $gameRow['dbGames_PlacementPoints'] ?? null;
-        if ($raw === null || $raw === '') return null;
 
-        $decoded = is_array($raw) ? $raw : json_decode((string)$raw, true);
-        if (!is_array($decoded) || empty($decoded['active'])) return null;
-        if (!isset($decoded['gross']) && !isset($decoded['net'])) return null;
+        $decoded = null;
+        if ($raw !== null && $raw !== '') {
+            $decoded = is_array($raw) ? $raw : json_decode((string)$raw, true);
+        }
 
-        return $decoded;
+        $top = (is_array($decoded) && in_array($decoded['top'] ?? null, ['default', 'active', 'disabled'], true))
+            ? $decoded['top']
+            : 'default';
+
+        $categories = $defaults;
+        if (is_array($decoded) && is_array($decoded['categories'] ?? null)) {
+            foreach ($decoded['categories'] as $c) {
+                if (!is_array($c) || !isset($c['key']) || !isset($defaults[$c['key']])) continue;
+                $categories[$c['key']] = array_merge($defaults[$c['key']], $c);
+            }
+        }
+
+        return ['top' => $top, 'categories' => $categories];
+    }
+
+    /**
+     * Flat key => state map for score_summary.js — the one thing it reads to
+     * decide column headers ("Points" vs "Default Points"), pill-disabling,
+     * and Leaderboard-tab suppression. Never consulted here for computation.
+     */
+    private static function placementPointsStatesMap(array $parsed): array
+    {
+        $out = ['top' => $parsed['top']];
+        foreach ($parsed['categories'] as $key => $cat) {
+            $out[$key] = (string)($cat['state'] ?? 'default');
+        }
+        return $out;
     }
 
     /**
@@ -933,7 +1022,9 @@ final class ServiceScoreSummary
             ? ['front' => '1', 'back' => '2', 'total' => '3']
             : ['total' => '1'];
         $lowerWins = (strtolower($scoringBasis) === 'strokes');
-        $placementConfig = self::parsePlacementPointsPairPair($gameRow);
+        // Always computed regardless of matchResult's active/disabled/default
+        // state — same acquisition-vs-display split as Pairing/Individual.
+        $placementConfig = self::parsePlacementPoints($gameRow)['categories']['matchResult'];
 
         foreach ($out as &$row) {
             $leftMatch = [];
@@ -1023,25 +1114,6 @@ final class ServiceScoreSummary
         }
         $leftWins = $lowerWins ? ($leftVal < $rightVal) : ($leftVal > $rightVal);
         return $leftWins ? ['left' => 'W', 'right' => 'L'] : ['left' => 'L', 'right' => 'W'];
-    }
-
-    /**
-     * Parses dbGames_PlacementPoints's PairPair shape:
-     * {"active":true,"segments":{"1":{"win":1,"halve":0.5,"loss":0}, ...}}
-     * Defaults to a single win=1/halve=0.5/loss=0 segment "1" when unset or
-     * invalid — matches module_definePlacementPoints.js's own default.
-     */
-    private static function parsePlacementPointsPairPair(array $gameRow): array
-    {
-        $default = ['active' => true, 'segments' => ['1' => ['win' => 1, 'halve' => 0.5, 'loss' => 0]]];
-        $raw = $gameRow['dbGames_PlacementPoints'] ?? null;
-        if ($raw === null || $raw === '') return $default;
-
-        $decoded = is_array($raw) ? $raw : json_decode((string)$raw, true);
-        if (!is_array($decoded) || !isset($decoded['segments']) || !is_array($decoded['segments'])) {
-            return $default;
-        }
-        return $decoded;
     }
 
     private static function placementPointsForStatus(?string $status, array $placementConfig, string $segmentIndex): float
@@ -1680,4 +1752,4 @@ final class ServiceScoreSummary
 
         return $default;
     }
-}
+}
