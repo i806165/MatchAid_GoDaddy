@@ -95,7 +95,12 @@ final class ServiceScoreSummary
 
                 $out[] = [
                     'playerId' => (string)($player['playerId'] ?? $player['dbPlayers_PlayerGHIN'] ?? ''),
-                    'playerName' => self::buildPairFieldLabel([$player]),
+                    // Full name, not buildPairFieldLabel() — that function is
+                    // tuned for compact multi-person pairing labels (last name
+                    // only, joined by "•"). A single player's own row should
+                    // show their real full name. Falls back to the pairing
+                    // label helper only if PlayerName is somehow empty.
+                    'playerName' => trim((string)($player['dbPlayers_PlayerName'] ?? '')) ?: self::buildPairFieldLabel([$player]),
                     'grossDiffValue' => ($grossDisplay !== null) ? self::displayToNumeric((string)$grossDisplay) : null,
                     'grossDiffDisplay' => $grossDisplay ?? '—',
                     'netDiffValue' => ($netDisplay !== null) ? self::displayToNumeric((string)$netDisplay) : null,
