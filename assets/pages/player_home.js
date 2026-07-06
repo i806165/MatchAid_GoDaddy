@@ -746,7 +746,7 @@ function getGameAdminMeta(g){
       }
     }
   */
-  function OLDdownloadIcsForGame(g) {
+  function downloadIcsForGame(g) {
     if (!MA.calendar || !MA.calendar.addCalendarEventFromGame) {
       setStatus("Calendar module not loaded.", "error");
       return;
@@ -766,8 +766,8 @@ function getGameAdminMeta(g){
 
     MA.calendar.addCalendarEventFromGame(gameForCalendar);
   }
-  
-  function downloadIcsForGame(g) {
+
+  function OLDdownloadIcsForGame(g) {
     const ggid = String(g?.ggid || g?.dbGames_GGID || "").trim();
 
     if (!ggid) {
