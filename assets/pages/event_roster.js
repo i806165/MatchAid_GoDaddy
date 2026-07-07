@@ -177,7 +177,8 @@
     if (state.activeTab === "favorites") {
       // Multi-add only: clear the module's multiAddMode/selection state,
       // which a plain re-mount intentionally leaves untouched.
-      MA.favoritesSource.refresh(el.trayControls);
+      const p = findTabPanel(el.trayControls, "favorites");
+      if (p) MA.favoritesSource.refresh(p);
     } else {
       renderTrayControls();
     }
@@ -471,20 +472,66 @@
       const leaving = state.activeTab;
 
       // Module cleanup on tab away
-      if (leaving === "favorites") MA.favoritesSource.cancelMultiAdd(el.trayControls);
-      if (leaving === "nonrated")  MA.nonRatedSource.clearSelection(el.trayControls);
+      if (leaving === "favorites") {
+        const p = findTabPanel(el.trayControls, "favorites");
+        if (p) MA.favoritesSource.cancelMultiAdd(p);
+      }
+      if (leaving === "nonrated") {
+        const p = findTabPanel(el.trayControls, "nonrated");
+        if (p) MA.nonRatedSource.clearSelection(p);
+      }
 
       state.activeTab = btn.dataset.tab;
       render();
     }));
   }
 
+  /**
+   * getTabPanel(parentEl, tabId) — keep-alive tab panel helper.
+   *
+   * el.trayControls and el.trayBody are single shared DOM nodes reused by
+   * every source module (Favorites, GHIN Search, Non-Rated). Each module
+   * keeps its own WeakMap-keyed "already mounted" state so that switching
+   * away and back preserves filters/search results/scroll position — but
+   * that only works if the DOM node it was keyed on still contains ITS
+   * markup. Because the node was shared, a sibling module could overwrite
+   * it, and the original module's "already mounted" check would then skip
+   * rebuilding controls it no longer actually owned (see game_players.js
+   * for the full writeup of this bug).
+   *
+   * Fix: give each tab its own permanent child container under the shared
+   * parent, and just show/hide between them. Every module gets a stable,
+   * dedicated node that only it ever writes to.
+   */
+  function getTabPanel(parentEl, tabId){
+    if (!parentEl) return null;
+    const selector = `:scope > [data-tab-panel="${tabId}"]`;
+    let node = parentEl.querySelector(selector);
+    if (!node) {
+      node = document.createElement("div");
+      node.setAttribute("data-tab-panel", tabId);
+      parentEl.appendChild(node);
+    }
+    Array.from(parentEl.children).forEach(child => {
+      child.style.display = (child === node) ? "" : "none";
+    });
+    return node;
+  }
+
+  // Pure lookup — never creates a panel, never touches visibility. Used by
+  // cleanup/refresh call sites that need "the element this module's state
+  // is keyed on, if it exists" without forcing that panel visible.
+  function findTabPanel(parentEl, tabId){
+    if (!parentEl) return null;
+    return parentEl.querySelector(`:scope > [data-tab-panel="${tabId}"]`);
+  }
+
   // ── Render: tray controls + body (via modules) ──────────────────────────────
   function renderTrayControls() {
     if (state.activeTab === "ghin") {
       MA.ghinSearch.mount({
-        controlsEl:    el.trayControls,
-        bodyEl:        el.trayBody,
+        controlsEl:    getTabPanel(el.trayControls, "ghin"),
+        bodyEl:        getTabPanel(el.trayBody, "ghin"),
         defaultState:  safe(state.context.userState || ""),
         existingGHINs: enrolledGHINs(),
         onSelect(player) { enrollPlayer(player); }
@@ -494,8 +541,8 @@
 
     if (state.activeTab === "favorites") {
       MA.favoritesSource.mount({
-        controlsEl:    el.trayControls,
-        bodyEl:        el.trayBody,
+        controlsEl:    getTabPanel(el.trayControls, "favorites"),
+        bodyEl:        getTabPanel(el.trayBody, "favorites"),
         footerEl:      el.trayFtr,
         apiPath:       MA.paths.favPlayersInit,
         courseId:      safe(state.event?.dbEvents_CourseID || ""),
@@ -511,8 +558,8 @@
 
     if (state.activeTab === "nonrated") {
       MA.nonRatedSource.mount({
-        controlsEl:      el.trayControls,
-        bodyEl:          el.trayBody,
+        controlsEl:      getTabPanel(el.trayControls, "nonrated"),
+        bodyEl:          getTabPanel(el.trayBody, "nonrated"),
         existingPlayers: state.roster || [],
         onAdd({ first_name, last_name, gender, hi }) {
           const ghin = `NH${Date.now()}${Math.floor(Math.random() * 1000)}`;
@@ -540,12 +587,14 @@
       MA.setStatus(res?.message || "Unable to update player.", "warn");
       return;
     }
-    MA.nonRatedSource.clearSelection(el.trayControls);
+    const nonRatedControls = getTabPanel(el.trayControls, "nonrated");
+    const nonRatedBody     = getTabPanel(el.trayBody, "nonrated");
+    MA.nonRatedSource.clearSelection(nonRatedControls);
     await refreshRoster();
     renderRoster();
     MA.nonRatedSource.mount({
-      controlsEl:      el.trayControls,
-      bodyEl:          el.trayBody,
+      controlsEl:      nonRatedControls,
+      bodyEl:          nonRatedBody,
       existingPlayers: state.roster || [],
     });
     MA.setStatus("Player updated.", "success");
