@@ -122,6 +122,28 @@
     return scoringBasis() === 'Points';
   }
 
+  // Parses dbGames_PointsConfig (or legacy dbGames_StablefordPoints) once.
+  // Mirrors ServiceScoreSummary::parsePointsConfig() server-side — same
+  // envelope shape, same legacy-array fallback — so the label/strategy this
+  // page reads always agrees with what the server actually computed against.
+  function pointsConfigParsed() {
+    let raw = game.dbGames_PointsConfig ?? game.dbGames_StablefordPoints ?? null;
+    if (typeof raw === 'string') {
+      try { raw = JSON.parse(raw); } catch (e) { raw = null; }
+    }
+    if (!raw || typeof raw !== 'object') return { strategy: null, values: null, quota: null };
+    if (Array.isArray(raw)) return { strategy: 'Stableford', values: raw, quota: null };
+    return {
+      strategy: raw.strategy || 'Stableford',
+      values:   raw.values ?? null,
+      quota:    raw.quota ?? null,
+    };
+  }
+
+  function isChicagoPoints() {
+    return isPointsBasis() && pointsConfigParsed().strategy === 'Chicago';
+  }
+
   // PairPair only — 1 (default, one overall result) or 3 (front 9 / back 9 /
   // overall, scored independently). Backend already normalizes to 1 or 3.
   function scoringSegments() {
@@ -169,13 +191,23 @@
 
   // Derives the points total for a row or side from the correct field
   // based on scoringMethod — gross points for ADJ GROSS, net points otherwise.
+  // Chicago — quotaNetValue (net-to-quota result) is only ever set (non-null)
+  // by the server when the game's strategy is actually Chicago; every other
+  // points strategy falls through to the raw points total unchanged.
   function pointsValue(rowOrSide) {
+    if (isChicagoPoints() && rowOrSide?.quotaNetValue !== null && rowOrSide?.quotaNetValue !== undefined) {
+      return Number(rowOrSide.quotaNetValue);
+    }
     const pts = scoringMethod() === 'ADJ GROSS'
       ? rowOrSide?.grossPoints
       : rowOrSide?.netPoints;
     return Number(pts?.total ?? 0);
   }
 
+  // Segment-scoped (front/back) Chicago quota isn't computed server-side
+  // today — only the overall/total quotaNetValue is — so front/back here
+  // still show raw points for a Chicago game. Deliberate, not an oversight;
+  // see the matching comment in ServiceScoreSummary::pairPairComparisonValue().
   function pointsSegments(rowOrSide) {
     const pts = scoringMethod() === 'ADJ GROSS'
       ? rowOrSide?.grossPoints
@@ -183,11 +215,16 @@
     return {
       front:   segNumDisplay(pts?.front),
       back:    segNumDisplay(pts?.back),
-      overall: segNumDisplay(pts?.total),
+      overall: isChicagoPoints() && rowOrSide?.quotaNetDisplay
+        ? rowOrSide.quotaNetDisplay
+        : segNumDisplay(pts?.total),
     };
   }
 
   function pointsDisplay(rowOrSide) {
+    if (isChicagoPoints() && rowOrSide?.quotaNetDisplay !== null && rowOrSide?.quotaNetDisplay !== undefined) {
+      return String(rowOrSide.quotaNetDisplay);
+    }
     return String(pointsValue(rowOrSide));
   }
 
@@ -218,12 +255,21 @@
     };
   }
 
-  // PairField — total points for the row
+  // PairField — total points for the row. For Chicago, "points" means the
+  // net-to-quota result (server-computed as row.quotaNetValue/quotaNetDisplay),
+  // not the raw accumulated points — quotaNetValue is what comparePairFieldRows()
+  // ranks on server-side, so the leaderboard order and the number shown here
+  // always agree.
   function pairFieldPointsValue(row) {
+    if (isChicagoPoints()) return Number(row?.quotaNetValue ?? 0);
     return Number(row?.pointsValue ?? 0);
   }
 
   function pairFieldPointsDisplay(row) {
+    if (isChicagoPoints()) {
+      const v = row?.quotaNetDisplay;
+      return (v !== undefined && v !== null) ? String(v) : '—';
+    }
     const v = row?.pointsDisplay;
     return (v !== undefined && v !== null && v !== '—') ? String(v) : '—';
   }
@@ -490,21 +536,15 @@
   function pointsHintText() {
     if (!isPointsBasis()) return '';
 
-    let raw = game.dbGames_PointsConfig ?? game.dbGames_StablefordPoints ?? null;
-    if (typeof raw === 'string') {
-      try { raw = JSON.parse(raw); } catch (e) { raw = null; }
-    }
-    if (!raw || typeof raw !== 'object') return '';
-
-    const strategy = raw.strategy || 'Stableford';
-    const values   = raw.values;
+    const { strategy, values, quota } = pointsConfigParsed();
+    if (!strategy) return '';
 
     if ((strategy === 'Stableford' || strategy === 'Chicago') && Array.isArray(values)) {
       const relLabels = { '-3': 'Albatross', '-2': 'Eagle', '-1': 'Birdie', '0': 'Par', '1': 'Bogey', '2': 'Dbl Bogey' };
       const parts = values
         .filter(v => Number(v.points) > 0)
         .map(v => `${relLabels[String(v.reltoPar)] || v.reltoPar}=${v.points}`);
-      const prefix = strategy === 'Chicago' ? 'Chicago · Quota 36 · ' : 'Stableford · ';
+      const prefix = strategy === 'Chicago' ? `Chicago · Quota ${quota?.base ?? 36} · ` : 'Stableford · ';
       return prefix + parts.join(' · ');
     }
 

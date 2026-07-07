@@ -72,7 +72,7 @@
     {
       strategy:   "Chicago",
       label:      "Chicago",
-      compFilter: "PairField",
+      compFilter: "both",
       hint:       "Each player has a points quota based on handicap. The winner is whoever most exceeds their quota.",
       hasConfig:  false,
     },
@@ -391,7 +391,11 @@
   function buildSegmentsOptionsFromHoles() {
     const holesSetting = String(state.game?.dbGames_Holes || "All 18");
     if (holesSetting === "F9" || holesSetting === "B9") {
-      return [{ label: "3's", value: "3" }, { label: "9's", value: "9" }];
+      // "9's" on an already-9-hole round would be exactly 1 segment spanning
+      // the whole round — not a real choice, and specifically it would let
+      // 1324/1423 rotation (which requires segments="9") get selected here
+      // and produce a single spin, i.e. no actual rotation at all. 3's only.
+      return [{ label: "3's", value: "3" }];
     }
     return [{ label: "6's", value: "6" }, { label: "9's", value: "9" }];
   }
@@ -408,7 +412,12 @@
 
   function defaultSegmentsForLabel(gameLabel, holesVal) {
     if (gameLabel === "C-O-D") return (holesVal === "All 18") ? "6" : "3";
-    return "9";
+    // Generic default must also respect hole count now that "9's" isn't a
+    // valid option on an already-9-hole round (see buildSegmentsOptionsFromHoles()).
+    // The wizRenderStep2()-site fallback (validVals[0]) would catch this
+    // regardless, but this function's own answer should be correct on its
+    // own terms, not merely masked by the caller.
+    return (holesVal === "F9" || holesVal === "B9") ? "3" : "9";
   }
 
   function normalizeStableford(existing) {
@@ -457,33 +466,79 @@
   function buildPointsConfig() {
     if (!wiz.pointsStrategy) return null;
 
+    // wiz.pointsConfig is kept live-synced with whatever's on screen by
+    // wizSyncStablefordConfig() / wizSyncNinesConfig() / wizSyncSimplePointsConfig() —
+    // called both on render and on every input change (see wizRenderPointsConfigSections()
+    // and onPointsInputChange()). It is the actual source of truth for "what the user has
+    // configured right now" for every strategy, Stableford included. Previously this
+    // function ignored it for every strategy except (partially) Stableford, and returned
+    // hardcoded placeholder values instead — meaning nothing a user configured in the
+    // Nines / LowBallLowTotal / LowBallHighBall / Vegas / Chicago UI ever actually saved.
+    const cfg = (wiz.pointsConfig && wiz.pointsConfig.strategy === wiz.pointsStrategy)
+      ? wiz.pointsConfig
+      : null;
+
+    // Shared fallback for Stableford/Chicago: if nothing has been synced from the
+    // grid this session (e.g. a strategy was just switched to without touching an
+    // input), fall back to whatever's already saved on the game, then the stock template.
+    const existingStablefordValues = (strategyName) => {
+      const g = state.game || {};
+      const existingRaw = g.dbGames_PointsConfig ?? g.dbGames_StablefordPoints ?? null;
+      if (!existingRaw) return null;
+      const parsed = parsePointsConfig(existingRaw);
+      return (parsed.strategy === strategyName) ? (parsed.config?.values ?? null) : null;
+    };
+
     switch (wiz.pointsStrategy) {
       case "Stableford": {
-        const g = state.game || {};
-        const existingRaw = g.dbGames_PointsConfig ?? g.dbGames_StablefordPoints ?? null;
-        let existingValues = null;
-        if (existingRaw) {
-          const parsed = parsePointsConfig(existingRaw);
-          if (parsed.strategy === "Stableford") existingValues = parsed.config?.values ?? null;
-        }
+        const values = (cfg && Array.isArray(cfg.values) && cfg.values.length)
+          ? cfg.values
+          : existingStablefordValues("Stableford");
         return {
           strategy: "Stableford",
-          values: normalizeStableford(existingValues),
+          values: normalizeStableford(values),
+        };
+      }
+      case "Chicago": {
+        const values = (cfg && Array.isArray(cfg.values) && cfg.values.length)
+          ? cfg.values
+          : existingStablefordValues("Chicago");
+        return {
+          strategy: "Chicago",
+          values: normalizeStableford(values),
+          // Quota comparison itself happens downstream (score_summary.js) —
+          // this envelope only needs to carry the quota basis being used.
+          quota: cfg?.quota || { method: "handicap", base: 36 },
         };
       }
       case "Nines":
         return {
           strategy: "Nines",
-          values: Array.isArray(wiz.pointsConfig?.values) ? wiz.pointsConfig.values : [5, 3, 1, 0],
+          values: (cfg && cfg.values && typeof cfg.values === "object" && !Array.isArray(cfg.values))
+            ? cfg.values
+            : { "4": [5, 3, 1, 0], "3": [4, 3, 2] },
         };
       case "LowBallLowTotal":
-        return { strategy: "LowBallLowTotal", values: { category1: 1, category2: 1 } };
+        return {
+          strategy: "LowBallLowTotal",
+          values: {
+            lowBall:  cfg?.values?.lowBall  ?? 1,
+            lowTotal: cfg?.values?.lowTotal ?? 1,
+          },
+        };
       case "LowBallHighBall":
-        return { strategy: "LowBallHighBall", values: { category1: 1, category2: 1 } };
+        return {
+          strategy: "LowBallHighBall",
+          values: {
+            lowBall:  cfg?.values?.lowBall  ?? 1,
+            highBall: cfg?.values?.highBall ?? 1,
+          },
+        };
       case "Vegas":
-        return { strategy: "Vegas", values: { pointsPerUnit: 1 } };
-      case "Chicago":
-        return { strategy: "Chicago", values: { quotaMethod: "handicap" } };
+        return {
+          strategy: "Vegas",
+          values: { pointsPerUnit: cfg?.values?.pointsPerUnit ?? 1 },
+        };
       default:
         return { strategy: wiz.pointsStrategy, values: wiz.pointsConfig?.values ?? null };
     }
@@ -600,12 +655,16 @@
     let effDate   = (eff === "Date") ? (wiz.hcEffectivityDate || null) : null;
     if (effDate && playIso && effDate > playIso) effDate = playIso;
 
-    // Scoring Segments (front9/back9/overall) only makes sense when Playing
-    // Segments spans a full 9 (or None) — a 3 or 6-hole rotation segment
-    // doesn't line up with a front/back split, so it's locked to 1 (Overall).
-    const playingSegments = wiz.segments || "9";
-    const segmentsLockScoringTo1 = playingSegments === "3" || playingSegments === "6";
-    const effectiveScoringSegments = (wiz.pairing === "PairPair" && !segmentsLockScoringTo1)
+    // Scoring Segments (front9/back9/overall) only makes sense for a match
+    // that plays as one continuous pairing all round — once a rotation
+    // method reshuffles partners mid-round (COD/1324/1423), there's no
+    // single "side" left to score front vs. back independently against, so
+    // it's locked to 1 (Overall). Keyed off the rotation method itself, not
+    // Playing Segments' size — the two are otherwise independent (a 6-hole
+    // Playing Segment with no rotation is a perfectly normal display
+    // grouping, nothing to do with scoring).
+    const rotationLocksScoringTo1 = !!wiz.rotation && wiz.rotation !== "None";
+    const effectiveScoringSegments = (wiz.pairing === "PairPair" && !rotationLocksScoringTo1)
       ? (parseInt(wiz.scoringSegments || "1", 10) === 3 ? 3 : 1)
       : 1;
 
@@ -1088,13 +1147,13 @@
       setStatus("Placement Points module not loaded.", "warn");
       return;
     }
-    // Scoring Segments (front9/back9/overall) can't apply on top of a 3 or
-    // 6-hole playing rotation — lock the modal to Overall (1) in that case.
-    const segmentsLockScoringTo1 = wiz.segments === "3" || wiz.segments === "6";
+    // Scoring Segments (front9/back9/overall) can't apply once a rotation
+    // method is active — see the matching comment in buildPatchFromWiz().
+    const rotationLocksScoringTo1 = !!wiz.rotation && wiz.rotation !== "None";
 
     MA.definePlacementPoints.open({
       competition:     wiz.pairing || "PairField",
-      scoringSegments: segmentsLockScoringTo1 ? 1 : (parseInt(wiz.scoringSegments || "1", 10) === 3 ? 3 : 1),
+      scoringSegments: rotationLocksScoringTo1 ? 1 : (parseInt(wiz.scoringSegments || "1", 10) === 3 ? 3 : 1),
       placementPoints: wiz.placementPoints || null,
       onApply: (jsonString, effectiveScoringSegments) => {
         wiz.placementPoints = jsonString;
@@ -1103,7 +1162,7 @@
         // sync it back into wiz state. There's no Step 2 control for it anymore
         // (the module is the single place this is edited), but wiz.scoringSegments
         // still needs to stay correct for the save patch.
-        const newSeg = segmentsLockScoringTo1
+        const newSeg = rotationLocksScoringTo1
           ? "1"
           : String(parseInt(effectiveScoringSegments, 10) === 3 ? "3" : "1");
         if (wiz.pairing === "PairPair") wiz.scoringSegments = newSeg;
@@ -1304,7 +1363,16 @@
     });
     const base = { strategy: wiz.pointsStrategy, values };
     if (wiz.pointsStrategy === "Chicago") {
-      base.quota = { method: "handicap", base: 36 };
+      // Quota base = (points value at reltoPar 0, i.e. "at par") × (holes
+      // actually being played). Derived from this same grid + the game's
+      // dbGames_Holes setting, not hardcoded — a 9-hole round or a
+      // customized "at par" value both need to scale it. See the matching
+      // derivation in ServiceScoreSummary::buildPairFieldRows().
+      const atParEntry  = values.find(v => v.reltoPar === 0);
+      const atParPoints = atParEntry ? Number(atParEntry.points) : 2;
+      const holesVal    = String(state.game?.dbGames_Holes || "All 18");
+      const totalHoles  = (holesVal === "F9" || holesVal === "B9") ? 9 : 18;
+      base.quota = { method: "handicap", base: atParPoints * totalHoles };
     }
     wiz.pointsConfig = base;
   }
@@ -1569,9 +1637,8 @@
 
   function wizSelectSegments(val) {
     wiz.segments = val;
-    // Scoring Segments (front9/back9/overall) can't apply on top of a 3 or
-    // 6-hole playing rotation — force it back to Overall (1) when locked.
-    if (val === "3" || val === "6") wiz.scoringSegments = "1";
+    // Scoring Segments is no longer coupled to Playing Segments' size — see
+    // wizSelectRotation() and the matching comment in buildPatchFromWiz().
     if (el.wizSegChips) el.wizSegChips.querySelectorAll(".wizChip").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
     wizRenderRotChips();
     setDirty(true); wizUpdateSummary(); wizCheckComplete();
@@ -1579,6 +1646,16 @@
 
   function wizSelectRotation(val) {
     wiz.rotation = val;
+    // Scoring Segments (front9/back9/overall) can't apply once a rotation
+    // reshuffles partners mid-round — force it back to Overall (1) the
+    // moment a real rotation method is chosen. This is a best-effort live
+    // sync for the interactive path; buildPatchFromWiz() and
+    // openPlacementPointsConfigurator() both independently re-derive the
+    // authoritative effective value from wiz.rotation at the point they're
+    // actually used, so they stay correct even for the other places
+    // wiz.rotation can get set directly (wizRenderRotChips()'s auto-
+    // correction/COD-forcing, legacy label auto-select).
+    if (val && val !== "None") wiz.scoringSegments = "1";
     if (el.wizRotChips) el.wizRotChips.querySelectorAll(".wizChip").forEach(b => b.classList.toggle("selected", b.dataset.val === val));
     wizUpdateRotNote();
     setDirty(true); wizUpdateSummary(); wizCheckComplete();

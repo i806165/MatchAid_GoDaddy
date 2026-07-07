@@ -413,11 +413,19 @@ public static function queryGames(array $args): array {
     // Normalize dbGames_ScoringSegments — must be 1 or 3; anything else falls back to 1.
     // PairField games are normalized to 1 regardless of what was posted, since the
     // field is PairPair-only and should never carry stale segmentation from a prior edit.
+    // Same for any rotation-aware PairPair match (COD/1324/1423) — once a rotation
+    // reshuffles partners mid-round there's no single side left to score front vs.
+    // back independently against, so it's forced to 1 here too, as the authoritative
+    // backstop regardless of what the client (game_settings.js) sent — see that
+    // file's matching wizSelectRotation()/buildPatchFromWiz() clamps, which this
+    // exists to guarantee even if bypassed, not merely duplicate.
     if (array_key_exists("dbGames_ScoringSegments", $clean)) {
       $ss = (int)$clean["dbGames_ScoringSegments"];
       if (!in_array($ss, [1, 3], true)) $ss = 1;
       $competition = $clean["dbGames_Competition"] ?? ($existing["dbGames_Competition"] ?? "PairField");
       if ($competition !== "PairPair") $ss = 1;
+      $rotation = (string)($clean["dbGames_RotationMethod"] ?? ($existing["dbGames_RotationMethod"] ?? "None"));
+      if (strtoupper(trim($rotation)) !== "NONE") $ss = 1;
       $clean["dbGames_ScoringSegments"] = $ss;
     }
 
@@ -542,8 +550,11 @@ public static function queryGames(array $args): array {
     // an unconfigured category. dbGames_ScoringSegments is always 1 at this
     // point (set immediately above, and PairPair/3-segment selection only
     // happens later via the Settings page), so matchResult is seeded with
-    // exactly one segment; module_definePlacementPoints.js expands it to 3
-    // on demand if the game is later switched to a 3-segment PairPair match.
+    // just its permanent Overall entry (key "1"); module_definePlacementPoints.js
+    // adds Front 9 / Back 9 (keys "2"/"3") alongside it on demand if the game
+    // is later switched to a 3-segment PairPair match — see that module's
+    // resegmentMatchResult() for why Overall is always key "1" and never
+    // part of that expansion/contraction.
     // "default" behaves identically to "active" everywhere this is read —
     // it's provenance only (has a human ever consciously saved this?), not a
     // second on/off gate.

@@ -3,6 +3,8 @@ declare(strict_types=1);
 // /public_html/services/scoring/service_ScoreSummary.php
 
 require_once __DIR__ . '/service_ScoreCardRotation.php';
+require_once __DIR__ . '/service_ScoreCard.php';
+require_once __DIR__ . '/service_ScoreRotation.php';
 require_once __DIR__ . '/service_CalcSkins.php';
 require_once __DIR__ . '/service_CalcPoints.php';
 
@@ -339,6 +341,22 @@ final class ServiceScoreSummary
         $out = [];
         $teamConfigById = self::parseTeamConfig($gameRow);
 
+        $basis = strtolower((string)($meta['scoringBasis'] ?? 'Strokes'));
+        $pointsConfig = ($basis === 'points') ? self::parsePointsConfig($gameRow) : ['strategy' => '', 'values' => []];
+        $pointsStrategy = trim((string)($pointsConfig['strategy'] ?? 'Stableford'));
+        $isChicago = ($basis === 'points' && $pointsStrategy === 'Chicago');
+
+        // Chicago quota — (points value at reltoPar=0) is the only part of
+        // the quota base that's constant across the whole game; the hole
+        // count it multiplies by is NOT constant when rotation is active
+        // (see the per-row use below), so only the at-par points value is
+        // precomputed here.
+        $atParPoints = 2.0;
+        if ($isChicago) {
+            $stablefordMapForQuota = ServiceCalcPoints::parseStablefordMap($pointsConfig);
+            $atParPoints = (float)($stablefordMapForQuota[0] ?? 2.0);
+        }
+
         foreach ($scorecardRows as $row) {
             $ctx = self::extractRowContext($row);
             $scopedHoles = self::scopedHolesForRow($ctx, $gameRow);
@@ -372,6 +390,19 @@ final class ServiceScoreSummary
                 $teamKey = self::sideTeamKey($pairPlayers) ?? '';
                 $teamInfo = $teamConfigById[$teamKey] ?? null;
 
+                // Chicago quota — see computeChicagoQuota() for the full
+                // rotation-aware derivation. PairField rows are never
+                // rotation-aware ($ctx['isRotationAware'] is always false
+                // here — see ServiceScoreRotation::isRotationAwarePairPair,
+                // which is PairPair-only), so this is the same whole-round
+                // calculation as before for PairField; only PairPair rows
+                // (below, in buildPairPairRows) actually exercise the
+                // spin-scoped branch. Computed unconditionally and cheaply
+                // here; zero/unused when the game isn't actually Chicago.
+                $quotaValue = $isChicago
+                    ? self::computeChicagoQuota($gameRow, $pairPlayers, $scopedHoles, $atParPoints, $ctx['isRotationAware'])
+                    : 0.0;
+
                 $out[] = [
                     'pairingId' => (string)$pairingId,
                     'pairingLabel' => self::buildPairFieldLabel($pairPlayers),
@@ -382,6 +413,7 @@ final class ServiceScoreSummary
                     'netDiffDisplay' => $net['display'],
                     'pointsValue' => $points['value'],
                     'pointsDisplay' => $points['display'],
+                    'quotaValue' => $quotaValue,
                     'thru' => self::deriveThru($pairPlayers, $scopedHoles),
 
                     // Team — null fields when no dbGames_TeamConfig is set,
@@ -410,7 +442,6 @@ final class ServiceScoreSummary
             }
         }
 
-        $basis = strtolower((string)($meta['scoringBasis'] ?? 'Strokes'));
 
         // ── Skins resolution for Traditional Skins (PairField) ───────────────────────
         if ($basis === 'skins') {
@@ -443,26 +474,41 @@ final class ServiceScoreSummary
                 // points are now calculated here, not in decorateScoredPlayers)
                 $row['pointsValue']   = (float)$netPts['total'];
                 $row['pointsDisplay'] = (string)(int)$netPts['total'];
+
+                // Chicago — net raw points against the pairing's quota (sum of
+                // each player's 36-minus-handicap). Positive = beat quota,
+                // negative = missed it, matching formatGameDiff's existing
+                // +/-/0 convention used elsewhere for to-par display.
+                if ($isChicago) {
+                    $netToQuota = $row['pointsValue'] - $row['quotaValue'];
+                    $row['quotaNetValue']   = $netToQuota;
+                    $row['quotaNetDisplay'] = self::formatGameDiff($netToQuota);
+                } else {
+                    $row['quotaNetValue']   = null;
+                    $row['quotaNetDisplay'] = null;
+                }
             }
             unset($row);
         } else {
             foreach ($out as &$row) {
                 $row['grossPoints'] = ['front' => 0, 'back' => 0, 'total' => 0];
                 $row['netPoints']   = ['front' => 0, 'back' => 0, 'total' => 0];
+                $row['quotaNetValue']   = null;
+                $row['quotaNetDisplay'] = null;
             }
             unset($row);
         }
         // ─────────────────────────────────────────────────────────────────────────────
 
-        usort($out, function (array $a, array $b) use ($basis): int {
-            return self::comparePairFieldRows($a, $b, $basis);
+        usort($out, function (array $a, array $b) use ($basis, $isChicago): int {
+            return self::comparePairFieldRows($a, $b, $basis, $isChicago);
         });
 
         if ($out) {
             $leaderSeed = $out[0];
             foreach ($out as $idx => &$row) {
                 $row['rank'] = $idx + 1;
-                $row['isLeader'] = self::comparePairFieldRows($row, $leaderSeed, $basis) === 0;
+                $row['isLeader'] = self::comparePairFieldRows($row, $leaderSeed, $basis, $isChicago) === 0;
             }
             unset($row);
         }
@@ -494,11 +540,73 @@ final class ServiceScoreSummary
         return $out;
     }
 
-    private static function comparePairFieldRows(array $a, array $b, string $basis): int
+    /**
+     * Chicago quota for a group of players (a PairField pairing, or one side
+     * of a PairPair match) over a given hole scope.
+     *
+     * Sum, per player, of (at-par points × holes in scope) − handicap
+     * contribution for that scope:
+     *   - Non-rotation-aware: handicap contribution is the player's whole-
+     *     round effective handicap (ServiceScoreCard::calculateEffectiveHandicap),
+     *     same as before — unchanged behavior for PairField and non-rotation
+     *     PairPair.
+     *   - Rotation-aware (PairPair + COD/1324/1423): the round's holes are
+     *     split into spins by ServiceScoreRotation, and $players here is
+     *     already the specific synthetic side for ONE spin (see
+     *     buildRotatedContexts()/deriveSpinTeams() — partners actually change
+     *     each spin). $scopedHoles is that spin's holes only, not the whole
+     *     round, so both the quota base and the handicap contribution must
+     *     be scoped to just this spin: the handicap contribution sums
+     *     ServiceScoreRotation::buildSpinAwareStrokeAllocationMap()'s
+     *     per-hole strokes (already spin-apportioned, respecting
+     *     dbGames_StrokeDistribution) over just this spin's holes.
+     */
+    private static function computeChicagoQuota(
+        array $gameRow,
+        array $players,
+        array $scopedHoles,
+        float $atParPoints,
+        bool $isRotationAware
+    ): float {
+        $quotaBasePerPlayer = $atParPoints * count($scopedHoles);
+        $total = 0.0;
+
+        foreach ($players as $player) {
+            $fullHandicap = ServiceScoreCard::calculateEffectiveHandicap($gameRow, $player);
+
+            if ($isRotationAware) {
+                $teeDetails = $player['dbPlayers_TeeSetDetails'] ?? null;
+                $teeHoles = is_array($teeDetails) ? ($teeDetails['holes'] ?? $teeDetails['Holes'] ?? []) : [];
+                $strokeMap = ServiceScoreRotation::buildSpinAwareStrokeAllocationMap($gameRow, $fullHandicap, $teeHoles);
+
+                $handicapContribution = 0.0;
+                foreach ($scopedHoles as $holeNumber) {
+                    $handicapContribution += (float)($strokeMap[$holeNumber] ?? 0);
+                }
+            } else {
+                $handicapContribution = $fullHandicap;
+            }
+
+            $total += $quotaBasePerPlayer - $handicapContribution;
+        }
+
+        return $total;
+    }
+
+    private static function comparePairFieldRows(array $a, array $b, string $basis, bool $isChicago = false): int
     {
         if ($basis === 'points') {
-            $cmp = ($b['pointsValue'] <=> $a['pointsValue']); // higher points wins
-            if ($cmp !== 0) return $cmp;
+            if ($isChicago) {
+                // Chicago's winner is whoever most exceeds their own quota —
+                // not whoever racked up the most raw points. quotaNetValue is
+                // always populated on every row when $isChicago (never null),
+                // set alongside pointsValue above.
+                $cmp = ($b['quotaNetValue'] <=> $a['quotaNetValue']); // higher net-to-quota wins
+                if ($cmp !== 0) return $cmp;
+            } else {
+                $cmp = ($b['pointsValue'] <=> $a['pointsValue']); // higher points wins
+                if ($cmp !== 0) return $cmp;
+            }
         } else {
             $cmp = ($a['netDiffValue'] <=> $b['netDiffValue']); // lower to-par wins
             if ($cmp !== 0) return $cmp;
@@ -733,6 +841,18 @@ final class ServiceScoreSummary
         $scoringBasis = trim((string)($meta['scoringBasis'] ?? $gameRow['dbGames_ScoringBasis'] ?? 'Strokes'));
         $scoringMethod = trim((string)($gameRow['dbGames_ScoringMethod'] ?? 'NET'));
         $isSkins = (strtolower($scoringBasis) === 'skins');
+        $isPointsBasis = (strtolower($scoringBasis) === 'points');
+
+        // Chicago — same detection/derivation as buildPairFieldRows(). Only
+        // the at-par points value is precomputed here; the quota base's hole
+        // count is scoped per-row below (see computeChicagoQuota()), since a
+        // rotation-aware match's rows are per-spin, not per-whole-round.
+        $pointsConfig = $isPointsBasis ? self::parsePointsConfig($gameRow) : ['strategy' => '', 'values' => []];
+        $isChicago = $isPointsBasis && (trim((string)($pointsConfig['strategy'] ?? '')) === 'Chicago');
+        $atParPoints = 2.0;
+        if ($isChicago) {
+            $atParPoints = (float)(ServiceCalcPoints::parseStablefordMap($pointsConfig)[0] ?? 2.0);
+        }
 
         // Scoring Segments — PairPair only. 1 = one overall match result (default),
         // 3 = front 9 / back 9 / overall scored independently. Independent of
@@ -832,9 +952,7 @@ final class ServiceScoreSummary
             // the same GHIN, including two clones of the same donor in the same
             // pairing, each resolve independently.
             $pairPairPoints = ['gross' => [], 'net' => []];
-            $isPoints = (strtolower($scoringBasis) === 'points');
-            if ($isPoints) {
-                $pointsConfig = self::parsePointsConfig($gameRow);
+            if ($isPointsBasis) {
                 $playerEntries  = [];
                 $playerPairings = [];
                 foreach ([
@@ -893,6 +1011,40 @@ final class ServiceScoreSummary
                         }
                     }
                 }
+            }
+            // ─────────────────────────────────────────────────────────────────────
+
+            // ── Chicago quota resolution ──────────────────────────────────────────
+            // Per side (not per player individually — see comparePairFieldRows'
+            // PairField equivalent for the same sum-of-individual-quotas logic).
+            // computeChicagoQuota() is spin-aware: $scopedHoles and
+            // $ctx['isRotationAware'] already reflect THIS row's spin when
+            // rotation is active (deriveSpinTeams() has already reshuffled
+            // $leftPlayers/$rightPlayers into that spin's actual partnerships
+            // by the time control reaches this point — see groupPlayersByFlightPos()
+            // above, which groups the already-rotated $players for this row).
+            $leftQuotaValue = null;
+            $rightQuotaValue = null;
+            $leftQuotaNetValue = null;
+            $rightQuotaNetValue = null;
+            $leftQuotaNetDisplay = null;
+            $rightQuotaNetDisplay = null;
+            if ($isChicago) {
+                $leftQuotaValue = self::computeChicagoQuota($gameRow, $leftPlayers, $scopedHoles, $atParPoints, $ctx['isRotationAware']);
+                $rightQuotaValue = self::computeChicagoQuota($gameRow, $rightPlayers, $scopedHoles, $atParPoints, $ctx['isRotationAware']);
+
+                // Same gross/net switch pairPairComparisonValue() already uses
+                // for 'points' — keeps the quota-net value consistent with
+                // whichever points figure the game's own scoring method says
+                // is official.
+                $pointsMetric = ($scoringMethod === 'ADJ GROSS') ? 'gross' : 'net';
+                $leftPointsTotal = (float)($pairPairPoints[$pointsMetric][(string)$leftPairingId]['total'] ?? 0.0);
+                $rightPointsTotal = (float)($pairPairPoints[$pointsMetric][(string)$rightPairingId]['total'] ?? 0.0);
+
+                $leftQuotaNetValue = $leftPointsTotal - $leftQuotaValue;
+                $rightQuotaNetValue = $rightPointsTotal - $rightQuotaValue;
+                $leftQuotaNetDisplay = self::formatGameDiff($leftQuotaNetValue);
+                $rightQuotaNetDisplay = self::formatGameDiff($rightQuotaNetValue);
             }
             // ─────────────────────────────────────────────────────────────────────
 
@@ -967,6 +1119,9 @@ final class ServiceScoreSummary
                     'netSkins'        => self::nullInvalidScalarSegments($pairPairSkins['net'][(string)$leftPairingId]    ?? ['front' => 0, 'back' => 0, 'total' => 0], $validSeg),
                     'grossPoints'     => self::nullInvalidScalarSegments($pairPairPoints['gross'][(string)$leftPairingId] ?? ['front' => 0, 'back' => 0, 'total' => 0], $validSeg),
                     'netPoints'       => self::nullInvalidScalarSegments($pairPairPoints['net'][(string)$leftPairingId]   ?? ['front' => 0, 'back' => 0, 'total' => 0], $validSeg),
+                    'quotaValue'      => $leftQuotaValue,
+                    'quotaNetValue'   => $leftQuotaNetValue,
+                    'quotaNetDisplay' => $leftQuotaNetDisplay,
                 ],
                 'right' => [
                     'flightPos'       => (string)$rightKey,
@@ -989,6 +1144,9 @@ final class ServiceScoreSummary
                     'netSkins'        => self::nullInvalidScalarSegments($pairPairSkins['net'][(string)$rightPairingId]   ?? ['front' => 0, 'back' => 0, 'total' => 0], $validSeg),
                     'grossPoints'     => self::nullInvalidScalarSegments($pairPairPoints['gross'][(string)$rightPairingId] ?? ['front' => 0, 'back' => 0, 'total' => 0], $validSeg),
                     'netPoints'       => self::nullInvalidScalarSegments($pairPairPoints['net'][(string)$rightPairingId]   ?? ['front' => 0, 'back' => 0, 'total' => 0], $validSeg),
+                    'quotaValue'      => $rightQuotaValue,
+                    'quotaNetValue'   => $rightQuotaNetValue,
+                    'quotaNetDisplay' => $rightQuotaNetDisplay,
                 ],
                 'thru' => max(
                     self::deriveThru($leftPlayers, $scopedHoles),
@@ -1030,11 +1188,14 @@ final class ServiceScoreSummary
         // independent pairs (front/back/total) when =3.
         $segmentKeys = ($scoringSegments === 3) ? ['front', 'back', 'total'] : ['total'];
         // Maps a segment key to dbGames_PlacementPoints's segment index.
-        // "1"=front, "2"=back, "3"=overall when segments=3; "1"=overall (the
-        // only segment) when segments=1 — matches module_definePlacementPoints.js's
-        // convention exactly.
+        // "1"=overall (always — including the only segment when segments=1),
+        // "2"=front, "3"=back when segments=3 — matches
+        // module_definePlacementPoints.js's convention exactly: Overall is
+        // permanently key "1" and is never part of segment expansion/
+        // contraction, so it can never be silently mistaken for Front 9
+        // (the old convention's key "1") when segment count changes.
         $segmentIndexMap = ($scoringSegments === 3)
-            ? ['front' => '1', 'back' => '2', 'total' => '3']
+            ? ['front' => '2', 'back' => '3', 'total' => '1']
             : ['total' => '1'];
         $lowerWins = (strtolower($scoringBasis) === 'strokes');
         // Always computed regardless of matchResult's active/disabled/default
@@ -1105,6 +1266,21 @@ final class ServiceScoreSummary
                 return ($v !== null) ? (float)$v : null;
 
             case 'points':
+                // Chicago — the match is decided by who most exceeds their
+                // quota, not raw points. quotaNetValue is only ever set (non-null)
+                // on a side when this game's strategy is actually Chicago (see
+                // buildPairPairRows()); every other points strategy falls
+                // through to the raw-points comparison below unchanged.
+                // Segment-scoped (front/back) quota isn't computed today — only
+                // 'total' carries a quotaNetValue — so front/back comparisons
+                // for a Chicago match still fall through to raw points, same
+                // as before. dbGames_ScoringSegments=3 on a Chicago game is an
+                // existing, not-yet-addressed gap, not something this change
+                // silently papers over.
+                if ($segmentKey === 'total' && array_key_exists('quotaNetValue', $side) && $side['quotaNetValue'] !== null) {
+                    return (float)$side['quotaNetValue'];
+                }
+
                 $arr = $isGross ? ($side['grossPoints'] ?? null) : ($side['netPoints'] ?? null);
                 $v = is_array($arr) ? ($arr[$segmentKey] ?? null) : null;
                 return ($v !== null) ? (float)$v : null;

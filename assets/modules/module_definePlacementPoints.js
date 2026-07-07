@@ -86,13 +86,9 @@
     { key: "individualNet",   kind: "placement", scope: "individual", label: "Individual Net",   desc: "Ranks each player by their own net score, independent of pairing." },
   ];
 
-  const SEGMENT_LABELS_MULTI = { "1": "Front 9", "2": "Back 9", "3": "Overall" };
+  const SEGMENT_LABELS_MULTI = { "1": "Overall", "2": "Front 9", "3": "Back 9" };
 
-  function segmentLabel(key, segCount) {
-    // A single-segment match is scored as one whole-round result — "Overall,"
-    // not "Front 9." The Front 9 / Back 9 split only makes sense once there
-    // are 3 independently-scored segments.
-    if (segCount === 1) return "Overall";
+  function segmentLabel(key) {
     return SEGMENT_LABELS_MULTI[key] || `Segment ${key}`;
   }
 
@@ -161,20 +157,30 @@
       categories[def.key]._expanded = categories[def.key]._checked;
     });
 
-    // matchResult's segment count must track the live scoringSegments value —
-    // expand/contract by cloning segment "1", same convention as the original
-    // PairPair inline Scoring Segments control.
+    // Ensure Front 9 / Back 9 (keys "2"/"3") exist if this session needs
+    // 3-segment mode — additive only, never removes existing segment data;
+    // see resegmentMatchResult()'s own comment for the full reasoning.
     resegmentMatchResult(categories.matchResult, scoringSegments);
 
     _state = { competition, scoringSegments, categories };
   }
 
+  // Overall (key "1") always exists once a matchResult category exists at
+  // all — it's not part of segment expansion/contraction. Front 9 (key "2")
+  // and Back 9 (key "3") are only created the first time 3-segment mode is
+  // reached, and — explicit product decision — are never removed again once
+  // created, even if segment count later drops back to 1 (including
+  // rotation-driven clamping). This is what lets a user switch between 1 and
+  // 3 segments freely without silently discarding their Front 9 / Back 9
+  // configuration; it just sits inert, unused, until 3-segment mode is
+  // selected again.
   function resegmentMatchResult(mr, targetCount) {
     const seg1 = mr.segments?.["1"] || { ...DEFAULT_OUTCOME };
-    const next = {};
-    for (let i = 1; i <= targetCount; i++) {
-      const k = String(i);
-      next[k] = mr.segments?.[k] || { ...seg1 };
+    const next = { ...mr.segments };
+    if (!next["1"]) next["1"] = { ...seg1 };
+    if (targetCount === 3) {
+      if (!next["2"]) next["2"] = { ...seg1 };
+      if (!next["3"]) next["3"] = { ...seg1 };
     }
     mr.segments = next;
   }
@@ -254,8 +260,15 @@
   function renderSegmentsEditor(key) {
     const cat = _state.categories[key];
     const segCount = _state.scoringSegments;
-    const segKeys = Object.keys(cat.segments);
-    const headerCells = segKeys.map(k => `<th>${esc(segmentLabel(k, segCount))}</th>`).join("");
+    // Overall (key "1") always shows. Front 9 / Back 9 (keys "2"/"3") only
+    // show in 3-segment mode — even if they already exist in storage from a
+    // prior 3-segment session, they stay hidden here (but untouched) while
+    // segCount is 1; see resegmentMatchResult(). Explicit order (Front 9,
+    // Back 9, Overall) rather than raw key order, so the on-screen layout
+    // stays exactly what users are used to even though Overall is now key
+    // "1" internally.
+    const segKeys = segCount === 3 ? ["2", "3", "1"] : ["1"];
+    const headerCells = segKeys.map(k => `<th>${esc(segmentLabel(k))}</th>`).join("");
 
     const outcomeRows = ["win", "halve", "loss"].map(outcome => {
       const label = outcome === "win" ? "Win" : outcome === "halve" ? "Halve" : "Loss";
@@ -336,7 +349,7 @@
       ${segCount === 1 ? `
         <div class="dpp-info-banner">
           <i class="ti ti-info-circle" aria-hidden="true"></i>
-          For one-segment games, only Segment 1 is used.
+          For one-segment games, only the Overall result is used.
         </div>` : ""}`;
   }
 
