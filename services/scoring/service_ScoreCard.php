@@ -13,6 +13,8 @@ declare(strict_types=1);
  * - Group Scorecard
  * - Game Scorecards
  */
+require_once __DIR__ . "/service_CalcPoints.php";
+
 final class ServiceScoreCard {
 
   // ==========================================================================
@@ -870,6 +872,25 @@ final class ServiceScoreCard {
     $holes = self::holesForGame($gameRow);
     $out = [];
 
+    // Points config — resolved once per call, not per-player/per-hole.
+    //
+    // Stableford and Chicago award points purely from a single player's own
+    // hole score relative to par (see ServiceCalcPoints::resolveStableford),
+    // so they can be computed right here, per cell, with no knowledge of
+    // other players/pairings. Nines, LowBallLowTotal, LowBallHighBall, and
+    // Vegas all compare scores *across* pairings, which this per-player loop
+    // doesn't have visibility into — those remain unresolved here (points
+    // stays null, same as before) until the scorecard payload is extended to
+    // pass the full pairing group through. Only compute when the game is
+    // actually running on a Points basis at all.
+    $pointsConfig = ServiceCalcPoints::parseConfigFromGameRow($gameRow);
+    $pointsStrategy = trim((string)($pointsConfig['strategy'] ?? 'Stableford'));
+    $canComputePointsPerHole = (self::deriveScoringBasis($gameRow) === 'Points')
+      && in_array($pointsStrategy, ['Stableford', 'Chicago'], true);
+    $stablefordMap = $canComputePointsPerHole
+      ? ServiceCalcPoints::parseStablefordMap($pointsConfig)
+      : [];
+
     foreach ($players as $player) {
       $scoreJson = self::extractScoreJson($player);
       $detailsByHole = self::extractHoleDetailsByNumber($scoreJson);
@@ -900,9 +921,13 @@ final class ServiceScoreCard {
 
         $netDiff = ($net !== null && $par !== null) ? ($net - $par) : null;
 
-        $points = null;
-        // Points are resolved by ServiceCalcPoints in service_ScoreSummary.php
-        // after decoration — not calculated per-player here.
+        // Points use the same "net" value computed above (which already
+        // accounts for the ADJ GROSS vs NET scoring method setting) — this
+        // keeps the per-hole points figure consistent with whichever basis
+        // the game header displays (e.g. "Stableford NET").
+        $points = ($canComputePointsPerHole && $declared && $netDiff !== null)
+          ? ServiceCalcPoints::stablefordPointsForDiff((int)round($netDiff), $stablefordMap)
+          : null;
 
         $modeValues["gross"][$holeNumber]     = $gross;
         $modeValues["net"][$holeNumber]       = $net;
@@ -1007,35 +1032,6 @@ final class ServiceScoreCard {
       "Skins" => "Skins",
       default => "Strokes",
     };
-  }
-
-  private static function parseStablefordMap(array $gameRow): array {
-    $default = [-3 => 5, -2 => 4, -1 => 3, 0 => 2, 1 => 1, 2 => 0];
-    $raw = $gameRow["dbGames_PointsConfig"] ?? null;
-
-    if (is_string($raw) && trim($raw) !== "") {
-      $decoded = json_decode($raw, true);
-      if (is_array($decoded)) $raw = $decoded;
-    }
-    if (!is_array($raw)) return $default;
-
-    $map = [];
-    foreach ($raw as $k => $v) {
-      if (is_array($v) && isset($v["relToPar"], $v["points"])) {
-        $map[intval($v["relToPar"])] = intval($v["points"]);
-      } else {
-        $map[intval($k)] = intval($v);
-      }
-    }
-
-    return $map + $default;
-  }
-
-  private static function stablefordPointsForDiff(int $diff, array $map): int {
-    if (array_key_exists($diff, $map)) return intval($map[$diff]);
-    if ($diff < min(array_keys($map))) return intval($map[min(array_keys($map))] ?? 0);
-    if ($diff > max(array_keys($map))) return intval($map[max(array_keys($map))] ?? 0);
-    return 0;
   }
 
   private static function classifyScoreShape($delta): string {

@@ -513,11 +513,49 @@ final class ServiceCalcPoints
     // -------------------------------------------------------------------------
 
     /**
+     * Parse dbGames_PointsConfig (or legacy dbGames_StablefordPoints) directly
+     * from a game row into the normalized {strategy, values} envelope.
+     *
+     * Mirrors ServiceScoreSummary::parsePointsConfig() — kept here as the
+     * single shared source of truth so every caller (scorecard grid,
+     * leaderboard/summary) parses the exact same config the exact same way.
+     * Supports both the new envelope format and the legacy flat Stableford
+     * array format.
+     */
+    public static function parseConfigFromGameRow(array $gameRow): array
+    {
+        $default = ['strategy' => 'Stableford', 'values' => []];
+
+        $raw = $gameRow['dbGames_PointsConfig'] ?? $gameRow['dbGames_StablefordPoints'] ?? null;
+
+        if (is_string($raw) && trim($raw) !== '') {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) $raw = $decoded;
+        }
+
+        if (!is_array($raw)) return $default;
+
+        // New envelope: { strategy, values, ... }
+        if (isset($raw['strategy'])) return $raw;
+
+        // Legacy: flat array of stableford rows [{ reltoPar, points }, ...]
+        if (!empty($raw)) {
+            return ['strategy' => 'Stableford', 'values' => $raw];
+        }
+
+        return $default;
+    }
+
+    /**
      * Parse the Stableford points map from the config envelope.
      * Returns an int-keyed array of [relToPar => points].
      * Falls back to standard Stableford defaults if config is missing/invalid.
+     *
+     * Public — reused directly by service_ScoreCard.php so the scorecard grid's
+     * per-hole Stableford/Chicago points always match this calculator's math
+     * instead of drifting via a second, separately-maintained copy.
      */
-    private static function parseStablefordMap(array $config): array
+    public static function parseStablefordMap(array $config): array
     {
         $default = [-3 => 5, -2 => 4, -1 => 3, 0 => 2, 1 => 1, 2 => 0];
         $values  = $config['values'] ?? null;
@@ -539,8 +577,10 @@ final class ServiceCalcPoints
     /**
      * Look up points for a given score diff against the map.
      * Clamps to the nearest boundary if diff is outside the map range.
+     *
+     * Public — reused directly by service_ScoreCard.php.
      */
-    private static function stablefordPointsForDiff(int $diff, array $map): int
+    public static function stablefordPointsForDiff(int $diff, array $map): int
     {
         if (array_key_exists($diff, $map)) return intval($map[$diff]);
 
