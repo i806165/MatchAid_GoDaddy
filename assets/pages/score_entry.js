@@ -237,6 +237,11 @@
         const json = await res.json();
         if (json.ok && json.payload) {
           state.payload = json.payload;
+          // Must be set before reconcileDeclaredState()/updateWorkingScoresJson()
+          // run below — they key off state.currentHole to decide which hole's
+          // entry to touch. Leaving it stale (pointing at the hole we just left)
+          // caused them to blank out the previous hole's just-saved score.
+          state.currentHole = nextHole;
           activePlayers().forEach((wrapper) => {
             if (!wrapper.originalScoresJson) {
               wrapper.originalScoresJson = deepClone(wrapper.scoresJson || null);
@@ -248,7 +253,6 @@
 
       await MA.postJson(apiUrls.setHole, { hole: nextHole });
 
-      state.currentHole = nextHole;
       renderHoleOptions();
       renderRows();
       if (!holeDeclareRecalculated) {

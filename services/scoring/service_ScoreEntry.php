@@ -932,6 +932,15 @@ final class ServiceScoreEntry
 
     private static function sortRecursive($value)
     {
+        // Normalize numeric leaves to a consistent type before comparison.
+        // PHP round-trips numeric fields as floats (via numOrZero/numOrNull),
+        // but values that pass through JS JSON.stringify lose the int/float
+        // distinction (4.0 becomes 4), which previously caused false-positive
+        // save conflicts once any whole-number hole score existed.
+        if (is_int($value) || is_float($value)) {
+            return (float)$value;
+        }
+
         if (!is_array($value)) {
             return $value;
         }
