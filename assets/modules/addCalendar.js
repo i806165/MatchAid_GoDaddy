@@ -286,8 +286,13 @@
       if (isValidDate(startDateObj)) {
         const endDateObj = new Date(startDateObj.getTime() + 4 * 60 * 60 * 1000);
         if (isValidDate(endDateObj)) {
-          endDate = endDateObj.toISOString().split("T")[0];
-          endTime = endDateObj.toTimeString().substring(0, 5);
+          //endDate = endDateObj.toISOString().split("T")[0];
+          //endTime = endDateObj.toTimeString().substring(0, 5);
+          const y = endDateObj.getFullYear();
+          const m = pad2(endDateObj.getMonth() + 1);
+          const d = pad2(endDateObj.getDate());
+          endDate = `${y}-${m}-${d}`;
+          endTime = `${pad2(endDateObj.getHours())}:${pad2(endDateObj.getMinutes())}`;
         }
       }
     }
