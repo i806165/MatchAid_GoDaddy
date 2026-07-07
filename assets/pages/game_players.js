@@ -741,8 +741,14 @@
       const leaving = state.activeTab;
 
       // Module cleanup on tab away
-      if (leaving === "favorites") MA.favoritesSource.cancelMultiAdd(el.trayControls);
-      if (leaving === "nonrated")  MA.nonRatedSource.clearSelection(el.trayControls);
+      if (leaving === "favorites") {
+        const p = findTabPanel(el.trayControls, "favorites");
+        if (p) MA.favoritesSource.cancelMultiAdd(p);
+      }
+      if (leaving === "nonrated") {
+        const p = findTabPanel(el.trayControls, "nonrated");
+        if (p) MA.nonRatedSource.clearSelection(p);
+      }
 
       state.activeTab = btn.dataset.tab;
 
@@ -752,6 +758,50 @@
       }
       render();
     }));
+  }
+
+  /**
+   * getTabPanel(parentEl, tabId) — keep-alive tab panel helper.
+   *
+   * el.trayControls and el.trayBody are single shared DOM nodes reused by
+   * every source module (Favorites, GHIN Search, Non-Rated, Event Roster).
+   * Each of those modules keeps its own WeakMap-keyed "already mounted"
+   * state so that switching away and back preserves filters/search results/
+   * scroll position — but that only works if the DOM node it was keyed on
+   * still contains ITS markup. Because the node was shared, a sibling module
+   * could overwrite it, and the original module's "already mounted" check
+   * would then skip rebuilding controls it no longer actually owned.
+   *
+   * Fix: give each tab its own permanent child container under the shared
+   * parent, and just show/hide between them. Every module gets a stable,
+   * dedicated node that only it ever writes to, so its sticky state is
+   * always valid — and real DOM (scroll position, in-progress typed text)
+   * survives a tab switch untouched, not just whatever each module
+   * separately remembered to track in JS.
+   */
+  function getTabPanel(parentEl, tabId){
+    if (!parentEl) return null;
+    const selector = `:scope > [data-tab-panel="${tabId}"]`;
+    let node = parentEl.querySelector(selector);
+    if (!node) {
+      node = document.createElement("div");
+      node.setAttribute("data-tab-panel", tabId);
+      parentEl.appendChild(node);
+    }
+    Array.from(parentEl.children).forEach(child => {
+      child.style.display = (child === node) ? "" : "none";
+    });
+    return node;
+  }
+
+  // Pure lookup — unlike getTabPanel(), never creates a panel and never
+  // touches visibility. Used by cleanup/refresh call sites that need "the
+  // element this module's state is keyed on, if it exists" without forcing
+  // that panel visible (which would fight with whichever tab is actually
+  // being switched to in the same handler).
+  function findTabPanel(parentEl, tabId){
+    if (!parentEl) return null;
+    return parentEl.querySelector(`:scope > [data-tab-panel="${tabId}"]`);
   }
 
   function render(){
@@ -779,8 +829,8 @@
 
     if (state.activeTab === "eventroster") {
       MA.eventRosterSource.mount({
-        controlsEl:    el.trayControls,
-        bodyEl:        el.trayBody,
+        controlsEl:    getTabPanel(el.trayControls, "eventroster"),
+        bodyEl:        getTabPanel(el.trayBody, "eventroster"),
         eventId:       safe(state.game?.dbGames_EID || ""),
         apiPath:       MA.paths.getEventRoster,
         existingGHINs: new Set(
@@ -794,8 +844,8 @@
 
     if (state.activeTab === "ghin") {
       MA.ghinSearch.mount({
-        controlsEl:    el.trayControls,
-        bodyEl:        el.trayBody,
+        controlsEl:    getTabPanel(el.trayControls, "ghin"),
+        bodyEl:        getTabPanel(el.trayBody, "ghin"),
         footerEl:      null,
         defaultState:  normalizeState(state.context.userState || ""),
         existingGHINs: new Set(
@@ -808,8 +858,8 @@
 
     if (state.activeTab === "favorites") {
       MA.favoritesSource.mount({
-        controlsEl:    el.trayControls,
-        bodyEl:        el.trayBody,
+        controlsEl:    getTabPanel(el.trayControls, "favorites"),
+        bodyEl:        getTabPanel(el.trayBody, "favorites"),
         footerEl:      el.trayFtr,
         apiPath:       MA.paths.favPlayersInit,
         courseId:      safe(state.game?.dbGames_CourseID),
@@ -827,8 +877,8 @@
 
     if (state.activeTab === "nonrated") {
       MA.nonRatedSource.mount({
-        controlsEl:      el.trayControls,
-        bodyEl:          el.trayBody,
+        controlsEl:      getTabPanel(el.trayControls, "nonrated"),
+        bodyEl:          getTabPanel(el.trayBody, "nonrated"),
         footerEl:        null,
         existingPlayers: state.players || [],
         onAdd({ first_name, last_name, gender, hi }) {
@@ -846,7 +896,8 @@
       const isExternal = state.importSourceMode === "external";
       const isExisting = state.importSourceMode === "existing";
 
-      el.trayControls.innerHTML = `
+      const panel = getTabPanel(el.trayControls, "import");
+      panel.innerHTML = `
         <div class="maFieldRow">
           <div class="maField">
             <div class="maSeg" style="display:grid; grid-template-columns:1fr 1fr;">
@@ -886,12 +937,13 @@ function renderTrayBody(){
     if (state.activeTab === "eventroster")  return;
 
     if (state.activeTab === "import") {
+      const importBody = getTabPanel(el.trayBody, "import");
       const isExternal = state.importSourceMode === "external";
       const isExisting = state.importSourceMode === "existing";
 
       if (isExternal) {
         if (state.importMode === "entry") {
-          el.trayBody.innerHTML = `<section class="maPanel gpImportPanel">
+          importBody.innerHTML = `<section class="maPanel gpImportPanel">
             <div class="gpImportCard">
               <div class="gpImportCard__hdr">
                 <div class="gpImportCard__label">Enter Golf Network ID's or email addresses.</div>
@@ -941,7 +993,7 @@ function renderTrayBody(){
         }).join("");
 
         const actionable = state.importRows.filter(r => !r.alreadyOnRoster).length;
-        el.trayBody.innerHTML = `<section class="maPanel gpImportPanel">
+        importBody.innerHTML = `<section class="maPanel gpImportPanel">
           <div class="maListRow maListRow--hdr gpRow--import">
             <div class="maListRow__col" style="flex:2;">Input</div>
             <div class="maListRow__col" style="flex:2;">Name</div>
@@ -997,7 +1049,7 @@ function renderTrayBody(){
           const skipped    = state.importRows.filter(r => !!r.alreadyOnRoster).length;
           const footerCount = `${actionable} player${actionable !== 1 ? "s" : ""} to import${skipped ? ` · ${skipped} skipped` : ""}`;
 
-          el.trayBody.innerHTML = `<section class="maPanel gpImportPanel">
+          importBody.innerHTML = `<section class="maPanel gpImportPanel">
             <div class="maListRow maListRow--hdr gpRow--import">
               <div class="maListRow__col" style="flex:0 0 70px;">GHIN</div>
               <div class="maListRow__col" style="flex:2;">Player</div>
@@ -1059,7 +1111,7 @@ function renderTrayBody(){
           <span class="gpGameListHdr__hint">Tap a game to import</span>
         </div>`;
 
-        el.trayBody.innerHTML = games.length
+        importBody.innerHTML = games.length
           ? `<section class="maPanel gpImportPanel" style="padding:0;">
                ${listHeader}
                <div class="maListRows">${gameRows}</div>
@@ -1068,7 +1120,7 @@ function renderTrayBody(){
                <div class="maEmptyState">No games with players found.</div>
              </section>`;
 
-        el.trayBody.querySelectorAll(".gpGameRow[data-ggid]").forEach(row => {
+        importBody.querySelectorAll(".gpGameRow[data-ggid]").forEach(row => {
           row.onclick = async () => {
             const ggid = row.getAttribute("data-ggid");
             if (!ggid) return;
@@ -1078,7 +1130,7 @@ function renderTrayBody(){
         });
 
         if (state.importSourceGameId) {
-          const sel = el.trayBody.querySelector(".gpGameRow--selected");
+          const sel = importBody.querySelector(".gpGameRow--selected");
           if (sel) sel.scrollIntoView({ behavior: "smooth", block: "nearest" });
         }
 
@@ -1095,12 +1147,14 @@ function renderTrayBody(){
       MA.setStatus(res?.message || "Unable to update player.", "danger");
       return;
     }
-    MA.nonRatedSource.clearSelection(el.trayControls);
+    const nonRatedControls = getTabPanel(el.trayControls, "nonrated");
+    const nonRatedBody     = getTabPanel(el.trayBody, "nonrated");
+    MA.nonRatedSource.clearSelection(nonRatedControls);
     await refreshPlayers();
     renderRoster();
     MA.nonRatedSource.mount({
-      controlsEl:      el.trayControls,
-      bodyEl:          el.trayBody,
+      controlsEl:      nonRatedControls,
+      bodyEl:          nonRatedBody,
       existingPlayers: state.players || [],
     });
     MA.setStatus("Player updated.", "success");
@@ -1498,7 +1552,8 @@ function renderTrayBody(){
         // Multi-add only: clear the favorites module's multiAddMode/selection
         // state, which a plain re-mount (already done inside render() above)
         // intentionally leaves untouched. Mirrors event_roster.js enrollMany.
-        MA.favoritesSource.refresh(el.trayControls);
+        const p = findTabPanel(el.trayControls, "favorites");
+        if (p) MA.favoritesSource.refresh(p);
       }
 
       if (failed) MA.setStatus(`Added ${added} favorites. ${failed} failed.`, "warn");
@@ -1557,7 +1612,8 @@ function renderTrayBody(){
     if (ghin.startsWith("NH")) MA.ghinSearch.close && MA.ghinSearch.close();
     state.pendingPlayer = null;
     if (ghin.startsWith("NH")) {
-      MA.nonRatedSource.clearForm(el.trayControls);
+      const p = findTabPanel(el.trayControls, "nonrated");
+      if (p) MA.nonRatedSource.clearForm(p);
     }
 
     if (wasPaired) {
