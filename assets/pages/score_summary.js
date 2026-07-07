@@ -212,12 +212,12 @@
     const pts = scoringMethod() === 'ADJ GROSS'
       ? rowOrSide?.grossPoints
       : rowOrSide?.netPoints;
+    const qseg = rowOrSide?.quotaNetSegments;
+    const useChicagoSeg = (key) => isChicagoPoints() && qseg?.[key]?.display !== null && qseg?.[key]?.display !== undefined;
     return {
-      front:   segNumDisplay(pts?.front),
-      back:    segNumDisplay(pts?.back),
-      overall: isChicagoPoints() && rowOrSide?.quotaNetDisplay
-        ? rowOrSide.quotaNetDisplay
-        : segNumDisplay(pts?.total),
+      front:   useChicagoSeg('front') ? qseg.front.display : segNumDisplay(pts?.front),
+      back:    useChicagoSeg('back')  ? qseg.back.display  : segNumDisplay(pts?.back),
+      overall: useChicagoSeg('total') ? qseg.total.display : segNumDisplay(pts?.total),
     };
   }
 

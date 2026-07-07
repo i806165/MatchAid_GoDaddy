@@ -281,16 +281,39 @@
   grid-template-columns: 1fr;
 }
 
+/* Single-panel mode: reclaim vertical space by hiding the outer panel header.
+   If the legacy "Both" state is ever restored, headers remain visible because
+   neither .is-games-only nor .is-events-only will be present. */
+.maPage--adminHome.is-games-only .maPanel__hdr,
+.maPage--adminHome.is-events-only .maPanel__hdr{
+  display: none;
+}
+
+/* Single-panel mode: Actions + "+ Add" move to the chrome header (see
+   updateChromeActionsForPanel() in admin_home.js), so hide the per-panel
+   controls row for the panel that's actually showing. The other panel's
+   controls are already hidden along with the panel itself via the rule
+   above. In legacy "both" mode neither .is-games-only nor .is-events-only
+   is present, so both panels keep their own controls row as before. */
+.maPage--adminHome.is-games-only .maPanel--primary .maPanel__controls,
+.maPage--adminHome.is-events-only .maPanel--secondary .maPanel__controls{
+  display: none;
+}
+
 /* Mobile panel visibility — three states driven by tab strip.
    "both" is desktop-only; on mobile only games or events shows.
    Default (no class) = games visible, matches server-side "both" default
    which renders correctly on desktop via the maPanels--2 grid. */
-@media (max-width: 900px){
-  /* Hide Both tab on mobile — not a valid option at this width */
-  .ahTabBoth{
-    display: none;
-  }
 
+/* Both tab suppressed for now — button markup intentionally left in the DOM
+   (adminhome.php) so it can be resurfaced later by removing this rule.
+   Do not delete the button itself. display:none also removes it from the
+   tab order and accessibility tree, so no extra aria attributes are needed. */
+.ahTabBoth{
+  display: none;
+}
+
+@media (max-width: 900px){
   /* Default mobile state: Games visible, Events hidden */
   .maPage--adminHome .maPanel--secondary{
     display: none;

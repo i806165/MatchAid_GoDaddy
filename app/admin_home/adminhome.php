@@ -140,8 +140,8 @@ $initPayload['eventsInit'] = $eventsInitPayload;
 //    b) ADMIN_PANEL_VIEW session var (user's persisted preference)
 //    c) Default: "both"
 $savedPanelView = strtolower(trim((string)($_SESSION["ADMIN_PANEL_VIEW"] ?? "")));
-if (!in_array($savedPanelView, ["games", "events", "both"], true)) {
-  $savedPanelView = "both";
+if (!in_array($savedPanelView, ["games", "events"], true)) {
+  $savedPanelView = "games";
 }
 
 // ?mode=events overrides the saved preference for this load only

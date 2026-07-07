@@ -429,6 +429,38 @@ public static function queryGames(array $args): array {
       $clean["dbGames_ScoringSegments"] = $ss;
     }
 
+    // Normalize dbGames_PointsConfig's strategy against competition — mirrors the
+    // ScoringSegments clamp immediately above. Nines, LowBallLowTotal,
+    // LowBallHighBall, and Vegas all require exactly two comparable sides
+    // (PairPair); none of them have a legitimate field-wide meaning on a
+    // PairField game (see ServiceScoreSummary::resolvePairFieldPoints() — it
+    // flattens every player across every playing group into one list, which
+    // has no valid way to compare finish position across groups that never
+    // played against each other). Falls back to Stableford, the same default
+    // game_settings.js uses, rather than rejecting the save outright — same
+    // "normalize rather than reject" precedent as ScoringSegments above; this
+    // is the authoritative backstop regardless of what the client sent, not
+    // merely a duplicate of its own compFilter restriction.
+    if (array_key_exists("dbGames_PointsConfig", $clean)) {
+      $pcRaw = $clean["dbGames_PointsConfig"];
+      $pcDecoded = is_array($pcRaw) ? $pcRaw : (is_string($pcRaw) && trim($pcRaw) !== "" ? json_decode($pcRaw, true) : null);
+      if (is_array($pcDecoded)) {
+        $competition = $clean["dbGames_Competition"] ?? ($existing["dbGames_Competition"] ?? "PairField");
+        $strategy = trim((string)($pcDecoded["strategy"] ?? "Stableford"));
+        $pairPairOnly = ["Nines", "LowBallLowTotal", "LowBallHighBall", "Vegas"];
+        if ($competition !== "PairPair" && in_array($strategy, $pairPairOnly, true)) {
+          // Deliberately drop $pcDecoded["values"] rather than carry it
+          // forward — Nines' values are keyed by group size, LowBall*/Vegas'
+          // are strategy-specific scalars; none of those shapes mean
+          // anything under Stableford's reltoPar/points array, so keeping
+          // them would just be inert clutter (ServiceCalcPoints::parseStablefordMap()
+          // already falls back to its own defaults for an unrecognized shape,
+          // so this isn't a correctness fix, just avoiding leftover confusion).
+          $clean["dbGames_PointsConfig"] = json_encode(["strategy" => "Stableford", "values" => []], JSON_UNESCAPED_SLASHES);
+        }
+      }
+    }
+
     // Validate dbGames_PlacementPoints as JSON before persisting — reject rather than
     // silently save corrupt configuration.
     if (array_key_exists("dbGames_PlacementPoints", $clean)) {

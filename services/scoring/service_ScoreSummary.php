@@ -569,22 +569,52 @@ final class ServiceScoreSummary
         bool $isRotationAware
     ): float {
         $quotaBasePerPlayer = $atParPoints * count($scopedHoles);
+        $fullRoundHoles = self::holesForGame($gameRow);
+        // Whole round scope, non-rotation: exactly the original flat-handicap
+        // behavior — verified against ServiceScoreCard::buildStrokeAllocationMap()
+        // that its per-hole sum only equals the flat handicap value for a FULL
+        // round; for a 9-hole (F9/B9) round specifically, that function's sum
+        // deliberately comes out lower than the flat handicap once handicap
+        // reaches 18+ (it doesn't try to cram a large handicap into 9 holes at
+        // double rate — same divide-by-18 convention the scorecard itself
+        // uses). So this whole-round branch must stay on the flat value; only
+        // a genuinely partial scope below switches to the per-hole approach.
+        $isWholeRound = (count($scopedHoles) === count($fullRoundHoles))
+            && !array_diff($scopedHoles, $fullRoundHoles);
+
         $total = 0.0;
 
         foreach ($players as $player) {
             $fullHandicap = ServiceScoreCard::calculateEffectiveHandicap($gameRow, $player);
 
-            if ($isRotationAware) {
+            if (!$isRotationAware && $isWholeRound) {
+                $handicapContribution = $fullHandicap;
+            } else {
+                // Partial scope — front-9-only/back-9-only 3-segment scoring,
+                // or a rotation spin. Sum the real per-hole stroke allocation
+                // over just these holes (the same map the scorecard itself
+                // uses to apply strokes), rather than assuming an even split —
+                // a player's stroke holes aren't evenly distributed front vs.
+                // back, so this matches what actually happened on the card.
                 $teeDetails = $player['dbPlayers_TeeSetDetails'] ?? null;
                 $teeHoles = is_array($teeDetails) ? ($teeDetails['holes'] ?? $teeDetails['Holes'] ?? []) : [];
-                $strokeMap = ServiceScoreRotation::buildSpinAwareStrokeAllocationMap($gameRow, $fullHandicap, $teeHoles);
+                $strokeMap = $isRotationAware
+                    ? ServiceScoreRotation::buildSpinAwareStrokeAllocationMap($gameRow, $fullHandicap, $teeHoles)
+                    : ServiceScoreCard::buildStrokeAllocationMap($gameRow, $fullHandicap, $teeHoles);
 
-                $handicapContribution = 0.0;
-                foreach ($scopedHoles as $holeNumber) {
-                    $handicapContribution += (float)($strokeMap[$holeNumber] ?? 0);
+                if ($strokeMap) {
+                    $handicapContribution = 0.0;
+                    foreach ($scopedHoles as $holeNumber) {
+                        $handicapContribution += (float)($strokeMap[$holeNumber] ?? 0);
+                    }
+                } else {
+                    // No tee-set hole data to allocate from (e.g. missing
+                    // dbPlayers_TeeSetDetails) — fall back to a proportional
+                    // share of the flat handicap rather than silently
+                    // treating the player as scratch for this scope.
+                    $fullCount = count($fullRoundHoles) ?: 1;
+                    $handicapContribution = $fullHandicap * (count($scopedHoles) / $fullCount);
                 }
-            } else {
-                $handicapContribution = $fullHandicap;
             }
 
             $total += $quotaBasePerPlayer - $handicapContribution;
@@ -1023,12 +1053,22 @@ final class ServiceScoreSummary
             // $leftPlayers/$rightPlayers into that spin's actual partnerships
             // by the time control reaches this point — see groupPlayersByFlightPos()
             // above, which groups the already-rotated $players for this row).
+            //
+            // quotaNetValue/quotaNetDisplay remain the 'total' scalar (unchanged
+            // shape, still what the non-segmented display reads). quotaNetSegments
+            // additionally carries front/back/total — front/back are only ever
+            // non-null when ScoringSegments=3, which per the rotation clamp added
+            // earlier can only happen when $ctx['isRotationAware'] is false, so
+            // computeChicagoQuota() is always called non-rotation-aware for the
+            // front/back split specifically.
             $leftQuotaValue = null;
             $rightQuotaValue = null;
             $leftQuotaNetValue = null;
             $rightQuotaNetValue = null;
             $leftQuotaNetDisplay = null;
             $rightQuotaNetDisplay = null;
+            $leftQuotaNetSegments = null;
+            $rightQuotaNetSegments = null;
             if ($isChicago) {
                 $leftQuotaValue = self::computeChicagoQuota($gameRow, $leftPlayers, $scopedHoles, $atParPoints, $ctx['isRotationAware']);
                 $rightQuotaValue = self::computeChicagoQuota($gameRow, $rightPlayers, $scopedHoles, $atParPoints, $ctx['isRotationAware']);
@@ -1045,6 +1085,39 @@ final class ServiceScoreSummary
                 $rightQuotaNetValue = $rightPointsTotal - $rightQuotaValue;
                 $leftQuotaNetDisplay = self::formatGameDiff($leftQuotaNetValue);
                 $rightQuotaNetDisplay = self::formatGameDiff($rightQuotaNetValue);
+
+                $nullCell = ['value' => null, 'display' => null];
+                $totalCell = ['value' => $leftQuotaNetValue, 'display' => $leftQuotaNetDisplay];
+                $leftQuotaNetSegments = ['front' => $nullCell, 'back' => $nullCell, 'total' => $totalCell];
+                $rightQuotaNetSegments = ['front' => $nullCell, 'back' => $nullCell,
+                    'total' => ['value' => $rightQuotaNetValue, 'display' => $rightQuotaNetDisplay]];
+
+                if ($scoringSegments === 3) {
+                    $frontHoles = array_values(array_filter($scopedHoles, fn($h) => (int)$h <= 9));
+                    $backHoles  = array_values(array_filter($scopedHoles, fn($h) => (int)$h >= 10));
+
+                    if ($validSeg['front'] && $frontHoles) {
+                        $leftFrontQuota = self::computeChicagoQuota($gameRow, $leftPlayers, $frontHoles, $atParPoints, false);
+                        $rightFrontQuota = self::computeChicagoQuota($gameRow, $rightPlayers, $frontHoles, $atParPoints, false);
+                        $leftFrontPoints = (float)($pairPairPoints[$pointsMetric][(string)$leftPairingId]['front'] ?? 0.0);
+                        $rightFrontPoints = (float)($pairPairPoints[$pointsMetric][(string)$rightPairingId]['front'] ?? 0.0);
+                        $leftFrontNet = $leftFrontPoints - $leftFrontQuota;
+                        $rightFrontNet = $rightFrontPoints - $rightFrontQuota;
+                        $leftQuotaNetSegments['front'] = ['value' => $leftFrontNet, 'display' => self::formatGameDiff($leftFrontNet)];
+                        $rightQuotaNetSegments['front'] = ['value' => $rightFrontNet, 'display' => self::formatGameDiff($rightFrontNet)];
+                    }
+
+                    if ($validSeg['back'] && $backHoles) {
+                        $leftBackQuota = self::computeChicagoQuota($gameRow, $leftPlayers, $backHoles, $atParPoints, false);
+                        $rightBackQuota = self::computeChicagoQuota($gameRow, $rightPlayers, $backHoles, $atParPoints, false);
+                        $leftBackPoints = (float)($pairPairPoints[$pointsMetric][(string)$leftPairingId]['back'] ?? 0.0);
+                        $rightBackPoints = (float)($pairPairPoints[$pointsMetric][(string)$rightPairingId]['back'] ?? 0.0);
+                        $leftBackNet = $leftBackPoints - $leftBackQuota;
+                        $rightBackNet = $rightBackPoints - $rightBackQuota;
+                        $leftQuotaNetSegments['back'] = ['value' => $leftBackNet, 'display' => self::formatGameDiff($leftBackNet)];
+                        $rightQuotaNetSegments['back'] = ['value' => $rightBackNet, 'display' => self::formatGameDiff($rightBackNet)];
+                    }
+                }
             }
             // ─────────────────────────────────────────────────────────────────────
 
@@ -1122,6 +1195,7 @@ final class ServiceScoreSummary
                     'quotaValue'      => $leftQuotaValue,
                     'quotaNetValue'   => $leftQuotaNetValue,
                     'quotaNetDisplay' => $leftQuotaNetDisplay,
+                    'quotaNetSegments' => $leftQuotaNetSegments,
                 ],
                 'right' => [
                     'flightPos'       => (string)$rightKey,
@@ -1147,6 +1221,7 @@ final class ServiceScoreSummary
                     'quotaValue'      => $rightQuotaValue,
                     'quotaNetValue'   => $rightQuotaNetValue,
                     'quotaNetDisplay' => $rightQuotaNetDisplay,
+                    'quotaNetSegments' => $rightQuotaNetSegments,
                 ],
                 'thru' => max(
                     self::deriveThru($leftPlayers, $scopedHoles),
@@ -1267,18 +1342,19 @@ final class ServiceScoreSummary
 
             case 'points':
                 // Chicago — the match is decided by who most exceeds their
-                // quota, not raw points. quotaNetValue is only ever set (non-null)
-                // on a side when this game's strategy is actually Chicago (see
-                // buildPairPairRows()); every other points strategy falls
-                // through to the raw-points comparison below unchanged.
-                // Segment-scoped (front/back) quota isn't computed today — only
-                // 'total' carries a quotaNetValue — so front/back comparisons
-                // for a Chicago match still fall through to raw points, same
-                // as before. dbGames_ScoringSegments=3 on a Chicago game is an
-                // existing, not-yet-addressed gap, not something this change
-                // silently papers over.
-                if ($segmentKey === 'total' && array_key_exists('quotaNetValue', $side) && $side['quotaNetValue'] !== null) {
-                    return (float)$side['quotaNetValue'];
+                // quota, not raw points. quotaNetSegments is only ever set on
+                // a side when this game's strategy is actually Chicago (see
+                // buildPairPairRows()); every other points strategy has no
+                // such key and falls through to the raw-points comparison
+                // below, unchanged. A null cell within quotaNetSegments (e.g.
+                // front/back on a 9-hole round where that half doesn't exist)
+                // is intentionally NOT backfilled from raw points — same
+                // "null propagates, not fabricated" convention already used
+                // for grossDiffSegments/netDiffSegments, see
+                // determineMatchStatus()'s own doc comment.
+                if (array_key_exists('quotaNetSegments', $side) && is_array($side['quotaNetSegments'])) {
+                    $cell = $side['quotaNetSegments'][$segmentKey] ?? null;
+                    return (is_array($cell) && $cell['value'] !== null) ? (float)$cell['value'] : null;
                 }
 
                 $arr = $isGross ? ($side['grossPoints'] ?? null) : ($side['netPoints'] ?? null);
@@ -1939,6 +2015,25 @@ final class ServiceScoreSummary
     ): array {
         $holes        = self::holesForGame($gameRow);
         $pointsConfig = self::parsePointsConfig($gameRow);
+
+        // Nines, LowBallLowTotal, LowBallHighBall, and Vegas all require
+        // exactly two comparable sides — none of them have a legitimate
+        // field-wide meaning here. This function flattens every player
+        // across every playing group into one list before calling
+        // ServiceCalcPoints::resolvePoints() below; for Nines specifically,
+        // that silently produces a wrong-but-not-crashing result (only the
+        // top handful of finishers *in the entire field* would ever score
+        // any points, since the distribution table only has 3-4 entries).
+        // game_settings.js's compFilter and service_dbGames.php's save-time
+        // normalization both already prevent this combination from being
+        // configured — this is the last-resort backstop for anything that
+        // slips past both anyway (existing data from before this fix,
+        // manual edits, etc.): fail safe with no points rather than compute
+        // a leaderboard that's wrong in a way nobody would notice.
+        $pairPairOnlyStrategies = ['Nines', 'LowBallLowTotal', 'LowBallHighBall', 'Vegas'];
+        if (in_array(trim((string)($pointsConfig['strategy'] ?? '')), $pairPairOnlyStrategies, true)) {
+            return ['gross' => [], 'net' => []];
+        }
 
         $playerEntries  = [];
         $playerPairings = [];

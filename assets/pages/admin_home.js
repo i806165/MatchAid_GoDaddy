@@ -217,9 +217,11 @@
         MA.chrome.showBrand(true);
       }
 
-      // Doorway: no chrome-level Actions/page button — each panel now owns
-      // its own (see #btnGamesActions/#btnAddGame and #btnEventsActions/
-      // #btnAddEvent in adminhome_view.php, wired via wireDoorwayControls()).
+      // Doorway: default chrome-level Actions/page button to hidden. This is
+      // immediately superseded by updateChromeActionsForPanel() inside
+      // wireDoorwayControls() once the initial tab (games/events/both) is
+      // known — see setActiveTab(). This just covers the defensive case
+      // where the tab strip/wiring fails to find its elements.
       if (MA.chrome && typeof MA.chrome.setActions === "function") {
         MA.chrome.setActions({
           left:  { show: false },
@@ -519,6 +521,42 @@ function wireDoorwayControls() {
     if (tab === "games")  mainEl.classList.add("is-games-only");
     if (tab === "events") mainEl.classList.add("is-events-only");
     // "both" — no class needed, default grid shows both panels
+
+    updateChromeActionsForPanel(tab);
+  }
+
+  // Single-panel mode (games/events) moves Actions + "+ Add" to the chrome
+  // header — page-level, matching the legacy pre-doorway single-panel look
+  // (chrome-header Actions button, dashed "+ Add New Game" at the bottom of
+  // the list). This reuses the same MA.chrome.setActions() API already used
+  // for Event Rounds mode above. In "both" mode the per-panel controls
+  // (#btnGamesActions/#btnAddGame, #btnEventsActions/#btnAddEvent) still
+  // own this instead, so chrome-level actions are turned off — the CSS
+  // hides the per-panel controls row only when its panel is the sole one
+  // showing, so "both" mode is unaffected either way.
+  function updateChromeActionsForPanel(tab) {
+    if (!MA.chrome || typeof MA.chrome.setActions !== "function") return;
+
+    if (tab === "games") {
+      MA.chrome.setActions({
+        left:  { show: false },
+        right: { show: true, label: "Actions", onClick: () => openActionsMenu(openModal) },
+        page:  { show: true, label: "+ Add New Game", onClick: () => handleGameAction({ action: "addGame" }) }
+      });
+    } else if (tab === "events") {
+      MA.chrome.setActions({
+        left:  { show: false },
+        right: { show: true, label: "Actions", onClick: openEventsActionsMenu },
+        page:  { show: true, label: "+ Add New Event", onClick: () => handleEventAction({ action: "addEvent" }) }
+      });
+    } else {
+      // legacy "both" — chrome-level actions off; per-panel controls handle this
+      MA.chrome.setActions({
+        left:  { show: false },
+        right: { show: false },
+        page:  { show: false }
+      });
+    }
   }
 
   // Wire directly to each button
@@ -531,7 +569,10 @@ function wireDoorwayControls() {
   });
 
   // Set initial state from server-side initialPanel (baked in from session)
-  const initialPanel = (window.__MA_INIT__ || window.__INIT__ || {}).initialPanel || "both";
+  let initialPanel = (window.__MA_INIT__ || window.__INIT__ || {}).initialPanel || "games";
+  if (initialPanel !== "games" && initialPanel !== "events") {
+    initialPanel = "games";
+  }
   setActiveTab(initialPanel);
 }
 

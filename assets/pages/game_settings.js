@@ -44,7 +44,7 @@
     {
       strategy:   "Nines",
       label:      "9's",
-      compFilter: "both",
+      compFilter: "PairPair",
       hint:       "A pool of 9 points is distributed each hole by finish position within the group.",
       hasConfig:  true,  // shows nines distribution chips
     },
