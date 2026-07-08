@@ -136,7 +136,7 @@
       el.id = OVERLAY_ID;
       el.className = "maModalOverlay";
       el.setAttribute("aria-hidden", "true");
-      el.addEventListener("click", e => { if (e.target === el) MA.manageTeams.close(); });
+      el.addEventListener("click", e => { if (e.target === el && !_busy) MA.manageTeams.close(); });
       document.body.appendChild(el);
     }
     return el;
@@ -286,15 +286,17 @@
   // — flipping this alone does nothing until Apply/Create is clicked.
   function _renderModeToggle() {
     if (!_opts.showModeToggle) return "";
-    const on = (_mode === "fixed");
+    const eventActive = (_mode === "fixed");
+    const roundActive = !eventActive;
     return `
-      <div style="margin-top:10px;">
-        <button type="button"
-                class="maChoiceChip${on ? " is-selected" : ""}"
-                id="mtModeToggle"
-                aria-pressed="${on}">
-          ${on ? "Cascading to rounds" : "Not cascading — rounds stand on their own"}
-        </button>
+      <div style="margin-top:10px; display:flex; align-items:center; gap:10px;">
+        <span style="font-size:12px; font-weight:700; color:var(--mutedText); white-space:nowrap;">Teams Managed by</span>
+        <div class="maSeg" id="mtModeToggle" style="width:auto; flex:0 0 auto;" role="group" aria-label="Team management level">
+          <button type="button" class="maSegBtn${eventActive ? " btnSecondary" : ""}"
+                  data-mode="fixed" aria-pressed="${eventActive}">EVENT</button>
+          <button type="button" class="maSegBtn${roundActive ? " btnSecondary" : ""}"
+                  data-mode="none" aria-pressed="${roundActive}">ROUND</button>
+        </div>
       </div>`;
   }
 
@@ -370,11 +372,13 @@
     const overlay = document.getElementById(OVERLAY_ID);
     if (!overlay) return;
 
-    overlay.querySelector("#mtBtnClose")?.addEventListener("click", MA.manageTeams.close);
-    overlay.querySelector("#mtBtnCancel")?.addEventListener("click", MA.manageTeams.close);
+    overlay.querySelector("#mtBtnClose")?.addEventListener("click", () => { if (!_busy) MA.manageTeams.close(); });
+    overlay.querySelector("#mtBtnCancel")?.addEventListener("click", () => { if (!_busy) MA.manageTeams.close(); });
 
-    overlay.querySelector("#mtModeToggle")?.addEventListener("click", () => {
-      _mode = (_mode === "fixed") ? "none" : "fixed";
+    overlay.querySelector("#mtModeToggle")?.addEventListener("click", e => {
+      const seg = e.target.closest("[data-mode]");
+      if (!seg) return;
+      _mode = seg.dataset.mode;
       _refreshModeToggle();
     });
 
@@ -386,12 +390,13 @@
   }
 
   function _refreshModeToggle() {
-    const btn = document.getElementById("mtModeToggle");
-    if (!btn) return;
-    const on = (_mode === "fixed");
-    btn.classList.toggle("is-selected", on);
-    btn.setAttribute("aria-pressed", String(on));
-    btn.textContent = on ? "Cascading to rounds" : "Not cascading — rounds stand on their own";
+    const wrap = document.getElementById("mtModeToggle");
+    if (!wrap) return;
+    wrap.querySelectorAll("[data-mode]").forEach(seg => {
+      const on = (seg.dataset.mode === _mode);
+      seg.classList.toggle("btnSecondary", on);
+      seg.setAttribute("aria-pressed", String(on));
+    });
   }
 
   function _wireStateA(overlay) {
@@ -530,7 +535,7 @@
 
   async function _saveTeamConfig(teams) {
     if (_busy) return;
-    _busy = true; _showBusy("Saving team configuration...");
+    _busy = true; _showBusy("Saving team configuration — please wait...");
     try {
       const res = await MA.postJson(apiPath("saveTeamConfig.php"), { teams, mode: _mode });
       if (!res?.ok) { MA.setStatus(res?.message || "Unable to save team configuration.", "danger"); return; }
@@ -545,7 +550,7 @@
 
   async function _applyChanges() {
     if (_busy) return;
-    _busy = true; _showBusy("Saving teams...");
+    _busy = true; _showBusy("Saving teams — please wait...");
     try {
       const configRes = await MA.postJson(apiPath("saveTeamConfig.php"), { teams: _teamConfig?.teams || [], mode: _mode });
       if (!configRes?.ok) { MA.setStatus(configRes?.message || "Unable to save team names.", "danger"); return; }
@@ -575,7 +580,7 @@
 
   async function _resetTeams() {
     if (_busy) return;
-    _busy = true; _showBusy("Resetting teams...");
+    _busy = true; _showBusy("Resetting teams — please wait...");
     try {
       const configRes = await MA.postJson(apiPath("saveTeamConfig.php"), { teams: [], mode: "none" });
       if (!configRes?.ok) { MA.setStatus(configRes?.message || "Unable to reset teams.", "danger"); return; }
@@ -599,34 +604,42 @@
     } finally { _busy = false; _hideBusy(); }
   }
 
-  const BUSY_ID = "maManageTeamsBusy";
+  const BUSY_ID = "mtBusyOverlay";
+
+  function _ensureBusyOverlay() {
+    if (document.getElementById(BUSY_ID)) return;
+
+    const overlay = document.createElement("div");
+    overlay.id = BUSY_ID;
+    overlay.className = "maModalOverlay";
+
+    const modal = document.createElement("section");
+    modal.className = "maModal";
+    modal.innerHTML = `
+      <header class="maModal__hdr">
+        <div class="maModal__titles">
+          <div class="maModal__title">Manage Teams</div>
+        </div>
+      </header>
+      <div class="maModal__body" id="mtBusyBody">
+        <p id="mtBusyMessage" style="line-height:1.6;"></p>
+      </div>`;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+  }
 
   function _showBusy(message) {
-    let el = document.getElementById(BUSY_ID);
-    if (!el) {
-      el = document.createElement("div");
-      el.id = BUSY_ID;
-      el.className = "maModalOverlay is-open";
-      el.innerHTML = `
-        <section class="maModal" role="dialog" aria-modal="true" aria-labelledby="mtBusyTitle">
-          <header class="maModal__hdr">
-            <div id="mtBusyTitle" class="maModal__title">Working</div>
-          </header>
-          <div class="maModal__body">
-            <div id="mtBusyMessage" class="maHelpText" style="padding:16px 0;"></div>
-          </div>
-        </section>`;
-      document.body.appendChild(el);
-    } else {
-      el.className = "maModalOverlay is-open";
-    }
-    const msg = document.getElementById("mtBusyMessage");
-    if (msg) msg.textContent = message || "Processing...";
+    _ensureBusyOverlay();
+    const overlay = document.getElementById(BUSY_ID);
+    const body    = document.getElementById("mtBusyBody");
+    if (body) body.innerHTML = `<p style="line-height:1.6;">${message || "Processing — please wait..."}</p>`;
+    if (overlay) overlay.classList.add("is-open");
   }
 
   function _hideBusy() {
-    const el = document.getElementById(BUSY_ID);
-    if (el) el.className = "maModalOverlay";
+    const overlay = document.getElementById(BUSY_ID);
+    if (overlay) overlay.classList.remove("is-open");
   }
 
   window.MA = MA;

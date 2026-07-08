@@ -127,13 +127,14 @@
   }
 
   function _refreshModeToggle() {
-    const btn = _overlay?.querySelector("#cepModeToggle");
-    if (!btn) return;
-    const on = (_state.mode === "fixed");
-    btn.classList.toggle("is-selected", on);
-    btn.style.cssText = on ? "" : "background:transparent;color:#fff;border-color:rgba(255,255,255,.4);";
-    btn.setAttribute("aria-pressed", String(on));
-    btn.textContent = on ? "Cascading to rounds" : "Not cascading";
+    const wrap = _overlay?.querySelector("#cepModeToggle");
+    if (!wrap) return;
+    wrap.querySelectorAll("[data-mode]").forEach(seg => {
+      const on = (seg.dataset.mode === _state.mode);
+      seg.classList.toggle("btnSecondary", on);
+      seg.style.color = on ? "" : "#fff";
+      seg.setAttribute("aria-pressed", String(on));
+    });
   }
 
   function markDirty() {
@@ -624,6 +625,7 @@
     const saveBtn = _overlay?.querySelector("#cepBtnSave");
     if (saveBtn) saveBtn.disabled = true;
     setStatus("Saving pairings…", "info");
+    _showBusy("Saving pairings — please wait...");
 
     try {
       const assignments = _state.players.map(p => ({
@@ -656,7 +658,46 @@
     } finally {
       _state.busy = false;
       if (saveBtn) saveBtn.disabled = false;
+      _hideBusy();
     }
+  }
+
+  const BUSY_ID = "cepBusyOverlay";
+
+  function _ensureBusyOverlay() {
+    if (document.getElementById(BUSY_ID)) return;
+
+    const overlay = document.createElement("div");
+    overlay.id = BUSY_ID;
+    overlay.className = "maModalOverlay";
+
+    const modal = document.createElement("section");
+    modal.className = "maModal";
+    modal.innerHTML = `
+      <header class="maModal__hdr">
+        <div class="maModal__titles">
+          <div class="maModal__title">Event Pairings</div>
+        </div>
+      </header>
+      <div class="maModal__body" id="cepBusyBody">
+        <p id="cepBusyMessage" style="line-height:1.6;"></p>
+      </div>`;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+  }
+
+  function _showBusy(message) {
+    _ensureBusyOverlay();
+    const overlay = document.getElementById(BUSY_ID);
+    const body    = document.getElementById("cepBusyBody");
+    if (body) body.innerHTML = `<p style="line-height:1.6;">${message || "Processing — please wait..."}</p>`;
+    if (overlay) overlay.classList.add("is-open");
+  }
+
+  function _hideBusy() {
+    const overlay = document.getElementById(BUSY_ID);
+    if (overlay) overlay.classList.remove("is-open");
   }
 
   // ── Mobile tray toggle ───────────────────────────────────────────────────────
@@ -695,11 +736,16 @@
             <div class="maModal__title" style="color:#fff;">Event Pairings</div>
             <div class="maModal__subtitle" style="color:rgba(255,255,255,.78);">${esc(String(total))} players</div>
           </div>
-          <div style="display:flex;gap:8px;align-items:center;">
-            <button id="cepModeToggle" type="button"
-                    class="maChoiceChip${_state.mode === "fixed" ? " is-selected" : ""}"
-                    style="${_state.mode === "fixed" ? "" : "background:transparent;color:#fff;border-color:rgba(255,255,255,.4);"}"
-                    aria-pressed="${_state.mode === "fixed"}">${_state.mode === "fixed" ? "Cascading to rounds" : "Not cascading"}</button>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.78);white-space:nowrap;">Pairings Managed by</span>
+            <div class="maSeg" id="cepModeToggle" style="width:auto;flex:0 0 auto;background:transparent;border-color:rgba(255,255,255,.4);" role="group" aria-label="Pairing management level">
+              <button type="button" class="maSegBtn${_state.mode === "fixed" ? " btnSecondary" : ""}"
+                      data-mode="fixed" aria-pressed="${_state.mode === "fixed"}"
+                      style="${_state.mode === "fixed" ? "" : "color:#fff;"}border-right-color:rgba(255,255,255,.4);">EVENT</button>
+              <button type="button" class="maSegBtn${_state.mode !== "fixed" ? " btnSecondary" : ""}"
+                      data-mode="none" aria-pressed="${_state.mode !== "fixed"}"
+                      style="${_state.mode !== "fixed" ? "" : "color:#fff;"}">ROUND</button>
+            </div>
             <button id="cepBtnAutoPair" type="button" class="btn" style="background:rgba(255,255,255,.18);color:#fff;border:0;font-size:12px;font-weight:800;">Auto-Pair</button>
             <button id="cepBtnClose"   type="button" class="btn btnPrimary" style="font-size:12px;">Close</button>
           </div>
@@ -768,8 +814,10 @@
     overlay.querySelector("#cepBtnAutoPair")?.addEventListener("click", () => openAutoPair());
     overlay.querySelector("#cepBtnTrayOpen")?.addEventListener("click", () => openMobileTray());
     overlay.querySelector(".cepMobileCloseBtn")?.addEventListener("click", () => closeMobileTray());
-    overlay.querySelector("#cepModeToggle")?.addEventListener("click", () => {
-      _state.mode = (_state.mode === "fixed") ? "none" : "fixed";
+    overlay.querySelector("#cepModeToggle")?.addEventListener("click", e => {
+      const seg = e.target.closest("[data-mode]");
+      if (!seg) return;
+      _state.mode = seg.dataset.mode;
       markDirty();
       _refreshModeToggle();
     });
@@ -791,6 +839,7 @@
   }
 
   function confirmClose() {
+    if (_state?.busy) return;
     if (_state?.dirty) {
       if (!confirm("Discard unsaved pairing changes?")) return;
     }

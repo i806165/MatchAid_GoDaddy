@@ -147,7 +147,7 @@
       el.id = OVERLAY_ID;
       el.className = "maModalOverlay";
       el.setAttribute("aria-hidden", "true");
-      el.addEventListener("click", e => { if (e.target === el) MA.defineFlights.close(); });
+      el.addEventListener("click", e => { if (e.target === el && !_busy) MA.defineFlights.close(); });
       document.body.appendChild(el);
     }
     return el;
@@ -282,15 +282,17 @@
   // when off, every linked round keeps whatever flight setup it already has
   // (round-level Flight editing isn't built yet — see spec discussion).
   function _renderModeToggle() {
-    const on = (_mode === "fixed");
+    const eventActive = (_mode === "fixed");
+    const roundActive = !eventActive;
     return `
-      <div style="margin-top:10px;">
-        <button type="button"
-                class="maChoiceChip${on ? " is-selected" : ""}"
-                id="dfModeToggle"
-                aria-pressed="${on}">
-          ${on ? "Cascading to rounds" : "Not cascading — rounds stand on their own"}
-        </button>
+      <div style="margin-top:10px; display:flex; align-items:center; gap:10px;">
+        <span style="font-size:12px; font-weight:700; color:var(--mutedText); white-space:nowrap;">Flights Managed by</span>
+        <div class="maSeg" id="dfModeToggle" style="width:auto; flex:0 0 auto;" role="group" aria-label="Flight management level">
+          <button type="button" class="maSegBtn${eventActive ? " btnSecondary" : ""}"
+                  data-mode="fixed" aria-pressed="${eventActive}">EVENT</button>
+          <button type="button" class="maSegBtn${roundActive ? " btnSecondary" : ""}"
+                  data-mode="none" aria-pressed="${roundActive}">ROUND</button>
+        </div>
       </div>`;
   }
 
@@ -362,8 +364,8 @@
     const overlay = document.getElementById(OVERLAY_ID);
     if (!overlay) return;
 
-    overlay.querySelector("#dfBtnClose")?.addEventListener("click", MA.defineFlights.close);
-    overlay.querySelector("#dfBtnCancel")?.addEventListener("click", MA.defineFlights.close);
+    overlay.querySelector("#dfBtnClose")?.addEventListener("click", () => { if (!_busy) MA.defineFlights.close(); });
+    overlay.querySelector("#dfBtnCancel")?.addEventListener("click", () => { if (!_busy) MA.defineFlights.close(); });
 
     overlay.querySelector("#dfBtnToggleCfg")?.addEventListener("click", () => {
       _cfgOpen = !_cfgOpen;
@@ -391,8 +393,10 @@
 
     overlay.querySelector("#dfBtnAddFlight")?.addEventListener("click", _addFlight);
 
-    overlay.querySelector("#dfModeToggle")?.addEventListener("click", () => {
-      _mode = (_mode === "fixed") ? "none" : "fixed";
+    overlay.querySelector("#dfModeToggle")?.addEventListener("click", e => {
+      const seg = e.target.closest("[data-mode]");
+      if (!seg) return;
+      _mode = seg.dataset.mode;
       _refreshModeToggle();
     });
 
@@ -480,12 +484,13 @@
   }
 
   function _refreshModeToggle() {
-    const btn = document.getElementById("dfModeToggle");
-    if (!btn) return;
-    const on = (_mode === "fixed");
-    btn.classList.toggle("is-selected", on);
-    btn.setAttribute("aria-pressed", String(on));
-    btn.textContent = on ? "Cascading to rounds" : "Not cascading — rounds stand on their own";
+    const wrap = document.getElementById("dfModeToggle");
+    if (!wrap) return;
+    wrap.querySelectorAll("[data-mode]").forEach(seg => {
+      const on = (seg.dataset.mode === _mode);
+      seg.classList.toggle("btnSecondary", on);
+      seg.setAttribute("aria-pressed", String(on));
+    });
   }
 
   function _refreshPlayerRow(ghin) {
@@ -535,7 +540,7 @@
 
   async function _applyChanges() {
     if (_busy) return;
-    _busy = true; _showBusy("Saving flights...");
+    _busy = true; _showBusy("Saving flights — please wait...");
     try {
       const configRes = await MA.postJson(apiPath("saveFlightConfig.php"), {
         flights: _flights.map(f => ({ id: f.id, name: f.name, sort: f.sort })),
@@ -564,34 +569,42 @@
     } finally { _busy = false; _hideBusy(); }
   }
 
-  const BUSY_ID = "maDefineFlightsBusy";
+  const BUSY_ID = "dfBusyOverlay";
+
+  function _ensureBusyOverlay() {
+    if (document.getElementById(BUSY_ID)) return;
+
+    const overlay = document.createElement("div");
+    overlay.id = BUSY_ID;
+    overlay.className = "maModalOverlay";
+
+    const modal = document.createElement("section");
+    modal.className = "maModal";
+    modal.innerHTML = `
+      <header class="maModal__hdr">
+        <div class="maModal__titles">
+          <div class="maModal__title">Define Flights</div>
+        </div>
+      </header>
+      <div class="maModal__body" id="dfBusyBody">
+        <p id="dfBusyMessage" style="line-height:1.6;"></p>
+      </div>`;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+  }
 
   function _showBusy(message) {
-    let el = document.getElementById(BUSY_ID);
-    if (!el) {
-      el = document.createElement("div");
-      el.id = BUSY_ID;
-      el.className = "maModalOverlay is-open";
-      el.innerHTML = `
-        <section class="maModal" role="dialog" aria-modal="true" aria-labelledby="dfBusyTitle">
-          <header class="maModal__hdr">
-            <div id="dfBusyTitle" class="maModal__title">Working</div>
-          </header>
-          <div class="maModal__body">
-            <div id="dfBusyMessage" class="maHelpText" style="padding:16px 0;"></div>
-          </div>
-        </section>`;
-      document.body.appendChild(el);
-    } else {
-      el.className = "maModalOverlay is-open";
-    }
-    const msg = document.getElementById("dfBusyMessage");
-    if (msg) msg.textContent = message || "Processing...";
+    _ensureBusyOverlay();
+    const overlay = document.getElementById(BUSY_ID);
+    const body    = document.getElementById("dfBusyBody");
+    if (body) body.innerHTML = `<p style="line-height:1.6;">${message || "Processing — please wait..."}</p>`;
+    if (overlay) overlay.classList.add("is-open");
   }
 
   function _hideBusy() {
-    const el = document.getElementById(BUSY_ID);
-    if (el) el.className = "maModalOverlay";
+    const overlay = document.getElementById(BUSY_ID);
+    if (overlay) overlay.classList.remove("is-open");
   }
 
   window.MA = MA;
