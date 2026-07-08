@@ -77,20 +77,15 @@
 
     <div class="maCard__body">
 
-      <!-- Pairing Mode -->
-      <div class="maFieldRow">
-        <div class="maField">
-          <label class="maLabel" for="emPairingMode">Pairing Mode</label>
-          <select id="emPairingMode" class="maTextInput">
-            <option value="none">Round Level — pairings set independently per round</option>
-            <option value="fixed">Event Level — fixed pairings set on the Event Roster, applied to all rounds</option>
-          </select>
-        </div>
-      </div>
-      <div class="emHint" id="emPairingModeHint"></div>
+      <!-- Pairing Mode removed — the on/off toggle now lives inside
+           module_createEventPairings.js itself (Event Roster → Manage
+           Pairings), bundled into that module's own Save. Team and
+           Flight's mode toggles live inside their own modules the same
+           way (Manage Teams / Define Flights). Event Maintenance no
+           longer owns any cascade-mode field. -->
 
       <!-- HC Effectivity -->
-      <div class="maFieldRow" style="margin-top:14px;">
+      <div class="maFieldRow">
         <div class="maField">
           <label class="maLabel" for="emHCEffectivity">Handicap Effectivity</label>
           <select id="emHCEffectivity" class="maTextInput">
