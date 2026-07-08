@@ -28,6 +28,7 @@ final class ServiceDbEventPlayers
         'dbEventPlayers_ClubName',
         'dbEventPlayers_LocalID',
         'dbEventPlayers_TeamKey',
+        'dbEventPlayers_FlightKey',
         'dbEventPlayers_PairingID',
         'dbEventPlayers_PairingPos',
         'dbEventPlayers_CreatorID',
@@ -408,20 +409,45 @@ final class ServiceDbEventPlayers
 
     /**
      * cascadeToGame(eid, ggid)
-     * Copy all event roster players into db_Players for the given GGID.
-     * Applies cascade rules from spec §7.4.
-     * Returns count of players cascaded.
      *
-     * NOTE: Phase 5 implementation — stub only.
-     * Full implementation requires ServiceContextGame and WorkflowProcessPlayers.
+     * Called once, at Round creation only (from ServiceDbGames::saveGame(),
+     * add-mode branch — never for Flat Games, which have no eid to cascade
+     * from). Snapshots the event's TeamConfig and FlightConfig onto the new
+     * round's db_Games row.
+     *
+     * Deliberately does NOT copy the roster or per-player Team/Flight/Pairing
+     * values — "each round stands on its own" for membership. Players are
+     * added to the round individually through the normal add-player flows,
+     * and WorkflowProcessPlayers::upsertPlayer() sources their Team/Flight
+     * (always) and Pairing (only if the event's PairingMode is "fixed")
+     * from db_EventPlayers at the moment each one is actually added.
+     *
+     * There is no PairingConfig to snapshot here — db_Games has no mirrored
+     * PairingMode column; that flag is read live off db_Events wherever it's
+     * needed (see ServiceContextGame's event hydration).
      *
      * @param  int $eid
      * @param  int $ggid
-     * @return int
+     * @return void
      */
-    public static function cascadeToGame(int $eid, int $ggid): int
+    public static function cascadeToGame(int $eid, int $ggid): void
     {
-        // Phase 5 — not yet implemented
-        throw new RuntimeException('cascadeToGame: not yet implemented (Phase 5)');
+        if ($eid <= 0 || $ggid <= 0) return;
+
+        try {
+            require_once MA_SVC_DB . '/service_dbEvents.php';
+            require_once MA_SVC_DB . '/service_dbGames.php';
+
+            $event = ServiceDbEvents::getEventByEID($eid);
+            if (!$event) return;
+
+            ServiceDbGames::updateGame($ggid, [
+                'dbGames_TeamConfig'   => $event['dbEvents_TeamConfig']   ?? null,
+                'dbGames_FlightConfig' => $event['dbEvents_FlightConfig'] ?? null,
+            ]);
+
+        } catch (Throwable $e) {
+            error_log('[ServiceDbEventPlayers::cascadeToGame] ' . $e->getMessage());
+        }
     }
 }

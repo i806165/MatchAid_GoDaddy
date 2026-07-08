@@ -21,7 +21,6 @@
     event:      init.event   || {},
     context:    init.context || {},
     portal:     init.portal  || "",
-    pairingMode:   String(init.pairingMode   || "none"),
     hcEffectivity: String(init.hcEffectivity || "PlayDate"),
     roster:     [],                            // db_EventPlayers rows
     favorites:  Array.isArray(init.favorites) ? init.favorites : [],
@@ -308,9 +307,7 @@
       ${sorts.map(s => `<button class="maSeg--sortBtn ${state.rosterSort === s.id ? "is-active" : ""}" type="button" data-roster-sort="${esc(s.id)}">${esc(s.label)}</button>`).join("")}
     </div>`;
 
-    const pairingsBtn = state.pairingMode === "fixed"
-      ? `<button id="erBtnManagePairings" class="btn btnSecondary" type="button">Manage Pairings</button>`
-      : "";
+    const pairingsBtn = `<button id="erBtnManagePairings" class="btn btnSecondary" type="button">Manage Pairings</button>`;
 
     el.canvasControls.innerHTML = `
       <div class="gpCanvasControls">
@@ -321,6 +318,7 @@
         <div class="gpCanvasControls__right">
           <button id="erBtnRefreshHI" class="btn btnSecondary" type="button">Refresh Handicaps</button>
           <button id="erBtnManageTeams" class="btn btnSecondary" type="button">Manage Teams</button>
+          <button id="erBtnDefineFlights" class="btn btnSecondary" type="button">Define Flights</button>
           ${pairingsBtn}
         </div>
       </div>`;
@@ -335,6 +333,9 @@
 
     const teamsBtn = document.getElementById("erBtnManageTeams");
     if (teamsBtn) teamsBtn.onclick = onManageTeams;
+
+    const flightsBtn = document.getElementById("erBtnDefineFlights");
+    if (flightsBtn) flightsBtn.onclick = onDefineFlights;
 
     const refreshBtn = document.getElementById("erBtnRefreshHI");
     if (refreshBtn) refreshBtn.onclick = onRefreshHandicaps;
@@ -397,8 +398,9 @@
     MA.createEventPairings.open({
       players,
       teamConfig,
+      pairingMode: state.event?.dbEvents_PairingMode || "none",
       apiSavePairings: MA.paths.saveEventRosterPairings,
-      onApply(updatedPlayers) {
+      onApply({ players: updatedPlayers, mode: newMode }) {
         updatedPlayers.forEach(up => {
           const row = state.roster.find(r => safe(r.dbEventPlayers_GHIN) === up.ghin);
           if (row) {
@@ -406,6 +408,7 @@
             row.dbEventPlayers_PairingPos = up.pairingPos;
           }
         });
+        if (state.event) state.event.dbEvents_PairingMode = newMode || "none";
         renderRoster();
         MA.setStatus("Pairings saved.", "success");
       }
@@ -426,6 +429,11 @@
       ]
     };
 
+    // Mirrors teamConfig's sourcing above — assumes the page controller
+    // hydrates __MA_INIT__.teamMode from dbEvents_TeamMode the same way
+    // it already hydrates __MA_INIT__.teamConfig from dbEvents_TeamConfig.
+    const teamMode = (window.__MA_INIT__ || {}).teamMode || "none";
+
     // Build a players-shaped array from roster for MA.manageTeams
     // manageTeams expects dbPlayers_* keys — map from dbEventPlayers_*
     const playersForTeams = (state.roster || []).map(p => ({
@@ -438,10 +446,12 @@
     }));
 
     MA.manageTeams.open({
-      players:    playersForTeams,
+      players:        playersForTeams,
       teamConfig,
-      apiBase:    MA.paths?.apiEventRoster || "/api/event_roster",
-      onApply: ({ players, teamConfig: newConfig }) => {
+      mode:           teamMode,
+      showModeToggle: true,
+      apiBase:        MA.paths?.apiEventRoster || "/api/event_roster",
+      onApply: ({ players, teamConfig: newConfig, mode: newMode }) => {
         // Write team keys back to state.roster.
         // saveTeamAssignments.php returns ServiceDbEventPlayers::getEventRoster()
         // rows — dbEventPlayers_*-keyed, not the dbPlayers_* shape Game Players'
@@ -453,7 +463,65 @@
             if (p) p.dbEventPlayers_TeamKey = safe(saved.dbEventPlayers_TeamKey || "");
           });
         }
-        if (window.__MA_INIT__) window.__MA_INIT__.teamConfig = newConfig;
+        if (window.__MA_INIT__) {
+          window.__MA_INIT__.teamConfig = newConfig;
+          window.__MA_INIT__.teamMode   = newMode || "none";
+        }
+        if (state.event) state.event.dbEvents_TeamMode = newMode || "none";
+        renderRoster();
+      }
+    });
+  }
+
+  // ── Manage Flights ───────────────────────────────────────────────────────────
+  function onDefineFlights() {
+    if (!MA.defineFlights || typeof MA.defineFlights.open !== "function") {
+      MA.setStatus("Define Flights module not loaded.", "warn");
+      return;
+    }
+
+    let flightConfig = null;
+    try {
+      const raw = state.event?.dbEvents_FlightConfig;
+      if (raw && typeof raw === "string" && raw !== "") {
+        flightConfig = JSON.parse(raw);
+      } else if (raw && typeof raw === "object") {
+        flightConfig = raw;
+      }
+    } catch (_) {
+      flightConfig = null;
+    }
+
+    const flightMode = state.event?.dbEvents_FlightMode || "none";
+
+    // module_defineFlights.js expects dbPlayers_* keys — map from
+    // dbEventPlayers_*, same convention as onManageTeams above.
+    const playersForFlights = (state.roster || []).map(p => ({
+      dbPlayers_PlayerGHIN: safe(p.dbEventPlayers_GHIN),
+      dbPlayers_Name:       safe(p.dbEventPlayers_Name),
+      dbPlayers_LName:      safe(p.dbEventPlayers_LName),
+      dbPlayers_Gender:     safe(p.dbEventPlayers_Gender),
+      dbPlayers_HI:         safe(p.dbEventPlayers_HI),
+      dbPlayers_FlightKey:  safe(p.dbEventPlayers_FlightKey),
+    }));
+
+    MA.defineFlights.open({
+      players:      playersForFlights,
+      flightConfig,
+      mode:         flightMode,
+      apiBase:      MA.paths?.apiEventRoster || "/api/event_roster",
+      onApply: ({ players, flightConfig: newConfig, mode: newMode }) => {
+        if (Array.isArray(players) && players.length) {
+          players.forEach(saved => {
+            const ghin = safe(saved.dbEventPlayers_GHIN || "");
+            const p = state.roster.find(x => safe(x.dbEventPlayers_GHIN) === ghin);
+            if (p) p.dbEventPlayers_FlightKey = safe(saved.dbEventPlayers_FlightKey || "");
+          });
+        }
+        if (state.event) {
+          state.event.dbEvents_FlightConfig = newConfig ? JSON.stringify(newConfig) : null;
+          state.event.dbEvents_FlightMode   = newMode || "none";
+        }
         renderRoster();
       }
     });

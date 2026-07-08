@@ -41,8 +41,6 @@
     endDate: document.getElementById("emEndDate"),
     scheduleHint: document.getElementById("emScheduleHint"),
     // EVENT SETTINGS
-    pairingMode: document.getElementById("emPairingMode"),
-    pairingModeHint: document.getElementById("emPairingModeHint"),
     hcEffectivity: document.getElementById("emHCEffectivity"),
     hcEffectivityDate: document.getElementById("emHCEffectivityDate"),
     hcEffectivityDateWrap: document.getElementById("emHCEffectivityDateWrap"),
@@ -154,14 +152,6 @@
     }
   }
 
-  function renderPairingModeHint() {
-    if (!el.pairingModeHint) return;
-    const mode = el.pairingMode?.value || "none";
-    el.pairingModeHint.textContent = mode === "fixed"
-      ? "Pairings set on the Event Roster will be applied to all rounds. Round-level pairing changes will be locked."
-      : "Players will be paired independently for each round.";
-  }
-
   function renderHCEffectivityHint() {
     if (!el.hcEffectivityHint) return;
     const eff = el.hcEffectivity?.value || "PlayDate";
@@ -225,7 +215,6 @@
     el.endDate.value      = String(ev.dbEvents_EndDate   || ev.endDateISO   || el.startDate.value || todayYmd()).slice(0, 10);
 
     // EVENT SETTINGS
-    if (el.pairingMode)       el.pairingMode.value       = ev.dbEvents_PairingMode    || "none";
     if (el.hcEffectivity)     el.hcEffectivity.value     = ev.dbEvents_HCEffectivity  || "PlayDate";
     if (el.hcEffectivityDate && ev.dbEvents_HCEffectivityDate) {
       el.hcEffectivityDate.value = String(ev.dbEvents_HCEffectivityDate).slice(0, 10);
@@ -240,7 +229,6 @@
     }
 
     renderScheduleHint();
-    renderPairingModeHint();
     renderHCEffectivityHint();
     renderKPIHint();
   }
@@ -254,7 +242,6 @@
       dbEvents_Description:        el.description.value.trim(),
       dbEvents_FacilityName:       el.facilityName.value.trim(),
       // EVENT SETTINGS
-      dbEvents_PairingMode:        el.pairingMode?.value        || "none",
       dbEvents_HCEffectivity:      el.hcEffectivity?.value      || "PlayDate",
       dbEvents_HCEffectivityDate:  (el.hcEffectivity?.value === "Date")
         ? (el.hcEffectivityDate?.value || "") : "",
@@ -386,20 +373,17 @@
       el.description,
       el.startDate,
       el.endDate,
-      el.pairingMode,
       el.hcEffectivity,
       el.hcEffectivityDate
     ].forEach(node => {
       if (!node) return;
       node.addEventListener("input", () => {
         renderScheduleHint();
-        renderPairingModeHint();
         renderHCEffectivityHint();
         setDirty(true);
       });
       node.addEventListener("change", () => {
         renderScheduleHint();
-        renderPairingModeHint();
         renderHCEffectivityHint();
         setDirty(true);
       });

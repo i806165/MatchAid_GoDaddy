@@ -5,8 +5,22 @@ declare(strict_types=1);
 // Player business logic: handicap resolution, tee set selection,
 // profile enrichment, PH calculation, and field assembly.
 // Called by upsertGamePlayers.php and any future player-related workflows.
+//
+// NOTE — Rounds vs. Flat Games: a "Round" is a db_Games row with
+// dbGames_EID set (created under an Event); a "Flat Game" has no EID
+// and stands entirely on its own. This same upsertPlayer() workflow is
+// called identically for both — the fork below is the one place that
+// distinction matters. For a Round, Team/Flight/Pairing are each sourced
+// from the event roster (db_EventPlayers) only when that field's own
+// event-level mode flag (dbEvents_TeamMode / dbEvents_FlightMode /
+// dbEvents_PairingMode) is "fixed" — otherwise the round's own value
+// stands, same sticky-per-round behavior as a Flat Game. All three
+// default off; a fresh event or a round with cascading turned off
+// behaves exactly as it did before this event work existed.
 
 require_once MA_SERVICES . "/database/service_dbPlayers.php";
+require_once MA_SERVICES . "/database/service_dbEvents.php";
+require_once MA_SERVICES . "/database/service_dbEventPlayers.php";
 require_once MA_SERVICES . "/GHIN/GHIN_API_Handicaps.php";
 require_once MA_SERVICES . "/GHIN/GHIN_API_Players.php";
 require_once MA_SERVICES . "/GHIN/GHIN_API_Courses.php";
@@ -65,6 +79,24 @@ final class WorkflowProcessPlayers
     // 4) Load existing player row (preserves pairing/flight/key if already on roster)
     $existing = ServiceDbPlayers::getPlayerByGGIDGHIN($ggid, $ghin);
 
+    // 4a) Round vs. Flat Game — resolve the event roster row once, if applicable.
+    //     $eventPlayer stays null for a Flat Game, which is what keeps every
+    //     field assignment below identical to pre-event behavior in that case.
+    $eid          = (int)($game["dbGames_EID"] ?? 0);
+    $event        = null;
+    $eventPlayer  = null;
+    $fixedPairing = false;
+    $fixedTeam    = false;
+    $fixedFlight  = false;
+
+    if ($eid > 0) {
+      $event        = ServiceDbEvents::getEventByEID($eid);
+      $eventPlayer  = ServiceDbEventPlayers::getEventPlayer($eid, $ghin);
+      $fixedPairing = (($event["dbEvents_PairingMode"] ?? "") === "fixed");
+      $fixedTeam    = (($event["dbEvents_TeamMode"]    ?? "") === "fixed");
+      $fixedFlight  = (($event["dbEvents_FlightMode"]  ?? "") === "fixed");
+    }
+
     // 5) Enrich profile — UI values > GHIN profile > existing DB values
     $profile = self::fetchPlayerProfile($ghin, $token, $creatorGHIN);
     $localId  = self::resolveField(
@@ -101,15 +133,38 @@ final class WorkflowProcessPlayers
       "dbPlayers_TeeSetName"   => (string)($tee["teeSetName"]  ?? ""),
       "dbPlayers_TeeSetSlope"  => (string)($tee["teeSetSlope"] ?? ""),
       "dbPlayers_TeeSetDetails"=> json_encode($richTeeDetails),
-      "dbPlayers_PairingID"    => (string)($existing["dbPlayers_PairingID"]  ?? "000"),
-      "dbPlayers_PairingPos"   => (string)($existing["dbPlayers_PairingPos"] ?? ""),
+
+      // Pairing: Round + Fixed PairingMode → event roster wins outright.
+      // Otherwise (Flat Game, or Round with PairingMode != "fixed") →
+      // unchanged, sticky-per-round behavior exactly as before.
+      "dbPlayers_PairingID"    => ($eventPlayer !== null && $fixedPairing)
+        ? (string)($eventPlayer["dbEventPlayers_PairingID"]  ?? "000")
+        : (string)($existing["dbPlayers_PairingID"]  ?? "000"),
+      "dbPlayers_PairingPos"   => ($eventPlayer !== null && $fixedPairing)
+        ? (string)($eventPlayer["dbEventPlayers_PairingPos"] ?? "")
+        : (string)($existing["dbPlayers_PairingPos"] ?? ""),
+
       "dbPlayers_MatchID"     => (string)($existing["dbPlayers_MatchID"]   ?? ""),
       "dbPlayers_MatchPos"    => (string)($existing["dbPlayers_MatchPos"]  ?? ""),
       "dbPlayers_PlayerKey"    => (string)($existing["dbPlayers_PlayerKey"]  ?? ""),
-      // Team key: caller-supplied value takes priority (copy-from-game carries source team assignment).
-      // Falls back to existing row value on re-enrollment so team is never overwritten by a tee update.
-      // Empty string = unassigned — safe default if neither source is present.
-      "dbPlayers_TeamKey"      => trim((string)($playerInput["teamKey"] ?? $existing["dbPlayers_TeamKey"] ?? "")),
+
+      // Team: Round + TeamMode "fixed" → event roster wins outright.
+      // Otherwise (Flat Game, or Round with TeamMode "none") → unchanged:
+      // caller-supplied value (copy-from-game carries source team
+      // assignment), falling back to the existing row on re-enrollment
+      // so team is never overwritten by a tee update.
+      "dbPlayers_TeamKey"      => ($eventPlayer !== null && $fixedTeam)
+        ? (string)($eventPlayer["dbEventPlayers_TeamKey"] ?? "")
+        : trim((string)($playerInput["teamKey"] ?? $existing["dbPlayers_TeamKey"] ?? "")),
+
+      // Flight: Round + FlightMode "fixed" → event roster wins outright.
+      // Otherwise → sticky-per-round, same fallback shape as Team's "off"
+      // case. There is no caller-supplied flight input path today, so
+      // this only ever falls back to whatever's already on the row.
+      "dbPlayers_FlightKey"    => ($eventPlayer !== null && $fixedFlight)
+        ? (string)($eventPlayer["dbEventPlayers_FlightKey"] ?? "")
+        : (string)($existing["dbPlayers_FlightKey"] ?? ""),
+
       "dbPlayers_Gender"       => $gender,
       "dbPlayers_CreatorID"    => $creatorGHIN,
       "dbPlayers_CreatorName"  => $creatorName,

@@ -24,10 +24,22 @@
  *
  * Options:
  *   {
- *     players    : array        — raw player rows from state.players (db field names)
- *     teamConfig : object|null  — current window.__MA_INIT__.teamConfig value
- *     apiBase    : string       — e.g. "/api/game_players" or "/api/event_roster"
- *     onApply    : function({ players, teamConfig })
+ *     players         : array        — raw player rows from state.players (db field names)
+ *     teamConfig      : object|null  — current window.__MA_INIT__.teamConfig value
+ *     mode            : string       — current dbEvents_TeamMode ("fixed"|"none").
+ *                                       Only meaningful when showModeToggle is true —
+ *                                       the round-level (game_players) usage of this
+ *                                       module has no mode of its own and can omit it.
+ *     showModeToggle  : bool         — true only for the Event Roster usage. Renders
+ *                                       the on/off cascade toggle in the modal, bundled
+ *                                       into the same Apply as config/assignments.
+ *                                       Omitted (falsy) for the round-level usage —
+ *                                       a round either follows the event (mode "fixed",
+ *                                       button hidden entirely — see game_players.js)
+ *                                       or is fully independent (mode "none"), and in
+ *                                       neither case does the round itself own a toggle.
+ *     apiBase         : string       — e.g. "/api/game_players" or "/api/event_roster"
+ *     onApply         : function({ players, teamConfig, mode })
  *   }
  */
 (function () {
@@ -49,6 +61,7 @@
   let _opts       = {};
   let _teamConfig = null;
   let _players    = [];
+  let _mode       = "none";  // "fixed" | "none" — see showModeToggle in options
   let _busy       = false;
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -143,6 +156,7 @@
     _opts       = options || {};
     _teamConfig = deepClone(_opts.teamConfig) || null;
     _players    = (_opts.players || []).map(normalizePlayer);
+    _mode       = (_opts.mode === "fixed") ? "fixed" : "none";
     _busy       = false;
 
     const overlay = _ensureOverlay();
@@ -204,6 +218,7 @@
           ${_renderTeamNameInput("T1", "Red")}
           ${_renderTeamNameInput("T2", "Blue")}
         </div>
+        ${_renderModeToggle()}
       </div>
       <div class="maModal__body"></div>
       <footer class="maModal__ftr">
@@ -221,6 +236,7 @@
           ${_renderTeamNameInput("T1", getTeamName("T1"))}
           ${_renderTeamNameInput("T2", getTeamName("T2"))}
         </div>
+        ${_renderModeToggle()}
       </div>
       <div class="maModal__controls"
            style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
@@ -259,6 +275,27 @@
         <button type="button" class="maFtrBtn maFtrBtn--cancel" id="mtBtnCancel">Cancel</button>
         <button type="button" class="maFtrBtn maFtrBtn--save" id="mtBtnApply">Apply</button>
       </footer>`;
+  }
+
+  // Cascade on/off toggle — only shown for the Event Roster usage of this
+  // module (showModeToggle). The round-level usage (game_players) has no
+  // toggle of its own: a round either follows the event (mode "fixed",
+  // and this whole module is unreachable there — see game_players.js's
+  // Manage Teams hide) or is fully independent (mode "none"), same as a
+  // Flat Game. Bundled into the same Apply/Create as config + assignments
+  // — flipping this alone does nothing until Apply/Create is clicked.
+  function _renderModeToggle() {
+    if (!_opts.showModeToggle) return "";
+    const on = (_mode === "fixed");
+    return `
+      <div style="margin-top:10px;">
+        <button type="button"
+                class="maChoiceChip${on ? " is-selected" : ""}"
+                id="mtModeToggle"
+                aria-pressed="${on}">
+          ${on ? "Cascading to rounds" : "Not cascading — rounds stand on their own"}
+        </button>
+      </div>`;
   }
 
   function _renderTeamNameInput(slotId, currentName) {
@@ -336,11 +373,25 @@
     overlay.querySelector("#mtBtnClose")?.addEventListener("click", MA.manageTeams.close);
     overlay.querySelector("#mtBtnCancel")?.addEventListener("click", MA.manageTeams.close);
 
+    overlay.querySelector("#mtModeToggle")?.addEventListener("click", () => {
+      _mode = (_mode === "fixed") ? "none" : "fixed";
+      _refreshModeToggle();
+    });
+
     if (!hasTeams()) {
       _wireStateA(overlay);
     } else {
       _wireStateB(overlay);
     }
+  }
+
+  function _refreshModeToggle() {
+    const btn = document.getElementById("mtModeToggle");
+    if (!btn) return;
+    const on = (_mode === "fixed");
+    btn.classList.toggle("is-selected", on);
+    btn.setAttribute("aria-pressed", String(on));
+    btn.textContent = on ? "Cascading to rounds" : "Not cascading — rounds stand on their own";
   }
 
   function _wireStateA(overlay) {
@@ -481,7 +532,7 @@
     if (_busy) return;
     _busy = true; _showBusy("Saving team configuration...");
     try {
-      const res = await MA.postJson(apiPath("saveTeamConfig.php"), { teams });
+      const res = await MA.postJson(apiPath("saveTeamConfig.php"), { teams, mode: _mode });
       if (!res?.ok) { MA.setStatus(res?.message || "Unable to save team configuration.", "danger"); return; }
       _teamConfig = res.payload?.teamConfig || { teams };
       const modal = _getModal();
@@ -496,9 +547,10 @@
     if (_busy) return;
     _busy = true; _showBusy("Saving teams...");
     try {
-      const configRes = await MA.postJson(apiPath("saveTeamConfig.php"), { teams: _teamConfig?.teams || [] });
+      const configRes = await MA.postJson(apiPath("saveTeamConfig.php"), { teams: _teamConfig?.teams || [], mode: _mode });
       if (!configRes?.ok) { MA.setStatus(configRes?.message || "Unable to save team names.", "danger"); return; }
       _teamConfig = configRes.payload?.teamConfig || _teamConfig;
+      _mode = configRes.payload?.mode || _mode;
 
       const assignments = _players.map(p => ({ ghin: p.ghin, team: p.team }));
       const assignRes = await MA.postJson(apiPath("saveTeamAssignments.php"), { assignments });
@@ -506,7 +558,7 @@
 
       MA.setStatus("Teams saved.", "success");
       if (typeof _opts.onApply === "function") {
-        _opts.onApply({ players: assignRes.payload?.players || [], teamConfig: _teamConfig });
+        _opts.onApply({ players: assignRes.payload?.players || [], teamConfig: _teamConfig, mode: _mode });
       }
       MA.manageTeams.close();
     } catch (e) {
@@ -525,7 +577,7 @@
     if (_busy) return;
     _busy = true; _showBusy("Resetting teams...");
     try {
-      const configRes = await MA.postJson(apiPath("saveTeamConfig.php"), { teams: [] });
+      const configRes = await MA.postJson(apiPath("saveTeamConfig.php"), { teams: [], mode: "none" });
       if (!configRes?.ok) { MA.setStatus(configRes?.message || "Unable to reset teams.", "danger"); return; }
 
       const assignments = _players.map(p => ({ ghin: p.ghin, team: "" }));
@@ -533,10 +585,11 @@
       if (!assignRes?.ok) { MA.setStatus(assignRes?.message || "Unable to clear assignments.", "danger"); return; }
 
       _teamConfig = null;
+      _mode = "none";
       _players.forEach(p => p.team = "");
       MA.setStatus("Teams have been reset.", "info");
       if (typeof _opts.onApply === "function") {
-        _opts.onApply({ players: assignRes.payload?.players || [], teamConfig: null });
+        _opts.onApply({ players: assignRes.payload?.players || [], teamConfig: null, mode: "none" });
       }
       const modal = _getModal();
       if (modal) { modal.innerHTML = _renderHeader() + _renderStateA(); _wireEvents(); }

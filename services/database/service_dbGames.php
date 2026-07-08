@@ -331,6 +331,16 @@ public static function queryGames(array $args): array {
       );
 
       $newGGID = self::insertGame($updated);
+
+      // Round vs. Flat Game: only Rounds (dbGames_EID set) get the
+      // event's TeamConfig/FlightConfig snapshot copied down at creation.
+      // Flat Games have no event to cascade from — untouched.
+      $eid = (int)($updated["dbGames_EID"] ?? 0);
+      if ($eid > 0) {
+        require_once MA_SVC_DB . "/service_dbEventPlayers.php";
+        ServiceDbEventPlayers::cascadeToGame($eid, $newGGID);
+      }
+
       $saved = self::getGameByGGID($newGGID) ?? $updated;
       $saved["dbGames_GGID"] = $newGGID;
       return ["ggid" => $newGGID, "game" => $saved, "mode" => "edit"];

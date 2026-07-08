@@ -8,11 +8,18 @@
  * Scope: PairingID / PairingPos only — no tee times, no flight IDs, no match tab.
  * Saves via saveEventRosterPairings.php → ServiceDbEventPlayers::updatePairing().
  *
+ * On/off cascade toggle lives in the header (cepModeToggle), bundled into
+ * the same Save as the pairing data itself — flipping it alone does
+ * nothing until Save is clicked. Defaults off. When on ("fixed"), saved
+ * pairings propagate to every round linked to this event; when off
+ * ("none"), rounds keep whatever pairing state they already have.
+ *
  * Usage:
  *   MA.createEventPairings.open({
  *     players:         [...],   // from event_roster.js — { ghin, name, lname, hi, pairingId, pairingPos, ... }
+ *     pairingMode:     "fixed" | "none",  // current dbEvents_PairingMode
  *     apiSavePairings: url,
- *     onApply:         (players) => { ... }
+ *     onApply:         ({ players, mode }) => { ... }
  *   });
  */
 (function (global) {
@@ -75,6 +82,7 @@
     _state = {
       players:       config.players.map(p => ({ ...p })),
       teamConfig:    config.teamConfig || null,
+      mode:          (config.pairingMode === "fixed") ? "fixed" : "none",
       selected:      new Set(),
       targetPairing: "",
       sortMode:      "name",
@@ -116,6 +124,16 @@
       .map(p => parseInt(pad3(p.pairingId), 10))
       .filter(n => Number.isFinite(n) && n > 0);
     return pad3(ids.length ? Math.max(...ids) + 1 : 1);
+  }
+
+  function _refreshModeToggle() {
+    const btn = _overlay?.querySelector("#cepModeToggle");
+    if (!btn) return;
+    const on = (_state.mode === "fixed");
+    btn.classList.toggle("is-selected", on);
+    btn.style.cssText = on ? "" : "background:transparent;color:#fff;border-color:rgba(255,255,255,.4);";
+    btn.setAttribute("aria-pressed", String(on));
+    btn.textContent = on ? "Cascading to rounds" : "Not cascading";
   }
 
   function markDirty() {
@@ -614,7 +632,7 @@
         pairingPos: safe(p.pairingPos)
       }));
 
-      const res = await postJson(_config.apiSavePairings, { assignments });
+      const res = await postJson(_config.apiSavePairings, { assignments, mode: _state.mode });
 
       if (!res?.ok) {
         throw new Error(res?.message || "Save failed.");
@@ -622,9 +640,13 @@
 
       setStatus("Pairings saved.", "success");
       _state.dirty = false;
+      _state.mode = res.payload?.mode || _state.mode;
 
       if (typeof _config.onApply === "function") {
-        _config.onApply(_state.players.map(p => ({ ...p })));
+        _config.onApply({
+          players: _state.players.map(p => ({ ...p })),
+          mode: _state.mode,
+        });
       }
 
       close();
@@ -674,6 +696,10 @@
             <div class="maModal__subtitle" style="color:rgba(255,255,255,.78);">${esc(String(total))} players</div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
+            <button id="cepModeToggle" type="button"
+                    class="maChoiceChip${_state.mode === "fixed" ? " is-selected" : ""}"
+                    style="${_state.mode === "fixed" ? "" : "background:transparent;color:#fff;border-color:rgba(255,255,255,.4);"}"
+                    aria-pressed="${_state.mode === "fixed"}">${_state.mode === "fixed" ? "Cascading to rounds" : "Not cascading"}</button>
             <button id="cepBtnAutoPair" type="button" class="btn" style="background:rgba(255,255,255,.18);color:#fff;border:0;font-size:12px;font-weight:800;">Auto-Pair</button>
             <button id="cepBtnClose"   type="button" class="btn btnPrimary" style="font-size:12px;">Close</button>
           </div>
@@ -742,6 +768,11 @@
     overlay.querySelector("#cepBtnAutoPair")?.addEventListener("click", () => openAutoPair());
     overlay.querySelector("#cepBtnTrayOpen")?.addEventListener("click", () => openMobileTray());
     overlay.querySelector(".cepMobileCloseBtn")?.addEventListener("click", () => closeMobileTray());
+    overlay.querySelector("#cepModeToggle")?.addEventListener("click", () => {
+      _state.mode = (_state.mode === "fixed") ? "none" : "fixed";
+      markDirty();
+      _refreshModeToggle();
+    });
 
     // Mobile: show tray open button + close button in tray header on narrow screens
     function applyMobileState() {

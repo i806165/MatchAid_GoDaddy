@@ -6,6 +6,8 @@ declare(strict_types=1);
 // NOTE: This file is designed to be callable from APIs and other services.
 
 require_once MA_SVC_DB . "/service_dbGames.php";
+require_once MA_SVC_DB . "/service_dbEvents.php";
+require_once MA_SERVICES . "/context/service_ContextEvent.php";
 require_once MA_API_LIB . "/Db.php";
 require_once MA_API_LIB . "/Logger.php";
 
@@ -199,6 +201,18 @@ final class ServiceContextGame
 
   /**
    * Add derived fields used by UI.
+   *
+   * Round vs. Flat Game: when dbGames_EID is set, the full event record
+   * (raw dbEvents_* columns, plus ServiceContextEvent's own derived UI
+   * fields like startDateISO/endDateISO) is appended directly onto this
+   * same game record — not nested under a separate key. dbGames_* and
+   * dbEvents_* column names never collide, so this merge is safe and
+   * unfiltered: any dbEvents_* column added in the future flows through
+   * to every page that reads game context automatically, with no changes
+   * needed here, the same way a new dbGames_* column already does.
+   *
+   * For a Flat Game (no EID), nothing below runs — the record is exactly
+   * what it was before this change.
    */
   public static function hydrateForUi(array $game): array
   {
@@ -212,6 +226,13 @@ final class ServiceContextGame
       $game["playTimeText"] = substr((string)$game["dbGames_PlayTime"], 0, 5);
     }
 
+    $eid = (int)($game["dbGames_EID"] ?? 0);
+    if ($eid > 0) {
+      $eventRow = ServiceDbEvents::getEventByEID($eid);
+      if ($eventRow) {
+        $game = array_merge($game, ServiceContextEvent::hydrateForUi($eventRow));
+      }
+    }
 
     return $game;
   }

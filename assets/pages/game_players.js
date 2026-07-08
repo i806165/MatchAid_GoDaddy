@@ -586,7 +586,17 @@
       ${sorts.map(s => `<button class="maSeg--sortBtn ${state.rosterSort === s.id ? "is-active" : ""}" type="button" data-roster-sort="${esc(s.id)}">${esc(s.label)}</button>`).join("")}
     </div>`;
 
-    const teamsBtn = `<button id="gpBtnManageTeams" class="btn btnSecondary" type="button">Manage Teams</button>`;
+    // Round with TeamMode "fixed" → hidden entirely, team assignment is
+    // owned by the event roster and cascades down automatically. Every
+    // other case — Flat Game, or a Round with cascading turned off —
+    // shows the button and the round is independently editable, same
+    // as it always has been. dbEvents_TeamMode is only present on
+    // state.game at all when this is a Round (ServiceContextGame merges
+    // the event record onto the game record for Rounds only), so a Flat
+    // Game's check is naturally undefined !== "fixed" → button shows.
+    const teamsBtn = (state.game?.dbEvents_TeamMode === "fixed")
+      ? ""
+      : `<button id="gpBtnManageTeams" class="btn btnSecondary" type="button">Manage Teams</button>`;
 
     el.canvasControls.innerHTML = `
       <div class="gpCanvasControls">
