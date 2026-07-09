@@ -43,6 +43,13 @@
     return String(n).padStart(3, "0");
   }
 
+  // Display-only — never used for the stored/matched pairingId itself,
+  // only for the zero-suppressed number shown to the user ("001" -> "1").
+  function dispPid(v) {
+    const n = parseInt(String(v || "0"), 10);
+    return Number.isFinite(n) ? String(n) : safe(v);
+  }
+
   // Resolve team display name from teamConfig by team key ('T1'/'T2')
   // Mirrors game_pairings.js resolveTeamName() exactly
   function resolveTeamName(teamKey, teamConfig) {
@@ -64,10 +71,6 @@
       body: JSON.stringify({ payload })
     });
     return res.json();
-  }
-
-  function isMobile() {
-    return window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
   }
 
   // ── Module-level singleton ───────────────────────────────────────────────────
@@ -132,7 +135,6 @@
     wrap.querySelectorAll("[data-mode]").forEach(seg => {
       const on = (seg.dataset.mode === _state.mode);
       seg.classList.toggle("btnSecondary", on);
-      seg.style.color = on ? "" : "#fff";
       seg.setAttribute("aria-pressed", String(on));
     });
   }
@@ -140,9 +142,62 @@
   function markDirty() {
     _state.dirty = true;
     const saveBtn = _overlay?.querySelector("#cepBtnSave");
-    if (saveBtn) saveBtn.textContent = "Save Pairings";
-    const hint = _overlay?.querySelector("#cepHint");
-    if (hint) hint.textContent = "Unsaved changes — pairings will not apply until you save.";
+    if (saveBtn && !_overlay?.querySelector(".maModal")?.classList.contains("is-tray-open")) {
+      saveBtn.textContent = "Save Pairings";
+    }
+  }
+
+  // Three-state dynamic hint, mirrored into both the canvas panel's own
+  // controls area and the tray's footer — same text, two places, so
+  // whichever panel is currently visible (mobile) or in view (desktop)
+  // still carries the current instruction. Mirrors game_pairings.js's
+  // setHints()/hintPair + unpairedFooterLeft pattern.
+  function setHints() {
+    const hasTarget = !!_state.targetPairing;
+    const selCount  = _state.selected.size;
+
+    let text;
+    if (hasTarget) {
+      text = `Tap Assign >> to add players to pairing ${dispPid(_state.targetPairing)}.`;
+    } else if (selCount > 0) {
+      text = `Tap Assign >> to create new.`;
+    } else {
+      text = `Select unassigned players, then tap Assign >>.`;
+    }
+
+    const canvasHint = _overlay?.querySelector("#cepCanvasHint");
+    if (canvasHint) canvasHint.textContent = text;
+
+    const trayFooterHint = _overlay?.querySelector("#cepTrayFooterHint");
+    if (trayFooterHint) trayFooterHint.textContent = text;
+  }
+
+  // Swaps the modal's own footer between its normal Cancel/Save Pairings
+  // pair and a Return/Assign pair while the mobile tray is open — the
+  // page-level chrome footer game_pairings.js repurposes for this isn't
+  // visible behind a modal, so .maModal__ftr stands in for it here.
+  // Return only closes the tray (non-destructive nav, not a discard);
+  // Assign does not close the tray — only Return does.
+  function applyModalFooter() {
+    const cancelBtn = _overlay?.querySelector("#cepBtnCancel");
+    const saveBtn   = _overlay?.querySelector("#cepBtnSave");
+    if (!cancelBtn || !saveBtn) return;
+
+    const trayOpen = _overlay?.querySelector(".maModal")?.classList.contains("is-tray-open");
+
+    if (trayOpen) {
+      cancelBtn.textContent = "Return";
+      cancelBtn.onclick = () => closeMobileTray();
+      saveBtn.textContent = "Assign";
+      saveBtn.onclick = () => assignSelected();
+      saveBtn.disabled = !_state.selected.size;
+    } else {
+      cancelBtn.textContent = "Cancel";
+      cancelBtn.onclick = () => confirmClose();
+      saveBtn.textContent = "Save Pairings";
+      saveBtn.onclick = () => doSave();
+      saveBtn.disabled = false;
+    }
   }
 
   // ── Pairing actions ──────────────────────────────────────────────────────────
@@ -222,12 +277,7 @@
     const el = _overlay?.querySelector("#cepTrayControls");
     if (!el) return;
 
-    const selCount  = _state.selected.size;
-    const unCount   = getUnassigned().length;
-    const hasTarget = !!_state.targetPairing;
-    const btnLabel  = hasTarget
-      ? `Assign >> to Pairing ${_state.targetPairing}`
-      : `Assign >> New Pairing`;
+    const selCount = _state.selected.size;
 
     el.innerHTML = `
       <div class="maCanvasControls">
@@ -235,16 +285,15 @@
           <button class="maSegBtn ${_state.sortMode === "name" ? "is-active" : ""}" data-sort="name" type="button">Name</button>
           <button class="maSegBtn ${_state.sortMode === "hi"   ? "is-active" : ""}" data-sort="hi"   type="button">HI</button>
         </div>
-        <div class="maCanvasControls__right">
-          <button id="cepBtnAssign" class="btn btnSecondary" type="button" ${!selCount ? "disabled" : ""}>${esc(btnLabel)}</button>
+      </div>
+      <div class="maCanvasControls" style="margin-top:8px;gap:8px;">
+        <div id="cepMasterCheck" class="maCheckbox maCheckbox--accent${selCount ? " is-checked" : ""}"
+             role="button" tabindex="0" aria-label="Clear selection" title="Clear selection"></div>
+        <div class="maInputWrap maInputWrap--clearable" style="flex:1 1 auto;min-width:0;">
+          <input id="cepSearch" class="maTextInput" type="text" placeholder="Search players…" value="${esc(_state.searchText)}" autocomplete="off" />
+          <button id="cepSearchClear" class="maClearBtn ${_state.searchText ? "" : "isHidden"}" type="button" aria-label="Clear search">×</button>
         </div>
-      </div>
-      <div style="padding:4px 0 6px;font-size:11px;font-weight:700;color:var(--mutedText);">
-        ${selCount ? `${selCount} selected · ` : ""}${unCount} unassigned${hasTarget ? ` · targeting Pairing ${esc(_state.targetPairing)}` : ""}
-      </div>
-      <div class="maInputWrap maInputWrap--clearable">
-        <input id="cepSearch" class="maTextInput" type="text" placeholder="Search players…" value="${esc(_state.searchText)}" autocomplete="off" />
-        <button id="cepSearchClear" class="maClearBtn ${_state.searchText ? "" : "isHidden"}" type="button" aria-label="Clear search">×</button>
+        <button id="cepBtnAssign" class="btn btnSecondary" type="button" ${!selCount ? "disabled" : ""}>Assign &gt;&gt;</button>
       </div>`;
 
     el.querySelectorAll("[data-sort]").forEach(btn => {
@@ -253,6 +302,13 @@
         renderTray();
         renderTrayControls();
       });
+    });
+
+    el.querySelector("#cepMasterCheck")?.addEventListener("click", () => {
+      if (!_state.selected.size) return;
+      _state.selected.clear();
+      renderTray();
+      renderTrayControls();
     });
 
     el.querySelector("#cepBtnAssign")?.addEventListener("click", assignSelected);
@@ -276,6 +332,13 @@
       renderTray();
       renderTrayControls();
     });
+
+    // Every mutation path (row click, sort, search, assign) already calls
+    // this function — folding these two in here means the dynamic hint
+    // and the modal footer's Assign-enabled state stay in sync everywhere
+    // for free, without touching each call site individually.
+    setHints();
+    applyModalFooter();
   }
 
   function renderTray() {
@@ -283,6 +346,9 @@
     if (!el) return;
 
     const rows = getUnassigned();
+
+    const countEl = _overlay?.querySelector("#cepUnassignedCount");
+    if (countEl) countEl.textContent = String(rows.length);
 
     if (!rows.length) {
       el.innerHTML = `<div class="maEmptyState">All players have been assigned.</div>`;
@@ -308,7 +374,7 @@
 
       return `
         <div class="maListRow ${selected ? "is-selected" : ""}" data-ghin="${esc(p.ghin)}">
-          <div class="maCheckbox ${selected ? "is-checked" : ""}"></div>
+          <div class="maCheckbox maCheckbox--accent ${selected ? "is-checked" : ""}"></div>
           <div class="maListRow__col">
             <div>${esc(p.name)}</div>
             ${subline ? `<div class="maListRow__subline">${subline}</div>` : ""}
@@ -383,8 +449,8 @@
       const sumHI   = hiVals.reduce((a, b) => a + b, 0).toFixed(1);
       const avgHI   = hiVals.length ? (hiVals.reduce((a, b) => a + b, 0) / hiVals.length).toFixed(1) : "—";
       const isTarget = _state.targetPairing === pid;
-      const title    = `Pairing ${pid} · Sum HI: ${sumHI} · Avg: ${avgHI}`;
-      const summary  = `Pairing ${pid}: ${members.map(p => esc(p.lname)).join(" · ")}`;
+      const title    = `Pairing ${dispPid(pid)} · Sum HI: ${sumHI} · Avg: ${avgHI}`;
+      const summary  = `Pairing ${dispPid(pid)}: ${members.map(p => esc(p.lname)).join(" · ")}`;
 
       const body = members.map(p => `
         <div class="maListRow" data-ghin="${esc(p.ghin)}" style="cursor:default;">
@@ -487,7 +553,6 @@
 
     const apOverlay = document.createElement("div");
     apOverlay.className = "maModalOverlay is-open";
-    apOverlay.style.cssText = "z-index:10001;";
     apOverlay.innerHTML = `
       <section class="maModal" role="dialog" aria-modal="true" style="max-width:380px;">
         <header class="maModal__hdr">
@@ -701,119 +766,126 @@
   }
 
   // ── Mobile tray toggle ───────────────────────────────────────────────────────
+  // .is-tray-open is a plain descendant selector (see ma_shared.css) — no
+  // specific ancestor required. Toggling it on the .maModal itself is the
+  // modal-context equivalent of what game_players.js/event_roster.js do on
+  // their page wrapper.
 
   function openMobileTray() {
-    const page = _overlay?.querySelector(".maPage--cepModal");
-    if (page) page.classList.add("is-tray-open");
-    const btn = _overlay?.querySelector("#cepBtnTrayOpen");
-    if (btn) btn.textContent = "Show Pairings";
+    const modal = _overlay?.querySelector(".maModal");
+    if (modal) modal.classList.add("is-tray-open");
+    setHints();
+    applyModalFooter();
   }
 
   function closeMobileTray() {
-    const page = _overlay?.querySelector(".maPage--cepModal");
-    if (page) page.classList.remove("is-tray-open");
-    const btn = _overlay?.querySelector("#cepBtnTrayOpen");
-    if (btn) btn.textContent = "+ Assign Players";
+    const modal = _overlay?.querySelector(".maModal");
+    if (modal) modal.classList.remove("is-tray-open");
+    applyModalFooter();
   }
 
   // ── Build overlay DOM ────────────────────────────────────────────────────────
 
   function buildOverlay(config) {
-    const ev    = config.players; // unused here but available
     const total = config.players.length;
 
     const overlay = document.createElement("div");
     overlay.id        = "cepOverlay";
     overlay.className = "maModalOverlay is-open";
-    overlay.style.cssText = "z-index:10000;padding:0;align-items:stretch;";
 
     overlay.innerHTML = `
-      <div class="maModal" style="width:100%;height:100%;max-width:100%;border-radius:0;display:flex;flex-direction:column;overflow:hidden;">
+      <div class="maModal maModal--panels" style="--modalMaxW: 1100px;">
 
-        <!-- Header -->
-        <header class="maModal__hdr" style="background:var(--brandTertiary);flex-shrink:0;">
+        <!-- Header — title, subtitle, Close only. Matches every other
+             modal's header shape (Team, Flight); nothing else lives here. -->
+        <header class="maModal__hdr">
           <div class="maModal__titles">
-            <div class="maModal__title" style="color:#fff;">Event Pairings</div>
-            <div class="maModal__subtitle" style="color:rgba(255,255,255,.78);">${esc(String(total))} players</div>
+            <div class="maModal__title">Event Pairings</div>
+            <div class="maModal__subtitle">${esc(String(total))} players</div>
           </div>
-          <div style="display:flex;gap:10px;align-items:center;">
-            <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,.78);white-space:nowrap;">Pairings Managed by</span>
-            <div class="maSeg" id="cepModeToggle" style="width:auto;flex:0 0 auto;background:transparent;border-color:rgba(255,255,255,.4);" role="group" aria-label="Pairing management level">
-              <button type="button" class="maSegBtn${_state.mode === "fixed" ? " btnSecondary" : ""}"
-                      data-mode="fixed" aria-pressed="${_state.mode === "fixed"}"
-                      style="${_state.mode === "fixed" ? "" : "color:#fff;"}border-right-color:rgba(255,255,255,.4);">EVENT</button>
-              <button type="button" class="maSegBtn${_state.mode !== "fixed" ? " btnSecondary" : ""}"
-                      data-mode="none" aria-pressed="${_state.mode !== "fixed"}"
-                      style="${_state.mode !== "fixed" ? "" : "color:#fff;"}">ROUND</button>
-            </div>
-            <button id="cepBtnAutoPair" type="button" class="btn" style="background:rgba(255,255,255,.18);color:#fff;border:0;font-size:12px;font-weight:800;">Auto-Pair</button>
-            <button id="cepBtnClose"   type="button" class="btn btnPrimary" style="font-size:12px;">Close</button>
-          </div>
+          <button id="cepBtnClose" type="button" class="iconBtn btnPrimary" aria-label="Close">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
         </header>
 
-        <!-- Status hint -->
-        <div id="cepHint" style="flex-shrink:0;padding:5px 12px;font-size:11px;font-weight:700;color:var(--mutedText);background:var(--surfaceChrome);border-bottom:1px solid var(--borderSubtle);">
-          Select players in the tray, then click Assign &gt;&gt; to create a pairing.
+        <!-- Controls — EVENT/ROUND toggle + Auto-Pair. Hidden entirely on
+             mobile while the tray is open (see ma_shared.css) — these
+             govern the canvas, not the tray. -->
+        <div class="maModal__controls">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span style="font-size:11px;font-weight:700;color:var(--mutedText);white-space:nowrap;">Pairings Managed by</span>
+            <div class="maSeg" id="cepModeToggle" style="width:auto;flex:0 0 auto;" role="group" aria-label="Pairing management level">
+              <button type="button" class="maSegBtn${_state.mode === "fixed" ? " btnSecondary" : ""}"
+                      data-mode="fixed" aria-pressed="${_state.mode === "fixed"}">EVENT</button>
+              <button type="button" class="maSegBtn${_state.mode !== "fixed" ? " btnSecondary" : ""}"
+                      data-mode="none" aria-pressed="${_state.mode !== "fixed"}">ROUND</button>
+            </div>
+            <button id="cepBtnAutoPair" type="button" class="btn btnSecondary" style="font-size:12px;">Auto-Pair</button>
+          </div>
         </div>
 
-        <!-- Two-panel body -->
-        <div class="maPage--cepModal" style="flex:1 1 auto;min-height:0;overflow:hidden;display:flex;flex-direction:column;">
-          <div class="maPanels maPanels--2" style="flex:1 1 auto;min-height:0;">
+        <!-- Body — the two-panel tray/canvas layout. Same shared pattern as
+             game_players.php / event_roster.php / game_pairings.php /
+             game_slotting.php, now consolidated in ma_shared.css rather
+             than re-implemented a fifth time. Small top padding so the
+             panel headers don't sit flush against the modal header /
+             controls above them, especially on mobile with the tray open
+             where .maModal__controls is hidden and there'd otherwise be
+             no separation at all. -->
+        <div class="maModal__body maModal__body--panels" style="padding-top:8px;">
+          <div class="maPanels maPanels--2">
 
-            <!-- LEFT: Tray — unassigned players -->
+            <!-- Tray — unassigned players. No in-panel close button —
+                 the modal footer's Return button (see applyModalFooter)
+                 is the only way back to the canvas on mobile. -->
             <section class="maPanel maPanel--secondary cepTrayPanel" aria-label="Unassigned players">
-              <header class="maPanel__hdr" style="background:var(--surfaceChrome);color:var(--brandTertiary);border-bottom:1px solid var(--borderSubtle);">
-                <div style="display:flex;align-items:center;justify-content:center;width:100%;position:relative;">
-                  <div style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.3px;">Unassigned</div>
-                  <button class="iconBtn cepMobileCloseBtn" type="button" aria-label="Close tray"
-                    style="position:absolute;right:0;display:none;width:28px;height:28px;border:1px solid rgba(255,255,255,.4);background:transparent;color:#fff;border-radius:var(--radiusMd);">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                  </button>
-                </div>
+              <header class="maPanel__hdr" style="background:var(--brandSecondary);color:var(--brandSecondaryText);display:flex;align-items:center;justify-content:center;position:relative;">
+                <div style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.3px;">Unassigned</div>
+                <span id="cepUnassignedCount" style="position:absolute;right:14px;font-size:12px;font-weight:800;color:rgba(255,255,255,.9);"></span>
               </header>
               <div class="maPanel__controls" id="cepTrayControls"></div>
               <div class="maPanel__body" id="cepTrayBody"></div>
-              <footer class="maPanel__ftr"></footer>
+              <footer class="maPanel__ftr">
+                <div id="cepTrayFooterHint" style="font-size:11px;font-weight:700;color:var(--mutedText);"></div>
+              </footer>
             </section>
 
-            <!-- RIGHT: Canvas — pairing cards -->
-            <section class="maPanel maPanel--primary" aria-label="Pairings">
-              <header class="maPanel__hdr" style="background:var(--surfaceChrome);color:var(--brandTertiary);border-bottom:1px solid var(--borderSubtle);">
-                <div style="display:flex;align-items:center;justify-content:center;width:100%;position:relative;">
-                  <div style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.3px;">Pairings</div>
+            <!-- Canvas — pairing cards -->
+            <section class="maPanel maPanel--primary" aria-label="Assigned Pairings">
+              <header class="maPanel__hdr" style="background:var(--brandSecondary);color:var(--brandSecondaryText);">
+                <div style="display:flex;align-items:center;justify-content:center;width:100%;">
+                  <div style="font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:.3px;">Assigned Pairings</div>
                 </div>
               </header>
               <div class="maPanel__controls">
-                <div style="font-size:11px;font-weight:700;color:var(--mutedText);">
-                  Tap a pairing card to target it, then Assign &gt;&gt; from the tray.
-                </div>
+                <div id="cepCanvasHint" style="font-size:11px;font-weight:700;color:var(--mutedText);"></div>
               </div>
               <div class="maPanel__body" id="cepCanvasBody"></div>
               <footer class="maPanel__ftr">
-                <button id="cepBtnTrayOpen" class="btn btnSecondary" type="button"
-                  style="width:100%;display:none;">+ Assign Players</button>
+                <button id="cepBtnTrayOpen" class="btn btnSecondary maTrayOpenBtn" type="button" style="width:100%;">+ Assign Players</button>
               </footer>
             </section>
 
           </div>
         </div>
 
-        <!-- Footer -->
-        <footer class="maModal__ftr" style="flex-shrink:0;">
-          <div style="flex:1;font-size:11px;font-weight:700;color:var(--mutedText);" id="cepFooterHint"></div>
+        <!-- Footer — swapped between Cancel/Save Pairings and Return/Assign
+             by applyModalFooter() depending on whether the mobile tray is
+             open. Handlers are bound there, not statically here. -->
+        <footer class="maModal__ftr">
           <button id="cepBtnCancel" class="maFtrBtn maFtrBtn--cancel" type="button">Cancel</button>
           <button id="cepBtnSave"   class="maFtrBtn maFtrBtn--save"   type="button">Save Pairings</button>
         </footer>
 
       </div>`;
 
-    // Wire static buttons
+    // Wire static buttons. Cancel/Save are bound dynamically by
+    // applyModalFooter() (called below) since their label and handler
+    // both depend on whether the mobile tray is open — binding them here
+    // too would double-fire on click.
     overlay.querySelector("#cepBtnClose")?.addEventListener("click",    () => confirmClose());
-    overlay.querySelector("#cepBtnCancel")?.addEventListener("click",   () => confirmClose());
-    overlay.querySelector("#cepBtnSave")?.addEventListener("click",     () => doSave());
     overlay.querySelector("#cepBtnAutoPair")?.addEventListener("click", () => openAutoPair());
     overlay.querySelector("#cepBtnTrayOpen")?.addEventListener("click", () => openMobileTray());
-    overlay.querySelector(".cepMobileCloseBtn")?.addEventListener("click", () => closeMobileTray());
     overlay.querySelector("#cepModeToggle")?.addEventListener("click", e => {
       const seg = e.target.closest("[data-mode]");
       if (!seg) return;
@@ -821,19 +893,6 @@
       markDirty();
       _refreshModeToggle();
     });
-
-    // Mobile: show tray open button + close button in tray header on narrow screens
-    function applyMobileState() {
-      const narrow = isMobile();
-      const trayOpenBtn = overlay.querySelector("#cepBtnTrayOpen");
-      const trayCloseBtn = overlay.querySelector(".cepMobileCloseBtn");
-      if (trayOpenBtn)  trayOpenBtn.style.display  = narrow ? "" : "none";
-      if (trayCloseBtn) trayCloseBtn.style.display = narrow ? "" : "none";
-    }
-
-    applyMobileState();
-    window.addEventListener("resize", applyMobileState);
-    overlay._cleanupResize = () => window.removeEventListener("resize", applyMobileState);
 
     return overlay;
   }
@@ -867,7 +926,6 @@
 
   function close() {
     if (_overlay) {
-      if (_overlay._cleanupResize) _overlay._cleanupResize();
       _overlay.remove();
       _overlay = null;
     }

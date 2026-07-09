@@ -1030,6 +1030,91 @@ textarea {
   border-top: 1px solid var(--panelFtrBorder);
 }
 
+/* ---------- Tray / canvas mobile swap ------------------------------------
+   Consolidates a pattern that existed as four independent, near-identical
+   copies (game_players.css, event_roster.css, game_pairings.css,
+   game_slotting.css) before this. Below 900px, .maPanels--2 has already
+   collapsed to one column (see .maPanels above) — this decides which of
+   the two panels occupies it. .maPanel--secondary (the tray: unassigned
+   players, add-player sources, etc.) starts hidden; .maPanel--primary
+   (the canvas) is the default view.
+
+   Not an overlay — no backdrop, no fixed positioning, no animation. Plain
+   display swap. This is a deliberately different mechanism from
+   .maChrome__hubTray (the mobile nav drawer, below) despite the shared
+   "tray" name — that one slides up over a backdrop; this one just swaps
+   which panel is visible in place. Don't conflate the two.
+
+   .is-tray-open is a plain descendant selector with no required ancestor
+   — it can be toggled on the page wrapper (as game_players/event_roster
+   do), a tab wrapper (as game_pairings/game_slotting do, for independent
+   per-tab tray state), or a modal (.maModal--panels), unmodified.
+
+   Expected trigger markup:
+     Inside .maPanel--primary's own .maPanel__ftr:
+       <button class="maTrayOpenBtn" type="button">+ Add Players</button>
+     Inside .maPanel--secondary's own .maPanel__hdr:
+       <button class="maTrayCloseBtn iconBtn btnSecondary" type="button"
+               aria-label="Close">×</button>
+   JS toggles .is-tray-open on the shared ancestor; nothing else required.
+   ------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .maPanels--2 .maPanel--secondary {
+    display: none;
+  }
+
+  .is-tray-open .maPanels--2 .maPanel--secondary {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .is-tray-open .maPanels--2 .maPanel--primary {
+    display: none;
+  }
+
+  /* Controls belong to the canvas, not the tray — hide the modal-level
+     controls strip (e.g. cascade mode toggle, Auto-Pair) while the tray
+     is showing instead of the canvas. Retained on desktop regardless of
+     .is-tray-open, since panels never swap there. */
+  .is-tray-open .maModal__controls {
+    display: none;
+  }
+}
+
+.maTrayOpenBtn {
+  display: none;
+  width: 100%;
+  min-height: var(--btnHeight);
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--brandPrimary);
+  border-radius: var(--radiusMd);
+  background: transparent;
+  color: var(--brandPrimary);
+  font-family: var(--fontFamilyBase);
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.maTrayOpenBtn:active {
+  transform: translateY(1px);
+}
+
+.maTrayCloseBtn {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .maTrayOpenBtn {
+    display: inline-flex;
+  }
+
+  .maTrayCloseBtn {
+    display: flex;
+  }
+}
+
 
 /* ==========================================================================
    10. OVERLAY FAMILY — DRAWER + MODAL
@@ -1194,6 +1279,30 @@ textarea {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ---------- Modal variant: hosts a .maPanels tray/canvas layout ---------
+   Opt-in modifiers for a modal whose body is a two-panel tray/canvas
+   layout (see section 9) rather than ordinary form fields.
+
+   .maModal--panels  — the panels need a real, definite height to fill
+     (not just the default max-height cap) so .maPanel__body's own
+     overflow:auto has something concrete to scroll within. Same
+     viewport-safe expression the existing max-height rule already uses.
+
+   .maModal__body--panels — strips the default 14px body padding (the
+     panels supply their own internal spacing) and locks outer scroll —
+     only .maPanel__body should scroll, never this wrapper. Mirrors the
+     "lock outer, scroll inner" rule every standalone tray/canvas page
+     already applies to its own <main class="maPage--X">.
+   ------------------------------------------------------------------------- */
+.maModal--panels {
+  height: min(var(--modalMaxH), calc(100dvh - (var(--modalViewportGap) + env(safe-area-inset-top) + env(safe-area-inset-bottom))));
+}
+
+.maModal__body--panels {
+  padding: 0;
+  overflow: hidden;
 }
 
 /* Mobile overrides for modal fields */
@@ -2301,6 +2410,18 @@ textarea {
   border-bottom: 2px solid #ffffff;
   transform: rotate(-45deg) translateY(-1px);
   display: block;
+}
+
+/* ---------- .maCheckbox--accent — blue variant ---------------------------
+   Same component, "our button blue" (--brandColor3) instead of the default
+   brandSecondary green — matches .btnSecondary's color. Additive modifier,
+   same convention as .btn--confirm / .btn--danger (section 21e). The base
+   .maCheckbox.is-checked default is untouched for existing consumers
+   (Buddy Groups modal, game pairings, admin picker).
+   ------------------------------------------------------------------------- */
+.maCheckbox--accent.is-checked {
+  background: var(--brandColor3);
+  border-color: var(--brandColor3);
 }
 
 
