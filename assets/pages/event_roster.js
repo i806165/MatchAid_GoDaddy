@@ -346,6 +346,9 @@
 
   // ── Refresh Handicaps ────────────────────────────────────────────────────────
   async function onRefreshHandicaps() {
+    const refreshBtn = document.getElementById("erBtnRefreshHI");
+    if (refreshBtn) refreshBtn.disabled = true;
+    _showBusy("Refreshing handicaps — please wait...");
     MA.setStatus("Refreshing handicaps…", "info");
     try {
       const res = await MA.postJson(MA.paths.refreshEventRosterHI, {});
@@ -359,7 +362,48 @@
     } catch (e) {
       console.error(e);
       MA.setStatus(String(e.message || e), "danger");
+    } finally {
+      if (refreshBtn) refreshBtn.disabled = false;
+      _hideBusy();
     }
+  }
+
+  const BUSY_ID = "erBusyOverlay";
+
+  function _ensureBusyOverlay() {
+    if (document.getElementById(BUSY_ID)) return;
+
+    const overlay = document.createElement("div");
+    overlay.id = BUSY_ID;
+    overlay.className = "maModalOverlay";
+
+    const modal = document.createElement("section");
+    modal.className = "maModal";
+    modal.innerHTML = `
+      <header class="maModal__hdr">
+        <div class="maModal__titles">
+          <div class="maModal__title">Working</div>
+        </div>
+      </header>
+      <div class="maModal__body" id="erBusyBody">
+        <p id="erBusyMessage" style="line-height:1.6;"></p>
+      </div>`;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+  }
+
+  function _showBusy(message) {
+    _ensureBusyOverlay();
+    const overlay = document.getElementById(BUSY_ID);
+    const body    = document.getElementById("erBusyBody");
+    if (body) body.innerHTML = `<p style="line-height:1.6;">${message || "Processing — please wait..."}</p>`;
+    if (overlay) overlay.classList.add("is-open");
+  }
+
+  function _hideBusy() {
+    const overlay = document.getElementById(BUSY_ID);
+    if (overlay) overlay.classList.remove("is-open");
   }
 
   // ── Manage Pairings ──────────────────────────────────────────────────────────
