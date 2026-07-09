@@ -121,6 +121,7 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
     <script src="<?= ma_asset('/assets/modules/pageHelp.js') ?>"></script>
     <script src="<?= ma_asset('/assets/modules/module_parseImportPlayers.js') ?>"></script>
     <script src="<?= ma_asset('/assets/modules/module_createEventPairings.js') ?>"></script>
+    <script src="<?= ma_asset('/assets/modules/module_defineFlights.js') ?>"></script>
     <script src="<?= ma_asset('/assets/pages/event_roster.js') ?>"></script>
 </body>
 </html>
