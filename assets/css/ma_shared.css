@@ -1082,7 +1082,7 @@ textarea {
 }
 
 .maTrayOpenBtn {
-  display: none;
+  display: none !important;
   width: 100%;
   min-height: var(--btnHeight);
   align-items: center;
@@ -1102,16 +1102,16 @@ textarea {
 }
 
 .maTrayCloseBtn {
-  display: none;
+  display: none !important;
 }
 
 @media (max-width: 900px) {
   .maTrayOpenBtn {
-    display: inline-flex;
+    display: inline-flex !important;
   }
 
   .maTrayCloseBtn {
-    display: flex;
+    display: flex !important;
   }
 }
 
@@ -2413,15 +2413,19 @@ textarea {
 }
 
 /* ---------- .maCheckbox--accent — blue variant ---------------------------
-   Same component, "our button blue" (--brandColor3) instead of the default
-   brandSecondary green — matches .btnSecondary's color. Additive modifier,
-   same convention as .btn--confirm / .btn--danger (section 21e). The base
-   .maCheckbox.is-checked default is untouched for existing consumers
-   (Buddy Groups modal, game pairings, admin picker).
+   Same component, --brandAccent instead of the default brandSecondary
+   green — matches the blue already used for selection state everywhere
+   else it appears (.gpRowCheck.is-selected, .gpMasterCheck.has-selection
+   in game_pairings.css; .maListRow.is-selected here). Not --brandColor3
+   ("button blue" / .btnSecondary) — that's a different semantic role.
+   Additive modifier, same convention as .btn--confirm / .btn--danger
+   (section 21e). The base .maCheckbox.is-checked default is untouched
+   for existing consumers (Buddy Groups modal, game pairings, admin
+   picker).
    ------------------------------------------------------------------------- */
 .maCheckbox--accent.is-checked {
-  background: var(--brandColor3);
-  border-color: var(--brandColor3);
+  background: var(--brandAccent);
+  border-color: var(--brandAccent);
 }
 
 

@@ -316,10 +316,13 @@
           ${sortStrip}
         </div>
         <div class="gpCanvasControls__right">
-          <button id="erBtnRefreshHI" class="btn btnSecondary" type="button">Refresh Handicaps</button>
-          <button id="erBtnManageTeams" class="btn btnSecondary" type="button">Manage Teams</button>
-          <button id="erBtnDefineFlights" class="btn btnSecondary" type="button">Define Flights</button>
-          ${pairingsBtn}
+          <div class="erDesktopActions" style="display:flex; align-items:center; gap:8px;">
+            <button id="erBtnRefreshHI" class="btn btnSecondary" type="button">Refresh Handicaps</button>
+            <button id="erBtnManageTeams" class="btn btnSecondary" type="button">Manage Teams</button>
+            <button id="erBtnDefineFlights" class="btn btnSecondary" type="button">Define Flights</button>
+            ${pairingsBtn}
+          </div>
+          <button id="erBtnManageRoster" class="btn btnSecondary erMobileManageBtn" type="button">Manage Roster</button>
         </div>
       </div>`;
 
@@ -342,6 +345,42 @@
 
     const pairBtn = document.getElementById("erBtnManagePairings");
     if (pairBtn) pairBtn.onclick = onManagePairings;
+
+    const manageRosterBtn = document.getElementById("erBtnManageRoster");
+    if (manageRosterBtn) manageRosterBtn.onclick = onManageRoster;
+  }
+
+  // ── Manage Roster (mobile) ───────────────────────────────────────────────────
+  // Mobile-only stand-in for the four desktop buttons above — same actions,
+  // same handlers, one trigger instead of a row that overflows a phone-width
+  // screen. Desktop keeps the four separate buttons, unchanged. Flights is
+  // deliberately last in this list (desktop button order is unchanged).
+  function onManageRoster() {
+    if (!MA.ui || !MA.ui.openActionsMenu) {
+      MA.setStatus("Actions menu not loaded.", "warn");
+      return;
+    }
+    MA.ui.openActionsMenu("Manage Roster", [
+      { label: "Refresh Handicaps", action: onRefreshHandicaps },
+      { label: "Manage Teams",      action: onManageTeams },
+      { label: "Manage Pairings",   action: onManagePairings },
+      { label: "Define Flights",    action: onDefineFlights },
+    ]);
+  }
+
+  // ── Mobile tray toggle ───────────────────────────────────────────────────────
+  // Mirrors game_players.js's approach exactly: toggle .is-tray-open on the
+  // page wrapper. The actual show/hide is handled entirely by ma_shared.css's
+  // shared .maPanels--2 / .is-tray-open mechanism — nothing page-specific
+  // needed here beyond flipping the class.
+  function openMobileTray() {
+    const page = document.querySelector(".maPage--event-roster");
+    if (page) page.classList.add("is-tray-open");
+  }
+
+  function closeMobileTray() {
+    const page = document.querySelector(".maPage--event-roster");
+    if (page) page.classList.remove("is-tray-open");
   }
 
   // ── Refresh Handicaps ────────────────────────────────────────────────────────
@@ -757,6 +796,12 @@
     applyChrome();
     await refreshRoster();
     render();
+
+    const trayOpenBtn = document.getElementById("erBtnTrayOpen");
+    if (trayOpenBtn) trayOpenBtn.onclick = openMobileTray;
+
+    const trayCloseBtn = document.querySelector(".maTrayCloseBtn");
+    if (trayCloseBtn) trayCloseBtn.onclick = closeMobileTray;
   }
 
   boot().catch(err => {

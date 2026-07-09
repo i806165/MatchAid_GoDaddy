@@ -51,6 +51,13 @@
   right: 10px;
 }
 
+.maPage--event-roster .erPanelHdr__left {
+  display: flex;
+  align-items: center;
+  position: absolute;
+  left: 10px;
+}
+
 /* ── Tray tab strip ─────────────────────────────────────────────────────── */
 
 .erTrayTabs {
@@ -129,20 +136,32 @@
 
 /* ── Mobile ─────────────────────────────────────────────────────────────── */
 
+/* Tray show/hide on mobile is now handled entirely by ma_shared.css's
+   shared .maPanels--2 / .is-tray-open mechanism (section 9) — it matches
+   on .maPanel--secondary / .maPanel--primary directly, which this page's
+   panels already carry, so no page-scoped duplicate is needed here.
+   .erBtnTrayOpen / the header close-X use the shared .maTrayOpenBtn /
+   .maTrayCloseBtn classes for the same reason. Previously this file had
+   its own copy of this block scoped to .maPage--event-roster.is-tray-open
+   — removed as redundant now that the generic version covers it. */
+
+/* Canvas action buttons — full row on desktop, single "Manage Roster"
+   trigger (opens the actions menu) on mobile. Both are always in the DOM;
+   visibility is CSS-only, same pattern as .maTrayOpenBtn. !important is
+   necessary here for the same reason it was needed there — .btn/.btnSecondary
+   are defined later in ma_shared.css than any page-scoped rule could be,
+   so equal-specificity source order would otherwise let their own
+   display:inline-flex silently win regardless of this media query. */
+.erMobileManageBtn {
+  display: none;
+}
+
 @media (max-width: 900px) {
-  .erTrayPanel {
-    display: none;
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
+  .erDesktopActions {
+    display: none !important;
   }
 
-  .maPage--event-roster.is-tray-open .erTrayPanel {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .maPage--event-roster.is-tray-open .maPanel--primary {
-    display: none;
+  .erMobileManageBtn {
+    display: inline-flex !important;
   }
 }
