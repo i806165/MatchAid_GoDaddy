@@ -14,21 +14,24 @@
   const rounds = Array.isArray(meta.rounds) ? meta.rounds : [];
 
   // Same four values as ServiceBuildEventSummary::NON_PERSONAL_SCORE_FORMATS
-  // — kept here only for the is-excluded visual cue on a round cell, never
-  // for any calculation (that's server-side, already reflected in
-  // countsTowardStrokes per round).
+  // — a round in one of these formats has no personal per-player score, so
+  // that day's score line is left empty (points still show). Kept in sync
+  // manually with the PHP list — this file has no access to that constant
+  // at build time.
+  const NON_PERSONAL_SCORE_FORMATS = ['Scramble', 'Shamble', 'AltShot', 'Chapman'];
+
   const state = {
-    flightKey: flights[0] ? flights[0].flightKey : null,
     view: 'individual',       // 'individual' | 'pairing' | 'team'
     metric: 'gross',          // Individual only — 'gross' | 'net'
+    collapsedFlights: new Set(),
   };
 
   const dom = {
-    flightTabs: document.getElementById('esFlightTabs'),
     viewPills: document.getElementById('esViewPills'),
     metricPills: document.getElementById('esMetricPills'),
     host: document.getElementById('esHost'),
     empty: document.getElementById('esEmpty'),
+    hint: document.getElementById('esHint'),
   };
 
   function esc(s) {
@@ -43,81 +46,91 @@
     return (n > 0 ? '+' : '') + (Number.isInteger(n) ? n : n.toFixed(1));
   }
 
+  // Points cell: blank (not "0") when nothing was actually assigned —
+  // confirmed behavior for ranks beyond the event's configured points
+  // table. A genuine zero-value place is visually indistinguishable from
+  // this and treated the same, deliberately.
   function fmtPoints(v) {
-    if (v === null || v === undefined || Number.isNaN(v)) return '0';
-    const n = Number(v);
+    const n = Number(v || 0);
+    if (!n) return '';
     return Number.isInteger(n) ? String(n) : n.toFixed(1);
   }
 
-  function currentFlight() {
-    return flights.find((f) => f.flightKey === state.flightKey) || flights[0] || null;
+  function fmtTally(v) {
+    const n = Number(v || 0);
+    return Number.isInteger(n) ? String(n) : n.toFixed(1);
   }
 
-  // ── Pill/tab rendering — all built on .maSeg/.maSegBtn from ma_shared.css,
-  //    no new chrome CSS needed for any of these three strips. ──────────────
+  function allRoundsNonPersonal() {
+    return rounds.length > 0 && rounds.every((r) => NON_PERSONAL_SCORE_FORMATS.includes(r.gameFormat));
+  }
 
-  function renderFlightTabs() {
-    if (!dom.flightTabs) return;
-    if (flights.length <= 1) {
-      dom.flightTabs.style.display = 'none';
-      dom.flightTabs.innerHTML = '';
+  function roundHeaderLabel(i) {
+    const r = rounds[i];
+    if (!r) return `Round ${i + 1}`;
+    return r.gameFormat ? `Round ${i + 1}<br>${esc(r.gameFormat)}` : `Round ${i + 1}`;
+  }
+
+  // ── Pills — real .maChoiceChip/.maChoiceChips, metric (left) + view
+  //    (right), per the confirmed round-level convention. ──────────────────
+
+  function renderMetricPills() {
+    if (!dom.metricPills) return;
+    if (state.view !== 'individual') {
+      dom.metricPills.innerHTML = '';
       return;
     }
-    dom.flightTabs.style.display = '';
-    dom.flightTabs.innerHTML = flights.map((f) => `
-      <button class="maSegBtn ${f.flightKey === state.flightKey ? 'is-active' : ''}"
-        data-flight="${esc(f.flightKey)}" type="button" role="tab"
-        aria-selected="${f.flightKey === state.flightKey}">${esc(f.flightName)}</button>
+    dom.metricPills.innerHTML = ['net', 'gross'].map((key) => `
+      <button class="maChoiceChip ${state.metric === key ? 'is-selected' : ''}"
+        data-metric="${key}" type="button">${key === 'gross' ? 'Gross' : 'Net'}</button>
     `).join('');
   }
 
   function renderViewPills() {
     if (!dom.viewPills) return;
-    const options = [['individual', 'Individual']];
-    if (pairingFixed) options.push(['pairing', 'Pairing']);
-    if (teamFixed) options.push(['team', 'Team']);
+    const individualDisabled = allRoundsNonPersonal();
 
-    dom.viewPills.innerHTML = options.map(([key, label]) => `
-      <button class="maSegBtn ${state.view === key ? 'is-active' : ''}"
-        data-view="${key}" type="button" role="tab"
-        aria-selected="${state.view === key}">${esc(label)}</button>
+    if (individualDisabled && state.view === 'individual') {
+      state.view = pairingFixed ? 'pairing' : (teamFixed ? 'team' : 'individual');
+    }
+
+    const options = [
+      ['individual', 'Individual', individualDisabled],
+      ['pairing', 'Pairing', !pairingFixed],
+      ['team', 'Team', !teamFixed],
+    ];
+
+    dom.viewPills.innerHTML = options.map(([key, label, isDisabled]) => `
+      <button class="maChoiceChip ${state.view === key ? 'is-selected' : ''} ${isDisabled ? 'is-disabled' : ''}"
+        data-view="${key}" type="button" ${isDisabled ? 'disabled' : ''}>${esc(label)}</button>
     `).join('');
   }
 
-  function renderMetricPills() {
-    if (!dom.metricPills) return;
-    if (state.view !== 'individual') {
-      dom.metricPills.style.display = 'none';
-      dom.metricPills.innerHTML = '';
-      return;
-    }
-    dom.metricPills.style.display = '';
-    dom.metricPills.innerHTML = ['gross', 'net'].map((key) => `
-      <button class="maSegBtn ${state.metric === key ? 'is-active' : ''}"
-        data-metric="${key}" type="button" role="tab"
-        aria-selected="${state.metric === key}">${key === 'gross' ? 'Gross' : 'Net'}</button>
-    `).join('');
+  // ── Dynamic header — mirrors score_summary.js's dom.lbSectionTitle
+  //    toggling, composed from view + metric instead of one placement flag.
+
+  function renderHint() {
+    if (!dom.hint) return;
+    const viewLabel = state.view.charAt(0).toUpperCase() + state.view.slice(1);
+    const metricSuffix = state.view === 'individual' ? ` — ${state.metric === 'gross' ? 'Gross' : 'Net'}` : '';
+    dom.hint.textContent = `${viewLabel} leaderboard${metricSuffix}`;
   }
 
   // ── Host content ─────────────────────────────────────────────────────────
 
   function render() {
-    renderFlightTabs();
-    renderViewPills();
     renderMetricPills();
+    renderViewPills();
+    renderHint();
 
-    const flight = currentFlight();
-    if (!flight) {
-      showEmpty(true);
-      return;
-    }
+    if (!flights.length) { showEmpty(true); return; }
 
     if (state.view === 'pairing') {
-      renderGroupView(flight.pairing || [], 'pairing');
+      renderTable(flights, 'pairing');
     } else if (state.view === 'team') {
-      renderGroupView(flight.team || [], 'team');
+      renderTable(flights, 'team');
     } else {
-      renderIndividualView(flight.individual || []);
+      renderTable(flights, 'individual');
     }
   }
 
@@ -126,79 +139,107 @@
     if (dom.host) dom.host.style.display = isEmpty ? 'none' : '';
   }
 
-  function renderIndividualView(players) {
-    if (!players.length) { showEmpty(true); return; }
-    showEmpty(false);
+  function collapseToggleBtn(flightKey) {
+    const collapsed = state.collapsedFlights.has(flightKey);
+    return `
+      <button class="iconBtn btnSecondary esCollapseBtn" type="button" data-flight-toggle="${esc(flightKey)}"
+        aria-label="${collapsed ? 'Expand' : 'Collapse'} flight" title="${collapsed ? 'Expand' : 'Collapse'} flight">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          ${collapsed ? '<line x1="12" y1="5" x2="12" y2="19"></line>' : ''}
+        </svg>
+      </button>`;
+  }
 
+  function renderTable(flightList, view) {
+    const isIndividual = view === 'individual';
     const isGross = state.metric === 'gross';
-    const sorted = players.slice().sort((a, b) => {
-      const av = isGross ? a.totalGrossValue : a.totalNetValue;
-      const bv = isGross ? b.totalGrossValue : b.totalNetValue;
-      return (av ?? 0) - (bv ?? 0); // lower is better, same as round-level
+    const colCount = isIndividual ? (4 + rounds.length) : (3 + rounds.length);
+
+    let html = `<table class="esTable"><colgroup></colgroup>`;
+
+    flightList.forEach((flight) => {
+      const rows = isIndividual ? (flight.individual || []) : (view === 'pairing' ? (flight.pairing || []) : (flight.team || []));
+      if (!rows.length) return;
+
+      const collapsed = state.collapsedFlights.has(flight.flightKey);
+
+      html += `
+        <tr class="esFlightRow">
+          <td colspan="${colCount}">
+            ${collapseToggleBtn(flight.flightKey)}
+            <span>${esc(flight.flightName)}</span>
+          </td>
+        </tr>`;
+
+      if (collapsed) return;
+
+      html += `<tr class="esHeaderRow" data-flight="${esc(flight.flightKey)}">`;
+      html += isIndividual
+        ? `<th>Player</th><th>Team</th>`
+        : `<th>${view === 'team' ? 'Team' : 'Pairing'}</th>`;
+      rounds.forEach((r, i) => { html += `<th>${roundHeaderLabel(i)}</th>`; });
+      html += `<th>Total</th><th>Rank</th><th>Points</th></tr>`;
+
+      const sorted = rows.slice().sort((a, b) => {
+        const av = isIndividual
+          ? (isGross ? a.totalPerformancePointsGross : a.totalPerformancePointsNet)
+          : a.totalPoints;
+        const bv = isIndividual
+          ? (isGross ? b.totalPerformancePointsGross : b.totalPerformancePointsNet)
+          : b.totalPoints;
+        return (bv ?? 0) - (av ?? 0); // higher tally is better
+      });
+
+      sorted.forEach((row, idx) => {
+        const rank = idx + 1;
+        html += `<tr class="esDataRow" data-flight="${esc(flight.flightKey)}">`;
+
+        if (isIndividual) {
+          html += `<td class="esLeftCell">${esc(row.playerName || row.playerLastName || 'Player')}</td>`;
+          html += `<td class="esLeftCell">${esc(row.teamName || '')}</td>`;
+        } else if (view === 'team') {
+          html += `<td class="esLeftCell">${esc(row.teamName || row.teamKey || '')}</td>`;
+        } else {
+          html += `<td class="esLeftCell">${esc(row.pairingLabel || row.pairingId || '')}</td>`;
+        }
+
+        (row.rounds || []).forEach((r) => {
+          if (isIndividual) {
+            const pts = isGross ? r.placementPointsGross : r.placementPointsNet;
+            const scoreDisplay = isGross ? r.grossDiffDisplay : r.netDiffDisplay;
+            const showScore = r.countsTowardStrokes;
+            html += `<td>
+              <div class="esCellPts">${fmtTally(pts)} pts</div>
+              <div class="esCellScore ${showScore ? '' : 'is-empty'}">${showScore ? esc(scoreDisplay) : ''}</div>
+            </td>`;
+          } else {
+            html += `<td><div class="esCellPts">${fmtTally(r.points)} pts</div></td>`;
+          }
+        });
+
+        const total = isIndividual
+          ? (isGross ? row.totalPerformancePointsGross : row.totalPerformancePointsNet)
+          : row.totalPoints;
+        const placement = isIndividual
+          ? (isGross ? row.eventPlacementPointsGross : row.eventPlacementPointsNet)
+          : row.eventPlacementPoints;
+
+        html += `<td class="esTotalCell">${fmtTally(total)}</td>`;
+        html += `<td class="esRankCell">${rank}</td>`;
+        html += `<td class="esPointsCell">${fmtPoints(placement)}</td>`;
+        html += `</tr>`;
+      });
     });
 
-    dom.host.innerHTML = sorted.map((p, idx) => {
-      const total = isGross ? p.totalGrossValue : p.totalNetValue;
-      const perfPts = isGross ? p.totalPerformancePointsGross : p.totalPerformancePointsNet;
-      const placePts = isGross ? p.eventPlacementPointsGross : p.eventPlacementPointsNet;
+    html += `</table>`;
 
-      const roundCells = (p.rounds || []).map((r, i) => {
-        const roundLabel = (rounds[i] && rounds[i].roundLabel) || r.roundLabel || `R${i + 1}`;
-        const scoreDisplay = isGross ? r.grossDiffDisplay : r.netDiffDisplay;
-        const roundPts = isGross ? r.placementPointsGross : r.placementPointsNet;
-        return `
-          <div class="esRoundCell ${r.countsTowardStrokes ? '' : 'is-excluded'}">
-            <div class="esRoundCell__label">${esc(roundLabel)}</div>
-            <div class="esRoundCell__score">${esc(scoreDisplay)}</div>
-            <div class="esRoundCell__points">${fmtPoints(roundPts)} pts</div>
-          </div>`;
-      }).join('');
-
-      return `
-        <div class="esPlayerCard ${idx === 0 ? 'is-leading' : ''}">
-          <div class="esPlayerCard__hdr">
-            <div class="esRank">${idx + 1}</div>
-            ${p.teamColor ? `<div class="esTeamDot" style="background:${esc(p.teamColor)}" title="${esc(p.teamName || '')}"></div>` : ''}
-            <div class="esPlayerCard__name">${esc(p.playerName || p.playerLastName || 'Player')}</div>
-            <div class="esPlayerCard__totals">
-              <div class="esTotalStrokes">${fmtNum(total)}</div>
-              <div class="esTotalPoints">${fmtPoints(perfPts)} perf · ${fmtPoints(placePts)} place</div>
-            </div>
-          </div>
-          <div class="esPlayerCard__rounds">${roundCells}</div>
-        </div>`;
-    }).join('');
-  }
-
-  function renderGroupView(rows, kind) {
-    if (!rows.length) { showEmpty(true); return; }
+    if (!dom.host) return;
     showEmpty(false);
-
-    const sorted = rows.slice().sort((a, b) => (b.totalPoints ?? 0) - (a.totalPoints ?? 0)); // higher is better
-
-    dom.host.innerHTML = sorted.map((row, idx) => {
-      const label = kind === 'team' ? (row.teamName || row.teamKey) : (row.pairingLabel || row.pairingId);
-      const record = (kind === 'team' && row.record)
-        ? `<div class="esGroupCard__record">${row.record.w}-${row.record.l}-${row.record.h}</div>`
-        : '';
-      return `
-        <div class="esGroupCard ${idx === 0 ? 'is-leading' : ''}">
-          ${row.teamColor ? `<div class="esTeamDot" style="background:${esc(row.teamColor)}"></div>` : ''}
-          <div class="esGroupCard__label">${esc(label)}</div>
-          ${record}
-          <div class="esGroupCard__points">
-            <div class="esGroupCard__pointsTotal">${fmtPoints(row.totalPoints)}</div>
-            <div class="esGroupCard__pointsLabel">${fmtPoints(row.eventPlacementPoints)} place pts</div>
-          </div>
-        </div>`;
-    }).join('');
+    dom.host.innerHTML = html;
   }
 
-  // ── Chrome — every event-context page drives this itself; including
-  //    chromeHeader.php/chromeFooter.php is not sufficient on its own (see
-  //    event_maintenance.js's own applyChrome() for the sibling pattern
-  //    this mirrors). Read-only page: no footer save/cancel, no right-side
-  //    Actions menu — just header lines and bottom-nav registration.
+  // ── Chrome ───────────────────────────────────────────────────────────────
 
   function applyChrome() {
     if (chrome && typeof chrome.setHeaderLines === 'function') {
@@ -227,18 +268,10 @@
 
   // ── Wiring ───────────────────────────────────────────────────────────────
 
-  if (dom.flightTabs) {
-    dom.flightTabs.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-flight]');
-      if (!btn) return;
-      state.flightKey = btn.dataset.flight;
-      render();
-    });
-  }
   if (dom.viewPills) {
     dom.viewPills.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-view]');
-      if (!btn) return;
+      if (!btn || btn.disabled) return;
       state.view = btn.dataset.view;
       render();
     });
@@ -248,6 +281,16 @@
       const btn = e.target.closest('[data-metric]');
       if (!btn) return;
       state.metric = btn.dataset.metric;
+      render();
+    });
+  }
+  if (dom.host) {
+    dom.host.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-flight-toggle]');
+      if (!btn) return;
+      const key = btn.dataset.flightToggle;
+      if (state.collapsedFlights.has(key)) state.collapsedFlights.delete(key);
+      else state.collapsedFlights.add(key);
       render();
     });
   }

@@ -15,6 +15,16 @@
   // client-side — service_ScoreSummary.php is the single source of truth.
   const placementStates = (payload.meta && typeof payload.meta.placementPointsStates === 'object' && payload.meta.placementPointsStates) || {};
 
+  // Same four values as ServiceBuildEventSummary::NON_PERSONAL_SCORE_FORMATS
+  // (event_summary.js carries the identical list, for the identical
+  // reason) — a round in one of these formats has no personal per-player
+  // score to show, so the Individual grouping pill has nothing to display.
+  // Kept in sync manually with the PHP list — not derived from it, since
+  // this file has no access to that constant at build time.
+  const NON_PERSONAL_SCORE_FORMATS = ['Scramble', 'Shamble', 'AltShot', 'Chapman'];
+  const gameFormat = String(game.dbGames_GameFormat || '');
+  const individualAggDisabled = NON_PERSONAL_SCORE_FORMATS.includes(gameFormat);
+
   const SCORE_SHAPE_ORDER = [
     ['eaglePlus', 'Eagle+'],
     ['birdie', 'Birdie'],
@@ -842,6 +852,13 @@
   function lbRenderControls() {
     if (!dom.lbControls) return;
 
+    // Same "currently-selected pill just became disabled" fallback used
+    // elsewhere in this file (see correctLbKpiIfDisabled()) — don't strand
+    // the user on a dead selection.
+    if (individualAggDisabled && state.lbAggregate === 'individual') {
+      state.lbAggregate = 'pairing';
+    }
+
     const individualGrain = (state.lbAggregate === 'individual');
     const d = lbIndividualPillDisabled();
 
@@ -860,7 +877,7 @@
       <div class="lbControlsRow">
         <div class="maChoiceChips">${kpiPillsHtml}</div>
         <div class="maChoiceChips">
-          <button class="maChoiceChip ${state.lbAggregate === 'individual' ? 'is-selected' : ''}" data-lbagg="individual" type="button">Individual</button>
+          <button class="maChoiceChip ${state.lbAggregate === 'individual' ? 'is-selected' : ''} ${individualAggDisabled ? 'is-disabled' : ''}" data-lbagg="individual" type="button" ${individualAggDisabled ? 'disabled' : ''}>Individual</button>
           <button class="maChoiceChip ${state.lbAggregate === 'pairing' ? 'is-selected' : ''}" data-lbagg="pairing" type="button">Pairing</button>
           <button class="maChoiceChip ${state.lbAggregate === 'team' ? 'is-selected' : ''}" data-lbagg="team" type="button">Team</button>
         </div>

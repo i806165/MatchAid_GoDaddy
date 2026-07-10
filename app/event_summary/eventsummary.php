@@ -45,9 +45,10 @@ $maChromeSubtitle = $initPayload["header"]["subtitle"] ?? "";
 </head><body>
 <?php require_once MA_INCLUDES . '/chromeHeader.php'; ?>
 <div id="esPanelControls" class="maControlArea" role="region" aria-label="Leaderboard views">
-  <div id="esFlightTabs" class="maSeg" role="tablist" aria-label="Switch flight" style="display:none;"></div>
-  <div id="esViewPills" class="maSeg" role="tablist" aria-label="Switch view"></div>
-  <div id="esMetricPills" class="maSeg" role="tablist" aria-label="Switch gross/net"></div>
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+    <div id="esMetricPills" class="maChoiceChips" role="group" aria-label="Switch gross/net"></div>
+    <div id="esViewPills" class="maChoiceChips" role="group" aria-label="Switch view"></div>
+  </div>
 </div>
 <main class="maPage" id="esMain"><?php require __DIR__ . '/eventsummary_view.php'; ?></main>
 <?php require_once MA_INCLUDES . '/chromeFooter.php'; ?>

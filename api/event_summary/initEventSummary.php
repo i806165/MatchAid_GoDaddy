@@ -139,13 +139,47 @@ function buildEventRoundPayloads(array $gameRows): array
 
 function loadEventRoundPlayers(string $ggid): array
 {
+    $rows = [];
     if (method_exists('ServiceDbPlayers', 'getScorecardPlayersByGGID')) {
-        $rows = ServiceDbPlayers::getScorecardPlayersByGGID($ggid);
-        if (is_array($rows) && !empty($rows)) return $rows;
+        $fetched = ServiceDbPlayers::getScorecardPlayersByGGID($ggid);
+        if (is_array($fetched) && !empty($fetched)) $rows = $fetched;
     }
-    if (method_exists('ServiceDbPlayers', 'getGamePlayers')) {
-        $rows = ServiceDbPlayers::getGamePlayers($ggid);
-        if (is_array($rows) && !empty($rows)) return $rows;
+    if (!$rows && method_exists('ServiceDbPlayers', 'getGamePlayers')) {
+        $fetched = ServiceDbPlayers::getGamePlayers($ggid);
+        if (is_array($fetched) && !empty($fetched)) $rows = $fetched;
     }
-    return [];
+    return hydrateEventRoundPlayerRows($rows);
+}
+
+/**
+ * Same JSON-decoding step as initScoreSummary.php's own
+ * hydrateScoreSummaryPlayerRows() — dbPlayers_TeeSetDetails and
+ * dbPlayers_Scores are stored as JSON strings and must be decoded to
+ * arrays before ServiceScoreCard/ServiceScoreCardRotation touch them. This
+ * was missing from the first version of this file: player rows went
+ * straight from the DB fetch into buildGameScorecardsPayload() as raw
+ * strings, which is the actual root cause of the "Modulo by zero" crash —
+ * not round score-count, which was an earlier, incorrect diagnosis.
+ * Defined locally rather than depending on initScoreSummary.php's global
+ * function, keeping this file self-contained the same way its sibling is.
+ */
+function hydrateEventRoundPlayerRows(array $players): array
+{
+    foreach ($players as &$p) {
+        if (isset($p['dbPlayers_TeeSetDetails']) && is_string($p['dbPlayers_TeeSetDetails']) && trim($p['dbPlayers_TeeSetDetails']) !== '') {
+            $decoded = json_decode($p['dbPlayers_TeeSetDetails'], true);
+            if (is_array($decoded)) {
+                $p['dbPlayers_TeeSetDetails'] = $decoded;
+            }
+        }
+        if (isset($p['dbPlayers_Scores']) && is_string($p['dbPlayers_Scores']) && trim($p['dbPlayers_Scores']) !== '') {
+            $decoded = json_decode($p['dbPlayers_Scores'], true);
+            if (is_array($decoded)) {
+                $p['dbPlayers_Scores'] = $decoded;
+            }
+        }
+    }
+    unset($p);
+
+    return $players;
 }

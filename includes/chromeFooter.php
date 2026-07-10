@@ -105,14 +105,6 @@
       <span class="maNavLabel">Event Pairings</span>
     </button>
 
-<!-- /////// ROUND ADMIN SECTION ////// -->
-    <button type="button" class="maNavBtn" data-nav="eventrounds" aria-label="Event Rounds">
-      <span class="maNavIcon" aria-hidden="true">
-        <img src="/assets/images/nav-gameslist.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
-      </span>
-      <span class="maNavLabel">Event Rounds</span>
-    </button>
-
     <button type="button" class="maNavBtn" data-nav="eventsummary" aria-label="Event Leaderboard">
       <span class="maNavIcon" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true">
@@ -123,6 +115,14 @@
         </svg>
       </span>
       <span class="maNavLabel">Event Leaderboard</span>
+    </button>
+
+<!-- /////// ROUND ADMIN SECTION ////// -->
+    <button type="button" class="maNavBtn" data-nav="eventrounds" aria-label="Event Rounds">
+      <span class="maNavIcon" aria-hidden="true">
+        <img src="/assets/images/nav-gameslist.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
+      </span>
+      <span class="maNavLabel">Event Rounds</span>
     </button>
 
     <button type="button" class="maNavBtn" data-nav="roundedit" aria-label="Round Edit">

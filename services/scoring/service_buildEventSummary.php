@@ -409,15 +409,18 @@ final class ServiceBuildEventSummary
         }
 
         // Event-level Placement Points — rank this flight's final totals
-        // ONCE, using the event's own points table. A distinct number from
-        // Performance Points (sum of each round's own rank points) above —
-        // see event_leaderboard_spec.md §5's two-tier model. Lower total
-        // is better, same convention as round-level grossDiffValue/
-        // netDiffValue ranking — no inversion needed here.
-        [$grossPts, $netPts] = self::rankAndAssign(
-            array_map(static fn(array $p): float => $p['totalGrossValue'], $players),
-            array_map(static fn(array $p): float => $p['totalNetValue'], $players),
-            $kpiConfig['grossPlacement'],
+        // ONCE, using the event's own points table. Ranked from the
+        // Performance Points TALLY, not from strokes — confirmed: "the row
+        // tally is ranked against all other row tallies to become
+        // placement." Same higher-is-better mechanism Pairing/Team already
+        // use (rankByPointsDescending), not the lower-is-better strokes
+        // convention this used to (incorrectly) rank by.
+        $grossPts = self::rankByPointsDescending(
+            array_map(static fn(array $p): float => $p['totalPerformancePointsGross'], $players),
+            $kpiConfig['grossPlacement']
+        );
+        $netPts = self::rankByPointsDescending(
+            array_map(static fn(array $p): float => $p['totalPerformancePointsNet'], $players),
             $kpiConfig['netPlacement']
         );
         foreach (array_keys($players) as $playerId) {
@@ -615,39 +618,10 @@ final class ServiceBuildEventSummary
     // ── Ranking helpers ───────────────────────────────────────────────────
 
     /**
-     * Ranks two parallel key => value maps (gross and net) where lower is
-     * better — same convention as round-level grossDiffValue/netDiffValue
-     * — via ServiceScoreSummary::assignPlacementPoints(), preserving the
-     * original keys rather than the numeric-index shape that mapper
-     * natively works in.
-     *
-     * @return array{0: array<string,float>, 1: array<string,float>}
-     */
-    private static function rankAndAssign(array $grossByKey, array $netByKey, array $grossCat, array $netCat): array
-    {
-        $keys = array_keys($grossByKey);
-        $grossInput = [];
-        $netInput = [];
-        foreach ($keys as $idx => $key) {
-            $grossInput[] = ['idx' => $idx, 'value' => $grossByKey[$key]];
-            $netInput[] = ['idx' => $idx, 'value' => $netByKey[$key]];
-        }
-        $grossOut = ServiceScoreSummary::assignPlacementPoints($grossInput, $grossCat['pointsConfig'], $grossCat['tieRule']);
-        $netOut = ServiceScoreSummary::assignPlacementPoints($netInput, $netCat['pointsConfig'], $netCat['tieRule']);
-
-        $grossByOrigKey = [];
-        $netByOrigKey = [];
-        foreach ($keys as $idx => $key) {
-            $grossByOrigKey[$key] = $grossOut[$idx] ?? 0.0;
-            $netByOrigKey[$key] = $netOut[$idx] ?? 0.0;
-        }
-        return [$grossByOrigKey, $netByOrigKey];
-    }
-
-    /**
-     * Same idea as rankAndAssign(), but for a single higher-is-better
-     * points total (Pairing/Team grain) — negates the value before handing
-     * it to assignPlacementPoints(), which always treats lower as better.
+     * Ranks a single higher-is-better points total (used by all three
+     * grains now — Individual's Performance Points tally, Pairing/Team's
+     * summed points) — negates the value before handing it to
+     * assignPlacementPoints(), which always treats lower as better.
      *
      * @return array<string,float>
      */
