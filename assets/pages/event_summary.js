@@ -2,6 +2,9 @@
 (function () {
   'use strict';
 
+  const MA = window.MA || {};
+  const chrome = MA.chrome || {};
+
   const init = window.__INIT__ || window.__MA_INIT__ || {};
   const payload = init.summary || {};
   const flights = Array.isArray(payload.flights) ? payload.flights : [];
@@ -191,6 +194,37 @@
     }).join('');
   }
 
+  // ── Chrome — every event-context page drives this itself; including
+  //    chromeHeader.php/chromeFooter.php is not sufficient on its own (see
+  //    event_maintenance.js's own applyChrome() for the sibling pattern
+  //    this mirrors). Read-only page: no footer save/cancel, no right-side
+  //    Actions menu — just header lines and bottom-nav registration.
+
+  function applyChrome() {
+    if (chrome && typeof chrome.setHeaderLines === 'function') {
+      const title = (init.header && init.header.title) || 'Event Leaderboard';
+      const subtitle = (init.header && init.header.subtitle) || '';
+      chrome.setHeaderLines([title, subtitle, '']);
+    }
+
+    if (chrome && typeof chrome.setActions === 'function') {
+      chrome.setActions({
+        left: { show: false },
+        right: { show: false },
+        footer: null,
+      });
+    }
+
+    if (chrome && typeof chrome.setBottomNav === 'function') {
+      chrome.setBottomNav({
+        visible: ['eventhome', 'eventedit', 'eventroster', 'eventrounds', 'eventsummary', 'eventscoring'],
+        active: 'eventsummary',
+        disabled: [],
+        onNavigate: (id) => MA.routerGo(id),
+      });
+    }
+  }
+
   // ── Wiring ───────────────────────────────────────────────────────────────
 
   if (dom.flightTabs) {
@@ -218,5 +252,6 @@
     });
   }
 
+  applyChrome();
   render();
 })();
