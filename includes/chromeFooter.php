@@ -113,6 +113,18 @@
       <span class="maNavLabel">Event Rounds</span>
     </button>
 
+    <button type="button" class="maNavBtn" data-nav="eventsummary" aria-label="Event Leaderboard">
+      <span class="maNavIcon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true">
+          <rect x="4" y="18.5" width="16" height="1.5" rx=".75"></rect>
+          <rect x="5.2" y="11.5" width="3.6" height="6.4" rx=".6"></rect>
+          <rect x="10.2" y="8.0" width="3.6" height="9.9" rx=".6"></rect>
+          <rect x="15.2" y="13.3" width="3.6" height="4.6" rx=".6"></rect>
+        </svg>
+      </span>
+      <span class="maNavLabel">Event Leaderboard</span>
+    </button>
+
     <button type="button" class="maNavBtn" data-nav="roundedit" aria-label="Round Edit">
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-edit.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">

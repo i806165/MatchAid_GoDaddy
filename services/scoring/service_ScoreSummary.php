@@ -64,6 +64,12 @@ final class ServiceScoreSummary
                 'scoringBasis' => $scoringBasis,
                 'defaultValueMode' => $defaultValueMode,
                 'scoringSegments' => $scoringSegments,
+                // Surfaced for the event-level aggregator's round-column
+                // labels (e.g. "Round 1 — Scramble") — this page doesn't
+                // consume it itself, but it's cheap to carry along here
+                // rather than have the aggregator re-fetch gameRow per
+                // round just for this one field.
+                'gameFormat' => trim((string)($gameRow['dbGames_GameFormat'] ?? '')),
                 // Surfaced as a blocking pop-up by score_summary.js — see
                 // checkTeamIntegrity()'s own comment for what it catches and why.
                 'teamIntegrityWarning' => self::checkTeamIntegrity($scorecards['rows'] ?? [], $gameRow, $competition),
@@ -96,6 +102,7 @@ final class ServiceScoreSummary
     {
         $out = [];
         $teamConfigById = self::parseTeamConfig($gameRow);
+        $flightConfigById = self::parseFlightConfig($gameRow);
         // Rotation games (COD/1324/1423) produce one $scorecardRows entry per
         // spin, not per physical scorecard — the same physical players get
         // re-stamped with a different effectivePairingID in each spin's
@@ -131,6 +138,22 @@ final class ServiceScoreSummary
                 $teamKey = trim((string)($player['dbPlayers_TeamKey'] ?? ''));
                 $teamInfo = $teamConfigById[$teamKey] ?? null;
 
+                // dbGames_FlightConfig is hydrated from the event (fixed
+                // mode) same as dbGames_TeamConfig — corrects an earlier
+                // assumption in this file's history that Flight had no
+                // round-level config column at all. parseFlightConfig()
+                // mirrors parseTeamConfig()'s exact pattern.
+                $flightKeyRaw = trim((string)($player['dbPlayers_FlightKey'] ?? ''));
+                // Every event always has at least 1 flight (never 0 — see
+                // background doc §2), so an empty/unresolved key here means
+                // legacy or malformed data, not a genuine "no flight" state.
+                // Default to the same floor the rest of the system already
+                // assumes rather than emitting null and pushing a new
+                // null-handling branch onto the event-level aggregator.
+                $flightKey = $flightKeyRaw !== '' ? $flightKeyRaw : 'F1';
+                $flightInfo = $flightConfigById[$flightKey] ?? null;
+                $flightName = trim((string)($flightInfo['name'] ?? '')) ?: 'Flight-1';
+
                 $grossDisplay = $player['totals']['grossDiff']['9c'] ?? null;
                 $netDisplay = $player['totals']['netDiff']['9c'] ?? null;
 
@@ -153,6 +176,8 @@ final class ServiceScoreSummary
                     'teamName' => $teamInfo['name'] ?? null,
                     'teamColor' => $teamInfo['color'] ?? null,
                     'teamSort' => $teamInfo['sort'] ?? null,
+                    'flightKey' => $flightKey,
+                    'flightName' => $flightName,
                 ];
             }
         }
@@ -423,6 +448,10 @@ final class ServiceScoreSummary
                     'teamColor' => $teamInfo['color'] ?? null,
                     'teamSort' => $teamInfo['sort'] ?? null,
 
+                    // Round-native player list for this pairing — see
+                    // exportPlayersList()'s doc comment.
+                    'players' => self::exportPlayersList($pairPlayers),
+
                     // Stat buckets for PairField leaderboard cards
                     'countedGrossStats' => $shapeStats['countedGrossStats'],
                     'countedNetStats' => $shapeStats['countedNetStats'],
@@ -676,6 +705,30 @@ final class ServiceScoreSummary
     }
 
     /**
+     * Parses dbGames_FlightConfig into an id-keyed lookup — same shape and
+     * parsing pattern as parseTeamConfig(), now that dbGames_FlightConfig is
+     * confirmed to exist and be hydrated from the event (correcting an
+     * earlier assumption in this file's history that Flight had no
+     * round-level config column at all).
+     */
+    private static function parseFlightConfig(array $gameRow): array
+    {
+        $raw = $gameRow['dbGames_FlightConfig'] ?? null;
+        if ($raw === null || $raw === '') return [];
+
+        $decoded = is_array($raw) ? $raw : json_decode((string)$raw, true);
+        $flights = is_array($decoded['flights'] ?? null) ? $decoded['flights'] : [];
+
+        $byId = [];
+        foreach ($flights as $f) {
+            if (!is_array($f)) continue;
+            $id = trim((string)($f['id'] ?? ''));
+            if ($id !== '') $byId[$id] = $f;
+        }
+        return $byId;
+    }
+
+    /**
      * The five categories every game carries from creation onward (see
      * service_dbGames.php's applyDefaultsForAdd and module_definePlacementPoints.js).
      * Used both as the ultimate fallback when dbGames_PlacementPoints is null/
@@ -752,12 +805,20 @@ final class ServiceScoreSummary
      * (keyed by string position, e.g. "1"=>100), applying $tieRule when two
      * or more rows share a value. Returns [idx => points].
      *
+     * Public (not private) specifically so the event-level aggregation
+     * service can reuse this exact tie-aware rank-to-points mapper against
+     * final event standings, rather than reimplementing it — see
+     * event_leaderboard_spec.md §5, "Placement Points reuses the same
+     * rank-to-points mechanism the round-level engine already has." No
+     * behavior change from the round-level call sites in this file; they're
+     * unaffected by the visibility change.
+     *
      * tieRule:
      *   'split' (default) — tied rows split the average of the positions they occupy
      *   'high'             — tied rows all receive the better (higher-points) position's value
      *   'low'              — tied rows all receive the worse (lower-points) position's value
      */
-    private static function assignPlacementPoints(array $rows, array $pointsConfig, string $tieRule): array
+    public static function assignPlacementPoints(array $rows, array $pointsConfig, string $tieRule): array
     {
         usort($rows, fn($a, $b) => $a['value'] <=> $b['value']);
 
@@ -1178,6 +1239,9 @@ final class ServiceScoreSummary
                     'teamName'        => $leftTeamInfo['name'] ?? null,
                     'teamColor'       => $leftTeamInfo['color'] ?? null,
                     'teamSort'        => $leftTeamInfo['sort'] ?? null,
+                    // Round-native player list for this side — see
+                    // exportPlayersList()'s doc comment.
+                    'players'         => self::exportPlayersList($leftPlayers, true),
                     'scoreCount'      => self::countDeclaredScores($leftPlayers, $scopedHoles),
                     'grossDiffValue'  => $leftGross['value'],
                     'grossDiffDisplay'=> $leftGross['display'],
@@ -1204,6 +1268,9 @@ final class ServiceScoreSummary
                     'teamName'        => $rightTeamInfo['name'] ?? null,
                     'teamColor'       => $rightTeamInfo['color'] ?? null,
                     'teamSort'        => $rightTeamInfo['sort'] ?? null,
+                    // Round-native player list for this side — see
+                    // exportPlayersList()'s doc comment.
+                    'players'         => self::exportPlayersList($rightPlayers, true),
                     'scoreCount'      => self::countDeclaredScores($rightPlayers, $scopedHoles),
                     'grossDiffValue'  => $rightGross['value'],
                     'grossDiffDisplay'=> $rightGross['display'],
@@ -1695,6 +1762,37 @@ final class ServiceScoreSummary
             ?? $first['dbPlayers_PairingID']
             ?? ''
         ));
+    }
+
+    /**
+     * Builds the 'players' list attached to pairing/side rows in
+     * buildPairFieldRows()/buildPairPairRows() — GHIN, full name, and last
+     * name per player, same fields buildIndividualRows() already exposes
+     * per-player, just at pairing/side grain instead. Round-native data
+     * only (no roster lookups, no event awareness — this file stays
+     * game-scoped; any Event Roster resolution happens one layer up, in
+     * the event-level aggregator).
+     *
+     * $includeMatchPos is PairPair-only: a side's players carry
+     * dbPlayers_MatchPos so each player's authoritative side value travels
+     * with them individually, not just implied by which of 'left'/'right'
+     * they're nested under.
+     */
+    private static function exportPlayersList(array $players, bool $includeMatchPos = false): array
+    {
+        $out = [];
+        foreach ($players as $player) {
+            $entry = [
+                'ghin' => (string)($player['playerId'] ?? $player['dbPlayers_PlayerGHIN'] ?? ''),
+                'name' => trim((string)($player['dbPlayers_Name'] ?? '')),
+                'lastName' => trim((string)($player['dbPlayers_LName'] ?? '')),
+            ];
+            if ($includeMatchPos) {
+                $entry['matchPos'] = trim((string)($player['dbPlayers_MatchPos'] ?? ''));
+            }
+            $out[] = $entry;
+        }
+        return $out;
     }
 
     private static function findTotalRowForPairing(array $totals, string $pairingId): ?array

@@ -1,0 +1,189 @@
+/* /public_html/assets/css/event_summary.css
+ *
+ * Builds on ma_shared.css — .maCard/.maCard__hdr/.maCard__body,
+ * .maSeg/.maSegBtn (Flight tabs, Individual/Pairing/Team pills, Gross/Net
+ * pills all reuse these directly, no new chrome CSS needed for them), and
+ * .maEmptyState are already defined there and untouched here.
+ *
+ * Everything below is new because the event-level leaderboard is a
+ * genuinely new UI pattern in this codebase — score_summary.css's own
+ * .lbCol* rules top out at 5 narrow flex columns (rank/name/thru/kpi/pts)
+ * and never had to solve "N round columns, each a stacked score+points
+ * pair, readable on a phone." Stacked card-per-player was the decision
+ * reached for that reason — see prior design discussion — rather than a
+ * horizontal-scroll table, since each round cell is itself two lines, not
+ * one uniform number.
+ */
+
+.esHost {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Individual view — one card per player ─────────────────────────────── */
+
+.esPlayerCard {
+  border: 0.5px solid var(--borderSubtle);
+  border-radius: var(--radiusMd, 10px);
+  background: var(--surface);
+  padding: 12px 14px;
+}
+
+.esPlayerCard__hdr {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.esRank {
+  flex: 0 0 26px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--mutedText);
+  text-align: center;
+}
+
+.esPlayerCard__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.esTeamDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 10px;
+  border: 0.5px solid rgba(0, 0, 0, 0.18);
+}
+
+.esPlayerCard__totals {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.15;
+}
+
+.esTotalStrokes {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.esTotalPoints {
+  font-size: 11px;
+  color: var(--mutedText);
+}
+
+/* Round-by-round strip — one stacked score+points pair per round, wraps
+ * onto multiple lines rather than scrolling; each pair reads as a unit. */
+.esPlayerCard__rounds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 0.5px solid var(--borderSubtle);
+}
+
+.esRoundCell {
+  flex: 0 0 auto;
+  min-width: 52px;
+  text-align: center;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: var(--surfaceChrome);
+}
+
+.esRoundCell__label {
+  font-size: 9px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--mutedText);
+}
+
+.esRoundCell__score {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.esRoundCell__points {
+  font-size: 10px;
+  color: var(--mutedText);
+}
+
+/* Rounds excluded from Individual Strokes/+/- (Scramble/Shamble/AltShot/
+ * Chapman — see service_buildEventSummary.php's NON_PERSONAL_SCORE_FORMATS)
+ * still show their Performance Points contribution, just visually muted on
+ * the score line to signal it didn't count toward the totals column. */
+.esRoundCell.is-excluded .esRoundCell__score {
+  color: var(--mutedText);
+  font-weight: 500;
+}
+
+/* ── Pairing / Team view — points-only cards, no strokes columns ───────── */
+
+.esGroupCard {
+  border: 0.5px solid var(--borderSubtle);
+  border-radius: var(--radiusMd, 10px);
+  background: var(--surface);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.esGroupCard__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.esGroupCard__record {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: var(--mutedText);
+}
+
+.esGroupCard__points {
+  flex: 0 0 auto;
+  text-align: right;
+  line-height: 1.15;
+}
+
+.esGroupCard__pointsTotal {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.esGroupCard__pointsLabel {
+  font-size: 10px;
+  color: var(--mutedText);
+}
+
+/* ── Leader highlight — same pattern as score_summary.css's .is-leading */
+
+.esPlayerCard.is-leading,
+.esGroupCard.is-leading {
+  border-color: var(--brandAccent);
+  background: color-mix(in srgb, var(--brandAccent) 6%, var(--surface));
+}
+
+@media (max-width: 420px) {
+  .esPlayerCard__name { font-size: 13px; }
+  .esRoundCell { min-width: 46px; }
+}
