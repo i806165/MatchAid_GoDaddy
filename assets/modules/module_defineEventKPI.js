@@ -3,15 +3,53 @@
  *
  * Opens as a full-screen modal. Renders the KPI catalog as a checklist.
  * Placement KPIs show an inline points table editor with expand/collapse.
- * Team KPIs are hidden (not greyed) when hasTeams is false.
+ *
+ * KPIs gated by cascade mode (Pairing/Team placement points, currently the
+ * only lockedUnless-bearing entries) are always VISIBLE, never hidden —
+ * shown greyed with a lock icon and a plain-language reason when their
+ * mode isn't "fixed" yet. This deliberately does not match the old
+ * requiresTeam/hasTeams hide behavior; see harmonization discussion this
+ * replaces. A locked entry's checkbox is inert (no toggle), and its state
+ * is never touched by collectState() while locked — round-tripped exactly
+ * as it came in, same "untouched if not shown/editable this session"
+ * mechanism module_definePlacementPoints.js already uses for the other
+ * competition type's Pairing category.
+ *
+ * dbEvents_KPIConfig shape (harmonized with dbGames_PlacementPoints'
+ * category vocabulary — same field name, same three-value enum):
+ *   {
+ *     "<kpiKey>": {
+ *       "state": "default" | "active" | "disabled",
+ *       "pointsConfig": {"1":100, "2":75, ...},   // only when catalog.hasConfig
+ *       "tieRule": "split" | "high" | "low"        // only when catalog.hasConfig
+ *     },
+ *     ...
+ *   }
+ * Every catalog key is always present. pointsConfig/tieRule, once a key has
+ * hasConfig, are ALWAYS present too — never stripped by an uncheck. "default"
+ * means never consciously touched (still whatever kpi_catalog.php seeded);
+ * checking sets "active", unchecking sets "disabled"; a key never reverts to
+ * "default" once touched. No top-level wrapper key — unlike
+ * dbGames_PlacementPoints' {top, categories} envelope, this is a flat map;
+ * that asymmetry between the two columns is intentional, not an oversight.
  *
  * Usage:
  *   MA.defineEventKPI.open({
- *     kpiCatalog: { ... },   // from init.kpiCatalog (server-side kpi_catalog.php)
- *     kpiConfig:  { ... },   // current dbEvents_KPIConfig parsed JSON (or null)
- *     hasTeams:   bool,      // whether event has TeamConfig set
- *     onApply:    (json) => { ... }  // called with serialized JSON string on Save
+ *     kpiCatalog:    { ... },  // from init.kpiCatalog (server-side kpi_catalog.php)
+ *     kpiConfig:     { ... },  // current dbEvents_KPIConfig parsed JSON (or null)
+ *     pairingFixed:  bool,     // dbEvents_PairingMode === "fixed"
+ *     teamFixed:     bool,     // dbEvents_TeamMode === "fixed"
+ *     onApply:       (json) => { ... }  // called with serialized JSON string on Save
  *   });
+ *
+ * Catalog contract this module expects from kpi_catalog.php going forward:
+ * each entry may carry lockedUnless: null | "pairingFixed" | "teamFixed" —
+ * generalizes the old boolean requiresTeam. kpi_catalog.php itself was not
+ * available while writing this pass; this module reads lockedUnless if
+ * present and degrades gracefully (never locked) if a catalog entry omits
+ * it, but the catalog file itself still needs updating to actually emit it
+ * for the Pairing/Team placement points entries — flagged as an open item,
+ * not done here.
  */
 (function (global) {
   "use strict";
@@ -34,34 +72,78 @@
 
   let _overlay = null;
   let _config  = null;
-  let _state   = null;   // { kpiKey: { active, pointsConfig, tieRule, expanded } }
+  let _state   = null;   // { kpiKey: { state, pointsConfig, tieRule, expanded, _locked, _lockReason } }
+
+  // ── Locking ──────────────────────────────────────────────────────────────────
+
+  // Generalizes the old boolean requiresTeam. def.lockedUnless names which
+  // config flag must be true for this entry to be editable; null/omitted
+  // means never locked. Unrecognized values degrade to "never locked"
+  // rather than throwing, so an out-of-date catalog entry fails open, not
+  // closed.
+  function lockInfo(def) {
+    if (def.lockedUnless === "pairingFixed") {
+      return _config.pairingFixed
+        ? { locked: false }
+        : { locked: true, reason: "Requires fixed pairing mode for this event." };
+    }
+    if (def.lockedUnless === "teamFixed") {
+      return _config.teamFixed
+        ? { locked: false }
+        : { locked: true, reason: "Requires fixed team mode for this event." };
+    }
+    return { locked: false };
+  }
 
   // ── State ────────────────────────────────────────────────────────────────────
 
   function initState(config) {
-    const catalog   = config.kpiCatalog || {};
-    const saved     = config.kpiConfig  || {};
+    const catalog = config.kpiCatalog || {};
+    const saved   = config.kpiConfig  || {};
     _state = {};
 
     Object.keys(catalog).forEach(key => {
+      const def         = catalog[key] || {};
       const saved_entry = saved[key] || {};
+      const state       = ["default", "active", "disabled"].includes(saved_entry.state)
+        ? saved_entry.state
+        : "default";
+
       _state[key] = {
-        active:       !!(saved_entry.active),
+        state,
+        // Always present once hasConfig, regardless of state — never
+        // stripped on uncheck. Falls back to the catalog default table
+        // only when this key has genuinely never been saved before.
         pointsConfig: saved_entry.pointsConfig || { "1": 100, "2": 75, "3": 50, "4": 25, "5": 10 },
         tieRule:      saved_entry.tieRule || "split",
-        expanded:     !!(saved_entry.active && catalog[key].hasConfig), // open by default if active + has config
+        // Checkbox reads on for "default" and "active" alike — only an
+        // explicit "disabled" renders unchecked, matching
+        // module_definePlacementPoints.js's _checked convention.
+        expanded:     state !== "disabled" && !!def.hasConfig,
       };
     });
   }
 
+  // Every key actually shown and editable this session (i.e. not locked)
+  // graduates from whatever it was to "active"/"disabled" based on its
+  // checkbox, and never reverts to "default" once touched. Locked keys are
+  // round-tripped completely unmodified — same "untouched if not
+  // editable this session" mechanism module_definePlacementPoints.js uses
+  // for a hidden competition type's Pairing category.
   function collectState() {
     const catalog = _config.kpiCatalog || {};
     const out = {};
     Object.keys(catalog).forEach(key => {
-      const s = _state[key] || {};
+      const s   = _state[key] || {};
       const def = catalog[key] || {};
-      const entry = { active: !!(s.active) };
-      if (def.hasConfig && s.active) {
+
+      if (lockInfo(def).locked) {
+        out[key] = { state: s.state, pointsConfig: s.pointsConfig, tieRule: s.tieRule };
+        return;
+      }
+
+      const entry = { state: (s.state !== "disabled") ? "active" : "disabled" };
+      if (def.hasConfig) {
         entry.pointsConfig = s.pointsConfig;
         entry.tieRule      = s.tieRule;
       }
@@ -71,45 +153,21 @@
   }
 
   function activeCount() {
-    return Object.values(_state || {}).filter(s => s.active).length;
+    return Object.values(_state || {}).filter(s => s.state !== "disabled").length;
   }
 
   function activeLabels() {
     const catalog = _config?.kpiCatalog || {};
     return Object.entries(_state || {})
-      .filter(([, s]) => s.active)
+      .filter(([, s]) => s.state !== "disabled")
       .map(([k]) => catalog[k]?.label || k)
       .join(" · ");
   }
 
-  // ── Segment tag labels ───────────────────────────────────────────────────────
-
-  const SEG_ICONS = {
-    individual: "ti-user",
-    pairing:    "ti-users",
-    team:       "ti-shield-half",
-    flight:     "ti-layout-columns",
-    gross:      "ti-golf",
-    net:        "ti-golf",
-  };
-  const SEG_LABELS = {
-    individual: "Individual",
-    pairing:    "Pairing",
-    team:       "Team",
-    flight:     "Flight",
-    gross:      "Gross",
-    net:        "Net",
-  };
-
-  function renderSegments(segments) {
-    if (!Array.isArray(segments) || !segments.length) return "";
-    return `<div class="dek-segments">${segments.map(s => `
-      <span class="dek-seg-tag">
-        <i class="ti ${SEG_ICONS[s] || "ti-point"}" aria-hidden="true"></i>
-        ${esc(SEG_LABELS[s] || s)}
-      </span>`).join("")}
-    </div>`;
-  }
+  // Segment tags (Individual/Pairing/Team/Flight badges) intentionally not
+  // rendered — dropped per product decision. def.segments still arrives from
+  // kpi_catalog.php and is left untouched in the catalog contract in case a
+  // future screen wants it; this module just no longer displays it.
 
   // ── Points table editor ──────────────────────────────────────────────────────
 
@@ -190,19 +248,26 @@
   // ── KPI row ──────────────────────────────────────────────────────────────────
 
   function renderKPIRow(kpiKey, def) {
-    const s = _state[kpiKey] || { active: false };
-    const checked  = s.active;
+    const s = _state[kpiKey] || { state: "default" };
+    const { locked, reason } = lockInfo(def);
+    // Checkbox reads on for "default" and "active" — only "disabled" reads
+    // off. A locked row's checkbox is always inert regardless of its
+    // underlying state; see collectState()'s locked round-trip.
+    const checked = !locked && s.state !== "disabled";
 
     return `
-      <div class="dek-kpi-row" data-kpi-key="${esc(kpiKey)}">
-        <div class="dek-check ${checked ? "on" : ""}"
-          data-check="${esc(kpiKey)}" role="checkbox"
-          aria-checked="${checked}" tabindex="0"
+      <div class="dek-kpi-row ${locked ? "is-locked" : ""}" data-kpi-key="${esc(kpiKey)}">
+        <div class="dek-check ${checked ? "on" : ""} ${locked ? "is-locked" : ""}"
+          data-check="${locked ? "" : esc(kpiKey)}" role="checkbox"
+          aria-checked="${checked}" aria-disabled="${locked}"
+          tabindex="${locked ? "-1" : "0"}"
           aria-label="${esc(def.label)}"></div>
         <div class="dek-kpi-body">
-          <div class="dek-kpi-label">${esc(def.label)}</div>
-          <div class="dek-kpi-desc">${esc(def.description)}</div>
-          ${renderSegments(def.segments)}
+          <div class="dek-kpi-label">
+            ${esc(def.label)}
+            ${locked ? `<i class="ti ti-lock" aria-hidden="true"></i>` : ""}
+          </div>
+          <div class="dek-kpi-desc">${esc(locked ? reason : def.description)}</div>
           ${def.hasConfig && checked ? renderPointsEditor(kpiKey) : ""}
         </div>
       </div>`;
@@ -210,24 +275,33 @@
 
   // ── Section header ───────────────────────────────────────────────────────────
 
+  // Pending update: kpi_catalog.php still needs its section values updated
+  // to match (currently "stroke"/"points"/"special" per the old two-bucket
+  // split). individual/pairingTeam below are the new intended buckets;
+  // unrecognized section keys still render fine via the humanize() fallback
+  // so this doesn't break against the not-yet-updated catalog file.
   const SECTION_LABELS = {
-    stroke:  "Stroke competitions",
-    points:  "Points competitions",
-    special: "Special competitions",
+    individual:  "Individual competitions",
+    pairingTeam: "Pairing and team competitions",
+    special:     "Special competitions",
   };
+
+  function humanizeSection(key) {
+    return key.replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase());
+  }
 
   // ── Full content render ──────────────────────────────────────────────────────
 
   function renderContent() {
-    const catalog  = _config.kpiCatalog || {};
-    const hasTeams = !!_config.hasTeams;
+    const catalog = _config.kpiCatalog || {};
 
-    const sections = { stroke: [], points: [], special: [] };
+    const sections = {};
 
+    // Locked (not editable this session) entries are never hidden — see
+    // lockInfo()/renderKPIRow(). Every catalog entry always renders.
     Object.entries(catalog)
       .sort((a, b) => (a[1].sortOrder || 0) - (b[1].sortOrder || 0))
       .forEach(([key, def]) => {
-        if (def.requiresTeam && !hasTeams) return; // hide team KPIs when no teams
         const section = def.section || "special";
         if (!sections[section]) sections[section] = [];
         sections[section].push([key, def]);
@@ -236,7 +310,7 @@
     let html = "";
     Object.entries(sections).forEach(([section, items]) => {
       if (!items.length) return;
-      html += `<div class="dek-section-hdr">${esc(SECTION_LABELS[section] || section)}</div>`;
+      html += `<div class="dek-section-hdr">${esc(SECTION_LABELS[section] || humanizeSection(section))}</div>`;
       items.forEach(([key, def]) => {
         html += renderKPIRow(key, def);
       });
@@ -269,8 +343,10 @@
   // ── Wire events ──────────────────────────────────────────────────────────────
 
   function wireBodyEvents(body) {
-    // Checkbox clicks
-    body.querySelectorAll("[data-check]").forEach(el => {
+    // Checkbox clicks — locked rows render data-check="" (see renderKPIRow)
+    // and are excluded here rather than relying on the empty-key guard
+    // inside toggleKPI alone.
+    body.querySelectorAll("[data-check]:not([data-check=''])").forEach(el => {
       el.addEventListener("click",   () => toggleKPI(el.dataset.check));
       el.addEventListener("keydown", e => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggleKPI(el.dataset.check); } });
     });
@@ -307,10 +383,14 @@
 
   function toggleKPI(key) {
     if (!_state[key]) return;
-    _state[key].active = !_state[key].active;
+    // Checkbox is on for "default" or "active" alike (see renderKPIRow) —
+    // toggling off from either lands on "disabled"; toggling on from
+    // "disabled" lands on "active", never back to "default".
+    const wasOn = _state[key].state !== "disabled";
+    _state[key].state = wasOn ? "disabled" : "active";
     // Auto-expand editor when first activating a config KPI
     const def = (_config.kpiCatalog || {})[key] || {};
-    if (_state[key].active && def.hasConfig) _state[key].expanded = true;
+    if (!wasOn && def.hasConfig) _state[key].expanded = true;
     renderBody();
   }
 
@@ -368,17 +448,19 @@
       .dek-section-hdr{font-size:10px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;color:var(--mutedText);padding:10px 16px 6px;background:var(--surfaceChrome);border-bottom:0.5px solid var(--borderSubtle);border-top:0.5px solid var(--borderSubtle);}
       .dek-kpi-row{display:flex;align-items:flex-start;gap:12px;padding:10px 16px;border-bottom:0.5px solid var(--borderSubtle);}
       .dek-kpi-row:last-child{border-bottom:none;}
-      /* Checkbox — same pattern as .maCheckbox */
+      .dek-kpi-row.is-locked{opacity:.55;}
+      /* Checkbox — same shape as .maCheckbox, accent blue at this level
+         (module_definePlacementPoints.js's game-level checkbox stays the
+         default green; tracked separately, not touched here) */
       .dek-check{width:18px;height:18px;border:1.5px solid var(--borderStrong,#bbb);border-radius:4px;flex-shrink:0;margin-top:2px;background:var(--surface);cursor:pointer;position:relative;}
-      .dek-check.on{background:var(--brandSecondary);border-color:var(--brandSecondary);}
+      .dek-check.on{background:var(--brandAccent);border-color:var(--brandAccent);}
       .dek-check.on::after{content:"";position:absolute;left:4px;top:1px;width:6px;height:10px;border:1.5px solid #fff;border-top:0;border-left:0;transform:rotate(45deg);}
+      .dek-check.is-locked{cursor:default;}
       /* KPI text */
       .dek-kpi-body{flex:1;min-width:0;}
-      .dek-kpi-label{font-size:13px;font-weight:500;color:var(--ink);}
+      .dek-kpi-label{font-size:13px;font-weight:500;color:var(--ink);display:flex;align-items:center;gap:6px;}
+      .dek-kpi-label .ti-lock{font-size:13px;color:var(--mutedText);}
       .dek-kpi-desc{font-size:12px;color:var(--mutedText);margin-top:2px;line-height:1.4;}
-      /* Segment tags */
-      .dek-segments{margin-top:5px;display:flex;gap:4px;flex-wrap:wrap;}
-      .dek-seg-tag{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:500;border:0.5px solid var(--borderSubtle);background:var(--surfaceChrome);color:var(--mutedText);}
       /* Config toggle */
       .dek-config-toggle{display:inline-flex;align-items:center;gap:4px;margin-top:7px;font-size:11px;color:var(--brandAccent);background:transparent;border:none;cursor:pointer;padding:0;font-family:inherit;}
       .dek-config-toggle .dek-chevron{font-size:11px;transition:transform .15s;}
