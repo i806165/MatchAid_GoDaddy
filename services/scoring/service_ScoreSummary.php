@@ -10,6 +10,20 @@ require_once __DIR__ . '/service_CalcPoints.php';
 
 final class ServiceScoreSummary
 {
+    // Formats where scoring happens at the team level (every teammate's
+    // card shows the same duplicated score) — a player's own
+    // grossDiffValue/netDiffValue/placementPoints/rank are not personal
+    // performance in these formats, so individualRows carries null for all
+    // of them rather than a technically-computed-but-illegitimate number.
+    // This is now the canonical location for this list — game_settings.js
+    // already names the same four values as its own "teamFmts" constant,
+    // and this list was previously duplicated (each copy flagged in its own
+    // comments as manually-synced) in service_buildEventSummary.php,
+    // event_summary.js, and score_summary.js for display-only exclusion.
+    // Those copies are now redundant now that the source itself excludes
+    // this data, but removing them is a separate follow-up, not done here.
+    private const NON_PERSONAL_SCORE_FORMATS = ['Scramble', 'Shamble', 'AltShot', 'Chapman'];
+
     public static function buildScoreSummaryPayload(array $gameRow, array $scorecards): array
     {
         if (!$gameRow) {
@@ -122,6 +136,16 @@ final class ServiceScoreSummary
         // hole range, computed once here, not per spin-context row.
         $fullGameHoles = self::holesForGame($gameRow);
 
+        // Whole-round flag, computed once — Scramble/Shamble/AltShot/Chapman
+        // have no personal score at all, not a per-player condition. See
+        // NON_PERSONAL_SCORE_FORMATS' doc comment for why this nulls rather
+        // than computes-then-hides.
+        $isTeamOnlyFormat = in_array(
+            trim((string)($gameRow['dbGames_GameFormat'] ?? '')),
+            self::NON_PERSONAL_SCORE_FORMATS,
+            true
+        );
+
         foreach ($scorecardRows as $row) {
             $players = is_array($row['players'] ?? null) ? $row['players'] : [];
             if (!$players) continue;
@@ -154,8 +178,8 @@ final class ServiceScoreSummary
                 $flightInfo = $flightConfigById[$flightKey] ?? null;
                 $flightName = trim((string)($flightInfo['name'] ?? '')) ?: 'Flight-1';
 
-                $grossDisplay = $player['totals']['grossDiff']['9c'] ?? null;
-                $netDisplay = $player['totals']['netDiff']['9c'] ?? null;
+                $grossDisplay = $isTeamOnlyFormat ? null : ($player['totals']['grossDiff']['9c'] ?? null);
+                $netDisplay = $isTeamOnlyFormat ? null : ($player['totals']['netDiff']['9c'] ?? null);
 
                 $fullName = trim((string)($player['dbPlayers_Name'] ?? ''));
                 $lastName = trim((string)($player['dbPlayers_LName'] ?? ''));
@@ -167,10 +191,14 @@ final class ServiceScoreSummary
                     // avoids re-deriving it from playerName later.
                     'playerName' => $fullName ?: self::buildPairFieldLabel([$player]),
                     'playerLastName' => $lastName,
+                    // null (not '—' / 0) for a team-only-format round — this
+                    // player never had a personal score to report, distinct
+                    // from a personal-format round where a score genuinely
+                    // wasn't entered yet.
                     'grossDiffValue' => ($grossDisplay !== null) ? self::displayToNumeric((string)$grossDisplay) : null,
-                    'grossDiffDisplay' => $grossDisplay ?? '—',
+                    'grossDiffDisplay' => $isTeamOnlyFormat ? null : ($grossDisplay ?? '—'),
                     'netDiffValue' => ($netDisplay !== null) ? self::displayToNumeric((string)$netDisplay) : null,
-                    'netDiffDisplay' => $netDisplay ?? '—',
+                    'netDiffDisplay' => $isTeamOnlyFormat ? null : ($netDisplay ?? '—'),
                     'thru' => self::deriveThru([$player], $fullGameHoles),
                     'teamKey' => $teamKey !== '' ? $teamKey : null,
                     'teamName' => $teamInfo['name'] ?? null,
@@ -193,30 +221,137 @@ final class ServiceScoreSummary
      * individualGross/individualNet categories' active/disabled/default
      * state — state is display-only (score_summary.js), never a gate here.
      * A player who hasn't started (grossDiffValue/netDiffValue null) ranks as
-     * if even-par, the same convention buildPairFieldRows already uses.
+     * if even-par, the same convention buildPairFieldRows already uses —
+     * except for a team-only-format round (NON_PERSONAL_SCORE_FORMATS),
+     * where that fallback is deliberately NOT applied: null there means "no
+     * personal score exists at all," not "hasn't started yet," so the whole
+     * round is excluded from ranking/points/rank rather than defaulted to
+     * even-par.
+     *
+     * rankGross/rankNet are standard competition ranking (ties share a rank,
+     * next distinct value skips accordingly — "1,2,2,4") — a separate
+     * concern from the points tie rule (split/high/low), which governs how
+     * points get distributed among tied ranks, not how rank itself reads.
      */
     private static function applyIndividualPlacementPoints(array $individualRows, array $gameRow): array
     {
+        $isTeamOnlyFormat = in_array(
+            trim((string)($gameRow['dbGames_GameFormat'] ?? '')),
+            self::NON_PERSONAL_SCORE_FORMATS,
+            true
+        );
+
+        if ($isTeamOnlyFormat) {
+            foreach ($individualRows as &$row) {
+                $row['placementPointsGross'] = null;
+                $row['placementPointsNet'] = null;
+                $row['rankGross'] = null;
+                $row['rankNet'] = null;
+            }
+            unset($row);
+            return $individualRows;
+        }
+
         $placement = self::parsePlacementPoints($gameRow);
         $grossCat = $placement['categories']['individualGross'];
         $netCat = $placement['categories']['individualNet'];
 
+        $flightKeyByIdx = [];
         $grossRankInput = [];
         $netRankInput = [];
         foreach ($individualRows as $idx => $row) {
+            $flightKeyByIdx[$idx] = $row['flightKey'] ?? 'F1';
             $grossRankInput[] = ['idx' => $idx, 'value' => (float)($row['grossDiffValue'] ?? 0)];
             $netRankInput[] = ['idx' => $idx, 'value' => (float)($row['netDiffValue'] ?? 0)];
         }
-        $grossPts = self::assignPlacementPoints($grossRankInput, $grossCat['pointsConfig'], $grossCat['tieRule']);
-        $netPts = self::assignPlacementPoints($netRankInput, $netCat['pointsConfig'], $netCat['tieRule']);
+
+        // Flight-scoped (task #9) — each flight ranked and pointed
+        // completely independently, no crossover. rankGross/rankNet are
+        // scoped along with the points they accompany, unlike rows' own
+        // separate 'rank' field (a different, pre-existing mechanism,
+        // explicitly out of scope for this task).
+        $grossPts = self::rankWithinFlights($grossRankInput, $flightKeyByIdx,
+            fn(array $g) => self::assignPlacementPoints($g, $grossCat['pointsConfig'], $grossCat['tieRule']));
+        $netPts = self::rankWithinFlights($netRankInput, $flightKeyByIdx,
+            fn(array $g) => self::assignPlacementPoints($g, $netCat['pointsConfig'], $netCat['tieRule']));
+        $grossRanks = self::rankWithinFlights($grossRankInput, $flightKeyByIdx,
+            fn(array $g) => self::computeStandardRanks($g));
+        $netRanks = self::rankWithinFlights($netRankInput, $flightKeyByIdx,
+            fn(array $g) => self::computeStandardRanks($g));
 
         foreach ($individualRows as $idx => &$row) {
             $row['placementPointsGross'] = $grossPts[$idx] ?? 0.0;
             $row['placementPointsNet'] = $netPts[$idx] ?? 0.0;
+            $row['rankGross'] = $grossRanks[$idx] ?? null;
+            $row['rankNet'] = $netRanks[$idx] ?? null;
         }
         unset($row);
 
         return $individualRows;
+    }
+
+    /**
+     * Standard competition ranking ("1,2,2,4") over the same
+     * ['idx'=>..., 'value'=>...] shape assignPlacementPoints() takes — lower
+     * value is better, ties share a rank, the next distinct value skips
+     * ahead accordingly. Deliberately separate from assignPlacementPoints()'
+     * own tie handling (split/high/low): that governs how POINTS get
+     * distributed among tied ranks, this just answers "what rank is this,"
+     * a display concept, not a points-distribution one.
+     *
+     * @return array<int,int> idx => rank
+     */
+    private static function computeStandardRanks(array $rows): array
+    {
+        $sorted = $rows;
+        usort($sorted, fn(array $a, array $b): int => $a['value'] <=> $b['value']);
+
+        $ranks = [];
+        $rank = 0;
+        $seen = 0;
+        $prevValue = null;
+        foreach ($sorted as $entry) {
+            $seen++;
+            if ($prevValue === null || $entry['value'] !== $prevValue) {
+                $rank = $seen;
+            }
+            $ranks[$entry['idx']] = $rank;
+            $prevValue = $entry['value'];
+        }
+        return $ranks;
+    }
+
+    /**
+     * Groups $rankInput (['idx'=>..., 'value'=>...] entries) by
+     * $flightKeyByIdx, runs $rankFn independently within each flight's own
+     * group, and merges the results back into one idx-keyed map spanning
+     * every row — task #9's fix: round-level Placement Points were ranking
+     * the whole field together regardless of flight. Flight is a pure
+     * grouping/scope (never itself aggregated or ranked) — this is what
+     * makes that concrete: each flight gets its own complete 1..N ranking
+     * and its own complete points distribution from the same points table,
+     * with zero crossover between flights, same principle already
+     * confirmed correct at the event level.
+     *
+     * $rankFn receives one flight's own entries and must return an
+     * idx-keyed map, same shape assignPlacementPoints()/
+     * computeStandardRanks() already return — this just fans a single call
+     * out into N independent calls, one per flight, then flattens the
+     * results back together.
+     */
+    private static function rankWithinFlights(array $rankInput, array $flightKeyByIdx, callable $rankFn): array
+    {
+        $groups = [];
+        foreach ($rankInput as $entry) {
+            $fk = $flightKeyByIdx[$entry['idx']] ?? 'F1';
+            $groups[$fk][] = $entry;
+        }
+
+        $merged = [];
+        foreach ($groups as $groupRows) {
+            $merged += $rankFn($groupRows);
+        }
+        return $merged;
     }
 
     /**
@@ -365,6 +500,7 @@ final class ServiceScoreSummary
     {
         $out = [];
         $teamConfigById = self::parseTeamConfig($gameRow);
+        $flightConfigById = self::parseFlightConfig($gameRow);
 
         $basis = strtolower((string)($meta['scoringBasis'] ?? 'Strokes'));
         $pointsConfig = ($basis === 'points') ? self::parsePointsConfig($gameRow) : ['strategy' => '', 'values' => []];
@@ -415,6 +551,14 @@ final class ServiceScoreSummary
                 $teamKey = self::sideTeamKey($pairPlayers) ?? '';
                 $teamInfo = $teamConfigById[$teamKey] ?? null;
 
+                // Same "every event has ≥1 flight" floor as
+                // buildIndividualRows() — disagreement or an unresolved key
+                // falls back to 'F1' rather than surfacing null. Added
+                // specifically to flight-scope this round's own Placement
+                // Points ranking below (task #9); carried onto the row like
+                // teamKey rather than stripped back out afterward.
+                $flightKey = self::sideFlightKey($pairPlayers) ?? 'F1';
+
                 // Chicago quota — see computeChicagoQuota() for the full
                 // rotation-aware derivation. PairField rows are never
                 // rotation-aware ($ctx['isRotationAware'] is always false
@@ -447,6 +591,11 @@ final class ServiceScoreSummary
                     'teamName' => $teamInfo['name'] ?? null,
                     'teamColor' => $teamInfo['color'] ?? null,
                     'teamSort' => $teamInfo['sort'] ?? null,
+
+                    // Flight — used to scope this round's own Placement
+                    // Points ranking below (task #9); always resolves to a
+                    // real value ('F1' floor), never null.
+                    'flightKey' => $flightKey,
 
                     // Round-native player list for this pairing — see
                     // exportPlayersList()'s doc comment.
@@ -547,18 +696,27 @@ final class ServiceScoreSummary
         // independent of dbGames_ScoringBasis. Always computed regardless of
         // the gross/net categories' active/disabled/default state — state is
         // display-only (score_summary.js), never a gate on acquisition.
+        // Flight-scoped (task #9) — each flight ranked and pointed
+        // completely independently, no crossover, via rankWithinFlights().
+        // The separate 'rank' field assigned earlier in this function
+        // (score-based, pre-existing) is a different mechanism and stays
+        // global — explicitly out of scope for this task.
         $placement = self::parsePlacementPoints($gameRow);
         $grossCat = $placement['categories']['gross'];
         $netCat = $placement['categories']['net'];
 
+        $flightKeyByIdx = [];
         $grossRankInput = [];
         $netRankInput = [];
         foreach ($out as $idx => $row) {
+            $flightKeyByIdx[$idx] = $row['flightKey'] ?? 'F1';
             $grossRankInput[] = ['idx' => $idx, 'value' => (float)($row['grossDiffValue'] ?? 0)];
             $netRankInput[] = ['idx' => $idx, 'value' => (float)($row['netDiffValue'] ?? 0)];
         }
-        $grossPts = self::assignPlacementPoints($grossRankInput, $grossCat['pointsConfig'], $grossCat['tieRule']);
-        $netPts = self::assignPlacementPoints($netRankInput, $netCat['pointsConfig'], $netCat['tieRule']);
+        $grossPts = self::rankWithinFlights($grossRankInput, $flightKeyByIdx,
+            fn(array $g) => self::assignPlacementPoints($g, $grossCat['pointsConfig'], $grossCat['tieRule']));
+        $netPts = self::rankWithinFlights($netRankInput, $flightKeyByIdx,
+            fn(array $g) => self::assignPlacementPoints($g, $netCat['pointsConfig'], $netCat['tieRule']));
 
         foreach ($out as $idx => &$row) {
             $row['placementPointsGross'] = $grossPts[$idx] ?? 0.0;
@@ -1747,6 +1905,25 @@ final class ServiceScoreSummary
         $keys = [];
         foreach ($sidePlayers as $p) {
             $k = trim((string)($p['dbPlayers_TeamKey'] ?? ''));
+            if ($k !== '') $keys[$k] = true;
+        }
+        $distinct = array_keys($keys);
+        return (count($distinct) === 1) ? $distinct[0] : null;
+    }
+
+    /**
+     * Same agreement-required pattern as sideTeamKey() — every player on a
+     * pairing must share one dbPlayers_FlightKey before it's trusted. Added
+     * specifically so buildPairFieldRows() can flight-scope its Placement
+     * Points ranking (task #9 — round-level Placement Points were ranking
+     * the whole field together, ignoring flight entirely). Round-scoped
+     * only, same as everywhere else in this file — no roster/event lookup.
+     */
+    private static function sideFlightKey(array $sidePlayers): ?string
+    {
+        $keys = [];
+        foreach ($sidePlayers as $p) {
+            $k = trim((string)($p['dbPlayers_FlightKey'] ?? ''));
             if ($k !== '') $keys[$k] = true;
         }
         $distinct = array_keys($keys);
