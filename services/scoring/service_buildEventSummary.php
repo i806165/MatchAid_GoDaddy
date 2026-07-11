@@ -393,6 +393,17 @@ final class ServiceBuildEventSummary
                     'netDiffDisplay' => $row['netDiffDisplay'] ?? '—',
                     'placementPointsGross' => (float)($row['placementPointsGross'] ?? 0),
                     'placementPointsNet' => (float)($row['placementPointsNet'] ?? 0),
+                    // Already flight-scoped at the source (task #9) — pulled
+                    // straight through, not recomputed here. Note: source
+                    // scoping uses round-native dbPlayers_FlightKey, this
+                    // aggregator's own flight buckets use the roster's
+                    // dbEventPlayers_FlightKey — these agree whenever
+                    // FlightMode="fixed" (the round cascades from the
+                    // roster), but could diverge if FlightMode="none".
+                    // Flagged, not resolved — the common/intended case is
+                    // covered.
+                    'rankGross' => $row['rankGross'] ?? null,
+                    'rankNet' => $row['rankNet'] ?? null,
                     'countsTowardStrokes' => $personalScore,
                 ];
 
@@ -472,7 +483,17 @@ final class ServiceBuildEventSummary
                             ];
                         }
                         $points = (float)($sideData['matchStatus']['total']['points'] ?? 0);
-                        $pairings[$pairingId]['rounds'][] = ['roundLabel' => $roundLabel, 'points' => $points];
+                        $pairings[$pairingId]['rounds'][] = [
+                            'roundLabel' => $roundLabel,
+                            'points' => $points,
+                            // No rank/score concept for PairPair — head-to-
+                            // head match result isn't rankable against the
+                            // rest of the field. Explicit null, not an
+                            // omitted key, so the renderer never has to
+                            // guess whether these exist.
+                            'rank' => null,
+                            'scoreDisplay' => null,
+                        ];
                         $pairings[$pairingId]['totalPoints'] += $points;
                     }
                 }
@@ -498,7 +519,21 @@ final class ServiceBuildEventSummary
                     $points = $isGross
                         ? (float)($row['placementPointsGross'] ?? 0)
                         : (float)($row['placementPointsNet'] ?? 0);
-                    $pairings[$pairingId]['rounds'][] = ['roundLabel' => $roundLabel, 'points' => $points];
+                    $pairings[$pairingId]['rounds'][] = [
+                        'roundLabel' => $roundLabel,
+                        'points' => $points,
+                        // PairField only — a genuine field-wide finishing
+                        // position exists here (score-based, not the
+                        // points-based ranking above), so it's meaningful
+                        // to show alongside points. PairPair has no
+                        // equivalent field at all — head-to-head match
+                        // result isn't rankable against the rest of the
+                        // field, so no rank/score is set on that branch.
+                        // NOT flight-scoped yet (task #2a) — whole-round
+                        // rank for now, by explicit decision.
+                        'rank' => $row['rank'] ?? null,
+                        'scoreDisplay' => $isGross ? ($row['grossDiffDisplay'] ?? null) : ($row['netDiffDisplay'] ?? null),
+                    ];
                     $pairings[$pairingId]['totalPoints'] += $points;
                 }
             }
@@ -533,7 +568,7 @@ final class ServiceBuildEventSummary
     ): array {
         $teams = [];
 
-        foreach ($roundPayloads as $round) {
+        foreach ($roundPayloads as $roundIdx => $round) {
             $payload = $round['payload'] ?? [];
             $competition = (string)($payload['competition'] ?? 'PairField');
             $roundLabel = (string)($round['roundLabel'] ?? '');
@@ -560,7 +595,7 @@ final class ServiceBuildEventSummary
                                 'teamKey' => $teamKey,
                                 'teamName' => $teamInfo['name'] ?? null,
                                 'teamColor' => $teamInfo['color'] ?? null,
-                                'rounds' => [],
+                                'roundsByIdx' => [],
                                 'totalPoints' => 0.0,
                                 'record' => ['w' => 0, 'l' => 0, 'h' => 0],
                             ];
@@ -571,7 +606,16 @@ final class ServiceBuildEventSummary
                         elseif ($status === 'H') $teams[$teamKey]['record']['h']++;
 
                         $points = (float)($sideData['matchStatus']['total']['points'] ?? 0);
-                        $teams[$teamKey]['rounds'][] = ['roundLabel' => $roundLabel, 'points' => $points];
+                        // Accumulate into ONE entry per (team, round) — a
+                        // team can have several matches/sides in the same
+                        // round (e.g. multiple pairs all on Team Blue), and
+                        // those must sum into a single round column, not
+                        // push a separate entry per match. This was the
+                        // bug behind the extra-columns rendering issue.
+                        if (!isset($teams[$teamKey]['roundsByIdx'][$roundIdx])) {
+                            $teams[$teamKey]['roundsByIdx'][$roundIdx] = ['roundLabel' => $roundLabel, 'points' => 0.0];
+                        }
+                        $teams[$teamKey]['roundsByIdx'][$roundIdx]['points'] += $points;
                         $teams[$teamKey]['totalPoints'] += $points;
                     }
                 }
@@ -589,7 +633,7 @@ final class ServiceBuildEventSummary
                             'teamKey' => $teamKey,
                             'teamName' => $teamInfo['name'] ?? null,
                             'teamColor' => $teamInfo['color'] ?? null,
-                            'rounds' => [],
+                            'roundsByIdx' => [],
                             'totalPoints' => 0.0,
                             // PairField has no win/loss/halve concept.
                             'record' => null,
@@ -598,11 +642,27 @@ final class ServiceBuildEventSummary
                     $points = $isGross
                         ? (float)($row['placementPointsGross'] ?? 0)
                         : (float)($row['placementPointsNet'] ?? 0);
-                    $teams[$teamKey]['rounds'][] = ['roundLabel' => $roundLabel, 'points' => $points];
+                    // Same accumulation fix as the PairPair branch above —
+                    // a team can have multiple pairings in one round.
+                    if (!isset($teams[$teamKey]['roundsByIdx'][$roundIdx])) {
+                        $teams[$teamKey]['roundsByIdx'][$roundIdx] = ['roundLabel' => $roundLabel, 'points' => 0.0];
+                    }
+                    $teams[$teamKey]['roundsByIdx'][$roundIdx]['points'] += $points;
                     $teams[$teamKey]['totalPoints'] += $points;
                 }
             }
         }
+
+        // Flatten roundsByIdx (keyed by round position, sparse-safe if a
+        // team skipped a round) into the ordered 'rounds' list callers
+        // expect — ksort() guarantees round order even though a team may
+        // have first appeared in a later round than index 0.
+        foreach ($teams as $teamKey => &$team) {
+            ksort($team['roundsByIdx']);
+            $team['rounds'] = array_values($team['roundsByIdx']);
+            unset($team['roundsByIdx']);
+        }
+        unset($team);
 
         $placementPts = self::rankByPointsDescending(
             array_map(static fn(array $t): float => $t['totalPoints'], $teams),

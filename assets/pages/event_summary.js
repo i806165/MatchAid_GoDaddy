@@ -61,6 +61,19 @@
     return Number.isInteger(n) ? String(n) : n.toFixed(1);
   }
 
+  function ordinal(n) {
+    const v = Number(n);
+    if (!Number.isFinite(v)) return '';
+    const mod100 = v % 100;
+    if (mod100 >= 11 && mod100 <= 13) return `${v}th`;
+    switch (v % 10) {
+      case 1: return `${v}st`;
+      case 2: return `${v}nd`;
+      case 3: return `${v}rd`;
+      default: return `${v}th`;
+    }
+  }
+
   function allRoundsNonPersonal() {
     return rounds.length > 0 && rounds.every((r) => NON_PERSONAL_SCORE_FORMATS.includes(r.gameFormat));
   }
@@ -207,11 +220,24 @@
         (row.rounds || []).forEach((r) => {
           if (isIndividual) {
             const pts = isGross ? r.placementPointsGross : r.placementPointsNet;
+            const rank = isGross ? r.rankGross : r.rankNet;
             const scoreDisplay = isGross ? r.grossDiffDisplay : r.netDiffDisplay;
             const showScore = r.countsTowardStrokes;
+            const rankScoreLine = showScore
+              ? `${rank != null ? ordinal(rank) + ' ' : ''}${esc(scoreDisplay)}`
+              : '';
             html += `<td>
               <div class="esCellPts">${fmtTally(pts)} pts</div>
-              <div class="esCellScore ${showScore ? '' : 'is-empty'}">${showScore ? esc(scoreDisplay) : ''}</div>
+              <div class="esCellScore ${showScore ? '' : 'is-empty'}">${rankScoreLine}</div>
+            </td>`;
+          } else if (view === 'pairing' && r.rank != null) {
+            // PairField only — a genuine field-wide finishing position
+            // exists here. PairPair (r.rank === null) falls through to the
+            // points-only cell below; head-to-head match result has no
+            // rank concept at all, not just an unavailable one.
+            html += `<td>
+              <div class="esCellPts">${fmtTally(r.points)} pts</div>
+              <div class="esCellScore">${ordinal(r.rank)} ${esc(r.scoreDisplay || '')}</div>
             </td>`;
           } else {
             html += `<td><div class="esCellPts">${fmtTally(r.points)} pts</div></td>`;
