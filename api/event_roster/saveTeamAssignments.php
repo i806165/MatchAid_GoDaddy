@@ -5,27 +5,25 @@ declare(strict_types=1);
 // Bulk-saves player team assignments to dbEventPlayers_TeamKey on
 // db_EventPlayers. Mirrors /api/game_players/saveTeamAssignments.php,
 // scoped to EID instead of GGID.
-// Each assignment is { "ghin": "...", "team": "T1"|"T2"|"" }.
-// Invalid team values are coerced to "" (unassigned) by
-// ServiceDbEventPlayers::updateTeamKey().
+//
+// This always runs immediately after saveTeamConfig.php in the same
+// Apply (see manage_teams.js's _applyChanges()), so dbEvents_TeamMode
+// is already current in the DB by the time this executes — no mode
+// needs to be passed in the request body here.
 //
 // Request body:
 //   { "assignments": [ { "ghin": "1234567", "team": "T1" }, ... ] }
 //
 // Success response:
 //   { "ok": true, "payload": { "players": [ ...full roster rows... ] } }
-//
-// Status code convention: matches the rest of the app (admin_games,
-// event_roster) — expected business outcomes (bad input, no event
-// selected) always return HTTP 200 with {ok:false, message}, since
-// MA.postJson() throws on any non-2xx status. Only 405 (bad method),
-// 401 (auth), and 500 (genuine server fault) use real non-2xx codes.
 
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextEvent.php";
+require_once MA_SERVICES . "/database/service_dbEvents.php";
 require_once MA_SERVICES . "/database/service_dbEventPlayers.php";
+require_once MA_SERVICES . "/workflows/workflow_ProcessEventCascade.php";
 
 header("Content-Type: application/json; charset=utf-8");
 
@@ -52,25 +50,49 @@ try {
         exit;
     }
 
-    // 3) Input
+    // 3) Current mode — saveTeamConfig.php already persisted it moments
+    //    earlier in this same Apply sequence.
+    $event = $ec["event"] ?? ServiceDbEvents::getEventByEID($eid);
+    $mode  = (string)($event["dbEvents_TeamMode"] ?? "none");
+
+    // 4) Valid team key values
+    $validTeams = ["T1", "T2", ""];
+
+    // 5) Input
     $in          = ma_json_in();
     $assignments = $in["assignments"] ?? [];
     if (!is_array($assignments)) $assignments = [];
 
-    // 4) Save each assignment — updateTeamKey() already validates/coerces
-    //    invalid team values to "" internally (see service_dbEventPlayers.php).
+    // 6) Save each assignment
     $saved = 0;
+    $ghinToTeam = [];
+
     foreach ($assignments as $a) {
         $ghin = trim((string)($a["ghin"] ?? ""));
         $team = trim((string)($a["team"] ?? ""));
 
         if ($ghin === "") continue;
 
-        ServiceDbEventPlayers::updateTeamKey($eid, $ghin, $team);
+        if (!in_array($team, $validTeams, true)) {
+            Logger::warn("SAVE_EVENT_TEAM_ASSIGNMENTS_INVALID_TEAM", [
+                "eid" => $eid, "ghin" => $ghin, "team" => $team,
+            ]);
+            $team = "";
+        }
+
+        ServiceDbEventPlayers::upsertEventPlayer($eid, $ghin, [
+            "dbEventPlayers_TeamKey" => $team,
+        ]);
         $saved++;
+        $ghinToTeam[$ghin] = $team;
     }
 
-    // 5) Return refreshed roster
+    // 7) Propagate — only when cascading is on.
+    if ($mode === "fixed") {
+        WorkflowProcessEventCascade::propagateTeamAssignments($eid, $ghinToTeam);
+    }
+
+    // 8) Return refreshed roster
     $players = ServiceDbEventPlayers::getEventRoster($eid);
     echo json_encode(["ok" => true, "payload" => ["players" => $players]]);
 
