@@ -728,6 +728,23 @@ function wireDoorwayControls() {
     if (action === "scorecard") return routerGo("scorecard", {});
     if (action === "pairings") return routerGo("pairings", {});
     if (action === "teetimes") return routerGo("teetimes", {});
+
+    if (action === "scorehome") {
+      // Row lookup by ggid, same pattern rosterView/calendar already use
+      // just below — handleGameAction only receives {action, ggid} from
+      // the onAction callback, not the full row, so this is where it's
+      // resolved. yourPlayerKey is stamped server-side in
+      // hydrateAdminGamesList.php (augmentGamesWithPlayerKey()) — same
+      // field name and scorehome({scoreId}) call shape player_home.js's
+      // own onGameAction() already uses.
+      const g = (state.games.dbRows || []).find(r => String(r.dbGames_GGID) === String(ggid));
+      const scoreId = g?.yourPlayerKey || "";
+      if (!scoreId) {
+        setStatus("Scoring is not yet activated for this game.", "warn");
+        return;
+      }
+      return routerGo("scorehome", { scoreId });
+    }
     
     if (action === "rosterView") {
       if (MA.rosterView && typeof MA.rosterView.open === "function") {

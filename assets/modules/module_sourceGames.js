@@ -164,7 +164,15 @@
       { label: `Pair ${gMode} Players`,    indent: true, action: () => fire("pairings") },
       { label: `Assign ${gMode} TeeTimes`, indent: true, action: () => fire("teetimes") },
       { label: `View ${gMode} Summary`,    indent: true, action: () => fire("summary") },
+
+      { category: `${gMode.toUpperCase()} SCORING` },
       { label: `Pre-${gMode} Scorecards`,  indent: true, action: () => fire("scorecard") },
+      {
+        label: g.yourPlayerKey ? "Open Scoring Portal" : "Scoring not yet Activated",
+        indent: true,
+        disabled: !g.yourPlayerKey,
+        action: () => fire("scorehome"),
+      },
 
       { category: "ADMIN SERVICES" },
       { label: "View Players",             indent: true, action: () => fire("rosterView") },

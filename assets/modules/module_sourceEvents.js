@@ -84,25 +84,34 @@
       </div>`;
   }
 
-  function buildEventMenu(ctx, eid) {
+  function buildEventMenu(ctx, row) {
     if (!MA.ui || typeof MA.ui.openActionsMenu !== "function") {
       console.warn("[module_sourceEvents] MA.ui.openActionsMenu not found.");
       return;
     }
 
+    const eid = String(row?.dbEvents_EID ?? "").trim();
+    const title = String(row?.dbEvents_Title || "").trim() || "Event";
+    const subtitle = formatDateRange(row?.dbEvents_StartDate, row?.dbEvents_EndDate);
+
     const fire = (action) => ctx.onAction(action, eid);
 
+    // No categories — confirmed too few items (6) for grouping to earn its
+    // keep the way it does on Games' 11-item menu. "Event Scoring" is
+    // deliberately absent here, not an oversight — confirmed when this
+    // arrangement was set.
     const items = [
       { label: "Edit Event", action: () => fire("editEvent") },
       { separator: true },
-      { label: "Event Rounds",  action: () => fire("eventGames") },
-      { label: "Event Roster",  action: () => fire("eventRoster") },
-      { label: "Event Scoring", action: () => fire("eventScoring") },
+      { label: "SetUp Rounds for the Event", action: () => fire("eventGames") },
+      { label: "Create Event Roster", action: () => fire("eventRoster") },
+      { separator: true },
+      { label: "Display Event Leaderboard", action: () => fire("eventLeaderboard") },
       { separator: true },
       { label: "Delete Event", action: () => fire("deleteEvent"), danger: true }
     ];
 
-    MA.ui.openActionsMenu("Event", items);
+    MA.ui.openActionsMenu(title, items, subtitle);
   }
 
   function render(ctx, rows) {
@@ -123,13 +132,16 @@
     cardsEl.innerHTML = dbRows.map(cardHtml).join("");
 
     // Card tap opens the event menu (single click target — no separate
-    // MANAGE button in the original events list markup).
+    // MANAGE button in the original events list markup). Row is looked up
+    // first, same pattern module_sourceGames.js uses, so the menu gets the
+    // real title/subtitle instead of a bare id.
     cardsEl.querySelectorAll(".maEventCard").forEach((card) => {
       card.addEventListener("click", (e) => {
         if (e.target.closest("button,a,input,label")) return;
         const eid = card.getAttribute("data-eid");
-        if (!eid) return;
-        buildEventMenu(ctx, eid);
+        const r = ctx.rows.find((x) => String(x.dbEvents_EID) === String(eid)) || null;
+        if (!r) return;
+        buildEventMenu(ctx, r);
       });
     });
   }
@@ -180,7 +192,9 @@
       const cardsEl = id ? document.getElementById(id) : null;
       const ctx = cardsEl ? mounts.get(cardsEl) : null;
       if (!ctx) return;
-      buildEventMenu(ctx, eid);
+      const r = (ctx.rows || []).find((x) => String(x.dbEvents_EID) === String(eid)) || null;
+      if (!r) return;
+      buildEventMenu(ctx, r);
     },
 
     _internals: { esc, parseYmd, formatDate, formatDateRange }

@@ -6,6 +6,48 @@ require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Db.php";
 require_once __DIR__ . '/../database/service_dbFavAdmins.php';
 require_once __DIR__ . '/../database/service_dbGames.php';
+require_once __DIR__ . '/../database/service_dbPlayers.php';
+
+/**
+ * Stamps 'yourPlayerKey' onto every row in $gamesResult['games']['raw'] —
+ * the signed-in user's dbPlayers_PlayerKey for that game, or '' when they
+ * have no player row there. One bulk lookup (ServiceDbPlayers::
+ * getPlayersByGGIDSet()) covers every row in $gamesResult at once, rather
+ * than a query per game. Field is always present (never an undefined key
+ * client-side) so module_sourceGames.js's "Open Scoring Portal" menu item
+ * can gate on it directly: !!row.yourPlayerKey.
+ *
+ * Called from both of this file's return paths (event mode and standalone)
+ * rather than duplicated inline at each one — adminhome.php calls
+ * hydrateAdminGamesList() directly for the initial page load, separately
+ * from whatever query.php does for filter-refresh AJAX calls, so the fix
+ * has to live in the one function both already share, not in either caller.
+ */
+function augmentGamesWithPlayerKey(array $gamesResult, string $ghin): array {
+  $rows = $gamesResult["games"]["raw"] ?? null;
+  if (!is_array($rows) || !$rows || trim($ghin) === "") {
+    return $gamesResult;
+  }
+
+  $ggidSet = array_values(array_unique(array_filter(array_map(
+    static fn($r) => trim((string)($r["dbGames_GGID"] ?? "")),
+    $rows
+  ))));
+
+  $playerRowsByGgid = [];
+  foreach (ServiceDbPlayers::getPlayersByGGIDSet($ggidSet, $ghin) as $p) {
+    $playerRowsByGgid[(string)($p["dbPlayers_GGID"] ?? "")] = $p;
+  }
+
+  foreach ($rows as &$row) {
+    $ggid = trim((string)($row["dbGames_GGID"] ?? ""));
+    $row["yourPlayerKey"] = (string)($playerRowsByGgid[$ggid]["dbPlayers_PlayerKey"] ?? "");
+  }
+  unset($row);
+
+  $gamesResult["games"]["raw"] = $rows;
+  return $gamesResult;
+}
 
 /**
  * hydrateAdminGamesList
@@ -29,6 +71,7 @@ function hydrateAdminGamesList(array $context, array $filters): array {
     require_once __DIR__ . '/../context/service_ContextEvent.php';
 
     $games = ServiceDbGames::queryEventGames($eid);
+    $games = augmentGamesWithPlayerKey($games, $userGhin);
     $eventCtx = ServiceContextEvent::getEventContext($eid);
     $event = $eventCtx["event"] ?? [];
 
@@ -116,6 +159,7 @@ function hydrateAdminGamesList(array $context, array $filters): array {
     "selectedAdminKeys" => $selectedForQuery,
     "includePlayerCounts" => true,
   ]);
+  $games = augmentGamesWithPlayerKey($games, $userGhin);
 
 
   //xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx

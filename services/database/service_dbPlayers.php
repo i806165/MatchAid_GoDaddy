@@ -205,6 +205,51 @@ final class ServiceDbPlayers
   }
 
   /**
+   * One bulk lookup — every db_Players row for this GHIN across a given set
+   * of GGIDs at once, instead of N individual getPlayerByGGIDGHIN() calls.
+   * Same "getPlayers...", full-row, SELECT * shape as getPlayersByPlayerKey()
+   * above — returns complete rows (not just PlayerKey) for future
+   * flexibility, even though the first caller only needs dbPlayers_PlayerKey.
+   *
+   * Built for hydrateAdminGamesList.php's "Open Scoring Portal" menu item:
+   * the Games list is game-centric (no per-player join baked in, unlike
+   * player_home.js's own hydration), so this resolves, once per page load,
+   * whether the signed-in user has a player row in each listed game. A GGID
+   * absent from the returned rows means no player row for that game (menu
+   * item stays disabled).
+   *
+   * @param  string[] $ggidSet
+   * @return array  db_Players rows (SELECT *), one per matching GGID
+   */
+  public static function getPlayersByGGIDSet(array $ggidSet, string $ghin): array
+  {
+    $ghin = trim($ghin);
+    $ggidSet = array_values(array_unique(array_filter(array_map(
+      static fn($g) => trim((string)$g),
+      $ggidSet
+    ))));
+    if ($ghin === "" || !$ggidSet) return [];
+
+    $pdo = Db::pdo();
+    $placeholders = [];
+    $params = [":ghin" => $ghin];
+    foreach ($ggidSet as $i => $ggid) {
+      $ph = ":g{$i}";
+      $placeholders[] = $ph;
+      $params[$ph] = $ggid;
+    }
+
+    $sql = "SELECT *
+            FROM db_Players
+            WHERE dbPlayers_PlayerGHIN = :ghin
+              AND dbPlayers_GGID IN (" . implode(",", $placeholders) . ")";
+    $st = $pdo->prepare($sql);
+    $st->execute($params);
+
+    return $st->fetchAll() ?: [];
+  }
+
+  /**
  * Returns co-play history for all pairs within today's unpaired GHIN pool.
  * Used by the Auto-Pair 'Least Played Together' outcome.
  *
