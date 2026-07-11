@@ -316,7 +316,7 @@ function getGameAdminMeta(g){
       const adminMeta = getGameAdminMeta(g);
       const courseConfirmed = adminMeta.courseConfirmed;
       const provisionalHtml = !courseConfirmed
-        ? `<div class="maGameCard__provisional">⚠ Course is not yet confirmed</div>`
+        ? `<div class="maGameCard__provisional">⚠ Course and Time subject to change</div>`
         : ``;
 
       const teeCnt = Number(g.dbGames_TeeTimeCnt ?? g.teeTimeCnt ?? 0);
