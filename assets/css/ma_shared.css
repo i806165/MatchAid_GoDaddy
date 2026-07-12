@@ -1770,6 +1770,33 @@ textarea {
   }
 }
 
+/* Generic desktop-actions / mobile-trigger pair — for pages without their
+   own per-page equivalent (Event Roster already has erDesktopActions/
+   erMobileManageBtn in event_roster.css; this is the same pattern, shared,
+   for pages that don't have one yet — e.g. Game Players). Desktop shows the
+   real action buttons; mobile collapses them to a single "Actions" trigger
+   (standard btnSecondary styling, same as every other action button) that
+   opens the same Actions menu. Same 600px breakpoint as everything else
+   here. */
+.maDesktopActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.maMobileActionsTrigger {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .maDesktopActions {
+    display: none;
+  }
+  .maMobileActionsTrigger {
+    display: inline-flex;
+  }
+}
+
 .maChoiceChip.is-disabled {
   opacity: .55;
   cursor: default;

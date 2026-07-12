@@ -562,7 +562,7 @@
     if (el.rosterCount) el.rosterCount.textContent = count ? `${count} players` : "";
   }
 
-  // ── Canvas controls — sort strip + Manage Teams + HCP date ────────────────
+  // ── Canvas controls — sort strip + Define Teams + HCP date ────────────────
   function renderCanvasControls(){
     const g = state.game || {};
     const eff = g.dbGames_HCEffectivity || "PlayDate";
@@ -596,7 +596,7 @@
     // Game's check is naturally undefined !== "fixed" → button shows.
     const teamsBtn = (state.game?.dbEvents_TeamMode === "fixed")
       ? ""
-      : `<button id="gpBtnManageTeams" class="btn btnSecondary" type="button">Manage Teams</button>`;
+      : `<button id="gpBtnManageTeams" class="btn btnSecondary" type="button">Define Teams</button>`;
 
     // Same lock condition as Teams — round with FlightMode "fixed" hides the
     // button entirely, flight assignment is owned by the event roster and
@@ -629,6 +629,14 @@
            Define Handicaps
          </button>`;
 
+    // Promoted from Actions-menu-only to a visible canvas button, matching
+    // Event Roster's Refresh Handicaps. Never disabled on gross games —
+    // per the earlier decision, this action already self-guards server-side
+    // (resets to 0, skips GHIN calls) rather than being disabled in the UI,
+    // and that decision applies everywhere this action appears, not just
+    // its original Actions-menu home.
+    const recalcBtn = `<button id="gpBtnRecalcHandicaps" class="btn btnSecondary" type="button">Recalculate Handicaps</button>`;
+
     el.canvasControls.innerHTML = `
       <div class="gpCanvasControls">
         <div style="display:flex; align-items:center; gap:6px;">
@@ -636,10 +644,14 @@
           ${sortStrip}
         </div>
         <div class="gpCanvasControls__right">
-          ${teamsBtn}
-          ${flightsBtn}
-          ${handicapsBtn}
-          <span class="gpHcpDate">${esc(hcLabel)}</span>
+          <div class="maDesktopActions">
+            ${recalcBtn}
+            ${handicapsBtn}
+            ${teamsBtn}
+            ${flightsBtn}
+            <span class="gpHcpDate">${esc(hcLabel)}</span>
+          </div>
+          <button id="gpBtnMobileActions" class="btn btnSecondary maMobileActionsTrigger" type="button">Actions</button>
         </div>
       </div>`;
 
@@ -656,6 +668,12 @@
 
     const flightsButton = document.getElementById("gpBtnDefineFlights");
     if (flightsButton) flightsButton.onclick = onDefineFlights;
+
+    const recalcButton = document.getElementById("gpBtnRecalcHandicaps");
+    if (recalcButton) recalcButton.onclick = onRecalcHandicaps;
+
+    const mobileActionsBtn = document.getElementById("gpBtnMobileActions");
+    if (mobileActionsBtn) mobileActionsBtn.onclick = openActionsMenu;
 
     const handicapsButton = document.getElementById("gpBtnDefineHandicaps");
     if (handicapsButton) handicapsButton.onclick = onDefineHandicapSettings;
@@ -690,14 +708,20 @@
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     MA.ui.openActionsMenu("Actions", [
-      { label: "Recalculate Handicaps",   action: onRecalcHandicaps },
+      { category: "Roster Management" },
+      { label: "Recalculate Handicaps",    indent: true, action: onRecalcHandicaps },
+      { label: "Define Handicap Settings", indent: true, action: onDefineHandicapSettings },
+      { label: "Define Teams",             indent: true, action: onManageTeams },
+      { label: "Define Flights",           indent: true, action: onDefineFlights },
+      { separator: true },
+      { category: "Messaging" },
       { label: "Send Message to Players", action: onNotify },
     ]);
   }
 
   function onManageTeams() {
     if (!MA.manageTeams || typeof MA.manageTeams.open !== "function") {
-      MA.setStatus("Manage Teams module not loaded.", "warn");
+      MA.setStatus("Define Teams module not loaded.", "warn");
       return;
     }
     const teamConfig = (window.__MA_INIT__ || {}).teamConfig || {

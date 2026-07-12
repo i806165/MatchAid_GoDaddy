@@ -319,11 +319,11 @@
           <div class="erDesktopActions" style="display:flex; align-items:center; gap:8px;">
             <button id="erBtnRefreshHI" class="btn btnSecondary" type="button">Refresh Handicaps</button>
             <button id="erBtnDefineHandicaps" class="btn btnSecondary" type="button">Define Handicaps</button>
-            <button id="erBtnManageTeams" class="btn btnSecondary" type="button">Manage Teams</button>
+            <button id="erBtnManageTeams" class="btn btnSecondary" type="button">Define Teams</button>
             <button id="erBtnDefineFlights" class="btn btnSecondary" type="button">Define Flights</button>
             ${pairingsBtn}
           </div>
-          <button id="erBtnManageRoster" class="btn btnSecondary erMobileManageBtn" type="button">Manage Roster</button>
+          <button id="erBtnManageRoster" class="btn btnSecondary erMobileManageBtn" type="button">Actions</button>
         </div>
       </div>`;
 
@@ -350,27 +350,10 @@
     const pairBtn = document.getElementById("erBtnManagePairings");
     if (pairBtn) pairBtn.onclick = onManagePairings;
 
+    // Mobile trigger reuses the exact same menu as the chrome header's
+    // Actions button — no separate "Manage Roster" menu/title anymore.
     const manageRosterBtn = document.getElementById("erBtnManageRoster");
-    if (manageRosterBtn) manageRosterBtn.onclick = onManageRoster;
-  }
-
-  // ── Manage Roster (mobile) ───────────────────────────────────────────────────
-  // Mobile-only stand-in for the five desktop buttons above — same actions,
-  // same handlers, one trigger instead of a row that overflows a phone-width
-  // screen. Desktop keeps the five separate buttons, unchanged. Flights is
-  // deliberately last in this list (desktop button order is unchanged).
-  function onManageRoster() {
-    if (!MA.ui || !MA.ui.openActionsMenu) {
-      MA.setStatus("Actions menu not loaded.", "warn");
-      return;
-    }
-    MA.ui.openActionsMenu("Manage Roster", [
-      { label: "Refresh Handicaps", action: onRefreshHandicaps },
-      { label: "Define Handicaps",  action: onDefineHandicapSettings },
-      { label: "Manage Teams",      action: onManageTeams },
-      { label: "Manage Pairings",   action: onManagePairings },
-      { label: "Define Flights",    action: onDefineFlights },
-    ]);
+    if (manageRosterBtn) manageRosterBtn.onclick = openActionsMenu;
   }
 
   // ── Mobile tray toggle ───────────────────────────────────────────────────────
@@ -503,10 +486,10 @@
     });
   }
 
-  // ── Manage Teams ────────────────────────────────────────────────────────────
+  // ── Define Teams ────────────────────────────────────────────────────────────
   function onManageTeams() {
     if (!MA.manageTeams || typeof MA.manageTeams.open !== "function") {
-      MA.setStatus("Manage Teams module not loaded.", "warn");
+      MA.setStatus("Define Teams module not loaded.", "warn");
       return;
     }
 
@@ -826,7 +809,14 @@
 
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
-    MA.ui.openActionsMenu("Actions", []);
+    MA.ui.openActionsMenu("Actions", [
+      { category: "Roster Management" },
+      { label: "Refresh Handicaps",         indent: true, action: onRefreshHandicaps },
+      { label: "Define Handicap Settings",  indent: true, action: onDefineHandicapSettings },
+      { label: "Define Teams",              indent: true, action: onManageTeams },
+      { label: "Define Flights",            indent: true, action: onDefineFlights },
+      { label: "Manage Pairings",           indent: true, action: onManagePairings },
+    ]);
   }
 
   // ── Boot ────────────────────────────────────────────────────────────────────
