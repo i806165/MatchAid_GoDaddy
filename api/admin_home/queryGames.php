@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../bootstrap.php';
 require_once MA_SERVICES . '/context/service_ContextUser.php';
 require_once MA_SERVICES . '/database/service_dbGames.php';
+require_once MA_SERVICES . '/workflows/hydrateAdminGamesList.php';
 require_once MA_API_LIB . "/Db.php";
 
 header('Content-Type: application/json; charset=utf-8');
@@ -79,6 +80,15 @@ if (!is_array($data) || !array_key_exists("games", $data)) {
   ], JSON_UNESCAPED_SLASHES);
   exit;
 }
+
+// Stamp yourPlayerKey onto each row — same function init.php/query.php
+// already call via hydrateAdminGamesList(). Without this, every game
+// row returned by this endpoint is missing yourPlayerKey entirely,
+// which module_sourceGames.js reads as "no player key" (same as an
+// empty string) — making the "Open Scoring Portal" menu item show
+// disabled/"Scoring not yet Activated" even for games where the
+// signed-in admin genuinely has a valid Scorecard ID.
+$data = augmentGamesWithPlayerKey($data, $ghinId);
 
 echo json_encode([
   "ok"      => true,
