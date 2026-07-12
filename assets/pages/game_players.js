@@ -644,14 +644,11 @@
           ${sortStrip}
         </div>
         <div class="gpCanvasControls__right">
-          <div class="maDesktopActions">
-            ${recalcBtn}
-            ${handicapsBtn}
-            ${teamsBtn}
-            ${flightsBtn}
-            <span class="gpHcpDate">${esc(hcLabel)}</span>
-          </div>
-          <button id="gpBtnMobileActions" class="btn btnSecondary maMobileActionsTrigger" type="button">Actions</button>
+          ${recalcBtn}
+          ${handicapsBtn}
+          ${teamsBtn}
+          ${flightsBtn}
+          <span class="gpHcpDate">${esc(hcLabel)}</span>
         </div>
       </div>`;
 
@@ -671,9 +668,6 @@
 
     const recalcButton = document.getElementById("gpBtnRecalcHandicaps");
     if (recalcButton) recalcButton.onclick = onRecalcHandicaps;
-
-    const mobileActionsBtn = document.getElementById("gpBtnMobileActions");
-    if (mobileActionsBtn) mobileActionsBtn.onclick = openActionsMenu;
 
     const handicapsButton = document.getElementById("gpBtnDefineHandicaps");
     if (handicapsButton) handicapsButton.onclick = onDefineHandicapSettings;
