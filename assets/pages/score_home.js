@@ -31,8 +31,8 @@
     btnLaunch:        document.getElementById('shBtnLaunch'),
 
     groupCard:        document.getElementById('shGroupCard'),
-    groupKey:         document.getElementById('shGroupKey'),
-    groupKeyWrap:     document.getElementById('shGroupKeyWrap'),
+    groupKeyBtn:      document.getElementById('shGroupKeyBtn'),
+    groupKeyText:     document.getElementById('shGroupKeyText'),
     groupKeyChevron:  document.getElementById('shGroupKeyChevron'),
     roleBadge:        document.getElementById('shRoleBadge'),
     groupContext:     document.getElementById('shGroupContext'),
@@ -443,17 +443,14 @@
     if (!MA.ui || !MA.ui.openActionsMenu) return;
 
     const items = [
-      { category: 'PLAYER ADJUSTMENTS' },
       {
         label:    'Change Tee Box',
         action:   () => openTeeChangeForPlayer(player),
-        indent:   true,
         disabled: !canChangeTeeBox(player),
       },
       // Phase 2-4 (Swap Player Position / Replace Player / Remove Player)
-      // land here as an 'ADMIN ADJUSTMENTS' category, gated on
-      // state.isGameAdmin AND dbGames_ScorerAdminFlag per the Toolkit
-      // spec — intentionally not built yet.
+      // land here — category headers / indentation can come back once
+      // there's more than one item to group.
     ];
 
     MA.ui.openActionsMenu(player.name || 'Player Actions', items);
@@ -517,7 +514,7 @@
 
     const ggidStr = String(state.game?.dbGames_GGID || '');
     const scorecardKey = String(
-      state.players?.[0]?.playerKey || el.groupKey?.value || ''
+      state.players?.[0]?.playerKey || el.groupKeyText?.textContent || ''
     ).trim().toUpperCase();
 
     try {
@@ -593,6 +590,9 @@
   function renderGroupKeySwitcher() {
     const canSwitch = state.isGameAdmin && state.scorecards.length > 0;
 
+    if (el.groupKeyBtn) {
+      el.groupKeyBtn.disabled = !canSwitch;
+    }
     if (el.groupKeyChevron) {
       el.groupKeyChevron.style.display = canSwitch ? '' : 'none';
     }
@@ -945,7 +945,7 @@
       el.launchCard.classList.add('isHidden');
       el.groupCard.classList.remove('isHidden');
       el.actionBar.classList.remove('isHidden');
-      if (el.groupKey) el.groupKey.value = key;
+      if (el.groupKeyText) el.groupKeyText.textContent = key;
       renderGroupKeySwitcher();
       renderRoleBadge();
 
@@ -1296,7 +1296,7 @@
   // Scorecard switcher — tap anywhere on the field (input or chevron);
   // openScorecardSwitcher() itself no-ops for anyone who isn't the game
   // admin, so this listener doesn't need its own guard beyond that.
-  el.groupKeyWrap?.addEventListener('click', openScorecardSwitcher);
+  el.groupKeyBtn?.addEventListener('click', openScorecardSwitcher);
 
   async function onGoClick() {
     if (el.btnGo.disabled) return;
@@ -1309,7 +1309,7 @@
     // actually runs.
     if (state.dirty && state.isGameDay) {
       const scorecardKey = String(
-        state.players?.[0]?.playerKey || el.groupKey?.value || ''
+        state.players?.[0]?.playerKey || el.groupKeyText?.textContent || ''
       ).trim().toUpperCase();
 
       if (scorecardKey) {
