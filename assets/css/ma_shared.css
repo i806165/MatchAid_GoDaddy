@@ -1724,6 +1724,40 @@ textarea {
   border-color: var(--choiceChipSelectedBorder);
 }
 
+/* Second selected state — brandSecondary green instead of the default tan.
+   For cases where a choice chip sits near another tan-selected control
+   (e.g. Define Flights' by-player/by-flight view toggle) and the shared
+   tan would make two unrelated "selected" meanings look identical. */
+.maChoiceChip.is-selected-accent {
+  background: var(--brandSecondary);
+  color: var(--brandSecondaryText);
+  border-color: color-mix(in srgb, var(--brandSecondary) 70%, black);
+}
+
+/* Define Flights — flight name row: input, remove button, player count all
+   sit on one line on desktop; wraps to its own line on mobile only, using
+   the app's existing 600px breakpoint (see .maFtrBtn above). */
+.dfFlightRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.dfFlightRow .dfFlightCount {
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+@media (max-width: 600px) {
+  .dfFlightRow {
+    flex-wrap: wrap;
+  }
+  .dfFlightRow .dfFlightCount {
+    margin-left: 0;
+  }
+}
+
 .maChoiceChip.is-disabled {
   opacity: .55;
   cursor: default;

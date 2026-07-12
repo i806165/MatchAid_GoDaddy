@@ -14,7 +14,12 @@
  *     single flight; there is no "unconfigured" state to render)
  *   - no color per flight
  *   - assignment is N-way single-select (.maChoiceChip), not a fixed
- *     two-badge toggle (.maTeamBadge is Team-specific, not reused here)
+ *     two-badge toggle (.maTeamBadge is Team-specific, not reused here).
+ *     Selected state uses .is-selected-accent (brandSecondary green), not
+ *     the default tan .is-selected — the chip strip sits directly beneath
+ *     the by-player/by-flight view toggle below, which IS tan, and the two
+ *     would otherwise look like the same kind of "selected" despite meaning
+ *     unrelated things (content assignment vs. which view you're looking at).
  *   - gender is shown per row (avatar color-coded + M/F text badge),
  *     since it's a common cue when sorting players into flights
  *   - cascade toggle (Event Roster usage only) is framed as a yes/no
@@ -276,39 +281,41 @@
   function _renderConfigStrip() {
     const applyToggle = _renderApplyToggle();
     return `
-      <div class="maModal__controls" id="dfCfgStrip" style="padding:0;">
-        <button type="button" id="dfBtnToggleCfg"
-                aria-expanded="${_cfgOpen}"
-                style="width:100%; display:flex; align-items:center; justify-content:space-between;
-                       padding:10px 16px; border:none; border-radius:0; background:var(--rowBgEnrolled,rgba(0,0,0,.03));
-                       font-size:12px; font-weight:800; cursor:pointer;">
-          <span id="dfCfgSummary" style="color:var(--mutedText);">${esc(_cfgSummaryText())}</span>
-          <svg id="dfCfgChevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-               stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
-               style="transition:transform .15s; transform:rotate(${_cfgOpen ? 180 : 0}deg);">
-            <polyline points="6 9 12 15 18 9"/>
-          </svg>
-        </button>
-        <div id="dfCfgPanel" style="padding:10px 16px 14px; display:${_cfgOpen ? "block" : "none"};">
-          ${applyToggle}
-          <div id="dfCfgRows" style="${applyToggle ? "border-top:1px solid var(--border); margin-top:12px; padding-top:12px;" : ""} display:flex; flex-direction:column; gap:8px;">
-            ${_renderFlightNameRows()}
-          </div>
-          <div style="display:flex; gap:8px; margin-top:8px;">
-            <button type="button" class="btn" id="dfBtnAddFlight"
-                    style="flex:1; font-size:12px;"
-                    ${_flights.length >= MAX_FLIGHTS ? "disabled" : ""}>
-              + Add flight
-            </button>
-            <button type="button" class="btn" id="dfBtnClearFlights"
-                    style="flex:1; font-size:12px; color:var(--danger);">
-              Clear flights
-            </button>
+      <div id="dfCfgStrip">
+        <div class="maModal__controls" style="padding:0;">
+          <button type="button" id="dfBtnToggleCfg"
+                  aria-expanded="${_cfgOpen}"
+                  style="width:100%; display:flex; align-items:center; justify-content:space-between;
+                         padding:10px 16px; border:none; border-radius:0; background:var(--rowBgEnrolled,rgba(0,0,0,.03));
+                         font-size:12px; font-weight:800; cursor:pointer;">
+            <span id="dfCfgSummary" style="color:var(--mutedText);">${esc(_cfgSummaryText())}</span>
+            <svg id="dfCfgChevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                 style="transition:transform .15s; transform:rotate(${_cfgOpen ? 180 : 0}deg);">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div id="dfCfgPanel" style="padding:10px 16px 14px; display:${_cfgOpen ? "block" : "none"};">
+            ${applyToggle}
+            <div id="dfCfgRows" style="${applyToggle ? "border-top:1px solid var(--border); margin-top:12px; padding-top:12px;" : ""} display:flex; flex-direction:column; gap:8px;">
+              ${_renderFlightNameRows()}
+            </div>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+              <button type="button" class="btn" id="dfBtnAddFlight"
+                      style="flex:1; font-size:12px;"
+                      ${_flights.length >= MAX_FLIGHTS ? "disabled" : ""}>
+                + Add flight
+              </button>
+              <button type="button" class="btn" id="dfBtnClearFlights"
+                      style="flex:1; font-size:12px; color:var(--danger);">
+                Clear flights
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-      <div style="padding:10px 16px 0;">
-        ${_renderViewToggle()}
+        <div style="padding:10px 16px 0;">
+          ${_renderViewToggle()}
+        </div>
       </div>`;
   }
 
@@ -338,7 +345,7 @@
     return `
       <div>
         <div style="display:flex; align-items:center; justify-content:space-between;">
-          <span style="font-size:12px; font-weight:700; color:var(--mutedText); white-space:nowrap;">Apply to all rounds?</span>
+          <span class="maListRow__col" style="flex:0 0 auto; white-space:nowrap;">Apply to all rounds?</span>
           <div class="maSeg" id="dfModeToggle" style="width:auto; flex:0 0 auto;" role="group" aria-label="Apply this flight configuration to all rounds">
             <button type="button" class="maSegBtn${yesActive ? " is-active-accent" : ""}"
                     data-mode="fixed" aria-pressed="${yesActive}">Yes</button>
@@ -375,26 +382,25 @@
       const count = countByFlight(f.id);
       const canRemove = _flights.length > MIN_FLIGHTS;
       return `
-        <div>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <input type="text"
-                   class="maTextInput"
-                   data-flight-id="${esc(f.id)}"
-                   value="${esc(f.name)}"
-                   maxlength="32"
-                   style="flex:1; height:32px; font-size:13px !important; padding:0 8px;"
-                   aria-label="${esc(f.name)} flight name">
-            <button type="button" class="iconBtn btnSecondary" data-remove-flight="${esc(f.id)}"
-                    ${canRemove ? "" : "disabled"} aria-label="Remove ${esc(f.name)}">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
-                   stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
-          </div>
-          <div class="maListRow__subline maListRow__subline--indented" data-flight-count="${esc(f.id)}">
-            ${count} player${count !== 1 ? "s" : ""}
-          </div>
+        <div class="dfFlightRow">
+          <input type="text"
+                 class="maTextInput"
+                 data-flight-id="${esc(f.id)}"
+                 value="${esc(f.name)}"
+                 maxlength="32"
+                 style="flex:0 0 140px; height:32px; font-size:13px !important; padding:0 8px;"
+                 aria-label="${esc(f.name)} flight name">
+          <button type="button" class="iconBtn btnSecondary" data-remove-flight="${esc(f.id)}"
+                  ${canRemove ? "" : "disabled"} aria-label="Remove ${esc(f.name)}">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+          <span class="maListRow__subline dfFlightCount" data-flight-count="${esc(f.id)}"
+                aria-label="${count} player${count !== 1 ? "s" : ""}">
+            ${count}
+          </span>
         </div>`;
     }).join("");
   }
@@ -441,7 +447,7 @@
           <div class="maChoiceChips" style="margin-top:6px;" role="group" aria-label="Flight assignment for ${name}">
             ${_flights.map(f => `
               <button type="button"
-                      class="maChoiceChip ${p.flight === f.id ? "is-selected" : ""}"
+                      class="maChoiceChip ${p.flight === f.id ? "is-selected-accent" : ""}"
                       data-assign-flight="${esc(f.id)}" data-ghin="${esc(p.ghin)}"
                       aria-pressed="${p.flight === f.id}">${esc(f.name)}</button>
             `).join("")}
@@ -631,7 +637,8 @@
       const el = document.querySelector(`[data-flight-count="${f.id}"]`);
       if (!el) return;
       const n = countByFlight(f.id);
-      el.textContent = `${n} player${n !== 1 ? "s" : ""}`;
+      el.textContent = String(n);
+      el.setAttribute("aria-label", `${n} player${n !== 1 ? "s" : ""}`);
     });
   }
 
