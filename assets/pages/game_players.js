@@ -598,6 +598,18 @@
       ? ""
       : `<button id="gpBtnManageTeams" class="btn btnSecondary" type="button">Manage Teams</button>`;
 
+    // Same lock condition as Teams — round with FlightMode "fixed" hides the
+    // button entirely, flight assignment is owned by the event roster and
+    // cascades down automatically. Every other case — Flat Game, or a Round
+    // with cascading turned off — shows the button and the round manages its
+    // own flights independently. dbEvents_FlightMode is only present on
+    // state.game at all when this is a Round (ServiceContextGame merges the
+    // event record onto the game record for Rounds only), so a Flat Game's
+    // check is naturally undefined !== "fixed" → button shows.
+    const flightsBtn = (state.game?.dbEvents_FlightMode === "fixed")
+      ? ""
+      : `<button id="gpBtnDefineFlights" class="btn btnSecondary" type="button">Define Flights</button>`;
+
     el.canvasControls.innerHTML = `
       <div class="gpCanvasControls">
         <div style="display:flex; align-items:center; gap:6px;">
@@ -606,6 +618,7 @@
         </div>
         <div class="gpCanvasControls__right">
           ${teamsBtn}
+          ${flightsBtn}
           <span class="gpHcpDate">${esc(hcLabel)}</span>
         </div>
       </div>`;
@@ -620,6 +633,9 @@
 
     const teamsButton = document.getElementById("gpBtnManageTeams");
     if (teamsButton) teamsButton.onclick = onManageTeams;
+
+    const flightsButton = document.getElementById("gpBtnDefineFlights");
+    if (flightsButton) flightsButton.onclick = onDefineFlights;
   }
 
 
@@ -680,6 +696,33 @@
           });
         }
         if (window.__MA_INIT__) window.__MA_INIT__.teamConfig = teamConfig;
+        renderRoster();
+        renderTrayBody();
+      }
+    });
+  }
+
+  function onDefineFlights() {
+    if (!MA.defineFlights || typeof MA.defineFlights.open !== "function") {
+      MA.setStatus("Define Flights module not loaded.", "warn");
+      return;
+    }
+    const flightConfig = (window.__MA_INIT__ || {}).flightConfig || null;
+
+    MA.defineFlights.open({
+      players:      state.players,   // native dbPlayers_* shape, no mapping needed
+      flightConfig,
+      apiBase:      MA.paths?.apiGamePlayers || "/api/game_players",
+      // no mode, no showModeToggle — round/flat game owns its own flights
+      onApply: ({ players, flightConfig: newConfig }) => {
+        if (Array.isArray(players) && players.length) {
+          players.forEach(saved => {
+            const ghin = String(saved.dbPlayers_PlayerGHIN || "");
+            const p = state.players.find(x => String(x.dbPlayers_PlayerGHIN || "") === ghin);
+            if (p) p.dbPlayers_FlightKey = String(saved.dbPlayers_FlightKey || "");
+          });
+        }
+        if (window.__MA_INIT__) window.__MA_INIT__.flightConfig = newConfig;
         renderRoster();
         renderTrayBody();
       }

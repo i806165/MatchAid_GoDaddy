@@ -1,8 +1,12 @@
 /* /assets/modules/module_defineFlights.js
  *
  * MA.defineFlights — Define Flights module.
- * Event Roster only (flight is defined at the event level and mirrors
- * one-way into every linked round; rounds never edit flight locally).
+ * Shared by Event Roster and Game/Round Roster (mirrors MA.manageTeams's
+ * dual-usage pattern). On Event Roster, showModeToggle:true renders the
+ * EVENT/ROUND toggle; when mode is "fixed", the saved config/assignments
+ * cascade to every linked round. On Game/Round Roster, no toggle is
+ * shown — a flat game, or a round with cascading turned off, edits its
+ * own flights independently, same posture as Manage Teams.
  *
  * Mirrors MA.manageTeams's structure and class vocabulary (maModal,
  * maListRow, ma_shared.css) but adapted for Flight's shape:
@@ -20,15 +24,21 @@
  *
  * Options:
  *   {
- *     players      : array        — raw player rows from state.players (db field names)
- *     flightConfig : object|null  — current window.__MA_INIT__.flightConfig value;
- *                                    null/empty is normalized to one default flight
- *     mode         : string       — current dbEvents_FlightMode ("fixed"|"none").
- *                                    Defaults off. Bundled into the same Apply as
- *                                    config/assignments — flipping it alone does
- *                                    nothing until Apply is clicked.
- *     apiBase      : string       — defaults to "/api/event_roster"
- *     onApply      : function({ players, flightConfig, mode })
+ *     players        : array        — raw player rows from state.players (db field names)
+ *     flightConfig   : object|null  — current flightConfig value; null/empty
+ *                                      is normalized to one default flight
+ *     mode           : string       — current *Mode ("fixed"|"none"). Only
+ *                                      meaningful when showModeToggle is true.
+ *                                      Defaults off. Bundled into the same Apply
+ *                                      as config/assignments — flipping it alone
+ *                                      does nothing until Apply is clicked.
+ *     showModeToggle : bool         — true only for the Event Roster usage.
+ *                                      Renders the EVENT/ROUND segmented toggle.
+ *                                      Omit (or false) for the round/flat-game
+ *                                      usage — module has no mode of its own
+ *                                      and can omit the mode option entirely.
+ *     apiBase        : string       — "/api/event_roster" or "/api/game_players"
+ *     onApply        : function({ players, flightConfig, mode })
  *   }
  */
 (function () {
@@ -208,8 +218,8 @@
           <div class="maListRows">${_renderRosterRows()}</div>
         </div>
         <footer class="maModal__ftr">
-          <button type="button" class="btn btnSecondary" id="dfBtnCancel">Cancel</button>
-          <button type="button" class="btn btnPrimary" id="dfBtnApply">Apply</button>
+          <button type="button" class="maFtrBtn maFtrBtn--cancel" id="dfBtnCancel">Cancel</button>
+          <button type="button" class="maFtrBtn maFtrBtn--save" id="dfBtnApply">Apply</button>
         </footer>
       </section>`;
   }
@@ -277,11 +287,16 @@
       </div>`;
   }
 
-  // Cascade on/off toggle. Bundled into the same Apply as config/assignments
-  // — flipping this alone does nothing until Apply is clicked. Defaults off;
-  // when off, every linked round keeps whatever flight setup it already has
-  // (round-level Flight editing isn't built yet — see spec discussion).
+  // Cascade on/off toggle — Event Roster usage only (showModeToggle:true).
+  // Bundled into the same Apply as config/assignments — flipping this alone
+  // does nothing until Apply is clicked. Defaults off; when off, every
+  // linked round keeps whatever flight setup it already has. The round/flat
+  // game usage (game_players) has no toggle of its own: a round either
+  // follows the event (mode "fixed", set from the Event Roster, causing
+  // game_players' Define Flights button to hide) or is fully independent
+  // (mode "none"), same as Manage Teams.
   function _renderModeToggle() {
+    if (!_opts.showModeToggle) return "";
     const eventActive = (_mode === "fixed");
     const roundActive = !eventActive;
     return `
@@ -349,7 +364,7 @@
           <div class="maChoiceChips" style="margin-top:6px;" role="group" aria-label="Flight assignment for ${name}">
             ${_flights.map(f => `
               <button type="button"
-                      class="maChoiceChip ${p.flight === f.id ? "is-active" : ""}"
+                      class="maChoiceChip ${p.flight === f.id ? "is-selected" : ""}"
                       data-assign-flight="${esc(f.id)}" data-ghin="${esc(p.ghin)}"
                       aria-pressed="${p.flight === f.id}">${esc(f.name)}</button>
             `).join("")}

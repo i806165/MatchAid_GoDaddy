@@ -589,10 +589,11 @@
     }));
 
     MA.defineFlights.open({
-      players:      playersForFlights,
+      players:        playersForFlights,
       flightConfig,
-      mode:         flightMode,
-      apiBase:      MA.paths?.apiEventRoster || "/api/event_roster",
+      mode:           flightMode,
+      showModeToggle: true,
+      apiBase:        MA.paths?.apiEventRoster || "/api/event_roster",
       onApply: ({ players, flightConfig: newConfig, mode: newMode }) => {
         if (Array.isArray(players) && players.length) {
           players.forEach(saved => {

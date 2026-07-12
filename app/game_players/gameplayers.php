@@ -49,6 +49,7 @@ try {
     "game" => $game,
     "courseTeePayload" => $courseTeePayload,
     "teamConfig" => !empty($game["dbGames_TeamConfig"]) ? json_decode((string)$game["dbGames_TeamConfig"], true) : null,
+    "flightConfig" => !empty($game["dbGames_FlightConfig"]) ? json_decode((string)$game["dbGames_FlightConfig"], true) : null,
     "context" => [
       "userState" => (string)($_SESSION["SessionUserState"] ?? ""),
       "userGHIN" => $userGHIN,
@@ -145,6 +146,7 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   <script src="<?= ma_asset('/assets/modules/module_sourceEventRoster.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/manage_teams.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_defineFlights.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/recalculate_handicaps.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/player_notifications.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/pageHelp.js') ?>"></script>
