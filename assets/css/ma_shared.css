@@ -1754,6 +1754,22 @@ textarea {
   }
 }
 
+/* Generic config-row layout — swatch/input + trailing count, one line on
+   desktop, wraps on mobile only (same 600px breakpoint as .dfFlightRow
+   above). Used by Manage Teams' team-name rows. */
+.maConfigRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+@media (max-width: 600px) {
+  .maConfigRow {
+    flex-wrap: wrap;
+  }
+}
+
 .maChoiceChip.is-disabled {
   opacity: .55;
   cursor: default;

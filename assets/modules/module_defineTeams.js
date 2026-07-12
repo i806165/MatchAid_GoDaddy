@@ -1,4 +1,4 @@
-/* /assets/modules/manage_teams.js
+/* /assets/modules/module_defineTeams.js
  *
  * MA.manageTeams — Manage Teams module.
  * Shared by Game Players and Event Roster.
@@ -31,8 +31,8 @@
  *                                       the round-level (game_players) usage of this
  *                                       module has no mode of its own and can omit it.
  *     showModeToggle  : bool         — true only for the Event Roster usage. Renders
- *                                       the on/off cascade toggle in the modal, bundled
- *                                       into the same Apply as config/assignments.
+ *                                       the "Apply to all rounds?" yes/no toggle,
+ *                                       bundled into the same Apply as config/assignments.
  *                                       Omitted (falsy) for the round-level usage —
  *                                       a round either follows the event (mode "fixed",
  *                                       button hidden entirely — see game_players.js)
@@ -41,6 +41,17 @@
  *     apiBase         : string       — e.g. "/api/game_players" or "/api/event_roster"
  *     onApply         : function({ players, teamConfig, mode })
  *   }
+ *
+ * No "Reset teams" — removed. It was the only action in this module that
+ * wrote to the server outside of Apply (immediate, unconfirmable-once-fired
+ * delete of both team config and every assignment), breaking the
+ * stage-then-Apply contract every other action here follows. Clear all
+ * already covers the "unassign everyone" need, fully staged behind Apply.
+ * An unassigned dbPlayers_TeamKey is itself the correct "no team" state for
+ * downstream processing — there's no need to also delete dbGames_TeamConfig
+ * to represent that, so once a game's teams are created they stay
+ * configured (a floor state), same philosophy as Define Flights never
+ * having a true zero-flights state.
  */
 (function () {
   "use strict";
@@ -214,11 +225,11 @@
     return `
       <div class="maModal__controls" id="mtTeamCfgStrip">
         <div class="maListRow__subline" style="margin-bottom:10px;">Get started by naming your teams.</div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        ${_renderApplyToggle()}
+        <div style="${_opts.showModeToggle ? "border-top:1px solid var(--border); margin-top:12px; padding-top:12px;" : ""} display:flex; flex-direction:column; gap:8px;">
           ${_renderTeamNameInput("T1", "Red")}
           ${_renderTeamNameInput("T2", "Blue")}
         </div>
-        ${_renderModeToggle()}
       </div>
       <div class="maModal__body"></div>
       <footer class="maModal__ftr">
@@ -232,41 +243,39 @@
     const u = unassignedCount();
     return `
       <div class="maModal__controls" id="mtTeamCfgStrip">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+        ${_renderApplyToggle()}
+        <div style="${_opts.showModeToggle ? "border-top:1px solid var(--border); margin-top:12px; padding-top:12px;" : ""} display:flex; flex-direction:column; gap:8px;">
           ${_renderTeamNameInput("T1", getTeamName("T1"))}
           ${_renderTeamNameInput("T2", getTeamName("T2"))}
         </div>
-        ${_renderModeToggle()}
-      </div>
-      <div class="maModal__controls"
-           style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-        <button type="button" class="btn btnSecondary" id="mtBtnSplitHC"
-                style="font-size:12px; gap:5px;">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
-               stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-            <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
-            <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
-            <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
-            <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/>
-            <line x1="17" y1="16" x2="23" y2="16"/>
-          </svg>
-          Auto-split by handicap
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <button type="button" class="btn btnSecondary" id="mtBtnSplitHC"
+                  style="flex:1; font-size:12px; gap:5px;">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+              <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+              <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+              <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+              <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/>
+              <line x1="17" y1="16" x2="23" y2="16"/>
+            </svg>
+            Auto-split by handicap
+          </button>
+          <button type="button" class="btn btnSecondary" id="mtBtnRandom"
+                  style="flex:1; font-size:12px; gap:5px;">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+              <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+              <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
+              <line x1="4" y1="4" x2="9" y2="9"/>
+            </svg>
+            Auto-split randomly
+          </button>
+        </div>
+        <button type="button" class="btn" id="mtBtnClearAll"
+                style="width:100%; font-size:12px; margin-top:8px;">
+          Clear all
         </button>
-        <button type="button" class="btn btnSecondary" id="mtBtnRandom"
-                style="font-size:12px; gap:5px;">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
-               stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-            <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
-            <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
-            <line x1="4" y1="4" x2="9" y2="9"/>
-          </svg>
-          Random
-        </button>
-        <span style="flex:1;"></span>
-        <button type="button" class="btn btnLink" id="mtBtnClearAll"
-                style="font-size:12px;">Clear all</button>
-        <button type="button" class="btn btnLink" id="mtBtnResetTeams"
-                style="font-size:12px; color:var(--danger);">Reset teams</button>
       </div>
       <div class="maModal__body" id="mtRoster" style="padding:0;">
         <div class="maListRows">${_renderRosterRows()}</div>
@@ -277,27 +286,48 @@
       </footer>`;
   }
 
-  // Cascade on/off toggle — only shown for the Event Roster usage of this
-  // module (showModeToggle). The round-level usage (game_players) has no
-  // toggle of its own: a round either follows the event (mode "fixed",
+  // Apply-toggle — "Apply to all rounds?" yes/no, Event Roster usage only
+  // (showModeToggle:true). Bundled into the same Apply/Create as
+  // config/assignments — flipping it alone does nothing until Apply is
+  // clicked. Defaults off; when off, every linked round keeps whatever
+  // team setup it already has. The round-level usage (game_players) has
+  // no toggle of its own: a round either follows the event (mode "fixed",
   // and this whole module is unreachable there — see game_players.js's
   // Manage Teams hide) or is fully independent (mode "none"), same as a
-  // Flat Game. Bundled into the same Apply/Create as config + assignments
-  // — flipping this alone does nothing until Apply/Create is clicked.
-  function _renderModeToggle() {
+  // Flat Game.
+  //
+  // Framed as a yes/no question, not an EVENT/ROUND location choice — the
+  // control only ever renders on the Event Roster page, so asking the
+  // admin to pick between "Event" and "Round" as if choosing a location
+  // is circular (they're already on the event). What's decided is a
+  // consequence, not a location: does this configuration apply
+  // everywhere, or does each round set its own. Mirrors
+  // module_defineFlights.js's identical reframe exactly, including the
+  // is-active-accent (brandColor3 blue) selected state instead of the
+  // standard tan is-active, since this is a binary decision with
+  // cascading consequences.
+  function _renderApplyToggle() {
     if (!_opts.showModeToggle) return "";
-    const eventActive = (_mode === "fixed");
-    const roundActive = !eventActive;
+    const yesActive = (_mode === "fixed");
     return `
-      <div style="margin-top:10px; display:flex; align-items:center; gap:10px;">
-        <span style="font-size:12px; font-weight:700; color:var(--mutedText); white-space:nowrap;">Teams Managed by</span>
-        <div class="maSeg" id="mtModeToggle" style="width:auto; flex:0 0 auto;" role="group" aria-label="Team management level">
-          <button type="button" class="maSegBtn${eventActive ? " btnSecondary" : ""}"
-                  data-mode="fixed" aria-pressed="${eventActive}">EVENT</button>
-          <button type="button" class="maSegBtn${roundActive ? " btnSecondary" : ""}"
-                  data-mode="none" aria-pressed="${roundActive}">ROUND</button>
+      <div>
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <span class="maListRow__col" style="flex:0 0 auto; white-space:nowrap;">Apply to all rounds?</span>
+          <div class="maSeg" id="mtModeToggle" style="width:auto; flex:0 0 auto;" role="group" aria-label="Apply this team configuration to all rounds">
+            <button type="button" class="maSegBtn${yesActive ? " is-active-accent" : ""}"
+                    data-mode="fixed" aria-pressed="${yesActive}">Yes</button>
+            <button type="button" class="maSegBtn${!yesActive ? " is-active-accent" : ""}"
+                    data-mode="none" aria-pressed="${!yesActive}">No</button>
+          </div>
         </div>
+        <div class="maHintText" id="mtModeHint">${esc(_applyHintText())}</div>
       </div>`;
+  }
+
+  function _applyHintText() {
+    return (_mode === "fixed")
+      ? "This team configuration will apply to every round in this event."
+      : "Each round can set its own teams.";
   }
 
   function _renderTeamNameInput(slotId, currentName) {
@@ -305,21 +335,19 @@
     const color = slot?.color || "red";
     const count = countByTeam(slotId);
     const countHtml = hasTeams()
-      ? `<div class="maListRow__subline maListRow__subline--indented" data-team-count="${esc(slotId)}">${count} player${count !== 1 ? "s" : ""}</div>`
+      ? `<span class="maListRow__subline" data-team-count="${esc(slotId)}" aria-label="${count} player${count !== 1 ? "s" : ""}">${count}</span>`
       : "";
     return `
-      <div>
-        <div style="display:flex; align-items:center; gap:8px;">
-          <span class="maSwatch maSwatch--${esc(color)}" aria-hidden="true"></span>
-          <input type="text"
-                 class="maTextInput"
-                 data-slot="${esc(slotId)}"
-                 id="mtTeamName${esc(slotId)}"
-                 value="${esc(currentName)}"
-                 maxlength="32"
-                 style="flex:1; height:32px; font-size:13px !important; padding:0 8px;"
-                 aria-label="${esc(slotId === "T1" ? "Team 1 name" : "Team 2 name")}">
-        </div>
+      <div class="maConfigRow">
+        <span class="maSwatch maSwatch--${esc(color)}" aria-hidden="true"></span>
+        <input type="text"
+               class="maTextInput"
+               data-slot="${esc(slotId)}"
+               id="mtTeamName${esc(slotId)}"
+               value="${esc(currentName)}"
+               maxlength="32"
+               style="flex:1; min-width:80px; height:34px; font-size:13px !important; padding:0 10px;"
+               aria-label="${esc(slotId === "T1" ? "Team 1 name" : "Team 2 name")}">
         ${countHtml}
       </div>`;
   }
@@ -394,9 +422,11 @@
     if (!wrap) return;
     wrap.querySelectorAll("[data-mode]").forEach(seg => {
       const on = (seg.dataset.mode === _mode);
-      seg.classList.toggle("btnSecondary", on);
+      seg.classList.toggle("is-active-accent", on);
       seg.setAttribute("aria-pressed", String(on));
     });
+    const hint = document.getElementById("mtModeHint");
+    if (hint) hint.textContent = _applyHintText();
   }
 
   function _wireStateA(overlay) {
@@ -459,7 +489,6 @@
       _refreshRoster(); _refreshTeamCounts(); _refreshSubtitle();
     });
 
-    overlay.querySelector("#mtBtnResetTeams")?.addEventListener("click", _confirmResetTeams);
     overlay.querySelector("#mtBtnApply")?.addEventListener("click", _applyChanges);
   }
 
@@ -496,7 +525,8 @@
       const el = document.querySelector(`[data-team-count="${id}"]`);
       if (!el) return;
       const n = countByTeam(id);
-      el.textContent = `${n} player${n !== 1 ? "s" : ""}`;
+      el.textContent = String(n);
+      el.setAttribute("aria-label", `${n} player${n !== 1 ? "s" : ""}`);
     });
   }
 
@@ -569,38 +599,6 @@
     } catch (e) {
       console.error("[MA.manageTeams]", e);
       MA.setStatus("Error saving teams.", "danger");
-    } finally { _busy = false; _hideBusy(); }
-  }
-
-  function _confirmResetTeams() {
-    if (_busy) return;
-    if (!window.confirm("This will delete both teams and remove all team assignments. This cannot be undone.")) return;
-    _resetTeams();
-  }
-
-  async function _resetTeams() {
-    if (_busy) return;
-    _busy = true; _showBusy("Resetting teams — please wait...");
-    try {
-      const configRes = await MA.postJson(apiPath("saveTeamConfig.php"), { teams: [], mode: "none" });
-      if (!configRes?.ok) { MA.setStatus(configRes?.message || "Unable to reset teams.", "danger"); return; }
-
-      const assignments = _players.map(p => ({ ghin: p.ghin, team: "" }));
-      const assignRes = await MA.postJson(apiPath("saveTeamAssignments.php"), { assignments });
-      if (!assignRes?.ok) { MA.setStatus(assignRes?.message || "Unable to clear assignments.", "danger"); return; }
-
-      _teamConfig = null;
-      _mode = "none";
-      _players.forEach(p => p.team = "");
-      MA.setStatus("Teams have been reset.", "info");
-      if (typeof _opts.onApply === "function") {
-        _opts.onApply({ players: assignRes.payload?.players || [], teamConfig: null, mode: "none" });
-      }
-      const modal = _getModal();
-      if (modal) { modal.innerHTML = _renderHeader() + _renderStateA(); _wireEvents(); }
-    } catch (e) {
-      console.error("[MA.manageTeams]", e);
-      MA.setStatus("Error resetting teams.", "danger");
     } finally { _busy = false; _hideBusy(); }
   }
 
