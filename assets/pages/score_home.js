@@ -34,6 +34,7 @@
     groupKey:         document.getElementById('shGroupKey'),
     groupKeyWrap:     document.getElementById('shGroupKeyWrap'),
     groupKeyChevron:  document.getElementById('shGroupKeyChevron'),
+    roleBadge:        document.getElementById('shRoleBadge'),
     groupContext:     document.getElementById('shGroupContext'),
     playerRows:       document.getElementById('shPlayerRows'),
     cardFooter:       document.getElementById('shCardFooter'),
@@ -597,6 +598,19 @@
     }
   }
 
+  // ADMINISTRATOR / PLAYER / GUEST — same two facts already computed for
+  // gating (sessionGhin present, isGameAdmin match), just rendered as a
+  // label rather than used to enable/disable anything. Not a new
+  // identity concept.
+  function getUserRoleLabel() {
+    if (!state.sessionGhin) return 'GUEST';
+    return state.isGameAdmin ? 'ADMINISTRATOR' : 'PLAYER';
+  }
+
+  function renderRoleBadge() {
+    if (el.roleBadge) el.roleBadge.textContent = getUserRoleLabel();
+  }
+
   function buildScorecardSwitcherItems() {
     return state.scorecards.map(sc => ({
       label:  `${sc.key} — ${sc.lastNames.join(' · ')}`,
@@ -933,6 +947,7 @@
       el.actionBar.classList.remove('isHidden');
       if (el.groupKey) el.groupKey.value = key;
       renderGroupKeySwitcher();
+      renderRoleBadge();
 
       renderGroupContext();
       renderPlayerRows();
