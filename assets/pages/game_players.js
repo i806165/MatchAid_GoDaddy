@@ -586,45 +586,31 @@
       ${sorts.map(s => `<button class="maSeg--sortBtn ${state.rosterSort === s.id ? "is-active" : ""}" type="button" data-roster-sort="${esc(s.id)}">${esc(s.label)}</button>`).join("")}
     </div>`;
 
-    // Round with TeamMode "fixed" → hidden entirely, team assignment is
-    // owned by the event roster and cascades down automatically. Every
-    // other case — Flat Game, or a Round with cascading turned off —
-    // shows the button and the round is independently editable, same
-    // as it always has been. dbEvents_TeamMode is only present on
-    // state.game at all when this is a Round (ServiceContextGame merges
-    // the event record onto the game record for Rounds only), so a Flat
-    // Game's check is naturally undefined !== "fixed" → button shows.
-    const teamsBtn = (state.game?.dbEvents_TeamMode === "fixed")
-      ? ""
-      : `<button id="gpBtnManageTeams" class="btn btnSecondary" type="button">Define Teams</button>`;
+    // Round with TeamMode "fixed" no longer hides this button — the button
+    // always renders, and the lock is enforced when clicked instead (see
+    // onManageTeams's showBlockedModal guard). This protects both this
+    // canvas button and the "Define Teams" entry in the Actions menu, since
+    // both call the same onManageTeams() function — a hidden button gave no
+    // way to tell "delegated to the event" apart from "broken" or "no
+    // permission"; a click-through message says so explicitly.
+    const teamsBtn = `<button id="gpBtnManageTeams" class="btn btnSecondary" type="button">Define Teams</button>`;
 
-    // Same lock condition as Teams — round with FlightMode "fixed" hides the
-    // button entirely, flight assignment is owned by the event roster and
-    // cascades down automatically. Every other case — Flat Game, or a Round
-    // with cascading turned off — shows the button and the round manages its
-    // own flights independently. dbEvents_FlightMode is only present on
-    // state.game at all when this is a Round (ServiceContextGame merges the
-    // event record onto the game record for Rounds only), so a Flat Game's
-    // check is naturally undefined !== "fixed" → button shows.
-    const flightsBtn = (state.game?.dbEvents_FlightMode === "fixed")
-      ? ""
-      : `<button id="gpBtnDefineFlights" class="btn btnSecondary" type="button">Define Flights</button>`;
+    // Same reasoning as Teams — always rendered, locked via the click guard
+    // in onDefineFlights() instead of being hidden.
+    const flightsBtn = `<button id="gpBtnDefineFlights" class="btn btnSecondary" type="button">Define Flights</button>`;
 
-    // Same lock condition as Teams/Flights — round with HandicapMode "fixed"
-    // hides the button entirely, since the event owns handicap rules and
-    // cascades down automatically. Separately, gross-scored games disable
-    // (not hide) the button — handicaps genuinely don't apply to gross
-    // scoring, but that's a per-game fact, not an event-delegation fact,
-    // so it gets its own independent check rather than folding into the
-    // lock condition above. This disable is Game/Round-only by design —
-    // an event has no single ScoringMethod (different rounds under the
-    // same event can be NET and ADJ GROSS simultaneously), so Event
-    // Roster's own button never gross-disables (see event_roster.js).
-    const isHandicapLocked = (state.game?.dbEvents_HandicapMode === "fixed");
-    const isGrossGame      = (state.game?.dbGames_ScoringMethod === "ADJ GROSS");
-    const handicapsBtn = isHandicapLocked
-      ? ""
-      : `<button id="gpBtnDefineHandicaps" class="btn btnSecondary" type="button"
+    // Same reasoning as Teams/Flights for the event-lock case — always
+    // rendered, locked via the click guard in onDefineHandicapSettings().
+    // Gross-scored games are a genuinely different, separate condition and
+    // keep the existing disable-with-tooltip treatment: "not applicable at
+    // all" (gross) reads differently from "delegated elsewhere, click to
+    // find out" (event-locked), so the two stay visually distinct rather
+    // than collapsing into one pattern. This disable is Game/Round-only by
+    // design — an event has no single ScoringMethod (different rounds
+    // under the same event can be NET and ADJ GROSS simultaneously), so
+    // Event Roster's own button never gross-disables (see event_roster.js).
+    const isGrossGame = (state.game?.dbGames_ScoringMethod === "ADJ GROSS");
+    const handicapsBtn = `<button id="gpBtnDefineHandicaps" class="btn btnSecondary" type="button"
                  ${isGrossGame ? 'disabled title="Not applicable — this game uses gross scoring."' : ""}>
            Define Handicaps
          </button>`;
@@ -713,7 +699,67 @@
     ]);
   }
 
+  // ── Modal: locked-by-event notice ───────────────────────────────────────────
+  // Mirrors event_roster.js's showBlockedModal/ensureBlockedModal pattern
+  // exactly (same maModalOverlay/maModal shape, same OK-to-dismiss behavior),
+  // generalized with a title param since this covers three different locked
+  // actions (Teams/Flights/Handicaps) rather than one. Lives only here —
+  // Event Roster's own three buttons are never locked, since Event Roster is
+  // always the top of the hierarchy for Teams/Flights/Handicaps; nothing
+  // above it can ever delegate ownership away from it.
+  function ensureBlockedModal() {
+    if (document.getElementById("gpBlockedOverlay")) return;
+
+    const overlay = document.createElement("div");
+    overlay.id = "gpBlockedOverlay";
+    overlay.className = "maModalOverlay";
+
+    const modal = document.createElement("section");
+    modal.className = "maModal";
+
+    modal.innerHTML = `
+      <header class="maModal__hdr">
+        <div class="maModal__titles">
+          <div class="maModal__title" id="gpBlockedTitle"></div>
+        </div>
+      </header>
+      <div class="maModal__body" id="gpBlockedBody">
+        <p style="line-height:1.6;" id="gpBlockedMessage"></p>
+        <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:14px; display:flex; justify-content:flex-end;">
+          <button type="button" class="btn btnSecondary" id="gpBlockedOkBtn">OK</button>
+        </div>
+      </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    document.getElementById("gpBlockedOkBtn")?.addEventListener("click", hideBlockedModal);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) hideBlockedModal();
+    });
+  }
+
+  function showBlockedModal(message, title) {
+    ensureBlockedModal();
+    const overlay = document.getElementById("gpBlockedOverlay");
+    const titleEl = document.getElementById("gpBlockedTitle");
+    const msgEl   = document.getElementById("gpBlockedMessage");
+    if (titleEl) titleEl.textContent = title || "Managed at Event Level";
+    if (msgEl) msgEl.textContent = message || "This action isn't available here.";
+    if (overlay) overlay.classList.add("is-open");
+  }
+
+  function hideBlockedModal() {
+    const overlay = document.getElementById("gpBlockedOverlay");
+    if (overlay) overlay.classList.remove("is-open");
+  }
+
   function onManageTeams() {
+    if (state.game?.dbEvents_TeamMode === "fixed") {
+      showBlockedModal("Teams are managed at the event level for this event.");
+      return;
+    }
     if (!MA.manageTeams || typeof MA.manageTeams.open !== "function") {
       MA.setStatus("Define Teams module not loaded.", "warn");
       return;
@@ -744,6 +790,10 @@
   }
 
   function onDefineFlights() {
+    if (state.game?.dbEvents_FlightMode === "fixed") {
+      showBlockedModal("Flights are managed at the event level for this event.");
+      return;
+    }
     if (!MA.defineFlights || typeof MA.defineFlights.open !== "function") {
       MA.setStatus("Define Flights module not loaded.", "warn");
       return;
@@ -771,6 +821,10 @@
   }
 
   function onDefineHandicapSettings() {
+    if (state.game?.dbEvents_HandicapMode === "fixed") {
+      showBlockedModal("Handicaps are managed at the event level for this event.");
+      return;
+    }
     if (!MA.defineHandicapSettings || typeof MA.defineHandicapSettings.open !== "function") {
       MA.setStatus("Define Handicaps module not loaded.", "warn");
       return;
