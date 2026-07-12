@@ -79,6 +79,20 @@
       });
       if (!res1 || !res1.ok) throw new Error(res1?.message || "Refresh failed.");
 
+      // Gross-scored game — refreshHandicaps.php already reset HI/CH/PH/SO
+      // to "0" directly with no GHIN calls. Pass 2 would just self-skip
+      // anyway (be_calculateGamePHSO() already no-ops on ADJ GROSS), so
+      // skip the round trip entirely. The only caller of this module
+      // (game_players.js's onRecalcHandicaps()) does no follow-up status
+      // handling of its own — this modal is the sole feedback surface —
+      // so hold the message visible briefly rather than hiding instantly.
+      if (res1.skipped) {
+        updateModal(res1.message || "Handicaps skipped.");
+        await new Promise(r => setTimeout(r, 1400));
+        hideModal();
+        return true;
+      }
+
       // Pass 2: Calculate Competition (PH, SO)
       updateModal("(Step 2 OF 2) Refreshing Handicap Competition Values (PH/SO)...");
       const res2 = await MA.postJson(`${base}/calcPHSO.php`, {

@@ -40,11 +40,6 @@
     startDate: document.getElementById("emStartDate"),
     endDate: document.getElementById("emEndDate"),
     scheduleHint: document.getElementById("emScheduleHint"),
-    // EVENT SETTINGS
-    hcEffectivity: document.getElementById("emHCEffectivity"),
-    hcEffectivityDate: document.getElementById("emHCEffectivityDate"),
-    hcEffectivityDateWrap: document.getElementById("emHCEffectivityDateWrap"),
-    hcEffectivityHint: document.getElementById("emHCEffectivityHint"),
     // EVENT COMPETITION
     btnDefineKPI: document.getElementById("emBtnDefineKPI"),
     kpiCountLabel: document.getElementById("emKPICountLabel"),
@@ -83,6 +78,28 @@
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
+  }
+
+  // Local-date-safe helpers. new Date("YYYY-MM-DD") parses as UTC midnight,
+  // which can silently shift a day once local getters (getDate(), etc.) are
+  // applied, depending on the browser's timezone offset. new Date(y, m-1, d)
+  // with numeric arguments always constructs in local time — that's the only
+  // safe path used here.
+  function parseLocalDateParts(s) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s || ""));
+    if (!m) return null;
+    return { y: parseInt(m[1], 10), mo: parseInt(m[2], 10), d: parseInt(m[3], 10) };
+  }
+
+  function addLocalDays(dateStr, days) {
+    const p = parseLocalDateParts(dateStr);
+    if (!p) return dateStr;
+    const dt = new Date(p.y, p.mo - 1, p.d); // local, not UTC
+    dt.setDate(dt.getDate() + days);
+    const y = dt.getFullYear();
+    const mo = String(dt.getMonth() + 1).padStart(2, "0");
+    const d = String(dt.getDate()).padStart(2, "0");
+    return `${y}-${mo}-${d}`;
   }
 
   function esc(s) {
@@ -152,22 +169,6 @@
     }
   }
 
-  function renderHCEffectivityHint() {
-    if (!el.hcEffectivityHint) return;
-    const eff = el.hcEffectivity?.value || "PlayDate";
-    const hints = {
-      PlayDate: "Handicap index as of the event start date.",
-      Low3:     "Lowest index over the past 3 months.",
-      Low6:     "Lowest index over the past 6 months.",
-      Low12:    "Lowest index over the past 12 months.",
-      Date:     "Specify an exact date to lock the index.",
-    };
-    el.hcEffectivityHint.textContent = hints[eff] || "";
-    if (el.hcEffectivityDateWrap) {
-      el.hcEffectivityDateWrap.style.display = (eff === "Date") ? "" : "none";
-    }
-  }
-
   function renderKPIHint() {
     if (!state.kpiConfig) {
       if (el.kpiHint)       el.kpiHint.textContent = "No competitions configured for this event.";
@@ -192,15 +193,20 @@
   function renderScheduleHint() {
     const s = el.startDate.value || "";
     const e = el.endDate.value || "";
+
+    // Native picker enforcement — keep in sync whenever start changes,
+    // not just at load time.
+    if (s) el.endDate.min = addLocalDays(s, 1);
+
     if (!s || !e) {
       el.scheduleHint.textContent = "Choose the event start and end dates.";
       return;
     }
-    if (e < s) {
-      el.scheduleHint.textContent = "End date is before start date.";
+    if (e <= s) {
+      el.scheduleHint.textContent = "End date must be after start date.";
       return;
     }
-    el.scheduleHint.textContent = (s === e) ? "Single-day event." : "Multi-day event.";
+    el.scheduleHint.textContent = "Multi-day event.";
   }
 
   function applyEventToDom() {
@@ -214,12 +220,6 @@
     el.startDate.value    = String(ev.dbEvents_StartDate || ev.startDateISO || todayYmd()).slice(0, 10);
     el.endDate.value      = String(ev.dbEvents_EndDate   || ev.endDateISO   || el.startDate.value || todayYmd()).slice(0, 10);
 
-    // EVENT SETTINGS
-    if (el.hcEffectivity)     el.hcEffectivity.value     = ev.dbEvents_HCEffectivity  || "PlayDate";
-    if (el.hcEffectivityDate && ev.dbEvents_HCEffectivityDate) {
-      el.hcEffectivityDate.value = String(ev.dbEvents_HCEffectivityDate).slice(0, 10);
-    }
-
     // KPI config
     try {
       const raw = ev.dbEvents_KPIConfig;
@@ -229,7 +229,6 @@
     }
 
     renderScheduleHint();
-    renderHCEffectivityHint();
     renderKPIHint();
   }
 
@@ -241,10 +240,6 @@
       dbEvents_EndDate:            el.endDate.value,
       dbEvents_Description:        el.description.value.trim(),
       dbEvents_FacilityName:       el.facilityName.value.trim(),
-      // EVENT SETTINGS
-      dbEvents_HCEffectivity:      el.hcEffectivity?.value      || "PlayDate",
-      dbEvents_HCEffectivityDate:  (el.hcEffectivity?.value === "Date")
-        ? (el.hcEffectivityDate?.value || "") : "",
       // KPI config — serialized from state
       dbEvents_KPIConfig: state.kpiConfig ? JSON.stringify(state.kpiConfig) : "",
     };
@@ -254,7 +249,7 @@
     if (!patch.dbEvents_Title) return "Please enter an event title.";
     if (!patch.dbEvents_StartDate) return "Please select a start date.";
     if (!patch.dbEvents_EndDate) return "Please select an end date.";
-    if (patch.dbEvents_EndDate < patch.dbEvents_StartDate) return "End date cannot be before start date.";
+    if (patch.dbEvents_EndDate <= patch.dbEvents_StartDate) return "End date must be after start date.";
     return "";
   }
 
@@ -372,22 +367,35 @@
       el.facilityName,
       el.description,
       el.startDate,
-      el.endDate,
-      el.hcEffectivity,
-      el.hcEffectivityDate
+      el.endDate
     ].forEach(node => {
       if (!node) return;
       node.addEventListener("input", () => {
         renderScheduleHint();
-        renderHCEffectivityHint();
         setDirty(true);
       });
       node.addEventListener("change", () => {
         renderScheduleHint();
-        renderHCEffectivityHint();
         setDirty(true);
       });
     });
+
+    // Auto-bump end date whenever start date changes and the current end
+    // date would no longer be strictly after it — e.g. user picks a new,
+    // later start date than the existing end date. Only fires on "change"
+    // (date selection committed), not "input", so it doesn't fight a user
+    // mid-interaction with the picker.
+    if (el.startDate) {
+      el.startDate.addEventListener("change", () => {
+        const s = el.startDate.value || "";
+        if (!s) return;
+        if (!el.endDate.value || el.endDate.value <= s) {
+          el.endDate.value = addLocalDays(s, 1);
+          renderScheduleHint();
+          setDirty(true);
+        }
+      });
+    }
 
     // KPI Competition button
     if (el.btnDefineKPI) {

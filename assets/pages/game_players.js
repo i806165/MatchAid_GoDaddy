@@ -610,6 +610,25 @@
       ? ""
       : `<button id="gpBtnDefineFlights" class="btn btnSecondary" type="button">Define Flights</button>`;
 
+    // Same lock condition as Teams/Flights — round with HandicapMode "fixed"
+    // hides the button entirely, since the event owns handicap rules and
+    // cascades down automatically. Separately, gross-scored games disable
+    // (not hide) the button — handicaps genuinely don't apply to gross
+    // scoring, but that's a per-game fact, not an event-delegation fact,
+    // so it gets its own independent check rather than folding into the
+    // lock condition above. This disable is Game/Round-only by design —
+    // an event has no single ScoringMethod (different rounds under the
+    // same event can be NET and ADJ GROSS simultaneously), so Event
+    // Roster's own button never gross-disables (see event_roster.js).
+    const isHandicapLocked = (state.game?.dbEvents_HandicapMode === "fixed");
+    const isGrossGame      = (state.game?.dbGames_ScoringMethod === "ADJ GROSS");
+    const handicapsBtn = isHandicapLocked
+      ? ""
+      : `<button id="gpBtnDefineHandicaps" class="btn btnSecondary" type="button"
+                 ${isGrossGame ? 'disabled title="Not applicable — this game uses gross scoring."' : ""}>
+           Define Handicaps
+         </button>`;
+
     el.canvasControls.innerHTML = `
       <div class="gpCanvasControls">
         <div style="display:flex; align-items:center; gap:6px;">
@@ -619,6 +638,7 @@
         <div class="gpCanvasControls__right">
           ${teamsBtn}
           ${flightsBtn}
+          ${handicapsBtn}
           <span class="gpHcpDate">${esc(hcLabel)}</span>
         </div>
       </div>`;
@@ -636,6 +656,9 @@
 
     const flightsButton = document.getElementById("gpBtnDefineFlights");
     if (flightsButton) flightsButton.onclick = onDefineFlights;
+
+    const handicapsButton = document.getElementById("gpBtnDefineHandicaps");
+    if (handicapsButton) handicapsButton.onclick = onDefineHandicapSettings;
   }
 
 
@@ -728,6 +751,39 @@
       }
     });
   }
+
+  function onDefineHandicapSettings() {
+    if (!MA.defineHandicapSettings || typeof MA.defineHandicapSettings.open !== "function") {
+      MA.setStatus("Define Handicaps module not loaded.", "warn");
+      return;
+    }
+    const g = state.game || {};
+
+    // Read directly off state.game's own plain columns — unlike Teams/
+    // Flights (JSON-blob config needing separate top-level init hydration),
+    // Method/Allowance/Effectivity/Date are already plain scalar fields on
+    // the full game record, no extra plumbing required.
+    MA.defineHandicapSettings.open({
+      method:       String(g.dbGames_HCMethod || "CH"),
+      allowance:    Number(g.dbGames_Allowance ?? 100),
+      effectivity:  String(g.dbGames_HCEffectivity || "PlayDate"),
+      effDate:      String(g.dbGames_HCEffectivityDate || ""),
+      apiBase:      MA.paths?.apiGamePlayers || "/api/game_players",
+      saveEndpoint: "saveGameHandicapSettings.php",
+      // no mode, no showModeToggle — round/flat game owns its own rules
+      onApply: ({ method, allowance, effectivity, effDate }) => {
+        if (state.game) {
+          state.game.dbGames_HCMethod          = method;
+          state.game.dbGames_Allowance         = allowance;
+          state.game.dbGames_HCEffectivity     = effectivity;
+          state.game.dbGames_HCEffectivityDate = effDate;
+        }
+        renderCanvasControls(); // HCP-as-of label reads dbGames_HCEffectivity live
+      }
+    });
+  }
+
+
 
   function onRecalcHandicaps() {
     if (!ggid) return;

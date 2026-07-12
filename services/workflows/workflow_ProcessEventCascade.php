@@ -65,6 +65,30 @@ final class WorkflowProcessEventCascade
     });
   }
 
+  /**
+   * Mirror handicap rules (Method/Allowance/Effectivity/Date) into every
+   * round under the event. Always unconditional, same as its Team/Flight
+   * siblings — the caller (saveEventHandicapSettings.php) decides whether
+   * to invoke this at all, only when dbEvents_HandicapMode is "fixed".
+   *
+   * No assignments-equivalent method exists alongside this one — unlike
+   * TeamKey/FlightKey, dbPlayers_HI/CH/PH/SO are computed values, not
+   * admin-assigned, so there's no per-player "assignment" to mirror here.
+   * Propagating the rule does not refresh the numbers; that stays a
+   * separate, deliberate action (Refresh Handicaps), never automatic.
+   */
+  public static function propagateHandicapConfig(int $eid, array $config): void
+  {
+    foreach (ServiceDbGames::getGamesByEID($eid) as $game) {
+      ServiceDbGames::updateGame((int)$game["dbGames_GGID"], [
+        "dbGames_HCMethod"          => $config["method"]      ?? "CH",
+        "dbGames_Allowance"         => $config["allowance"]   ?? 100,
+        "dbGames_HCEffectivity"     => $config["effectivity"] ?? "PlayDate",
+        "dbGames_HCEffectivityDate" => $config["effDate"]     ?? null,
+      ]);
+    }
+  }
+
   private static function propagateFields(int $eid, array $ghinMap, callable $toFields): void
   {
     if (!$ghinMap) return;

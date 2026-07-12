@@ -18,6 +18,20 @@ try {
   $game = $gc["game"];
   $ggid = (string)($gc["ggid"] ?? "");
 
+  // be_calculateGamePHSO() already self-skips correctly on ADJ GROSS once
+  // it's reached — this is a pure optimization, saving the round trip for
+  // callers that reach this endpoint independently of refreshHandicaps.php
+  // (e.g. game_players.js's pairing-change flow). workflow_Handicaps.php
+  // itself is untouched either way.
+  if ((string)($game["dbGames_ScoringMethod"] ?? "") === "ADJ GROSS") {
+    ma_respond(200, [
+      "ok" => true,
+      "skipped" => true,
+      "message" => "PH/SO skipped — this game uses gross scoring.",
+    ]);
+    exit;
+  }
+
   // Action: "all" (default), "player", "pairing", "flight"
   $action = trim((string)($payload["action"] ?? "all"));
   // ID: GHIN, PairingID, or FlightID (depending on action)

@@ -181,7 +181,7 @@ final class ServiceContextEvent
 
     $facilityName = (string)($_SESSION["SessionFacilityName"] ?? $_SESSION["SessionGHINFacilityName"] ?? "");
 
-    return [
+    $record = [
       "dbEvents_EID" => null,
       "dbEvents_Title" => "",
       "dbEvents_EventType" => "Tournament",
@@ -205,5 +205,80 @@ final class ServiceContextEvent
       "dbEvents_TiebreakMethod" => "",
       "dbEvents_TiebreakConfig" => "",
     ];
+
+    // Handicap shell defaults — mirrors ServiceContextGame::defaultGameForAdd()'s
+    // applyAddDefaults()/alignHCEffectivity() pattern, kept as its own pair of
+    // helpers rather than a shared abstraction, same convention already used
+    // between service_dbGames.php and service_ContextGame.php.
+    self::applyHandicapDefaults($record);
+    self::alignHCEffectivity($record);
+
+    return $record;
+  }
+
+  /** Mirrors ServiceContextGame::applyAddDefaults() — handicap fields only. */
+  private static function applyHandicapDefaults(array &$record): void
+  {
+    if (empty($record["dbEvents_HCMethod"]))      $record["dbEvents_HCMethod"] = "CH";
+    if (!isset($record["dbEvents_Allowance"]) || $record["dbEvents_Allowance"] === null || $record["dbEvents_Allowance"] === "") {
+      $record["dbEvents_Allowance"] = 100;
+    }
+    if (empty($record["dbEvents_HandicapMode"]))  $record["dbEvents_HandicapMode"] = "none";
+  }
+
+  /**
+   * Mirrors ServiceContextGame::alignHCEffectivity() exactly, with
+   * dbEvents_StartDate standing in for dbGames_PlayDate.
+   */
+  private static function alignHCEffectivity(array &$record): void
+  {
+    $hcEff = $record["dbEvents_HCEffectivity"] ?? null;
+    $startYMD = self::toYMD($record["dbEvents_StartDate"] ?? null);
+
+    if (!$startYMD) {
+      $record["dbEvents_HCEffectivityDate"] = null;
+      return;
+    }
+
+    switch ($hcEff) {
+      case null:
+      case "":
+        $record["dbEvents_HCEffectivity"] = "PlayDate";
+        $record["dbEvents_HCEffectivityDate"] = $startYMD;
+        break;
+
+      case "PlayDate":
+        $record["dbEvents_HCEffectivityDate"] = $startYMD;
+        break;
+
+      case "Date":
+        $effYMD = self::toYMD($record["dbEvents_HCEffectivityDate"] ?? null);
+        if (!$effYMD || $effYMD > $startYMD) {
+          $record["dbEvents_HCEffectivityDate"] = $startYMD;
+        } else {
+          $record["dbEvents_HCEffectivityDate"] = $effYMD;
+        }
+        break;
+
+      default:
+        $record["dbEvents_HCEffectivityDate"] = null;
+        break;
+    }
+  }
+
+  /** Direct copy of ServiceContextGame::toYMD() — same contract. */
+  private static function toYMD($v): ?string
+  {
+    if ($v === null) return null;
+    $s = trim((string)$v);
+    if ($s === "") return null;
+
+    if (preg_match('/^\d{4}-\d{2}-\d{2}/', $s, $m)) {
+      return substr($s, 0, 10);
+    }
+
+    $ts = strtotime($s);
+    if ($ts === false) return null;
+    return date("Y-m-d", $ts);
   }
 }

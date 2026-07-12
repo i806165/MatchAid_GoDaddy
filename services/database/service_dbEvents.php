@@ -201,13 +201,18 @@ final class ServiceDbEvents
       $updated["dbEvents_AdminClubID"] = (string)($sessionCtx["adminClubId"] ?? "");
       $updated["dbEvents_AdminClubName"] = (string)($sessionCtx["adminClubName"] ?? "");
 
+      self::applyDefaultsForAdd($updated);
+      self::enforceHcEffectivity($updated);
+
       $newEID = self::insertEvent($updated);
       $saved = self::getEventByEID($newEID) ?? $updated;
       $saved["dbEvents_EID"] = $newEID;
       return ["eid" => $newEID, "event" => $saved, "mode" => "edit"];
     }
 
-    // edit
+    // edit: enforce rules
+    self::enforceHcEffectivity($updated);
+
     self::updateEvent($eid, $updated);
     $saved = self::getEventByEID($eid);
     if (!$saved) {
@@ -219,6 +224,72 @@ final class ServiceDbEvents
       "eid" => $eid,
       "event" => $saved
     ];
+  }
+
+  /**
+   * Handicap defaults for a new Event — mirrors service_dbGames.php's
+   * applyDefaultsForAdd() for the same fields, deliberately kept in
+   * lockstep so neither drifts from the other. Scoped only to the
+   * handicap fields; Events has no other defaultable fields in scope here.
+   */
+  private static function applyDefaultsForAdd(array &$e): void
+  {
+    if (empty($e["dbEvents_HCMethod"])) {
+      $e["dbEvents_HCMethod"] = "CH";
+    }
+    if (!isset($e["dbEvents_Allowance"]) || $e["dbEvents_Allowance"] === null || $e["dbEvents_Allowance"] === "") {
+      $e["dbEvents_Allowance"] = 100;
+    }
+    if (empty($e["dbEvents_HCEffectivity"])) {
+      $e["dbEvents_HCEffectivity"] = "PlayDate";
+    }
+    if (empty($e["dbEvents_HandicapMode"])) {
+      $e["dbEvents_HandicapMode"] = "none";
+    }
+  }
+
+  /**
+   * Mirrors service_dbGames.php's enforceHcEffectivity() exactly, with
+   * dbEvents_StartDate standing in for dbGames_PlayDate — an event has no
+   * single play date, so StartDate is the natural anchor. Called on both
+   * add and edit, same as the Games version.
+   */
+  private static function enforceHcEffectivity(array &$e): void
+  {
+    $startDate = trim((string)($e["dbEvents_StartDate"] ?? ""));
+    if ($startDate !== "") {
+      $startDate = self::normalizeDateYMD($startDate);
+      $e["dbEvents_StartDate"] = $startDate;
+    }
+
+    $eff = trim((string)($e["dbEvents_HCEffectivity"] ?? ""));
+    $dt  = trim((string)($e["dbEvents_HCEffectivityDate"] ?? ""));
+
+    if ($eff !== "Date") {
+      // Only default if empty; otherwise respect Low3/Low12/PlayDate
+      if ($eff === "") $e["dbEvents_HCEffectivity"] = "PlayDate";
+      $e["dbEvents_HCEffectivityDate"] = $startDate;
+      return;
+    }
+
+    // eff == Date
+    if ($dt === "") $dt = $startDate;
+    $dt = self::normalizeDateYMD($dt);
+    if ($startDate !== "" && $dt > $startDate) $dt = $startDate; // clamp
+    $e["dbEvents_HCEffectivityDate"] = $dt;
+  }
+
+  /** Direct copy of service_dbGames.php's normalizeDateYMD() — same contract. */
+  private static function normalizeDateYMD(string $s): string
+  {
+    $s = trim($s);
+    if ($s === "") return "";
+
+    $s10 = substr($s, 0, 10);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $s10)) {
+      throw new RuntimeException("Invalid StartDate format; expected YYYY-MM-DD.");
+    }
+    return $s10;
   }
 
   /**
@@ -239,6 +310,9 @@ final class ServiceDbEvents
       "dbEvents_PairingMode",
       "dbEvents_HCEffectivity",
       "dbEvents_HCEffectivityDate",
+      "dbEvents_HCMethod",
+      "dbEvents_Allowance",
+      "dbEvents_HandicapMode",
       // EVENT COMPETITION
       "dbEvents_KPIConfig",
     ];

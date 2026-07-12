@@ -318,6 +318,7 @@
         <div class="gpCanvasControls__right">
           <div class="erDesktopActions" style="display:flex; align-items:center; gap:8px;">
             <button id="erBtnRefreshHI" class="btn btnSecondary" type="button">Refresh Handicaps</button>
+            <button id="erBtnDefineHandicaps" class="btn btnSecondary" type="button">Define Handicaps</button>
             <button id="erBtnManageTeams" class="btn btnSecondary" type="button">Manage Teams</button>
             <button id="erBtnDefineFlights" class="btn btnSecondary" type="button">Define Flights</button>
             ${pairingsBtn}
@@ -343,6 +344,9 @@
     const refreshBtn = document.getElementById("erBtnRefreshHI");
     if (refreshBtn) refreshBtn.onclick = onRefreshHandicaps;
 
+    const handicapsBtn = document.getElementById("erBtnDefineHandicaps");
+    if (handicapsBtn) handicapsBtn.onclick = onDefineHandicapSettings;
+
     const pairBtn = document.getElementById("erBtnManagePairings");
     if (pairBtn) pairBtn.onclick = onManagePairings;
 
@@ -351,9 +355,9 @@
   }
 
   // ── Manage Roster (mobile) ───────────────────────────────────────────────────
-  // Mobile-only stand-in for the four desktop buttons above — same actions,
+  // Mobile-only stand-in for the five desktop buttons above — same actions,
   // same handlers, one trigger instead of a row that overflows a phone-width
-  // screen. Desktop keeps the four separate buttons, unchanged. Flights is
+  // screen. Desktop keeps the five separate buttons, unchanged. Flights is
   // deliberately last in this list (desktop button order is unchanged).
   function onManageRoster() {
     if (!MA.ui || !MA.ui.openActionsMenu) {
@@ -362,6 +366,7 @@
     }
     MA.ui.openActionsMenu("Manage Roster", [
       { label: "Refresh Handicaps", action: onRefreshHandicaps },
+      { label: "Define Handicaps",  action: onDefineHandicapSettings },
       { label: "Manage Teams",      action: onManageTeams },
       { label: "Manage Pairings",   action: onManagePairings },
       { label: "Define Flights",    action: onDefineFlights },
@@ -607,6 +612,38 @@
           state.event.dbEvents_FlightMode   = newMode || "none";
         }
         renderRoster();
+      }
+    });
+  }
+
+  // ── Define Handicaps ────────────────────────────────────────────────────────
+  // Read directly off state.event's own raw columns — same as onDefineFlights
+  // reads dbEvents_FlightConfig, but Method/Allowance/Effectivity/Date are
+  // plain scalar columns (not a JSON blob), so no parsing is needed here.
+  function onDefineHandicapSettings() {
+    if (!MA.defineHandicapSettings || typeof MA.defineHandicapSettings.open !== "function") {
+      MA.setStatus("Define Handicaps module not loaded.", "warn");
+      return;
+    }
+    const ev = state.event || {};
+
+    MA.defineHandicapSettings.open({
+      method:         safe(ev.dbEvents_HCMethod || "CH"),
+      allowance:      Number(ev.dbEvents_Allowance ?? 100),
+      effectivity:    safe(ev.dbEvents_HCEffectivity || "PlayDate"),
+      effDate:        safe(ev.dbEvents_HCEffectivityDate || ""),
+      mode:           safe(ev.dbEvents_HandicapMode || "none"),
+      showModeToggle: true,
+      apiBase:        MA.paths?.apiEventRoster || "/api/event_roster",
+      saveEndpoint:   "saveEventHandicapSettings.php",
+      onApply: ({ method, allowance, effectivity, effDate, mode }) => {
+        if (state.event) {
+          state.event.dbEvents_HCMethod          = method;
+          state.event.dbEvents_Allowance         = allowance;
+          state.event.dbEvents_HCEffectivity     = effectivity;
+          state.event.dbEvents_HCEffectivityDate = effDate;
+          state.event.dbEvents_HandicapMode      = mode;
+        }
       }
     });
   }

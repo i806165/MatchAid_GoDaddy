@@ -82,33 +82,16 @@
            Pairings), bundled into that module's own Save. Team and
            Flight's mode toggles live inside their own modules the same
            way (Manage Teams / Define Flights). Event Maintenance no
-           longer owns any cascade-mode field. -->
+           longer owns any cascade-mode field.
 
-      <!-- HC Effectivity -->
-      <div class="maFieldRow">
-        <div class="maField">
-          <label class="maLabel" for="emHCEffectivity">Handicap Effectivity</label>
-          <select id="emHCEffectivity" class="maTextInput">
-            <option value="PlayDate">Play Date — handicap index as of the event start date</option>
-            <option value="Low3">3-Month Low — lowest index over the past 3 months</option>
-            <option value="Low6">6-Month Low — lowest index over the past 6 months</option>
-            <option value="Low12">12-Month Low — lowest index over the past 12 months</option>
-            <option value="Date">Choose Date — specify an exact date to lock the index</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- HC Effectivity Date — shown only when "Choose Date" is selected -->
-      <div class="maFieldRow" id="emHCEffectivityDateWrap" style="display:none;">
-        <div class="maField">
-          <label class="maLabel" for="emHCEffectivityDate">Effectivity Date</label>
-          <input id="emHCEffectivityDate" class="maTextInput" type="date" />
-        </div>
-      </div>
-      <div class="emHint" id="emHCEffectivityHint"></div>
+           HC Effectivity removed the same way — now owned by
+           module_defineHandicapSettings.js (Event Roster → Define
+           Handicaps), bundled with Method/Allowance/Mode into that
+           module's own Apply. Event Maintenance no longer owns any
+           handicap field at all. -->
 
       <!-- Event Competition -->
-      <div class="maFieldRow" style="margin-top:18px;padding-top:14px;border-top:0.5px solid var(--borderSubtle);">
+      <div class="maFieldRow">
         <div class="maField">
           <label class="maLabel">Event Competition</label>
           <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">

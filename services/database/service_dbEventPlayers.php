@@ -442,8 +442,12 @@ final class ServiceDbEventPlayers
             if (!$event) return;
 
             ServiceDbGames::updateGame($ggid, [
-                'dbGames_TeamConfig'   => $event['dbEvents_TeamConfig']   ?? null,
-                'dbGames_FlightConfig' => $event['dbEvents_FlightConfig'] ?? null,
+                'dbGames_TeamConfig'         => $event['dbEvents_TeamConfig']         ?? null,
+                'dbGames_FlightConfig'       => $event['dbEvents_FlightConfig']       ?? null,
+                'dbGames_HCMethod'           => $event['dbEvents_HCMethod']           ?? "CH",
+                'dbGames_Allowance'          => $event['dbEvents_Allowance']          ?? 100,
+                'dbGames_HCEffectivity'      => $event['dbEvents_HCEffectivity']      ?? "PlayDate",
+                'dbGames_HCEffectivityDate'  => $event['dbEvents_HCEffectivityDate']  ?? null,
             ]);
 
         } catch (Throwable $e) {
