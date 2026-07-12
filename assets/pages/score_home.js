@@ -7,10 +7,18 @@
   const paths     = (MA.paths) || {};
 
   const apiUrls = {
-    scoreHome:       (paths.apiScoreHome || '/api/score_home') + '/initScoreHome.php',
-    setScorerContext:(paths.apiScoreHome || '/api/score_home') + '/setScorerContext.php',
-    scoreEntry:       paths.scoreEntry  || '/app/score_entry/scoreentry.php',
-    scoreSummary:     paths.scoreSummary || '/app/score_summary/scoresummary.php',
+    scoreHome:            (paths.apiScoreHome || '/api/score_home') + '/initScoreHome.php',
+    setScorerContext:     (paths.apiScoreHome || '/api/score_home') + '/setScorerContext.php',
+    getPlayersForRefresh: (paths.apiScoreHome || '/api/score_home') + '/getPlayersForRefresh.php',
+    scoreEntry:            paths.scoreEntry   || '/app/score_entry/scoreentry.php',
+    scoreSummary:          paths.scoreSummary || '/app/score_summary/scoresummary.php',
+    // Change Tee Box (Phase 1) — same endpoint Player Home uses for
+    // self-service tee changes, called here with the tapped player's
+    // GHIN instead of the session user's own. See scorehome.php for the
+    // route addition and workflow_ProcessPlayers.php for why this is
+    // safe to call for any GHIN, not just the signed-in user's.
+    upsertGamePlayers: paths.upsertGamePlayers ||
+      ((paths.apiGamePlayers || '/api/game_players') + '/upsertGamePlayers.php'),
   };
 
   // -------------------------------------------------------------------------
@@ -24,6 +32,8 @@
 
     groupCard:        document.getElementById('shGroupCard'),
     groupKey:         document.getElementById('shGroupKey'),
+    groupKeyWrap:     document.getElementById('shGroupKeyWrap'),
+    groupKeyChevron:  document.getElementById('shGroupKeyChevron'),
     groupContext:     document.getElementById('shGroupContext'),
     playerRows:       document.getElementById('shPlayerRows'),
     cardFooter:       document.getElementById('shCardFooter'),
@@ -90,6 +100,31 @@
     blindConfig:       null,   // { mode, target, ghin?, name? } or null
     existingBlindGHIN: null,   // GHIN from db_Scores if already applied to this pairing
     roster:            [],     // full filtered game roster for blind player selection
+
+    // Phase 1 — Player Adjustment Toolkit foundation
+    // ------------------------------------------------------------------
+    // scorecards: every Scorecard ID for this game (from initScoreHome
+    // payload) — always populated server-side regardless of who's
+    // asking; see initScoreHome.php. What's gated here is only whether
+    // the switcher control responds to a tap.
+    scorecards: [],
+
+    // isGameAdmin: sessionGhin matches THIS game's dbGames_AdminGHIN —
+    // not "logged into the Admin Portal" (that's just a routing path,
+    // not a permission). Recomputed on every onLaunch(), since it
+    // depends on state.game, which changes on every scorecard switch.
+    isGameAdmin: false,
+
+    // dirty: true once any tee-box correction has been saved this
+    // session but the group-wide handicap recalculation hasn't run yet.
+    // The save itself only zeroes the touched player's SO (see
+    // workflow_ProcessPlayers.php) — SO for the whole group depends on
+    // the lowest HI across all players sharing this Scorecard ID, so a
+    // single-player save can silently leave every OTHER player's SO
+    // stale too. Cleared only by a successful recalculateHandicaps()
+    // call, deferred to the "Go to Digital Scoring" click (game day
+    // only) rather than run after every individual correction.
+    dirty: false,
   };
 
   // -------------------------------------------------------------------------
@@ -198,6 +233,8 @@
     return (rows || []).map(r => ({
       ghin:          String(r.dbPlayers_PlayerGHIN  ?? ''),
       name:          String(r.dbPlayers_Name         ?? ''),
+      gender:        String(r.dbPlayers_Gender       ?? ''),
+      teeSetId:      String(r.dbPlayers_TeeSetID     ?? ''),
       teeSetName:    String(r.dbPlayers_TeeSetName   ?? ''),
       hi:            String(r.dbPlayers_HI           ?? ''),
       ch:            String(r.dbPlayers_CH           ?? ''),
@@ -367,6 +404,220 @@
     });
 
     el.playerRows.innerHTML = html;
+    wirePlayerRowClicks();
+  }
+
+  // -------------------------------------------------------------------------
+  // Player row taps — Change Tee Box (Phase 1) and future Player/Admin
+  // Adjustments (Phase 2-4, per the Toolkit spec's dbGames_ScorerAdminFlag
+  // gating — not implemented here, this only builds the menu framework
+  // those phases will extend).
+  //
+  // Gate is simply "is anyone signed in" — sessionGhin !== ''. Not
+  // membership in this group, not scorer/admin status. Change Tee Box
+  // itself is intentionally not further restricted (matches the Tee Box
+  // spec: no hasScores lockout, no scorer-identity assumption).
+  // -------------------------------------------------------------------------
+
+  function wirePlayerRowClicks() {
+    const canTap = !!state.sessionGhin;
+
+    el.playerRows.querySelectorAll('.sh-playerRow').forEach(row => {
+      if (!canTap) {
+        // Reuses the shared .maListRow--static class (cursor:default,
+        // pointer-events:none) already defined in ma_shared.css — no new
+        // CSS needed for the inert state.
+        row.classList.add('maListRow--static');
+        return;
+      }
+      row.addEventListener('click', () => {
+        const ghin = String(row.dataset.ghin || '');
+        const player = state.players.find(p => p.ghin === ghin);
+        if (player) openPlayerActionsMenu(player);
+      });
+    });
+  }
+
+  function openPlayerActionsMenu(player) {
+    if (!MA.ui || !MA.ui.openActionsMenu) return;
+
+    const items = [
+      { category: 'PLAYER ADJUSTMENTS' },
+      {
+        label:    'Change Tee Box',
+        action:   () => openTeeChangeForPlayer(player),
+        indent:   true,
+        disabled: !canChangeTeeBox(player),
+      },
+      // Phase 2-4 (Swap Player Position / Replace Player / Remove Player)
+      // land here as an 'ADMIN ADJUSTMENTS' category, gated on
+      // state.isGameAdmin AND dbGames_ScorerAdminFlag per the Toolkit
+      // spec — intentionally not built yet.
+    ];
+
+    MA.ui.openActionsMenu(player.name || 'Player Actions', items);
+  }
+
+  // Availability check only — NOT a security gate. Every field here is
+  // about whether the UI can function (selector loaded, game context
+  // present), never about who's allowed to act. Real enforcement, if
+  // ever needed for this action, belongs server-side in
+  // upsertGamePlayers.php's own auth check — mirrors the same principle
+  // already stated for this exact function in the Tee Box spec.
+  function canChangeTeeBox(player) {
+    if (!player || !player.ghin) return false;
+    if (!state.game || !state.game.dbGames_GGID) return false;
+    if (!MA.TeeSetSelection || typeof MA.TeeSetSelection.open !== 'function') return false;
+    return true;
+  }
+
+  function openTeeChangeForPlayer(player) {
+    if (!MA.TeeSetSelection || typeof MA.TeeSetSelection.open !== 'function') {
+      MA.setStatus('Tee set selector not loaded.', 'error');
+      return;
+    }
+
+    const ggid = String(state.game?.dbGames_GGID || '');
+    if (!ggid) {
+      MA.setStatus('Game context unavailable.', 'error');
+      return;
+    }
+
+    // NOTE / assumption to verify: getTeeSets.php's own requirements
+    // aren't confirmed here — only ghin and gender are sent, since those
+    // are the only two identity-shaped values this app actually tracks
+    // per-player that a GHIN tee lookup would plausibly need. `name` is
+    // passed only as display text (config.subtitle covers the modal's
+    // own label, so this is a non-binding fallback). If getTeeSets.php
+    // turns out to require a first/last split, that will surface as a
+    // clear "Unable to load tee sets" error rather than silently
+    // corrupting anything — flagging this rather than assuming it.
+    MA.TeeSetSelection.open({
+      gameId: ggid,
+      player: {
+        ghin:   player.ghin,
+        name:   player.name,
+        gender: player.gender,
+      },
+      currentTeeSetId:  player.teeSetId,
+      subtitle:         player.name,
+      courseConfirmed:  true,
+      onSave: async (selectedTee) => {
+        await saveScoreHomeTeeChange(player, selectedTee);
+      },
+    });
+  }
+
+  async function saveScoreHomeTeeChange(player, selectedTee) {
+    if (!player?.ghin || !selectedTee) {
+      MA.setStatus('Missing tee change context.', 'error');
+      return;
+    }
+
+    const ggidStr = String(state.game?.dbGames_GGID || '');
+    const scorecardKey = String(
+      state.players?.[0]?.playerKey || el.groupKey?.value || ''
+    ).trim().toUpperCase();
+
+    try {
+      MA.setStatus('Updating tee box…', 'info');
+
+      // Deliberately sending ONLY ghin — no name/gender. This app has no
+      // first-name concept to send correctly (see the long trail of
+      // conversation that led here), and workflow_ProcessPlayers.php now
+      // re-resolves first/last/gender from GHIN's own live profile for
+      // whatever GHIN is passed, so there is nothing else this call
+      // needs to supply for identity to stay correct.
+      const res = await MA.postJson(apiUrls.upsertGamePlayers, {
+        player: { ghin: player.ghin },
+        selectedTee,
+      });
+
+      if (!res || !res.ok) {
+        throw new Error(res?.message || 'Unable to update tee box.');
+      }
+
+      // Pull fresh player rows for this Scorecard ID — read-only, no
+      // recalc/refresh side effects — so the tapped row's tee/HI/CH
+      // reflect the save immediately without triggering onLaunch()'s
+      // isGameDay-gated recalc or the deferred group-wide one.
+      if (ggidStr && scorecardKey) {
+        const refreshed = await MA.postJson(apiUrls.getPlayersForRefresh, {
+          ggid: ggidStr,
+          scorecardKey,
+        });
+        if (refreshed && refreshed.ok) {
+          state.players = normalizePlayers(refreshed.players || []);
+        }
+
+        // Local, cheap recompute against already-entered scores — same
+        // reasoning as onLaunch(): no external dependency, safe to run
+        // immediately, not part of the deferred recalc.
+        await MA.refreshScores({ ggid: ggidStr, gameRow: state.game, scorecardKey });
+      }
+
+      // The real handicap recalculation is deferred — it's a live GHIN
+      // network call, and SO for every player in the group depends on
+      // the lowest HI across the whole group, not just the player who
+      // just changed tees (workflow_ProcessPlayers.php zeroes ONLY the
+      // touched player's SO on save — see its step 7). Recalculating
+      // once, group-wide, right before scoring starts (el.btnGo click,
+      // game day only) avoids re-running it after every correction and
+      // avoids leaving every other player's SO silently stale in the
+      // meantime.
+      state.dirty = true;
+
+      renderPlayerRows();
+      renderGroupContext();
+      MA.setStatus('Tee box updated.', 'success');
+
+    } catch (e) {
+      console.error(e);
+      MA.setStatus(e.message || 'Unable to update tee box.', 'error');
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Scorecard switcher — Playing Group card header
+  //
+  // Always rendered with the full scorecard list (server always returns
+  // it — see initScoreHome.php). Only whether it's tappable varies:
+  // enabled for the game admin (sessionGhin === dbGames_AdminGHIN),
+  // inert for everyone else. The underlying read was already open to
+  // anyone who could hand-type a different key into the launch field,
+  // so this doesn't add new exposure — it's a UX gate, not a security
+  // boundary.
+  // -------------------------------------------------------------------------
+
+  function renderGroupKeySwitcher() {
+    const canSwitch = state.isGameAdmin && state.scorecards.length > 0;
+
+    if (el.groupKeyChevron) {
+      el.groupKeyChevron.style.display = canSwitch ? '' : 'none';
+    }
+  }
+
+  function buildScorecardSwitcherItems() {
+    return state.scorecards.map(sc => ({
+      label:  `${sc.key} — ${sc.lastNames.join(' · ')}`,
+      action: () => switchToScorecard(sc.key),
+    }));
+  }
+
+  function openScorecardSwitcher() {
+    if (!state.isGameAdmin) return;
+    if (!MA.ui || !MA.ui.openActionsMenu) return;
+
+    const items = buildScorecardSwitcherItems();
+    if (!items.length) return;
+
+    MA.ui.openActionsMenu('Switch Scorecard', items);
+  }
+
+  function switchToScorecard(key) {
+    if (!el.playerKey) return;
+    el.playerKey.value = key;
+    onLaunch();
   }
 
   // -------------------------------------------------------------------------
@@ -623,6 +874,23 @@
       state.roster            = payload.roster || [];  // raw rows — module reads dbPlayers_* field names directly
       state.flags.blindConfigured = state.blindConfig !== null;
 
+      // Phase 1 — scorecard switcher + game-admin identity.
+      // isGameAdmin is a true per-game check (this GHIN matches THIS
+      // game's dbGames_AdminGHIN) — deliberately NOT state.portal, which
+      // only reflects how the user routed in (Admin Portal vs Player
+      // Portal), not whether they administer this specific game.
+      state.scorecards = Array.isArray(payload.scorecards) ? payload.scorecards : [];
+      state.isGameAdmin = !!(
+        state.sessionGhin &&
+        state.game &&
+        state.sessionGhin === String(state.game.dbGames_AdminGHIN || '')
+      );
+
+      // A fresh launch is a clean slate for the dirty flag — whatever
+      // group is now loaded either just came from a correction-free
+      // read, or (if isGameDay) already ran the recalc below.
+      state.dirty = false;
+
       // Resolve autoScorerGhin from session (mirrors scorehome.php logic)
       const sessionGhin = initData.sessionGhin || '';
       state.autoScorerGhin = '';
@@ -663,7 +931,8 @@
       el.launchCard.classList.add('isHidden');
       el.groupCard.classList.remove('isHidden');
       el.actionBar.classList.remove('isHidden');
-      el.groupKey.textContent = key;
+      if (el.groupKey) el.groupKey.value = key;
+      renderGroupKeySwitcher();
 
       renderGroupContext();
       renderPlayerRows();
@@ -1007,9 +1276,46 @@
   el.btnLaunch?.addEventListener('click', onLaunch);
   el.playerKey?.addEventListener('keydown', (e) => { if (e.key === 'Enter') onLaunch(); });
 
-  el.btnGo?.addEventListener('click', () => {
+  el.btnGo?.addEventListener('click', onGoClick);
+
+  // Scorecard switcher — tap anywhere on the field (input or chevron);
+  // openScorecardSwitcher() itself no-ops for anyone who isn't the game
+  // admin, so this listener doesn't need its own guard beyond that.
+  el.groupKeyWrap?.addEventListener('click', openScorecardSwitcher);
+
+  async function onGoClick() {
+    if (el.btnGo.disabled) return;
+
+    // Deferred group-wide handicap recalculation — only if something
+    // changed this session (state.dirty) and only on game day, matching
+    // the existing isGameDay gate onLaunch() already uses for the same
+    // real GHIN network call. Not gated by dirty+isGameDay together
+    // anywhere else — this is the one place the deferred correction
+    // actually runs.
+    if (state.dirty && state.isGameDay) {
+      const scorecardKey = String(
+        state.players?.[0]?.playerKey || el.groupKey?.value || ''
+      ).trim().toUpperCase();
+
+      if (scorecardKey) {
+        el.btnGo.disabled = true;
+        MA.setStatus('Recalculating handicaps…', 'info');
+        try {
+          const ok = await MA.recalculateHandicaps(null, { scorecardKey });
+          if (!ok) throw new Error('Handicap recalculation failed.');
+          state.dirty = false;
+          MA.setStatus('Handicaps updated.', 'success');
+        } catch (e) {
+          MA.setStatus(e.message || 'Unable to recalculate handicaps.', 'error');
+          el.btnGo.disabled = false;
+          return; // stay on the page — leave dirty set so the next attempt retries
+        }
+        el.btnGo.disabled = false;
+      }
+    }
+
     window.location.href = state.isGameDay ? apiUrls.scoreEntry : apiUrls.scoreSummary;
-  });
+  }
 
   // Cart drawer
   el.cartClose?.addEventListener('click',   closeCartDrawer);

@@ -108,6 +108,35 @@ if ($blindConfig !== null && $groupPairingId !== '' && $groupPairingId !== '000'
     $existingBlindGHIN = ServiceBlindPlayer::getBlindScoreForPairing($ggid, $groupPairingId);
 }
 
+// ── scorecards: every Scorecard ID for this game, grouped, for the group-     ──
+// switcher control in the Playing Group card header. Always built, regardless
+// of who's asking — the read itself was already open to anyone who could
+// hand-type another key into the launch field, so this adds no new exposure.
+// What's gated (client-side, on state.isGameAdmin) is only whether the
+// control responds to a tap — not whether the data is fetched.
+$scorecards = [];
+if ($ggid > 0) {
+    $allGamePlayers = ServiceDbPlayers::getScorecardPlayersByGGID((string)$ggid);
+    $order = [];
+    $byKey = [];
+    foreach ($allGamePlayers as $gp) {
+        $pk = trim((string)($gp['dbPlayers_PlayerKey'] ?? ''));
+        if ($pk === '') continue; // unattached / not yet slotted — not a real scorecard
+        if (!isset($byKey[$pk])) {
+            $byKey[$pk] = [];
+            $order[] = $pk;
+        }
+        $ln = trim((string)($gp['dbPlayers_LName'] ?? ''));
+        if ($ln !== '') $byKey[$pk][] = $ln;
+    }
+    foreach ($order as $pk) {
+        $scorecards[] = [
+            'key'       => $pk,
+            'lastNames' => $byKey[$pk],
+        ];
+    }
+}
+
 // ── roster: full game player list for the blind player selection modal ─────────
 // Excludes stray / unattached players (PairingID = "000" or empty, or PlayerKey
 // null / empty). Players with null Scores are included — the module renders them
@@ -137,4 +166,5 @@ ma_respond(200, ['ok' => true, 'payload' => [
     'blindConfig'       => $blindConfig,
     'existingBlindGHIN' => $existingBlindGHIN,
     'roster'            => $roster,
+    'scorecards'        => $scorecards,
 ]]);

@@ -54,11 +54,47 @@ final class WorkflowProcessPlayers
     string $creatorName
   ): array
   {
-    $ghin     = trim((string)($playerInput["ghin"]       ?? ""));
-    $first    = trim((string)($playerInput["first_name"] ?? ""));
-    $last     = trim((string)($playerInput["last_name"]  ?? ""));
-    $gender   = trim((string)($playerInput["gender"]     ?? ""));
-    $manualHi = trim((string)($playerInput["hi"]         ?? ""));
+    $ghin     = trim((string)($playerInput["ghin"] ?? ""));
+    $manualHi = trim((string)($playerInput["hi"]   ?? ""));
+
+    // Existing row and live GHIN profile are both loaded up front, ahead
+    // of the original step numbering below — moved earlier than where
+    // this profile fetch used to sit (previously "step 5") because
+    // gender is needed immediately by step 2's tee-set lookup, not just
+    // at final field assembly. Neither of these two calls depends on
+    // anything computed in steps 1-4, so pulling them forward is safe.
+    $existing = ServiceDbPlayers::getPlayerByGGIDGHIN($ggid, $ghin);
+    $profile  = self::fetchPlayerProfile($ghin, $token, $creatorGHIN);
+
+    // Identity fields — first_name / last_name / gender.
+    //
+    // This app's own db_Players table has no first-name concept at all
+    // (only dbPlayers_Name — a full name string — and dbPlayers_LName
+    // exist; see the field assembly in step 7 below). So there is no db
+    // column to treat as a source of truth for a first/last split, and
+    // none of the tiers below ever derive one by splitting
+    // dbPlayers_Name — that would be inventing data this app doesn't
+    // actually track.
+    //
+    // Instead: the live GHIN profile just fetched above is the single
+    // trusted source — real GHIN golfer data, fetched fresh for THIS
+    // ghin on every call, not a cached/stale value. Caller-supplied
+    // $playerInput is only a fallback for the rare case where that
+    // profile lookup itself comes back empty (GHIN hiccup, or an NH /
+    // non-rated GHIN with no searchable profile). Existing-row data is
+    // the last-resort safety net, and even then used whole — the full
+    // dbPlayers_Name / dbPlayers_LName pair as already stored, never
+    // split apart — purely so a transient lookup failure can't blank
+    // out a previously-good name/gender on a routine correction like a
+    // tee change.
+    $profileFirst  = trim((string)($profile["first_name"] ?? $profile["firstName"] ?? ""));
+    $profileLast   = trim((string)($profile["last_name"]  ?? $profile["lastName"]  ?? ""));
+    $profileGender = trim((string)($profile["gender"]     ?? ""));
+
+    $first  = $profileFirst  !== "" ? $profileFirst  : trim((string)($playerInput["first_name"] ?? ""));
+    $last   = $profileLast   !== "" ? $profileLast   : trim((string)($playerInput["last_name"]  ?? ""));
+    $gender = $profileGender !== "" ? $profileGender : trim((string)($playerInput["gender"]     ?? ""));
+    if ($gender === "") $gender = trim((string)($existing["dbPlayers_Gender"] ?? ""));
 
     // 1) Resolve effective handicap index
     $effectiveHI = self::resolveHandicap($ghin, $manualHi, $game, $token);
@@ -76,8 +112,9 @@ final class WorkflowProcessPlayers
     $teeSetId       = (string)($tee["teeSetID"] ?? "");
     $richTeeDetails = ($teeSetId !== "") ? be_getTeeSetByID($teeSetId, $token) : $tee;
 
-    // 4) Load existing player row (preserves pairing/flight/key if already on roster)
-    $existing = ServiceDbPlayers::getPlayerByGGIDGHIN($ggid, $ghin);
+    // 4) Existing row and profile already loaded above (moved ahead of
+    //    step 2 so gender was available in time — see the block before
+    //    step 1).
 
     // 4a) Round vs. Flat Game — resolve the event roster row once, if applicable.
     //     $eventPlayer stays null for a Flat Game, which is what keeps every
@@ -98,7 +135,7 @@ final class WorkflowProcessPlayers
     }
 
     // 5) Enrich profile — UI values > GHIN profile > existing DB values
-    $profile = self::fetchPlayerProfile($ghin, $token, $creatorGHIN);
+    //    ($profile itself already loaded above, ahead of step 1.)
     $localId  = self::resolveField(
       $playerInput,  ["local_number", "memberId"],
       $profile,      ["local_number", "member_number", "memberId"],
@@ -122,8 +159,16 @@ final class WorkflowProcessPlayers
 
     // 7) Assemble fields for DB write
     $fields = [
-      "dbPlayers_Name"         => trim($first . " " . $last),
-      "dbPlayers_LName"        => $last,
+      // Reconstructed from resolved first/last only when at least one
+      // resolved to something real. If both the live GHIN fetch and any
+      // caller-supplied fallback came back empty, reuse the existing
+      // row's Name/LName untouched rather than writing a blank — the
+      // resolution above never invents a first name, so this guard is
+      // what keeps a lookup failure from ever corrupting a good name.
+      "dbPlayers_Name"         => ($first !== "" || $last !== "")
+        ? trim($first . " " . $last)
+        : (string)($existing["dbPlayers_Name"] ?? ""),
+      "dbPlayers_LName"        => $last !== "" ? $last : (string)($existing["dbPlayers_LName"] ?? ""),
       "dbPlayers_HI"           => $effectiveHI,
       "dbPlayers_CH"           => (string)$ch,
       "dbPlayers_PH"           => (string)$ph,
@@ -165,7 +210,7 @@ final class WorkflowProcessPlayers
         ? (string)($eventPlayer["dbEventPlayers_FlightKey"] ?? "")
         : (string)($existing["dbPlayers_FlightKey"] ?? ""),
 
-      "dbPlayers_Gender"       => $gender,
+      "dbPlayers_Gender"       => $gender !== "" ? $gender : (string)($existing["dbPlayers_Gender"] ?? ""),
       "dbPlayers_CreatorID"    => $creatorGHIN,
       "dbPlayers_CreatorName"  => $creatorName,
       "dbPlayers_LocalID"      => $localId,

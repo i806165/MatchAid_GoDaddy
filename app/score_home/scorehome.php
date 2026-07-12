@@ -66,6 +66,12 @@ $paths = [
     "scoreEntry"      => MA_ROUTE_SCORE_ENTRY,
     "routerApi"       => MA_ROUTE_API_ROUTER,
     "scoreHome"       => MA_ROUTE_SCORE_HOME,
+    // Change Tee Box (Phase 1) reuses the same player upsert endpoint
+    // Player Home uses for self-service tee changes — same code path,
+    // just called with the tapped player's GHIN instead of the session
+    // user's own. See workflow_ProcessPlayers.php for the shared logic.
+    "apiGamePlayers"    => MA_ROUTE_API_GAME_PLAYERS,
+    "upsertGamePlayers" => MA_ROUTE_API_GAME_PLAYERS . '/upsertGamePlayers.php',
 ];
 
 $initPayload = [
