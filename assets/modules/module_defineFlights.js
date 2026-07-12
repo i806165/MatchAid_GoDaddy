@@ -201,7 +201,12 @@
     _players.forEach(p => { if (!p.flight) p.flight = defaultId; });
 
     _busy     = false;
-    _cfgOpen  = false;
+    // Expanded by default only for a first-time setup (still just the
+    // single default flight) — surfaces the apply-to-all-rounds decision
+    // when it matters most. Once flights are actually defined (>1), a
+    // returning admin almost always just wants the roster, so it stays
+    // collapsed, same as before.
+    _cfgOpen  = (_flights.length <= 1);
     _viewMode = "player";
 
     const overlay = _ensureOverlay();

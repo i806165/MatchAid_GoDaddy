@@ -1746,15 +1746,11 @@ textarea {
 
 .dfFlightRow .dfFlightCount {
   white-space: nowrap;
-  margin-left: auto;
 }
 
 @media (max-width: 600px) {
   .dfFlightRow {
     flex-wrap: wrap;
-  }
-  .dfFlightRow .dfFlightCount {
-    margin-left: 0;
   }
 }
 
