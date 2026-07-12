@@ -27,16 +27,16 @@
     <div class="maCard__hdr">
       <div class="maCard__title">Playing group</div>
       <!--
-        Role badge — ADMINISTRATOR / PLAYER / GUEST. Reuses
-        .maChrome__hdrBtn (the same class the header's own "Actions"
-        button uses) rather than the generic .maPill, since .maPill's
-        default muted tone reads poorly against this card's dark green
-        header — .maChrome__hdrBtn already solves that exact contrast
-        problem, proven in the header right above this card.
-        Populated in score_home.js's renderRoleBadge(), same underlying
-        identity check as isGameAdmin, just displayed as a label.
+        Role badge — ADMINISTRATOR / PLAYER / GUEST. Same
+        .maChrome__hdrBtn look as the scorecard button and the header's
+        "Actions" button. Explicit inline-flex/align-items added because
+        .maChrome__hdrBtn sets a fixed height but no vertical-centering
+        rule — without it, text sits at the box's default baseline
+        instead of centered, regardless of font. Populated in
+        score_home.js's renderRoleBadge().
       -->
-      <div class="maChrome__hdrBtn" id="shRoleBadge" style="cursor:default"></div>
+      <div class="maChrome__hdrBtn" id="shRoleBadge"
+           style="cursor:default; display:inline-flex; align-items:center; justify-content:center;"></div>
       <!--
         Scorecard switcher — a real <button>, not a text input pretending
         to be one. Always rendered and always populated with the current
