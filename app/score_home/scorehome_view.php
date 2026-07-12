@@ -27,6 +27,14 @@
     <div class="maCard__hdr">
       <div class="maCard__title">Playing group</div>
       <!--
+        Role badge — ADMINISTRATOR / PLAYER / GUEST. Populated in
+        score_home.js right alongside isGameAdmin, since it's the same
+        underlying identity check (sessionGhin present? matches
+        dbGames_AdminGHIN?) just rendered as a label instead of used as
+        a permission gate.
+      -->
+      <div class="maPill" id="shRoleBadge"></div>
+      <!--
         Always rendered, for everyone — not-logged-in and non-admin users
         see this same field locked to the one scorecard already loaded
         (no chevron, not clickable). Only a signed-in user whose GHIN
@@ -37,7 +45,7 @@
       <div class="maInputWrap maInputWrap--inner sh-groupKeyWrap" id="shGroupKeyWrap"
            style="max-width:170px">
         <input type="text" id="shGroupKey" class="maTextInput sh-groupKey" readonly tabindex="-1"
-               style="min-height:28px; font-size:13px; font-weight:900; padding:0 8px; text-align:right; background:transparent; border:none;" />
+               style="min-height:28px; font-size:13px; font-weight:900; padding:0 30px 0 10px; text-align:right; background:transparent; border:none;" />
         <button type="button" class="maInputInnerBtn" id="shGroupKeyChevron" aria-label="Switch scorecard"
                 style="display:none">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
