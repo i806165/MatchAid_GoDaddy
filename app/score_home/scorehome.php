@@ -113,5 +113,6 @@ $maChromeSubtitle = "Score Entry";
 <script src="<?= ma_asset('/assets/modules/module_DisplayGameFormat.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/ghin_post_scores.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/module_BlindPlayer.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/teesetSelection.js') ?>"></script>
 <script src="<?= ma_asset('/assets/pages/score_home.js') ?>"></script>
 </body></html>
