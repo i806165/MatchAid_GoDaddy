@@ -270,7 +270,7 @@
   }
 
   function _cfgSummaryText() {
-    return _flights.map(f => f.name).join(", ");
+    return _cfgOpen ? "Collapse flight section" : "Expand flight section";
   }
 
   // Collapsed by default — flight config is edited rarely relative to
@@ -477,6 +477,7 @@
       if (panel) panel.style.display = _cfgOpen ? "block" : "none";
       if (chevron) chevron.style.transform = `rotate(${_cfgOpen ? 180 : 0}deg)`;
       overlay.querySelector("#dfBtnToggleCfg")?.setAttribute("aria-expanded", String(_cfgOpen));
+      _refreshCfgSummary();
     });
 
     overlay.querySelectorAll(".maTextInput[data-flight-id]").forEach(inp => {
