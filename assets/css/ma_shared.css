@@ -1760,6 +1760,15 @@ textarea {
   color: var(--segActiveText);
 }
 
+/* Blue selected state — for segmented yes/no decisions where the default
+   tan is-active reads as too neutral, e.g. Define Flights' "Apply to all
+   rounds?" toggle. Same brandColor3 already used for filled action buttons
+   elsewhere (Manage Teams, Refresh Handicaps, Multi-Add). */
+.maSegBtn.is-active-accent {
+  background: var(--brandColor3);
+  color: var(--brandPrimaryText);
+}
+
 .maSegBtn:disabled {
   opacity: .55;
   cursor: default;
@@ -2338,6 +2347,18 @@ textarea {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Wrapping helper/hint text — explains what a control's current selection
+   means (e.g. Define Flights' apply-to-all-rounds hint). Unlike
+   .maListRow__subline this wraps instead of truncating, since it's a full
+   sentence, not a label. */
+.maHintText {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--mutedText);
+  line-height: 1.4;
+  margin-top: 6px;
 }
 
 /* Empty/missing data subline — italic hint */

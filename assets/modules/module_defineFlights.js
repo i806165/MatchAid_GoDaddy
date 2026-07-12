@@ -3,8 +3,8 @@
  * MA.defineFlights — Define Flights module.
  * Shared by Event Roster and Game/Round Roster (mirrors MA.manageTeams's
  * dual-usage pattern). On Event Roster, showModeToggle:true renders the
- * EVENT/ROUND toggle; when mode is "fixed", the saved config/assignments
- * cascade to every linked round. On Game/Round Roster, no toggle is
+ * "Apply to all rounds?" yes/no toggle; when mode is "fixed", the saved
+ * config/assignments cascade to every linked round. On Game/Round Roster, no toggle is
  * shown — a flat game, or a round with cascading turned off, edits its
  * own flights independently, same posture as Manage Teams.
  *
@@ -17,6 +17,15 @@
  *     two-badge toggle (.maTeamBadge is Team-specific, not reused here)
  *   - gender is shown per row (avatar color-coded + M/F text badge),
  *     since it's a common cue when sorting players into flights
+ *   - cascade toggle (Event Roster usage only) is framed as a yes/no
+ *     question — "Apply to all rounds?" — not an EVENT/ROUND location
+ *     choice like Manage Teams uses, with a hint line stating the
+ *     consequence of the current selection. Rendered in brandColor3 blue
+ *     (.is-active-accent), not the standard tan .is-active, since it's a
+ *     binary decision with cascading consequences, unlike the view toggle.
+ *   - roster has a by-player / by-flight view toggle (.maSeg, standard
+ *     tan .is-active) — a display preference independent of cascade mode,
+ *     available in both Event Roster and round usage
  *
  * Public API:
  *   MA.defineFlights.open(options)
@@ -33,7 +42,7 @@
  *                                      as config/assignments — flipping it alone
  *                                      does nothing until Apply is clicked.
  *     showModeToggle : bool         — true only for the Event Roster usage.
- *                                      Renders the EVENT/ROUND segmented toggle.
+ *                                      Renders the "Apply to all rounds?" yes/no toggle.
  *                                      Omit (or false) for the round/flat-game
  *                                      usage — module has no mode of its own
  *                                      and can omit the mode option entirely.
@@ -60,6 +69,7 @@
   let _mode          = "none"; // "fixed" | "none" — defaults off
   let _busy          = false;
   let _cfgOpen       = false;  // config strip collapsed by default
+  let _viewMode      = "player"; // "player" | "flight" — roster grouping
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -185,8 +195,9 @@
     const defaultId = _flights[0]?.id || "F1";
     _players.forEach(p => { if (!p.flight) p.flight = defaultId; });
 
-    _busy    = false;
-    _cfgOpen = false;
+    _busy     = false;
+    _cfgOpen  = false;
+    _viewMode = "player";
 
     const overlay = _ensureOverlay();
     overlay.innerHTML = _renderModal();
@@ -253,8 +264,17 @@
   }
 
   // Collapsed by default — flight config is edited rarely relative to
-  // assignment; the roster is the primary surface of this module.
+  // assignment; the roster is the primary surface of this module. The
+  // apply-toggle (Event Roster usage only) sits at the TOP of the panel,
+  // above the flight rows — it's the higher-level decision (does this
+  // cascade at all), so it's answered before the detail work below it.
+  // "Clear flights" sits paired with "Add flight" as an equal-weight
+  // action, not a separate link — both are flight-list-level operations.
+  // The by-player/by-flight view toggle is a roster DISPLAY preference,
+  // not a flight-configuration edit, so it renders as its own block below
+  // the collapsible panel, always visible regardless of _cfgOpen.
   function _renderConfigStrip() {
+    const applyToggle = _renderApplyToggle();
     return `
       <div class="maModal__controls" id="dfCfgStrip" style="padding:0;">
         <button type="button" id="dfBtnToggleCfg"
@@ -270,20 +290,25 @@
           </svg>
         </button>
         <div id="dfCfgPanel" style="padding:10px 16px 14px; display:${_cfgOpen ? "block" : "none"};">
-          <div id="dfCfgRows" style="display:flex; flex-direction:column; gap:8px;">
+          ${applyToggle}
+          <div id="dfCfgRows" style="${applyToggle ? "border-top:1px solid var(--border); margin-top:12px; padding-top:12px;" : ""} display:flex; flex-direction:column; gap:8px;">
             ${_renderFlightNameRows()}
           </div>
-          <button type="button" class="btn btnSecondary" id="dfBtnAddFlight"
-                  style="margin-top:8px; width:100%; font-size:12px;"
-                  ${_flights.length >= MAX_FLIGHTS ? "disabled" : ""}>
-            + Add flight
-          </button>
-          ${_renderModeToggle()}
-          <button type="button" class="btn btnLink" id="dfBtnResetFlights"
-                  style="margin-top:10px; font-size:12px; color:var(--danger);">
-            Reset — move all players to one flight
-          </button>
+          <div style="display:flex; gap:8px; margin-top:8px;">
+            <button type="button" class="btn" id="dfBtnAddFlight"
+                    style="flex:1; font-size:12px;"
+                    ${_flights.length >= MAX_FLIGHTS ? "disabled" : ""}>
+              + Add flight
+            </button>
+            <button type="button" class="btn" id="dfBtnClearFlights"
+                    style="flex:1; font-size:12px; color:var(--danger);">
+              Clear flights
+            </button>
+          </div>
         </div>
+      </div>
+      <div style="padding:10px 16px 0;">
+        ${_renderViewToggle()}
       </div>`;
   }
 
@@ -295,19 +320,53 @@
   // follows the event (mode "fixed", set from the Event Roster, causing
   // game_players' Define Flights button to hide) or is fully independent
   // (mode "none"), same as Manage Teams.
-  function _renderModeToggle() {
+  //
+  // Framed as a yes/no question ("Apply to all rounds?") rather than an
+  // EVENT/ROUND ownership choice — the control only ever renders on the
+  // Event Roster page, so asking the admin to pick between "Event" and
+  // "Round" as if choosing a location is circular (they're already on the
+  // event). What's actually being decided is a consequence, not a location:
+  // does this configuration apply everywhere, or does each round set its
+  // own. The hint line beneath states that consequence explicitly so the
+  // control never depends on the admin inferring it from the label alone.
+  // Uses is-active-accent (brandColor3 blue) instead of the standard tan
+  // is-active — this is a binary decision with real cascading consequences,
+  // not a passive display filter like the view toggle below it.
+  function _renderApplyToggle() {
     if (!_opts.showModeToggle) return "";
-    const eventActive = (_mode === "fixed");
-    const roundActive = !eventActive;
+    const yesActive = (_mode === "fixed");
     return `
-      <div style="margin-top:10px; display:flex; align-items:center; gap:10px;">
-        <span style="font-size:12px; font-weight:700; color:var(--mutedText); white-space:nowrap;">Flights Managed by</span>
-        <div class="maSeg" id="dfModeToggle" style="width:auto; flex:0 0 auto;" role="group" aria-label="Flight management level">
-          <button type="button" class="maSegBtn${eventActive ? " btnSecondary" : ""}"
-                  data-mode="fixed" aria-pressed="${eventActive}">EVENT</button>
-          <button type="button" class="maSegBtn${roundActive ? " btnSecondary" : ""}"
-                  data-mode="none" aria-pressed="${roundActive}">ROUND</button>
+      <div>
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <span style="font-size:12px; font-weight:700; color:var(--mutedText); white-space:nowrap;">Apply to all rounds?</span>
+          <div class="maSeg" id="dfModeToggle" style="width:auto; flex:0 0 auto;" role="group" aria-label="Apply this flight configuration to all rounds">
+            <button type="button" class="maSegBtn${yesActive ? " is-active-accent" : ""}"
+                    data-mode="fixed" aria-pressed="${yesActive}">Yes</button>
+            <button type="button" class="maSegBtn${!yesActive ? " is-active-accent" : ""}"
+                    data-mode="none" aria-pressed="${!yesActive}">No</button>
+          </div>
         </div>
+        <div class="maHintText" id="dfModeHint">${esc(_applyHintText())}</div>
+      </div>`;
+  }
+
+  function _applyHintText() {
+    return (_mode === "fixed")
+      ? "This flight configuration will apply to every round in this event."
+      : "Each round can set its own flight configuration.";
+  }
+
+  // Roster display preference — flat list vs grouped-by-flight. Independent
+  // of _mode: available in both Event Roster and round usage, since it's
+  // just how the (already-loaded) roster is presented, not a config edit.
+  function _renderViewToggle() {
+    const playerActive = (_viewMode === "player");
+    return `
+      <div class="maSeg" id="dfViewToggle" role="group" aria-label="Roster view">
+        <button type="button" class="maSegBtn${playerActive ? " is-active" : ""}"
+                data-view="player" aria-pressed="${playerActive}">By player</button>
+        <button type="button" class="maSegBtn${!playerActive ? " is-active" : ""}"
+                data-view="flight" aria-pressed="${!playerActive}">By flight</button>
       </div>`;
   }
 
@@ -343,7 +402,25 @@
   function _renderRosterRows() {
     const players = sortedPlayers();
     if (!players.length) return `<div class="maEmptyState">No players on this roster.</div>`;
+    if (_viewMode === "flight") return _renderRosterRowsByFlight(players);
     return players.map(_renderPlayerRow).join("");
+  }
+
+  // Same chip strip under each row as the flat view — a player sitting in
+  // the "Flight 1" section can still tap "Flight 2" to move themselves,
+  // without leaving the grouped view. Reuses .maListRow__group--none, the
+  // same neutral section-divider class event_roster.js already uses for
+  // Team grouping — flights have no color of their own (see header note).
+  function _renderRosterRowsByFlight(players) {
+    return _flights.map(f => {
+      const group = players.filter(p => p.flight === f.id);
+      const count = group.length;
+      const header = `<div class="maListRow__group maListRow__group--none">${esc(f.name)} &middot; ${count} player${count !== 1 ? "s" : ""}</div>`;
+      const rows = count
+        ? group.map(_renderPlayerRow).join("")
+        : `<div class="maEmptyState" style="padding:10px 16px;">No players in this flight.</div>`;
+      return header + rows;
+    }).join("");
   }
 
   function _renderPlayerRow(p) {
@@ -415,7 +492,15 @@
       _refreshModeToggle();
     });
 
-    overlay.querySelector("#dfBtnResetFlights")?.addEventListener("click", _confirmResetFlights);
+    overlay.querySelector("#dfViewToggle")?.addEventListener("click", e => {
+      const seg = e.target.closest("[data-view]");
+      if (!seg || seg.dataset.view === _viewMode) return;
+      _viewMode = seg.dataset.view;
+      _refreshConfigStrip(); // updates the toggle's own active pill
+      _refreshRoster();      // reflows flat <-> grouped
+    });
+
+    overlay.querySelector("#dfBtnClearFlights")?.addEventListener("click", _confirmClearFlights);
 
     overlay.querySelector("#dfRoster")?.addEventListener("click", e => {
       const chip = e.target.closest("[data-assign-flight][data-ghin]");
@@ -423,7 +508,10 @@
       const player = _players.find(p => p.ghin === chip.dataset.ghin);
       if (!player || player.flight === chip.dataset.assignFlight) return;
       player.flight = chip.dataset.assignFlight;
-      _refreshPlayerRow(player.ghin);
+      // Grouped view: reassignment moves the row to a different section,
+      // so the whole roster needs to reflow, not just the one row.
+      if (_viewMode === "flight") _refreshRoster();
+      else _refreshPlayerRow(player.ghin);
       _refreshFlightCounts();
       _refreshSubtitle();
     });
@@ -471,16 +559,20 @@
   // guard above would even let the extra flights go. Staged locally like
   // every other edit here (rename, add, remove, assign) — takes effect on
   // the next Apply, not immediately, consistent with the rest of this module.
-  function _confirmResetFlights() {
-    if (_flights.length === MIN_FLIGHTS) return; // already a single flight — nothing to collapse
+  //
+  // Named "Clear", not "Reset" — this collapses every player into one
+  // flight permanently; there's no prior/default state it's reverting to,
+  // so "reset" would overstate an undo-ability that doesn't exist.
+  function _confirmClearFlights() {
+    if (_flights.length === MIN_FLIGHTS) return; // already a single flight — nothing to clear
     if (!window.confirm(
-      `This will move all ${_players.length} player${_players.length !== 1 ? "s" : ""} into a single flight. ` +
+      `This will clear all flights and move all ${_players.length} player${_players.length !== 1 ? "s" : ""} into one flight. ` +
       `This won't take effect until you click Apply.`
     )) return;
-    _resetFlights();
+    _clearFlights();
   }
 
-  function _resetFlights() {
+  function _clearFlights() {
     _flights = [{ id: "F1", name: "Flight 1", sort: 1 }];
     _players.forEach(p => { p.flight = "F1"; });
     _refreshConfigStrip();
@@ -503,9 +595,11 @@
     if (!wrap) return;
     wrap.querySelectorAll("[data-mode]").forEach(seg => {
       const on = (seg.dataset.mode === _mode);
-      seg.classList.toggle("btnSecondary", on);
+      seg.classList.toggle("is-active-accent", on);
       seg.setAttribute("aria-pressed", String(on));
     });
+    const hint = document.getElementById("dfModeHint");
+    if (hint) hint.textContent = _applyHintText();
   }
 
   function _refreshPlayerRow(ghin) {
