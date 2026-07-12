@@ -393,7 +393,7 @@
                  data-flight-id="${esc(f.id)}"
                  value="${esc(f.name)}"
                  maxlength="32"
-                 style="flex:0 0 140px; height:32px; font-size:13px !important; padding:0 8px;"
+                 style="flex:1; min-width:80px; height:32px; font-size:13px !important; padding:0 8px;"
                  aria-label="${esc(f.name)} flight name">
           <button type="button" class="iconBtn btnSecondary" data-remove-flight="${esc(f.id)}"
                   ${canRemove ? "" : "disabled"} aria-label="Remove ${esc(f.name)}">
