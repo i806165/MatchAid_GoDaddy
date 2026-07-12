@@ -520,14 +520,17 @@
     try {
       MA.setStatus('Updating tee box…', 'info');
 
-      // Deliberately sending ONLY ghin — no name/gender. This app has no
-      // first-name concept to send correctly (see the long trail of
-      // conversation that led here), and workflow_ProcessPlayers.php now
-      // re-resolves first/last/gender from GHIN's own live profile for
-      // whatever GHIN is passed, so there is nothing else this call
-      // needs to supply for identity to stay correct.
+      // Sending ghin + gender — NOT first_name/last_name. gender is a
+      // real, directly-stored field (dbPlayers_Gender, already on this
+      // player's normalized row), so there's no reason to withhold it —
+      // matches how Player Home calls this same endpoint. first/last
+      // name are different: this app has no first-name concept at all
+      // (only Full Name + Last Name), so those are correctly left out —
+      // workflow_ProcessPlayers.php resolves them (and re-resolves
+      // gender, taking priority over what's sent here) from a live GHIN
+      // profile fetch instead.
       const res = await MA.postJson(apiUrls.upsertGamePlayers, {
-        player: { ghin: player.ghin },
+        player: { ghin: player.ghin, gender: player.gender },
         selectedTee,
       });
 
