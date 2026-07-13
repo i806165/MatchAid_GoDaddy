@@ -353,7 +353,7 @@ function renderGroup(group) {
   // 7. Page Actions / Print
   // ==========================================================================
 
-  async function downloadPointScorecards() {
+  async function downloadPointScorecards(layout) {
     const endpoint = String(paths.excelPointScorecards || "").trim();
 
     if (!endpoint) {
@@ -361,10 +361,12 @@ function renderGroup(group) {
       return;
     }
 
+    const url = endpoint + (endpoint.includes("?") ? "&" : "?") + "layout=" + encodeURIComponent(layout);
+
     try {
       setStatus("Creating Excel point scorecards…", "info");
 
-      const response = await fetch(endpoint, {
+      const response = await fetch(url, {
         method: "GET",
         credentials: "same-origin",
         cache: "no-store"
@@ -390,24 +392,34 @@ function renderGroup(group) {
         throw new Error("The server did not return an Excel workbook.");
       }
 
+      const resolvedLayout = response.headers.get("x-ma-point-scorecard-layout") || layout;
+      const layoutSwitched = response.headers.get("x-ma-point-scorecard-layout-switched") === "1";
+
       const blob = await response.blob();
       const disposition = response.headers.get("content-disposition") || "";
       const match = disposition.match(/filename="?([^"]+)"?/i);
       const ggid = String(game.dbGames_GGID || game.dbGames_GGIDnum || "game");
-      const filename = match?.[1] ? match[1] : `MatchAid_PointScorecards_${ggid}.xlsx`;
+      const filename = match?.[1] ? match[1] : `MatchAid_PointScorecards_${ggid}_${resolvedLayout}.xlsx`;
 
-      const url = URL.createObjectURL(blob);
+      const blobUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = url;
+      link.href = blobUrl;
       link.download = filename;
 
       document.body.appendChild(link);
       link.click();
       link.remove();
 
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
 
-      setStatus("Excel point scorecards downloaded.", "success");
+      if (layoutSwitched) {
+        setStatus(
+          "This game isn't a full 18 holes, so 3x6 segments aren't available — downloaded the 2x9 scorecards instead.",
+          "warn"
+        );
+      } else {
+        setStatus("Excel point scorecards downloaded.", "success");
+      }
 
     } catch (error) {
       console.error("[MA][POINT_SCORECARD_EXPORT]", error);
@@ -422,7 +434,8 @@ function renderGroup(group) {
     }
 
     const items = [
-      { label: "Download Point Scorecards (.xlsx)", action: downloadPointScorecards }
+      { label: "Download Point Scorecards (2x9)", action: () => downloadPointScorecards("2x9") },
+      { label: "Download Point Scorecards (3x6)", action: () => downloadPointScorecards("3x6") }
     ];
 
     MA.ui.openActionsMenu("Actions", items);

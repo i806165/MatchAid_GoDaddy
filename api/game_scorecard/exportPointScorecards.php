@@ -246,19 +246,20 @@ function maPopulateTablePlayers(
     }
 }
 
-function maPopulateHoleHeadings(Spreadsheet $spreadsheet, Worksheet $sheet, string $tablePrefix, int $startHole): void
+function maPopulateHoleHeadings(Spreadsheet $spreadsheet, Worksheet $sheet, string $tablePrefix, int $startHole, int $holeCount = 9): void
 {
-    for ($i = 0; $i < 9; $i++) {
+    for ($i = 0; $i < $holeCount; $i++) {
         $col = str_pad((string)($i + 1), 2, '0', STR_PAD_LEFT);
         maSetLocalNamedValue($spreadsheet, $sheet, "{$tablePrefix}_Hole{$col}", $startHole + $i);
     }
 }
 
 // ==========================================================================
-// Group Sheet Population
+// Group Sheet Population — 2x9 layout (holes 1-9 / 10-18, or a single
+// 9-hole table for F9/B9 games)
 // ==========================================================================
 
-function maPopulateGroupSheet(Spreadsheet $spreadsheet, Worksheet $sheet, array $game, array $group): void
+function maPopulateGroupSheet2x9(Spreadsheet $spreadsheet, Worksheet $sheet, array $game, array $group): void
 {
     // Existing scorecard order is preserved as-is; do not resort here.
     $groupPlayers = $group['players'] ?? [];
@@ -277,17 +278,50 @@ function maPopulateGroupSheet(Spreadsheet $spreadsheet, Worksheet $sheet, array 
 
     $holeMode = maResolveHoleMode($game);
 
-    maPopulateHoleHeadings($spreadsheet, $sheet, 'Table1', $holeMode === 'B9' ? 10 : 1);
+    maPopulateHoleHeadings($spreadsheet, $sheet, 'Table1', $holeMode === 'B9' ? 10 : 1, 9);
     maPopulateTablePlayers($spreadsheet, $sheet, 'Table1', $sourcePlayers, $game);
 
     if ($holeMode === 'ALL18') {
-        maPopulateHoleHeadings($spreadsheet, $sheet, 'Table2', 10);
+        maPopulateHoleHeadings($spreadsheet, $sheet, 'Table2', 10, 9);
         maPopulateTablePlayers($spreadsheet, $sheet, 'Table2', $sourcePlayers, $game);
     } else {
         // F9 / B9: Table 2's range covers its own hole-heading row too
         // (A13:Q22), so clearing it wipes the headings and the player rows
         // in a single pass.
         maClearAndHideLocalRange($spreadsheet, $sheet, 'Table2');
+    }
+}
+
+// ==========================================================================
+// Group Sheet Population — 3x6 layout (holes 1-6 / 7-12 / 13-18)
+//
+// Only valid for full 18-hole games. The caller (main endpoint flow below)
+// is responsible for falling back to the 2x9 layout for F9/B9 games before
+// this function is ever invoked — it assumes an 18-hole game unconditionally
+// and always populates all three tables.
+// ==========================================================================
+
+function maPopulateGroupSheet3x6(Spreadsheet $spreadsheet, Worksheet $sheet, array $game, array $group): void
+{
+    $groupPlayers = $group['players'] ?? [];
+    $sourcePlayers = array_values(array_filter(
+        is_array($groupPlayers) ? $groupPlayers : [],
+        'is_array'
+    ));
+
+    $firstPlayer = $sourcePlayers[0] ?? [];
+    maSetLocalNamedValue(
+        $spreadsheet,
+        $sheet,
+        'Group_PlayerKey',
+        $firstPlayer['dbPlayers_PlayerKey'] ?? ''
+    );
+
+    $segments = ['Table1' => 1, 'Table2' => 7, 'Table3' => 13];
+
+    foreach ($segments as $tablePrefix => $startHole) {
+        maPopulateHoleHeadings($spreadsheet, $sheet, $tablePrefix, $startHole, 6);
+        maPopulateTablePlayers($spreadsheet, $sheet, $tablePrefix, $sourcePlayers, $game);
     }
 }
 
@@ -317,9 +351,34 @@ try {
         throw new RuntimeException('No scorecard groups are available for this game.');
     }
 
-    $templatePath = MA_EXCEL_TEMPLATES . '/MatchAid_PointScoring_Template.xlsx';
+    // --------------------------------------------------------------------
+    // Layout selection. The person chooses 2x9 or 3x6 from the Actions
+    // menu; 3x6 only makes sense for a full 18-hole game (three 6-hole
+    // segments = 18 holes), so an F9/B9 game silently falls back to 2x9.
+    // The frontend is told about the fallback via a response header so it
+    // can surface a status message rather than the download just quietly
+    // not being what the person asked for.
+    // --------------------------------------------------------------------
+    $requestedLayout = strtolower(trim((string)($_GET['layout'] ?? '2x9')));
+    if (!in_array($requestedLayout, ['2x9', '3x6'], true)) {
+        throw new RuntimeException("Unsupported point scorecard layout: {$requestedLayout}");
+    }
+
+    $layout = $requestedLayout;
+    $layoutSwitchedFrom3x6 = false;
+
+    if ($layout === '3x6' && maResolveHoleMode($game) !== 'ALL18') {
+        $layout = '2x9';
+        $layoutSwitchedFrom3x6 = true;
+    }
+
+    $templateFile = $layout === '3x6'
+        ? 'MatchAid_PointScoring_3x6_Template.xlsx'
+        : 'MatchAid_PointScoring_2x9_Template.xlsx';
+
+    $templatePath = MA_EXCEL_TEMPLATES . '/' . $templateFile;
     if (!is_file($templatePath)) {
-        throw new RuntimeException('Point scorecard template was not found.');
+        throw new RuntimeException("Point scorecard template was not found: {$templateFile}");
     }
 
     if (!class_exists(IOFactory::class)) {
@@ -342,14 +401,19 @@ try {
         $spreadsheet->addSheet($groupSheet);
 
         maCloneLocalNames($spreadsheet, $templateSheet, $groupSheet);
-        maPopulateGroupSheet($spreadsheet, $groupSheet, $game, is_array($group) ? $group : []);
+
+        if ($layout === '3x6') {
+            maPopulateGroupSheet3x6($spreadsheet, $groupSheet, $game, is_array($group) ? $group : []);
+        } else {
+            maPopulateGroupSheet2x9($spreadsheet, $groupSheet, $game, is_array($group) ? $group : []);
+        }
     }
 
     $spreadsheet->removeSheetByIndex($spreadsheet->getIndex($templateSheet));
     $spreadsheet->setActiveSheetIndex(0);
 
     $safeGgid = preg_replace('/[^0-9A-Za-z_-]/', '', (string)$ggid) ?: 'game';
-    $filename = "MatchAid_PointScorecards_{$safeGgid}.xlsx";
+    $filename = "MatchAid_PointScorecards_{$safeGgid}_{$layout}.xlsx";
 
     while (ob_get_level() > 0) {
         ob_end_clean();
@@ -360,6 +424,8 @@ try {
     header('Cache-Control: no-store, no-cache, must-revalidate');
     header('Pragma: no-cache');
     header('Expires: 0');
+    header('X-MA-Point-Scorecard-Layout: ' . $layout);
+    header('X-MA-Point-Scorecard-Layout-Switched: ' . ($layoutSwitchedFrom3x6 ? '1' : '0'));
 
     $writer = new Xlsx($spreadsheet);
     $writer->save('php://output');
