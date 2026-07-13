@@ -10,6 +10,11 @@ declare(strict_types=1);
 
 // Absolute filesystem path to /public_html
 define('MA_ROOT', realpath(__DIR__));
+define('MA_VENDOR', MA_ROOT . '/vendor');
+$composerAutoload = MA_VENDOR . '/autoload.php';
+if (is_file($composerAutoload)) {
+    require_once $composerAutoload;
+}
 
 // Key directories
 define('MA_API',       MA_ROOT . '/api');
@@ -21,6 +26,8 @@ define('MA_SVC_DB',    MA_SERVICES . '/database');
 define('MA_SVC_GHIN',  MA_SERVICES . '/GHIN');
 define('MA_APP',       MA_ROOT . '/app');
 define('MA_INCLUDES',  MA_ROOT . '/includes');
+define('MA_TEMPLATES', MA_ROOT . '/templates');
+define('MA_EXCEL_TEMPLATES', MA_TEMPLATES . '/excel');
 
 // Help system
 define('MA_HELP_INCLUDES', MA_INCLUDES . '/help');
@@ -69,6 +76,10 @@ define('MA_ROUTE_API_EXTERNAL', '/api/external');
 define("MA_ROUTE_CLUB_MARKETING", "/app/home/clubmarketing.php");
 define('MA_ROUTE_EVENT_MAINT', '/app/event_maintenance/eventmaint.php');
 define('MA_ROUTE_API_EVENT_MAINT', '/api/event_maintenance');
+define(
+    'MA_ROUTE_API_POINT_SCORECARD_EXPORT',
+    '/api/game_scorecard/exportPointScorecards.php'
+);
 
 function ma_asset(string $relativePath): string {
     $full = MA_ROOT . $relativePath;
