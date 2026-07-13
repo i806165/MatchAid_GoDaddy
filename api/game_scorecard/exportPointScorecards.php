@@ -271,8 +271,8 @@ function maPopulateGroupSheet(Spreadsheet $spreadsheet, Worksheet $sheet, array 
     maSetLocalNamedValue(
         $spreadsheet,
         $sheet,
-        'Group_PairingID',
-        $firstPlayer['dbPlayers_PairingID'] ?? ''
+        'Group_PlayerKey',
+        $firstPlayer['dbPlayers_PlayerKey'] ?? ''
     );
 
     $holeMode = maResolveHoleMode($game);
