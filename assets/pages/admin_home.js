@@ -433,7 +433,7 @@ async function handleEventAction(args) {
     editEvent: "eventedit",
     eventRoster: "eventroster",
     eventGames: "eventrounds",
-    eventScoring: "eventscoring"
+    eventScoring: "eventsummary"
   };
 
   const route = routeMap[action];
