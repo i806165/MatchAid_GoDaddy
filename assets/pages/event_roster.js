@@ -494,10 +494,13 @@
       ]
     };
 
-    // Mirrors teamConfig's sourcing above — assumes the page controller
-    // hydrates __MA_INIT__.teamMode from dbEvents_TeamMode the same way
-    // it already hydrates __MA_INIT__.teamConfig from dbEvents_TeamConfig.
-    const teamMode = (window.__MA_INIT__ || {}).teamMode || "none";
+    // Read directly off state.event, same pattern as onDefineFlights and
+    // onDefineHandicapSettings use — NOT a separate __MA_INIT__.teamMode
+    // field. That field was never actually hydrated by eventroster.php's
+    // initPayload (only teamConfig is), so reading it always silently
+    // fell back to "none" regardless of the real saved dbEvents_TeamMode —
+    // this is the fix for that bug.
+    const teamMode = state.event?.dbEvents_TeamMode || "none";
 
     // Build a players-shaped array from roster for MA.manageTeams
     // manageTeams expects dbPlayers_* keys — map from dbEventPlayers_*
@@ -530,7 +533,6 @@
         }
         if (window.__MA_INIT__) {
           window.__MA_INIT__.teamConfig = newConfig;
-          window.__MA_INIT__.teamMode   = newMode || "none";
         }
         if (state.event) state.event.dbEvents_TeamMode = newMode || "none";
         renderRoster();
