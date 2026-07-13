@@ -828,7 +828,7 @@
   function lbFlightCollapseToggleBtn(flightKey) {
     const collapsed = state.collapsedFlights.has(flightKey);
     return `
-      <button class="iconBtn btnSecondary lbFlightCollapseBtn" type="button" data-lb-flight-toggle="${esc(flightKey)}"
+      <button class="iconBtn btnSecondary" type="button" data-lb-flight-toggle="${esc(flightKey)}"
         aria-label="${collapsed ? 'Expand' : 'Collapse'} flight" title="${collapsed ? 'Expand' : 'Collapse'} flight">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
           <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -837,11 +837,17 @@
       </button>`;
   }
 
+  // .maListRow__group — existing shared class (ma_shared.css, "Group divider
+  // label"), documented as built for exactly this case ("flight groups in
+  // pairings"). Using it instead of a bespoke class gets correct typography/
+  // token inheritance for free, and — unlike .maListRow--static, which the
+  // plain data rows use — carries no pointer-events:none, so the collapse
+  // button inside it stays clickable.
   function lbFlightHeaderRow(group) {
     return `
-      <div class="maListRow maListRow--static lbFlightRow">
+      <div class="maListRow__group lbFlightGroup">
         ${lbFlightCollapseToggleBtn(group.flightKey)}
-        <span class="lbFlightRow__name">${esc(group.flightName)}</span>
+        <span>${esc(group.flightName)}</span>
       </div>
     `;
   }
