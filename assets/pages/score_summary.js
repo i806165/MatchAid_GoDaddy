@@ -1138,7 +1138,7 @@
   }
 
   function lbRenderPairFieldTeamRows() {
-    if (!teamRollup.length) return `<div class="maEmptyState">No team config set for this game.</div>`;
+    if (!teamRollup.length) return `<div class="maEmptyState">Teams have not been defined for this game.</div>`;
 
     const header = `
       <div class="maListRow maListRow--static lbHeaderRow">
@@ -1429,4 +1429,4 @@
   } else {
     initialize();
   }
-})();
+})();
