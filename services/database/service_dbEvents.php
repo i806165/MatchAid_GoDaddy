@@ -9,6 +9,17 @@ require_once MA_API_LIB . "/Logger.php";
 
 final class ServiceDbEvents
 {
+  // Independent copy — same name/value as the constants of the same
+  // purpose in module_defineEventKPI.js and
+  // ServiceBuildEventSummary::EVENT_PLACEMENT_DEFAULTS, kept in sync by
+  // convention (grep EVENT_PLACEMENT_DEFAULTS to find all three), not by
+  // a shared require. This copy is the one that actually matters —
+  // it's the value written into dbEvents_KPIConfig at event creation and
+  // on a mode-transition sync; the other two are UI seeding and a
+  // same-class crash guard respectively, not sources of truth.
+  private const EVENT_PLACEMENT_DEFAULTS = ["1" => 100, "2" => 75, "3" => 50];
+  private const DEFAULT_TIE_RULE = "split";
+
   /**
    * Query events for Events Home.
    *
@@ -115,6 +126,8 @@ final class ServiceDbEvents
    */
   public static function updateEvent(int $eid, array $fields): bool
   {
+    self::syncKPIConfigForModeChange($eid, $fields);
+
     $pdo = Db::pdo();
     $sets = [];
     $params = [":eid" => $eid];
@@ -246,6 +259,114 @@ final class ServiceDbEvents
     if (empty($e["dbEvents_HandicapMode"])) {
       $e["dbEvents_HandicapMode"] = "none";
     }
+
+    // KPIConfig — always hydrated, never left null/empty, mirroring
+    // ServiceDbGames' own applyDefaultsForAdd() philosophy for
+    // dbGames_PlacementPoints. Unlike games, not every category is
+    // unconditionally in scope for an event: Individual Gross/Net apply
+    // to every event regardless of configuration, so they seed
+    // "default". Pairing/Team are only ever meaningful once their
+    // respective mode is "fixed" — which a brand-new event never is —
+    // so they seed "disabled" rather than falsely implying they're
+    // already valid. See ServiceBuildEventSummary::parseEventKPIConfig()
+    // for the four keys this must match exactly.
+    if (empty($e["dbEvents_KPIConfig"])) {
+      $e["dbEvents_KPIConfig"] = json_encode(self::seedKPIConfig());
+    }
+  }
+
+  /**
+   * Default dbEvents_KPIConfig shape — all four categories always
+   * present and fully populated (pointsConfig/tieRule), only "state"
+   * ever differs. Individual Gross/Net seed "default" since they're
+   * always in scope; Pairing/Team seed "disabled" since they depend on
+   * dbEvents_PairingMode/TeamMode being "fixed", which a new event
+   * never starts as. Values are this class's own EVENT_PLACEMENT_DEFAULTS
+   * — this is the one place that actually establishes the default.
+   */
+  private static function seedKPIConfig(): array
+  {
+    $table = self::EVENT_PLACEMENT_DEFAULTS;
+    $tie   = self::DEFAULT_TIE_RULE;
+
+    return [
+      "grossPlacement"   => ["state" => "default",  "pointsConfig" => $table, "tieRule" => $tie],
+      "netPlacement"     => ["state" => "default",  "pointsConfig" => $table, "tieRule" => $tie],
+      "pairingPlacement" => ["state" => "disabled", "pointsConfig" => $table, "tieRule" => $tie],
+      "teamPlacement"    => ["state" => "disabled", "pointsConfig" => $table, "tieRule" => $tie],
+    ];
+  }
+
+  /**
+   * Forces pairingPlacement/teamPlacement's KPIConfig state to track
+   * dbEvents_PairingMode/TeamMode whenever updateEvent() is asked to
+   * change one of those mode columns — regardless of which caller
+   * triggered it (saveEventRosterPairings.php, saveTeamConfig.php, or
+   * saveEvent.php's own edit path all converge on updateEvent(), which
+   * is why the sync lives here rather than in any one of them).
+   *
+   * Mode -> "fixed": category state -> "default" (now in scope, not yet
+   * consciously confirmed by an admin in the KPI modal).
+   * Mode -> "none"/anything else: category state -> "disabled" (out of
+   * scope). pointsConfig/tieRule are NEVER cleared or reset here — an
+   * admin's prior configuration survives a mode toggle untouched, only
+   * "state" moves. If the mode key is present in $fields but its value
+   * is unchanged from what's already stored, this is a no-op — a full
+   * merged-row save (e.g. from saveEvent.php's edit path, which always
+   * carries every dbEvents_* column) must not re-force state on every
+   * unrelated save.
+   */
+  private static function syncKPIConfigForModeChange(int $eid, array &$fields): void
+  {
+    $touchesPairing = array_key_exists("dbEvents_PairingMode", $fields);
+    $touchesTeam    = array_key_exists("dbEvents_TeamMode", $fields);
+    if (!$touchesPairing && !$touchesTeam) return;
+
+    $existing = self::getEventByEID($eid);
+    if (!$existing) return;
+
+    $transitions = [];
+
+    if ($touchesPairing) {
+      $old = trim((string)($existing["dbEvents_PairingMode"] ?? ""));
+      $new = trim((string)($fields["dbEvents_PairingMode"] ?? ""));
+      if ($old !== $new) $transitions["pairingPlacement"] = ($new === "fixed");
+    }
+    if ($touchesTeam) {
+      $old = trim((string)($existing["dbEvents_TeamMode"] ?? ""));
+      $new = trim((string)($fields["dbEvents_TeamMode"] ?? ""));
+      if ($old !== $new) $transitions["teamPlacement"] = ($new === "fixed");
+    }
+
+    if (!$transitions) return;
+
+    // Source the current config from whatever's already being written
+    // in this same call (a caller could theoretically bundle both), else
+    // fall back to what's stored — never invent a config that overwrites
+    // an admin's real saved data.
+    $raw = $fields["dbEvents_KPIConfig"] ?? $existing["dbEvents_KPIConfig"] ?? null;
+    $decoded = null;
+    if ($raw !== null && $raw !== "") {
+      $decoded = is_array($raw) ? $raw : json_decode((string)$raw, true);
+    }
+    if (!is_array($decoded)) {
+      $decoded = self::seedKPIConfig();
+    }
+
+    $table = self::EVENT_PLACEMENT_DEFAULTS;
+    $tie   = self::DEFAULT_TIE_RULE;
+
+    foreach ($transitions as $key => $isFixed) {
+      if (!isset($decoded[$key]) || !is_array($decoded[$key])) {
+        // Category never had a saved shape at all (legacy row predating
+        // this seeding) — hydrate it now rather than writing a bare
+        // state with no pointsConfig/tieRule alongside it.
+        $decoded[$key] = ["pointsConfig" => $table, "tieRule" => $tie];
+      }
+      $decoded[$key]["state"] = $isFixed ? "default" : "disabled";
+    }
+
+    $fields["dbEvents_KPIConfig"] = json_encode($decoded);
   }
 
   /**

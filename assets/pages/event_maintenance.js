@@ -52,11 +52,17 @@
     mode: String(init.mode || "edit"),
     eid: init.eid || null,
     event: init.event || {},
-    kpiCatalog: init.kpiCatalog || {},
     kpiConfig: null,   // parsed JSON object — set from event record or module onApply
     dirty: false,
     busy: false
   };
+
+  // Label lookup now comes from the KPI module's own hardcoded catalog
+  // (kpi_catalog.php is retired) rather than a page-level payload —
+  // falls back to the raw key if the module hasn't loaded yet.
+  function kpiLabel(key) {
+    return MA.defineEventKPI?.catalog?.[key]?.label || key;
+  }
 
   function setDirty(on) {
     state.dirty = !!on;
@@ -175,9 +181,13 @@
       if (el.kpiCountLabel) el.kpiCountLabel.textContent = "";
       return;
     }
+    // v?.state is "default"|"active"|"disabled" — only an explicit
+    // "disabled" means off, matching the module's own checkbox
+    // convention. (Previously checked a nonexistent boolean v?.active,
+    // which was always undefined — this hint never showed a count.)
     const active = Object.entries(state.kpiConfig)
-      .filter(([, v]) => v?.active)
-      .map(([k]) => (state.kpiCatalog[k]?.label || k));
+      .filter(([, v]) => v?.state !== "disabled")
+      .map(([k]) => kpiLabel(k));
     const count = active.length;
     if (el.kpiCountLabel) el.kpiCountLabel.textContent = count ? `${count} active` : "";
     if (el.kpiHint)       el.kpiHint.textContent = count
@@ -404,11 +414,16 @@
           setStatus("Event KPI module not loaded.", "warn");
           return;
         }
-        const hasTeams = !!(state.event?.dbEvents_TeamConfig);
+        // pairingFixed/teamFixed drive the module's Pairing/Team lock
+        // state — previously this passed an unused `hasTeams` flag the
+        // module never read, so those rows rendered permanently locked
+        // regardless of the event's actual mode.
+        const pairingFixed = String(state.event?.dbEvents_PairingMode || "") === "fixed";
+        const teamFixed     = String(state.event?.dbEvents_TeamMode || "")    === "fixed";
         MA.defineEventKPI.open({
-          kpiCatalog: state.kpiCatalog,
-          kpiConfig:  state.kpiConfig,
-          hasTeams,
+          kpiConfig: state.kpiConfig,
+          pairingFixed,
+          teamFixed,
           onApply(jsonStr) {
             try {
               state.kpiConfig = JSON.parse(jsonStr);

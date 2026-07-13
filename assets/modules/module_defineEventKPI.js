@@ -1,55 +1,71 @@
 /* /assets/modules/module_defineEventKPI.js
  * MA.defineEventKPI — Event KPI selection overlay module.
  *
- * Opens as a full-screen modal. Renders the KPI catalog as a checklist.
- * Placement KPIs show an inline points table editor with expand/collapse.
+ * Opens as a full-screen modal. Renders a fixed, hardcoded KPI catalog
+ * (CATALOG below) as a checklist — kpi_catalog.php is retired; this
+ * module is now the sole source of truth for the catalog, the same way
+ * module_definePlacementPoints.js owns its own CATEGORY_DEFS rather than
+ * reading them from a server-side include. eventmaint.php no longer
+ * loads or passes a kpiCatalog payload.
  *
- * KPIs gated by cascade mode (Pairing/Team placement points, currently the
- * only lockedUnless-bearing entries) are always VISIBLE, never hidden —
- * shown greyed with a lock icon and a plain-language reason when their
- * mode isn't "fixed" yet. This deliberately does not match the old
- * requiresTeam/hasTeams hide behavior; see harmonization discussion this
- * replaces. A locked entry's checkbox is inert (no toggle), and its state
- * is never touched by collectState() while locked — round-tripped exactly
- * as it came in, same "untouched if not shown/editable this session"
- * mechanism module_definePlacementPoints.js already uses for the other
- * competition type's Pairing category.
+ * Every points-bearing (hasConfig: true) row shows its points table and
+ * tie-rule select inline, always, whenever it's checked and unlocked —
+ * no expand/collapse, no collapsed-state summary line. All four
+ * placement categories (Individual Gross, Individual Net, Pairing, Team)
+ * use the identical renderPointsEditor() structure; only the wrapper
+ * (label, description, lock state) differs between them.
+ *
+ * Two independent lock mechanisms, both rendered the same way (greyed
+ * row, lock icon, reason text in place of the description, no points
+ * table, checkbox inert):
+ *   - lockedUnless: "pairingFixed" | "teamFixed" — gated on the live
+ *     event's cascade mode, passed in via config. Resolves to unlocked
+ *     once that mode is "fixed".
+ *   - comingSoon: true — permanent, never resolves to unlocked. For
+ *     catalog entries with no algorithm in ServiceEventSummary yet
+ *     (Ringer/eclectic, Hole champions).
+ * A locked entry's state is never touched by collectState() — round-
+ * tripped exactly as it came in, so an admin's prior configuration on a
+ * category survives it being temporarily out of scope (see
+ * ServiceDbEvents::syncKPIConfigForModeChange() on the PHP side, which
+ * flips state between "default"/"disabled" on a mode transition but
+ * never clears pointsConfig/tieRule).
  *
  * dbEvents_KPIConfig shape (harmonized with dbGames_PlacementPoints'
  * category vocabulary — same field name, same three-value enum):
  *   {
- *     "<kpiKey>": {
- *       "state": "default" | "active" | "disabled",
- *       "pointsConfig": {"1":100, "2":75, ...},   // only when catalog.hasConfig
- *       "tieRule": "split" | "high" | "low"        // only when catalog.hasConfig
- *     },
- *     ...
+ *     "grossPlacement":   { "state": "default"|"active"|"disabled", "pointsConfig": {...}, "tieRule": "split"|"high"|"low" },
+ *     "netPlacement":     { ... },
+ *     "pairingPlacement": { ... },
+ *     "teamPlacement":    { ... },
+ *     "RINGER":           { "state": ... },   // no pointsConfig/tieRule — hasConfig: false
+ *     "HOLE_CHAMPIONS":   { "state": ... }
  *   }
- * Every catalog key is always present. pointsConfig/tieRule, once a key has
- * hasConfig, are ALWAYS present too — never stripped by an uncheck. "default"
- * means never consciously touched (still whatever kpi_catalog.php seeded);
- * checking sets "active", unchecking sets "disabled"; a key never reverts to
- * "default" once touched. No top-level wrapper key — unlike
- * dbGames_PlacementPoints' {top, categories} envelope, this is a flat map;
- * that asymmetry between the two columns is intentional, not an oversight.
+ * These four placement keys are exactly what
+ * ServiceBuildEventSummary::parseEventKPIConfig() reads — the vocabulary
+ * must match verbatim or a saved category silently falls back to that
+ * service's own hardcoded default table. pointsConfig/tieRule, on any
+ * hasConfig key, are ALWAYS present — never stripped by an uncheck.
+ * "default" means never consciously touched via this modal's Save;
+ * checking sets "active", unchecking sets "disabled" — except on
+ * pairingPlacement/teamPlacement, whose state can ALSO be forced by a
+ * mode transition server-side (see ServiceDbEvents), independent of
+ * this modal ever having been opened. state is display-only — it never
+ * gates computation in ServiceBuildEventSummary. No top-level wrapper
+ * key — unlike dbGames_PlacementPoints' {top, categories} envelope,
+ * this is a flat map.
  *
  * Usage:
  *   MA.defineEventKPI.open({
- *     kpiCatalog:    { ... },  // from init.kpiCatalog (server-side kpi_catalog.php)
  *     kpiConfig:     { ... },  // current dbEvents_KPIConfig parsed JSON (or null)
  *     pairingFixed:  bool,     // dbEvents_PairingMode === "fixed"
  *     teamFixed:     bool,     // dbEvents_TeamMode === "fixed"
  *     onApply:       (json) => { ... }  // called with serialized JSON string on Save
  *   });
  *
- * Catalog contract this module expects from kpi_catalog.php going forward:
- * each entry may carry lockedUnless: null | "pairingFixed" | "teamFixed" —
- * generalizes the old boolean requiresTeam. kpi_catalog.php itself was not
- * available while writing this pass; this module reads lockedUnless if
- * present and degrades gracefully (never locked) if a catalog entry omits
- * it, but the catalog file itself still needs updating to actually emit it
- * for the Pairing/Team placement points entries — flagged as an open item,
- * not done here.
+ * MA.defineEventKPI.catalog is also exposed (read-only) so callers like
+ * event_maintenance.js can resolve a key to its label for hint text
+ * without needing their own copy of the catalog.
  */
 (function (global) {
   "use strict";
@@ -68,11 +84,81 @@
     if (typeof MA.setStatus === "function") MA.setStatus(msg, level || "info");
   }
 
+  function clone(v) { return JSON.parse(JSON.stringify(v)); }
+
+  // Independent copy — same name/value as the constants of the same
+  // purpose in ServiceDbEvents and
+  // ServiceBuildEventSummary::EVENT_PLACEMENT_DEFAULTS, kept in sync by
+  // convention (grep EVENT_PLACEMENT_DEFAULTS to find all three), not by
+  // any shared payload. This copy's only job is seeding a fresh, never-
+  // saved checkbox's form state below — it is NOT consulted by the
+  // server and has no bearing on what actually gets scored; ServiceDbEvents'
+  // own copy, written at event creation, is what matters there.
+  const EVENT_PLACEMENT_DEFAULTS = { "1": 100, "2": 75, "3": 50 };
+
+  // ── Catalog ──────────────────────────────────────────────────────────────────
+  // Replaces kpi_catalog.php. Section keys drive grouping/order in the
+  // modal only ("individual" | "event" | "special"); see SECTION_LABELS.
+  // lockedUnless names a boolean the caller passes into open() (see
+  // lockInfo()); comingSoon is a standing, caller-independent lock.
+  const CATALOG = {
+    grossPlacement: {
+      label: "Individual gross placement points",
+      section: "individual",
+      hasConfig: true,
+      sortOrder: 10,
+      lockedUnless: null,
+      description: "Ranks each player by gross score across all rounds. Lower is better.",
+    },
+    netPlacement: {
+      label: "Individual net placement points",
+      section: "individual",
+      hasConfig: true,
+      sortOrder: 20,
+      lockedUnless: null,
+      description: "Ranks each player by net score across all rounds. Lower is better.",
+    },
+    pairingPlacement: {
+      label: "Pairing placement points",
+      section: "event",
+      hasConfig: true,
+      sortOrder: 30,
+      lockedUnless: "pairingFixed",
+      description: "Ranks each pairing by total points across all rounds. Higher is better.",
+    },
+    teamPlacement: {
+      label: "Team placement points",
+      section: "event",
+      hasConfig: true,
+      sortOrder: 40,
+      lockedUnless: "teamFixed",
+      description: "Ranks each team by total points across all rounds. Higher is better.",
+    },
+    RINGER: {
+      label: "Ringer / eclectic",
+      section: "special",
+      hasConfig: false,
+      sortOrder: 50,
+      lockedUnless: null,
+      comingSoon: true,
+      description: "Each player's personal best score per hole across their own rounds.",
+    },
+    HOLE_CHAMPIONS: {
+      label: "Hole champions",
+      section: "special",
+      hasConfig: false,
+      sortOrder: 60,
+      lockedUnless: null,
+      comingSoon: true,
+      description: "Best score per hole across all players across all rounds. Same player cannot tie themselves.",
+    },
+  };
+
   // ── Singleton ────────────────────────────────────────────────────────────────
 
   let _overlay = null;
   let _config  = null;
-  let _state   = null;   // { kpiKey: { state, pointsConfig, tieRule, expanded, _locked, _lockReason } }
+  let _state   = null;   // { kpiKey: { state, pointsConfig, tieRule } } — lock status is derived on render via lockInfo(), not stored
 
   // ── Locking ──────────────────────────────────────────────────────────────────
 
@@ -81,16 +167,26 @@
   // means never locked. Unrecognized values degrade to "never locked"
   // rather than throwing, so an out-of-date catalog entry fails open, not
   // closed.
+  //
+  // def.comingSoon is a separate, permanent lock — unlike lockedUnless,
+  // it isn't gated on any event config and never resolves to unlocked.
+  // Checked first: a comingSoon entry stays locked regardless of what
+  // lockedUnless would otherwise say. Used for catalog entries whose
+  // algorithm doesn't exist in ServiceEventSummary yet — surfaced so
+  // admins know the capability is planned, but inert until implemented.
   function lockInfo(def) {
+    if (def.comingSoon) {
+      return { locked: true, reason: "Coming soon — not yet available." };
+    }
     if (def.lockedUnless === "pairingFixed") {
       return _config.pairingFixed
         ? { locked: false }
-        : { locked: true, reason: "Requires fixed pairing mode for this event." };
+        : { locked: true, reason: "Event-level pairings not enabled for this event." };
     }
     if (def.lockedUnless === "teamFixed") {
       return _config.teamFixed
         ? { locked: false }
-        : { locked: true, reason: "Requires fixed team mode for this event." };
+        : { locked: true, reason: "Event-level teams not enabled for this event." };
     }
     return { locked: false };
   }
@@ -98,12 +194,11 @@
   // ── State ────────────────────────────────────────────────────────────────────
 
   function initState(config) {
-    const catalog = config.kpiCatalog || {};
-    const saved   = config.kpiConfig  || {};
+    const saved = config.kpiConfig || {};
     _state = {};
 
-    Object.keys(catalog).forEach(key => {
-      const def         = catalog[key] || {};
+    Object.keys(CATALOG).forEach(key => {
+      const def         = CATALOG[key];
       const saved_entry = saved[key] || {};
       const state       = ["default", "active", "disabled"].includes(saved_entry.state)
         ? saved_entry.state
@@ -114,12 +209,8 @@
         // Always present once hasConfig, regardless of state — never
         // stripped on uncheck. Falls back to the catalog default table
         // only when this key has genuinely never been saved before.
-        pointsConfig: saved_entry.pointsConfig || { "1": 100, "2": 75, "3": 50, "4": 25, "5": 10 },
+        pointsConfig: saved_entry.pointsConfig || clone(EVENT_PLACEMENT_DEFAULTS),
         tieRule:      saved_entry.tieRule || "split",
-        // Checkbox reads on for "default" and "active" alike — only an
-        // explicit "disabled" renders unchecked, matching
-        // module_definePlacementPoints.js's _checked convention.
-        expanded:     state !== "disabled" && !!def.hasConfig,
       };
     });
   }
@@ -129,13 +220,15 @@
   // checkbox, and never reverts to "default" once touched. Locked keys are
   // round-tripped completely unmodified — same "untouched if not
   // editable this session" mechanism module_definePlacementPoints.js uses
-  // for a hidden competition type's Pairing category.
+  // for a hidden competition type's Pairing category. This is also how a
+  // pairingPlacement/teamPlacement category whose state was forced by a
+  // server-side mode transition (see ServiceDbEvents) survives a Save
+  // made while that category happens to still be locked in this session.
   function collectState() {
-    const catalog = _config.kpiCatalog || {};
     const out = {};
-    Object.keys(catalog).forEach(key => {
+    Object.keys(CATALOG).forEach(key => {
       const s   = _state[key] || {};
-      const def = catalog[key] || {};
+      const def = CATALOG[key];
 
       if (lockInfo(def).locked) {
         out[key] = { state: s.state, pointsConfig: s.pointsConfig, tieRule: s.tieRule };
@@ -152,41 +245,38 @@
     return out;
   }
 
+  // Locked rows (mode-gated or comingSoon) always render unchecked in the
+  // UI regardless of their stored state — see renderKPIRow()'s `checked`
+  // computation — so they're excluded here too; otherwise the footer
+  // count could read "6 active" while several checkboxes visibly show
+  // unchecked and greyed.
   function activeCount() {
-    return Object.values(_state || {}).filter(s => s.state !== "disabled").length;
+    return Object.entries(_state || {})
+      .filter(([key, s]) => s.state !== "disabled" && !lockInfo(CATALOG[key]).locked)
+      .length;
   }
 
   function activeLabels() {
-    const catalog = _config?.kpiCatalog || {};
     return Object.entries(_state || {})
-      .filter(([, s]) => s.state !== "disabled")
-      .map(([k]) => catalog[k]?.label || k)
+      .filter(([key, s]) => s.state !== "disabled" && !lockInfo(CATALOG[key]).locked)
+      .map(([k]) => CATALOG[k]?.label || k)
       .join(" · ");
   }
 
   // Segment tags (Individual/Pairing/Team/Flight badges) intentionally not
-  // rendered — dropped per product decision. def.segments still arrives from
-  // kpi_catalog.php and is left untouched in the catalog contract in case a
-  // future screen wants it; this module just no longer displays it.
+  // part of the catalog at all — kpi_catalog.php's old "segments" array
+  // was display-only and never consumed here; dropped rather than carried
+  // forward into CATALOG.
 
   // ── Points table editor ──────────────────────────────────────────────────────
-
-  function pointsConfigSummary(kpiKey) {
-    const s = _state[kpiKey];
-    if (!s) return "";
-    const places = Object.keys(s.pointsConfig || {}).length;
-    const vals   = Object.values(s.pointsConfig || {}).join(", ");
-    const tie    = s.tieRule === "split" ? "Split ties"
-                 : s.tieRule === "high"  ? "High ties"
-                 : "Low ties";
-    return `${places} place${places !== 1 ? "s" : ""} configured · ${vals} pts · ${tie}`;
-  }
+  // Always rendered in full when a hasConfig row is checked and unlocked —
+  // no expand/collapse, no collapsed-state summary. Identical structure
+  // for all four placement categories; only the caller (renderKPIRow)
+  // decides whether this gets shown at all.
 
   function renderPointsEditor(kpiKey) {
     const s = _state[kpiKey];
     if (!s) return "";
-    const expanded = s.expanded;
-    const summary  = pointsConfigSummary(kpiKey);
 
     const rows = Object.entries(s.pointsConfig || {}).map(([place, pts]) => {
       const ordinal = place === "1" ? "1st"
@@ -204,17 +294,7 @@
     }).join("");
 
     return `
-      <button class="dek-config-toggle ${expanded ? "open" : ""}"
-        data-toggle-kpi="${esc(kpiKey)}"
-        aria-expanded="${expanded}"
-        aria-controls="dek-editor-${esc(kpiKey)}">
-        <i class="ti ti-settings" aria-hidden="true"></i>
-        <span class="dek-toggle-label">${expanded ? "Hide points table" : "Edit points table"}</span>
-        <i class="ti ti-chevron-down dek-chevron" aria-hidden="true"></i>
-      </button>
-
-      <div class="dek-editor" id="dek-editor-${esc(kpiKey)}"
-        style="${expanded ? "" : "display:none;"}">
+      <div class="dek-editor" id="dek-editor-${esc(kpiKey)}">
         <div class="dek-editor-title">Points awarded per finishing position</div>
         <table class="dek-pts-table">
           <thead>
@@ -236,12 +316,6 @@
             <option value="low"   ${s.tieRule === "low"   ? "selected" : ""}>Low — all tied players receive the lower points</option>
           </select>
         </div>
-      </div>
-
-      <div class="dek-config-summary" id="dek-summary-${esc(kpiKey)}"
-        style="${expanded ? "display:none;" : ""}">
-        <i class="ti ti-check" aria-hidden="true" style="color:var(--text-success);"></i>
-        ${esc(summary)}
       </div>`;
   }
 
@@ -268,22 +342,17 @@
             ${locked ? `<i class="ti ti-lock" aria-hidden="true"></i>` : ""}
           </div>
           <div class="dek-kpi-desc">${esc(locked ? reason : def.description)}</div>
-          ${def.hasConfig && checked ? renderPointsEditor(kpiKey) : ""}
+          ${def.hasConfig && checked && !locked ? renderPointsEditor(kpiKey) : ""}
         </div>
       </div>`;
   }
 
   // ── Section header ───────────────────────────────────────────────────────────
 
-  // Pending update: kpi_catalog.php still needs its section values updated
-  // to match (currently "stroke"/"points"/"special" per the old two-bucket
-  // split). individual/pairingTeam below are the new intended buckets;
-  // unrecognized section keys still render fine via the humanize() fallback
-  // so this doesn't break against the not-yet-updated catalog file.
   const SECTION_LABELS = {
-    individual:  "Individual competitions",
-    pairingTeam: "Pairing and team competitions",
-    special:     "Special competitions",
+    individual: "Individual",
+    event:      "Event",
+    special:    "Special competitions",
   };
 
   function humanizeSection(key) {
@@ -293,13 +362,11 @@
   // ── Full content render ──────────────────────────────────────────────────────
 
   function renderContent() {
-    const catalog = _config.kpiCatalog || {};
-
     const sections = {};
 
     // Locked (not editable this session) entries are never hidden — see
     // lockInfo()/renderKPIRow(). Every catalog entry always renders.
-    Object.entries(catalog)
+    Object.entries(CATALOG)
       .sort((a, b) => (a[1].sortOrder || 0) - (b[1].sortOrder || 0))
       .forEach(([key, def]) => {
         const section = def.section || "special";
@@ -351,19 +418,15 @@
       el.addEventListener("keydown", e => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggleKPI(el.dataset.check); } });
     });
 
-    // Config toggle (expand/collapse points editor)
-    body.querySelectorAll("[data-toggle-kpi]").forEach(btn => {
-      btn.addEventListener("click", () => toggleEditor(btn.dataset.toggleKpi));
-    });
-
-    // Points inputs
+    // Points inputs — points table is always fully rendered when visible
+    // (see renderPointsEditor), so a change just writes straight into
+    // state; no summary line to keep in sync anymore.
     body.querySelectorAll(".dek-pts-input").forEach(inp => {
       inp.addEventListener("change", () => {
         const key   = inp.dataset.kpi;
         const place = inp.dataset.place;
         if (!_state[key]) return;
         _state[key].pointsConfig[place] = parseInt(inp.value, 10) || 0;
-        updateSummary(key);
       });
     });
 
@@ -376,7 +439,7 @@
     body.querySelectorAll(".dek-tie-select").forEach(sel => {
       sel.addEventListener("change", () => {
         const key = sel.dataset.tieKpi;
-        if (_state[key]) { _state[key].tieRule = sel.value; updateSummary(key); }
+        if (_state[key]) _state[key].tieRule = sel.value;
       });
     });
   }
@@ -385,37 +448,12 @@
     if (!_state[key]) return;
     // Checkbox is on for "default" or "active" alike (see renderKPIRow) —
     // toggling off from either lands on "disabled"; toggling on from
-    // "disabled" lands on "active", never back to "default".
+    // "disabled" lands on "active", never back to "default". The points
+    // table (if hasConfig) now just appears/disappears with the checkbox
+    // on the next renderBody() — no separate expand state to manage.
     const wasOn = _state[key].state !== "disabled";
     _state[key].state = wasOn ? "disabled" : "active";
-    // Auto-expand editor when first activating a config KPI
-    const def = (_config.kpiCatalog || {})[key] || {};
-    if (!wasOn && def.hasConfig) _state[key].expanded = true;
     renderBody();
-  }
-
-  function toggleEditor(key) {
-    if (!_state[key]) return;
-    _state[key].expanded = !_state[key].expanded;
-
-    const editor  = _overlay?.querySelector(`#dek-editor-${key}`);
-    const summary = _overlay?.querySelector(`#dek-summary-${key}`);
-    const toggle  = _overlay?.querySelector(`[data-toggle-kpi="${key}"]`);
-    const label   = toggle?.querySelector(".dek-toggle-label");
-
-    if (_state[key].expanded) {
-      if (editor)  editor.style.display  = "";
-      if (summary) summary.style.display = "none";
-      toggle?.classList.add("open");
-      toggle?.setAttribute("aria-expanded", "true");
-      if (label) label.textContent = "Hide points table";
-    } else {
-      if (editor)  editor.style.display  = "none";
-      if (summary) summary.style.display = "";
-      toggle?.classList.remove("open");
-      toggle?.setAttribute("aria-expanded", "false");
-      if (label) label.textContent = "Edit points table";
-    }
   }
 
   function addPlace(key) {
@@ -424,13 +462,6 @@
     const nextPlace = String(existing.length + 1);
     _state[key].pointsConfig[nextPlace] = 0;
     renderBody(); // full re-render to show new row
-  }
-
-  function updateSummary(key) {
-    const summaryEl = _overlay?.querySelector(`#dek-summary-${key}`);
-    if (summaryEl) summaryEl.innerHTML = `
-      <i class="ti ti-check" aria-hidden="true" style="color:var(--text-success);"></i>
-      ${esc(pointsConfigSummary(key))}`;
   }
 
   // ── Styles ───────────────────────────────────────────────────────────────────
@@ -461,11 +492,7 @@
       .dek-kpi-label{font-size:13px;font-weight:500;color:var(--ink);display:flex;align-items:center;gap:6px;}
       .dek-kpi-label .ti-lock{font-size:13px;color:var(--mutedText);}
       .dek-kpi-desc{font-size:12px;color:var(--mutedText);margin-top:2px;line-height:1.4;}
-      /* Config toggle */
-      .dek-config-toggle{display:inline-flex;align-items:center;gap:4px;margin-top:7px;font-size:11px;color:var(--brandAccent);background:transparent;border:none;cursor:pointer;padding:0;font-family:inherit;}
-      .dek-config-toggle .dek-chevron{font-size:11px;transition:transform .15s;}
-      .dek-config-toggle.open .dek-chevron{transform:rotate(180deg);}
-      /* Points editor */
+      /* Points editor — always rendered in full when visible, no toggle */
       .dek-editor{margin-top:10px;background:var(--surfaceChrome);border:0.5px solid var(--borderSubtle);border-radius:var(--radiusMd,6px);padding:12px;}
       .dek-editor-title{font-size:11px;font-weight:500;color:var(--mutedText);margin-bottom:8px;}
       .dek-pts-table{width:100%;border-collapse:collapse;font-size:12px;}
@@ -477,7 +504,6 @@
       .dek-tie-row{display:flex;align-items:center;gap:8px;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--borderSubtle);}
       .dek-tie-label{font-size:11px;font-weight:500;color:var(--mutedText);white-space:nowrap;}
       .dek-tie-select{border:0.5px solid var(--borderStrong,#bbb);border-radius:var(--radiusSq,4px);padding:3px 8px;font-size:12px;background:var(--surface);color:var(--ink);flex:1;}
-      .dek-config-summary{display:flex;align-items:center;gap:4px;margin-top:6px;font-size:11px;font-style:italic;color:var(--mutedText);}
       /* Footer info */
       .dek-footer-info{flex:1;min-width:0;}
       .dek-footer-count{font-size:12px;font-weight:700;color:var(--ink);}
@@ -546,13 +572,9 @@
 
   function open(config) {
     if (_overlay) close();
-    if (!config?.kpiCatalog || !Object.keys(config.kpiCatalog).length) {
-      setStatus("KPI catalog not loaded.", "warn");
-      return;
-    }
 
-    _config = config;
-    initState(config);
+    _config = config || {};
+    initState(_config);
     injectStyles();
 
     _overlay = buildOverlay();
@@ -567,6 +589,13 @@
     _state  = null;
   }
 
-  MA.defineEventKPI = { open, close };
+  MA.defineEventKPI = {
+    open,
+    close,
+    // Read-only — for callers like event_maintenance.js that need to
+    // resolve a saved kpiConfig key to its display label (e.g. for a
+    // hint line) without keeping their own duplicate copy of the catalog.
+    catalog: Object.freeze(clone(CATALOG)),
+  };
 
 })(window);

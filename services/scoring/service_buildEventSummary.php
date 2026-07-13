@@ -46,7 +46,18 @@ final class ServiceBuildEventSummary
     // Four Ball), both already correctly included.
     private const NON_PERSONAL_SCORE_FORMATS = ['Scramble', 'Shamble', 'AltShot', 'Chapman'];
 
-    private const DEFAULT_PLACEMENT_TABLE = ['1' => 100, '2' => 75, '3' => 50];
+    // Independent copy — same name/value as the constants of the same
+    // purpose in module_defineEventKPI.js and ServiceDbEvents, kept in
+    // sync by convention (grep EVENT_PLACEMENT_DEFAULTS to find all
+    // three), not by a shared require. Deliberately NOT exposed publicly
+    // and NOT consumed by any other class: this copy's only job is a
+    // same-class structural guard in parseEventKPIConfig() below, for a
+    // category key that's absent from the decoded JSON entirely — a case
+    // ServiceDbEvents' own seeding should make effectively unreachable
+    // for any event created after that seeding existed. It is not a
+    // second opinion on what "default" placement points should be, and
+    // it never overrides real (even if minimal/empty) saved data.
+    private const EVENT_PLACEMENT_DEFAULTS = ['1' => 100, '2' => 75, '3' => 50];
     private const DEFAULT_TIE_RULE = 'split';
 
     /**
@@ -211,8 +222,16 @@ final class ServiceBuildEventSummary
      * State is never consulted here to gate computation — same server-
      * side philosophy as ServiceScoreSummary::parsePlacementPoints():
      * always computed regardless of active/disabled/default; state is
-     * display-only. A missing or malformed key gets the catalog's seed
-     * default table rather than a zero/empty table.
+     * display-only.
+     *
+     * This method TRUSTS the saved config completely — it does not
+     * re-validate or second-guess a category's shape. The fallbacks
+     * below only fire when a category key is absent from the decoded
+     * JSON entirely, which ServiceDbEvents' own seeding (event creation
+     * + mode-transition sync) should make effectively unreachable for
+     * any event created after that seeding existed. This is a same-class
+     * structural guard against a legacy/pre-seeding row, not a policy
+     * decision about what an admin's real configuration should be.
      */
     private static function parseEventKPIConfig(array $eventRow): array
     {
@@ -232,7 +251,7 @@ final class ServiceBuildEventSummary
                     : 'default',
                 'pointsConfig' => is_array($entry['pointsConfig'] ?? null)
                     ? $entry['pointsConfig']
-                    : self::DEFAULT_PLACEMENT_TABLE,
+                    : self::EVENT_PLACEMENT_DEFAULTS,
                 'tieRule' => in_array($entry['tieRule'] ?? null, ['split', 'high', 'low'], true)
                     ? $entry['tieRule']
                     : self::DEFAULT_TIE_RULE,

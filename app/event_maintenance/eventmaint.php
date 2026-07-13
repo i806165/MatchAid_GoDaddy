@@ -45,17 +45,14 @@ try {
     ? "Add New Event"
     : ("EID " . (string)$eid);
 
-  // Load KPI catalog include — passed to JS for the defineEventKPI module
-  $kpiCatalog = file_exists(MA_INCLUDES . "/kpi_catalog.php")
-    ? require MA_INCLUDES . "/kpi_catalog.php"
-    : [];
+  // kpi_catalog.php retired — module_defineEventKPI.js now owns its own
+  // hardcoded catalog and no longer needs one supplied via initPayload.
 
   $initPayload = [
     "ok"             => true,
     "mode"           => $mode,
     "eid"            => $eid,
     "event"          => $event,
-    "kpiCatalog"     => $kpiCatalog,
     "authorizations" => $authorizations,
     "header"         => [
       "subtitle" => $subtitle
