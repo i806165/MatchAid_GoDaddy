@@ -428,12 +428,22 @@ async function handleEventAction(args) {
   // "eventGames" (Event Rounds) is the drill-in: it sets SessionStoredEID
   // server-side via setEventSession above, then this page (adminhome.php)
   // re-renders itself in Event Rounds mode — sourceGames scoped to the eid.
+  //
+  // Key names here must match the action strings module_sourceEvents.js's
+  // menu actually fires (see its buildEventMenu()) — eventLeaderboard maps
+  // to the eventsummary route/page, which is the real leaderboard. This
+  // was previously keyed "eventScoring", an action nothing ever fires
+  // (the menu deliberately has no "Event Scoring" item), which both
+  // silently broke the leaderboard click (routeMap["eventLeaderboard"]
+  // was undefined) and conflated naming with pageRouter.php's separate,
+  // still-unbuilt "eventscoring" route/page — a genuinely different page
+  // from the leaderboard.
   const routeMap = {
     openEvent: "event",
     editEvent: "eventedit",
     eventRoster: "eventroster",
     eventGames: "eventrounds",
-    eventScoring: "eventsummary"
+    eventLeaderboard: "eventsummary"
   };
 
   const route = routeMap[action];

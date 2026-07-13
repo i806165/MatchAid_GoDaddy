@@ -211,6 +211,10 @@
         // only when this key has genuinely never been saved before.
         pointsConfig: saved_entry.pointsConfig || clone(EVENT_PLACEMENT_DEFAULTS),
         tieRule:      saved_entry.tieRule || "split",
+        // Points table starts open whenever the category is checked and
+        // configurable — the toggle below only lets the admin collapse
+        // it back down, not start collapsed on load.
+        expanded:     state !== "disabled" && !!def.hasConfig,
       };
     });
   }
@@ -269,14 +273,14 @@
   // forward into CATALOG.
 
   // ── Points table editor ──────────────────────────────────────────────────────
-  // Always rendered in full when a hasConfig row is checked and unlocked —
-  // no expand/collapse, no collapsed-state summary. Identical structure
-  // for all four placement categories; only the caller (renderKPIRow)
-  // decides whether this gets shown at all.
+  // Rendered whenever a hasConfig row is checked and unlocked; the table
+  // itself can be collapsed via the toggle button, but — unlike the prior
+  // design — collapsing it shows nothing in its place (no summary line).
 
   function renderPointsEditor(kpiKey) {
     const s = _state[kpiKey];
     if (!s) return "";
+    const expanded = s.expanded;
 
     const rows = Object.entries(s.pointsConfig || {}).map(([place, pts]) => {
       const ordinal = place === "1" ? "1st"
@@ -294,7 +298,17 @@
     }).join("");
 
     return `
-      <div class="dek-editor" id="dek-editor-${esc(kpiKey)}">
+      <button class="dek-config-toggle ${expanded ? "open" : ""}"
+        data-toggle-kpi="${esc(kpiKey)}"
+        aria-expanded="${expanded}"
+        aria-controls="dek-editor-${esc(kpiKey)}">
+        <i class="ti ti-settings" aria-hidden="true"></i>
+        <span class="dek-toggle-label">${expanded ? "Hide points table" : "Edit points table"}</span>
+        <i class="ti ti-chevron-down dek-chevron" aria-hidden="true"></i>
+      </button>
+
+      <div class="dek-editor" id="dek-editor-${esc(kpiKey)}"
+        style="${expanded ? "" : "display:none;"}">
         <div class="dek-editor-title">Points awarded per finishing position</div>
         <table class="dek-pts-table">
           <thead>
@@ -418,9 +432,13 @@
       el.addEventListener("keydown", e => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggleKPI(el.dataset.check); } });
     });
 
-    // Points inputs — points table is always fully rendered when visible
-    // (see renderPointsEditor), so a change just writes straight into
-    // state; no summary line to keep in sync anymore.
+    // Config toggle (expand/collapse points editor)
+    body.querySelectorAll("[data-toggle-kpi]").forEach(btn => {
+      btn.addEventListener("click", () => toggleEditor(btn.dataset.toggleKpi));
+    });
+
+    // Points inputs — points table renders in full when expanded, so a
+    // change just writes straight into state.
     body.querySelectorAll(".dek-pts-input").forEach(inp => {
       inp.addEventListener("change", () => {
         const key   = inp.dataset.kpi;
@@ -448,11 +466,17 @@
     if (!_state[key]) return;
     // Checkbox is on for "default" or "active" alike (see renderKPIRow) —
     // toggling off from either lands on "disabled"; toggling on from
-    // "disabled" lands on "active", never back to "default". The points
-    // table (if hasConfig) now just appears/disappears with the checkbox
-    // on the next renderBody() — no separate expand state to manage.
+    // "disabled" lands on "active", never back to "default".
     const wasOn = _state[key].state !== "disabled";
     _state[key].state = wasOn ? "disabled" : "active";
+    // Auto-expand the points table on first activation.
+    if (!wasOn && CATALOG[key]?.hasConfig) _state[key].expanded = true;
+    renderBody();
+  }
+
+  function toggleEditor(key) {
+    if (!_state[key]) return;
+    _state[key].expanded = !_state[key].expanded;
     renderBody();
   }
 
@@ -492,7 +516,11 @@
       .dek-kpi-label{font-size:13px;font-weight:500;color:var(--ink);display:flex;align-items:center;gap:6px;}
       .dek-kpi-label .ti-lock{font-size:13px;color:var(--mutedText);}
       .dek-kpi-desc{font-size:12px;color:var(--mutedText);margin-top:2px;line-height:1.4;}
-      /* Points editor — always rendered in full when visible, no toggle */
+      /* Config toggle */
+      .dek-config-toggle{display:inline-flex;align-items:center;gap:4px;margin-top:7px;font-size:11px;color:var(--brandAccent);background:transparent;border:none;cursor:pointer;padding:0;font-family:inherit;}
+      .dek-config-toggle .dek-chevron{font-size:11px;transition:transform .15s;}
+      .dek-config-toggle.open .dek-chevron{transform:rotate(180deg);}
+      /* Points editor */
       .dek-editor{margin-top:10px;background:var(--surfaceChrome);border:0.5px solid var(--borderSubtle);border-radius:var(--radiusMd,6px);padding:12px;}
       .dek-editor-title{font-size:11px;font-weight:500;color:var(--mutedText);margin-bottom:8px;}
       .dek-pts-table{width:100%;border-collapse:collapse;font-size:12px;}
