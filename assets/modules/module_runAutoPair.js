@@ -197,6 +197,27 @@
     return [{ teamId: null, pool: currentPool() }];
   }
 
+  // The count that acceptable-size feasibility/combinations must actually
+  // divide evenly into. This is NOT the same as currentPool().length when
+  // more than one team is checked — currentPool() is the COMBINED total
+  // across every checked team, but each team is drafted as its own
+  // independent subgroup (see currentSubgroups()), and the equal-count
+  // clamp (_onTeamToggle) guarantees every checked subgroup has the SAME
+  // count. So the number that matters for "does this size mix work" is one
+  // subgroup's count, not the sum of all of them — a combo that sums
+  // correctly against the combined total does not necessarily divide
+  // evenly per subgroup (e.g. combined 36 as 9 foursomes is valid for 36,
+  // but 9 foursomes does not split evenly across two 18-player teams).
+  // Using the combined count here was the original bug: it produced a
+  // sizes array long enough for the FULL combined pool, then that same
+  // oversized array was applied to each individually-smaller subgroup,
+  // leaving the back half of every subgroup's groups empty once that
+  // subgroup ran out of real players.
+  function subgroupUnitCount() {
+    const subs = currentSubgroups();
+    return subs.length ? subs[0].pool.length : 0;
+  }
+
   // ── Combination math ─────────────────────────────────────────────────────────
 
   // Every combination of the checked sizes that sums exactly to N. Ported
@@ -391,7 +412,7 @@
   // ── Render — acceptable sizes + live status + combination dropdown ─────────
 
   function _renderSizeSection() {
-    const n = currentPool().length;
+    const n = subgroupUnitCount();
     return `
       <div class="maFieldRow" id="apSizeRow">
         <div class="maField" style="flex:1;">
@@ -409,7 +430,7 @@
   }
 
   function _renderSizeStatus() {
-    const n = currentPool().length;
+    const n = subgroupUnitCount();
     const combos = combosForSizes(n, _selSizes);
     const ok = combos.length > 0;
     return `<div class="maInlineStatus" style="color:${ok ? "var(--success)" : "var(--danger)"};">
@@ -418,7 +439,7 @@
   }
 
   function _renderComboSelect() {
-    const n = currentPool().length;
+    const n = subgroupUnitCount();
     const combos = combosForSizes(n, _selSizes);
     if (!combos.length) return "";
     const idx = Math.min(_selComboIdx, combos.length - 1);
@@ -477,12 +498,11 @@
   // ── Render — footer ──────────────────────────────────────────────────────────
 
   function _renderFooter() {
-    const n = currentPool().length;
+    const n = subgroupUnitCount();
     const combos = combosForSizes(n, _selSizes);
     const runDisabled = n === 0 || combos.length === 0;
     return `
-      <footer class="maModal__ftr">
-        <button type="button" class="maFtrBtn maFtrBtn--cancel" id="apBtnCancel">Cancel</button>
+      <footer class="maModal__ftr" style="justify-content:flex-end;">
         <div class="maModal__ftrActions">
           <button type="button" class="maFtrBtn maFtrBtn--cancel" id="apBtnRetry" style="display:${_mode === "review" ? "" : "none"};">Retry</button>
           <button type="button" class="maFtrBtn maFtrBtn--save" id="apBtnRun" style="display:${_mode === "setup" ? "" : "none"};" ${runDisabled ? "disabled" : ""}>Run</button>
@@ -577,7 +597,6 @@
     if (!overlay) return;
 
     overlay.querySelector("#apBtnClose")?.addEventListener("click", () => { if (!_busy) MA.runAutoPair.close(); });
-    overlay.querySelector("#apBtnCancel")?.addEventListener("click", () => { if (!_busy) MA.runAutoPair.close(); });
 
     // Flight change — resets team/size selection under the new scope.
     overlay.querySelector("#apFlight")?.addEventListener("change", (e) => {
@@ -653,7 +672,7 @@
   // ── Run / Retry / Apply ──────────────────────────────────────────────────────
 
   async function _onRun() {
-    const n = currentPool().length;
+    const n = subgroupUnitCount();
     const combos = combosForSizes(n, _selSizes);
     if (!combos.length) return; // Run is disabled in this state, but guard anyway
 
@@ -668,6 +687,11 @@
 
     let coPlayMatrix = {};
     if (_outcome === "leastPlayed") {
+      // Co-play history is fetched across the FULL combined pool being run
+      // this click (both teams' players, if two are checked) — unlike
+      // `sizes` above, this one is correct to build from the combined pool,
+      // since it's just lookup data, not something that gets divided per
+      // subgroup.
       const ghins = currentPool().map(p => p.playerGHIN).filter(g => !isNH(g));
       try {
         const res = await MA.postJson(apiPath("getCoPlayMatrix.php"), { ghins });
@@ -678,8 +702,13 @@
     }
 
     // Draft each checked team's subgroup independently — never merged.
-    // Every subgroup uses the SAME combo, valid because the equal-count
-    // clamp guarantees any two checked teams already share the same N.
+    // `sizes` was built from subgroupUnitCount(), and the equal-count clamp
+    // (_onTeamToggle) guarantees every checked subgroup has exactly that
+    // many players — so the SAME sizes array is valid, unmodified, for each
+    // subgroup in this loop. (Previously this used a sizes array sized for
+    // the COMBINED pool, applied per subgroup — the bug that produced
+    // empty pairing cards once a subgroup ran out of real players partway
+    // through that oversized array.)
     _previewGroups = [];
     currentSubgroups().forEach(({ teamId, pool }) => {
       const sortedPool = pool.slice().sort((a, b) => phValue(a) - phValue(b));
@@ -772,15 +801,21 @@
   }
 
   function _draft(outcome, buckets, pool, sizes, coPlayMatrix) {
+    let groups;
     switch (outcome) {
-      case "balanced":         return _draftBalanced(buckets, sizes);
-      case "inOrder":           return _draftInOrder(pool, sizes);
-      case "abcdDraw":          return _draftABCD(buckets, sizes);
-      case "random":            return _draftRandom(pool, sizes);
-      case "stackedHighFirst":  return _draftInOrder(pool, sizes); // pool already sorted asc by PH
-      case "leastPlayed":       return _draftLeastPlayed(pool, sizes, coPlayMatrix || {});
-      default:                  return _draftBalanced(buckets, sizes);
+      case "balanced":         groups = _draftBalanced(buckets, sizes); break;
+      case "inOrder":           groups = _draftInOrder(pool, sizes); break;
+      case "abcdDraw":          groups = _draftABCD(buckets, sizes); break;
+      case "random":            groups = _draftRandom(pool, sizes); break;
+      case "stackedHighFirst":  groups = _draftInOrder(pool, sizes); break; // pool already sorted asc by PH
+      case "leastPlayed":       groups = _draftLeastPlayed(pool, sizes, coPlayMatrix || {}); break;
+      default:                  groups = _draftBalanced(buckets, sizes); break;
     }
+    // Defense-in-depth: a `sizes` array longer than the pool can fill
+    // (the exact mismatch subgroupUnitCount() exists to prevent, see
+    // _onRun) would otherwise surface as an empty "Pairing N" preview
+    // card. Never hand one back, regardless of how it happened.
+    return groups.filter(g => g.length > 0);
   }
 
   function _draftBalanced(buckets, sizes) {
