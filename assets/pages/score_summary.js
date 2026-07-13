@@ -46,6 +46,11 @@
     // low to high — the natural "who's leading" order for this grain.
     lbSortKey: 'kpi',
     lbSortDir: 'asc',
+    // Leaderboard flight sections — same collapse-by-key pattern as
+    // event_summary.js's state.collapsedFlights. Score Summary cards
+    // (dom.host) are unaffected; only the Leaderboard panel (dom.lbHost)
+    // groups by flight.
+    collapsedFlights: new Set(),
   };
 
   const dom = {
@@ -788,6 +793,66 @@
     return color ? `<span class="lbTeamDot" style="background:${esc(color)}"></span>` : '';
   }
 
+  // ── Flight grouping (Leaderboard panel only) ────────────────────────────
+  // Every list this feeds (individualRows, pairing rows(), teamRollup)
+  // already carries flightKey/flightName per row from service_ScoreSummary.php
+  // — this just partitions client-side and orders the groups using the same
+  // config order the server resolved (payload.meta.flightOrder), the same
+  // source of truth event_summary.js's own flights[] ordering ultimately
+  // comes from. A flightKey that shows up on a row but isn't in flightOrder
+  // (legacy/malformed data) is appended after the configured ones, sorted
+  // naturally so it's still deterministic.
+  function groupByFlight(list) {
+    const groups = new Map();
+    list.forEach((item) => {
+      const flightKey = String(item.flightKey ?? 'F1');
+      const flightName = item.flightName || 'Flight-1';
+      if (!groups.has(flightKey)) groups.set(flightKey, { flightKey, flightName, items: [] });
+      groups.get(flightKey).items.push(item);
+    });
+
+    const order = Array.isArray(payload.meta?.flightOrder) ? payload.meta.flightOrder.map(String) : [];
+    const ordered = [];
+    order.forEach((fk) => {
+      if (groups.has(fk)) {
+        ordered.push(groups.get(fk));
+        groups.delete(fk);
+      }
+    });
+    const rest = Array.from(groups.values()).sort((a, b) =>
+      String(a.flightKey).localeCompare(String(b.flightKey), undefined, { numeric: true })
+    );
+    return ordered.concat(rest);
+  }
+
+  function lbFlightCollapseToggleBtn(flightKey) {
+    const collapsed = state.collapsedFlights.has(flightKey);
+    return `
+      <button class="iconBtn btnSecondary lbFlightCollapseBtn" type="button" data-lb-flight-toggle="${esc(flightKey)}"
+        aria-label="${collapsed ? 'Expand' : 'Collapse'} flight" title="${collapsed ? 'Expand' : 'Collapse'} flight">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          ${collapsed ? '<line x1="12" y1="5" x2="12" y2="19"></line>' : ''}
+        </svg>
+      </button>`;
+  }
+
+  function lbFlightHeaderRow(group) {
+    return `
+      <div class="maListRow maListRow--static lbFlightRow">
+        ${lbFlightCollapseToggleBtn(group.flightKey)}
+        <span class="lbFlightRow__name">${esc(group.flightName)}</span>
+      </div>
+    `;
+  }
+
+  // Renders one grouped section: flight header, then (unless collapsed)
+  // headerHtml followed by bodyHtml for that flight's own items.
+  function lbRenderFlightSection(group, headerHtml, bodyHtml) {
+    const collapsed = state.collapsedFlights.has(group.flightKey);
+    return `${lbFlightHeaderRow(group)}${collapsed ? '' : headerHtml + bodyHtml}`;
+  }
+
   // Which category's state governs the Points column currently on screen.
   // Individual grain still has a real Gross/Net choice; Pairing/Team never
   // does — it's always whichever category matches the game's official
@@ -921,7 +986,8 @@
   }
 
   function lbRenderPairFieldPairingRows() {
-    const sorted = rows().slice().sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999));
+    const dataRows = rows();
+    if (!dataRows.length) return `<div class="maEmptyState">No standings available.</div>`;
 
     const header = `
       <div class="maListRow maListRow--static lbHeaderRow">
@@ -933,17 +999,26 @@
       </div>
     `;
 
-    const body = sorted.map((row) => `
-      <div class="maListRow maListRow--static ${row.isLeader ? 'is-leading' : ''}">
-        <span class="maListRow__col lbColRank">${esc(row.rank ?? '')}</span>
-        <span class="maListRow__col lbColName">${lbTeamDotHtml(row.teamColor)}${esc(row.pairingLabel || '')}</span>
-        <span class="maListRow__col--muted lbColThru">${esc(formatThru(row.thru))}</span>
-        <span class="maListRow__col lbColKpi">${esc(lbPairFieldKpiDisplay(row))}</span>
-        <span class="maListRow__col--muted lbColPts">${esc(lbPlacementPointsDisplay(row))}</span>
-      </div>
-    `).join('');
+    const groups = groupByFlight(dataRows);
 
-    return `${header}${body || `<div class="maEmptyState">No standings available.</div>`}`;
+    return groups.map((group) => {
+      // rank is intentionally field-wide, not flight-scoped (see
+      // service_ScoreSummary.php's own comment on this) — sorting within
+      // the group by that same field-wide rank keeps display order
+      // consistent with what the number itself means; it will not always
+      // read 1..N within a single flight section, by design.
+      const sorted = group.items.slice().sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999));
+      const body = sorted.map((row) => `
+        <div class="maListRow maListRow--static ${row.isLeader ? 'is-leading' : ''}">
+          <span class="maListRow__col lbColRank">${esc(row.rank ?? '')}</span>
+          <span class="maListRow__col lbColName">${lbTeamDotHtml(row.teamColor)}${esc(row.pairingLabel || '')}</span>
+          <span class="maListRow__col--muted lbColThru">${esc(formatThru(row.thru))}</span>
+          <span class="maListRow__col lbColKpi">${esc(lbPairFieldKpiDisplay(row))}</span>
+          <span class="maListRow__col--muted lbColPts">${esc(lbPlacementPointsDisplay(row))}</span>
+        </div>
+      `).join('');
+      return lbRenderFlightSection(group, header, body);
+    }).join('');
   }
 
   // Individual grain only ever has Gross/Net now — no 'game' option exists
@@ -1019,7 +1094,9 @@
   }
 
   function lbRenderPairFieldIndividualRows() {
-    const list = lbApplyIndividualSort(Array.isArray(payload.individualRows) ? payload.individualRows : []);
+    const list = Array.isArray(payload.individualRows) ? payload.individualRows : [];
+    if (!list.length) return `<div class="maEmptyState">No individual scores available.</div>`;
+
     const kpiField = lbIndividualKpiField();
     const kpiLabel = gameTabLabelForKpiColumn();
     const ptsLabel = pointsColumnLabel(activePlacementCategoryKey());
@@ -1033,25 +1110,29 @@
       </div>
     `;
 
-    const body = list.map((p) => {
-      const kpiDisplay = (kpiField === 'gross') ? p.grossDiffDisplay : p.netDiffDisplay;
-      const ptsValue = (kpiField === 'gross') ? p.placementPointsGross : p.placementPointsNet;
+    const groups = groupByFlight(list);
 
-      return `
-        <div class="maListRow maListRow--static">
-          <span class="maListRow__col lbColName" data-lb-menu data-sort-key="playerLastName" data-display-value="${esc(p.playerName || '')}">${lbTeamDotHtml(p.teamColor)}${esc(p.playerName || '')}</span>
-          <span class="maListRow__col--muted lbColThru" data-lb-menu data-sort-key="thru" data-display-value="${esc(formatThru(p.thru))}">${esc(formatThru(p.thru))}</span>
-          <span class="maListRow__col lbColKpi" data-lb-menu data-sort-key="kpi" data-display-value="${esc(kpiDisplay ?? '—')}">${esc(kpiDisplay ?? '—')}</span>
-          <span class="maListRow__col--muted lbColPts">${esc(fmtNum(ptsValue))}</span>
-        </div>
-      `;
+    return groups.map((group) => {
+      const sorted = lbApplyIndividualSort(group.items);
+      const body = sorted.map((p) => {
+        const kpiDisplay = (kpiField === 'gross') ? p.grossDiffDisplay : p.netDiffDisplay;
+        const ptsValue = (kpiField === 'gross') ? p.placementPointsGross : p.placementPointsNet;
+
+        return `
+          <div class="maListRow maListRow--static">
+            <span class="maListRow__col lbColName" data-lb-menu data-sort-key="playerLastName" data-display-value="${esc(p.playerName || '')}">${lbTeamDotHtml(p.teamColor)}${esc(p.playerName || '')}</span>
+            <span class="maListRow__col--muted lbColThru" data-lb-menu data-sort-key="thru" data-display-value="${esc(formatThru(p.thru))}">${esc(formatThru(p.thru))}</span>
+            <span class="maListRow__col lbColKpi" data-lb-menu data-sort-key="kpi" data-display-value="${esc(kpiDisplay ?? '—')}">${esc(kpiDisplay ?? '—')}</span>
+            <span class="maListRow__col--muted lbColPts">${esc(fmtNum(ptsValue))}</span>
+          </div>
+        `;
+      }).join('');
+      return lbRenderFlightSection(group, header, body);
     }).join('');
-
-    return `${header}${body || `<div class="maEmptyState">No individual scores available.</div>`}`;
   }
 
   function lbRenderPairFieldTeamRows() {
-    const sorted = teamRollup.slice().sort((a, b) => (a.teamSort ?? 999) - (b.teamSort ?? 999));
+    if (!teamRollup.length) return `<div class="maEmptyState">No team config set for this game.</div>`;
 
     const header = `
       <div class="maListRow maListRow--static lbHeaderRow">
@@ -1061,19 +1142,23 @@
       </div>
     `;
 
-    const body = sorted.map((team) => {
-      const kpiVal = officialMetricIsGross() ? team.grossDiffTotal : team.netDiffTotal;
-      const ptsVal = officialMetricIsGross() ? team.placementPointsGrossTotal : team.placementPointsNetTotal;
-      return `
-        <div class="maListRow maListRow--static">
-          <span class="maListRow__col lbColName">${lbTeamDotHtml(team.teamColor)}${esc(team.teamName || team.teamKey)}</span>
-          <span class="maListRow__col lbColKpi">${esc(fmtNum(kpiVal))}</span>
-          <span class="maListRow__col--muted lbColPts">${esc(officialCategoryDisplay(ptsVal))}</span>
-        </div>
-      `;
-    }).join('');
+    const groups = groupByFlight(teamRollup);
 
-    return `${header}${body || `<div class="maEmptyState">No team config set for this game.</div>`}`;
+    return groups.map((group) => {
+      const sorted = group.items.slice().sort((a, b) => (a.teamSort ?? 999) - (b.teamSort ?? 999));
+      const body = sorted.map((team) => {
+        const kpiVal = officialMetricIsGross() ? team.grossDiffTotal : team.netDiffTotal;
+        const ptsVal = officialMetricIsGross() ? team.placementPointsGrossTotal : team.placementPointsNetTotal;
+        return `
+          <div class="maListRow maListRow--static">
+            <span class="maListRow__col lbColName">${lbTeamDotHtml(team.teamColor)}${esc(team.teamName || team.teamKey)}</span>
+            <span class="maListRow__col lbColKpi">${esc(fmtNum(kpiVal))}</span>
+            <span class="maListRow__col--muted lbColPts">${esc(officialCategoryDisplay(ptsVal))}</span>
+          </div>
+        `;
+      }).join('');
+      return lbRenderFlightSection(group, header, body);
+    }).join('');
   }
 
   // ---------- PairPair ----------
@@ -1129,36 +1214,45 @@
     const dataRows = rows();
     if (!dataRows.length) return `<div class="maEmptyState">No standings available.</div>`;
 
-    return dataRows.map((row) => {
-      const left = row.left || {};
-      const right = row.right || {};
-      const leftSegs = lbPairPairKpiSegments(row, 'left');
-      const rightSegs = lbPairPairKpiSegments(row, 'right');
+    const groups = groupByFlight(dataRows);
 
-      return `
-        <div class="lbMatchRow">
-          <div class="lbMatchSide ${lbSideIsLeading(left) ? 'is-leading' : ''}">
-            <div class="lbMatchSideTop">
-              <span class="lbMatchSideName">${lbTeamDotHtml(left.teamColor)}${esc(row.matchLabelTop || '')}</span>
-              <span class="lbMatchSidePoints">${esc(lbSidePointsLabel(left))}</span>
+    return groups.map((group) => {
+      // No re-sort — match order within a flight is preserved exactly as
+      // the server returned it, same as the ungrouped version did.
+      const body = group.items.map((row) => {
+        const left = row.left || {};
+        const right = row.right || {};
+        const leftSegs = lbPairPairKpiSegments(row, 'left');
+        const rightSegs = lbPairPairKpiSegments(row, 'right');
+
+        return `
+          <div class="lbMatchRow">
+            <div class="lbMatchSide ${lbSideIsLeading(left) ? 'is-leading' : ''}">
+              <div class="lbMatchSideTop">
+                <span class="lbMatchSideName">${lbTeamDotHtml(left.teamColor)}${esc(row.matchLabelTop || '')}</span>
+                <span class="lbMatchSidePoints">${esc(lbSidePointsLabel(left))}</span>
+              </div>
+              <div class="lbMatchSideSegments">${lbSegmentsInlineString(leftSegs)}</div>
             </div>
-            <div class="lbMatchSideSegments">${lbSegmentsInlineString(leftSegs)}</div>
-          </div>
-          <span class="lbMatchVs">vs</span>
-          <div class="lbMatchSide ${lbSideIsLeading(right) ? 'is-leading' : ''}">
-            <div class="lbMatchSideTop">
-              <span class="lbMatchSideName">${lbTeamDotHtml(right.teamColor)}${esc(row.matchLabelBottom || '')}</span>
-              <span class="lbMatchSidePoints">${esc(lbSidePointsLabel(right))}</span>
+            <span class="lbMatchVs">vs</span>
+            <div class="lbMatchSide ${lbSideIsLeading(right) ? 'is-leading' : ''}">
+              <div class="lbMatchSideTop">
+                <span class="lbMatchSideName">${lbTeamDotHtml(right.teamColor)}${esc(row.matchLabelBottom || '')}</span>
+                <span class="lbMatchSidePoints">${esc(lbSidePointsLabel(right))}</span>
+              </div>
+              <div class="lbMatchSideSegments">${lbSegmentsInlineString(rightSegs)}</div>
             </div>
-            <div class="lbMatchSideSegments">${lbSegmentsInlineString(rightSegs)}</div>
           </div>
-        </div>
-      `;
+        `;
+      }).join('');
+      return lbRenderFlightSection(group, '', body);
     }).join('');
   }
 
   function lbRenderPairPairTeamRows() {
-    const sorted = teamRollup.slice().sort((a, b) => (a.teamSort ?? 999) - (b.teamSort ?? 999));
+    if (!teamRollup.length) {
+      return `<div class="maEmptyState">No team config set for this game, or this game is rotation-aware (Team is not shown for COD/1324/1423 games).</div>`;
+    }
 
     const header = `
       <div class="maListRow maListRow--static lbHeaderRow">
@@ -1168,15 +1262,19 @@
       </div>
     `;
 
-    const body = sorted.map((team) => `
-      <div class="maListRow maListRow--static">
-        <span class="maListRow__col lbColName">${lbTeamDotHtml(team.teamColor)}${esc(team.teamName || team.teamKey)}</span>
-        <span class="maListRow__col--muted lbColRecord">${team.record.w}-${team.record.l}-${team.record.h}</span>
-        <span class="maListRow__col--muted lbColPts">${esc(officialCategoryDisplay(team.pointsTotal))}</span>
-      </div>
-    `).join('');
+    const groups = groupByFlight(teamRollup);
 
-    return `${header}${body || `<div class="maEmptyState">No team config set for this game, or this game is rotation-aware (Team is not shown for COD/1324/1423 games).</div>`}`;
+    return groups.map((group) => {
+      const sorted = group.items.slice().sort((a, b) => (a.teamSort ?? 999) - (b.teamSort ?? 999));
+      const body = sorted.map((team) => `
+        <div class="maListRow maListRow--static">
+          <span class="maListRow__col lbColName">${lbTeamDotHtml(team.teamColor)}${esc(team.teamName || team.teamKey)}</span>
+          <span class="maListRow__col--muted lbColRecord">${team.record.w}-${team.record.l}-${team.record.h}</span>
+          <span class="maListRow__col--muted lbColPts">${esc(officialCategoryDisplay(team.pointsTotal))}</span>
+        </div>
+      `).join('');
+      return lbRenderFlightSection(group, header, body);
+    }).join('');
   }
 
   function lbRenderBody() {
@@ -1255,6 +1353,7 @@
     applyPlacementTopLevelState();
     wireOuterTabs();
     wireIndividualSortMenu();
+    wireLbFlightToggle();
     if (payload.meta?.teamIntegrityWarning) {
       showTeamIntegrityWarning(payload.meta.teamIntegrityWarning);
     }
@@ -1270,6 +1369,21 @@
       const cell = e.target.closest('[data-lb-menu]');
       if (!cell || !dom.lbHost.contains(cell)) return;
       lbOpenIndividualCellMenu(cell);
+    });
+  }
+
+  // Delegated once on the same container as wireIndividualSortMenu — dom.lbHost's
+  // innerHTML is replaced on every render, the element itself persists. Every
+  // grain's flight section header carries [data-lb-flight-toggle], so this is
+  // grain-agnostic by construction.
+  function wireLbFlightToggle() {
+    dom.lbHost?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-lb-flight-toggle]');
+      if (!btn) return;
+      const key = btn.dataset.lbFlightToggle;
+      if (state.collapsedFlights.has(key)) state.collapsedFlights.delete(key);
+      else state.collapsedFlights.add(key);
+      lbRenderBody();
     });
   }
 

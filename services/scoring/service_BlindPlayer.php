@@ -465,7 +465,14 @@ final class ServiceBlindPlayer
 
     /**
      * Merge blind score rows into the player pool as synthetic player records.
-     * Unchanged from original.
+     *
+     * The donor selected by the scorer can be anyone with recorded scores,
+     * regardless of their own Team/Flight (Option B, confirmed) — but the
+     * synthetic clone is always relabeled to the destination pairing's
+     * Team/Flight, not the donor's own. Selection stays a free choice;
+     * correctness is enforced here at merge time instead, so rollups/
+     * leaderboards never see a blind player counted against the wrong team
+     * or flight.
      */
     public static function mergeBlindScoresIntoPlayers(array $players, array $blindScores, array $gameRow): array
     {
@@ -475,12 +482,29 @@ final class ServiceBlindPlayer
             if ($ghin !== '') $byGHIN[$ghin] = $p;
         }
 
-        $pairingKeyMap = [];
+        // One representative real member per pairing — supplies the
+        // PlayerKey (existing behavior) plus TeamKey/FlightKey (new) that a
+        // blind clone inherits from the pairing it's filling, rather than
+        // from the donor. First real member found per pairing wins. A
+        // pairing with no real members at all (fully-blind pairing) has
+        // nothing to inherit from — the clone falls back to the donor's own
+        // Team/Flight in that edge case, same as before this change.
+        $pairingKeyMap    = [];
+        $pairingTeamMap   = [];
+        $pairingFlightMap = [];
         foreach ($players as $p) {
             $pid = (string)($p['dbPlayers_PairingID'] ?? '');
+            if ($pid === '') continue;
+
             $key = (string)($p['dbPlayers_PlayerKey'] ?? '');
-            if ($pid !== '' && $key !== '') {
+            if ($key !== '' && !isset($pairingKeyMap[$pid])) {
                 $pairingKeyMap[$pid] = $key;
+            }
+            if (!isset($pairingTeamMap[$pid]) && isset($p['dbPlayers_TeamKey'])) {
+                $pairingTeamMap[$pid] = (string)$p['dbPlayers_TeamKey'];
+            }
+            if (!isset($pairingFlightMap[$pid]) && isset($p['dbPlayers_FlightKey'])) {
+                $pairingFlightMap[$pid] = (string)$p['dbPlayers_FlightKey'];
             }
         }
 
@@ -499,6 +523,15 @@ final class ServiceBlindPlayer
             $synthetic['dbPlayers_PairingPos'] = $pos;
             $synthetic['dbPlayers_Scores']     = $bs['dbScores_Scores'];
             $synthetic['dbPlayers_PlayerKey']  = $pairingKeyMap[$pairingId] ?? $pairingId;
+
+            // Relabel to the destination pairing's Team/Flight, not the donor's.
+            if (isset($pairingTeamMap[$pairingId])) {
+                $synthetic['dbPlayers_TeamKey'] = $pairingTeamMap[$pairingId];
+            }
+            if (isset($pairingFlightMap[$pairingId])) {
+                $synthetic['dbPlayers_FlightKey'] = $pairingFlightMap[$pairingId];
+            }
+
             $synthetic['isBlind']              = true;
 
             $players[] = $synthetic;

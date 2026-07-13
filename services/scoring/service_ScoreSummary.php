@@ -32,6 +32,7 @@ final class ServiceScoreSummary
 
         $competition = trim((string)($scorecards['competition'] ?? $gameRow['dbGames_Competition'] ?? 'PairField'));
         $meta = is_array($scorecards['meta'] ?? null) ? $scorecards['meta'] : [];
+        $flightConfigById = self::parseFlightConfig($gameRow);
 
         $rows = ($competition === 'PairPair')
             ? self::buildPairPairRows($scorecards['rows'] ?? [], $gameRow, $meta)
@@ -59,7 +60,7 @@ final class ServiceScoreSummary
             // reimplementing the summation itself. Points are the field that
             // actually generalizes across rounds/formats for that purpose;
             // raw KPI sums are included for this page's own display only.
-            'teamRollup' => self::buildTeamRollupRows($rows, $competition),
+            'teamRollup' => self::buildTeamRollupRows($rows, $competition, $flightConfigById),
             // Individual rows — every player's own gross/net-to-par, from
             // totals.grossDiff/netDiff.9c already attached by
             // ServiceScoreCard::decorateScoredPlayers() upstream, for EVERY
@@ -92,6 +93,11 @@ final class ServiceScoreSummary
                 // Leaderboard-tab suppression. Never consulted server-side to
                 // decide whether to compute — see parsePlacementPoints().
                 'placementPointsStates' => self::placementPointsStatesMap(self::parsePlacementPoints($gameRow)),
+                // Display order for flight grouping — the config's own order,
+                // not re-sorted here. Any flightKey a row resolves to that
+                // isn't present in this list (legacy/malformed data) is
+                // appended at the end by the client, sorted naturally.
+                'flightOrder' => array_keys($flightConfigById),
             ]),
         ];
     }
@@ -373,20 +379,38 @@ final class ServiceScoreSummary
      * Teams with no dbGames_TeamConfig entry (teamKey null) are excluded
      * entirely — an empty teamRollup array means "no team config," not zero
      * teams meaningfully computed to nothing.
+     *
+     * Flight-scoped (confirmed: Team is nested inside Flight, never spans
+     * flights) — grouped by [flightKey, teamKey] rather than teamKey alone,
+     * same principle as rankWithinFlights() elsewhere in this file. A team
+     * that happens to have members in more than one flight (data drift, not
+     * expected) produces one rollup row per flight it actually appears in,
+     * rather than one row silently summing across flight boundaries.
+     * $flightConfigById resolves flightName the same way parseFlightConfig()
+     * already does everywhere else in this file.
      */
-    private static function buildTeamRollupRows(array $rows, string $competition): array
+    private static function buildTeamRollupRows(array $rows, string $competition, array $flightConfigById): array
     {
         $teams = [];
 
+        $flightName = function (string $flightKey) use ($flightConfigById): string {
+            return trim((string)($flightConfigById[$flightKey]['name'] ?? '')) ?: 'Flight-1';
+        };
+
         if ($competition === 'PairPair') {
             foreach ($rows as $row) {
+                $flightKey = $row['flightKey'] ?? 'F1';
                 foreach (['left', 'right'] as $side) {
                     $sideData = $row[$side] ?? [];
                     $teamKey = $sideData['teamKey'] ?? null;
                     if ($teamKey === null || $teamKey === '') continue;
 
-                    if (!isset($teams[$teamKey])) {
-                        $teams[$teamKey] = [
+                    $groupKey = $flightKey . '|' . $teamKey;
+
+                    if (!isset($teams[$groupKey])) {
+                        $teams[$groupKey] = [
+                            'flightKey' => $flightKey,
+                            'flightName' => $flightName($flightKey),
                             'teamKey' => $teamKey,
                             'teamName' => $sideData['teamName'] ?? null,
                             'teamColor' => $sideData['teamColor'] ?? null,
@@ -398,22 +422,26 @@ final class ServiceScoreSummary
 
                     $overall = $sideData['matchStatus']['total'] ?? null;
                     $status = $overall['status'] ?? null;
-                    if ($status === 'W') $teams[$teamKey]['record']['w']++;
-                    elseif ($status === 'L') $teams[$teamKey]['record']['l']++;
-                    elseif ($status === 'H') $teams[$teamKey]['record']['h']++;
+                    if ($status === 'W') $teams[$groupKey]['record']['w']++;
+                    elseif ($status === 'L') $teams[$groupKey]['record']['l']++;
+                    elseif ($status === 'H') $teams[$groupKey]['record']['h']++;
 
-                    $teams[$teamKey]['pointsTotal'] += (float)($overall['points'] ?? 0);
+                    $teams[$groupKey]['pointsTotal'] += (float)($overall['points'] ?? 0);
                 }
             }
         } else {
             foreach ($rows as $row) {
                 $teamKey = $row['teamKey'] ?? null;
                 if ($teamKey === null || $teamKey === '') continue;
+                $flightKey = $row['flightKey'] ?? 'F1';
+                $groupKey = $flightKey . '|' . $teamKey;
 
-                if (!isset($teams[$teamKey])) {
+                if (!isset($teams[$groupKey])) {
                     $hasGrossPts = ($row['placementPointsGross'] !== null);
                     $hasNetPts = ($row['placementPointsNet'] !== null);
-                    $teams[$teamKey] = [
+                    $teams[$groupKey] = [
+                        'flightKey' => $flightKey,
+                        'flightName' => $flightName($flightKey),
                         'teamKey' => $teamKey,
                         'teamName' => $row['teamName'] ?? null,
                         'teamColor' => $row['teamColor'] ?? null,
@@ -425,19 +453,19 @@ final class ServiceScoreSummary
                     ];
                 }
 
-                $teams[$teamKey]['grossDiffTotal'] += (float)($row['grossDiffValue'] ?? 0);
-                $teams[$teamKey]['netDiffTotal'] += (float)($row['netDiffValue'] ?? 0);
-                if ($teams[$teamKey]['placementPointsGrossTotal'] !== null) {
-                    $teams[$teamKey]['placementPointsGrossTotal'] += (float)($row['placementPointsGross'] ?? 0);
+                $teams[$groupKey]['grossDiffTotal'] += (float)($row['grossDiffValue'] ?? 0);
+                $teams[$groupKey]['netDiffTotal'] += (float)($row['netDiffValue'] ?? 0);
+                if ($teams[$groupKey]['placementPointsGrossTotal'] !== null) {
+                    $teams[$groupKey]['placementPointsGrossTotal'] += (float)($row['placementPointsGross'] ?? 0);
                 }
-                if ($teams[$teamKey]['placementPointsNetTotal'] !== null) {
-                    $teams[$teamKey]['placementPointsNetTotal'] += (float)($row['placementPointsNet'] ?? 0);
+                if ($teams[$groupKey]['placementPointsNetTotal'] !== null) {
+                    $teams[$groupKey]['placementPointsNetTotal'] += (float)($row['placementPointsNet'] ?? 0);
                 }
             }
         }
 
         $out = array_values($teams);
-        usort($out, fn($a, $b) => ($a['teamSort'] ?? 999) <=> ($b['teamSort'] ?? 999));
+        usort($out, fn($a, $b) => [(string)$a['flightKey'], $a['teamSort'] ?? 999] <=> [(string)$b['flightKey'], $b['teamSort'] ?? 999]);
         return $out;
     }
 
@@ -1113,6 +1141,7 @@ final class ServiceScoreSummary
         // a 9-hole round (F9/B9) only ever has one, never both.
         $validSeg = self::validSegmentKeys($gameRow);
         $teamConfigById = self::parseTeamConfig($gameRow);
+        $flightConfigById = self::parseFlightConfig($gameRow);
 
         foreach ($scorecardRows as $row) {
             $players = is_array($row['players'] ?? null) ? $row['players'] : [];
@@ -1375,8 +1404,22 @@ final class ServiceScoreSummary
                 $rightTeamInfo = ($rightTeamKey !== null) ? ($teamConfigById[$rightTeamKey] ?? null) : null;
             }
 
+            // Flight (division) — NOT the same thing as $flightId above, which
+            // is the pre-existing MatchID-based bracket/slot label used only
+            // for matchLabel display text. This is the real dbPlayers_FlightKey
+            // grouping, same concept buildPairFieldRows resolves via
+            // sideFlightKey(). A match's two sides are expected to agree (a
+            // match is played within one flight); if they don't, prefer the
+            // left side rather than silently picking whichever resolves
+            // non-null, then fall back to the same 'F1' floor used everywhere
+            // else in this file.
+            $matchFlightKey = self::sideFlightKey($leftPlayers) ?? self::sideFlightKey($rightPlayers) ?? 'F1';
+            $matchFlightName = trim((string)($flightConfigById[$matchFlightKey]['name'] ?? '')) ?: 'Flight-1';
+
             $out[] = [
                 'flightId'       => $flightId,
+                'flightKey'      => $matchFlightKey,
+                'flightName'     => $matchFlightName,
                 'matchLabel'     => $pairingLabel,
                 'matchLabelTop'  => self::buildPairFieldLabel($leftPlayers),
                 'matchLabelBottom' => self::buildPairFieldLabel($rightPlayers),
@@ -2173,8 +2216,14 @@ final class ServiceScoreSummary
         array $scorecardRows,
         array $gameRow
     ): array {
-        $holes    = self::holesForGame($gameRow);
-        $pairings = [];
+        $holes = self::holesForGame($gameRow);
+
+        // Keyed by flightKey => [pairingId => ['pairingId'=>..., 'holes'=>...]].
+        // Confirmed: skins are an in-flight pot — carryover chains and awards
+        // must never cross a flight boundary, so pairings are bucketed by
+        // flight before ServiceCalcSkins ever sees them, rather than pooling
+        // the whole field into one calculation.
+        $pairingsByFlight = [];
 
         foreach ($scorecardRows as $scoreRow) {
             $players = is_array($scoreRow['players'] ?? null) ? $scoreRow['players'] : [];
@@ -2184,8 +2233,12 @@ final class ServiceScoreSummary
 
             foreach ($playersByPairing as $pairingId => $pairPlayers) {
                 $pairingId = (string)$pairingId;
-                if (!isset($pairings[$pairingId])) {
-                    $pairings[$pairingId] = ['pairingId' => $pairingId, 'holes' => []];
+                // Same "every event has ≥1 flight, unresolved falls to F1"
+                // floor used everywhere else in this file.
+                $flightKey = self::sideFlightKey($pairPlayers) ?? 'F1';
+
+                if (!isset($pairingsByFlight[$flightKey][$pairingId])) {
+                    $pairingsByFlight[$flightKey][$pairingId] = ['pairingId' => $pairingId, 'holes' => []];
                 }
 
                 foreach ($holes as $holeNumber) {
@@ -2213,7 +2266,7 @@ final class ServiceScoreSummary
                     }
 
                     if ($grossDiffSum !== null || $netDiffSum !== null) {
-                        $pairings[$pairingId]['holes'][$holeKey] = [
+                        $pairingsByFlight[$flightKey][$pairingId]['holes'][$holeKey] = [
                             'gross'    => $grossDiffSum,
                             'net'      => $netDiffSum,
                             'declared' => true,
@@ -2223,7 +2276,17 @@ final class ServiceScoreSummary
             }
         }
 
-        return ServiceCalcSkins::resolveSkins(array_values($pairings), $holes);
+        // Each flight resolved independently, then merged back into one
+        // pairingId-keyed map — pairingIds are unique game-wide, so there's
+        // no collision risk in the merge regardless of how many flights
+        // contributed to it.
+        $merged = ['gross' => [], 'net' => []];
+        foreach ($pairingsByFlight as $pairings) {
+            $result = ServiceCalcSkins::resolveSkins(array_values($pairings), $holes);
+            $merged['gross'] += $result['gross'];
+            $merged['net']   += $result['net'];
+        }
+        return $merged;
     }
 
     /**
