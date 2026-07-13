@@ -17,6 +17,9 @@
   const paths = MA.paths || {};
   const game = init.game || {};
   const scorecards = init.scorecards || {};
+  const setStatus = typeof MA.setStatus === "function"
+    ? MA.setStatus
+    : function (m, lvl) { if (m) console.log("[STATUS]", lvl || "info", m); };
 
   // ==========================================================================
   // 2. Generic DOM Helpers
@@ -350,6 +353,81 @@ function renderGroup(group) {
   // 7. Page Actions / Print
   // ==========================================================================
 
+  async function downloadPointScorecards() {
+    const endpoint = String(paths.excelPointScorecards || "").trim();
+
+    if (!endpoint) {
+      setStatus("Excel point scorecard export is not configured.", "error");
+      return;
+    }
+
+    try {
+      setStatus("Creating Excel point scorecards…", "info");
+
+      const response = await fetch(endpoint, {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store"
+      });
+
+      const contentType = response.headers.get("content-type") || "";
+
+      if (!response.ok) {
+        let message = "Could not create Excel point scorecards.";
+
+        if (contentType.includes("application/json")) {
+          const payload = await response.json();
+          message = payload?.message || message;
+        } else {
+          const text = await response.text();
+          if (text.trim()) message = text.trim();
+        }
+
+        throw new Error(message);
+      }
+
+      if (!contentType.includes("application/vnd.openxmlformats-officedocument")) {
+        throw new Error("The server did not return an Excel workbook.");
+      }
+
+      const blob = await response.blob();
+      const disposition = response.headers.get("content-disposition") || "";
+      const match = disposition.match(/filename="?([^"]+)"?/i);
+      const ggid = String(game.dbGames_GGID || game.dbGames_GGIDnum || "game");
+      const filename = match?.[1] ? match[1] : `MatchAid_PointScorecards_${ggid}.xlsx`;
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+      setStatus("Excel point scorecards downloaded.", "success");
+
+    } catch (error) {
+      console.error("[MA][POINT_SCORECARD_EXPORT]", error);
+      setStatus(String(error?.message || "Excel point scorecard export failed."), "error");
+    }
+  }
+
+  function openActionsMenu() {
+    if (!MA.ui || typeof MA.ui.openActionsMenu !== "function") {
+      setStatus("Actions menu module is unavailable.", "error");
+      return;
+    }
+
+    const items = [
+      { label: "Download Point Scorecards (.xlsx)", action: downloadPointScorecards }
+    ];
+
+    MA.ui.openActionsMenu("Actions", items);
+  }
+
   const PRINT_STEPS = [
     { icon: "🖨", label: "Orientation",       detail: "Select Landscape" },
     { icon: "📄", label: "Paper",             detail: "Select Letter size (8.5 × 11)" },
@@ -420,8 +498,7 @@ function renderGroup(group) {
     if (chrome.setHeaderLines) chrome.setHeaderLines([isEvent ? "Round Scorecard" : "Game Scorecard", game.dbGames_Title || "Game", subtitle]);
     if (chrome.setActions) chrome.setActions({
       left:  { show: false },
-      right: { show: false }
-      // right: { show: true, label: "Print", onClick: onPrint }
+      right: { show: true, label: "Actions", onClick: openActionsMenu }
     });
 
     if (chrome.setBottomNav) chrome.setBottomNav( {
