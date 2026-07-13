@@ -116,6 +116,7 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   <script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/recalculate_handicaps.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/pageHelp.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_runAutoPair.js') ?>"></script>
   <script src="<?= ma_asset('/assets/pages/game_pairings.js') ?>"></script>
 </body>
 </html>

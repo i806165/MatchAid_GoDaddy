@@ -70,6 +70,11 @@
 
     editMode: false, // For card editing
     teamConfig: null,   // null | { teams: [{id,name,color,sort},...] } — from dbGames_TeamConfig
+    // flightConfig is the dbPlayers_FlightKey / dbGames_FlightConfig grouping
+    // (e.g. Men/Women) used by the boundary clamp and MA.runAutoPair. This is
+    // UNRELATED to targetFlightId/targetFlightPos above, which is the Match
+    // Pairings tab's Side A/B container — do not conflate the two.
+    flightConfig: null, // null | { flights: [{id,name,sort},...] } — from dbGames_FlightConfig
   // Dirty map by GHIN
     dirty: new Set(),
     allCollapsed: false, // Global expand/collapse state
@@ -265,510 +270,29 @@
     const allUnpaired = state.players.filter(p => String(p.pairingId || "000") === "000");
     if (allUnpaired.length < 2) return setStatus("Not enough unpaired players.", "warn");
 
-    // Detect teams — valid only when 2+ distinct non-empty team keys exist in the unpaired pool
-    const teamIds = state.teamConfig
-      ? [...new Set(allUnpaired.map(p => p.team || "").filter(Boolean))].sort()
-      : [];
-    const hasTeams = state.teamConfig !== null && teamIds.length > 1;
-
-    // Build defaults against the full pool (modal recalculates per-team on open)
-    const total = allUnpaired.length;
-    const minGroups = Math.max(1, Math.ceil(total / 4));
-    const mixes = AutoPairEngine.calculateValidMixes(total, minGroups);
-    const mix = mixes[0] || { fours: 0, threes: 0, twos: Math.ceil(total / 2), singles: 0 };
-
-    const defaults = {
-      teeTimeCount: minGroups,
-      foursomes: mix.fours,
-      threesomes: mix.threes,
-      twosomes: mix.twos,
-      singles: mix.singles || 0,
-      outcome: "balanced"  // always resets to Competitive balance — no persistence
-    };
-
-    openAutoPairModal(defaults, allUnpaired, state.teamConfig, hasTeams);
-  }
-
-  function openActionsMenu() {
-    if (!MA.ui || !MA.ui.openActionsMenu) return;
-    
-    const items = [
-      { label: "Open Automated Pairing", action: onAutoPair },
-      { separator: true },
-      { separator: true },
-      { label: "Reset Pairings and Matches to last Save", action: onResetPairings, danger: true }
-    ];
-    MA.ui.openActionsMenu("Actions", items);
-  }
-
-  // ============================================================
-  // AUTO-PAIR MODAL & LOGIC
-  // Self-contained section. Two touch points with page state:
-  //   IN:  allUnpaired pool (read from state.players on open)
-  //   OUT: applyAutoPairGroups() writes pairingId/pairingPos and marks dirty
-  // All other state is local to the modal session.
-  // ============================================================
-
-  /**
-   * Derive bucket count from the dominant (most common) group size in the mix.
-   * Replaces the removed Buckets user-input field.
-   * Used by AutoPairEngine.run() — irrelevant for outcomes that skip _bucketize().
-   */
-  function deriveBucketCount(mix) {
-    const sizes = [];
-    for (let i = 0; i < mix.fours;   i++) sizes.push(4);
-    for (let i = 0; i < mix.threes;  i++) sizes.push(3);
-    for (let i = 0; i < mix.twos;    i++) sizes.push(2);
-    for (let i = 0; i < mix.singles; i++) sizes.push(1);
-    if (!sizes.length) return 1;
-    const freq = sizes.reduce((acc, s) => { acc[s] = (acc[s] || 0) + 1; return acc; }, {});
-    return Number(Object.entries(freq).sort((a, b) => b[1] - a[1])[0][0]);
-  }
-
-  /**
-   * Resolve a team display name from teamConfig by team ID ('T1'/'T2').
-   * Returns '' if not found (unassigned or no config).
-   */
-  function resolveTeamName(teamId, teamConfig) {
-    if (!teamConfig || !Array.isArray(teamConfig.teams)) return "";
-    const t = teamConfig.teams.find(t => t.id === teamId);
-    return t ? (t.name || "") : "";
-  }
-
-  function isNH(ghin) {
-    return String(ghin || '').toUpperCase().startsWith('NH');
-  }
-
-  function openAutoPairModal(defaults, allUnpairedPlayers, teamConfig, hasTeams) {
-    // ---- Session state ----
-    // allUnpairedPlayers is frozen at modal open — never re-read from state.players mid-session.
-    // Applied players are marked dirty in state.players externally; the modal's local pool is not mutated.
-    let scopeLocked = false;          // true after first Run — scope becomes read-only
-    let appliedTeams = [];            // teams successfully applied this session (for post-apply cycling)
-
-    // ---- Helpers ----
-    // Returns the active player pool: full pool or filtered by selected team
-    const getActivePool = () => {
-      if (!elScope || elScope.value !== "team") return allUnpairedPlayers;
-      const selectedTeam = elTeam ? elTeam.value : "";
-      return allUnpairedPlayers.filter(p => (p.team || "") === selectedTeam);
-    };
-
-    // Returns unpaired count for a given team ID within the original pool
-    const teamUnpairedCount = (teamId) =>
-      allUnpairedPlayers.filter(p => (p.team || "") === teamId).length;
-
-    // ---- Build shell ----
-    const overlay = document.createElement("div");
-    overlay.className = "maModalOverlay is-open";
-
-    const modal = document.createElement("div");
-    modal.className = "maModal";
-
-    // ---- Header ----
-    const header = document.createElement("div");
-    header.className = "maModal__hdr";
-    header.innerHTML = `
-      <div class="maModal__titles">
-        <div class="maModal__title">Auto-Pair</div>
-        <div class="maModal__subtitle" id="apSubtitle">${allUnpairedPlayers.length} Unpaired Players</div>
-      </div>
-      <button type="button" class="iconBtn btnSecondary" id="apBtnClose" aria-label="Close">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-      </button>
-    `;
-
-    // ---- Controls (Setup Mode) ----
-    // Pairing Scope and Team fields are conditionally rendered based on hasTeams.
-    // Core fields (No. of Pairings, Pairing Size, Pairing Outcome) always shown.
-    const controls = document.createElement("div");
-    controls.className = "maModal__controls";
-    controls.innerHTML = `
-      ${hasTeams ? `
-      <div class="maFieldRow" id="apScopeRow" style="margin-top:0;">
-        <div class="maField" style="flex:1;">
-          <label class="maLabel">Pairing Scope</label>
-          <div class="maFieldHint" style="font-size:11px; color:var(--mutedText); margin-bottom:4px;">Should pairings respect team assignments?</div>
-          <select id="apScope" class="maTextInput">
-            <option value="all">All players together — ${allUnpairedPlayers.length} players</option>
-            <option value="team">Pair within teams only</option>
-          </select>
-        </div>
-      </div>
-      <div class="maFieldRow" id="apTeamRow" style="display:none; margin-top:0;">
-        <div class="maField" style="flex:1;">
-          <label class="maLabel">Team</label>
-          <div class="maFieldHint" style="font-size:11px; color:var(--mutedText); margin-bottom:4px;">Select a team to configure pairings for</div>
-          <select id="apTeam" class="maTextInput"></select>
-        </div>
-      </div>
-      ` : ""}
-      <div class="maFieldRow" id="apScopeLockedRow" style="display:none; margin-top:0;">
-        <div class="maField" style="flex:1;">
-          <div style="font-size:12px; font-weight:700; color:var(--ink);" id="apScopeLockedLabel"></div>
-          <button type="button" class="maLink" id="apBtnChangeScope" style="font-size:11px; margin-top:4px;">Change scope</button>
-        </div>
-      </div>
-      <div class="maFieldRow" style="margin-top:0;" id="apCoreRow1">
-        <div class="maField">
-          <label class="maLabel">No. of Pairings</label>
-          <div class="maFieldHint" style="font-size:11px; color:var(--mutedText); margin-bottom:4px;">How many competitive groups to create</div>
-          <input type="number" id="apTeeTimeCount" class="maTextInput" min="1" max="99" value="${defaults.teeTimeCount}">
-        </div>
-        <div class="maField">
-          <label class="maLabel">Pairing Size</label>
-          <div class="maFieldHint" style="font-size:11px; color:var(--mutedText); margin-bottom:4px;">All options account for every player</div>
-          <select id="apMixSelect" class="maTextInput"></select>
-        </div>
-      </div>
-      <div class="maFieldRow" id="apCoreRow2">
-        <div class="maField" style="flex:1;">
-          <label class="maLabel">Pairing Outcome</label>
-          <div class="maFieldHint" style="font-size:11px; color:var(--mutedText); margin-bottom:4px;">What result are you looking to achieve?</div>
-          <select id="apOutcome" class="maTextInput">
-            <option value="balanced">Competitive balance — spread handicaps evenly across pairings</option>
-            <option value="abcdDraw">ABCD Draw — one player from each handicap tier</option>
-            <option value="inOrder">Ranked — pair strongest players together</option>
-            <option value="stackedHighFirst">Stacked — pair highest handicaps together</option>
-            <option value="random">Random — ignore handicaps entirely</option>
-            <option value="leastPlayed">Least Played Together — prioritize players with least shared history</option>
-          </select>
-        </div>
-      </div>
-      <div id="apMsg" style="margin-top:10px; font-size:12px; font-weight:700; color:var(--warn);"></div>
-    `;
-
-    // ---- Body (Review Mode — initially hidden) ----
-    const body = document.createElement("div");
-    body.className = "maModal__body";
-    body.style.display = "none";
-    body.innerHTML = `<div id="apPreviewList" class="maCards"></div>`;
-
-    // ---- Footer ----
-    const footer = document.createElement("div");
-    footer.className = "maModal__ftr";
-    footer.innerHTML = `
-      <button class="btn btnSecondary" id="apBtnCancel" type="button">Cancel</button>
-      <div class="maModal__ftrActions">
-        <button class="btn btnSecondary" id="apBtnRetry" type="button" style="display:none;">Retry</button>
-        <button class="btn btnPrimary"   id="apBtnRun"   type="button">Run</button>
-        <button class="btn btnPrimary"   id="apBtnApply" type="button" style="display:none;">Apply</button>
-      </div>
-    `;
-
-    modal.appendChild(header);
-    modal.appendChild(controls);
-    modal.appendChild(body);
-    modal.appendChild(footer);
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-
-    // ---- Element references ----
-    const elSubtitle      = header.querySelector("#apSubtitle");
-    const elScope         = hasTeams ? controls.querySelector("#apScope") : null;
-    const elTeamRow       = hasTeams ? controls.querySelector("#apTeamRow") : null;
-    const elTeam          = hasTeams ? controls.querySelector("#apTeam") : null;
-    const elScopeLockedRow   = controls.querySelector("#apScopeLockedRow");
-    const elScopeLockedLabel = controls.querySelector("#apScopeLockedLabel");
-    const btnChangeScope  = controls.querySelector("#apBtnChangeScope");
-    const elTT            = controls.querySelector("#apTeeTimeCount");
-    const elMix           = controls.querySelector("#apMixSelect");
-    const elOutcome       = controls.querySelector("#apOutcome");
-    const elMsg           = controls.querySelector("#apMsg");
-    const elPreview       = body.querySelector("#apPreviewList");
-    const btnClose        = header.querySelector("#apBtnClose");
-    const btnCancel       = footer.querySelector("#apBtnCancel");
-    const btnRun          = footer.querySelector("#apBtnRun");
-    const btnRetry        = footer.querySelector("#apBtnRetry");
-    const btnApply        = footer.querySelector("#apBtnApply");
-
-    let currentPreviewGroups = [];
-
-    // ---- Close ----
-    const close = () => overlay.remove();
-    btnClose.addEventListener("click", close);
-    btnCancel.addEventListener("click", close);
-
-    // ---- Subtitle ----
-    const updateSubtitle = () => {
-      if (!elSubtitle) return;
-      if (!hasTeams || !elScope || elScope.value !== "team") {
-        elSubtitle.textContent = `${allUnpairedPlayers.length} Unpaired Players`;
-      } else {
-        const teamId   = elTeam ? elTeam.value : "";
-        const teamName = resolveTeamName(teamId, teamConfig);
-        const n        = teamUnpairedCount(teamId);
-        elSubtitle.textContent = `${teamName} — ${n} Unpaired Player${n !== 1 ? "s" : ""}`;
-      }
-    };
-
-    // ---- Team dropdown population ----
-    const populateTeamDropdown = () => {
-      if (!elTeam || !teamConfig) return;
-      const sorted = [...teamConfig.teams].sort((a, b) => a.sort - b.sort);
-      elTeam.innerHTML = sorted.map(t => {
-        const n = teamUnpairedCount(t.id);
-        const disabled = n === 0 ? " disabled" : "";
-        return `<option value="${esc(t.id)}"${disabled}>${esc(t.name)} — ${n} unpaired player${n !== 1 ? "s" : ""}${n === 0 ? " (disabled)" : ""}</option>`;
-      }).join("");
-      // Default to first team with unpaired players
-      const firstAvailable = sorted.find(t => teamUnpairedCount(t.id) > 0);
-      if (firstAvailable) elTeam.value = firstAvailable.id;
-    };
-
-    // ---- No. of Pairings default recalc ----
-    const recalcGroupCount = () => {
-      const pool = getActivePool();
-      const n = pool.length;
-      elTT.value = String(Math.max(1, Math.ceil(n / 4)));
-    };
-
-    // ---- Pairing Size dropdown ----
-    const updateMixOptions = () => {
-      const pool = getActivePool();
-      const tt   = Math.max(1, parseInt(elTT.value || "1", 10));
-
-      // Get all valid mixes for this pool + group count
-      let mixes = AutoPairEngine.calculateValidMixes(pool.length, tt);
-
-      // PairPair constraint: max 2 players per pairing — filter out mixes with fours or threes.
-      // GUARD: Run button disabled state and "no valid mix" check must evaluate against this
-      // filtered list, not the raw output, so the button correctly reflects what the user can run.
-      if (isPairPair()) {
-        mixes = mixes.filter(m => m.fours === 0 && m.threes === 0);
-      }
-
-      elMix.innerHTML = "";
-      if (!mixes.length) {
-        elMsg.textContent = "No valid pairing size for this group count.";
-        btnRun.disabled = true;
-        return;
-      }
-      elMsg.textContent = "";
-      btnRun.disabled = false;
-
-      mixes.forEach((m, idx) => {
-        const opt = document.createElement("option");
-        opt.value = JSON.stringify({ fours: m.fours, threes: m.threes, twos: m.twos, singles: m.singles || 0 });
-        opt.textContent = m.verboseDisplay;
-        if (idx === 0) opt.selected = true;
-        elMix.appendChild(opt);
-      });
-    };
-
-    elTT.addEventListener("change", updateMixOptions);
-    elTT.addEventListener("input",  updateMixOptions);
-
-    // ---- Scope visibility ----
-    const updateScopeVisibility = () => {
-      if (!hasTeams || !elScope) return;
-      const isTeam = elScope.value === "team";
-      if (elTeamRow) elTeamRow.style.display = isTeam ? "" : "none";
-      if (isTeam) {
-        populateTeamDropdown();
-        recalcGroupCount();
-      } else {
-        // All players together — reset group count to full pool default
-        const total = allUnpairedPlayers.length;
-        elTT.value = String(Math.max(1, Math.ceil(total / 4)));
-      }
-      updateSubtitle();
-      updateMixOptions();
-    };
-
-    if (elScope) elScope.addEventListener("change", updateScopeVisibility);
-    if (elTeam)  elTeam.addEventListener("change", () => {
-      recalcGroupCount();
-      updateSubtitle();
-      updateMixOptions();
-    });
-
-    // ---- Scope lock (after first Run) ----
-    const lockScope = () => {
-      if (!hasTeams || scopeLocked) return;
-      scopeLocked = true;
-
-      // Hide the live scope/team dropdowns, show read-only summary line
-      const scopeRow = controls.querySelector("#apScopeRow");
-      if (scopeRow) scopeRow.style.display = "none";
-      if (elTeamRow) elTeamRow.style.display = "none";
-      if (elScopeLockedRow) elScopeLockedRow.style.display = "";
-
-      const scopeLabel = elScope && elScope.value === "team"
-        ? "Pairing within teams — " + teamConfig.teams.map(t => t.name).join(" • ")
-        : "All players together";
-      if (elScopeLockedLabel) elScopeLockedLabel.textContent = scopeLabel;
-    };
-
-    // Change scope — escape hatch with confirmation.
-    // Warns that any pairings applied this session will be discarded.
-    if (btnChangeScope) {
-      btnChangeScope.addEventListener("click", () => {
-        const msg = appliedTeams.length > 0
-          ? `Changing scope will discard pairings already applied this session (${appliedTeams.map(id => resolveTeamName(id, teamConfig) || id).join(", ")}). Continue?`
-          : "Change pairing scope? This will reset the modal to Setup.";
-        if (!confirm(msg)) return;
-
-        // Reset session
-        scopeLocked = false;
-        appliedTeams = [];
-        currentPreviewGroups = [];
-
-        // Restore scope controls
-        const scopeRow = controls.querySelector("#apScopeRow");
-        if (scopeRow) scopeRow.style.display = "";
-        if (elScopeLockedRow) elScopeLockedRow.style.display = "none";
-
-        // Return to Setup Mode
-        body.style.display = "none";
-        controls.style.display = "";
-        elPreview.innerHTML = "";
-        btnApply.style.display = "none";
-        btnRetry.style.display = "none";
-        btnRun.style.display   = "inline-flex";
-        btnRun.disabled        = false;
-        elMsg.textContent      = "";
-
-        updateScopeVisibility();
-        updateSubtitle();
-      });
+    if (!MA.runAutoPair || typeof MA.runAutoPair.open !== "function") {
+      setStatus("Auto-Pair module failed to load.", "danger");
+      return;
     }
 
-    // ---- Initialize controls ----
-    elOutcome.value = "balanced"; // always resets — no localStorage persistence
-    updateScopeVisibility();      // sets team row visibility, populates team dropdown
-    updateMixOptions();           // populates Pairing Size
-
-    // ---- RUN ----
-    btnRun.addEventListener("click", async () => {
-      const pool = getActivePool();
-      const mix  = JSON.parse(elMix.value || "{}");
-      const cfg  = {
-        teeTimeCount: parseInt(elTT.value, 10),
-        foursomes:    mix.fours   || 0,
-        threesomes:   mix.threes  || 0,
-        twosomes:     mix.twos    || 0,
-        singles:      mix.singles || 0,
-        outcome:      elOutcome.value,
-        // bucketCount derived automatically — Buckets field removed
-        bucketCount:  deriveBucketCount({ fours: mix.fours || 0, threes: mix.threes || 0, twos: mix.twos || 0, singles: mix.singles || 0 }),
-      };
-
-      const v = AutoPairEngine.validateConfig(cfg, pool);
-      if (!v.ok) { elMsg.textContent = v.message; return; }
-
-      // Lock scope after first Run
-      lockScope();
-
-      // Fetch co-play matrix for leastPlayed outcome only.
-      // Matrix shape: { 'LOWER_GHIN|HIGHER_GHIN': { count: int, last: 'Y-m-d'|null } }
-      // NH players excluded here and again at the PHP level.
-      // On any failure: empty matrix = handicap tiebreak only — still a valid result.
-      let coPlayMatrix = {};
-      if (cfg.outcome === "leastPlayed") {
-        const ghins = pool.map(p => p.playerGHIN).filter(g => !isNH(g));
-        try {
-          const res = await MA.postJson(`${apiBase}/getCoPlayMatrix.php`, { ghins });
-          if (res && res.ok) coPlayMatrix = res.matrix || {};
-        } catch (err) {
-          console.warn("[AutoPair] Co-play matrix fetch failed — proceeding without history.", err);
-        }
-      }
-      cfg.coPlayMatrix = coPlayMatrix;
-
-      // Generate preview
-      currentPreviewGroups = AutoPairEngine.run(cfg, pool);
-
-      // Render preview cards
-      elPreview.innerHTML = currentPreviewGroups.map((grp, i) => {
-        const sum = grp.reduce((s, p) => s + AutoPairEngine.phValue(p), 0);
-        const avg = grp.length ? (sum / grp.length).toFixed(1) : "0.0";
-        const rows = grp.map(p => {
-          const ph   = AutoPairEngine.phValue(p);
-          const meta = [p.teeSetName, `PH:${ph}`].filter(Boolean).join(" • ");
-          return `<div style="display:flex; justify-content:space-between; font-size:12px; padding:4px 0; border-top:1px solid #eee;">
-            <span>${esc(p.name)}</span>
-            <span style="color:var(--mutedText);">${esc(meta)}</span>
-          </div>`;
-        }).join("");
-        return `
-          <div class="maCard">
-            <div class="maCard__hdr" style="padding:8px 10px; background:#f9f9f9; border-bottom:1px solid #eee;">
-              <div class="maCard__title" style="font-size:12px;">Pairing ${i + 1}</div>
-              <div style="font-size:11px; font-weight:700; color:var(--mutedText);">Sum ${sum} • Avg ${avg}</div>
-            </div>
-            <div class="maCard__body" style="padding:4px 10px;">${rows}</div>
-          </div>`;
-      }).join("");
-
-      // Transition to Review Mode
-      controls.style.display = "none";
-      body.style.display     = "block";
-      btnRun.style.display   = "none";
-      btnRetry.style.display = "inline-flex";
-      btnApply.style.display = "inline-flex";
-    });
-
-    // ---- RETRY ----
-    btnRetry.addEventListener("click", () => {
-      body.style.display     = "none";
-      controls.style.display = "";
-      elPreview.innerHTML    = "";
-      currentPreviewGroups   = [];
-      btnApply.style.display = "none";
-      btnRetry.style.display = "none";
-      btnRun.style.display   = "inline-flex";
-    });
-
-    // ---- APPLY ----
-    btnApply.addEventListener("click", () => {
-      if (!currentPreviewGroups.length) return;
-
-      const appliedTeamId = (hasTeams && elScope && elScope.value === "team" && elTeam)
-        ? elTeam.value
-        : null;
-
-      applyAutoPairGroups(currentPreviewGroups);
-      currentPreviewGroups = [];
-
-      if (appliedTeamId) appliedTeams.push(appliedTeamId);
-
-      // Post-apply: check for remaining teams with unpaired players (team-scope mode only)
-      if (hasTeams && elScope && elScope.value === "team") {
-        const remaining = teamConfig.teams
-          .map(t => t.id)
-          .filter(id => !appliedTeams.includes(id) && teamUnpairedCount(id) > 0);
-
-        if (remaining.length > 0) {
-          const nextTeamId   = remaining[0];
-          const nextTeamName = resolveTeamName(nextTeamId, teamConfig);
-
-          // Advance team selection to next team, recalculate core fields
-          if (elTeam) elTeam.value = nextTeamId;
-          recalcGroupCount();
-          updateSubtitle();
-          updateMixOptions();
-
-          // Return to Setup Mode — modal stays open
-          body.style.display     = "none";
-          controls.style.display = "";
-          elPreview.innerHTML    = "";
-          btnApply.style.display = "none";
-          btnRetry.style.display = "none";
-          btnRun.style.display   = "inline-flex";
-
-          const appliedName = resolveTeamName(appliedTeamId, teamConfig) || appliedTeamId;
-          elMsg.textContent = `Pairings applied for ${appliedName}. Now configure ${nextTeamName}.`;
-          elMsg.style.color = "var(--success, green)";
-          return; // do not close
-        }
-      }
-
-      close();
+    MA.runAutoPair.open({
+      players: allUnpaired,
+      flightConfig: state.flightConfig,
+      teamConfig: state.teamConfig,
+      isPairPair: isPairPair(),
+      apiBase,
+      onApply: onAutoPairApply,
     });
   }
 
-  function applyAutoPairGroups(groups) {
+  // Commits groups drafted by MA.runAutoPair — same job applyAutoPairGroups()
+  // used to do inline (see the note a few lines below). Stays in this file
+  // rather than the module because pairing-ID numbering (nextPairingId/pad3)
+  // depends on the FULL player set, not just the unpaired pool the module
+  // was handed. Called once per Apply click — the module may call this more
+  // than once per open() session if the user runs/applies repeatedly before
+  // closing (it re-hydrates and stays open rather than closing after Apply).
+  function onAutoPairApply(groups) {
     let pidNum = parseInt(nextPairingId(), 10) - 1; // start before next available
 
     groups.forEach(grp => {
@@ -785,320 +309,35 @@
     });
 
     render();
-    setStatus(`Auto-paired ${groups.length} pairings.`, "success");
+    setStatus(`Auto-paired ${groups.length} pairing${groups.length !== 1 ? "s" : ""}.`, "success");
   }
 
-  // ---- AutoPair Engine (Ported) ----
-  const AutoPairEngine = {
-    phValue(p) {
-      const v = (p && p.ph != null && p.ph !== "") ? Number(p.ph)
-        : (p && p.ch != null && p.ch !== "") ? Number(p.ch)
-          : (p && p.hi != null && p.hi !== "") ? Number(p.hi)
-            : 999;
-      return Number.isFinite(v) ? v : 999;
-    },
-    calculateValidMixes(totalGolfers, totalTeeTimes) {
-      if (!(totalGolfers > 0 && totalTeeTimes > 0)) return [];
-      const results = [];
+  function openActionsMenu() {
+    if (!MA.ui || !MA.ui.openActionsMenu) return;
+    
+    const items = [
+      { label: "Open Automated Pairing", action: onAutoPair },
+      { separator: true },
+      { separator: true },
+      { label: "Reset Pairings and Matches to last Save", action: onResetPairings, danger: true }
+    ];
+    MA.ui.openActionsMenu("Actions", items);
+  }
 
-      for (let fours = Math.floor(totalGolfers / 4); fours >= 0; fours--) {
-        const leftAfter4 = totalGolfers - (fours * 4);
+  /**
+   * Resolve a team display name from teamConfig by team ID ('T1'/'T2').
+   * Returns '' if not found (unassigned or no config).
+   */
+  function resolveTeamName(teamId, teamConfig) {
+    if (!teamConfig || !Array.isArray(teamConfig.teams)) return "";
+    const t = teamConfig.teams.find(t => t.id === teamId);
+    return t ? (t.name || "") : "";
+  }
 
-        for (let threes = Math.floor(leftAfter4 / 3); threes >= 0; threes--) {
-          const leftAfter3 = leftAfter4 - (threes * 3);
-
-          for (let twos = Math.floor(leftAfter3 / 2); twos >= 0; twos--) {
-            const leftAfter2 = leftAfter3 - (twos * 2);
-
-            // whatever remains becomes singles
-            const singles = leftAfter2;
-            if (singles < 0) continue;
-
-            const totalGroups = fours + threes + twos + singles;
-            if (totalGroups > totalTeeTimes) continue;
-
-            results.push({ fours, threes, twos, singles });
-          }
-        }
-      }
-
-      results.sort((a, b) => {
-        const aSinglesOnly = a.singles > 0 && a.fours === 0 && a.threes === 0 && a.twos === 0;
-        const bSinglesOnly = b.singles > 0 && b.fours === 0 && b.threes === 0 && b.twos === 0;
-        if (aSinglesOnly !== bSinglesOnly) return aSinglesOnly ? 1 : -1;
-
-        const aHasSingles = a.singles > 0;
-        const bHasSingles = b.singles > 0;
-        if (aHasSingles !== bHasSingles) return aHasSingles ? 1 : -1;
-
-        const aKinds =
-          (a.fours > 0 ? 1 : 0) +
-          (a.threes > 0 ? 1 : 0) +
-          (a.twos > 0 ? 1 : 0) +
-          (a.singles > 0 ? 1 : 0);
-
-        const bKinds =
-          (b.fours > 0 ? 1 : 0) +
-          (b.threes > 0 ? 1 : 0) +
-          (b.twos > 0 ? 1 : 0) +
-          (b.singles > 0 ? 1 : 0);
-
-        if (aKinds !== bKinds) return aKinds - bKinds;
-        if (a.fours !== b.fours) return b.fours - a.fours;
-        if (a.threes !== b.threes) return b.threes - a.threes;
-        if (a.twos !== b.twos) return b.twos - a.twos;
-        return a.singles - b.singles;
-      });
-
-      return results.map(m => ({
-        fours: m.fours,
-        threes: m.threes,
-        twos: m.twos,
-        singles: m.singles,
-        verboseDisplay: this._mixVerbose(m.fours, m.threes, m.twos, m.singles)
-      }));
-    },
-    validateConfig(cfg, unpairedPlayers) {
-      const total = (unpairedPlayers || []).length;
-      const fours = Number(cfg.foursomes || 0);
-      const threes = Number(cfg.threesomes || 0);
-      const twos = Number(cfg.twosomes || 0);
-      const singles = Number(cfg.singles || 0);
-      const seats = fours * 4 + threes * 3 + twos * 2 + singles;
-      const groups = fours + threes + twos + singles;
-
-      if (!total) return { ok: false, message: "No unpaired players." };
-      if (seats !== total) return { ok: false, message: `Mix seats (${seats}) must equal unpaired players (${total}).` };
-      if (groups <= 0) return { ok: false, message: "Choose a valid group mix." };
-      if (groups > Number(cfg.teeTimeCount || groups)) return { ok: false, message: "Total groups exceed tee times." };
-
-      return { ok: true, message: "" };
-    },
-    run(cfg, unpairedPlayers) {
-      const pool = (unpairedPlayers || []).slice().sort((a, b) => this.phValue(a) - this.phValue(b));
-      const sizes = this._autopairGroupSizes(cfg, pool.length);
-      // bucketCount is auto-derived from the dominant mix size — Buckets field was removed.
-      // cfg.bucketCount is pre-calculated by deriveBucketCount() in the Run handler and passed here.
-      // For outcomes that skip _bucketize() (inOrder, random, stackedHighFirst), this value is unused.
-      const bucketCount = Math.max(1, Number(cfg.bucketCount || 1));
-      const buckets = this._bucketize(pool, bucketCount);
-
-      switch (cfg.outcome) {
-        case "balanced": return this._draftBalanced(buckets, sizes);
-        case "inOrder": return this._draftInOrder(pool, sizes);
-        case "abcdDraw": return this._draftABCD(buckets, sizes);
-        case "random": return this._draftRandom(pool, sizes);
-        case "stackedHighFirst": return this._draftStackedHighFirst(pool, sizes);
-        case "leastPlayed":      return this._draftLeastPlayed(pool, sizes, cfg.coPlayMatrix || {});
-        default: return this._draftBalanced(buckets, sizes);
-      }
-    },
-    _autopairGroupSizes(cfg, availablePlayers) {
-      const out = [];
-      const f = Number(cfg.foursomes || 0);
-      const t3 = Number(cfg.threesomes || 0);
-      const t2 = Number(cfg.twosomes || 0);
-      const s1 = Number(cfg.singles || 0);
-      for (let i = 0; i < f; i++) out.push(4);
-      for (let i = 0; i < t3; i++) out.push(3);
-      for (let i = 0; i < t2; i++) out.push(2);
-      for (let i = 0; i < s1; i++) out.push(1);
-      const seats = out.reduce((s, x) => s + x, 0);
-      if (seats <= availablePlayers) return out;
-      let remaining = availablePlayers;
-      const clamped = [];
-      for (const s of out) {
-        if (remaining <= 0) break;
-        const take = Math.min(s, remaining);
-        clamped.push(take);
-        remaining -= take;
-      }
-      return clamped;
-    },
-    _bucketize(players, bucketCount) {
-      if (bucketCount <= 1) return [players.slice()];
-      const sorted = players.slice().sort((a, b) => this.phValue(a) - this.phValue(b));
-      const n = sorted.length;
-      const base = Math.floor(n / bucketCount);
-      const rem = n % bucketCount;
-      const buckets = [];
-      let idx = 0;
-      for (let i = 0; i < bucketCount; i++) {
-        const extra = (i < rem) ? 1 : 0;
-        const size = base + extra;
-        const slice = (size > 0 && idx < n) ? sorted.slice(idx, Math.min(idx + size, n)) : [];
-        buckets.push(slice);
-        idx += size;
-      }
-      return buckets;
-    },
-    _draftBalanced(buckets, sizes) {
-      const queues = buckets.map(b => b.slice());
-      const pull = (bi, back = false) => {
-        if (!queues[bi] || !queues[bi].length) return null;
-        return back ? queues[bi].pop() : queues[bi].shift();
-      };
-      const pullAny = () => {
-        for (let i = 0; i < queues.length; i++) {
-          if (queues[i].length) return queues[i].shift();
-        }
-        return null;
-      };
-      const pushFrom = (group, sources) => {
-        for (const [i, back] of sources) {
-          const p = pull(i, back);
-          if (p) { group.push(p); return; }
-        }
-        const p = pullAny();
-        if (p) group.push(p);
-      };
-      const groups = [];
-      for (const size of sizes) {
-        const g = [];
-        switch (size) {
-          case 4:
-            pushFrom(g, [[0, false], [1, true], [2, false], [3, false]]);
-            pushFrom(g, [[1, true], [2, false], [3, false], [0, false]]);
-            pushFrom(g, [[2, true], [3, false], [1, false], [0, false]]);
-            pushFrom(g, [[3, false], [0, false], [2, false], [1, false]]);
-            break;
-          case 3:
-            pushFrom(g, [[0, false], [1, true], [2, false], [3, false]]);
-            pushFrom(g, [[1, true], [2, false], [3, false], [0, false]]);
-            pushFrom(g, [[2, false], [3, false], [1, false], [0, false]]);
-            break;
-          default:
-            for (let i = 0; i < size; i++) { const p = pullAny(); if (p) g.push(p); }
-            break;
-        }
-        groups.push(g);
-      }
-      return groups;
-    },
-    _draftInOrder(players, sizes) {
-      const list = players.slice();
-      const groups = [];
-      for (const s of sizes) {
-        const g = [];
-        for (let i = 0; i < s; i++) if (list.length) g.push(list.shift());
-        groups.push(g);
-      }
-      return groups;
-    },
-    _draftABCD(buckets, sizes) {
-      const queues = buckets.map(b => b.slice());
-      const pullFront = (i) => {
-        if (!queues[i] || !queues[i].length) return null;
-        return queues[i].shift();
-      };
-      const pullAny = () => {
-        for (let i = 0; i < queues.length; i++) if (queues[i].length) return queues[i].shift();
-        return null;
-      };
-      const B = Math.max(1, queues.length);
-      const groups = [];
-      for (const s of sizes) {
-        const g = [];
-        let k = 0;
-        while (g.length < s) {
-          const bi = k % B;
-          const p = pullFront(bi) || pullAny();
-          if (!p) break;
-          g.push(p);
-          k += 1;
-        }
-        groups.push(g);
-      }
-      return groups;
-    },
-    _draftRandom(players, sizes) {
-      const list = players.slice();
-      for (let i = list.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [list[i], list[j]] = [list[j], list[i]];
-      }
-      return this._draftInOrder(list, sizes);
-    },
-    _draftStackedHighFirst(players, sizes) {
-      // players already sorted asc by PH, so this is just InOrder
-      return this._draftInOrder(players, sizes);
-    },
-    _draftLeastPlayed(pool, sizes, matrix) {
-      // pool arrives pre-sorted asc by PH from run() — real players anchor,
-      // NH players trail and never become group anchors.
-      const real      = pool.filter(p => !isNH(p.playerGHIN));
-      const nh        = pool.filter(p =>  isNH(p.playerGHIN));
-      const remaining = [...real, ...nh];
-
-      const groups = [];
-      for (const size of sizes) {
-        if (!remaining.length) break;
-        const anchor = remaining.shift();   // lowest PH real player
-        const group  = [anchor];
-        while (group.length < size && remaining.length) {
-          const best = this._pickBestCandidate(group, remaining, matrix);
-          if (!best) break;
-          remaining.splice(remaining.indexOf(best), 1);
-          group.push(best);
-        }
-        groups.push(group);
-      }
-      return groups;
-    },
-    _pickBestCandidate(group, remaining, matrix) {
-      let best = null, bestScore = null;
-      for (const candidate of remaining) {
-        let totalCount     = 0;
-        let mostRecentLast = null; // most recent shared game — we want the oldest
-        for (const member of group) {
-          // Sort GHINs to match PHP key convention (p1.GHIN < p2.GHIN)
-          const key   = [member.playerGHIN, candidate.playerGHIN].sort().join('|');
-          const entry = matrix[key];
-          if (entry) {
-            totalCount += entry.count;
-            if (entry.last && (!mostRecentLast || entry.last > mostRecentLast)) {
-              mostRecentLast = entry.last;
-            }
-          }
-          // No entry = never played together = count 0, last null (ideal)
-        }
-        const score = {
-          count:  totalCount,
-          last:   mostRecentLast,
-          spread: this._spreadIfAdded(group, candidate),
-        };
-        if (!best || this._compareScore(score, bestScore) < 0) {
-          best = candidate; bestScore = score;
-        }
-      }
-      return best;
-    },
-    _compareScore(a, b) {
-      // Priority 1: fewest times played together
-      if (a.count !== b.count) return a.count - b.count;
-      // Priority 2: longest ago (null = never = best)
-      if (a.last !== b.last) {
-        if (a.last === null) return -1;
-        if (b.last === null) return  1;
-        return a.last.localeCompare(b.last); // Y-m-d: older string wins
-      }
-      // Priority 3: tightest handicap spread
-      return a.spread - b.spread;
-    },
-    _spreadIfAdded(group, candidate) {
-      const vals = [...group, candidate].map(p => this.phValue(p));
-      return Math.max(...vals) - Math.min(...vals);
-    },
-    _mixVerbose(f, t3, t2, s1) {
-      // Plain-English pairing size labels — no "foursomes/threesomes/twosomes/singles" (playing group language).
-      const p = [];
-      if (f  > 0) p.push(`4-player pairings (${f})`);
-      if (t3 > 0) p.push(`3-player pairings (${t3})`);
-      if (t2 > 0) p.push(`2-player pairings (${t2})`);
-      if (s1 > 0) p.push(`1-player pairings (${s1})`);
-      return p.length ? p.join(" + ") : "—";
-    }
-  };
+  // The Auto-Pair modal + drafting engine (isNH, openAutoPairModal,
+  // applyAutoPairGroups, AutoPairEngine) used to live here inline. It's now
+  // /assets/modules/module_runAutoPair.js (MA.runAutoPair) — see onAutoPair()
+  // above and onAutoPairApply() below.
 
   // ---- Chrome ----
   function applyChrome() {
@@ -2196,6 +1435,11 @@
         // Team assignment — stable slot ID ('T1', 'T2', or '').
         // Display name is resolved at render time from teamConfig; never stored here.
         team: String(r.dbPlayers_TeamKey ?? r.team ?? ""),
+        // Flight assignment (dbPlayers_FlightKey) — the Men's/Women's-style
+        // grouping used by the boundary clamp and MA.runAutoPair. NOT the
+        // same as flightId/flightPos above (Match tab Side A/B container).
+        // Display name resolved at render time from state.flightConfig.
+        flightKey: String(r.dbPlayers_FlightKey ?? r.flightKey ?? ""),
       };
     });
   }
@@ -2231,6 +1475,20 @@
       : null;
     state.teamConfig = (rawTeamConfig && Array.isArray(rawTeamConfig.teams) && rawTeamConfig.teams.length === 2)
       ? rawTeamConfig
+      : null;
+
+    // flightConfig: dbPlayers_FlightKey grouping (e.g. Men/Women), parsed the
+    // same way as teamConfig above — but with NO 2-item cap. A game can have
+    // any number of flights (or none). Distinct from targetFlightId/
+    // targetFlightPos (state, ~line 68), which is the unrelated Match
+    // Pairings Side A/B container — see the comment on state.flightConfig.
+    const rawFlightConfig = init.game && init.game.dbGames_FlightConfig
+      ? (typeof init.game.dbGames_FlightConfig === "string"
+          ? (() => { try { return JSON.parse(init.game.dbGames_FlightConfig); } catch(e) { return null; } })()
+          : init.game.dbGames_FlightConfig)
+      : null;
+    state.flightConfig = (rawFlightConfig && Array.isArray(rawFlightConfig.flights) && rawFlightConfig.flights.length > 0)
+      ? rawFlightConfig
       : null;
 
     applyChrome();
