@@ -671,6 +671,17 @@
     margin-bottom: 0;
   }
 
+  /* Canvas action buttons (Recalculate Handicaps, Define Handicaps,
+     Define Teams, Define Flights) hide at this page's actual mobile
+     threshold — same 900px as the tray/canvas toggle above, not the
+     generic 600px .maDesktopActions defaults to in ma_shared.css. Mobile
+     users rely on the chrome-header Actions button instead; no in-canvas
+     replacement trigger. Compound selector matches the specificity used
+     in ma_shared.css's own version of this rule. */
+  .gpCanvasControls__right.maDesktopActions {
+    display: none;
+  }
+
   /* Tray open: show tray, hide canvas */
   .maPage--players.is-tray-open .gpTrayPanel {
     display: flex;

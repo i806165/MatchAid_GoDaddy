@@ -1770,6 +1770,20 @@ textarea {
   }
 }
 
+/* Hide-on-mobile wrapper for action-button rows on pages that rely solely
+   on the chrome-header Actions button for mobile access (no in-canvas
+   replacement trigger needed — e.g. Game Players). Deliberately no base
+   styling here, so it can't clobber whatever the page's own CSS already
+   sets on desktop; only takes effect at the 600px breakpoint. Compound
+   selector keeps specificity high enough to win over an equal-specificity
+   page-level rule regardless of stylesheet load order. */
+@media (max-width: 600px) {
+  .maDesktopActions,
+  .gpCanvasControls__right.maDesktopActions {
+    display: none;
+  }
+}
+
 .maChoiceChip.is-disabled {
   opacity: .55;
   cursor: default;

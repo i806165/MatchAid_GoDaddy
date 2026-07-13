@@ -629,7 +629,7 @@
           <span style="font-size:11px; font-weight:500; color:var(--mutedText); white-space:nowrap;">Sort:</span>
           ${sortStrip}
         </div>
-        <div class="gpCanvasControls__right">
+        <div class="gpCanvasControls__right maDesktopActions">
           ${recalcBtn}
           ${handicapsBtn}
           ${teamsBtn}

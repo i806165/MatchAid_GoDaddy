@@ -323,7 +323,6 @@
             <button id="erBtnDefineFlights" class="btn btnSecondary" type="button">Define Flights</button>
             ${pairingsBtn}
           </div>
-          <button id="erBtnManageRoster" class="btn btnSecondary erMobileManageBtn" type="button">Actions</button>
         </div>
       </div>`;
 
@@ -349,11 +348,6 @@
 
     const pairBtn = document.getElementById("erBtnManagePairings");
     if (pairBtn) pairBtn.onclick = onManagePairings;
-
-    // Mobile trigger reuses the exact same menu as the chrome header's
-    // Actions button — no separate "Manage Roster" menu/title anymore.
-    const manageRosterBtn = document.getElementById("erBtnManageRoster");
-    if (manageRosterBtn) manageRosterBtn.onclick = openActionsMenu;
   }
 
   // ── Mobile tray toggle ───────────────────────────────────────────────────────
