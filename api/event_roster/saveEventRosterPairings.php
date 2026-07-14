@@ -65,9 +65,13 @@ try {
         }
     }
 
-    // Propagate — only when cascading is on.
+    // Propagate — only when cascading is on. Captures the reconciliation
+    //    summary — see workflow_ProcessEventCascade.php. Note $ghinToPairing
+    //    is already pre-filtered above to real pairings (id !== "000"),
+    //    per propagatePairingAssignments()'s own contract.
+    $reconcileSummary = ["roundsTouched" => 0, "roundsAffected" => 0, "affectedGgids" => []];
     if ($mode === "fixed" && $ghinToPairing) {
-        WorkflowProcessEventCascade::propagatePairingAssignments($eid, $ghinToPairing);
+        $reconcileSummary = WorkflowProcessEventCascade::propagatePairingAssignments($eid, $ghinToPairing);
     }
 
     // Return fresh roster so client can update state in one round-trip
@@ -78,7 +82,7 @@ try {
         "message" => "Pairings saved for {$updated} players." . ($errors ? " {$errors} failed." : ""),
         "updated" => $updated,
         "errors"  => $errors,
-        "payload" => ["roster" => $roster, "mode" => $mode]
+        "payload" => ["roster" => $roster, "mode" => $mode, "reconcile" => $reconcileSummary]
     ]);
 
 } catch (Throwable $e) {

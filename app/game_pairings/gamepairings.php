@@ -8,6 +8,7 @@ require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_SVC_DB . "/service_dbPlayers.php";
+require_once MA_SERVICES . "/workflows/workflow_ReconcilePairingBoundaries.php";
 
 // 1) USER context hydration (Rule-2)
 $ctx = ServiceUserContext::getUserContext();
@@ -25,6 +26,19 @@ try {
     throw new RuntimeException("Missing game context.");
   }
 
+  // Reconcile before the initial fetch — a team/flight change made
+  // elsewhere (Manage Teams, Define Flights, or eventually the event
+  // cascade) since this game's pairings were last built may have broken
+  // the team/flight boundary invariant client-side clamps only guard at
+  // write time. Same call the round-level Manage Teams/Define Flights
+  // saves already trigger — see workflow_ReconcilePairingBoundaries.php.
+  // Second query on getGamePlayers() below is deliberate, not an
+  // oversight — a single game's player count is small (well under 100),
+  // so the extra round-trip is nominal, and reconciling BEFORE the fetch
+  // means the page never renders stale (pre-reset) data even for an
+  // instant.
+  $reconciled = WorkflowReconcilePairingBoundaries::reconcileGame((string)$ggid, $game);
+
   $players = ServiceDbPlayers::getGamePlayers((string)$ggid);
 
   $initPayload = [
@@ -32,6 +46,7 @@ try {
     "ggid" => $ggid,
     "game" => $game,
     "players" => $players,
+    "reconciled" => $reconciled,
     "authorizations" => $gc["authorizations"] ?? [],
     "header" => [
       "subtitle" => "GGID " . (string)$ggid

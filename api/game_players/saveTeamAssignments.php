@@ -16,6 +16,7 @@ require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/database/service_dbPlayers.php";
+require_once MA_SERVICES . "/workflows/workflow_ReconcilePairingBoundaries.php";
 
 header("Content-Type: application/json; charset=utf-8");
 
@@ -74,9 +75,18 @@ try {
     $saved++;
   }
 
-  // 6) Return refreshed player list
+  // 6) Reconcile — a team change can invalidate an existing pairing/match
+  //    the affected player(s) already belong to (client-side clamps only
+  //    guard the moment a pairing is created, not later edits made here).
+  //    Full reset of any violating group, not just the changed player —
+  //    see workflow_ReconcilePairingBoundaries.php's own header. Captured,
+  //    not discarded — the client needs to know whether anything reset,
+  //    not just have it happen silently.
+  $reconciled = WorkflowReconcilePairingBoundaries::reconcileGame($ggid);
+
+  // 7) Return refreshed player list
   $players = ServiceDbPlayers::getGamePlayers($ggid);
-  echo json_encode(["ok" => true, "payload" => ["players" => $players]]);
+  echo json_encode(["ok" => true, "payload" => ["players" => $players, "reconciled" => $reconciled]]);
 
 } catch (Throwable $e) {
   Logger::error("SAVE_TEAM_ASSIGNMENTS_EXCEPTION", ["err" => $e->getMessage()]);

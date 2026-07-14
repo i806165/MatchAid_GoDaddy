@@ -2940,6 +2940,19 @@ textarea {
   padding: 8px var(--spaceMd);
 }
 
+/* 4-col grid: checkbox │ name+subline │ badge group │ indicator
+   Used by MA.eventRosterSource in multi-add mode. Mirrors
+   .maListRow--favoritesMulti's checkbox column, but replaces the
+   fixed-width avatar slot with an auto-sized team/pairing badge group,
+   since event-roster rows have no avatar. */
+.maListRow--playerMulti {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto 34px;
+  align-items: center;
+  column-gap: var(--spaceSm);
+  padding: 8px var(--spaceMd);
+}
+
 /* 3-col grid: avatar │ name+subline │ badge group
    Used by MA.manageTeams roster rows. Replaces gpRow--teams. */
 .maListRow--teams {

@@ -677,14 +677,31 @@
       if (!assignRes?.ok) { MA.setStatus(assignRes?.message || "Unable to save flight assignments.", "danger"); return; }
 
       MA.setStatus("Flights saved.", "success");
+
+      const reconcileSummary = assignRes.payload?.reconcile || null;   // event-shaped
+      const reconciled       = assignRes.payload?.reconciled || [];    // round-shaped
+      const hasIssue = (reconcileSummary && reconcileSummary.roundsAffected > 0) || reconciled.length > 0;
+
       if (typeof _opts.onApply === "function") {
+        // See module_defineTeams.js's identical comment — "reconcile"
+        // (event-shaped) vs "reconciled" (round-shaped, handled below)
+        // don't collide, so this module stays context-agnostic.
         _opts.onApply({
           players: assignRes.payload?.players || [],
           flightConfig: { flights: _flights },
           mode: _mode,
+          reconcile: reconcileSummary,
         });
       }
-      MA.defineFlights.close();
+
+      // Save already fully committed — see module_defineTeams.js's
+      // identical comment for why staying open (rather than "reverting")
+      // is what this buys: an immediate corrective edit, not an undo.
+      if (hasIssue) {
+        if (reconciled.length) _showReconciledNotice();
+      } else {
+        MA.defineFlights.close();
+      }
     } catch (e) {
       console.error("[MA.defineFlights]", e);
       MA.setStatus("Error saving flights.", "danger");
@@ -727,6 +744,41 @@
   function _hideBusy() {
     const overlay = document.getElementById(BUSY_ID);
     if (overlay) overlay.classList.remove("is-open");
+  }
+
+  const RECONCILED_ID = "dfReconciledOverlay";
+
+  function _showReconciledNotice() {
+    let overlay = document.getElementById(RECONCILED_ID);
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = RECONCILED_ID;
+      overlay.className = "maModalOverlay";
+      document.body.appendChild(overlay);
+    }
+    overlay.innerHTML = `
+      <section class="maModal" role="dialog" aria-modal="true" aria-labelledby="dfReconciledTitle">
+        <header class="maModal__hdr">
+          <div class="maModal__titles">
+            <div id="dfReconciledTitle" class="maModal__title">Pairings Affected</div>
+          </div>
+        </header>
+        <div class="maModal__body">
+          <p style="line-height:1.6;">
+            This change affected one or more existing pairings. Please revisit the Pairings page to review and fix them.
+          </p>
+        </div>
+        <footer class="maModal__ftr" style="justify-content:flex-end;">
+          <div class="maModal__ftrActions">
+            <button type="button" class="maFtrBtn maFtrBtn--save" id="dfReconciledOk">OK</button>
+          </div>
+        </footer>
+      </section>`;
+    overlay.className = "maModalOverlay is-open";
+    overlay.querySelector("#dfReconciledOk")?.addEventListener("click", () => {
+      overlay.className = "maModalOverlay";
+      overlay.innerHTML = "";
+    });
   }
 
   window.MA = MA;

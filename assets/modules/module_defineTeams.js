@@ -592,10 +592,44 @@
       if (!assignRes?.ok) { MA.setStatus(assignRes?.message || "Unable to save assignments.", "danger"); return; }
 
       MA.setStatus("Teams saved.", "success");
+
+      const reconcileSummary = assignRes.payload?.reconcile || null;   // event-shaped
+      const reconciled       = assignRes.payload?.reconciled || [];    // round-shaped
+      const hasIssue = (reconcileSummary && reconcileSummary.roundsAffected > 0) || reconciled.length > 0;
+
       if (typeof _opts.onApply === "function") {
-        _opts.onApply({ players: assignRes.payload?.players || [], teamConfig: _teamConfig, mode: _mode });
+        // reconcile (object: {roundsTouched, roundsAffected, affectedGgids})
+        // is only present when this module is used from the Event Roster
+        // page — saveTeamAssignments.php there cascades to every linked
+        // round and returns this shape. The round-level game_players
+        // endpoint returns "reconciled" (an array) instead, handled below
+        // via this module's own notice — the two shapes intentionally
+        // don't collide, so this module doesn't have to know which
+        // context it's running in. When "reconcile" IS present, forwarding
+        // it lets the caller show its own context-appropriate message
+        // ("N of M rounds") rather than this module guessing at one.
+        _opts.onApply({
+          players: assignRes.payload?.players || [],
+          teamConfig: _teamConfig,
+          mode: _mode,
+          reconcile: reconcileSummary,
+        });
       }
-      MA.manageTeams.close();
+
+      // The save already fully committed — including any reconciliation
+      // resets — so there's nothing left to "revert" by staying open.
+      // What staying open DOES offer: the user can immediately make a
+      // corrective change (e.g. flip the team back) without reopening
+      // this module from scratch. Close normally on a clean result.
+      if (hasIssue) {
+        // Round-shaped notice is this module's own responsibility. The
+        // event-shaped notice was already shown by the caller via onApply
+        // above (event_roster.js's notifyReconcile) — nothing more to do
+        // here for that case, just don't close.
+        if (reconciled.length) _showReconciledNotice();
+      } else {
+        MA.manageTeams.close();
+      }
     } catch (e) {
       console.error("[MA.manageTeams]", e);
       MA.setStatus("Error saving teams.", "danger");
@@ -638,6 +672,41 @@
   function _hideBusy() {
     const overlay = document.getElementById(BUSY_ID);
     if (overlay) overlay.classList.remove("is-open");
+  }
+
+  const RECONCILED_ID = "mtReconciledOverlay";
+
+  function _showReconciledNotice() {
+    let overlay = document.getElementById(RECONCILED_ID);
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = RECONCILED_ID;
+      overlay.className = "maModalOverlay";
+      document.body.appendChild(overlay);
+    }
+    overlay.innerHTML = `
+      <section class="maModal" role="dialog" aria-modal="true" aria-labelledby="mtReconciledTitle">
+        <header class="maModal__hdr">
+          <div class="maModal__titles">
+            <div id="mtReconciledTitle" class="maModal__title">Pairings Affected</div>
+          </div>
+        </header>
+        <div class="maModal__body">
+          <p style="line-height:1.6;">
+            This change affected one or more existing pairings. Please revisit the Pairings page to review and fix them.
+          </p>
+        </div>
+        <footer class="maModal__ftr" style="justify-content:flex-end;">
+          <div class="maModal__ftrActions">
+            <button type="button" class="maFtrBtn maFtrBtn--save" id="mtReconciledOk">OK</button>
+          </div>
+        </footer>
+      </section>`;
+    overlay.className = "maModalOverlay is-open";
+    overlay.querySelector("#mtReconciledOk")?.addEventListener("click", () => {
+      overlay.className = "maModalOverlay";
+      overlay.innerHTML = "";
+    });
   }
 
   window.MA = MA;

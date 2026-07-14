@@ -87,14 +87,22 @@ try {
         $ghinToTeam[$ghin] = $team;
     }
 
-    // 7) Propagate — only when cascading is on.
+    // 7) Propagate — only when cascading is on. Captures the reconciliation
+    //    summary (workflow_ProcessEventCascade.php now runs boundary
+    //    reconciliation per linked round as part of this) rather than
+    //    discarding it — the client needs "N of M rounds affected," not a
+    //    silent fix.
+    $reconcileSummary = ["roundsTouched" => 0, "roundsAffected" => 0, "affectedGgids" => []];
     if ($mode === "fixed") {
-        WorkflowProcessEventCascade::propagateTeamAssignments($eid, $ghinToTeam);
+        $reconcileSummary = WorkflowProcessEventCascade::propagateTeamAssignments($eid, $ghinToTeam);
     }
 
     // 8) Return refreshed roster
     $players = ServiceDbEventPlayers::getEventRoster($eid);
-    echo json_encode(["ok" => true, "payload" => ["players" => $players]]);
+    echo json_encode(["ok" => true, "payload" => [
+        "players" => $players,
+        "reconcile" => $reconcileSummary,
+    ]]);
 
 } catch (Throwable $e) {
     Logger::error("SAVE_EVENT_TEAM_ASSIGNMENTS_EXCEPTION", ["err" => $e->getMessage()]);

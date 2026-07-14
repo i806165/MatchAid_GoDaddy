@@ -103,14 +103,19 @@ try {
         $ghinToFlight[$ghin] = $flight;
     }
 
-    // 6) Propagate — only when cascading is on.
+    // 6) Propagate — only when cascading is on. Captures the reconciliation
+    //    summary — see workflow_ProcessEventCascade.php.
+    $reconcileSummary = ["roundsTouched" => 0, "roundsAffected" => 0, "affectedGgids" => []];
     if ((string)($event["dbEvents_FlightMode"] ?? "none") === "fixed") {
-        WorkflowProcessEventCascade::propagateFlightAssignments($eid, $ghinToFlight);
+        $reconcileSummary = WorkflowProcessEventCascade::propagateFlightAssignments($eid, $ghinToFlight);
     }
 
     // 7) Return refreshed roster
     $roster = ServiceDbEventPlayers::getEventRoster($eid);
-    echo json_encode(["ok" => true, "payload" => ["players" => $roster]]);
+    echo json_encode(["ok" => true, "payload" => [
+        "players" => $roster,
+        "reconcile" => $reconcileSummary,
+    ]]);
 
 } catch (Throwable $e) {
     Logger::error("SAVE_EVENT_FLIGHT_ASSIGNMENTS_EXCEPTION", ["err" => $e->getMessage()]);

@@ -79,6 +79,20 @@
     dirty: new Set(),
     allCollapsed: false, // Global expand/collapse state
     busy: false,
+    // Per-tray collapsed-group tracking for the nested Flight→Team grouping
+    // (§4). Keys: "F1" for a flight-level group, "F1|T1" for a team-level
+    // group nested inside flight F1 (composite key disambiguates the same
+    // team id appearing under different flights). Persisted in state (not
+    // just toggled via a CSS class) because these trays re-render on
+    // search/sort/selection changes too, not just on the collapse click
+    // itself — state is what keeps a group's collapsed appearance stable
+    // across those other re-renders. Checked-row selection survives this
+    // fine regardless, since selectedPlayerGHINs/selectedPairingIds are
+    // Sets independent of the DOM — a row's checked state is derived from
+    // that Set at render time, not from anything that gets destroyed by
+    // re-rendering.
+    unpairedCollapsedGroups: new Set(),
+    unmatchedCollapsedGroups: new Set(),
   };
 
   // ---- Utils ----
@@ -114,6 +128,74 @@
 
   function isPairPair() {
     return String(state.competition || "") === "PairPair";
+  }
+
+  // True when this round's linked event owns pairing assignment
+  // (dbEvents_PairingMode "fixed", set via module_createEventPairings.js's
+  // EVENT/ROUND toggle). The full event record is merged onto state.game
+  // by ServiceContextGame::getGameContext() — no separate fetch needed.
+  // Enforced via click-through modal (showBlockedModal), not by hiding
+  // buttons — mirrors game_players.js's onManageTeams/onDefineFlights
+  // pattern exactly. Guards Edit (pen), Unpair (unlink), and the tray's
+  // Assign button. The Match tab is untouched entirely, since
+  // module_createEventPairings.js never writes flightId/flightPos.
+  function pairingsLockedByEvent() {
+    return String(state.game?.dbEvents_PairingMode || "") === "fixed";
+  }
+
+  // ── Modal: locked-by-event notice ───────────────────────────────────────────
+  // Mirrors game_players.js's ensureBlockedModal/showBlockedModal pattern
+  // exactly (itself mirroring event_roster.js's) — same maModalOverlay/
+  // maModal shape, same OK-to-dismiss behavior. Only one locked action
+  // here (Pairings), unlike game_players.js's three (Teams/Flights/
+  // Handicaps), but kept as a message param for consistency should that
+  // change.
+  function ensureBlockedModal() {
+    if (document.getElementById("gpBlockedOverlay")) return;
+
+    const overlay = document.createElement("div");
+    overlay.id = "gpBlockedOverlay";
+    overlay.className = "maModalOverlay";
+
+    const modal = document.createElement("section");
+    modal.className = "maModal";
+
+    modal.innerHTML = `
+      <header class="maModal__hdr">
+        <div class="maModal__titles">
+          <div class="maModal__title" id="gpBlockedTitle"></div>
+        </div>
+      </header>
+      <div class="maModal__body" id="gpBlockedBody">
+        <p style="line-height:1.6;" id="gpBlockedMessage"></p>
+        <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:14px; display:flex; justify-content:flex-end;">
+          <button type="button" class="btn btnSecondary" id="gpBlockedOkBtn">OK</button>
+        </div>
+      </div>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    document.getElementById("gpBlockedOkBtn")?.addEventListener("click", hideBlockedModal);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) hideBlockedModal();
+    });
+  }
+
+  function showBlockedModal(message, title) {
+    ensureBlockedModal();
+    const overlay = document.getElementById("gpBlockedOverlay");
+    const titleEl = document.getElementById("gpBlockedTitle");
+    const msgEl   = document.getElementById("gpBlockedMessage");
+    if (titleEl) titleEl.textContent = title || "Managed at Event Level";
+    if (msgEl) msgEl.textContent = message || "This action isn't available here.";
+    if (overlay) overlay.classList.add("is-open");
+  }
+
+  function hideBlockedModal() {
+    const overlay = document.getElementById("gpBlockedOverlay");
+    if (overlay) overlay.classList.remove("is-open");
   }
 
   function pad3(v) {
@@ -332,6 +414,60 @@
     if (!teamConfig || !Array.isArray(teamConfig.teams)) return "";
     const t = teamConfig.teams.find(t => t.id === teamId);
     return t ? (t.name || "") : "";
+  }
+
+  /**
+   * Resolve a flight display name from flightConfig by flight id ('F1', etc.).
+   * Returns '' if not found (unassigned or no config). Mirrors
+   * resolveTeamName() — NOT to be confused with flightId/flightPos, the
+   * unrelated Match Pairings Side A/B container (see state.flightConfig's
+   * own comment for the full distinction).
+   */
+  function resolveFlightName(flightKey, flightConfig) {
+    if (!flightConfig || !Array.isArray(flightConfig.flights)) return "";
+    const f = flightConfig.flights.find(f => f.id === flightKey);
+    return f ? (f.name || "") : "";
+  }
+
+  /**
+   * Whether teams are actually in use right now, as opposed to merely
+   * configured. state.teamConfig alone is NOT enough to answer this —
+   * module_defineTeams.js's "Clear All" only blanks every player's
+   * dbPlayers_TeamKey; it deliberately never deletes dbGames_TeamConfig
+   * (documented there as an intentional floor state: once a game has had
+   * teams, the config stays). So a game that once had teams, then had
+   * everyone cleared, still has state.teamConfig !== null even though no
+   * player has a team — using teamConfig truthiness alone would treat
+   * every player's blank team as "the same team" and misfire.
+   */
+  function teamsActive() {
+    return !!state.teamConfig && state.players.some(p => p.team);
+  }
+
+  // Shared collapsible group header + body wrapper for the nested
+  // Flight→Team tray grouping (§4). Used by both renderUnpairedList() and
+  // renderUnmatchedList(). `groupKey` must be unique within the tray's
+  // collapsedSet — "F1" for a flight-level group, "F1|T1" for a team-level
+  // group nested inside flight F1.
+  const trayIconMinus = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+  const trayIconPlus = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+
+  function renderTrayGroupHeader(label, count, groupKey, collapsedSet, trayName, unitLabel) {
+    const unit = unitLabel || "player";
+    const collapsed = collapsedSet.has(groupKey);
+    return `
+      <div class="gpTrayGroupHdr" data-action="toggle-tray-group" data-tray="${esc(trayName)}" data-group-key="${esc(groupKey)}"
+           style="display:flex; align-items:center; gap:6px; padding:5px 10px; font-size:11px; font-weight:800; color:var(--mutedText); background:var(--surfaceApp); border-bottom:1px solid var(--borderSubtle); cursor:pointer; user-select:none;">
+        <button class="iconBtn btnSecondary" type="button" data-action="toggle-tray-group" data-tray="${esc(trayName)}" data-group-key="${esc(groupKey)}"
+                title="${collapsed ? "Expand" : "Collapse"}" aria-label="${collapsed ? "Expand" : "Collapse"} ${esc(label)}"
+                style="width:20px; height:20px; padding:0; flex:0 0 auto;">${collapsed ? trayIconPlus : trayIconMinus}</button>
+        <span>${esc(label)} — ${count} ${unit}${count !== 1 ? "s" : ""}</span>
+      </div>`;
+  }
+
+  function renderTrayGroupBody(groupKey, collapsedSet, innerHtml) {
+    const collapsed = collapsedSet.has(groupKey);
+    return `<div class="gpTrayGroupBody" data-group-body="${esc(groupKey)}" style="${collapsed ? "display:none;" : ""}">${innerHtml}</div>`;
   }
 
   // The Auto-Pair modal + drafting engine (isNH, openAutoPairModal,
@@ -578,7 +714,13 @@
       const collapsedClass = state.allCollapsed ? " is-collapsed" : "";
       const editActiveClass = (state.editMode && state.targetPairingId === pid) ? " is-active" : "";
       
-      // Header Icons: Unpair (broken link), Edit (pencil)
+      // Header Icons: Unpair (broken link), Edit (pencil) — always
+      // rendered. Locking is enforced on click instead (see
+      // toggleEditMode/unpairGroup's showBlockedModal guard), mirroring
+      // game_players.js's onManageTeams/onDefineFlights pattern exactly:
+      // a hidden button can't distinguish "delegated to the event" from
+      // "broken" or "no permission" — a click-through message says so
+      // explicitly.
       return `
         <div class="gpGroupCard${selectedClass}${collapsedClass}" data-pairing-id="${esc(pid)}">
           <!-- Expanded Header -->
@@ -657,38 +799,69 @@
         </div>`;
     };
 
-    // Group header renderer
-    const renderGroupHeader = (label, count) =>
-      `<div style="padding:4px 10px; font-size:11px; font-weight:800; color:var(--mutedText); background:var(--surfaceApp); border-bottom:1px solid var(--borderSubtle);">${esc(label)} — ${count} player${count !== 1 ? "s" : ""}</div>`;
+    // Group header renderer (legacy — retained only as the flat-list
+    // fallback path's building block is gone; grouping now always goes
+    // through renderTrayGroupHeader/Body above for collapse support).
 
-    if (!state.teamConfig) {
-      // No teams — flat sorted list, same as before
-      host.innerHTML = [...unpaired].sort(sortCmp).map(renderRow).join("");
+    const hasFlights = !!(state.flightConfig && Array.isArray(state.flightConfig.flights) && state.flightConfig.flights.length);
+    const hasTeams = !!state.teamConfig;
+
+    if (!hasFlights && !hasTeams) {
+      // Neither dimension configured — flat sorted list, unchanged from before.
+      host.innerHTML = [...unpaired].sort(sortCmp).map(renderRow).join("") || `<div class="maEmpty">No unpaired players.</div>`;
       return;
     }
 
-    // Teams active — group: Unassigned first, then teams sorted by name
-    const unassigned = unpaired.filter(p => !p.team).sort(sortCmp);
+    // Renders the Team sub-grouping (Unassigned + each team) for a given
+    // slice of the pool — reused whether or not Flight grouping is active
+    // above it. flightGroupKey is "" when Flight grouping is inactive
+    // (team-only mode), otherwise the enclosing flight's id, used to
+    // namespace the composite collapse key so the same team id under two
+    // different flights collapses independently.
+    const renderTeamGroups = (pool, flightGroupKey) => {
+      if (!hasTeams) {
+        return pool.length ? pool.sort(sortCmp).map(renderRow).join("") : "";
+      }
+      let out = "";
+      const unassigned = pool.filter(p => !p.team).sort(sortCmp);
+      if (unassigned.length) {
+        const key = flightGroupKey ? `${flightGroupKey}|__none__` : "__none__";
+        out += renderTrayGroupHeader("Unassigned", unassigned.length, key, state.unpairedCollapsedGroups, "unpaired");
+        out += renderTrayGroupBody(key, state.unpairedCollapsedGroups, unassigned.map(renderRow).join(""));
+      }
+      [...state.teamConfig.teams]
+        .sort((a, b) => String(a.name).localeCompare(String(b.name)))
+        .forEach(t => {
+          const players = pool.filter(p => p.team === t.id).sort(sortCmp);
+          if (!players.length) return;
+          const key = flightGroupKey ? `${flightGroupKey}|${t.id}` : t.id;
+          out += renderTrayGroupHeader(t.name, players.length, key, state.unpairedCollapsedGroups, "unpaired");
+          out += renderTrayGroupBody(key, state.unpairedCollapsedGroups, players.map(renderRow).join(""));
+        });
+      return out;
+    };
 
-    const teamGroups = [...state.teamConfig.teams]
-      .sort((a, b) => String(a.name).localeCompare(String(b.name)))
-      .map(t => ({
-        label: t.name,
-        players: unpaired.filter(p => p.team === t.id).sort(sortCmp)
-      }));
-
-    let html = "";
-
-    if (unassigned.length) {
-      html += renderGroupHeader("Unassigned", unassigned.length);
-      html += unassigned.map(renderRow).join("");
+    if (!hasFlights) {
+      // Team-only grouping, single level, still collapsible.
+      host.innerHTML = renderTeamGroups(unpaired, "") || `<div class="maEmpty">No unpaired players.</div>`;
+      return;
     }
 
-    teamGroups.forEach(g => {
-      if (!g.players.length) return;
-      html += renderGroupHeader(g.label, g.players.length);
-      html += g.players.map(renderRow).join("");
-    });
+    // Flight (outer, sorted by flightConfig.sort) → Team (inner) grouping.
+    let html = "";
+    const unassignedFlight = unpaired.filter(p => !p.flightKey);
+    if (unassignedFlight.length) {
+      html += renderTrayGroupHeader("Unassigned", unassignedFlight.length, "__noflight__", state.unpairedCollapsedGroups, "unpaired");
+      html += renderTrayGroupBody("__noflight__", state.unpairedCollapsedGroups, renderTeamGroups(unassignedFlight, "__noflight__"));
+    }
+    [...state.flightConfig.flights]
+      .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+      .forEach(f => {
+        const players = unpaired.filter(p => p.flightKey === f.id);
+        if (!players.length) return;
+        html += renderTrayGroupHeader(f.name, players.length, f.id, state.unpairedCollapsedGroups, "unpaired");
+        html += renderTrayGroupBody(f.id, state.unpairedCollapsedGroups, renderTeamGroups(players, f.id));
+      });
 
     host.innerHTML = html || `<div class="maEmpty">No unpaired players.</div>`;
   }
@@ -841,7 +1014,7 @@
 
     if (countEl) countEl.textContent = `${rows.length}`;
 
-    host.innerHTML = rows.map(r => {
+    const renderRow = (r) => {
       const sel = state.selectedPairingIds.has(String(r.pairingId));
       const cls = sel ? "maListRow is-selected" : "maListRow";
       const checkHtml = sel
@@ -853,7 +1026,66 @@
           ${checkHtml}
           <div class="maListRow__col">${esc(label)}</div>
         </div>`;
-    }).join("");
+    };
+
+    const hasFlights = !!(state.flightConfig && Array.isArray(state.flightConfig.flights) && state.flightConfig.flights.length);
+    const hasTeams = !!state.teamConfig;
+
+    if (!hasFlights && !hasTeams) {
+      host.innerHTML = rows.map(renderRow).join("") || `<div class="maEmpty">No unmatched pairings.</div>`;
+      return;
+    }
+
+    // A pairing is homogeneous (single team, single flight) by construction
+    // — the §2 clamp on assignSelectedPlayerToPairing guarantees this for
+    // any pairing created going forward. Group key is read from the first
+    // player as the pairing's representative, same convention already used
+    // by buildTeamSummary()/formatPairingLabel() elsewhere on this page.
+    const teamOf = (r) => r.players[0]?.team || "";
+    const flightOf = (r) => r.players[0]?.flightKey || "";
+
+    const renderTeamGroups = (list, flightGroupKey) => {
+      if (!hasTeams) return list.length ? list.map(renderRow).join("") : "";
+      let out = "";
+      const unassigned = list.filter(r => !teamOf(r));
+      if (unassigned.length) {
+        const key = flightGroupKey ? `${flightGroupKey}|__none__` : "__none__";
+        out += renderTrayGroupHeader("Unassigned", unassigned.length, key, state.unmatchedCollapsedGroups, "unmatched", "pairing");
+        out += renderTrayGroupBody(key, state.unmatchedCollapsedGroups, unassigned.map(renderRow).join(""));
+      }
+      [...state.teamConfig.teams]
+        .sort((a, b) => String(a.name).localeCompare(String(b.name)))
+        .forEach(t => {
+          const group = list.filter(r => teamOf(r) === t.id);
+          if (!group.length) return;
+          const key = flightGroupKey ? `${flightGroupKey}|${t.id}` : t.id;
+          out += renderTrayGroupHeader(t.name, group.length, key, state.unmatchedCollapsedGroups, "unmatched", "pairing");
+          out += renderTrayGroupBody(key, state.unmatchedCollapsedGroups, group.map(renderRow).join(""));
+        });
+      return out;
+    };
+
+    if (!hasFlights) {
+      host.innerHTML = renderTeamGroups(rows, "") || `<div class="maEmpty">No unmatched pairings.</div>`;
+      return;
+    }
+
+    let html = "";
+    const unassignedFlight = rows.filter(r => !flightOf(r));
+    if (unassignedFlight.length) {
+      html += renderTrayGroupHeader("Unassigned", unassignedFlight.length, "__noflight__", state.unmatchedCollapsedGroups, "unmatched", "pairing");
+      html += renderTrayGroupBody("__noflight__", state.unmatchedCollapsedGroups, renderTeamGroups(unassignedFlight, "__noflight__"));
+    }
+    [...state.flightConfig.flights]
+      .sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+      .forEach(f => {
+        const group = rows.filter(r => flightOf(r) === f.id);
+        if (!group.length) return;
+        html += renderTrayGroupHeader(f.name, group.length, f.id, state.unmatchedCollapsedGroups, "unmatched", "pairing");
+        html += renderTrayGroupBody(f.id, state.unmatchedCollapsedGroups, renderTeamGroups(group, f.id));
+      });
+
+    host.innerHTML = html || `<div class="maEmpty">No unmatched pairings.</div>`;
   }
 
   function getUnmatchedPairingIds() {
@@ -883,6 +1115,10 @@
   }
 
   function toggleEditMode(pid) {
+    if (pairingsLockedByEvent()) {
+      showBlockedModal("Pairings are managed at the event level for this event.");
+      return;
+    }
     const id = String(pid || "");
     if (state.editMode && state.targetPairingId === id) {
       // Toggling off
@@ -935,6 +1171,10 @@
   }
 
   function assignSelectedPlayerToPairing() {
+    if (pairingsLockedByEvent()) {
+      showBlockedModal("Pairings are managed at the event level for this event.");
+      return;
+    }
     if (state.selectedPlayerGHINs.size === 0) return setStatus("Select unpaired players first.", "warn");
     
     let pid = state.targetPairingId;
@@ -945,8 +1185,31 @@
       isNew = true;
     }
 
-    // Gap Filling: Find first available slots (1, 2, 3, 4)
     const existingRows = playersInPairing(pid);
+
+    // Boundary clamp: every player in the selected group — plus any
+    // existing occupants of the target pairing — must share the same
+    // team AND the same flightKey. All-or-nothing: if anyone mismatches,
+    // skip the whole group, nothing gets seated. Reference comes from
+    // existing occupants when adding to an already-seated pairing (its
+    // boundary is already established and can't be overridden by a new
+    // selection); otherwise from the selected group itself. Blank team/
+    // flightKey ("") is treated as its own value — two unassigned players
+    // match each other, but not an assigned one.
+    const selectedPlayers = Array.from(state.selectedPlayerGHINs)
+      .map(ghin => getPlayerByGHIN(ghin))
+      .filter(Boolean);
+    const referencePlayer = existingRows[0] || selectedPlayers[0];
+    if (referencePlayer) {
+      const refTeam = referencePlayer.team || "";
+      const refFlight = referencePlayer.flightKey || "";
+      const mismatch = selectedPlayers.some(p => (p.team || "") !== refTeam || (p.flightKey || "") !== refFlight);
+      if (mismatch) {
+        return setStatus("Selected players don't share the same team and flight — nothing was paired.", "warn");
+      }
+    }
+
+    // Gap Filling: Find first available slots (1, 2, 3, 4)
     const usedPos = new Set(existingRows.map(p => parseInt(p.pairingPos, 10)).filter(n => n > 0));
     const slots = [];
     let cursor = 1;
@@ -1015,6 +1278,10 @@
   }
 
   function removePlayerFromPairing(ghin) {
+    if (pairingsLockedByEvent()) {
+      showBlockedModal("Pairings are managed at the event level for this event.");
+      return;
+    }
     const p = getPlayerByGHIN(ghin);
     if (!p) return;
     // Remove 1 player from pairing
@@ -1033,6 +1300,10 @@
   }
 
   function unpairGroup(pairingId) {
+    if (pairingsLockedByEvent()) {
+      showBlockedModal("Pairings are managed at the event level for this event.");
+      return;
+    }
     const pid = String(pairingId || "");
     const rows = playersInPairing(pid);
     rows.forEach(p => {
@@ -1108,7 +1379,54 @@
     }
 
     const pids = Array.from(state.selectedPairingIds);
-    
+
+    // Boundary clamp: the two pairings occupying a match's Side A / Side B
+    // must share the same flightKey. The "different team" half only
+    // applies when teams are actually in use on this game right now
+    // (teamsActive() — see its own comment; teamConfig alone isn't enough,
+    // since Clear All in Manage Teams leaves config in place while
+    // blanking every player). Without active teams, MatchPos (Side A/B)
+    // IS the team distinction, assigned by which pairing the user clicked
+    // first/second, not read from an independent team fact. Checking team
+    // equality in that case would be circular (every player's team is
+    // blank, so "same team" would always be true) and would block every
+    // match. A pairing is already guaranteed single-team/single-flight by
+    // assignSelectedPlayerToPairing's own clamp, so this runs at the
+    // pairing level, not per-player. No auto-match exists here, so this is
+    // a single commit-time gate, not a structural engine fix.
+    const referenceFor = (pairingId) => playersInPairing(pairingId)[0] || null;
+    const violatesBoundary = (a, b) => {
+      if (!a || !b) return false; // nothing to compare yet — no violation possible
+      const sameFlight = (a.flightKey || "") === (b.flightKey || "");
+      if (!sameFlight) return true;
+      if (!teamsActive()) return false; // no active teams — MatchPos IS the team; nothing else to check
+      const sameTeam = (a.team || "") === (b.team || "");
+      return sameTeam;
+    };
+
+    const boundaryMessageGroup = teamsActive()
+      ? "must share a flight and belong to different teams"
+      : "must share a flight";
+    const boundaryMessageSingle = teamsActive()
+      ? "must share a flight and belong to a different team than the other side"
+      : "must share a flight with the other side";
+
+    if (isNew && pids.length === 2) {
+      if (violatesBoundary(referenceFor(pids[0]), referenceFor(pids[1]))) {
+        return setStatus(`These two pairings ${boundaryMessageGroup} — nothing was matched.`, "warn");
+      }
+    } else {
+      // Single-slot assignment — compare against whatever already occupies
+      // the OTHER side of this match container, if anything does.
+      const otherFp = fp === "A" ? "B" : "A";
+      const otherSummary = buildTeamSummary(fid, otherFp);
+      if (otherSummary && otherSummary.pairingId) {
+        if (violatesBoundary(referenceFor(otherSummary.pairingId), referenceFor(pids[0]))) {
+          return setStatus(`This pairing ${boundaryMessageSingle} — nothing was matched.`, "warn");
+        }
+      }
+    }
+
     // Helper to assign one pairing
     const doAssign = (pid, slot) => {
       const rows = playersInPairing(pid);
@@ -1357,6 +1675,14 @@
         }
         return;
       }
+      if (action === "toggle-tray-group") {
+        const tray = a.dataset.tray;
+        const key = a.dataset.groupKey;
+        const set = tray === "unmatched" ? state.unmatchedCollapsedGroups : state.unpairedCollapsedGroups;
+        if (set.has(key)) set.delete(key); else set.add(key);
+        if (tray === "unmatched") renderUnmatchedList(); else renderUnpairedList();
+        return;
+      }
       if (action === "toggle-truncate") {
         // Only toggle if the text is actually overflowing
         if (a.scrollWidth > a.clientWidth) {
@@ -1454,6 +1780,38 @@
     }[c]));
   }
 
+  // Past tense, no "go check" language — unlike Manage Teams/Define
+  // Flights' equivalent notice, the user is already ON the Pairings page
+  // by the time this shows, and the fix already happened server-side
+  // (workflow_ReconcilePairingBoundaries.php, run at load in
+  // gamepairings.php before the initial player fetch). Deliberately
+  // terse, same as the Manage Teams/Define Flights version — no
+  // player/pairing detail dump.
+  function warnReconciledOnLoad() {
+    const overlay = document.createElement("div");
+    overlay.className = "maModalOverlay is-open";
+    overlay.innerHTML = `
+      <section class="maModal" role="dialog" aria-modal="true" aria-labelledby="gpReconciledTitle">
+        <header class="maModal__hdr">
+          <div class="maModal__titles">
+            <div id="gpReconciledTitle" class="maModal__title">Pairings Updated</div>
+          </div>
+        </header>
+        <div class="maModal__body">
+          <p style="line-height:1.6;">
+            Some pairings were reset because team or flight assignments changed since they were last set.
+          </p>
+        </div>
+        <footer class="maModal__ftr" style="justify-content:flex-end;">
+          <div class="maModal__ftrActions">
+            <button type="button" class="maFtrBtn maFtrBtn--save" id="gpReconciledOk">OK</button>
+          </div>
+        </footer>
+      </section>`;
+    document.body.appendChild(overlay);
+    overlay.querySelector("#gpReconciledOk")?.addEventListener("click", () => overlay.remove());
+  }
+
   function initialize() {
     if (!init || !init.ok) {
       setStatus("Failed to load game context.", "error");
@@ -1490,6 +1848,24 @@
     state.flightConfig = (rawFlightConfig && Array.isArray(rawFlightConfig.flights) && rawFlightConfig.flights.length > 0)
       ? rawFlightConfig
       : null;
+
+    // Unassigned players are no longer excluded here. Two guarantees make
+    // that safe: workflow_ReconcilePairingBoundaries runs server-side
+    // (gamepairings.php) before $players is even fetched, so a pairing
+    // containing an unassigned player would already have been reset before
+    // this page saw it — an unassigned player reaching here is guaranteed
+    // NOT to be sitting in a live pairing. And assignSelectedPlayerToPairing's
+    // own clamp already halts any attempt to pair them with a team-assigned
+    // player (blank only matches blank), so nothing downstream depends on
+    // them being hidden. They now render normally in the Unassigned group
+    // of the nested tray grouping (§4), same as any other team.
+
+    // Server already reconciled (see gamepairings.php) before this payload
+    // was built — state.players reflects the post-reset state already.
+    // This just tells the user it happened.
+    if (Array.isArray(init.reconciled) && init.reconciled.length) {
+      warnReconciledOnLoad();
+    }
 
     applyChrome();
     wireEvents();

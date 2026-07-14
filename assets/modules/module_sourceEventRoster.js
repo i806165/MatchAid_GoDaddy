@@ -274,7 +274,7 @@
         const selected = _isSelected(st, ghin);
         const meta     = [hi && `HI ${hi}`, gender].filter(Boolean).join(" · ");
 
-        return `<div class="maListRow maListRow--player
+        return `<div class="maListRow maListRow--playerMulti
           ${selected  ? "maListRow--selected"  : ""}
           ${enrolled  ? "maListRow--enrolled"  : ""}"
           data-er-ghin="${esc(ghin)}"

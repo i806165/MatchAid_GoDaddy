@@ -211,6 +211,31 @@
 
     // Find next available position within this pairing
     const existing = playersInPairing(targetId);
+
+    // Boundary clamp: every selected player, plus any existing occupants
+    // of the target pairing, must share the same team. All-or-nothing —
+    // mirrors game_pairings.js's assignSelectedPlayerToPairing clamp,
+    // minus the flightKey dimension (this module has no flight concept
+    // at all — see its own header comment). Reference comes from existing
+    // occupants when adding to an already-seated pairing (its boundary is
+    // already established and can't be overridden by a new selection);
+    // otherwise from the selected group itself — which for a brand-new
+    // pairing (targetId freshly minted by nextPairingId()) means
+    // `existing` is always empty, so the reference falls through to the
+    // selection, same as the new-pairing case in game_pairings.js. Blank
+    // teamKey ("") is its own value — two unassigned players match each
+    // other, but not an assigned one.
+    const selectedPlayers = selected.map(ghin => _state.players.find(p => p.ghin === ghin)).filter(Boolean);
+    const referencePlayer = existing[0] || selectedPlayers[0];
+    if (referencePlayer) {
+      const refTeam = safe(referencePlayer.teamKey);
+      const mismatch = selectedPlayers.some(p => safe(p.teamKey) !== refTeam);
+      if (mismatch) {
+        setStatus("Selected players don't share the same team — nothing was paired.", "warn");
+        return;
+      }
+    }
+
     let pos = existing.length + 1;
 
     selected.forEach(ghin => {
@@ -709,14 +734,31 @@
       _state.dirty = false;
       _state.mode = res.payload?.mode || _state.mode;
 
+      const reconcileSummary = res.payload?.reconcile || null;
+      const hasIssue = !!(reconcileSummary && reconcileSummary.roundsAffected > 0);
+
       if (typeof _config.onApply === "function") {
         _config.onApply({
           players: _state.players.map(p => ({ ...p })),
           mode: _state.mode,
+          reconcile: reconcileSummary,
         });
       }
 
-      close();
+      // Stay open on an issue (see module_defineTeams.js's identical
+      // comment) — save already committed, staying open just enables an
+      // immediate corrective edit. One caveat specific to this module: a
+      // reconciled round's reset happened in THAT round's own db_Players,
+      // not here — this module's _state.players (and the canvas built
+      // from it) is event-scoped and never re-fetches per-round state, so
+      // the canvas will NOT visually reflect whatever got reset elsewhere.
+      // The notice (shown by the caller via onApply, e.g. event_roster.js's
+      // notifyReconcile) is the only signal available; there's nothing
+      // more specific this module can show without a per-round refetch it
+      // doesn't currently do.
+      if (!hasIssue) {
+        close();
+      }
     } catch (e) {
       console.error("[createEventPairings] save error:", e);
       setStatus(String(e.message || e), "danger");
