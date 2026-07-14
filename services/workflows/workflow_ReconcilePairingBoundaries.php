@@ -144,7 +144,7 @@ final class WorkflowReconcilePairingBoundaries
     }
 
     foreach (array_keys($toReset) as $ghin) {
-      ServiceDbPlayers::updateGamePlayerFields($ggid, $ghin, self::RESET_FIELDS);
+      ServiceDbPlayers::updateGamePlayerFields($ggid, (string)$ghin, self::RESET_FIELDS);
     }
 
     return $report;
