@@ -6,10 +6,52 @@ declare(strict_types=1);
 // down into every round belonging to that event (db_Games / db_Players).
 // Lives outside ServiceDbEventPlayers / ServiceDbEvents on purpose —
 // those services own a single table each and don't write across domains.
+//
+// TERMINOLOGY — "cascade" (the class name, kept for now to avoid renaming
+// every existing caller) actually covers two DIFFERENT mechanisms. Every
+// method below is one or the other; each method's own docblock says
+// which, but the definitions live here once:
+//
+//   INHERITANCE — one-time, at the moment a child is CREATED (or, for
+//     Path A, re-applied on every EDIT too). The child PULLS the
+//     parent's current state onto itself. Not triggered by a parent-side
+//     change — triggered by the child's own creation/edit action.
+//     Path A: applyEventDataToGame(), called from ServiceDbGames::
+//       saveGame()'s add/edit branches.
+//     Path B: a player's Team/Flight/Pairing, pulled from db_EventPlayers
+//       at the moment that player is individually enrolled into a round —
+//       see WorkflowProcessPlayers::upsertPlayer() (a different file;
+//       this class has no Path B inheritance method of its own).
+//
+//   PROPAGATION — ongoing, triggered by a change at the PARENT
+//     (event) level. The parent PUSHES its new state out to every
+//     already-existing child. Not triggered by anything happening to the
+//     child — triggered by an event-side Apply action.
+//     Path A: propagateTeamConfig() / propagateFlightConfig() /
+//       propagateHandicapConfig() — each a thin loop over every linked
+//       round, delegating to applyEventDataToGame() per round (so
+//       Propagation, mechanically, is just Inheritance run once per
+//       existing child instead of once at creation).
+//     Path B: propagateTeamAssignments() / propagateFlightAssignments()
+//       / propagatePairingAssignments() — each a thin trigger delegating
+//       to propagateEventDataToPlayers(), which applies whichever of
+//       Team/Flight/Pairing are currently fixed to every enrolled
+//       player, all in one update — same consolidation shape as Path A's
+//       applyEventDataToGame(), just scoped to players instead of
+//       game-level config.
+//
+// Path A = Event → Game (config: dbEvents_* → dbGames_*).
+// Path B = Event Roster → Players (assignment: dbEventPlayers_* → dbPlayers_*).
+// The two paths are deliberately separate — different source/destination
+// tables, different trigger points (Path A's Inheritance fires on both
+// create AND edit; Path B's Inheritance is user-driven at enrollment
+// only, never automatic — see the "no automatic player seeding at round
+// creation" note on service_dbEventPlayers.php's cascadeToGame() removal).
 
 require_once MA_SVC_DB . "/service_dbGames.php";
 require_once MA_SVC_DB . "/service_dbEvents.php";
 require_once MA_SVC_DB . "/service_dbPlayers.php";
+require_once MA_SVC_DB . "/service_dbEventPlayers.php";
 require_once MA_SERVICES . "/workflows/workflow_ReconcilePairingBoundaries.php";
 
 final class WorkflowProcessEventCascade
@@ -19,6 +61,15 @@ final class WorkflowProcessEventCascade
    * "does this round need dbEvents_* config applied to its dbGames_*
    * columns, and if so, apply it." Determines relevance and per-dimension
    * mode-gating internally — callers never duplicate that logic.
+   *
+   * Serves BOTH mechanisms (see class header for definitions), depending
+   * on who's calling: INHERITANCE when called directly from
+   * ServiceDbGames::saveGame() (a round pulling its event's current state
+   * at create/edit time); PROPAGATION when called from the loops inside
+   * propagateTeamConfig/propagateFlightConfig/propagateHandicapConfig
+   * below (an event-side change pushing out to every existing round).
+   * This function itself doesn't know or care which — it just answers
+   * "apply or skip" for one round, correctly, every time.
    *
    * This replaces what used to be TWO independent implementations that
    * had silently drifted apart: service_dbEventPlayers.php's
@@ -93,7 +144,7 @@ final class WorkflowProcessEventCascade
   }
 
   /**
-   * Mirror TeamConfig into every round under the event.
+   * PROPAGATION. Mirror TeamConfig into every round under the event.
    * $teamConfig is no longer read directly — applyEventDataToGame() reads
    * dbEvents_TeamConfig fresh per round instead, since the caller has
    * already persisted it to db_Events before calling this (see
@@ -108,35 +159,33 @@ final class WorkflowProcessEventCascade
   }
 
   /**
-   * Mirror TeamKey for each enrolled GHIN into every round under the event.
-   * @return array Reconciliation summary — see propagateFields().
+   * PROPAGATION (Path B). Mirror TeamKey for every enrolled player into
+   * every round under the event. $ghinToTeam is no longer read directly —
+   * propagateEventDataToPlayers() re-reads db_EventPlayers fresh for
+   * every enrolled player instead, and applies whichever of Team/Flight/
+   * Pairing are currently fixed, all in one update per player — not just
+   * Team. Signature kept unchanged for backward compatibility with
+   * existing callers.
+   * @return array Reconciliation summary — see propagateEventDataToPlayers().
    */
   public static function propagateTeamAssignments(int $eid, array $ghinToTeam): array
   {
-    return self::propagateFields($eid, $ghinToTeam, function ($val) {
-      return ["dbPlayers_TeamKey" => $val];
-    });
+    return self::propagateEventDataToPlayers($eid);
   }
 
   /**
-   * Mirror PairingID/Pos for each enrolled GHIN — caller must pre-filter
-   * $ghinToPairing to GHINs that already have a real pairing (id !== "000")
-   * and must not call this at all when PairingMode isn't "fixed".
-   * @return array Reconciliation summary — see propagateFields().
+   * PROPAGATION (Path B). Mirror PairingID/Pos for every enrolled player
+   * into every round under the event. $ghinToPairing is no longer read
+   * directly — same reasoning as propagateTeamAssignments() above.
+   * @return array Reconciliation summary — see propagateEventDataToPlayers().
    */
   public static function propagatePairingAssignments(int $eid, array $ghinToPairing): array
   {
-    return self::propagateFields($eid, $ghinToPairing, function ($val) {
-      return [
-        "dbPlayers_PairingID"  => $val["id"],
-        "dbPlayers_PairingPos" => $val["pos"],
-      ];
-    });
+    return self::propagateEventDataToPlayers($eid);
   }
 
-  /** Mirror FlightConfig into every round under the event. Always unconditional. */
   /**
-   * Mirror FlightConfig into every round under the event.
+   * PROPAGATION. Mirror FlightConfig into every round under the event.
    * $flightConfig is no longer read directly — same reasoning as
    * propagateTeamConfig() above.
    */
@@ -148,18 +197,18 @@ final class WorkflowProcessEventCascade
   }
 
   /**
-   * Mirror FlightKey for each enrolled GHIN into every round under the event.
-   * @return array Reconciliation summary — see propagateFields().
+   * PROPAGATION (Path B). Mirror FlightKey for every enrolled player into
+   * every round under the event. $ghinToFlight is no longer read directly
+   * — same reasoning as propagateTeamAssignments() above.
+   * @return array Reconciliation summary — see propagateEventDataToPlayers().
    */
   public static function propagateFlightAssignments(int $eid, array $ghinToFlight): array
   {
-    return self::propagateFields($eid, $ghinToFlight, function ($val) {
-      return ["dbPlayers_FlightKey" => $val];
-    });
+    return self::propagateEventDataToPlayers($eid);
   }
 
   /**
-   * Mirror handicap rules (Method/Allowance/Effectivity/Date) into every
+   * PROPAGATION. Mirror handicap rules (Method/Allowance/Effectivity/Date) into every
    * round under the event. $config is no longer read directly — same
    * reasoning as propagateTeamConfig() above; applyEventDataToGame() now
    * also gates this on dbEvents_HandicapMode === "fixed" internally
@@ -181,24 +230,26 @@ final class WorkflowProcessEventCascade
   }
 
   /**
-   * Shared by propagateTeamAssignments / propagateFlightAssignments /
-   * propagatePairingAssignments. Writes each field, then — for every round
-   * the loop visits (all rounds linked to the event, unconditionally; see
-   * class-level note below) — runs the same boundary reconciliation the
-   * round-level Manage Teams/Define Flights saves and gamepairings.php's
-   * own load already run (workflow_ReconcilePairingBoundaries), passing
-   * the $game row already in hand to skip its internal lookup.
+   * PROPAGATION (Path B) engine — the ONE implementation of "does this
+   * player need dbEventPlayers_* assignments applied to their dbPlayers_*
+   * row, and if so, apply them," mirroring Path A's applyEventDataToGame().
+   * "The record is open, apply all in one update": for every enrolled
+   * player found in every linked round, applies whichever of Team/
+   * Flight/Pairing are currently "fixed" — all three checked and, if
+   * qualifying, written together in a single updateGamePlayerFields()
+   * call — regardless of which single dimension's save actually
+   * triggered this pass. Previously propagateTeamAssignments/
+   * propagateFlightAssignments/propagatePairingAssignments each wrote
+   * only their own one field via propagateFields() (removed); this
+   * consolidation means a Team-only Apply now also re-syncs Flight and
+   * Pairing for every player if those are independently fixed too — same
+   * self-healing benefit Path A's consolidation already gave Games.
    *
-   * Every linked round is checked on every call, not just rounds this
-   * particular $ghinMap happened to write to — a fixed-mode Apply always
-   * writes to every round (there's no selective per-round save), so this
-   * matches that: one check per round, every pass, no conditional logic
-   * about whether "this write mattered" to that round.
-   *
-   * Exception: if $ghinMap itself is empty (nothing was submitted to
-   * propagate at all — a degenerate case, not the normal fixed-mode flow),
-   * this returns immediately without visiting any round or reconciling
-   * anything, since nothing was actually saved.
+   * Reconciliation (workflow_ReconcilePairingBoundaries) still runs once
+   * per round after that round's players are updated, unchanged in
+   * behavior from before this consolidation — every linked round is
+   * checked on every call, not just rounds this particular Apply actually
+   * wrote to, since a fixed-mode Apply always touches every round.
    *
    * @return array{ roundsTouched: int, roundsAffected: int, affectedGgids: string[] }
    *   roundsTouched  — every round linked to the event (== getGamesByEID() count).
@@ -206,21 +257,29 @@ final class WorkflowProcessEventCascade
    *   affectedGgids  — which ones, for logging; the client-facing message
    *                    stays terse ("N of M rounds"), not a per-round dump.
    */
-  private static function propagateFields(int $eid, array $ghinMap, callable $toFields): array
+  private static function propagateEventDataToPlayers(int $eid): array
   {
     $summary = ["roundsTouched" => 0, "roundsAffected" => 0, "affectedGgids" => []];
-    if (!$ghinMap) return $summary;
+
+    $event = ServiceDbEvents::getEventByEID($eid);
+    if (!$event) return $summary;
+
+    // One roster fetch for the whole event, indexed by GHIN, reused for
+    // every player in every round below — not re-fetched per round.
+    $eventRosterByGhin = [];
+    foreach (ServiceDbEventPlayers::getEventRoster($eid) as $r) {
+      $ghin = (string)($r["dbEventPlayers_GHIN"] ?? "");
+      if ($ghin !== "") $eventRosterByGhin[$ghin] = $r;
+    }
 
     $games = ServiceDbGames::getGamesByEID($eid);
     $summary["roundsTouched"] = count($games);
 
     foreach ($games as $game) {
       $ggid = (string)$game["dbGames_GGID"];
-      foreach (ServiceDbPlayers::getGamePlayers($ggid) as $row) {
-        $ghin = (string)($row["dbPlayers_PlayerGHIN"] ?? "");
-        if ($ghin !== "" && array_key_exists($ghin, $ghinMap)) {
-          ServiceDbPlayers::updateGamePlayerFields($ggid, $ghin, $toFields($ghinMap[$ghin]));
-        }
+
+      foreach (ServiceDbPlayers::getGamePlayers($ggid) as $playerRow) {
+        self::applyEventDataToGamePlayer($ggid, $playerRow, $event, $eventRosterByGhin);
       }
 
       $reconciled = WorkflowReconcilePairingBoundaries::reconcileGame($ggid, $game);
@@ -231,5 +290,47 @@ final class WorkflowProcessEventCascade
     }
 
     return $summary;
+  }
+
+  /**
+   * Applies whichever of Team/Flight/Pairing are currently fixed to ONE
+   * player's row, sourced from their event-roster enrollment. A player
+   * with no matching event-roster row (not enrolled at the event level)
+   * is left untouched — nothing to inherit. Pairing additionally requires
+   * a real pairing on the roster side (id !== "000") before propagating,
+   * same guard propagatePairingAssignments' docblock used to require of
+   * its caller — an unassigned event-roster pairing has nothing
+   * meaningful to push down.
+   */
+  private static function applyEventDataToGamePlayer(string $ggid, array $playerRow, array $event, array $eventRosterByGhin): void
+  {
+    $ghin = (string)($playerRow["dbPlayers_PlayerGHIN"] ?? "");
+    if ($ghin === "") return;
+
+    $eventPlayer = $eventRosterByGhin[$ghin] ?? null;
+    if (!$eventPlayer) return;
+
+    $teamMode    = (string)($event["dbEvents_TeamMode"]    ?? "none");
+    $flightMode  = (string)($event["dbEvents_FlightMode"]  ?? "none");
+    $pairingMode = (string)($event["dbEvents_PairingMode"] ?? "none");
+
+    $fields = [];
+    if ($teamMode === "fixed") {
+      $fields["dbPlayers_TeamKey"] = (string)($eventPlayer["dbEventPlayers_TeamKey"] ?? "");
+    }
+    if ($flightMode === "fixed") {
+      $fields["dbPlayers_FlightKey"] = (string)($eventPlayer["dbEventPlayers_FlightKey"] ?? "");
+    }
+    if ($pairingMode === "fixed") {
+      $pid = (string)($eventPlayer["dbEventPlayers_PairingID"] ?? "000");
+      if ($pid !== "" && $pid !== "000") {
+        $fields["dbPlayers_PairingID"]  = $pid;
+        $fields["dbPlayers_PairingPos"] = (string)($eventPlayer["dbEventPlayers_PairingPos"] ?? "");
+      }
+    }
+
+    if (!$fields) return; // every dimension is "none" (or no real pairing to push) — nothing to apply
+
+    ServiceDbPlayers::updateGamePlayerFields($ggid, $ghin, $fields);
   }
 }

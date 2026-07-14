@@ -407,16 +407,20 @@ final class ServiceDbEventPlayers
         }
     }
 
-    // cascadeToGame() used to live here — round-creation-time snapshot of
-    // dbEvents_TeamConfig/FlightConfig/handicap rules onto a new round.
-    // Moved to workflow_ProcessEventCascade.php::applyEventDataToGame(),
-    // which is now the single implementation of "does this round need
-    // event config applied, and if so, apply it" — called from
-    // ServiceDbGames::saveGame()'s add AND edit branches, plus the
-    // propagateTeamConfig/propagateFlightConfig/propagateHandicapConfig
-    // event-side "apply to all" methods. Previously this method and those
-    // three propagate* methods were independent implementations of the
-    // same idea that had silently drifted out of sync (this one copied
+    // cascadeToGame() used to live here — round-creation-time INHERITANCE
+    // (see workflow_ProcessEventCascade.php's class header for the
+    // Inheritance vs. Propagation distinction) of dbEvents_TeamConfig/
+    // FlightConfig/handicap rules onto a new round. Moved to
+    // workflow_ProcessEventCascade.php::applyEventDataToGame(), which is
+    // now the single implementation of "does this round need event config
+    // applied, and if so, apply it" — called from ServiceDbGames::
+    // saveGame()'s add AND edit branches (both Inheritance — a round
+    // pulling its event's current state), plus the propagateTeamConfig/
+    // propagateFlightConfig/propagateHandicapConfig event-side "apply to
+    // all" methods (Propagation — an event-side change pushing out to
+    // every existing round). Previously this method and those three
+    // propagate* methods were independent implementations of the same
+    // idea that had silently drifted out of sync (this one copied
     // handicap fields unconditionally and Team/Flight config only after a
     // later fix; the propagate* methods were gated by their callers) —
     // consolidating into one function removes the ability for that drift
@@ -427,5 +431,7 @@ final class ServiceDbEventPlayers
     // WorkflowProcessPlayers::upsertPlayer() sources each player's Team/
     // Flight (always) and Pairing (only if PairingMode is "fixed") from
     // db_EventPlayers at the moment that player is individually added to
-    // a round — user-driven, not automatic at round creation.
+    // a round — this IS Path B's Inheritance mechanism (a player pulling
+    // the event roster's current state at enrollment), it's just
+    // user-driven rather than automatic, and lives in a different file.
 }
