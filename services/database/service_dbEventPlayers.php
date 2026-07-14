@@ -407,51 +407,25 @@ final class ServiceDbEventPlayers
         }
     }
 
-    /**
-     * cascadeToGame(eid, ggid)
-     *
-     * Called once, at Round creation only (from ServiceDbGames::saveGame(),
-     * add-mode branch — never for Flat Games, which have no eid to cascade
-     * from). Snapshots the event's TeamConfig and FlightConfig onto the new
-     * round's db_Games row.
-     *
-     * Deliberately does NOT copy the roster or per-player Team/Flight/Pairing
-     * values — "each round stands on its own" for membership. Players are
-     * added to the round individually through the normal add-player flows,
-     * and WorkflowProcessPlayers::upsertPlayer() sources their Team/Flight
-     * (always) and Pairing (only if the event's PairingMode is "fixed")
-     * from db_EventPlayers at the moment each one is actually added.
-     *
-     * There is no PairingConfig to snapshot here — db_Games has no mirrored
-     * PairingMode column; that flag is read live off db_Events wherever it's
-     * needed (see ServiceContextGame's event hydration).
-     *
-     * @param  int $eid
-     * @param  int $ggid
-     * @return void
-     */
-    public static function cascadeToGame(int $eid, int $ggid): void
-    {
-        if ($eid <= 0 || $ggid <= 0) return;
-
-        try {
-            require_once MA_SVC_DB . '/service_dbEvents.php';
-            require_once MA_SVC_DB . '/service_dbGames.php';
-
-            $event = ServiceDbEvents::getEventByEID($eid);
-            if (!$event) return;
-
-            ServiceDbGames::updateGame($ggid, [
-                'dbGames_TeamConfig'         => $event['dbEvents_TeamConfig']         ?? null,
-                'dbGames_FlightConfig'       => $event['dbEvents_FlightConfig']       ?? null,
-                'dbGames_HCMethod'           => $event['dbEvents_HCMethod']           ?? "CH",
-                'dbGames_Allowance'          => $event['dbEvents_Allowance']          ?? 100,
-                'dbGames_HCEffectivity'      => $event['dbEvents_HCEffectivity']      ?? "PlayDate",
-                'dbGames_HCEffectivityDate'  => $event['dbEvents_HCEffectivityDate']  ?? null,
-            ]);
-
-        } catch (Throwable $e) {
-            error_log('[ServiceDbEventPlayers::cascadeToGame] ' . $e->getMessage());
-        }
-    }
+    // cascadeToGame() used to live here — round-creation-time snapshot of
+    // dbEvents_TeamConfig/FlightConfig/handicap rules onto a new round.
+    // Moved to workflow_ProcessEventCascade.php::applyEventDataToGame(),
+    // which is now the single implementation of "does this round need
+    // event config applied, and if so, apply it" — called from
+    // ServiceDbGames::saveGame()'s add AND edit branches, plus the
+    // propagateTeamConfig/propagateFlightConfig/propagateHandicapConfig
+    // event-side "apply to all" methods. Previously this method and those
+    // three propagate* methods were independent implementations of the
+    // same idea that had silently drifted out of sync (this one copied
+    // handicap fields unconditionally and Team/Flight config only after a
+    // later fix; the propagate* methods were gated by their callers) —
+    // consolidating into one function removes the ability for that drift
+    // to happen again.
+    //
+    // Per-player Team/Flight/Pairing seeding (this method never did that,
+    // by design) still happens exactly as documented here previously:
+    // WorkflowProcessPlayers::upsertPlayer() sources each player's Team/
+    // Flight (always) and Pairing (only if PairingMode is "fixed") from
+    // db_EventPlayers at the moment that player is individually added to
+    // a round — user-driven, not automatic at round creation.
 }

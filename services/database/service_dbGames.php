@@ -8,6 +8,7 @@ declare(strict_types=1);
 require_once MA_API_LIB . "/Db.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/workflows/workflow_CourseChange.php";
+require_once MA_SERVICES . "/workflows/workflow_ProcessEventCascade.php";
 
 final class ServiceDbGames
 {
@@ -332,14 +333,13 @@ public static function queryGames(array $args): array {
 
       $newGGID = self::insertGame($updated);
 
-      // Round vs. Flat Game: only Rounds (dbGames_EID set) get the
-      // event's TeamConfig/FlightConfig snapshot copied down at creation.
-      // Flat Games have no event to cascade from — untouched.
-      $eid = (int)($updated["dbGames_EID"] ?? 0);
-      if ($eid > 0) {
-        require_once MA_SVC_DB . "/service_dbEventPlayers.php";
-        ServiceDbEventPlayers::cascadeToGame($eid, $newGGID);
-      }
+      // Round vs. Flat Game: applyEventDataToGame() determines relevance
+      // itself (checks dbGames_EID internally) and no-ops for Flat Games
+      // — no caller-side check needed here anymore. $updated already has
+      // dbGames_EID correctly set post-insert, so passing it skips a
+      // redundant fetch.
+      $updated["dbGames_GGID"] = $newGGID;
+      WorkflowProcessEventCascade::applyEventDataToGame($newGGID, $updated);
 
       $saved = self::getGameByGGID($newGGID) ?? $updated;
       $saved["dbGames_GGID"] = $newGGID;
@@ -360,6 +360,16 @@ public static function queryGames(array $args): array {
     $newCourseId = trim((string)($updated["dbGames_CourseID"] ?? ""));
 
     self::updateGame($ggid, $updated);
+
+    // New call site — round edits previously never re-touched event-
+    // derived fields at all, meaning a round's config could drift out of
+    // sync with its event with no path back to correct except an
+    // unrelated event-side "apply to all." Every edit now re-syncs,
+    // regardless of what was actually changed — cheap (a few conditional
+    // checks, a small UPDATE) and self-healing for any dimension that had
+    // drifted, not just whatever this specific edit touched.
+    WorkflowProcessEventCascade::applyEventDataToGame($ggid, $updated);
+
     $saved = self::getGameByGGID($ggid) ?? $updated;
     $saved["dbGames_GGID"] = $ggid;
 

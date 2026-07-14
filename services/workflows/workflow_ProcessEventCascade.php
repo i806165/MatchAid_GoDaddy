@@ -8,19 +8,102 @@ declare(strict_types=1);
 // those services own a single table each and don't write across domains.
 
 require_once MA_SVC_DB . "/service_dbGames.php";
+require_once MA_SVC_DB . "/service_dbEvents.php";
 require_once MA_SVC_DB . "/service_dbPlayers.php";
 require_once MA_SERVICES . "/workflows/workflow_ReconcilePairingBoundaries.php";
 
 final class WorkflowProcessEventCascade
 {
-  /** Mirror TeamConfig into every round under the event. Always unconditional. */
+  /**
+   * Path A — Event → Game (config level): the ONE implementation of
+   * "does this round need dbEvents_* config applied to its dbGames_*
+   * columns, and if so, apply it." Determines relevance and per-dimension
+   * mode-gating internally — callers never duplicate that logic.
+   *
+   * This replaces what used to be TWO independent implementations that
+   * had silently drifted apart: service_dbEventPlayers.php's
+   * cascadeToGame() (round-creation time, unconditional — no mode check
+   * at all) and this class's own propagateTeamConfig/propagateFlightConfig/
+   * propagateHandicapConfig (event-side "apply to all," each duplicating
+   * its own copy of the field-set logic). cascadeToGame() is removed;
+   * the three propagate* methods below now delegate here instead of
+   * carrying their own logic.
+   *
+   * Called from three places: new round creation, round edit (both in
+   * ServiceDbGames::saveGame()), and the propagate* loops below (event-
+   * side "apply to all"). Every dimension re-checks its own mode fresh
+   * from the event record on every call — so a Team-only Apply, for
+   * instance, also harmlessly re-applies Flight/Handicap if THEIR modes
+   * are independently "fixed" (idempotent, same current values) — which
+   * means any qualifying Apply also self-heals any other dimension that
+   * had drifted out of sync, not just the one being edited.
+   *
+   * Path B (Event Roster → Players, dbEventPlayers_* → dbPlayers_*) is
+   * deliberately NOT part of this function — separate source table,
+   * separate destination table, separate trigger points (user-driven at
+   * round creation, not automatic). See propagateTeamAssignments /
+   * propagateFlightAssignments / propagatePairingAssignments below,
+   * unchanged by this pass.
+   *
+   * @param  int    $ggid
+   * @param  ?array $gameRow  Optional — pass the game's row if the caller
+   *                          already has it (saveGame()'s add/edit
+   *                          branches always do; the propagate* loops
+   *                          below already have it from getGamesByEID())
+   *                          to skip the internal lookup. Only
+   *                          `dbGames_EID` is read from it — a partial/
+   *                          in-memory row (like saveGame()'s $updated,
+   *                          not yet a real fetched row) is fine as long
+   *                          as that one key is correct.
+   */
+  public static function applyEventDataToGame(int $ggid, ?array $gameRow = null): void
+  {
+    if ($ggid <= 0) return;
+
+    $game = $gameRow ?? ServiceDbGames::getGameByGGID($ggid);
+    if (!$game) return;
+
+    $eid = (int)($game["dbGames_EID"] ?? 0);
+    if ($eid <= 0) return; // not event-relevant — skip, not an error
+
+    $event = ServiceDbEvents::getEventByEID($eid);
+    if (!$event) return;
+
+    $teamMode     = (string)($event["dbEvents_TeamMode"]     ?? "none");
+    $flightMode   = (string)($event["dbEvents_FlightMode"]   ?? "none");
+    $handicapMode = (string)($event["dbEvents_HandicapMode"] ?? "none");
+
+    $fields = [];
+    if ($teamMode === "fixed") {
+      $fields["dbGames_TeamConfig"] = $event["dbEvents_TeamConfig"] ?? null;
+    }
+    if ($flightMode === "fixed") {
+      $fields["dbGames_FlightConfig"] = $event["dbEvents_FlightConfig"] ?? null;
+    }
+    if ($handicapMode === "fixed") {
+      $fields["dbGames_HCMethod"]          = $event["dbEvents_HCMethod"]          ?? "CH";
+      $fields["dbGames_Allowance"]         = $event["dbEvents_Allowance"]         ?? 100;
+      $fields["dbGames_HCEffectivity"]     = $event["dbEvents_HCEffectivity"]     ?? "PlayDate";
+      $fields["dbGames_HCEffectivityDate"] = $event["dbEvents_HCEffectivityDate"] ?? null;
+    }
+
+    if (!$fields) return; // every dimension is "none" — nothing to apply
+
+    ServiceDbGames::updateGame($ggid, $fields);
+  }
+
+  /**
+   * Mirror TeamConfig into every round under the event.
+   * $teamConfig is no longer read directly — applyEventDataToGame() reads
+   * dbEvents_TeamConfig fresh per round instead, since the caller has
+   * already persisted it to db_Events before calling this (see
+   * saveTeamConfig.php: updateEvent() runs first, then this). Signature
+   * kept unchanged for backward compatibility with existing callers.
+   */
   public static function propagateTeamConfig(int $eid, ?array $teamConfig): void
   {
-    $json = $teamConfig ? json_encode($teamConfig) : null;
     foreach (ServiceDbGames::getGamesByEID($eid) as $game) {
-      ServiceDbGames::updateGame((int)$game["dbGames_GGID"], [
-        "dbGames_TeamConfig" => $json,
-      ]);
+      self::applyEventDataToGame((int)$game["dbGames_GGID"], $game);
     }
   }
 
@@ -52,13 +135,15 @@ final class WorkflowProcessEventCascade
   }
 
   /** Mirror FlightConfig into every round under the event. Always unconditional. */
+  /**
+   * Mirror FlightConfig into every round under the event.
+   * $flightConfig is no longer read directly — same reasoning as
+   * propagateTeamConfig() above.
+   */
   public static function propagateFlightConfig(int $eid, array $flightConfig): void
   {
-    $json = json_encode($flightConfig);
     foreach (ServiceDbGames::getGamesByEID($eid) as $game) {
-      ServiceDbGames::updateGame((int)$game["dbGames_GGID"], [
-        "dbGames_FlightConfig" => $json,
-      ]);
+      self::applyEventDataToGame((int)$game["dbGames_GGID"], $game);
     }
   }
 
@@ -75,9 +160,12 @@ final class WorkflowProcessEventCascade
 
   /**
    * Mirror handicap rules (Method/Allowance/Effectivity/Date) into every
-   * round under the event. Always unconditional, same as its Team/Flight
-   * siblings — the caller (saveEventHandicapSettings.php) decides whether
-   * to invoke this at all, only when dbEvents_HandicapMode is "fixed".
+   * round under the event. $config is no longer read directly — same
+   * reasoning as propagateTeamConfig() above; applyEventDataToGame() now
+   * also gates this on dbEvents_HandicapMode === "fixed" internally
+   * (previously this method wrote unconditionally once called — the
+   * caller's own "only call when fixed" check was the only gate; now
+   * there's a second, internal one too, matching Team/Flight).
    *
    * No assignments-equivalent method exists alongside this one — unlike
    * TeamKey/FlightKey, dbPlayers_HI/CH/PH/SO are computed values, not
@@ -88,12 +176,7 @@ final class WorkflowProcessEventCascade
   public static function propagateHandicapConfig(int $eid, array $config): void
   {
     foreach (ServiceDbGames::getGamesByEID($eid) as $game) {
-      ServiceDbGames::updateGame((int)$game["dbGames_GGID"], [
-        "dbGames_HCMethod"          => $config["method"]      ?? "CH",
-        "dbGames_Allowance"         => $config["allowance"]   ?? 100,
-        "dbGames_HCEffectivity"     => $config["effectivity"] ?? "PlayDate",
-        "dbGames_HCEffectivityDate" => $config["effDate"]     ?? null,
-      ]);
+      self::applyEventDataToGame((int)$game["dbGames_GGID"], $game);
     }
   }
 
