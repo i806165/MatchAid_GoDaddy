@@ -115,6 +115,22 @@
   }
 
   async function refreshGamesAndAdmins(next) {
+    if (state.isEventMode) {
+      // Event Rounds mode: scoped entirely by eid, no date/admin filtering
+      // — mirrors adminhome.php's own initial-load call to
+      // hydrateAdminGamesList($context, ["eid" => $eid]). Admin-favorites
+      // refresh is skipped too — there's no admin filter UI in this mode.
+      // This is what was missing before: refreshGamesAndAdmins() always
+      // sent the standalone flat-games payload regardless of mode, and
+      // queryGames.php's underlying query actively excludes event-linked
+      // rounds by design — so any post-load refresh in event mode (e.g.
+      // after deleting a round) silently came back with the wrong games
+      // entirely, not just a wrong filter.
+      const gamesRes = await apiAdmin("queryGames.php", { eid: state.eid });
+      if (gamesRes?.payload) applyRenderGames(gamesRes.payload);
+      return;
+    }
+
     const f = next || {};
     // take next if provided else state
     state.filters.dateFrom = (f.dateFrom ?? state.filters.dateFrom ?? "").trim();
@@ -167,6 +183,13 @@
       // ---- EVENT MODE ----
       if (evCtx) {
         state.isEventMode = true;
+        // Captured here because nothing else in this file stores it —
+        // refreshGamesAndAdmins() needs this to stay event-scoped on any
+        // later re-fetch (e.g. after deleting a round). evCtx.eid mirrors
+        // ServiceContextEvent::getEventContext()'s standard {eid, event,
+        // authorizations} shape; falling back to the event row's own
+        // dbEvents_EID in case only that's present.
+        state.eid = Number(evCtx.eid || evCtx.event?.dbEvents_EID || 0);
         const ev = evCtx.event || {};
         const evTitle    = String(ev.dbEvents_Title || "Event Rounds").trim();
         const evStart    = String(ev.startDateISO || ev.dbEvents_StartDate || "").slice(0, 10);

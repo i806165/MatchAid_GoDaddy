@@ -39,6 +39,13 @@ if ($clubId === "") {
 $body = json_decode(file_get_contents("php://input"), true) ?: [];
 $payload = $body["payload"] ?? [];
 
+// Event Rounds mode — scoped entirely by eid, mirrors the eid-only filter
+// adminhome.php's initial page load already passes to
+// hydrateAdminGamesList(). Bypasses adminScope/date-range resolution
+// below entirely; those belong to the standalone flat-games filter UI,
+// which doesn't exist in this mode.
+$eid = (int)($payload["eid"] ?? 0);
+
 // Resolve and validate adminScope BEFORE building $args
 $adminScope = strtoupper(trim((string)($payload["adminScope"] ?? "ME")));
 if (!in_array($adminScope, ["ME", "ALL", "CUSTOM"], true)) $adminScope = "ME";
@@ -52,20 +59,33 @@ $args = [
   "adminScope"          => $adminScope,  // now correctly defined before use
 ];
 
-// Prefer uiSelectedAdminKeys (always has the UI selection, even when scope=ALL
-// and selectedAdminKeys is intentionally sent as []).
-$uiKeys = is_array($payload["uiSelectedAdminKeys"] ?? null) ? $payload["uiSelectedAdminKeys"] : null;
-$keysToStore = is_array($uiKeys) ? $uiKeys : $args["selectedAdminKeys"];
+if ($eid <= 0) {
+  // Only persist standalone filter session state for the flat-games case
+  // — an event-mode refresh has no date/admin filters of its own to save,
+  // and writing blanks here would silently clear the user's actual
+  // flat-games filter preferences as a side effect of viewing an event's
+  // rounds.
+  $uiKeys = is_array($payload["uiSelectedAdminKeys"] ?? null) ? $payload["uiSelectedAdminKeys"] : null;
+  $keysToStore = is_array($uiKeys) ? $uiKeys : $args["selectedAdminKeys"];
+  $keysToStore = array_values(array_unique(array_filter(array_map("strval", $keysToStore))));
 
-// Normalize + de-dupe
-$keysToStore = array_values(array_unique(array_filter(array_map("strval", $keysToStore))));
+  $_SESSION["AP_FILTERDATEFROM"]   = (string)$args["dateFrom"];
+  $_SESSION["AP_FILTERDATETO"]     = (string)$args["dateTo"];
+  $_SESSION["AP_FILTER_ADMINS"]    = json_encode($keysToStore);
+  $_SESSION["AP_FILTERADMINSCOPE"] = $adminScope;
+}
 
-$_SESSION["AP_FILTERDATEFROM"]   = (string)$args["dateFrom"];
-$_SESSION["AP_FILTERDATETO"]     = (string)$args["dateTo"];
-$_SESSION["AP_FILTER_ADMINS"]    = json_encode($keysToStore);
-$_SESSION["AP_FILTERADMINSCOPE"] = $adminScope;
-
-$data = ServiceDbGames::queryGames($args);
+// Event Rounds mode uses the existing, dedicated queryEventGames() —
+// already correct, already returns the same {games:{vm,raw}} shape
+// queryGames() does (see that method's own docblock), and already sorts
+// by dbGames_EventRoundNo first, which queryGames() has no concept of at
+// all. Not routed through queryGames() itself — that method's "new"
+// branch actively EXCLUDES event-linked rounds by design, and duplicating
+// its logic here would mean maintaining two implementations of the same
+// query instead of reusing the one that already exists.
+$data = ($eid > 0)
+  ? ServiceDbGames::queryEventGames($eid)
+  : ServiceDbGames::queryGames($args);
 
 if (!is_array($data) || !array_key_exists("games", $data)) {
   echo json_encode([

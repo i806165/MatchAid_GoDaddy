@@ -296,11 +296,19 @@ final class WorkflowProcessEventCascade
    * Applies whichever of Team/Flight/Pairing are currently fixed to ONE
    * player's row, sourced from their event-roster enrollment. A player
    * with no matching event-roster row (not enrolled at the event level)
-   * is left untouched — nothing to inherit. Pairing additionally requires
-   * a real pairing on the roster side (id !== "000") before propagating,
-   * same guard propagatePairingAssignments' docblock used to require of
-   * its caller — an unassigned event-roster pairing has nothing
-   * meaningful to push down.
+   * is left untouched — nothing to inherit.
+   *
+   * All three dimensions are treated symmetrically: while a dimension is
+   * "fixed," whatever the event roster currently says — including a
+   * blank Team/Flight or an unassigned ("000") Pairing — propagates
+   * unconditionally. An earlier version of this function skipped "000"
+   * Pairing values, treating them as "nothing to push." That was wrong:
+   * flipping a mode to "none" is non-destructive (existing round data is
+   * simply left alone going forward), but an explicit clear WHILE fixed
+   * is a deliberate assertion of the new state and is meant to be
+   * destructive, propagating everywhere — exactly like clearing Team
+   * assignments at the event level already blanks TeamKey across every
+   * round. Pairing gets no special exemption from that rule.
    */
   private static function applyEventDataToGamePlayer(string $ggid, array $playerRow, array $event, array $eventRosterByGhin): void
   {
@@ -322,14 +330,11 @@ final class WorkflowProcessEventCascade
       $fields["dbPlayers_FlightKey"] = (string)($eventPlayer["dbEventPlayers_FlightKey"] ?? "");
     }
     if ($pairingMode === "fixed") {
-      $pid = (string)($eventPlayer["dbEventPlayers_PairingID"] ?? "000");
-      if ($pid !== "" && $pid !== "000") {
-        $fields["dbPlayers_PairingID"]  = $pid;
-        $fields["dbPlayers_PairingPos"] = (string)($eventPlayer["dbEventPlayers_PairingPos"] ?? "");
-      }
+      $fields["dbPlayers_PairingID"]  = (string)($eventPlayer["dbEventPlayers_PairingID"]  ?? "000");
+      $fields["dbPlayers_PairingPos"] = (string)($eventPlayer["dbEventPlayers_PairingPos"] ?? "");
     }
 
-    if (!$fields) return; // every dimension is "none" (or no real pairing to push) — nothing to apply
+    if (!$fields) return; // every dimension is "none" — nothing to apply
 
     ServiceDbPlayers::updateGamePlayerFields($ggid, $ghin, $fields);
   }

@@ -580,6 +580,24 @@
 
   async function _applyChanges() {
     if (_busy) return;
+
+    // All-or-none: a player roster where SOME players have a team and
+    // others don't is not a valid state to save. If mode is "fixed,"
+    // saving here propagates to every linked round — an unassigned
+    // player's blank TeamKey would propagate too, silently clearing
+    // whatever team that player already had at the round level. Blocking
+    // the mixed state here means Propagation never has a blank value to
+    // push out unless the admin genuinely means "no one has a team."
+    const assignedCount   = _players.filter(p => !!p.team).length;
+    const unassignedCount = _players.length - assignedCount;
+    if (assignedCount > 0 && unassignedCount > 0) {
+      MA.setStatus(
+        `All players must be assigned to a team, or none at all — ${unassignedCount} player${unassignedCount === 1 ? "" : "s"} still need${unassignedCount === 1 ? "s" : ""} a team.`,
+        "warn"
+      );
+      return;
+    }
+
     _busy = true; _showBusy("Saving teams — please wait...");
     try {
       const configRes = await MA.postJson(apiPath("saveTeamConfig.php"), { teams: _teamConfig?.teams || [], mode: _mode });

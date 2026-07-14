@@ -15,6 +15,7 @@ declare(strict_types=1);
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
+require_once MA_SERVICES . "/database/service_dbGames.php";
 require_once MA_SERVICES . "/database/service_dbPlayers.php";
 require_once MA_SERVICES . "/workflows/workflow_ReconcilePairingBoundaries.php";
 
@@ -81,8 +82,11 @@ try {
   //    Full reset of any violating group, not just the changed player —
   //    see workflow_ReconcilePairingBoundaries.php's own header. Captured,
   //    not discarded — the client needs to know whether anything reset,
-  //    not just have it happen silently.
-  $reconciled = WorkflowReconcilePairingBoundaries::reconcileGame($ggid);
+  //    not just have it happen silently. $game fetched once here and
+  //    passed through, matching saveFlightAssignments.php's pattern —
+  //    skips reconcileGame()'s internal getGameByGGID() lookup.
+  $game       = ServiceDbGames::getGameByGGID((int)$ggid);
+  $reconciled = WorkflowReconcilePairingBoundaries::reconcileGame($ggid, $game);
 
   // 7) Return refreshed player list
   $players = ServiceDbPlayers::getGamePlayers($ggid);
