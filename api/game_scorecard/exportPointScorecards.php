@@ -275,6 +275,12 @@ function maPopulateGroupSheet2x9(Spreadsheet $spreadsheet, Worksheet $sheet, arr
         'Group_PlayerKey',
         $firstPlayer['dbPlayers_PlayerKey'] ?? ''
     );
+    maSetLocalNamedValue(
+        $spreadsheet,
+        $sheet,
+        'Group_TeeTime',
+        (string)($group['teeTime'] ?? '')
+    );
 
     $holeMode = maResolveHoleMode($game);
 
@@ -315,6 +321,12 @@ function maPopulateGroupSheet3x6(Spreadsheet $spreadsheet, Worksheet $sheet, arr
         $sheet,
         'Group_PlayerKey',
         $firstPlayer['dbPlayers_PlayerKey'] ?? ''
+    );
+    maSetLocalNamedValue(
+        $spreadsheet,
+        $sheet,
+        'Group_TeeTime',
+        (string)($group['teeTime'] ?? '')
     );
 
     $segments = ['Table1' => 1, 'Table2' => 7, 'Table3' => 13];
