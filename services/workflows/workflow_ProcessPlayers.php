@@ -66,6 +66,36 @@ final class WorkflowProcessPlayers
     $existing = ServiceDbPlayers::getPlayerByGGIDGHIN($ggid, $ghin);
     $profile  = self::fetchPlayerProfile($ghin, $token, $creatorGHIN);
 
+    $isNonRated = str_starts_with(
+      strtoupper($ghin),
+      "NH"
+    );
+
+    if ($isNonRated) {
+      $inputFirst = trim(
+        (string)($playerInput["first_name"] ?? "")
+      );
+
+      $inputLast = trim(
+        (string)($playerInput["last_name"] ?? "")
+      );
+
+      $inputGender = trim(
+        (string)($playerInput["gender"] ?? "")
+      );
+
+      $profile["first_name"] = $inputFirst;
+      $profile["firstName"]  = $inputFirst;
+
+      $profile["last_name"] = $inputLast;
+      $profile["lastName"]  = $inputLast;
+
+      $profile["gender"] = $inputGender;
+
+      $profile["local_number"]  = $ghin;
+      $profile["member_number"] = $ghin;
+      $profile["memberId"]      = $ghin;
+    }
     // Identity fields — first_name / last_name / gender.
     //
     // This app's own db_Players table has no first-name concept at all
