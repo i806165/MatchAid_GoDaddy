@@ -75,55 +75,17 @@
   const HEART_OUTLINE = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#0066CC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.84-8.84 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`;
   const ICON_CLOSE    = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
 
-  // ── Modal: blocked-delete notice ────────────────────────────────────────────
-  // Mirrors the maModalOverlay / maModal pattern from game_maintenance.js
-  // (ensureSavingOverlay/showSavingOverlay/hideSavingOverlay) — used for
-  // important messages that should interrupt the user rather than scroll
-  // past in the chrome status line.
-  function ensureBlockedModal() {
-    if (document.getElementById("erBlockedOverlay")) return;
-
-    const overlay = document.createElement("div");
-    overlay.id = "erBlockedOverlay";
-    overlay.className = "maModalOverlay";
-
-    const modal = document.createElement("section");
-    modal.className = "maModal";
-
-    modal.innerHTML = `
-      <header class="maModal__hdr">
-        <div class="maModal__titles">
-          <div class="maModal__title">Player Enrolled in Linked Round</div>
-        </div>
-      </header>
-      <div class="maModal__body" id="erBlockedBody">
-        <p style="line-height:1.6;" id="erBlockedMessage"></p>
-        <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:14px; display:flex; justify-content:flex-end;">
-          <button type="button" class="btn btnSecondary" id="erBlockedOkBtn">OK</button>
-        </div>
-      </div>
-    `;
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-
-    document.getElementById("erBlockedOkBtn")?.addEventListener("click", hideBlockedModal);
-    overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) hideBlockedModal();
-    });
-  }
-
+  // ── Blocked-delete notice ───────────────────────────────────────────────
+  // Delegates to MA.ui.confirm (okOnly mode). This was the original pattern
+  // game_players.js and game_pairings.js's "managed at event level" modals
+  // mirrored — now all three render through the same shared implementation
+  // instead of copies of this file's markup.
   function showBlockedModal(message) {
-    ensureBlockedModal();
-    const overlay = document.getElementById("erBlockedOverlay");
-    const msgEl   = document.getElementById("erBlockedMessage");
-    if (msgEl) msgEl.textContent = message || "This player cannot be removed right now.";
-    if (overlay) overlay.classList.add("is-open");
-  }
-
-  function hideBlockedModal() {
-    const overlay = document.getElementById("erBlockedOverlay");
-    if (overlay) overlay.classList.remove("is-open");
+    MA.ui.confirm({
+      title: "Player enrolled in linked round",
+      message: message || "This player cannot be removed right now.",
+      okOnly: true
+    });
   }
 
   // ── API helpers ─────────────────────────────────────────────────────────────
@@ -144,9 +106,9 @@
     if (!res?.ok) {
       // 409 = already enrolled — treat as success (checkmark will update)
       if (res?.status === 409 || res?.message?.includes("already")) {
-        MA.setStatus("Player is already enrolled.", "info");
+        MA.ui.notify("Player is already enrolled.", "info");
       } else {
-        MA.setStatus(res?.message || "Unable to enroll player.", "warn");
+        MA.ui.notify(res?.message || "Unable to enroll player.", "warn");
       }
       return;
     }
@@ -155,7 +117,7 @@
     renderRoster();
     renderTrayControls();
     renderTrayBody();
-    MA.setStatus("Player enrolled.", "success");
+    MA.ui.notify("Player enrolled.", "success");
   }
 
   // ── Enroll multiple players (multi-add from favorites) ─────────────────────
@@ -183,8 +145,8 @@
     }
     renderTrayBody();
 
-    if (failed) MA.setStatus(`Enrolled ${added} players. ${failed} failed.`, "warn");
-    else MA.setStatus(`Enrolled ${added} players.`, "success");
+    if (failed) MA.ui.notify(`Enrolled ${added} players. ${failed} failed.`, "warn");
+    else MA.ui.notify(`Enrolled ${added} players.`, "success");
   }
 
   // ── Remove a player ─────────────────────────────────────────────────────────
@@ -203,7 +165,7 @@
     renderRoster();
     renderTrayControls();
     renderTrayBody();
-    MA.setStatus("Player removed.", "success");
+    MA.ui.notify("Player removed.", "success");
   }
 
   // ── Heart button — navigate to favorites page ───────────────────────────────
@@ -370,67 +332,40 @@
     const refreshBtn = document.getElementById("erBtnRefreshHI");
     if (refreshBtn) refreshBtn.disabled = true;
     _showBusy("Refreshing handicaps — please wait...");
-    MA.setStatus("Refreshing handicaps…", "info");
+    MA.ui.notify("Refreshing handicaps…", "info");
     try {
       const res = await MA.postJson(MA.paths.refreshEventRosterHI, {});
       if (!res?.ok) {
-        MA.setStatus(res?.message || "Unable to refresh handicaps.", "warn");
+        MA.ui.notify(res?.message || "Unable to refresh handicaps.", "warn");
         return;
       }
       state.roster = Array.isArray(res.payload?.roster) ? res.payload.roster : state.roster;
       renderRoster();
-      MA.setStatus(res.message || "Handicaps refreshed.", "success");
+      MA.ui.notify(res.message || "Handicaps refreshed.", "success");
     } catch (e) {
       console.error(e);
-      MA.setStatus(String(e.message || e), "danger");
+      MA.ui.notify(String(e.message || e), "danger");
     } finally {
       if (refreshBtn) refreshBtn.disabled = false;
       _hideBusy();
     }
   }
 
-  const BUSY_ID = "erBusyOverlay";
-
-  function _ensureBusyOverlay() {
-    if (document.getElementById(BUSY_ID)) return;
-
-    const overlay = document.createElement("div");
-    overlay.id = BUSY_ID;
-    overlay.className = "maModalOverlay";
-
-    const modal = document.createElement("section");
-    modal.className = "maModal";
-    modal.innerHTML = `
-      <header class="maModal__hdr">
-        <div class="maModal__titles">
-          <div class="maModal__title">Working</div>
-        </div>
-      </header>
-      <div class="maModal__body" id="erBusyBody">
-        <p id="erBusyMessage" style="line-height:1.6;"></p>
-      </div>`;
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-  }
-
+  // Delegates to MA.ui — also fixes that this version never toggled
+  // maOverlayOpen, so the page underneath was never actually locked while
+  // handicaps were refreshing.
   function _showBusy(message) {
-    _ensureBusyOverlay();
-    const overlay = document.getElementById(BUSY_ID);
-    const body    = document.getElementById("erBusyBody");
-    if (body) body.innerHTML = `<p style="line-height:1.6;">${message || "Processing — please wait..."}</p>`;
-    if (overlay) overlay.classList.add("is-open");
+    MA.ui.showBusy({ title: "Working", message: message || "Processing — please wait..." });
   }
 
   function _hideBusy() {
-    const overlay = document.getElementById(BUSY_ID);
-    if (overlay) overlay.classList.remove("is-open");
+    MA.ui.hideBusy();
   }
 
   // ── Manage Pairings ──────────────────────────────────────────────────────────
   function onManagePairings() {
     if (!MA.createEventPairings || typeof MA.createEventPairings.open !== "function") {
-      MA.setStatus("Manage Pairings module not loaded.", "warn");
+      MA.ui.notify("Manage Pairings module not loaded.", "warn");
       return;
     }
 
@@ -475,7 +410,7 @@
         });
         if (state.event) state.event.dbEvents_PairingMode = newMode || "none";
         renderRoster();
-        MA.setStatus("Pairings saved.", "success");
+        MA.ui.notify("Pairings saved.", "success");
       }
     });
   }
@@ -483,7 +418,7 @@
   // ── Define Teams ────────────────────────────────────────────────────────────
   function onManageTeams() {
     if (!MA.manageTeams || typeof MA.manageTeams.open !== "function") {
-      MA.setStatus("Define Teams module not loaded.", "warn");
+      MA.ui.notify("Define Teams module not loaded.", "warn");
       return;
     }
 
@@ -543,7 +478,7 @@
   // ── Manage Flights ───────────────────────────────────────────────────────────
   function onDefineFlights() {
     if (!MA.defineFlights || typeof MA.defineFlights.open !== "function") {
-      MA.setStatus("Define Flights module not loaded.", "warn");
+      MA.ui.notify("Define Flights module not loaded.", "warn");
       return;
     }
 
@@ -601,7 +536,7 @@
   // plain scalar columns (not a JSON blob), so no parsing is needed here.
   function onDefineHandicapSettings() {
     if (!MA.defineHandicapSettings || typeof MA.defineHandicapSettings.open !== "function") {
-      MA.setStatus("Define Handicaps module not loaded.", "warn");
+      MA.ui.notify("Define Handicaps module not loaded.", "warn");
       return;
     }
     const ev = state.event || {};
@@ -752,7 +687,7 @@
   async function upsertNonRated(player) {
     const res = await MA.postJson(MA.paths.saveEventRosterPlayer, { player });
     if (!res?.ok) {
-      MA.setStatus(res?.message || "Unable to update player.", "warn");
+      MA.ui.notify(res?.message || "Unable to update player.", "warn");
       return;
     }
     const nonRatedControls = getTabPanel(el.trayControls, "nonrated");
@@ -765,7 +700,7 @@
       bodyEl:          nonRatedBody,
       existingPlayers: state.roster || [],
     });
-    MA.setStatus("Player updated.", "success");
+    MA.ui.notify("Player updated.", "success");
   }
 
   // ── render() ────────────────────────────────────────────────────────────────
@@ -830,7 +765,7 @@
 
   boot().catch(err => {
     console.error("[EVENT_ROSTER] boot error", err);
-    MA.setStatus("Failed to initialize event roster.", "danger");
+    MA.ui.notify("Failed to initialize event roster.", "danger");
   });
 
 })();

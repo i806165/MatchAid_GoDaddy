@@ -181,7 +181,7 @@
         return;
       }
     } catch (e) {
-      if (MA.setStatus) MA.setStatus(String(e.message || e), "error");
+      if (MA.ui && MA.ui.notify) MA.ui.notify(String(e.message || e), "error");
     }
 
     showList();
@@ -453,7 +453,7 @@
       </section>`;
 
     document.body.appendChild(overlay);
-    document.body.classList.add("maOverlayOpen");
+    document.documentElement.classList.add("maOverlayOpen");
 
     // Wire events
     overlay.querySelector("#fpEmailModalClose")?.addEventListener("click", _destroyEmailModal);
@@ -518,7 +518,7 @@
   function _destroyEmailModal() {
     const existing = document.getElementById("fpEmailModal");
     if (existing) existing.remove();
-    document.body.classList.remove("maOverlayOpen");
+    document.documentElement.classList.remove("maOverlayOpen");
   }
 
   // ── Add Group modal ─────────────────────────────────────────────────────────
@@ -553,7 +553,7 @@
       </section>`;
 
     document.body.appendChild(overlay);
-    document.body.classList.add("maOverlayOpen");
+    document.documentElement.classList.add("maOverlayOpen");
 
     const input   = overlay.querySelector("#fpGroupModalInput");
     const saveBtn = overlay.querySelector("#fpGroupModalSave");
@@ -587,7 +587,7 @@
   function _destroyGroupModal() {
     const existing = document.getElementById("fpGroupModal");
     if (existing) existing.remove();
-    document.body.classList.remove("maOverlayOpen");
+    document.documentElement.classList.remove("maOverlayOpen");
   }
 
   // ── Form ────────────────────────────────────────────────────────────────────
@@ -729,14 +729,14 @@
       state.groups = Array.isArray(res.payload?.groups) ? res.payload.groups : state.groups;
       renderFilters();
       renderList();
-      if (MA.setStatus) MA.setStatus("Favorite removed.", "info");
+      if (MA.ui && MA.ui.notify) MA.ui.notify("Favorite removed.", "info");
     } catch (e) {
       console.error("[FP] doDelete failed:", {
         message:  e?.message || String(e),
         userGHIN: state.context?.userGHIN || "unknown",
         userName: state.context?.userName || "unknown",
       });
-      if (MA.setStatus) MA.setStatus(String(e.message || e), "error");
+      if (MA.ui && MA.ui.notify) MA.ui.notify(String(e.message || e), "error");
     }
   }
 
@@ -749,17 +749,17 @@
 
     // ── Phase 1: Field validation (no API calls) ──────────────────────────
     if (emailVal && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-      if (MA.setStatus) MA.setStatus("Invalid email address.", "error");
+      if (MA.ui && MA.ui.notify) MA.ui.notify("Invalid email address.", "error");
       return;
     }
 
     if (isMaskedEmail(emailVal)) {
-      if (MA.setStatus) MA.setStatus("Please select a valid email address.", "error");
+      if (MA.ui && MA.ui.notify) MA.ui.notify("Please select a valid email address.", "error");
       return;
     }
 
     if (mobileVal && mobileVal.length < 10) {
-      if (MA.setStatus) MA.setStatus("Invalid mobile number (10 digits required).", "error");
+      if (MA.ui && MA.ui.notify) MA.ui.notify("Invalid mobile number (10 digits required).", "error");
       if (el.mobile) el.mobile.focus();
       return;
     }
@@ -780,7 +780,7 @@
           const res = await MA.postJson(validatePath, { mobile: mobileVal });
 
           if (!res || !res.valid) {
-            if (MA.setStatus) MA.setStatus(res?.message || "Mobile number is invalid.", "error");
+            if (MA.ui && MA.ui.notify) MA.ui.notify(res?.message || "Mobile number is invalid.", "error");
             return;
           }
 
@@ -798,7 +798,7 @@
           resolvedCarrier = res.carrier || "";
 
         } catch (e) {
-          if (MA.setStatus) MA.setStatus("Mobile validation failed. Please try again.", "error");
+          if (MA.ui && MA.ui.notify) MA.ui.notify("Mobile validation failed. Please try again.", "error");
           return;
         }
 
@@ -831,7 +831,7 @@
       state.favorites = Array.isArray(res.payload?.favorites) ? res.payload.favorites : state.favorites;
       state.groups    = Array.isArray(res.payload?.groups)    ? res.payload.groups    : state.groups;
 
-      if (MA.setStatus) MA.setStatus("Saved.", "info");
+      if (MA.ui && MA.ui.notify) MA.ui.notify("Saved.", "info");
 
       if (state.returnAction === "roster") {
         await MA.routerGo(state.returnAction);
@@ -844,7 +844,7 @@
         userGHIN: state.context?.userGHIN || "unknown",
         userName: state.context?.userName || "unknown",
       });
-      if (MA.setStatus) MA.setStatus(String(e.message || e), "error");
+      if (MA.ui && MA.ui.notify) MA.ui.notify(String(e.message || e), "error");
     }
   }
 
@@ -871,7 +871,7 @@
         try {
           await openFromGhinSelection(ghin);
         } catch (e) {
-          if (MA.setStatus) MA.setStatus(String(e.message || e), "error");
+          if (MA.ui && MA.ui.notify) MA.ui.notify(String(e.message || e), "error");
         }
       },
     });
@@ -879,34 +879,15 @@
 
   // ── Import busy overlay ─────────────────────────────────────────────────────
 
-  function _importEnsureOverlay() {
-    if (document.getElementById("fpBusyOverlay")) return;
-    const overlay = document.createElement("div");
-    overlay.id = "fpBusyOverlay";
-    overlay.className = "maModalOverlay";
-    const modal = document.createElement("section");
-    modal.className = "maModal";
-    modal.style.maxWidth = "320px";
-    modal.innerHTML = `
-      <header class="maModal__hdr">
-        <div class="maModal__titles">
-          <div class="maModal__title">Please wait</div>
-          <div class="maModal__subtitle" id="fpBusyMessage">Working...</div>
-        </div>
-      </header>`;
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-  }
-
+  // Delegates to MA.ui — also fixes that this version never toggled
+  // maOverlayOpen, so the page underneath was never actually locked during
+  // import validation.
   function _importShowOverlay(message) {
-    _importEnsureOverlay();
-    const msg = document.getElementById("fpBusyMessage");
-    if (msg) msg.textContent = message || "Working...";
-    document.getElementById("fpBusyOverlay")?.classList.add("is-open");
+    MA.ui.showBusy({ title: "Working", message: message || "Working..." });
   }
 
   function _importHideOverlay() {
-    document.getElementById("fpBusyOverlay")?.classList.remove("is-open");
+    MA.ui.hideBusy();
   }
 
   // ── Import ──────────────────────────────────────────────────────────────────
@@ -970,11 +951,11 @@
   function _importHandleFile(file) {
     const name = file.name.toLowerCase();
     if (!name.endsWith(".xlsx") && !name.endsWith(".xls") && !name.endsWith(".csv")) {
-      if (MA.setStatus) MA.setStatus("Please upload an .xlsx, .xls, or .csv file.", "warn");
+      if (MA.ui && MA.ui.notify) MA.ui.notify("Please upload an .xlsx, .xls, or .csv file.", "warn");
       return;
     }
     if (typeof XLSX === "undefined") {
-      if (MA.setStatus) MA.setStatus("File parser not loaded. Please refresh and try again.", "danger");
+      if (MA.ui && MA.ui.notify) MA.ui.notify("File parser not loaded. Please refresh and try again.", "danger");
       return;
     }
     const reader = new FileReader();
@@ -985,7 +966,7 @@
         const sheet    = workbook.Sheets[workbook.SheetNames[0]];
         const raw      = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
         if (!raw || raw.length < 2) {
-          if (MA.setStatus) MA.setStatus("File appears empty. Please check and try again.", "warn");
+          if (MA.ui && MA.ui.notify) MA.ui.notify("File appears empty. Please check and try again.", "warn");
           return;
         }
         _importParseRows(raw);
@@ -997,7 +978,7 @@
           userName: state.context?.userName || "unknown",
           stack:    err?.stack || "no stack",
         });
-        if (MA.setStatus) MA.setStatus("Could not read the file. Please check the format and try again.", "danger");
+        if (MA.ui && MA.ui.notify) MA.ui.notify("Could not read the file. Please check the format and try again.", "danger");
       }
     };
     reader.readAsArrayBuffer(file);
@@ -1041,11 +1022,11 @@
     }
 
     if (rows.length === 0) {
-      if (MA.setStatus) MA.setStatus("No data rows found in file.", "warn");
+      if (MA.ui && MA.ui.notify) MA.ui.notify("No data rows found in file.", "warn");
       return;
     }
     if (rows.length > FP_IMPORT_BATCH_MAX) {
-      if (MA.setStatus) MA.setStatus(
+      if (MA.ui && MA.ui.notify) MA.ui.notify(
         `File has ${rows.length} rows. Maximum per import is ${FP_IMPORT_BATCH_MAX}. Please split your file.`,
         "warn"
       );
@@ -1221,7 +1202,7 @@
       _importHideOverlay();
 
       if (!res?.ok) {
-        if (MA.setStatus) MA.setStatus(res?.message ?? "Import failed. Please try again.", "danger");
+        if (MA.ui && MA.ui.notify) MA.ui.notify(res?.message ?? "Import failed. Please try again.", "danger");
         return;
       }
 
@@ -1239,7 +1220,7 @@
         s.skipped  ? `${s.skipped} skipped` : null,
       ].filter(Boolean).join(", ");
 
-      if (MA.setStatus) MA.setStatus(`Import complete — ${msg}.`, "success");
+      if (MA.ui && MA.ui.notify) MA.ui.notify(`Import complete — ${msg}.`, "success");
       showList();
 
     } catch (err) {
@@ -1253,13 +1234,13 @@
         userName: state.context?.userName || "unknown",
         stack:    err?.stack || "no stack",
       });
-      if (MA.setStatus) MA.setStatus("Import failed due to a network error. Please try again.", "danger");
+      if (MA.ui && MA.ui.notify) MA.ui.notify("Import failed due to a network error. Please try again.", "danger");
     }
   }
 
   function _importDownloadTemplate() {
     if (typeof XLSX === "undefined") {
-      if (MA.setStatus) MA.setStatus("Template generator not loaded. Please refresh and try again.", "warn");
+      if (MA.ui && MA.ui.notify) MA.ui.notify("Template generator not loaded. Please refresh and try again.", "warn");
       return;
     }
     const sampleRow = ["4821093", "John", "Smith", "john@example.com", "555-0100", "M-0001", "Tuesday Group|Members"];
@@ -1358,7 +1339,7 @@
         userName: state.context?.userName || window.__INIT__?.context?.userName || "unknown",
         stack:    e?.stack || "no stack",
       });
-      if (MA.setStatus) MA.setStatus(String(e.message || e), "error");
+      if (MA.ui && MA.ui.notify) MA.ui.notify(String(e.message || e), "error");
     }
   })();
 

@@ -101,6 +101,7 @@
   }
 
   function setStatus(msg, level){
+    if (MA.ui && typeof MA.ui.notify === 'function') return MA.ui.notify(msg || '', level || '');
     if (typeof MA.setStatus === 'function') return MA.setStatus(msg || '', level || '');
     if (el.status) el.status.textContent = msg || '';
     if (msg) console.log('[PLAYER_GAMES]', level || 'info', msg);
@@ -676,7 +677,13 @@ function getGameAdminMeta(g){
         return;
       }
 
-      const ok = window.confirm("Unregister from this game?");
+      const ok = await MA.ui.confirm({
+        title: "Unregister from game?",
+        message: "Your registration and tee selection will be removed.",
+        confirmLabel: "Unregister",
+        cancelLabel: "Keep registration",
+        danger: true
+      });
       if (!ok) return;
 
       setStatus("Unregistering...", "info");

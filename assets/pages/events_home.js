@@ -21,7 +21,8 @@
   };
 
   function setStatus(message, level) {
-    if (typeof MA.setStatus === "function") MA.setStatus(message, level);
+    if (MA.ui && typeof MA.ui.notify === "function") MA.ui.notify(message, level);
+    else if (typeof MA.setStatus === "function") MA.setStatus(message, level);
     else if (message) console.log("[STATUS]", level || "info", message);
   }
 
@@ -217,7 +218,14 @@
     if (!eid) return;
 
     if (action === "deleteEvent") {
-      if (!confirm("Delete this event? This cannot be undone.")) return;
+      const approved = await MA.ui.confirm({
+        title: "Delete event?",
+        message: "This event will be permanently deleted. This can't be undone.",
+        confirmLabel: "Delete",
+        cancelLabel: "Cancel",
+        danger: true
+      });
+      if (!approved) return;
       try {
         const res = await postJson(`${apiBase}/deleteEvent.php`, { eid });
         if (res?.ok) {

@@ -22,14 +22,16 @@
 
   const apiEM = (file, payload) => apiCall(emApiBase, file, payload);
 
-  const setStatus = typeof MA.setStatus === "function"
-    ? MA.setStatus
-    : (msg, level) => {
-        const el = document.getElementById("chromeStatusLine");
-        if (!el) return;
-        el.className = "maChrome__status " + (level ? ("status-" + level) : "status-info");
-        el.textContent = msg || "";
-      };
+  function setStatus(msg, level) {
+    if (MA.ui && typeof MA.ui.notify === "function") MA.ui.notify(msg, level);
+    else if (typeof MA.setStatus === "function") MA.setStatus(msg, level);
+    else {
+      const elLine = document.getElementById("chromeStatusLine");
+      if (!elLine) return;
+      elLine.className = "maChrome__status " + (level ? ("status-" + level) : "status-info");
+      elLine.textContent = msg || "";
+    }
+  }
 
   const el = {
     eidLabel: document.getElementById("emEidLabel"),
@@ -299,7 +301,14 @@
 
   async function onDeleteEvent() {
     if (!state.eid) return;
-    if (!confirm("Are you sure you want to delete this event? This cannot be undone.")) return;
+    const approved = await MA.ui.confirm({
+      title: "Delete event?",
+      message: "This event will be permanently deleted. This can't be undone.",
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+      danger: true
+    });
+    if (!approved) return;
 
     setBusy(true);
     try {
@@ -323,9 +332,15 @@
     ]);
   }
 
-  function onBack() {
+  async function onBack() {
     if (state.dirty) {
-      const ok = confirm("Discard unsaved changes and go back?");
+      const ok = await MA.ui.confirm({
+        title: "Discard changes?",
+        message: "You have unsaved changes. Discard them and go back?",
+        confirmLabel: "Discard",
+        cancelLabel: "Keep editing",
+        danger: true
+      });
       if (!ok) return;
     }
     if (typeof MA.routerGo === "function") {
