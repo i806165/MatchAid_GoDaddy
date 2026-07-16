@@ -271,11 +271,14 @@
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
+  const NOTICE_ID = "dfNotice";
+
   function _renderModal() {
     const expanded = _isExpanded();
     return `
       <section class="maModal" role="dialog" aria-modal="true" aria-label="Define Flights">
         ${_renderHeader()}
+        ${_renderNoticeHtml()}
         ${_renderConfigStrip()}
         <div class="maModal__body${expanded ? "" : " is-collapsed"}" id="dfRoster"
              style="padding:0; ${expanded ? "" : "display:none;"}">
@@ -290,6 +293,42 @@
           <button type="button" class="maFtrBtn maFtrBtn--save" id="dfBtnApply">Apply</button>
         </footer>
       </section>`;
+  }
+
+  // Persistent, hidden-by-default in-modal notice. MA.setStatus() writes
+  // to a page-chrome element that sits BEHIND this modal's full-screen
+  // overlay — the user can never see it while the modal is open. Every
+  // save-failure/success/validation message inside this modal must go
+  // through _showModalNotice() instead, never MA.setStatus() directly.
+  // Mirrors module_defineTeams.js's identical helper.
+  function _renderNoticeHtml() {
+    return `<div id="${NOTICE_ID}" class="maModalNotice" role="alert" aria-live="assertive"
+                 style="display:none; margin:10px 16px 0; padding:10px 12px; border-radius:6px; font-size:12.5px; font-weight:600; line-height:1.4;"></div>`;
+  }
+
+  function _noticeLevelStyle(level) {
+    const map = {
+      danger:  { bg: "rgba(211,47,47,.10)",  border: "#d32f2f", color: "#b71c1c" },
+      warn:    { bg: "rgba(237,158,0,.12)",  border: "#ed9e00", color: "#8a6100" },
+      success: { bg: "rgba(46,125,50,.10)",  border: "#2e7d32", color: "#1b5e20" },
+    };
+    return map[level] || map.warn;
+  }
+
+  function _showModalNotice(message, level) {
+    const el = document.getElementById(NOTICE_ID);
+    if (!el) { MA.setStatus?.(message, level); return; }
+    const s = _noticeLevelStyle(level);
+    el.textContent = message;
+    el.style.display = "block";
+    el.style.background = s.bg;
+    el.style.borderLeft = `3px solid ${s.border}`;
+    el.style.color = s.color;
+  }
+
+  function _hideModalNotice() {
+    const el = document.getElementById(NOTICE_ID);
+    if (el) el.style.display = "none";
   }
 
   function _renderHeader() {
@@ -639,7 +678,7 @@
     if (_flights.length <= MIN_FLIGHTS) return;
     const count = countByFlight(flightId);
     if (count > 0) {
-      MA.setStatus?.(
+      _showModalNotice(
         `Move ${count} player${count !== 1 ? "s" : ""} out of ${getFlightName(flightId)} before removing it.`,
         "warn"
       );
@@ -792,7 +831,7 @@
         flights: _flights.map(f => ({ id: f.id, name: f.name, sort: f.sort })),
         mode: _modeToSend(),
       });
-      if (!configRes?.ok) { MA.setStatus(configRes?.message || "Unable to save flight configuration.", "danger"); return; }
+      if (!configRes?.ok) { _showModalNotice(configRes?.message || "Unable to save flight configuration.", "danger"); return; }
       _flights = normalizeFlightConfig(configRes.payload?.flightConfig || { flights: _flights });
       if (_opts.showModeToggle) {
         _mode = configRes.payload?.mode || _mode;
@@ -802,8 +841,12 @@
 
       const assignments = _players.map(p => ({ ghin: p.ghin, flight: p.flight }));
       const assignRes = await MA.postJson(apiPath("saveFlightAssignments.php"), { assignments });
-      if (!assignRes?.ok) { MA.setStatus(assignRes?.message || "Unable to save flight assignments.", "danger"); return; }
+      if (!assignRes?.ok) { _showModalNotice(assignRes?.message || "Unable to save flight assignments.", "danger"); return; }
 
+      // Modal closes right after this in the clean path — see
+      // module_defineTeams.js's identical comment for why a page-level
+      // toast is correct here specifically, unlike every other message
+      // in this function.
       MA.setStatus("Flights saved.", "success");
 
       const reconcileSummary = assignRes.payload?.reconcile || null;   // event-shaped
@@ -833,7 +876,7 @@
       }
     } catch (e) {
       console.error("[MA.defineFlights]", e);
-      MA.setStatus("Error saving flights.", "danger");
+      _showModalNotice("Error saving flights.", "danger");
     } finally { _busy = false; _hideBusy(); }
   }
 

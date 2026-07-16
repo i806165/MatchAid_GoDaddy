@@ -148,10 +148,13 @@
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
+  const NOTICE_ID = "dhNotice";
+
   function _renderModal() {
     return `
       <section class="maModal" role="dialog" aria-modal="true" aria-label="Define Handicaps">
         ${_renderHeader()}
+        ${_renderNoticeHtml()}
         <div class="maModal__body">
           ${_renderApplyToggle()}
           <div style="${_opts.showModeToggle ? "border-top:1px solid var(--border); margin-top:12px; padding-top:12px;" : ""}">
@@ -165,6 +168,42 @@
           <button type="button" class="maFtrBtn maFtrBtn--save" id="dhBtnApply">Apply</button>
         </footer>
       </section>`;
+  }
+
+  // Persistent, hidden-by-default in-modal notice. MA.setStatus() writes
+  // to a page-chrome element that sits BEHIND this modal's full-screen
+  // overlay — the user can never see it while the modal is open. Every
+  // save-failure message inside this modal must go through
+  // _showModalNotice() instead, never MA.setStatus() directly. Mirrors
+  // module_defineTeams.js's / module_defineFlights.js's identical helper.
+  function _renderNoticeHtml() {
+    return `<div id="${NOTICE_ID}" class="maModalNotice" role="alert" aria-live="assertive"
+                 style="display:none; margin:10px 16px 0; padding:10px 12px; border-radius:6px; font-size:12.5px; font-weight:600; line-height:1.4;"></div>`;
+  }
+
+  function _noticeLevelStyle(level) {
+    const map = {
+      danger:  { bg: "rgba(211,47,47,.10)",  border: "#d32f2f", color: "#b71c1c" },
+      warn:    { bg: "rgba(237,158,0,.12)",  border: "#ed9e00", color: "#8a6100" },
+      success: { bg: "rgba(46,125,50,.10)",  border: "#2e7d32", color: "#1b5e20" },
+    };
+    return map[level] || map.warn;
+  }
+
+  function _showModalNotice(message, level) {
+    const el = document.getElementById(NOTICE_ID);
+    if (!el) { MA.setStatus?.(message, level); return; }
+    const s = _noticeLevelStyle(level);
+    el.textContent = message;
+    el.style.display = "block";
+    el.style.background = s.bg;
+    el.style.borderLeft = `3px solid ${s.border}`;
+    el.style.color = s.color;
+  }
+
+  function _hideModalNotice() {
+    const el = document.getElementById(NOTICE_ID);
+    if (el) el.style.display = "none";
   }
 
   function _renderHeader() {
@@ -324,7 +363,7 @@
 
       const endpoint = _opts.saveEndpoint || "saveGameHandicapSettings.php";
       const res = await MA.postJson(apiPath(endpoint), body);
-      if (!res?.ok) { MA.setStatus(res?.message || "Unable to save handicap settings.", "danger"); return; }
+      if (!res?.ok) { _showModalNotice(res?.message || "Unable to save handicap settings.", "danger"); return; }
 
       const cfg = res.payload?.handicapConfig || {};
       _method      = cfg.method      || _method;
@@ -333,6 +372,9 @@
       _effDate     = cfg.effDate     || _effDate;
       if (_opts.showModeToggle) _mode = res.payload?.mode || _mode;
 
+      // Modal closes right after this — see module_defineTeams.js's
+      // identical comment for why a page-level toast is correct here
+      // specifically, unlike the failure/error paths above and below.
       MA.setStatus("Handicap settings saved.", "success");
       if (typeof _opts.onApply === "function") {
         _opts.onApply({
@@ -346,7 +388,7 @@
       MA.defineHandicapSettings.close();
     } catch (e) {
       console.error("[MA.defineHandicapSettings]", e);
-      MA.setStatus("Error saving handicap settings.", "danger");
+      _showModalNotice("Error saving handicap settings.", "danger");
     } finally { _busy = false; _hideBusy(); }
   }
 

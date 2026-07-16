@@ -225,14 +225,56 @@
     _busy = false;
   };
 
+  const NOTICE_ID = "mtNotice";
+
   // ── Render ───────────────────────────────────────────────────────────────────
 
   function _renderModal() {
     return `
       <section class="maModal" role="dialog" aria-modal="true" aria-label="Manage Teams">
         ${_renderHeader()}
+        ${_renderNoticeHtml()}
         ${hasTeams() ? _renderStateB() : _renderStateA()}
       </section>`;
+  }
+
+  // Persistent, hidden-by-default in-modal notice. MA.setStatus() writes
+  // to a page-chrome element that sits BEHIND this modal's full-screen
+  // overlay — the user can never see it while the modal is open. Every
+  // save-failure/success/validation message inside this modal must go
+  // through _showModalNotice() instead, never MA.setStatus() directly.
+  function _renderNoticeHtml() {
+    return `<div id="${NOTICE_ID}" class="maModalNotice" role="alert" aria-live="assertive"
+                 style="display:none; margin:10px 16px 0; padding:10px 12px; border-radius:6px; font-size:12.5px; font-weight:600; line-height:1.4;"></div>`;
+  }
+
+  function _noticeLevelStyle(level) {
+    const map = {
+      danger:  { bg: "rgba(211,47,47,.10)",  border: "#d32f2f", color: "#b71c1c" },
+      warn:    { bg: "rgba(237,158,0,.12)",  border: "#ed9e00", color: "#8a6100" },
+      success: { bg: "rgba(46,125,50,.10)",  border: "#2e7d32", color: "#1b5e20" },
+    };
+    return map[level] || map.warn;
+  }
+
+  // Every caller in this module should use this — never MA.setStatus()
+  // directly — for anything the user needs to see while the modal is
+  // open. Falls back to MA.setStatus() only defensively, if somehow
+  // called with no modal on screen (shouldn't happen in practice).
+  function _showModalNotice(message, level) {
+    const el = document.getElementById(NOTICE_ID);
+    if (!el) { MA.setStatus?.(message, level); return; }
+    const s = _noticeLevelStyle(level);
+    el.textContent = message;
+    el.style.display = "block";
+    el.style.background = s.bg;
+    el.style.borderLeft = `3px solid ${s.border}`;
+    el.style.color = s.color;
+  }
+
+  function _hideModalNotice() {
+    const el = document.getElementById(NOTICE_ID);
+    if (el) el.style.display = "none";
   }
 
   function _renderHeader() {
@@ -691,7 +733,7 @@
     _busy = true; _showBusy("Saving team configuration — please wait...");
     try {
       const res = await MA.postJson(apiPath("saveTeamConfig.php"), { teams, mode: _modeToSend() });
-      if (!res?.ok) { MA.setStatus(res?.message || "Unable to save team configuration.", "danger"); return; }
+      if (!res?.ok) { _showModalNotice(res?.message || "Unable to save team configuration.", "danger"); return; }
       _teamConfig = res.payload?.teamConfig || { teams };
       if (_opts.showModeToggle) {
         _mode = res.payload?.mode || _mode;
@@ -699,10 +741,10 @@
         _activation = res.payload?.mode || _activation;
       }
       const modal = _getModal();
-      if (modal) { modal.innerHTML = _renderHeader() + _renderStateB(); _wireEvents(); }
+      if (modal) { modal.innerHTML = _renderHeader() + _renderNoticeHtml() + _renderStateB(); _wireEvents(); }
     } catch (e) {
       console.error("[MA.manageTeams]", e);
-      MA.setStatus("Error saving team configuration.", "danger");
+      _showModalNotice("Error saving team configuration.", "danger");
     } finally { _busy = false; _hideBusy(); }
   }
 
@@ -727,7 +769,7 @@
     // there stays exactly as it was until reactivated).
     const unassignedCount = _players.filter(p => !p.team).length;
     if (_isExpanded() && unassignedCount > 0) {
-      MA.setStatus(
+      _showModalNotice(
         `All players must be assigned to a team while Teams is active — ${unassignedCount} player${unassignedCount === 1 ? "" : "s"} still need${unassignedCount === 1 ? "s" : ""} a team.`,
         "warn"
       );
@@ -737,7 +779,7 @@
     _busy = true; _showBusy("Saving teams — please wait...");
     try {
       const configRes = await MA.postJson(apiPath("saveTeamConfig.php"), { teams: _teamConfig?.teams || [], mode: _modeToSend() });
-      if (!configRes?.ok) { MA.setStatus(configRes?.message || "Unable to save team names.", "danger"); return; }
+      if (!configRes?.ok) { _showModalNotice(configRes?.message || "Unable to save team names.", "danger"); return; }
       _teamConfig = configRes.payload?.teamConfig || _teamConfig;
       if (_opts.showModeToggle) {
         _mode = configRes.payload?.mode || _mode;
@@ -747,8 +789,14 @@
 
       const assignments = _players.map(p => ({ ghin: p.ghin, team: p.team }));
       const assignRes = await MA.postJson(apiPath("saveTeamAssignments.php"), { assignments });
-      if (!assignRes?.ok) { MA.setStatus(assignRes?.message || "Unable to save assignments.", "danger"); return; }
+      if (!assignRes?.ok) { _showModalNotice(assignRes?.message || "Unable to save assignments.", "danger"); return; }
 
+      // Modal closes right after this in the clean path (below), so a
+      // page-level toast is correct here, unlike every other message in
+      // this function — there's no modal left on screen for it to hide
+      // behind. In the hasIssue+reconciled path the modal stays open via
+      // _showReconciledNotice() instead; this toast still fires but is a
+      // secondary concern to the reconciliation notice itself.
       MA.setStatus("Teams saved.", "success");
 
       const reconcileSummary = assignRes.payload?.reconcile || null;   // event-shaped
@@ -791,7 +839,7 @@
       }
     } catch (e) {
       console.error("[MA.manageTeams]", e);
-      MA.setStatus("Error saving teams.", "danger");
+      _showModalNotice("Error saving teams.", "danger");
     } finally { _busy = false; _hideBusy(); }
   }
 
