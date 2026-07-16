@@ -357,10 +357,20 @@
       return;
     }
 
+    // Activation-aware, not data-presence — same reasoning and same
+    // shared functions as renderUnpairedList()/renderUnmatchedList()
+    // above. Without this gate, a deactivated dimension's old config
+    // (still sitting in dbGames_FlightConfig/TeamConfig, untouched per
+    // Round-Level Dimension Activation's own contract) would still reach
+    // MA.runAutoPair and show its Flight dropdown / Team checklist even
+    // though the dimension is off. module_runAutoPair.js itself is
+    // correct as-is — it already hides each control when its config is
+    // null/empty — so the fix belongs here, at the call site, not inside
+    // that module.
     MA.runAutoPair.open({
       players: allUnpaired,
-      flightConfig: state.flightConfig,
-      teamConfig: state.teamConfig,
+      flightConfig: flightsActive() ? state.flightConfig : null,
+      teamConfig: teamsActive() ? state.teamConfig : null,
       isPairPair: isPairPair(),
       apiBase,
       onApply: onAutoPairApply,
