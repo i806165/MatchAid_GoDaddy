@@ -1062,7 +1062,7 @@
   }
 
   function lbIndividualSortLabel(key) {
-    return { playerLastName: 'Player', thru: 'Thru', kpi: gameTabLabelForKpiColumn() }[key] || 'Value';
+    return { playerLastName: 'Player', thru: 'Thru', front: 'Front', back: 'Back', kpi: gameTabLabelForKpiColumn() }[key] || 'Value';
   }
 
   function gameTabLabelForKpiColumn() {
@@ -1076,6 +1076,23 @@
 
     return [...list].sort((a, b) => {
       if (key === 'thru') return ((a.thru ?? 0) - (b.thru ?? 0)) * dir;
+      if (key === 'front' || key === 'back') {
+        // Same "empty always sorts last" convention as 'kpi' below — a 9-hole
+        // round's invalid half is also null here (see nullInvalidValueDisplaySegments),
+        // so it naturally falls back to 0 and sorts alongside real ties rather
+        // than needing its own empty check.
+        const aEmpty = (a.thru ?? 0) === 0;
+        const bEmpty = (b.thru ?? 0) === 0;
+        if (aEmpty && bEmpty) return 0;
+        if (aEmpty) return 1;
+        if (bEmpty) return -1;
+
+        const aSeg = (kpiField === 'gross') ? a.grossDiffSegments : a.netDiffSegments;
+        const bSeg = (kpiField === 'gross') ? b.grossDiffSegments : b.netDiffSegments;
+        const av = aSeg?.[key]?.value;
+        const bv = bSeg?.[key]?.value;
+        return ((av ?? 0) - (bv ?? 0)) * dir;
+      }
       if (key === 'kpi') {
         // grossDiffValue/netDiffValue resolve to 0.0, not null, for a player
         // who hasn't started (backend's displayToNumeric("-") falls through
@@ -1113,7 +1130,7 @@
     const sortKey = cell.dataset.sortKey || '';
     const displayVal = cell.dataset.displayValue || cell.textContent.trim();
     const label = lbIndividualSortLabel(sortKey);
-    const isNumeric = (sortKey === 'thru' || sortKey === 'kpi');
+    const isNumeric = (sortKey === 'thru' || sortKey === 'kpi' || sortKey === 'front' || sortKey === 'back');
     const actions = isNumeric
       ? [
           { label: `Sort ${label} Low to High`, action: () => lbSetIndividualSort(sortKey, 'asc') },
@@ -1159,8 +1176,8 @@
           <div class="maListRow maListRow--static">
             <span class="maListRow__col lbColName" data-lb-menu data-sort-key="playerLastName" data-display-value="${esc(p.playerName || '')}">${lbTeamDotHtml(p.teamColor)}${esc(p.playerName || '')}</span>
             <span class="maListRow__col--muted lbColThru" data-lb-menu data-sort-key="thru" data-display-value="${esc(formatThru(p.thru))}">${esc(formatThru(p.thru))}</span>
-            <span class="maListRow__col--muted lbColThru">${esc(segCellDisplay(segs?.front))}</span>
-            <span class="maListRow__col--muted lbColThru">${esc(segCellDisplay(segs?.back))}</span>
+            <span class="maListRow__col--muted lbColThru" data-lb-menu data-sort-key="front" data-display-value="${esc(segCellDisplay(segs?.front))}">${esc(segCellDisplay(segs?.front))}</span>
+            <span class="maListRow__col--muted lbColThru" data-lb-menu data-sort-key="back" data-display-value="${esc(segCellDisplay(segs?.back))}">${esc(segCellDisplay(segs?.back))}</span>
             <span class="maListRow__col lbColKpi" data-lb-menu data-sort-key="kpi" data-display-value="${esc(kpiDisplay ?? '—')}">${esc(kpiDisplay ?? '—')}</span>
             <span class="maListRow__col--muted lbColPts">${esc(fmtNum(ptsValue))}</span>
           </div>
