@@ -27,6 +27,7 @@ declare(strict_types=1);
 
 require_once MA_SVC_DB . "/service_dbPlayers.php";
 require_once MA_SVC_DB . "/service_dbGames.php";
+require_once MA_SVC_DB . "/service_dbEvents.php";
 
 final class WorkflowReconcilePairingBoundaries
 {
@@ -64,7 +65,7 @@ final class WorkflowReconcilePairingBoundaries
     $rows = ServiceDbPlayers::getGamePlayers($ggid);
     if (!$rows) return [];
 
-    $teamsActive = self::teamsActive($ggid, $rows, $gameRow);
+    $teamsActive = self::teamsActive($ggid, $gameRow);
 
     // Group by pairingId (skip 000/blank)
     $byPairing = [];
@@ -164,24 +165,30 @@ final class WorkflowReconcilePairingBoundaries
   }
 
   /**
-   * Mirrors game_pairings.js's teamsActive(): config must actually specify
-   * 2 teams AND at least one player must currently hold a non-blank team.
-   * Config existing alone isn't enough — module_defineTeams.js's Clear All
-   * leaves dbGames_TeamConfig in place while blanking every player's
-   * TeamKey (documented there as an intentional floor state).
+   * Whether Team is active for this round, per the shared Round-Level
+   * Dimension Activation hierarchy (ServiceDbEvents::isDimensionActive()).
+   * Previously this was its own private mirror of game_pairings.js's
+   * teamsActive() — a second, independent copy of the same data-presence
+   * inference kept in sync only by hand. That mirror is retired; this is
+   * now one of two callers of the single shared implementation (the
+   * other being game_pairings.js's own teamsActive() replacement).
+   *
+   * Fetches the event only when the round is actually linked to one
+   * (dbGames_EID > 0) — a flat game never needs it, same guarded pattern
+   * used elsewhere (e.g. WorkflowProcessEventCascade::applyEventDataToGame()).
    */
-  private static function teamsActive(string $ggid, array $rows, ?array $gameRow = null): bool
+  private static function teamsActive(string $ggid, ?array $gameRow = null): bool
   {
     $game = $gameRow ?? ServiceDbGames::getGameByGGID((int)$ggid);
-    $raw  = $game["dbGames_TeamConfig"] ?? null;
-    $cfg  = $raw ? json_decode((string)$raw, true) : null;
-    $hasConfig = is_array($cfg) && isset($cfg["teams"]) && is_array($cfg["teams"]) && count($cfg["teams"]) === 2;
-    if (!$hasConfig) return false;
+    if (!$game) return false;
 
-    foreach ($rows as $r) {
-      if (trim((string)($r["dbPlayers_TeamKey"] ?? "")) !== "") return true;
+    $event = null;
+    $eid = (int)($game["dbGames_EID"] ?? 0);
+    if ($eid > 0) {
+      $event = ServiceDbEvents::getEventByEID($eid);
     }
-    return false;
+
+    return ServiceDbEvents::isDimensionActive("team", $game, $event);
   }
 
   private static function normFlightPos($v): string

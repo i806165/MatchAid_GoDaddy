@@ -660,6 +660,14 @@ public static function queryGames(array $args): array {
     $g["dbGames_PrivacyGroups"] = $g["dbGames_PrivacyGroups"] ?? "[]";
     $g["dbGames_Holes"]         = $g["dbGames_Holes"]         ?? "All 18";
 
+    // Round-Level Dimension Activation — new rounds start with Team/Flight
+    // OFF by default; a person consciously activates them via the
+    // round-level toggle in Manage Teams / Define Flights. Distinct from,
+    // and never written by, event-side Propagation (dbEvents_TeamMode/
+    // FlightMode) — see round_dimension_activation_spec.
+    $g["dbGames_TeamMode"]   = $g["dbGames_TeamMode"]   ?? "disabled";
+    $g["dbGames_FlightMode"] = $g["dbGames_FlightMode"] ?? "disabled";
+
     // New games start as tentative unless explicitly confirmed
     if (!array_key_exists("dbGames_CourseConfirmed", $g)) {
       $g["dbGames_CourseConfirmed"] = 0;

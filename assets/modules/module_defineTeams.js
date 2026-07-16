@@ -29,17 +29,39 @@
  *     mode            : string       — current dbEvents_TeamMode ("fixed"|"none").
  *                                       Only meaningful when showModeToggle is true —
  *                                       the round-level (game_players) usage of this
- *                                       module has no mode of its own and can omit it.
+ *                                       module ignores it (see activation below instead).
  *     showModeToggle  : bool         — true only for the Event Roster usage. Renders
- *                                       the "Apply to all rounds?" yes/no toggle,
- *                                       bundled into the same Apply as config/assignments.
- *                                       Omitted (falsy) for the round-level usage —
- *                                       a round either follows the event (mode "fixed",
- *                                       button hidden entirely — see game_players.js)
- *                                       or is fully independent (mode "none"), and in
- *                                       neither case does the round itself own a toggle.
+ *                                       the toggle (labeled "Activate" in the UI, since
+ *                                       Activation and Propagation are the same single
+ *                                       decision at the event level — see
+ *                                       round_dimension_activation_spec), bundled into
+ *                                       the same Apply as config/assignments. Flipping it
+ *                                       also expands/collapses the player-row content
+ *                                       below it. Omitted (falsy) for the round-level usage.
+ *
+ *     activation          : string   — ROUND-LEVEL ONLY. Current dbGames_TeamMode
+ *                                       ("active"|"disabled") — this round's OWN
+ *                                       Activation flag, wholly independent of the
+ *                                       event's dbEvents_TeamMode/showModeToggle above.
+ *                                       Only meaningful when showActivationToggle is true.
+ *     showActivationToggle : bool    — true only for the round-level (game_players)
+ *                                       usage, and only when the caller has already
+ *                                       confirmed the event isn't authoritative for Team
+ *                                       (see MA.isDimensionActive() / the existing
+ *                                       dbEvents_TeamMode-fixed lock check in
+ *                                       game_players.js's onManageTeams() — this modal
+ *                                       is never opened at all when the event is fixed,
+ *                                       so if it's open, showActivationToggle is safe to
+ *                                       be true unconditionally for round usage).
+ *                                       Renders an Activate/Deactivate toggle that
+ *                                       expands/collapses the player-row content and is
+ *                                       bundled into the same Apply/Create as config/
+ *                                       assignments. Deactivating never clears
+ *                                       dbGames_TeamConfig or any player's TeamKey —
+ *                                       display-only, per round_dimension_activation_spec.
+ *
  *     apiBase         : string       — e.g. "/api/game_players" or "/api/event_roster"
- *     onApply         : function({ players, teamConfig, mode })
+ *     onApply         : function({ players, teamConfig, mode, activation })
  *   }
  *
  * No "Reset teams" — removed. It was the only action in this module that
@@ -72,7 +94,8 @@
   let _opts       = {};
   let _teamConfig = null;
   let _players    = [];
-  let _mode       = "none";  // "fixed" | "none" — see showModeToggle in options
+  let _mode       = "none";     // "fixed" | "none" — event's dbEvents_TeamMode, see showModeToggle
+  let _activation = "disabled"; // "active" | "disabled" — round's OWN dbGames_TeamMode, see showActivationToggle
   let _busy       = false;
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -138,6 +161,18 @@
     return safe(_opts.apiBase || "/api/game_players").replace(/\/$/, "") + "/" + endpoint;
   }
 
+  // Whether the player-row roster should currently be shown expanded.
+  // Event usage: driven by _mode ("fixed" = Activated). Round usage:
+  // driven by _activation ("active" = Activated). Exactly one of
+  // showModeToggle/showActivationToggle is ever true for a given usage
+  // of this module — if neither is set (shouldn't happen given current
+  // callers), default to expanded so nothing regresses silently.
+  function _isExpanded() {
+    if (_opts.showModeToggle) return _mode === "fixed";
+    if (_opts.showActivationToggle) return _activation === "active";
+    return true;
+  }
+
   // ── Overlay ──────────────────────────────────────────────────────────────────
 
   function _ensureOverlay() {
@@ -168,6 +203,7 @@
     _teamConfig = deepClone(_opts.teamConfig) || null;
     _players    = (_opts.players || []).map(normalizePlayer);
     _mode       = (_opts.mode === "fixed") ? "fixed" : "none";
+    _activation = (_opts.activation === "active") ? "active" : "disabled";
     _busy       = false;
 
     const overlay = _ensureOverlay();
@@ -222,11 +258,12 @@
 
   // State A — no teams configured yet
   function _renderStateA() {
+    const toggle = _opts.showModeToggle ? _renderApplyToggle() : _renderActivationToggle();
     return `
       <div class="maModal__controls" id="mtTeamCfgStrip">
         <div class="maListRow__subline" style="margin-bottom:10px;">Get started by naming your teams.</div>
-        ${_renderApplyToggle()}
-        <div style="${_opts.showModeToggle ? "border-top:1px solid var(--border); margin-top:12px; padding-top:12px;" : ""} display:flex; flex-direction:column; gap:8px;">
+        ${toggle}
+        <div style="${toggle ? "border-top:1px solid var(--border); margin-top:12px; padding-top:12px;" : ""} display:flex; flex-direction:column; gap:8px;">
           ${_renderTeamNameInput("T1", "Red")}
           ${_renderTeamNameInput("T2", "Blue")}
         </div>
@@ -241,10 +278,12 @@
   // State B — full assignment view
   function _renderStateB() {
     const u = unassignedCount();
+    const toggle = _opts.showModeToggle ? _renderApplyToggle() : _renderActivationToggle();
+    const expanded = _isExpanded();
     return `
       <div class="maModal__controls" id="mtTeamCfgStrip">
-        ${_renderApplyToggle()}
-        <div style="${_opts.showModeToggle ? "border-top:1px solid var(--border); margin-top:12px; padding-top:12px;" : ""} display:flex; flex-direction:column; gap:8px;">
+        ${toggle}
+        <div style="${toggle ? "border-top:1px solid var(--border); margin-top:12px; padding-top:12px;" : ""} display:flex; flex-direction:column; gap:8px;">
           ${_renderTeamNameInput("T1", getTeamName("T1"))}
           ${_renderTeamNameInput("T2", getTeamName("T2"))}
         </div>
@@ -277,8 +316,13 @@
           Clear all
         </button>
       </div>
-      <div class="maModal__body" id="mtRoster" style="padding:0;">
+      <div class="maModal__body${expanded ? "" : " is-collapsed"}" id="mtRoster"
+           style="padding:0; ${expanded ? "" : "display:none;"}">
         <div class="maListRows">${_renderRosterRows()}</div>
+      </div>
+      <div class="maListRow__subline" id="mtCollapsedHint"
+           style="padding:10px 16px; ${expanded ? "display:none;" : ""}">
+        Team assignments are hidden while deactivated. Activate to view and edit them.
       </div>
       <footer class="maModal__ftr">
         <button type="button" class="maFtrBtn maFtrBtn--cancel" id="mtBtnCancel">Cancel</button>
@@ -286,34 +330,35 @@
       </footer>`;
   }
 
-  // Apply-toggle — "Apply to all rounds?" yes/no, Event Roster usage only
-  // (showModeToggle:true). Bundled into the same Apply/Create as
-  // config/assignments — flipping it alone does nothing until Apply is
-  // clicked. Defaults off; when off, every linked round keeps whatever
-  // team setup it already has. The round-level usage (game_players) has
-  // no toggle of its own: a round either follows the event (mode "fixed",
-  // and this whole module is unreachable there — see game_players.js's
-  // Manage Teams hide) or is fully independent (mode "none"), same as a
-  // Flat Game.
+  // Event-level "Activate" toggle — Event Roster usage only
+  // (showModeToggle:true). At the event level, Activation and Propagation
+  // are the same single decision: nothing in this codebase distinguishes
+  // "active but not cascading" from "off" (see
+  // syncKPIConfigForModeChange(), applyEventDataToGame(),
+  // service_buildEventSummary.php — every consumer of dbEvents_TeamMode
+  // already treats anything other than "fixed" as off). So this toggle
+  // still writes the existing dbEvents_TeamMode column exactly as before
+  // ("fixed"/"none") — no new event-level column — it's relabeled
+  // "Activate" in the UI only, and flipping it now ALSO expands/collapses
+  // the player-row roster below, same visual behavior as the round-level
+  // Activation toggle (see _renderActivationToggle()), even though the
+  // two write to different columns for different reasons.
   //
-  // Framed as a yes/no question, not an EVENT/ROUND location choice — the
-  // control only ever renders on the Event Roster page, so asking the
-  // admin to pick between "Event" and "Round" as if choosing a location
-  // is circular (they're already on the event). What's decided is a
-  // consequence, not a location: does this configuration apply
-  // everywhere, or does each round set its own. Mirrors
-  // module_defineFlights.js's identical reframe exactly, including the
-  // is-active-accent (brandColor3 blue) selected state instead of the
-  // standard tan is-active, since this is a binary decision with
-  // cascading consequences.
+  // Bundled into the same Apply/Create as config/assignments — flipping
+  // it alone does nothing until Apply is clicked. Defaults off; when off,
+  // every linked round keeps whatever team setup it already has.
+  //
+  // Uses is-active-accent (brandColor3 blue) instead of the standard tan
+  // is-active, since this is a binary decision with cascading
+  // consequences. Mirrors module_defineFlights.js's identical control.
   function _renderApplyToggle() {
     if (!_opts.showModeToggle) return "";
     const yesActive = (_mode === "fixed");
     return `
       <div>
         <div style="display:flex; align-items:center; justify-content:space-between;">
-          <span class="maListRow__col" style="flex:0 0 auto; white-space:nowrap;">Apply to all rounds?</span>
-          <div class="maSeg" id="mtModeToggle" style="width:auto; flex:0 0 auto;" role="group" aria-label="Apply this team configuration to all rounds">
+          <span class="maListRow__col" style="flex:0 0 auto; white-space:nowrap;">Activate</span>
+          <div class="maSeg" id="mtModeToggle" style="width:auto; flex:0 0 auto;" role="group" aria-label="Activate teams for this event">
             <button type="button" class="maSegBtn${yesActive ? " is-active-accent" : ""}"
                     data-mode="fixed" aria-pressed="${yesActive}">Yes</button>
             <button type="button" class="maSegBtn${!yesActive ? " is-active-accent" : ""}"
@@ -326,8 +371,43 @@
 
   function _applyHintText() {
     return (_mode === "fixed")
-      ? "This team configuration will apply to every round in this event."
-      : "Each round can set its own teams.";
+      ? "Teams are active for this event and will apply to every round."
+      : "Teams are not active for this event. Each round can set its own.";
+  }
+
+  // Round-level "Activate"/"Deactivate" toggle — game_players usage only
+  // (showActivationToggle:true). Writes this round's OWN dbGames_TeamMode
+  // column — wholly independent of the event's dbEvents_TeamMode above.
+  // Only ever rendered when the caller has already confirmed the event
+  // isn't authoritative for Team (this modal doesn't open at all
+  // otherwise — see game_players.js's onManageTeams() lock check), so no
+  // additional guard is needed here.
+  //
+  // Deactivating never clears dbGames_TeamConfig or any player's
+  // TeamKey — it only collapses the player-row roster below. Activating
+  // reveals whatever was already there, pre-populated, not a blank slate.
+  function _renderActivationToggle() {
+    if (!_opts.showActivationToggle) return "";
+    const isActive = (_activation === "active");
+    return `
+      <div>
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <span class="maListRow__col" style="flex:0 0 auto; white-space:nowrap;">Activate</span>
+          <div class="maSeg" id="mtActivationToggle" style="width:auto; flex:0 0 auto;" role="group" aria-label="Activate teams for this round">
+            <button type="button" class="maSegBtn${isActive ? " is-active-accent" : ""}"
+                    data-activation="active" aria-pressed="${isActive}">Yes</button>
+            <button type="button" class="maSegBtn${!isActive ? " is-active-accent" : ""}"
+                    data-activation="disabled" aria-pressed="${!isActive}">No</button>
+          </div>
+        </div>
+        <div class="maHintText" id="mtActivationHint">${esc(_activationHintText())}</div>
+      </div>`;
+  }
+
+  function _activationHintText() {
+    return (_activation === "active")
+      ? "Teams are active for this round."
+      : "Teams are not active for this round. Existing team data, if any, is preserved and hidden.";
   }
 
   function _renderTeamNameInput(slotId, currentName) {
@@ -408,6 +488,15 @@
       if (!seg) return;
       _mode = seg.dataset.mode;
       _refreshModeToggle();
+      _refreshRosterVisibility();
+    });
+
+    overlay.querySelector("#mtActivationToggle")?.addEventListener("click", e => {
+      const seg = e.target.closest("[data-activation]");
+      if (!seg) return;
+      _activation = seg.dataset.activation;
+      _refreshActivationToggle();
+      _refreshRosterVisibility();
     });
 
     if (!hasTeams()) {
@@ -427,6 +516,31 @@
     });
     const hint = document.getElementById("mtModeHint");
     if (hint) hint.textContent = _applyHintText();
+  }
+
+  function _refreshActivationToggle() {
+    const wrap = document.getElementById("mtActivationToggle");
+    if (!wrap) return;
+    wrap.querySelectorAll("[data-activation]").forEach(seg => {
+      const on = (seg.dataset.activation === _activation);
+      seg.classList.toggle("is-active-accent", on);
+      seg.setAttribute("aria-pressed", String(on));
+    });
+    const hint = document.getElementById("mtActivationHint");
+    if (hint) hint.textContent = _activationHintText();
+  }
+
+  // Shared by both toggles — expand/collapse is purely a display concern
+  // (player rows only); no data is read, written, or cleared here.
+  function _refreshRosterVisibility() {
+    const expanded = _isExpanded();
+    const roster = document.getElementById("mtRoster");
+    const hint    = document.getElementById("mtCollapsedHint");
+    if (roster) {
+      roster.style.display = expanded ? "" : "none";
+      roster.classList.toggle("is-collapsed", !expanded);
+    }
+    if (hint) hint.style.display = expanded ? "none" : "";
   }
 
   function _wireStateA(overlay) {
@@ -563,13 +677,27 @@
 
   // ── API calls ────────────────────────────────────────────────────────────────
 
+  // The "mode" value sent to the save endpoint means something different
+  // depending on which usage of this module is active — event usage
+  // writes dbEvents_TeamMode ("fixed"/"none", cascade authority); round
+  // usage writes dbGames_TeamMode ("active"/"disabled", this round's own
+  // Activation flag). Each endpoint only ever expects its own vocabulary.
+  function _modeToSend() {
+    return _opts.showModeToggle ? _mode : _activation;
+  }
+
   async function _saveTeamConfig(teams) {
     if (_busy) return;
     _busy = true; _showBusy("Saving team configuration — please wait...");
     try {
-      const res = await MA.postJson(apiPath("saveTeamConfig.php"), { teams, mode: _mode });
+      const res = await MA.postJson(apiPath("saveTeamConfig.php"), { teams, mode: _modeToSend() });
       if (!res?.ok) { MA.setStatus(res?.message || "Unable to save team configuration.", "danger"); return; }
       _teamConfig = res.payload?.teamConfig || { teams };
+      if (_opts.showModeToggle) {
+        _mode = res.payload?.mode || _mode;
+      } else {
+        _activation = res.payload?.mode || _activation;
+      }
       const modal = _getModal();
       if (modal) { modal.innerHTML = _renderHeader() + _renderStateB(); _wireEvents(); }
     } catch (e) {
@@ -600,10 +728,14 @@
 
     _busy = true; _showBusy("Saving teams — please wait...");
     try {
-      const configRes = await MA.postJson(apiPath("saveTeamConfig.php"), { teams: _teamConfig?.teams || [], mode: _mode });
+      const configRes = await MA.postJson(apiPath("saveTeamConfig.php"), { teams: _teamConfig?.teams || [], mode: _modeToSend() });
       if (!configRes?.ok) { MA.setStatus(configRes?.message || "Unable to save team names.", "danger"); return; }
       _teamConfig = configRes.payload?.teamConfig || _teamConfig;
-      _mode = configRes.payload?.mode || _mode;
+      if (_opts.showModeToggle) {
+        _mode = configRes.payload?.mode || _mode;
+      } else {
+        _activation = configRes.payload?.mode || _activation;
+      }
 
       const assignments = _players.map(p => ({ ghin: p.ghin, team: p.team }));
       const assignRes = await MA.postJson(apiPath("saveTeamAssignments.php"), { assignments });
@@ -630,6 +762,7 @@
           players: assignRes.payload?.players || [],
           teamConfig: _teamConfig,
           mode: _mode,
+          activation: _activation,
           reconcile: reconcileSummary,
         });
       }

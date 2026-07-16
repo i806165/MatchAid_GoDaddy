@@ -2,26 +2,34 @@
 declare(strict_types=1);
 // /api/game_players/saveFlightConfig.php
 //
-// Saves flight configuration JSON to dbGames_FlightConfig on db_Games.
-// Mirrors /api/event_roster/saveFlightConfig.php's shape and validation,
-// minus the mode/cascade concern, which belongs to the event only.
+// Saves flight configuration JSON to dbGames_FlightConfig on db_Games,
+// and the round-owned Activation flag (dbGames_FlightMode) alongside it.
+// Mirrors /api/event_roster/saveFlightConfig.php's shape and validation
+// for the config itself, minus the cascade/Propagation concern, which
+// belongs to the event only.
 //
 // 1 to 5 entries, never 0 — a game always has at least one flight (no
 // reset-to-null path, unlike Teams). Ids are assigned canonically by
 // position (F1..F5), never trusted from the client — same defensive
 // posture as saveTeamConfig.php's fixed T1/T2 ids.
 //
-// This endpoint has no concept of "mode" — a flat game, or a round with
-// event cascading turned off, owns its flights outright. (A round whose
-// event has cascading turned on never reaches this endpoint at all: its
-// Define Flights button is hidden client-side while dbEvents_FlightMode
-// is "fixed".)
+// dbGames_FlightMode is this round's OWN activation flag — a purely
+// round-owned concept (Round-Level Dimension Activation), completely
+// independent of dbEvents_FlightMode (event-side cascade/propagation
+// authority). This endpoint never touches WorkflowProcessEventCascade
+// and never writes any dbEvents_* column. (A round whose event has
+// cascading turned on never reaches this endpoint at all: its Define
+// Flights button is hidden client-side while dbEvents_FlightMode is
+// "fixed" — unrelated to and unchanged by this Activation flag.)
+//
+// Invalid or missing mode coerces to "disabled" (safe default).
 //
 // Request body:
-//   { "flights": [ { "name": "Championship" }, { "name": "Flight 2" }, ... ] }
+//   { "flights": [ { "name": "Championship" }, { "name": "Flight 2" }, ... ],
+//     "mode": "active" | "disabled" }
 //
 // Success response:
-//   { "ok": true, "payload": { "flightConfig": { "flights": [...] } } }
+//   { "ok": true, "payload": { "flightConfig": { "flights": [...] }, "mode": "active"|"disabled" } }
 
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
@@ -58,6 +66,11 @@ try {
   $flights = $in["flights"] ?? [];
   if (!is_array($flights)) $flights = [];
 
+  // Round-owned Activation flag — coerce anything unrecognized to the
+  // safe default rather than rejecting the request.
+  $mode = trim((string)($in["mode"] ?? "disabled"));
+  if ($mode !== "active") $mode = "disabled";
+
   // 4) Validate — must be 1 to 5 entries; never 0
   $count = count($flights);
   if ($count < 1 || $count > 5) {
@@ -84,9 +97,13 @@ try {
     ];
   }
 
-  // 6) Persist — always a real config, never NULL (floor of 1 flight)
+  // 6) Persist — always a real config, never NULL (floor of 1 flight);
+  //    mode always written
   $flightConfigJson = json_encode(["flights" => $sanitized]);
-  $updated = ServiceDbGames::updateGame($ggid, ["dbGames_FlightConfig" => $flightConfigJson]);
+  $updated = ServiceDbGames::updateGame($ggid, [
+    "dbGames_FlightConfig" => $flightConfigJson,
+    "dbGames_FlightMode"   => $mode,
+  ]);
 
   if (!$updated) {
     Logger::error("SAVE_FLIGHT_CONFIG_FAIL", ["ggid" => $ggid]);
@@ -94,7 +111,7 @@ try {
     exit;
   }
 
-  echo json_encode(["ok" => true, "payload" => ["flightConfig" => ["flights" => $sanitized]]]);
+  echo json_encode(["ok" => true, "payload" => ["flightConfig" => ["flights" => $sanitized], "mode" => $mode]]);
 
 } catch (Throwable $e) {
   Logger::error("SAVE_FLIGHT_CONFIG_EXCEPTION", ["err" => $e->getMessage()]);

@@ -2,14 +2,30 @@
 declare(strict_types=1);
 // /api/game_players/saveTeamConfig.php
 //
-// Saves team configuration JSON to dbGames_TeamConfig on db_Games.
-// Passing an empty teams array sets the column to NULL (resets teams).
+// Saves team configuration JSON to dbGames_TeamConfig on db_Games, and
+// the round-owned Activation flag (dbGames_TeamMode) alongside it.
+// Passing an empty teams array sets the config column to NULL (resets
+// teams) and forces mode to "disabled" — an empty config can't
+// meaningfully be "active," same reasoning as the event-side
+// saveTeamConfig.php's own empty-config handling.
+//
+// dbGames_TeamMode is this round's OWN activation flag — a purely
+// round-owned concept (Round-Level Dimension Activation), completely
+// independent of dbEvents_TeamMode (event-side cascade/propagation
+// authority). This endpoint never touches WorkflowProcessEventCascade
+// and never writes any dbEvents_* column — Activation and Propagation
+// are deliberately separate mechanisms; see round_dimension_activation_spec.
+//
+// Invalid or missing mode coerces to "disabled" (safe default), same
+// coerce-to-default pattern already used by the event-side endpoints
+// for their own mode value.
 //
 // Request body:
-//   { "teams": [ { "id": "T1", "name": "Red", "color": "red", "sort": 1 }, ... ] }
+//   { "teams": [ { "id": "T1", "name": "Red", "color": "red", "sort": 1 }, ... ],
+//     "mode": "active" | "disabled" }
 //
 // Success response:
-//   { "ok": true, "payload": { "teamConfig": { "teams": [...] } } }
+//   { "ok": true, "payload": { "teamConfig": { "teams": [...] }, "mode": "active"|"disabled" } }
 
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
@@ -45,6 +61,11 @@ try {
   $in    = ma_json_in();
   $teams = $in["teams"] ?? [];
   if (!is_array($teams)) $teams = [];
+
+  // Round-owned Activation flag — coerce anything unrecognized to the
+  // safe default rather than rejecting the request.
+  $mode = trim((string)($in["mode"] ?? "disabled"));
+  if ($mode !== "active") $mode = "disabled";
 
   // 4) Validate — must be empty (reset) or exactly 2 entries
   if (count($teams) !== 0 && count($teams) !== 2) {
@@ -86,9 +107,17 @@ try {
     ];
   }
 
-  // 6) Persist — NULL when resetting, JSON when setting
+  // An empty config can't meaningfully be "active" — force the flag off
+  // with it, same as the event-side endpoint forces its cascade mode off
+  // on an empty config.
+  if (!$sanitized) $mode = "disabled";
+
+  // 6) Persist — NULL when resetting, JSON when setting; mode always written
   $teamConfigJson = count($sanitized) === 0 ? null : json_encode(["teams" => $sanitized]);
-  $updated = ServiceDbGames::updateGame($ggid, ["dbGames_TeamConfig" => $teamConfigJson]);
+  $updated = ServiceDbGames::updateGame($ggid, [
+    "dbGames_TeamConfig" => $teamConfigJson,
+    "dbGames_TeamMode"   => $mode,
+  ]);
 
   if (!$updated) {
     Logger::error("SAVE_TEAM_CONFIG_FAIL", ["ggid" => $ggid]);
@@ -98,7 +127,7 @@ try {
 
 
   $teamConfig = count($sanitized) === 0 ? null : ["teams" => $sanitized];
-  echo json_encode(["ok" => true, "payload" => ["teamConfig" => $teamConfig]]);
+  echo json_encode(["ok" => true, "payload" => ["teamConfig" => $teamConfig, "mode" => $mode]]);
 
 } catch (Throwable $e) {
   Logger::error("SAVE_TEAM_CONFIG_EXCEPTION", ["err" => $e->getMessage()]);

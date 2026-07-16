@@ -774,7 +774,15 @@
       players:    state.players,
       teamConfig,
       apiBase:    MA.paths?.apiGamePlayers || "/api/game_players",
-      onApply: ({ players, teamConfig }) => {
+      // Round-Level Dimension Activation — this round's OWN dbGames_TeamMode,
+      // wholly independent of the event's dbEvents_TeamMode checked above.
+      // showActivationToggle is safe unconditionally here: this function
+      // already returned early above whenever the event IS authoritative,
+      // so by the time we reach this call the event is guaranteed not to
+      // be, and the round-level toggle is always the right thing to show.
+      activation:           state.game?.dbGames_TeamMode || "disabled",
+      showActivationToggle: true,
+      onApply: ({ players, teamConfig, activation }) => {
         if (Array.isArray(players) && players.length) {
           players.forEach(saved => {
             const ghin = String(saved.dbPlayers_PlayerGHIN || saved.ghin || "");
@@ -783,6 +791,7 @@
           });
         }
         if (window.__MA_INIT__) window.__MA_INIT__.teamConfig = teamConfig;
+        if (state.game) state.game.dbGames_TeamMode = activation || state.game.dbGames_TeamMode;
         renderRoster();
         renderTrayBody();
       }
@@ -804,8 +813,14 @@
       players:      state.players,   // native dbPlayers_* shape, no mapping needed
       flightConfig,
       apiBase:      MA.paths?.apiGamePlayers || "/api/game_players",
-      // no mode, no showModeToggle — round/flat game owns its own flights
-      onApply: ({ players, flightConfig: newConfig }) => {
+      // Round-Level Dimension Activation — this round's OWN dbGames_FlightMode,
+      // wholly independent of the event's dbEvents_FlightMode checked above.
+      // Same reasoning as onManageTeams(): the event-lock guard above has
+      // already returned early whenever the event IS authoritative, so
+      // showActivationToggle is safe unconditionally here.
+      activation:           state.game?.dbGames_FlightMode || "disabled",
+      showActivationToggle: true,
+      onApply: ({ players, flightConfig: newConfig, activation }) => {
         if (Array.isArray(players) && players.length) {
           players.forEach(saved => {
             const ghin = String(saved.dbPlayers_PlayerGHIN || "");
@@ -814,6 +829,7 @@
           });
         }
         if (window.__MA_INIT__) window.__MA_INIT__.flightConfig = newConfig;
+        if (state.game) state.game.dbGames_FlightMode = activation || state.game.dbGames_FlightMode;
         renderRoster();
         renderTrayBody();
       }

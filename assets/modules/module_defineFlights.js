@@ -3,10 +3,14 @@
  * MA.defineFlights — Define Flights module.
  * Shared by Event Roster and Game/Round Roster (mirrors MA.manageTeams's
  * dual-usage pattern). On Event Roster, showModeToggle:true renders the
- * "Apply to all rounds?" yes/no toggle; when mode is "fixed", the saved
- * config/assignments cascade to every linked round. On Game/Round Roster, no toggle is
- * shown — a flat game, or a round with cascading turned off, edits its
- * own flights independently, same posture as Manage Teams.
+ * "Activate" toggle (writes dbEvents_FlightMode "fixed"/"none" — cascade
+ * authority; Activation and Propagation are the same decision at the
+ * event level). On Game/Round Roster, showActivationToggle:true renders
+ * a separate "Activate" toggle owned entirely by the round
+ * (dbGames_FlightMode "active"/"disabled" — Round-Level Dimension
+ * Activation, independent of the event's toggle). Exactly one of the two
+ * is ever true for a given usage. Either toggle expands/collapses the
+ * player-row roster below it; neither ever clears underlying data.
  *
  * Mirrors MA.manageTeams's structure and class vocabulary (maModal,
  * maListRow, ma_shared.css) but adapted for Flight's shape:
@@ -22,14 +26,13 @@
  *     unrelated things (content assignment vs. which view you're looking at).
  *   - gender is shown per row (avatar color-coded + M/F text badge),
  *     since it's a common cue when sorting players into flights
- *   - cascade toggle (Event Roster usage only) is framed as a yes/no
- *     question — "Apply to all rounds?" — not an EVENT/ROUND location
- *     choice like Manage Teams uses, with a hint line stating the
+ *   - Activate toggle (both usages) is framed as a yes/no question, not
+ *     an EVENT/ROUND location choice, with a hint line stating the
  *     consequence of the current selection. Rendered in brandColor3 blue
  *     (.is-active-accent), not the standard tan .is-active, since it's a
- *     binary decision with cascading consequences, unlike the view toggle.
+ *     binary decision with real consequences, unlike the view toggle.
  *   - roster has a by-player / by-flight view toggle (.maSeg, standard
- *     tan .is-active) — a display preference independent of cascade mode,
+ *     tan .is-active) — a display preference independent of Activation,
  *     available in both Event Roster and round usage
  *
  * Public API:
@@ -41,18 +44,44 @@
  *     players        : array        — raw player rows from state.players (db field names)
  *     flightConfig   : object|null  — current flightConfig value; null/empty
  *                                      is normalized to one default flight
- *     mode           : string       — current *Mode ("fixed"|"none"). Only
- *                                      meaningful when showModeToggle is true.
- *                                      Defaults off. Bundled into the same Apply
- *                                      as config/assignments — flipping it alone
- *                                      does nothing until Apply is clicked.
+ *     mode           : string       — current dbEvents_FlightMode ("fixed"|"none").
+ *                                      Only meaningful when showModeToggle is true —
+ *                                      the round-level usage ignores it (see
+ *                                      activation below instead). Bundled into
+ *                                      the same Apply as config/assignments —
+ *                                      flipping it alone does nothing until
+ *                                      Apply is clicked.
  *     showModeToggle : bool         — true only for the Event Roster usage.
- *                                      Renders the "Apply to all rounds?" yes/no toggle.
- *                                      Omit (or false) for the round/flat-game
- *                                      usage — module has no mode of its own
- *                                      and can omit the mode option entirely.
+ *                                      Renders the toggle (labeled "Activate" in
+ *                                      the UI — Activation and Propagation are
+ *                                      the same single decision at the event
+ *                                      level; see round_dimension_activation_spec).
+ *                                      Flipping it also expands/collapses the
+ *                                      player-row roster below. Omit (or false)
+ *                                      for the round/flat-game usage.
+ *
+ *     activation          : string  — ROUND-LEVEL ONLY. Current dbGames_FlightMode
+ *                                      ("active"|"disabled") — this round's OWN
+ *                                      Activation flag, independent of the
+ *                                      event's dbEvents_FlightMode/showModeToggle
+ *                                      above. Only meaningful when
+ *                                      showActivationToggle is true.
+ *     showActivationToggle : bool   — true only for the round-level (game_players)
+ *                                      usage, and only when the caller has
+ *                                      already confirmed the event isn't
+ *                                      authoritative for Flight (this modal is
+ *                                      never opened at all otherwise — see
+ *                                      game_players.js's onDefineFlights() lock
+ *                                      check). Renders an Activate/Deactivate
+ *                                      toggle that expands/collapses the
+ *                                      player-row roster and is bundled into
+ *                                      the same Apply as config/assignments.
+ *                                      Deactivating never clears
+ *                                      dbGames_FlightConfig or any player's
+ *                                      FlightKey — display-only.
+ *
  *     apiBase        : string       — "/api/event_roster" or "/api/game_players"
- *     onApply        : function({ players, flightConfig, mode })
+ *     onApply        : function({ players, flightConfig, mode, activation })
  *   }
  */
 (function () {
@@ -71,9 +100,10 @@
   let _opts         = {};
   let _flights       = [];     // [{ id, name, sort }]
   let _players       = [];
-  let _mode          = "none"; // "fixed" | "none" — defaults off
+  let _mode          = "none";     // "fixed" | "none" — event's dbEvents_FlightMode, see showModeToggle
+  let _activation    = "disabled"; // "active" | "disabled" — round's OWN dbGames_FlightMode, see showActivationToggle
   let _busy          = false;
-  let _cfgOpen       = false;  // config strip collapsed by default
+  let _cfgOpen       = false;  // config strip (flight naming) collapsed by default — unrelated to Activation
   let _viewMode      = "player"; // "player" | "flight" — roster grouping
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -163,6 +193,16 @@
     return safe(_opts.apiBase || "/api/event_roster").replace(/\/$/, "") + "/" + endpoint;
   }
 
+  // Whether the player-row roster should currently be shown expanded.
+  // Event usage: driven by _mode ("fixed" = Activated). Round usage:
+  // driven by _activation ("active" = Activated). Unrelated to _cfgOpen,
+  // which is the separate flight-NAMING panel's own collapse state.
+  function _isExpanded() {
+    if (_opts.showModeToggle) return _mode === "fixed";
+    if (_opts.showActivationToggle) return _activation === "active";
+    return true;
+  }
+
   // ── Overlay ──────────────────────────────────────────────────────────────────
 
   function _ensureOverlay() {
@@ -189,10 +229,11 @@
   // ── Public API ───────────────────────────────────────────────────────────────
 
   MA.defineFlights.open = function (options) {
-    _opts    = options || {};
-    _flights = normalizeFlightConfig(_opts.flightConfig);
-    _players = (_opts.players || []).map(normalizePlayer);
-    _mode    = (_opts.mode === "fixed") ? "fixed" : "none";
+    _opts       = options || {};
+    _flights    = normalizeFlightConfig(_opts.flightConfig);
+    _players    = (_opts.players || []).map(normalizePlayer);
+    _mode       = (_opts.mode === "fixed") ? "fixed" : "none";
+    _activation = (_opts.activation === "active") ? "active" : "disabled";
 
     // Every player always has a flight — default anyone unassigned
     // (legacy rows, or players added before this feature existed) to
@@ -231,12 +272,18 @@
   // ── Render ───────────────────────────────────────────────────────────────────
 
   function _renderModal() {
+    const expanded = _isExpanded();
     return `
       <section class="maModal" role="dialog" aria-modal="true" aria-label="Define Flights">
         ${_renderHeader()}
         ${_renderConfigStrip()}
-        <div class="maModal__body" id="dfRoster" style="padding:0;">
+        <div class="maModal__body${expanded ? "" : " is-collapsed"}" id="dfRoster"
+             style="padding:0; ${expanded ? "" : "display:none;"}">
           <div class="maListRows">${_renderRosterRows()}</div>
+        </div>
+        <div class="maListRow__subline" id="dfCollapsedHint"
+             style="padding:10px 16px; ${expanded ? "display:none;" : ""}">
+          Flight assignments are hidden while deactivated. Activate to view and edit them.
         </div>
         <footer class="maModal__ftr">
           <button type="button" class="maFtrBtn maFtrBtn--cancel" id="dfBtnCancel">Cancel</button>
@@ -284,7 +331,7 @@
   // not a flight-configuration edit, so it renders as its own block below
   // the collapsible panel, always visible regardless of _cfgOpen.
   function _renderConfigStrip() {
-    const applyToggle = _renderApplyToggle();
+    const applyToggle = _opts.showModeToggle ? _renderApplyToggle() : _renderActivationToggle();
     return `
       <div id="dfCfgStrip">
         <div class="maModal__controls" style="padding:0;">
@@ -333,7 +380,7 @@
   // game_players' Define Flights button to hide) or is fully independent
   // (mode "none"), same as Manage Teams.
   //
-  // Framed as a yes/no question ("Apply to all rounds?") rather than an
+  // Framed as a yes/no question ("Activate") rather than an
   // EVENT/ROUND ownership choice — the control only ever renders on the
   // Event Roster page, so asking the admin to pick between "Event" and
   // "Round" as if choosing a location is circular (they're already on the
@@ -350,8 +397,8 @@
     return `
       <div>
         <div style="display:flex; align-items:center; justify-content:space-between;">
-          <span class="maListRow__col" style="flex:0 0 auto; white-space:nowrap;">Apply to all rounds?</span>
-          <div class="maSeg" id="dfModeToggle" style="width:auto; flex:0 0 auto;" role="group" aria-label="Apply this flight configuration to all rounds">
+          <span class="maListRow__col" style="flex:0 0 auto; white-space:nowrap;">Activate</span>
+          <div class="maSeg" id="dfModeToggle" style="width:auto; flex:0 0 auto;" role="group" aria-label="Activate flights for this event">
             <button type="button" class="maSegBtn${yesActive ? " is-active-accent" : ""}"
                     data-mode="fixed" aria-pressed="${yesActive}">Yes</button>
             <button type="button" class="maSegBtn${!yesActive ? " is-active-accent" : ""}"
@@ -364,8 +411,41 @@
 
   function _applyHintText() {
     return (_mode === "fixed")
-      ? "This flight configuration will apply to every round in this event."
-      : "Each round can set its own flight configuration.";
+      ? "Flights are active for this event and will apply to every round."
+      : "Flights are not active for this event. Each round can set its own.";
+  }
+
+  // Round-level "Activate"/"Deactivate" toggle — game_players usage only
+  // (showActivationToggle:true). Writes this round's OWN dbGames_FlightMode
+  // column, independent of the event's dbEvents_FlightMode above. Only
+  // ever rendered when the caller has already confirmed the event isn't
+  // authoritative for Flight (this modal doesn't open otherwise — see
+  // game_players.js's onDefineFlights() lock check).
+  //
+  // Deactivating never clears dbGames_FlightConfig or any player's
+  // FlightKey — it only collapses the player-row roster below.
+  function _renderActivationToggle() {
+    if (!_opts.showActivationToggle) return "";
+    const isActive = (_activation === "active");
+    return `
+      <div>
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <span class="maListRow__col" style="flex:0 0 auto; white-space:nowrap;">Activate</span>
+          <div class="maSeg" id="dfActivationToggle" style="width:auto; flex:0 0 auto;" role="group" aria-label="Activate flights for this round">
+            <button type="button" class="maSegBtn${isActive ? " is-active-accent" : ""}"
+                    data-activation="active" aria-pressed="${isActive}">Yes</button>
+            <button type="button" class="maSegBtn${!isActive ? " is-active-accent" : ""}"
+                    data-activation="disabled" aria-pressed="${!isActive}">No</button>
+          </div>
+        </div>
+        <div class="maHintText" id="dfActivationHint">${esc(_activationHintText())}</div>
+      </div>`;
+  }
+
+  function _activationHintText() {
+    return (_activation === "active")
+      ? "Flights are active for this round."
+      : "Flights are not active for this round. Existing flight data, if any, is preserved and hidden.";
   }
 
   // Roster display preference — flat list vs grouped-by-flight. Independent
@@ -502,6 +582,15 @@
       if (!seg) return;
       _mode = seg.dataset.mode;
       _refreshModeToggle();
+      _refreshRosterVisibility();
+    });
+
+    overlay.querySelector("#dfActivationToggle")?.addEventListener("click", e => {
+      const seg = e.target.closest("[data-activation]");
+      if (!seg) return;
+      _activation = seg.dataset.activation;
+      _refreshActivationToggle();
+      _refreshRosterVisibility();
     });
 
     overlay.querySelector("#dfViewToggle")?.addEventListener("click", e => {
@@ -614,6 +703,31 @@
     if (hint) hint.textContent = _applyHintText();
   }
 
+  function _refreshActivationToggle() {
+    const wrap = document.getElementById("dfActivationToggle");
+    if (!wrap) return;
+    wrap.querySelectorAll("[data-activation]").forEach(seg => {
+      const on = (seg.dataset.activation === _activation);
+      seg.classList.toggle("is-active-accent", on);
+      seg.setAttribute("aria-pressed", String(on));
+    });
+    const hint = document.getElementById("dfActivationHint");
+    if (hint) hint.textContent = _activationHintText();
+  }
+
+  // Shared by both toggles — expand/collapse is purely a display concern
+  // (player rows only); no data is read, written, or cleared here.
+  function _refreshRosterVisibility() {
+    const expanded = _isExpanded();
+    const roster = document.getElementById("dfRoster");
+    const hint    = document.getElementById("dfCollapsedHint");
+    if (roster) {
+      roster.style.display = expanded ? "" : "none";
+      roster.classList.toggle("is-collapsed", !expanded);
+    }
+    if (hint) hint.style.display = expanded ? "none" : "";
+  }
+
   function _refreshPlayerRow(ghin) {
     const overlay = document.getElementById(OVERLAY_ID);
     if (!overlay) return;
@@ -660,17 +774,31 @@
 
   // ── API calls ────────────────────────────────────────────────────────────────
 
+  // The "mode" value sent to the save endpoint means something different
+  // depending on which usage of this module is active — event usage
+  // writes dbEvents_FlightMode ("fixed"/"none", cascade authority);
+  // round usage writes dbGames_FlightMode ("active"/"disabled", this
+  // round's own Activation flag). Each endpoint only ever expects its
+  // own vocabulary. Mirrors module_defineTeams.js's identical helper.
+  function _modeToSend() {
+    return _opts.showModeToggle ? _mode : _activation;
+  }
+
   async function _applyChanges() {
     if (_busy) return;
     _busy = true; _showBusy("Saving flights — please wait...");
     try {
       const configRes = await MA.postJson(apiPath("saveFlightConfig.php"), {
         flights: _flights.map(f => ({ id: f.id, name: f.name, sort: f.sort })),
-        mode: _mode,
+        mode: _modeToSend(),
       });
       if (!configRes?.ok) { MA.setStatus(configRes?.message || "Unable to save flight configuration.", "danger"); return; }
       _flights = normalizeFlightConfig(configRes.payload?.flightConfig || { flights: _flights });
-      _mode = configRes.payload?.mode || _mode;
+      if (_opts.showModeToggle) {
+        _mode = configRes.payload?.mode || _mode;
+      } else {
+        _activation = configRes.payload?.mode || _activation;
+      }
 
       const assignments = _players.map(p => ({ ghin: p.ghin, flight: p.flight }));
       const assignRes = await MA.postJson(apiPath("saveFlightAssignments.php"), { assignments });
@@ -690,6 +818,7 @@
           players: assignRes.payload?.players || [],
           flightConfig: { flights: _flights },
           mode: _mode,
+          activation: _activation,
           reconcile: reconcileSummary,
         });
       }

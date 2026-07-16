@@ -430,18 +430,27 @@
   }
 
   /**
-   * Whether teams are actually in use right now, as opposed to merely
-   * configured. state.teamConfig alone is NOT enough to answer this —
-   * module_defineTeams.js's "Clear All" only blanks every player's
-   * dbPlayers_TeamKey; it deliberately never deletes dbGames_TeamConfig
-   * (documented there as an intentional floor state: once a game has had
-   * teams, the config stays). So a game that once had teams, then had
-   * everyone cleared, still has state.teamConfig !== null even though no
-   * player has a team — using teamConfig truthiness alone would treat
-   * every player's blank team as "the same team" and misfire.
+   * Whether Team is active for this round, per the shared Round-Level
+   * Dimension Activation hierarchy (MA.isDimensionActive(), defined in
+   * ma_SharedBusLogic.js). Previously this was its own local inference —
+   * "is a team config present AND does at least one player currently
+   * hold a team" — a data-presence proxy that had already drifted into
+   * needing a second, independently-maintained mirror in
+   * workflow_ReconcilePairingBoundaries.php. Both are now replaced by
+   * the single shared hierarchy.
+   *
+   * Confirmed full, not hybrid, replacement: a round that has
+   * consciously been set to dbGames_TeamMode "active" is treated as
+   * team-active even before any player has actually been assigned a
+   * team yet — the round's own declared state governs, not merely
+   * whether assignment data happens to exist. state.game already
+   * carries the linked event's dbEvents_TeamMode merged onto it (full-
+   * row hydration via ServiceContextGame), so no separate event object
+   * is needed here.
    */
   function teamsActive() {
-    return !!state.teamConfig && state.players.some(p => p.team);
+    return !!(window.MA && typeof MA.isDimensionActive === "function")
+      && MA.isDimensionActive("team", state.game, state.game);
   }
 
   // Shared collapsible group header + body wrapper for the nested
@@ -1382,18 +1391,19 @@
 
     // Boundary clamp: the two pairings occupying a match's Side A / Side B
     // must share the same flightKey. The "different team" half only
-    // applies when teams are actually in use on this game right now
-    // (teamsActive() — see its own comment; teamConfig alone isn't enough,
-    // since Clear All in Manage Teams leaves config in place while
-    // blanking every player). Without active teams, MatchPos (Side A/B)
-    // IS the team distinction, assigned by which pairing the user clicked
-    // first/second, not read from an independent team fact. Checking team
-    // equality in that case would be circular (every player's team is
-    // blank, so "same team" would always be true) and would block every
-    // match. A pairing is already guaranteed single-team/single-flight by
-    // assignSelectedPlayerToPairing's own clamp, so this runs at the
-    // pairing level, not per-player. No auto-match exists here, so this is
-    // a single commit-time gate, not a structural engine fix.
+    // applies when Team is actually active for this round right now
+    // (teamsActive() — see its own comment; driven by dbGames_TeamMode /
+    // the shared isDimensionActive() hierarchy, not by whether assignment
+    // data happens to be present). Without an active Team dimension,
+    // MatchPos (Side A/B) IS the team distinction, assigned by which
+    // pairing the user clicked first/second, not read from an independent
+    // team fact. Checking team equality in that case would be circular
+    // (every player's team is blank, so "same team" would always be true)
+    // and would block every match. A pairing is already guaranteed
+    // single-team/single-flight by assignSelectedPlayerToPairing's own
+    // clamp, so this runs at the pairing level, not per-player. No
+    // auto-match exists here, so this is a single commit-time gate, not a
+    // structural engine fix.
     const referenceFor = (pairingId) => playersInPairing(pairingId)[0] || null;
     const violatesBoundary = (a, b) => {
       if (!a || !b) return false; // nothing to compare yet — no violation possible

@@ -494,4 +494,80 @@ final class ServiceDbEvents
       "gameCount" => (int)($r["gameCount"] ?? 0),
     ];
   }
+
+  // -----------------------------
+  // Round-Level Dimension Activation
+  // -----------------------------
+
+  /**
+   * isDimensionActive($dimension, $game, $event)
+   *
+   * THE single authoritative answer to "is Team/Flight actually in use
+   * right now for this round" — replaces every ad-hoc inference that
+   * used to answer this by checking whether config data happened to be
+   * present (e.g. game_pairings.js's old teamsActive(), and the private
+   * mirror of it in workflow_ReconcilePairingBoundaries.php). Two
+   * independent implementations of that inference had already silently
+   * drifted into needing to stay manually in sync — this function is
+   * what replaces both.
+   *
+   * Deliberately excludes Pairing — Pairing has no legitimate "off"
+   * state at the round level (there is no dbGames_PairingConfig, no
+   * round-owned PairingMode column, and none is planned). Locking
+   * (pairingsLockedByEvent()) is the entire answer for Pairing; this
+   * function is never called for it.
+   *
+   * Strict two-level hierarchy, event first, round second, off if
+   * neither claims it:
+   *   1. If $game.dbGames_EID is set AND $event.dbEvents_{Dim}Mode is
+   *      "fixed" -> ACTIVE, event-authoritative. Stop.
+   *   2. Else if $game.dbGames_{Dim}Mode is "active" -> ACTIVE,
+   *      round-authoritative. Stop.
+   *   3. Else -> INACTIVE.
+   *
+   * $event may be null (flat game, or round not yet resolved to an
+   * event) — step 1 simply never matches in that case, same as if
+   * dbGames_EID were unset.
+   *
+   * Mirrored in JS by MA.isDimensionActive() in
+   * /assets/js/ma_SharedBusLogic.js — same signature, same order of
+   * checks, kept as a deliberate duplicate (per project decision) rather
+   * than a single cross-language shared implementation, since the logic
+   * itself is only a few lines and duplication here is lower-risk than
+   * the two-field ambiguity this function exists to close off.
+   *
+   * @param  string     $dimension  "team" | "flight"
+   * @param  array      $game       db_Games row (or any array carrying
+   *                                 dbGames_EID and dbGames_{Dim}Mode)
+   * @param  ?array     $event      db_Events row, or null
+   * @return bool
+   */
+  public static function isDimensionActive(string $dimension, array $game, ?array $event): bool
+  {
+    $dimension = strtolower(trim($dimension));
+    $fieldMap = [
+      "team"   => ["event" => "dbEvents_TeamMode",   "round" => "dbGames_TeamMode"],
+      "flight" => ["event" => "dbEvents_FlightMode", "round" => "dbGames_FlightMode"],
+    ];
+
+    if (!isset($fieldMap[$dimension])) return false;
+
+    $eventField = $fieldMap[$dimension]["event"];
+    $roundField = $fieldMap[$dimension]["round"];
+
+    $eid = (int)($game["dbGames_EID"] ?? 0);
+
+    // 1) Event-authoritative
+    if ($eid > 0 && $event) {
+      $eventMode = trim((string)($event[$eventField] ?? ""));
+      if ($eventMode === "fixed") return true;
+    }
+
+    // 2) Round-authoritative
+    $roundMode = trim((string)($game[$roundField] ?? ""));
+    if ($roundMode === "active") return true;
+
+    // 3) Neither claims it
+    return false;
+  }
 }

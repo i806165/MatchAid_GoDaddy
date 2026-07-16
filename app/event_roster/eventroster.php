@@ -113,6 +113,7 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
         };
     </script>
     <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
+    <script src="<?= ma_asset('/assets/js/ma_SharedBusLogic.js') ?>"></script>
     <script src="<?= ma_asset('/assets/modules/module_sourceGHINPlayers.js') ?>"></script>
     <script src="<?= ma_asset('/assets/modules/module_sourceFavorites.js') ?>"></script>
     <script src="<?= ma_asset('/assets/modules/module_sourceNonRated.js') ?>"></script>
