@@ -21,16 +21,4 @@ declare(strict_types=1);
     </section>
   </section>
 
-  <dialog id="scoreDirtyDialog" class="scoreDirtyDialog">
-    <form method="dialog" class="scoreDirtyDialogForm">
-      <h3>Unsaved score changes</h3>
-      <p>You have unsaved score changes. What would you like to do?</p>
-      <div class="scoreDirtyActions">
-        <button value="save" class="btn btnPrimary">Save &amp; Continue</button>
-        <button value="discard" class="btn">Discard &amp; Leave</button>
-        <button value="cancel" class="btn">Cancel</button>
-      </div>
-    </form>
-  </dialog>
-
 </div>

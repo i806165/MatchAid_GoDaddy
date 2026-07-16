@@ -1367,36 +1367,20 @@
     dom.host.innerHTML = renderPairFieldCards(dataRows);
   }
 
-  // Reuses the exact modal shell module_definePlacementPoints.js already
-  // established (maModalOverlay/maModal/maModal__hdr/__body/__ftr) — no new
-  // UI component invented for this. Surfaces service_ScoreSummary.php's
-  // checkTeamIntegrity() result: a data problem in team assignment (not a
-  // rendering bug), so this blocks until dismissed rather than being a
-  // quiet, easy-to-miss banner — see the "everyone shows Red" incident this
-  // exists to catch, which was silent for a while before anyone noticed.
+  // Surfaces service_ScoreSummary.php's checkTeamIntegrity() result: a data
+  // problem in team assignment (not a rendering bug), so this blocks until
+  // dismissed rather than being a quiet, easy-to-miss banner — see the
+  // "everyone shows Red" incident this exists to catch, which was silent
+  // for a while before anyone noticed. danger:true preserves the original's
+  // deliberate role="alertdialog" (MA.ui.confirm sets that role whenever
+  // danger is true).
   function showTeamIntegrityWarning(message) {
-    const overlay = document.createElement('div');
-    overlay.className = 'maModalOverlay is-open';
-    overlay.innerHTML = `
-      <div class="maModal" role="alertdialog" aria-modal="true" aria-label="Team assignment issue">
-        <div class="maModal__hdr">
-          <div class="maModal__titles">
-            <div class="maModal__title">Team assignment issue</div>
-          </div>
-        </div>
-        <div class="maModal__body">
-          <p>${esc(message)}</p>
-        </div>
-        <div class="maModal__ftr">
-          <div class="maModal__ftrActions">
-            <button class="maFtrBtn maFtrBtn--save" type="button" id="teamIntegrityDismiss">OK</button>
-          </div>
-        </div>
-      </div>`;
-    document.body.appendChild(overlay);
-    const close = () => overlay.remove();
-    overlay.querySelector('#teamIntegrityDismiss')?.addEventListener('click', close);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    MA.ui.confirm({
+      title: "Team assignment issue",
+      message: esc(message),
+      okOnly: true,
+      danger: true
+    });
   }
 
   function initialize() {

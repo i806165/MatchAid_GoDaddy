@@ -471,13 +471,13 @@
 
   function openTeeChangeForPlayer(player) {
     if (!MA.TeeSetSelection || typeof MA.TeeSetSelection.open !== 'function') {
-      MA.setStatus('Tee set selector not loaded.', 'error');
+      MA.ui.notify('Tee set selector not loaded.', 'error');
       return;
     }
 
     const ggid = String(state.game?.dbGames_GGID || '');
     if (!ggid) {
-      MA.setStatus('Game context unavailable.', 'error');
+      MA.ui.notify('Game context unavailable.', 'error');
       return;
     }
 
@@ -508,7 +508,7 @@
 
   async function saveScoreHomeTeeChange(player, selectedTee) {
     if (!player?.ghin || !selectedTee) {
-      MA.setStatus('Missing tee change context.', 'error');
+      MA.ui.notify('Missing tee change context.', 'error');
       return;
     }
 
@@ -518,7 +518,7 @@
     ).trim().toUpperCase();
 
     try {
-      MA.setStatus('Updating tee box…', 'info');
+      MA.ui.notify('Updating tee box…', 'info');
 
       // Sending ghin + gender — NOT first_name/last_name. gender is a
       // real, directly-stored field (dbPlayers_Gender, already on this
@@ -570,11 +570,11 @@
 
       renderPlayerRows();
       renderGroupContext();
-      MA.setStatus('Tee box updated.', 'success');
+      MA.ui.notify('Tee box updated.', 'success');
 
     } catch (e) {
       console.error(e);
-      MA.setStatus(e.message || 'Unable to update tee box.', 'error');
+      MA.ui.notify(e.message || 'Unable to update tee box.', 'error');
     }
   }
 
@@ -799,7 +799,7 @@
 
   function invokeBlindPlayer() {
     if (!MA.blindPlayer) {
-      MA.setStatus('Blind player module not loaded.', 'error');
+      MA.ui.notify('Blind player module not loaded.', 'error');
       return;
     }
     const pairingId = String(state.players[0]?.pairingId || state.players[0]?.dbPlayers_PairingID || '');
@@ -813,7 +813,7 @@
       apiBase:      MA.paths?.apiGameSettings || '/api/game_settings',
       onApplied:    (appliedGHIN) => {
         state.existingBlindGHIN = appliedGHIN || state.existingBlindGHIN;
-        MA.setStatus('Blind player applied.', 'success');
+        MA.ui.notify('Blind player applied.', 'success');
       },
     });
   }
@@ -859,10 +859,10 @@
 
   async function onLaunch() {
     const key = (el.playerKey?.value || '').trim().toUpperCase();
-    if (!key) return MA.setStatus('Please enter a Scorecard ID.', 'warn');
+    if (!key) return MA.ui.notify('Please enter a Scorecard ID.', 'warn');
 
     try {
-      MA.setStatus('Validating…', 'info');
+      MA.ui.notify('Validating…', 'info');
       const res = await MA.postJson(apiUrls.scoreHome, { playerKey: key });
       if (!res.ok) throw new Error(res.message || 'Validation failed');
 
@@ -959,9 +959,9 @@
       updateGoButton();
       applyChrome();
 
-      MA.setStatus('Ready.', 'success');
+      MA.ui.notify('Ready.', 'success');
     } catch (e) {
-      MA.setStatus(e.message || 'Launch failed.', 'error');
+      MA.ui.notify(e.message || 'Launch failed.', 'error');
     }
   }
 
@@ -984,12 +984,12 @@
     renderCartPreview();
 
     el.cartOverlay.classList.add('is-open');
-    document.body.classList.add('maOverlayOpen');
+    document.documentElement.classList.add('maOverlayOpen');
   }
 
   function closeCartDrawer() {
     el.cartOverlay.classList.remove('is-open');
-    document.body.classList.remove('maOverlayOpen');
+    document.documentElement.classList.remove('maOverlayOpen');
   }
 
   function initCartState() {
@@ -1169,7 +1169,7 @@
     assignCart(cart2, bottomPId);
 
     try {
-      MA.setStatus('Saving cart configuration…', 'info');
+      MA.ui.notify('Saving cart configuration…', 'info');
       await MA.postJson(apiUrls.setScorerContext, {
         ghin:  state.scorerGHIN || state.autoScorerGhin || '',
         carts: cartAssignments,
@@ -1181,9 +1181,9 @@
       renderSecondaryActions();
       renderPlayerRows();
       updateGoButton();
-      MA.setStatus('Cart configuration saved.', 'success');
+      MA.ui.notify('Cart configuration saved.', 'success');
     } catch (e) {
-      MA.setStatus('Failed to save cart configuration.', 'error');
+      MA.ui.notify('Failed to save cart configuration.', 'error');
     }
   }
 
@@ -1197,12 +1197,12 @@
 
     renderScorerPlayerList();
     el.scorerOverlay.classList.add('is-open');
-    document.body.classList.add('maOverlayOpen');
+    document.documentElement.classList.add('maOverlayOpen');
   }
 
   function closeScorerDrawer() {
     el.scorerOverlay.classList.remove('is-open');
-    document.body.classList.remove('maOverlayOpen');
+    document.documentElement.classList.remove('maOverlayOpen');
   }
 
   function renderScorerPlayerList() {
@@ -1270,7 +1270,7 @@
     if (!ghin) return;
 
     try {
-      MA.setStatus('Setting scorer…', 'info');
+      MA.ui.notify('Setting scorer…', 'info');
       await MA.postJson(apiUrls.setScorerContext, {
         ghin,
         carts: state.cartAssignments,
@@ -1281,9 +1281,9 @@
       renderCardFooter();
       renderSecondaryActions();
       updateGoButton();
-      MA.setStatus('Scorer set.', 'success');
+      MA.ui.notify('Scorer set.', 'success');
     } catch (e) {
-      MA.setStatus('Failed to set scorer.', 'error');
+      MA.ui.notify('Failed to set scorer.', 'error');
     }
   }
 
@@ -1317,14 +1317,14 @@
 
       if (scorecardKey) {
         el.btnGo.disabled = true;
-        MA.setStatus('Recalculating handicaps…', 'info');
+        MA.ui.notify('Recalculating handicaps…', 'info');
         try {
           const ok = await MA.recalculateHandicaps(null, { scorecardKey });
           if (!ok) throw new Error('Handicap recalculation failed.');
           state.dirty = false;
-          MA.setStatus('Handicaps updated.', 'success');
+          MA.ui.notify('Handicaps updated.', 'success');
         } catch (e) {
-          MA.setStatus(e.message || 'Unable to recalculate handicaps.', 'error');
+          MA.ui.notify(e.message || 'Unable to recalculate handicaps.', 'error');
           el.btnGo.disabled = false;
           return; // stay on the page — leave dirty set so the next attempt retries
         }

@@ -57,7 +57,6 @@
     prevHoleBtn: document.getElementById('scorePrevHoleBtn'),
     nextHoleBtn: document.getElementById('scoreNextHoleBtn'),
     rows: document.getElementById('scoreRowsContainer'),
-    dirtyDialog: document.getElementById('scoreDirtyDialog'),
     ctx: {
       teeTime: document.getElementById('ctxTeeTime'),
       flightId: document.getElementById('ctxFlightId'),
@@ -72,41 +71,15 @@
     }
   };
 
-    function ensureSavingOverlay() {
-    if (document.getElementById('scoreBusyOverlay')) return;
-
-    const overlay = document.createElement('div');
-    overlay.id = 'scoreBusyOverlay';
-    overlay.className = 'maModalOverlay';
-
-    const modal = document.createElement('section');
-    modal.className = 'maModal';
-    modal.style.maxWidth = '320px';
-
-    modal.innerHTML = `
-      <header class="maModal__hdr">
-        <div class="maModal__titles">
-          <div class="maModal__title">Please wait</div>
-          <div class="maModal__subtitle" id="scoreBusyMessage">Saving...</div>
-        </div>
-      </header>
-    `;
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-  }
-
+  // Delegates to MA.ui — also fixes that this version never toggled
+  // maOverlayOpen at all, so the page underneath was never actually locked
+  // while a save was in flight.
   function showSavingOverlay(message) {
-    ensureSavingOverlay();
-    const overlay = document.getElementById('scoreBusyOverlay');
-    const msg = document.getElementById('scoreBusyMessage');
-    if (msg) msg.textContent = message || 'Saving...';
-    if (overlay) overlay.classList.add('is-open');
+    MA.ui.showBusy({ title: "Working", message: message || "Saving..." });
   }
 
   function hideSavingOverlay() {
-    const overlay = document.getElementById('scoreBusyOverlay');
-    if (overlay) overlay.classList.remove('is-open');
+    MA.ui.hideBusy();
   }
 
   // ==========================================================================
@@ -681,21 +654,19 @@ function markDirty(playerId, rawScore, declared) {
   // 9. Dirty-State / Dialog Handling
   // ==========================================================================
 
+  // Two-way decision: "Keep editing" (stay, scores intact) or "Leave
+  // without saving" (discard and navigate away). No "Save & leave" shortcut
+  // — that option existed in the old three-button <dialog> version but
+  // added a third outcome MA.ui.confirm doesn't support; dropped as a
+  // deliberate simplification, not an oversight. Returns a boolean instead
+  // of the old 'cancel'/'discard'/'save' strings.
   function openDirtyDialog() {
-    return new Promise((resolve) => {
-      if (!el.dirtyDialog?.showModal) {
-        resolve(window.confirm('You have unsaved changes. Leave anyway?') ? 'discard' : 'cancel');
-        return;
-      }
-
-      el.dirtyDialog.showModal();
-
-      const handler = () => {
-        el.dirtyDialog.removeEventListener('close', handler);
-        resolve(el.dirtyDialog.returnValue || 'cancel');
-      };
-
-      el.dirtyDialog.addEventListener('close', handler);
+    return MA.ui.confirm({
+      title: "Leave without saving?",
+      message: "You have unsaved changes on this hole.",
+      confirmLabel: "Leave without saving",
+      cancelLabel: "Keep editing",
+      danger: true
     });
   }
 
@@ -776,7 +747,14 @@ function markDirty(playerId, rawScore, declared) {
         label: 'Restart Scoring Session',
         danger: true,
           action: async () => {
-            if (window.confirm('Clear session and restart?')) {
+            const approved = await MA.ui.confirm({
+              title: "Restart scoring session?",
+              message: "This clears the current session and starts over.",
+              confirmLabel: "Restart",
+              cancelLabel: "Cancel",
+              danger: true
+            });
+            if (approved) {
               await fetch(apiUrls.clearContext);
               const key = getBaselinePlayerKey();
               if (typeof MA.routerGo === 'function') {
@@ -827,7 +805,9 @@ function markDirty(playerId, rawScore, declared) {
   }
 
   function setPageStatus(message, level){
-    if (typeof MA.setStatus === 'function') {
+    if (MA.ui && typeof MA.ui.notify === 'function') {
+      MA.ui.notify(message || '', level || 'info');
+    } else if (typeof MA.setStatus === 'function') {
       MA.setStatus(message || '', level || 'info');
     }
   }
@@ -869,34 +849,11 @@ function markDirty(playerId, rawScore, declared) {
             return;
           }
 
-          openDirtyDialog().then(async (choice) => {
-            if (choice === 'cancel') return;
+          openDirtyDialog().then((leaveWithoutSaving) => {
+            if (!leaveWithoutSaving) return;
 
-            if (choice === 'discard') {
-              state.dirty = false;
-              if (typeof MA.routerGo === 'function') MA.routerGo(id);
-              return;
-            }
-
-            if (choice === 'save') {
-              try {
-                const saveResult = await saveScoresSilently(state.currentHole);
-                if (!saveResult.ok) {
-                  if (saveResult.conflict) {
-                    resetToLaunch(saveResult.message || 'Another scorer is already updating this scorecard.');
-                    return;
-                  }
-                  setPageStatus(saveResult.message || 'Unable to save before leaving.', 'error');
-                  return;
-                }
-
-                patchReturnedScores(saveResult);
-                state.dirty = false;
-                if (typeof MA.routerGo === 'function') MA.routerGo(id);
-              } catch (err) {
-                setPageStatus(err.message || 'Unable to save before leaving.', 'error');
-              }
-            }
+            state.dirty = false;
+            if (typeof MA.routerGo === 'function') MA.routerGo(id);
           });
         }
       });

@@ -773,7 +773,7 @@ function renderPlayerRows(players, cardState, row){
 
     // Trigger open state after paint so CSS transition fires
     requestAnimationFrame(() => overlay.classList.add('is-open'));
-    document.body.classList.add('maOverlayOpen');
+    document.documentElement.classList.add('maOverlayOpen');
 
     // Close on overlay background click
     overlay.addEventListener('click', (e) => {
@@ -804,7 +804,7 @@ function renderPlayerRows(players, cardState, row){
     overlay.addEventListener('transitionend', () => overlay.remove(), { once: true });
     // Guard: only remove maOverlayOpen if no other overlays remain
     if (!document.querySelector('.maDrawerOverlay.is-open, .maModalOverlay.is-open')) {
-      document.body.classList.remove('maOverlayOpen');
+      document.documentElement.classList.remove('maOverlayOpen');
     }
   }
 
