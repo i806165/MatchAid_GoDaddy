@@ -62,7 +62,6 @@
 
   // ── Constants ────────────────────────────────────────────────────────────────
   const OVERLAY_ID      = "maRunAutoPairOverlay";
-  const WARN_OVERLAY_ID = "maRunAutoPairWarnOverlay";
   const SIZES_ALL        = [4, 3, 2, 1];
   const SIZES_PAIRPAIR   = [2, 1];
 
@@ -541,54 +540,16 @@
     _wireEvents(); // DOM was replaced piecemeal above — rebind
   }
 
-  // ── Uneven-team-counts warning modal ────────────────────────────────────────
-  // Follows recalculate_handicaps.js's ensure/show/hide shell (same
-  // maModalOverlay/maModal shell openAutoPairModal itself is built on) —
-  // but that module never needed a dismiss button, since it's a
-  // non-interactive, self-closing progress indicator. This one requires a
-  // manual dismiss, so it borrows the maModal__ftr/maModal__ftrActions
-  // footer already used by this module's own primary footer above, rather
-  // than inventing new markup.
-
-  function _ensureWarnOverlay() {
-    let el = document.getElementById(WARN_OVERLAY_ID);
-    if (!el) {
-      el = document.createElement("div");
-      el.id = WARN_OVERLAY_ID;
-      el.className = "maModalOverlay";
-      document.body.appendChild(el);
-    }
-    return el;
-  }
-
+  // ── Uneven-team-counts warning ──────────────────────────────────────────────
+  // Delegates to MA.ui.confirm (okOnly mode) instead of this module's own
+  // overlay — stacks on top of this module's own open Auto-Pair modal the
+  // same way the old warn overlay did.
   function _showUnevenTeamsWarning(teamA, teamB) {
-    const el = _ensureWarnOverlay();
-    el.innerHTML = `
-      <section class="maModal" role="dialog" aria-modal="true" aria-labelledby="apWarnTitle">
-        <header class="maModal__hdr">
-          <div class="maModal__titles">
-            <div id="apWarnTitle" class="maModal__title">Uneven Team Counts</div>
-          </div>
-        </header>
-        <div class="maModal__body">
-          <p style="line-height:1.6;">
-            ${esc(teamA.name)} (${teamA.count}) and ${esc(teamB.name)} (${teamB.count}) have different unpaired counts.
-            Uncheck one to continue.
-          </p>
-        </div>
-        <footer class="maModal__ftr">
-          <div class="maModal__ftrActions">
-            <button type="button" class="maFtrBtn maFtrBtn--save" id="apWarnOk">OK</button>
-          </div>
-        </footer>
-      </section>`;
-    el.className = "maModalOverlay is-open";
-    el.querySelector("#apWarnOk")?.addEventListener("click", _hideUnevenTeamsWarning);
-  }
-
-  function _hideUnevenTeamsWarning() {
-    const el = document.getElementById(WARN_OVERLAY_ID);
-    if (el) { el.className = "maModalOverlay"; el.innerHTML = ""; }
+    MA.ui.confirm({
+      title: "Uneven team counts",
+      message: `${esc(teamA.name)} (${teamA.count}) and ${esc(teamB.name)} (${teamB.count}) have different unpaired counts. Uncheck one to continue.`,
+      okOnly: true
+    });
   }
 
   // ── Event wiring ─────────────────────────────────────────────────────────────

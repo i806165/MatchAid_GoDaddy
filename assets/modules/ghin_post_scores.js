@@ -55,7 +55,8 @@
     ensureOverlay();
 
     try {
-      if (typeof MA.setStatus === 'function') MA.setStatus("Preparing score review...", "info");
+      if (MA.ui && typeof MA.ui.notify === 'function') MA.ui.notify("Preparing score review...", "info");
+      else if (typeof MA.setStatus === 'function') MA.setStatus("Preparing score review...", "info");
       const payload = await fetchReviewData();
       
       const blocker = getPostingBlocker(payload);
@@ -155,8 +156,8 @@
               <div class="maPillKV"><span class="maLabelLg">TOTAL</span><span class="maValueLg">${esc(scoreTot)}</span></div>
             </div>
           <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-            <button id="btnGhinCancel" class="btn btnPrimary" type="button">Cancel</button>
-            <button id="btnGhinConfirm" class="btn btnSecondary" type="button"
+            <button id="btnGhinCancel" class="maModalFtr__btn maModalFtr__btn--cancel" type="button">Cancel</button>
+            <button id="btnGhinConfirm" class="maModalFtr__btn maModalFtr__btn--confirm" type="button"
               ${isBlocked ? 'disabled' : ''}>
               Post to GHIN
             </button>
@@ -189,16 +190,25 @@
       const base = (MA.paths && MA.paths.apiGHIN) ? MA.paths.apiGHIN : "/api/GHIN";
       const res = await MA.postJson(`${base}/post_score.php`, { ggid: _config.ggid });
       if (res && res.ok) {
-        if (typeof MA.setStatus === 'function') MA.setStatus("Score posted to GHIN successfully!", "success");
+        // Modal is still open at this exact point — close() hasn't run
+        // yet — so this needs to route correctly if the timing ever
+        // changes, not rely on close() happening to run right after.
+        if (MA.ui && typeof MA.ui.notify === 'function') MA.ui.notify("Score posted to GHIN successfully!", "success");
+        else if (typeof MA.setStatus === 'function') MA.setStatus("Score posted to GHIN successfully!", "success");
         close();
         if (typeof _config.onPosted === 'function') _config.onPosted(res);
       } else {
-        if (typeof MA.setStatus === 'function') MA.setStatus(res.message || "Failed to post score.", "error");
+        // Modal does NOT close here — the button just re-enables — so a
+        // direct MA.setStatus() call was permanently invisible behind
+        // the still-open modal, not just briefly. Real bug, not timing.
+        if (MA.ui && typeof MA.ui.notify === 'function') MA.ui.notify(res.message || "Failed to post score.", "error");
+        else if (typeof MA.setStatus === 'function') MA.setStatus(res.message || "Failed to post score.", "error");
         btn.disabled = false;
         btn.textContent = "Post to GHIN";
       }
     } catch (err) {
-      if (typeof MA.setStatus === 'function') MA.setStatus("An error occurred while posting.", "error");
+      if (MA.ui && typeof MA.ui.notify === 'function') MA.ui.notify("An error occurred while posting.", "error");
+      else if (typeof MA.setStatus === 'function') MA.setStatus("An error occurred while posting.", "error");
       close();
     }
   }
