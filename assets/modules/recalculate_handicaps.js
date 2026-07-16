@@ -1,51 +1,12 @@
 /* /assets/modules/recalculate_handicaps.js
  * Shared module to refresh GHIN data and recalculate competition handicaps (PH/SO).
- * Includes self-contained UI blocking modal.
+ * UI feedback now goes through MA.ui (ma_shared.js) — see MA.recalculateHandicaps
+ * below. No self-built modal in this file anymore.
  */
 (function() {
   "use strict";
   const MA = window.MA || {};
   window.MA = MA;
-
-  function ensureModal() {
-    let overlay = document.getElementById("maRecalcModal");
-    if (!overlay) {
-      overlay = document.createElement("div");
-      overlay.id = "maRecalcModal";
-      overlay.className = "maModalOverlay";
-      overlay.innerHTML = `
-        <section class="maModal" role="dialog" aria-modal="true" aria-labelledby="maRecalcTitle">
-          <header class="maModal__hdr">
-            <div id="maRecalcTitle" class="maModal__title">Working</div>
-          </header>
-          <div class="maModal__body">
-            <div id="maRecalcMsg" style="text-align:center; padding:10px;">Processing...</div>
-          </div>
-        </section>
-      `;
-      document.body.appendChild(overlay);
-    }
-    return overlay;
-  }
-
-  function showModal(msg) {
-    const el = ensureModal();
-    const txt = document.getElementById("maRecalcMsg");
-    if (txt) txt.textContent = msg || "Processing...";
-    el.classList.add("is-open");
-    document.body.classList.add("maOverlayOpen");
-  }
-
-  function updateModal(msg) {
-    const txt = document.getElementById("maRecalcMsg");
-    if (txt) txt.textContent = msg || "Processing...";
-  }
-
-  function hideModal() {
-    const el = document.getElementById("maRecalcModal");
-    if (el) el.classList.remove("is-open");
-    document.body.classList.remove("maOverlayOpen");
-  }
 
   /**
    * @param {string} apiBase
@@ -64,15 +25,20 @@
     const scorecardKey = scope?.scorecardKey || "";
 
     if (typeof MA.postJson !== "function") {
-      alert("System Error: MA.postJson not found.");
+      await MA.ui.confirm({
+        title: "System error",
+        message: "MA.postJson not found.",
+        okOnly: true,
+        danger: true
+      });
       return false;
     }
 
     try {
-      showModal("Recalculating handicaps...");
-      
+      MA.ui.showBusy({ title: "Working", message: "Recalculating handicaps..." });
+
       // Pass 1: Refresh from GHIN (HI, CH)
-      updateModal("(Step 1 OF 2) Refreshing Player Handicaps (HI/CH)...");
+      MA.ui.updateBusy({ message: "(Step 1 OF 2) Refreshing Player Handicaps (HI/CH)..." });
       const res1 = await MA.postJson(`${base}/refreshHandicaps.php`, {
         ghin: scorecardKey ? undefined : "all",
         scorecardKey: scorecardKey || undefined,
@@ -84,29 +50,35 @@
       // anyway (be_calculateGamePHSO() already no-ops on ADJ GROSS), so
       // skip the round trip entirely. The only caller of this module
       // (game_players.js's onRecalcHandicaps()) does no follow-up status
-      // handling of its own — this modal is the sole feedback surface —
-      // so hold the message visible briefly rather than hiding instantly.
+      // handling of its own — this busy overlay is the sole feedback
+      // surface — so hold the message visible briefly rather than hiding
+      // instantly.
       if (res1.skipped) {
-        updateModal(res1.message || "Handicaps skipped.");
+        MA.ui.updateBusy({ message: res1.message || "Handicaps skipped." });
         await new Promise(r => setTimeout(r, 1400));
-        hideModal();
+        MA.ui.hideBusy();
         return true;
       }
 
       // Pass 2: Calculate Competition (PH, SO)
-      updateModal("(Step 2 OF 2) Refreshing Handicap Competition Values (PH/SO)...");
+      MA.ui.updateBusy({ message: "(Step 2 OF 2) Refreshing Handicap Competition Values (PH/SO)..." });
       const res2 = await MA.postJson(`${base}/calcPHSO.php`, {
         action: scorecardKey ? "scorecard" : "all",
         id: scorecardKey || undefined,
       });
       if (!res2 || !res2.ok) throw new Error(res2?.message || "Calculation failed.");
 
-      hideModal();
+      MA.ui.hideBusy();
       return true;
     } catch (e) {
       console.error(e);
-      hideModal();
-      alert(`Recalculation error: ${e.message || e}`);
+      MA.ui.hideBusy();
+      await MA.ui.confirm({
+        title: "Recalculation error",
+        message: e.message || String(e),
+        okOnly: true,
+        danger: true
+      });
       return false;
     }
   };

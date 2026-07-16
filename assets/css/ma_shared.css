@@ -3178,15 +3178,16 @@ textarea {
 
 .maModalBusy__title {
   font-family: var(--fontFamilyBase);
-  font-size: 13px;
-  font-weight: 800;
+  font-size: var(--modalTitleSize);
+  font-weight: 900;
   color: var(--ink);
 }
 
 .maModalBusy__message {
   font-family: var(--fontFamilyBase);
-  font-size: 11px;
+  font-size: var(--fieldValueSize);
   color: var(--mutedText);
+  line-height: 1.5;
 }
 
 @keyframes maSpin {
