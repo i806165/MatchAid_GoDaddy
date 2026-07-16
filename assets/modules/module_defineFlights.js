@@ -445,7 +445,7 @@
   function _activationHintText() {
     return (_activation === "active")
       ? "Flights are active for this round."
-      : "Flights are not active for this round. Existing flight data, if any, is preserved and hidden.";
+      : "Flights are not active for this round.";
   }
 
   // Roster display preference — flat list vs grouped-by-flight. Independent

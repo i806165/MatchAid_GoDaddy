@@ -407,7 +407,7 @@
   function _activationHintText() {
     return (_activation === "active")
       ? "Teams are active for this round."
-      : "Teams are not active for this round. Existing team data, if any, is preserved and hidden.";
+      : "Teams are not active for this round.";
   }
 
   function _renderTeamNameInput(slotId, currentName) {
