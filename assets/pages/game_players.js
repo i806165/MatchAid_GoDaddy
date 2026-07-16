@@ -150,7 +150,7 @@
     hydrateImportTeeOptionsFromPayload();
 
     if (!state.importTeeOptions.length) {
-      MA.setStatus("No course tee sets were provided for this game.", "warn");
+      MA.ui.notify("No course tee sets were provided for this game.", "warn");
     }
   }
 
@@ -209,7 +209,7 @@
 
     const res = await MA.postJson(MA.paths.importSourceGames, {});
     if (!res?.ok) {
-      MA.setStatus(res?.message || "Unable to load source games.", "warn");
+      MA.ui.notify(res?.message || "Unable to load source games.", "warn");
       return;
     }
 
@@ -259,7 +259,7 @@
       });
 
       if (!res?.ok) {
-        MA.setStatus(res?.message || "Unable to preview source game.", "danger");
+        MA.ui.notify(res?.message || "Unable to preview source game.", "danger");
         return;
       }
 
@@ -298,7 +298,7 @@
         };
       });
 
-      MA.setStatus(`Loaded ${state.importExistingPreviewCount} players. Select a fallback tee to continue.`, "info");
+      MA.ui.notify(`Loaded ${state.importExistingPreviewCount} players. Select a fallback tee to continue.`, "info");
     } finally {
       state.importBusy = false;
       hideBusyModal();
@@ -387,48 +387,27 @@
       }));
 
       state.importMode = "review";
-      MA.setStatus(`Tee assignments resolved for ${updatedRows.filter(r => !r.alreadyOnRoster).length} players.`, "success");
+      MA.ui.notify(`Tee assignments resolved for ${updatedRows.filter(r => !r.alreadyOnRoster).length} players.`, "success");
     } finally {
       state.importBusy = false;
       hideBusyModal();
     }
   }
 
+  // Delegates to MA.ui (ma_shared.js) instead of building its own overlay —
+  // removes this file's own maModalOverlay markup and its own (incorrect,
+  // document.body-targeted) maOverlayOpen toggle. Call sites throughout this
+  // file are unchanged.
   function showBusyModal(message){
-    let overlay = document.getElementById("gpBusyModal");
-    if (!overlay) {
-      overlay = document.createElement("div");
-      overlay.id = "gpBusyModal";
-      overlay.className = "maModalOverlay is-open";
-      overlay.innerHTML = `
-        <section class="maModal" role="dialog" aria-modal="true" aria-labelledby="gpBusyTitle">
-          <header class="maModal__hdr">
-            <div id="gpBusyTitle" class="maModal__title">Working</div>
-          </header>
-          <div class="maModal__body">
-            <div id="gpBusyMessage" class="gpBusyMessage"></div>
-          </div>
-        </section>
-      `;
-      document.body.appendChild(overlay);
-    } else {
-      overlay.classList.add("is-open");
-    }
-
-    const msg = document.getElementById("gpBusyMessage");
-    if (msg) msg.textContent = message || "Processing...";
-    document.body.classList.add("maOverlayOpen");
+    MA.ui.showBusy({ title: "Working", message: message || "Processing..." });
   }
 
   function updateBusyModal(message){
-    const msg = document.getElementById("gpBusyMessage");
-    if (msg) msg.textContent = message || "Processing...";
+    MA.ui.updateBusy({ message: message || "Processing..." });
   }
 
   function hideBusyModal(){
-    const overlay = document.getElementById("gpBusyModal");
-    if (overlay) overlay.classList.remove("is-open");
-    document.body.classList.remove("maOverlayOpen");
+    MA.ui.hideBusy();
   }
 
   function formatDate(s) {
@@ -699,60 +678,18 @@
     ]);
   }
 
-  // ── Modal: locked-by-event notice ───────────────────────────────────────────
-  // Mirrors event_roster.js's showBlockedModal/ensureBlockedModal pattern
-  // exactly (same maModalOverlay/maModal shape, same OK-to-dismiss behavior),
-  // generalized with a title param since this covers three different locked
-  // actions (Teams/Flights/Handicaps) rather than one. Lives only here —
-  // Event Roster's own three buttons are never locked, since Event Roster is
-  // always the top of the hierarchy for Teams/Flights/Handicaps; nothing
-  // above it can ever delegate ownership away from it.
-  function ensureBlockedModal() {
-    if (document.getElementById("gpBlockedOverlay")) return;
-
-    const overlay = document.createElement("div");
-    overlay.id = "gpBlockedOverlay";
-    overlay.className = "maModalOverlay";
-
-    const modal = document.createElement("section");
-    modal.className = "maModal";
-
-    modal.innerHTML = `
-      <header class="maModal__hdr">
-        <div class="maModal__titles">
-          <div class="maModal__title" id="gpBlockedTitle"></div>
-        </div>
-      </header>
-      <div class="maModal__body" id="gpBlockedBody">
-        <p style="line-height:1.6;" id="gpBlockedMessage"></p>
-        <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:14px; display:flex; justify-content:flex-end;">
-          <button type="button" class="btn btnSecondary" id="gpBlockedOkBtn">OK</button>
-        </div>
-      </div>
-    `;
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-
-    document.getElementById("gpBlockedOkBtn")?.addEventListener("click", hideBlockedModal);
-    overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) hideBlockedModal();
-    });
-  }
-
+  // ── Locked-by-event notice ──────────────────────────────────────────────
+  // Delegates to MA.ui.confirm (okOnly mode) instead of this file's own
+  // overlay. Same three call sites below (onManageTeams/onDefineFlights/
+  // onDefineHandicapSettings) are unchanged. Mirrors the identical
+  // "managed at event level" pattern in game_pairings.js — same wording,
+  // now the same rendering too.
   function showBlockedModal(message, title) {
-    ensureBlockedModal();
-    const overlay = document.getElementById("gpBlockedOverlay");
-    const titleEl = document.getElementById("gpBlockedTitle");
-    const msgEl   = document.getElementById("gpBlockedMessage");
-    if (titleEl) titleEl.textContent = title || "Managed at Event Level";
-    if (msgEl) msgEl.textContent = message || "This action isn't available here.";
-    if (overlay) overlay.classList.add("is-open");
-  }
-
-  function hideBlockedModal() {
-    const overlay = document.getElementById("gpBlockedOverlay");
-    if (overlay) overlay.classList.remove("is-open");
+    MA.ui.confirm({
+      title: title || "Managed at event level",
+      message: message || "This action isn't available here.",
+      okOnly: true
+    });
   }
 
   function onManageTeams() {
@@ -761,7 +698,7 @@
       return;
     }
     if (!MA.manageTeams || typeof MA.manageTeams.open !== "function") {
-      MA.setStatus("Define Teams module not loaded.", "warn");
+      MA.ui.notify("Define Teams module not loaded.", "warn");
       return;
     }
     const teamConfig = (window.__MA_INIT__ || {}).teamConfig || {
@@ -804,7 +741,7 @@
       return;
     }
     if (!MA.defineFlights || typeof MA.defineFlights.open !== "function") {
-      MA.setStatus("Define Flights module not loaded.", "warn");
+      MA.ui.notify("Define Flights module not loaded.", "warn");
       return;
     }
     const flightConfig = (window.__MA_INIT__ || {}).flightConfig || null;
@@ -842,7 +779,7 @@
       return;
     }
     if (!MA.defineHandicapSettings || typeof MA.defineHandicapSettings.open !== "function") {
-      MA.setStatus("Define Handicaps module not loaded.", "warn");
+      MA.ui.notify("Define Handicaps module not loaded.", "warn");
       return;
     }
     const g = state.game || {};
@@ -886,7 +823,7 @@
         apiPath: MA.paths?.apiNotify,
       });
     } else {
-      if (typeof MA.setStatus === "function") MA.setStatus("Messaging module not loaded.", "error");
+      if (typeof MA.setStatus === "function") MA.ui.notify("Messaging module not loaded.", "error");
     }
   }
 
@@ -1341,7 +1278,7 @@ function renderTrayBody(){
   async function upsertNonRated(player, existingTee) {
     const res = await MA.postJson(MA.paths.gamePlayersUpsert, { player, selectedTee: existingTee });
     if (!res?.ok) {
-      MA.setStatus(res?.message || "Unable to update player.", "danger");
+      MA.ui.notify(res?.message || "Unable to update player.", "danger");
       return;
     }
     const nonRatedControls = getTabPanel(el.trayControls, "nonrated");
@@ -1354,7 +1291,7 @@ function renderTrayBody(){
       bodyEl:          nonRatedBody,
       existingPlayers: state.players || [],
     });
-    MA.setStatus("Player updated.", "success");
+    MA.ui.notify("Player updated.", "success");
   }
 
   // ── CHANGED: evaluateImportRows — uses MA.parseImportPlayers() instead of
@@ -1366,14 +1303,14 @@ function renderTrayBody(){
     const parsed = MA.parseImportPlayers(state.importText);
 
     if (!parsed.length) {
-      MA.setStatus("Enter at least one Golf Network number or email address.", "warn");
+      MA.ui.notify("Enter at least one Golf Network number or email address.", "warn");
       return;
     }
 
     // Surface unrecognized tokens immediately
     const unknown = parsed.filter(p => p.type === "unknown");
     if (unknown.length) {
-      MA.setStatus(
+      MA.ui.notify(
         `${unknown.length} unrecognized entr${unknown.length === 1 ? "y" : "ies"} will be skipped: ${unknown.map(u => u.raw).join(", ")}`,
         "warn"
       );
@@ -1381,7 +1318,7 @@ function renderTrayBody(){
 
     const actionable = parsed.filter(p => p.type === "ghin" || p.type === "email");
     if (!actionable.length) {
-      MA.setStatus("No valid Golf Network numbers or email addresses found.", "warn");
+      MA.ui.notify("No valid Golf Network numbers or email addresses found.", "warn");
       return;
     }
 
@@ -1431,7 +1368,7 @@ function renderTrayBody(){
             }
             const unresolved = (res.unresolved || []).filter(u => u.type === "email");
             if (unresolved.length) {
-              MA.setStatus(
+              MA.ui.notify(
                 `${unresolved.length} email${unresolved.length === 1 ? "" : "s"} not found in favorites: ${unresolved.map(u => u.input).join(", ")}`,
                 "warn"
               );
@@ -1572,8 +1509,8 @@ function renderTrayBody(){
       state.importMode        = "review";
       render();
 
-      if (canImportAllRows()) MA.setStatus(`Evaluated ${rows.length} rows. All rows valid.`, "success");
-      else MA.setStatus(`Evaluated ${rows.length} rows. Fix errors before import.`, "warn");
+      if (canImportAllRows()) MA.ui.notify(`Evaluated ${rows.length} rows. All rows valid.`, "success");
+      else MA.ui.notify(`Evaluated ${rows.length} rows. Fix errors before import.`, "warn");
 
     } finally {
       state.importBusy = false;
@@ -1584,7 +1521,7 @@ function renderTrayBody(){
   async function beginImportBatch(){
     if (state.importBusy) return;
     if (!canImportAllRows()) {
-      MA.setStatus("All rows must be valid before import can proceed.", "warn");
+      MA.ui.notify("All rows must be valid before import can proceed.", "warn");
       return;
     }
     await commitImportBatch(state.importRows.slice());
@@ -1593,11 +1530,11 @@ function renderTrayBody(){
   async function beginExistingGameImport(){
     if (state.importBusy) return;
     if (!safe(state.importSourceGameId)) {
-      MA.setStatus("Select a source game first.", "warn");
+      MA.ui.notify("Select a source game first.", "warn");
       return;
     }
     if (!canImportAllRows()) {
-      MA.setStatus("No importable players found. All players may already be on the roster.", "warn");
+      MA.ui.notify("No importable players found. All players may already be on the roster.", "warn");
       return;
     }
     await commitImportBatch(state.importRows.slice());
@@ -1656,8 +1593,8 @@ function renderTrayBody(){
       resetExistingGameImport();
       render();
 
-      if (failed) MA.setStatus(`Imported ${added} players. ${skipped} skipped. ${failed} failed.`, "warn");
-      else MA.setStatus(`Imported ${added} players. ${skipped} already existed.`, "success");
+      if (failed) MA.ui.notify(`Imported ${added} players. ${skipped} skipped. ${failed} failed.`, "warn");
+      else MA.ui.notify(`Imported ${added} players. ${skipped} already existed.`, "success");
     } finally {
       state.importBusy = false;
       hideBusyModal();
@@ -1667,13 +1604,13 @@ function renderTrayBody(){
   async function beginBatchTeeFlow(players){
     // players is a pre-filtered, normalized array delivered by MA.favoritesSource
     if (!players || !players.length) {
-      MA.setStatus("Select at least one favorite.", "warn");
+      MA.ui.notify("Select at least one favorite.", "warn");
       return;
     }
 
     const genders = Array.from(new Set(players.map(p => safe(p.gender || "").toUpperCase()).filter(Boolean)));
     if (genders.length > 1) {
-      MA.setStatus("Multi-Add currently requires selected favorites to share the same gender.", "warn");
+      MA.ui.notify("Multi-Add currently requires selected favorites to share the same gender.", "warn");
       return;
     }
 
@@ -1753,8 +1690,8 @@ function renderTrayBody(){
         if (p) MA.favoritesSource.refresh(p);
       }
 
-      if (failed) MA.setStatus(`Added ${added} favorites. ${failed} failed.`, "warn");
-      else MA.setStatus(`Added ${added} favorites.`, "success");
+      if (failed) MA.ui.notify(`Added ${added} favorites. ${failed} failed.`, "warn");
+      else MA.ui.notify(`Added ${added} favorites.`, "success");
     } finally {
       hideBusyModal();
     }
@@ -1803,7 +1740,7 @@ function renderTrayBody(){
 
     const res = await MA.postJson(MA.paths.gamePlayersUpsert, { player, selectedTee: state.selectedTee });
     if (!res?.ok) {
-      MA.setStatus(res?.message || "Unable to save player", "danger");
+      MA.ui.notify(res?.message || "Unable to save player", "danger");
       return;
     }
     if (ghin.startsWith("NH")) MA.ghinSearch.close && MA.ghinSearch.close();
@@ -1814,7 +1751,7 @@ function renderTrayBody(){
     }
 
     if (wasPaired) {
-      MA.setStatus("Calculating shots off...", "info");
+      MA.ui.notify("Calculating shots off...", "info");
       try {
         await MA.postJson(`${apiGHIN}/calcPHSO.php`, { action: "player", id: ghin });
       } catch (e) { console.error(e); }
@@ -1823,7 +1760,7 @@ function renderTrayBody(){
     await refreshPlayers();
     renderRoster();
     render();
-    MA.setStatus("Player added/updated.", "success");
+    MA.ui.notify("Player added/updated.", "success");
   }
 
   async function onDeleteRow(e){
@@ -1850,7 +1787,7 @@ function renderTrayBody(){
         .filter(b => b.ghin)
         .map(b => String(b.ghin));
       if (blindGHINs.includes(String(ghin))) {
-        return MA.setStatus(
+        return MA.ui.notify(
           'This player is the blind player for this game. ' +
           'Remove the blind assignment in Game Settings before deleting.',
           'warn'
@@ -1896,7 +1833,7 @@ function renderTrayBody(){
               ${statCell("Net score",    netScore)}
             </div>`;
 
-          const confirmed = await MA.confirm({
+          const confirmed = await MA.ui.confirm({
             title:        "Player has scores",
             message:      `<strong>${playerName}</strong> has scores recorded for this round. Deleting them will permanently erase those scores.<br><br><span style="color:var(--mutedText);font-size:12px;">Are you sure you want to continue?</span>`,
             detail,
@@ -1912,10 +1849,10 @@ function renderTrayBody(){
     }
 
     const res = await MA.postJson(MA.paths.gamePlayersDelete, { playerGHIN: ghin });
-    if (!res?.ok) return MA.setStatus("Unable to delete player", "danger");
+    if (!res?.ok) return MA.ui.notify("Unable to delete player", "danger");
 
     if (wasPaired) {
-      MA.setStatus("Calculating shots off...", "info");
+      MA.ui.notify("Calculating shots off...", "info");
       try {
         if (comp === "PairPair") {
           await MA.postJson(`${apiGHIN}/calcPHSO.php`, { action: "flight", id: fid });
@@ -1928,7 +1865,7 @@ function renderTrayBody(){
     await refreshPlayers();
     renderRoster();
     render();
-    MA.setStatus("Player removed.", "success");
+    MA.ui.notify("Player removed.", "success");
   }
 
   function onRowFavorite(e){
@@ -1940,6 +1877,6 @@ function renderTrayBody(){
 
   boot().catch(err => {
     console.error(err);
-    MA.setStatus("Failed to initialize page.", "danger");
+    MA.ui.notify("Failed to initialize page.", "danger");
   });
 })();

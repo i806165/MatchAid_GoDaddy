@@ -97,7 +97,8 @@
 
   // ---- Utils ----
   function setStatus(msg, level) {
-    if (typeof MA.setStatus === "function") MA.setStatus(msg, level);
+    if (MA.ui && typeof MA.ui.notify === "function") MA.ui.notify(msg, level);
+    else if (typeof MA.setStatus === "function") MA.setStatus(msg, level);
     else if (msg) console.log("[STATUS]", level || "info", msg);
   }
 
@@ -143,59 +144,16 @@
     return String(state.game?.dbEvents_PairingMode || "") === "fixed";
   }
 
-  // ── Modal: locked-by-event notice ───────────────────────────────────────────
-  // Mirrors game_players.js's ensureBlockedModal/showBlockedModal pattern
-  // exactly (itself mirroring event_roster.js's) — same maModalOverlay/
-  // maModal shape, same OK-to-dismiss behavior. Only one locked action
-  // here (Pairings), unlike game_players.js's three (Teams/Flights/
-  // Handicaps), but kept as a message param for consistency should that
-  // change.
-  function ensureBlockedModal() {
-    if (document.getElementById("gpBlockedOverlay")) return;
-
-    const overlay = document.createElement("div");
-    overlay.id = "gpBlockedOverlay";
-    overlay.className = "maModalOverlay";
-
-    const modal = document.createElement("section");
-    modal.className = "maModal";
-
-    modal.innerHTML = `
-      <header class="maModal__hdr">
-        <div class="maModal__titles">
-          <div class="maModal__title" id="gpBlockedTitle"></div>
-        </div>
-      </header>
-      <div class="maModal__body" id="gpBlockedBody">
-        <p style="line-height:1.6;" id="gpBlockedMessage"></p>
-        <div style="border-top:1px solid var(--border); padding-top:12px; margin-top:14px; display:flex; justify-content:flex-end;">
-          <button type="button" class="btn btnSecondary" id="gpBlockedOkBtn">OK</button>
-        </div>
-      </div>
-    `;
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-
-    document.getElementById("gpBlockedOkBtn")?.addEventListener("click", hideBlockedModal);
-    overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) hideBlockedModal();
-    });
-  }
-
+  // ── Locked-by-event notice ──────────────────────────────────────────────
+  // Delegates to MA.ui.confirm (okOnly mode) instead of this file's own
+  // overlay. Mirrors the identical migration in game_players.js — same
+  // wording ("managed at event level"), now the same rendering too.
   function showBlockedModal(message, title) {
-    ensureBlockedModal();
-    const overlay = document.getElementById("gpBlockedOverlay");
-    const titleEl = document.getElementById("gpBlockedTitle");
-    const msgEl   = document.getElementById("gpBlockedMessage");
-    if (titleEl) titleEl.textContent = title || "Managed at Event Level";
-    if (msgEl) msgEl.textContent = message || "This action isn't available here.";
-    if (overlay) overlay.classList.add("is-open");
-  }
-
-  function hideBlockedModal() {
-    const overlay = document.getElementById("gpBlockedOverlay");
-    if (overlay) overlay.classList.remove("is-open");
+    MA.ui.confirm({
+      title: title || "Managed at event level",
+      message: message || "This action isn't available here.",
+      okOnly: true
+    });
   }
 
   function pad3(v) {
@@ -341,9 +299,16 @@
   }
 
   // ---- Actions Menu ----
-  function onResetPairings() {
+  async function onResetPairings() {
     if (state.dirty.size === 0) return setStatus("No unsaved changes.", "info");
-    if (confirm("Discard all unsaved changes and revert to the last save?")) {
+    const approved = await MA.ui.confirm({
+      title: "Discard changes?",
+      message: "This reverts all pairings and matches to the last save.",
+      confirmLabel: "Discard",
+      cancelLabel: "Keep editing",
+      danger: true
+    });
+    if (approved) {
       window.location.reload();
     }
   }
@@ -553,9 +518,16 @@
     }
   }
 
-  function onBack() {
+  async function onBack() {
     if (state.dirty.size > 0) {
-      if (!confirm("Discard unsaved changes and go back?")) return;
+      const approved = await MA.ui.confirm({
+        title: "Discard changes?",
+        message: "You have unsaved pairing changes. Discard them and go back?",
+        confirmLabel: "Discard",
+        cancelLabel: "Keep editing",
+        danger: true
+      });
+      if (!approved) return;
     }
     if (typeof MA.routerGo === "function") {
       MA.routerGo("admin");
@@ -1837,28 +1809,11 @@
   // terse, same as the Manage Teams/Define Flights version — no
   // player/pairing detail dump.
   function warnReconciledOnLoad() {
-    const overlay = document.createElement("div");
-    overlay.className = "maModalOverlay is-open";
-    overlay.innerHTML = `
-      <section class="maModal" role="dialog" aria-modal="true" aria-labelledby="gpReconciledTitle">
-        <header class="maModal__hdr">
-          <div class="maModal__titles">
-            <div id="gpReconciledTitle" class="maModal__title">Pairings Updated</div>
-          </div>
-        </header>
-        <div class="maModal__body">
-          <p style="line-height:1.6;">
-            Some pairings were reset because team or flight assignments changed since they were last set.
-          </p>
-        </div>
-        <footer class="maModal__ftr" style="justify-content:flex-end;">
-          <div class="maModal__ftrActions">
-            <button type="button" class="maFtrBtn maFtrBtn--save" id="gpReconciledOk">OK</button>
-          </div>
-        </footer>
-      </section>`;
-    document.body.appendChild(overlay);
-    overlay.querySelector("#gpReconciledOk")?.addEventListener("click", () => overlay.remove());
+    MA.ui.confirm({
+      title: "Pairings updated",
+      message: "Some pairings were reset because team or flight assignments changed since they were last set.",
+      okOnly: true
+    });
   }
 
   function initialize() {

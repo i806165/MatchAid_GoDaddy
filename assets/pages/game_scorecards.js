@@ -17,9 +17,11 @@
   const paths = MA.paths || {};
   const game = init.game || {};
   const scorecards = init.scorecards || {};
-  const setStatus = typeof MA.setStatus === "function"
-    ? MA.setStatus
-    : function (m, lvl) { if (m) console.log("[STATUS]", lvl || "info", m); };
+  function setStatus(m, lvl) {
+    if (MA.ui && typeof MA.ui.notify === "function") MA.ui.notify(m, lvl);
+    else if (typeof MA.setStatus === "function") MA.setStatus(m, lvl);
+    else if (m) console.log("[STATUS]", lvl || "info", m);
+  }
 
   // ==========================================================================
   // 2. Generic DOM Helpers
@@ -448,13 +450,12 @@ function renderGroup(group) {
     { icon: "🔍", label: "Zoom",             detail: "Adjust Zoom settings (~85%)" },
   ];
 
-  function scEnsurePrintModal() {
-    if (document.getElementById("scPrintOverlay")) return;
-
-    const overlay = document.createElement("div");
-    overlay.id = "scPrintOverlay";
-    overlay.className = "maModalOverlay";
-
+  // Genuinely an OK/Cancel decision (Cancel dismisses, "Print" confirms and
+  // triggers window.print()) rather than a plain informational modal, so
+  // this maps onto MA.ui.confirm rather than MA.ui's info/okOnly mode.
+  // window.scShowPrintModal keeps its name/signature — likely invoked via
+  // inline onclick in the PHP template.
+  async function scShowPrintModal() {
     const stepsHtml = PRINT_STEPS.map(s => `
       <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.08);">
         <span style="font-size:18px;flex:0 0 24px;text-align:center;">${s.icon}</span>
@@ -464,43 +465,17 @@ function renderGroup(group) {
         </div>
       </div>`).join("");
 
-    const modal = document.createElement("section");
-    modal.className = "maModal";
-    modal.style.maxWidth = "360px";
-    modal.innerHTML = `
-      <header class="maModal__hdr">
-        <div class="maModal__titles">
-          <div class="maModal__title">Before You Print</div>
-          <div class="maModal__subtitle">Verify these print setup settings</div>
-        </div>
-      </header>
-      <div class="maModal__body" style="padding:12px 16px 4px;">
-        ${stepsHtml}
-      </div>
-      <div class="maModal__ftrActions">
-        <button class="btn btnCancel" id="scPrintCancel">Cancel</button>
-        <button class="btn btnSecondary" id="scPrintGo">🖨 Print Scorecards</button>
-      </div>`;
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-
-    document.getElementById("scPrintCancel").addEventListener("click", scHidePrintModal);
-    document.getElementById("scPrintGo").addEventListener("click", function () {
-      scHidePrintModal();
-      setTimeout(function () { try { window.print(); } catch (e) {} }, 120);
+    const go = await MA.ui.confirm({
+      title: "Before you print",
+      message: "Verify these print setup settings:",
+      detail: stepsHtml,
+      confirmLabel: "🖨 Print scorecards",
+      cancelLabel: "Cancel"
     });
-  }
 
-  function scShowPrintModal() {
-    scEnsurePrintModal();
-    const overlay = document.getElementById("scPrintOverlay");
-    if (overlay) overlay.classList.add("is-open");
-  }
-
-  function scHidePrintModal() {
-    const overlay = document.getElementById("scPrintOverlay");
-    if (overlay) overlay.classList.remove("is-open");
+    if (go) {
+      setTimeout(function () { try { window.print(); } catch (e) {} }, 120);
+    }
   }
 
   function onPrint() { try { window.print(); } catch (e) {} }

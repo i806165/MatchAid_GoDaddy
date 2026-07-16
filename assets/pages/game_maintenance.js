@@ -28,14 +28,16 @@
   const apiGM   = (file, payload) => apiCall(gmApiBase, file, payload);
   const apiGHIN = (file, payload) => apiCall(ghinApiBase, file, payload);
 
-  const setStatus = typeof MA.setStatus === "function"
-    ? MA.setStatus
-    : (msg, level) => {
-        const el = document.getElementById("chromeStatusLine");
-        if (!el) return;
-        el.className = "maChrome__status " + (level ? ("status-" + level) : "status-info");
-        el.textContent = msg || "";
-      };
+  function setStatus(msg, level) {
+    if (MA.ui && typeof MA.ui.notify === "function") MA.ui.notify(msg, level);
+    else if (typeof MA.setStatus === "function") MA.setStatus(msg, level);
+    else {
+      const elLine = document.getElementById("chromeStatusLine");
+      if (!elLine) return;
+      elLine.className = "maChrome__status " + (level ? ("status-" + level) : "status-info");
+      elLine.textContent = msg || "";
+    }
+  }
 
 
   // ---- DOM ----
@@ -193,43 +195,12 @@
     }
   }
 
-  function ensureSavingOverlay() {
-    if (document.getElementById('gmBusyOverlay')) return;
-
-    const overlay = document.createElement('div');
-    overlay.id = 'gmBusyOverlay';
-    overlay.className = 'maModalOverlay';
-
-    const modal = document.createElement('section');
-    modal.className = 'maModal';
-
-    modal.innerHTML = `
-      <header class="maModal__hdr">
-        <div class="maModal__titles">
-          <div class="maModal__title">Course Changes and Tee-Set Conversions</div>
-        </div>
-      </header>
-      <div class="maModal__body" id="gmBusyBody">
-        <p id="gmBusyMessage" style="line-height:1.6;"></p>
-      </div>
-    `;
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-  }
-
-  function showSavingOverlay(message) {
-    ensureSavingOverlay();
-    const overlay = document.getElementById('gmBusyOverlay');
-    const body = document.getElementById('gmBusyBody');
-    if (body) body.innerHTML = `<p style="line-height:1.6;">${message || 'Saving...'}</p>`;
-    if (overlay) overlay.classList.add('is-open');
-  }
-
-  function hideSavingOverlay() {
-    const overlay = document.getElementById('gmBusyOverlay');
-    if (overlay) overlay.classList.remove('is-open');
-  }
+  // The old gmBusyOverlay did double duty here: a plain busy state while
+  // saving, then (on course change) its body got swapped in-place for a
+  // results summary with stat cards and an OK button — really two different
+  // message types sharing one overlay. Split at the doSave() call site below
+  // into MA.ui.showBusy() (busy phase) and MA.ui.confirm({ okOnly: true })
+  // (results-summary phase) instead.
 
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
@@ -242,7 +213,14 @@
 
   async function onDeleteGame() {
     if (!state.ggid) return;
-    if (!confirm("Are you sure you want to delete this game? This cannot be undone.")) return;
+    const approved = await MA.ui.confirm({
+      title: "Delete game?",
+      message: "This game will be permanently deleted. This can't be undone.",
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+      danger: true
+    });
+    if (!approved) return;
 
     setBusy(true);
     try {
@@ -337,9 +315,15 @@
     }
   }
 
-  function onBack() {
+  async function onBack() {
     if (state.dirty) {
-      const ok = confirm("Discard unsaved changes and go back?");
+      const ok = await MA.ui.confirm({
+        title: "Discard changes?",
+        message: "You have unsaved changes. Discard them and go back?",
+        confirmLabel: "Discard",
+        cancelLabel: "Keep editing",
+        danger: true
+      });
       if (!ok) return;
     }
     const backRoute = (state.eventContext) ? "eventgames" : "admin";
@@ -492,7 +476,7 @@
       ? [...state.availableTags]
       : [...state.privacyGroups];
     renderBuddyTagRows();
-    document.body.classList.add("maOverlayOpen");
+    document.documentElement.classList.add("maOverlayOpen");
     el.buddyModal.classList.add("is-open");
     el.buddyModal.setAttribute("aria-hidden", "false");
   }
@@ -500,7 +484,7 @@
   function closeBuddyGroupsModal() {
     el.buddyModal.classList.remove("is-open");
     el.buddyModal.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("maOverlayOpen");
+    document.documentElement.classList.remove("maOverlayOpen");
   }
 
   function renderBuddyTagRows() {
@@ -755,7 +739,7 @@
   }
 
   function openCourseModal() {
-    document.body.classList.add("maOverlayOpen");
+    document.documentElement.classList.add("maOverlayOpen");
     el.modal.classList.add("is-open");
     el.modal.setAttribute("aria-hidden", "false");
     setCourseTab("recent");
@@ -764,7 +748,7 @@
   function closeCourseModal() {
     el.modal.classList.remove("is-open");
     el.modal.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("maOverlayOpen");
+    document.documentElement.classList.remove("maOverlayOpen");
   }
 
   function setCourseRows(rows) {
@@ -859,21 +843,22 @@
         patch.dbGames_CourseID !== (state.game?.dbGames_CourseID || "");
 
     if (courseChanging) {
-      const ok = confirm(
-        `Course changed.\n\n` +
-        `${state.playerCount} player${state.playerCount !== 1 ? "s" : ""} ` +
-        `will have their tee assignments updated to the new course.\n\n` +
-        `Players whose tees cannot be resolved automatically will be ` +
-        `flagged for manual re-selection on the Game Players page.\n\n` +
-        `Continue?`
-      );
+      const ok = await MA.ui.confirm({
+        title: "Change course?",
+        message: `${state.playerCount} player${state.playerCount !== 1 ? "s" : ""} will have their tee assignments updated to the new course. Players whose tees cannot be resolved automatically will be flagged for manual re-selection on the Game Players page.`,
+        confirmLabel: "Change course",
+        cancelLabel: "Keep current course"
+      });
       if (!ok) return;
     }
 
     setBusy(true);
-    showSavingOverlay(courseChanging
-      ? "Saving game and converting player tees — please wait..."
-      : "Saving game...");
+    MA.ui.showBusy({
+      title: "Working",
+      message: courseChanging
+        ? "Saving game and converting player tees — please wait..."
+        : "Saving game..."
+    });
 
     try {
       const res = await apiGM("saveGame.php", { mode: state.mode, patch });
@@ -898,7 +883,7 @@
         const r = res.resolutionResult;
         const hasReselect = r.reselect > 0;
 
-        const cards = `
+        const detail = `
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px;">
             <div style="background:var(--panelControlsBg); border-radius:var(--radiusSq); padding:12px 8px; text-align:center;">
               <div style="font-size:22px; font-weight:900; color:var(--ink);">${r.resolved}</div>
@@ -918,31 +903,21 @@
           ? "Please proceed to the Game Players page and apply the corrections."
           : "Please proceed to the Game Players page and verify tee-sets were converted correctly.";
 
-        const msgLines = [line1, line2, line3].filter(Boolean).map(l =>
-          `<div style="margin-top:8px;">${l}</div>`
-        ).join("");
+        const message = [line1, line2, line3, "You should also select &ldquo;Recalculate Handicaps&rdquo; from the ACTIONS menu after correcting/confirming player tee-sets."]
+          .filter(Boolean)
+          .map(l => `<div style="margin-top:8px;">${l}</div>`)
+          .join("");
 
-        const body = document.getElementById('gmBusyBody');
-        if (body) {
-          body.innerHTML = `
-            ${cards}
-            <div style="line-height:1.6; margin-bottom:14px;">
-              <div>${line1}</div>
-              ${line2 ? `<div style="margin-top:8px;">${line2}</div>` : ""}
-              <div style="margin-top:8px;">${line3}</div>
-              <div style="margin-top:8px;">You should also select &ldquo;Recalculate Handicaps&rdquo; from the ACTIONS menu after correcting/confirming player tee-sets.</div>
-            </div>
-            <div style="border-top:1px solid var(--border); padding-top:12px; display:flex; justify-content:flex-end;">
-              <button type="button" class="btn btnSecondary" id="gmBusyOkBtn">OK</button>
-            </div>`;
-
-          document.getElementById('gmBusyOkBtn')?.addEventListener('click', () => {
-            hideSavingOverlay();
-            setStatus(hasReselect ? "Course changed — review players needing manual tee selection." : "Game saved.", hasReselect ? "warn" : "success");
-          });
-        }
+        MA.ui.hideBusy();
+        await MA.ui.confirm({
+          title: "Course changes and tee-set conversions",
+          message,
+          detail,
+          okOnly: true
+        });
+        setStatus(hasReselect ? "Course changed — review players needing manual tee selection." : "Game saved.", hasReselect ? "warn" : "success");
       } else {
-        hideSavingOverlay();
+        MA.ui.hideBusy();
         setStatus("Game saved.", "success");
       }
 
@@ -950,7 +925,7 @@
     } catch (e) {
       console.error(e);
       setStatus(String(e.message || e), "error");
-      hideSavingOverlay();
+      MA.ui.hideBusy();
     } finally {
       setBusy(false);
     }
@@ -990,7 +965,11 @@
     if (state.mode !== "edit") return;
     if (state.busy) return;
 
-    const ok = confirm("Refresh handicaps for this game now?");
+    const ok = await MA.ui.confirm({
+      title: "Refresh handicaps?",
+      message: "Refresh handicaps for this game now?",
+      confirmLabel: "Refresh"
+    });
     if (!ok) return;
 
     if (MA.recalculateHandicaps) {

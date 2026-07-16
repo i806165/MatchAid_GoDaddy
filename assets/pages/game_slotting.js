@@ -187,7 +187,7 @@
     if (!ghin) return;
     const wasClean = state.dirty.size === 0;
     state.dirty.add(String(ghin));
-    if (MA.setStatus) MA.setStatus("Unsaved changes.", "warn");
+    if (MA.ui && MA.ui.notify) MA.ui.notify("Unsaved changes.", "warn");
     if (wasClean) applyChrome();
   }
 
@@ -448,7 +448,7 @@ const AutoSlotEngine = {
       } else {
         const slotPlayers = getPlayersInSlot(currentSlotId);
         if (slotPlayers.length + blockCount > 4) {
-          if (MA.setStatus) MA.setStatus("Tee Time slot is full (max 4).", "warn");
+          if (MA.ui && MA.ui.notify) MA.ui.notify("Tee Time slot is full (max 4).", "warn");
           return;
         }
       }
@@ -760,7 +760,7 @@ function promoteTeeTime(playerKey, direction) {
   const sourceAttrs = makeSlotAttrs(source.meta.time, source.meta.hole, "");
   const targetAttrs = deriveTeeTarget(source, direction);
   if (!targetAttrs) {
-    if (MA.setStatus) MA.setStatus(`No ${direction === "up" ? "earlier" : "later"} slot available.`, "info");
+    if (MA.ui && MA.ui.notify) MA.ui.notify(`No ${direction === "up" ? "earlier" : "later"} slot available.`, "info");
     return;
   }
 
@@ -768,11 +768,11 @@ function promoteTeeTime(playerKey, direction) {
 
   if (!affected) {
     moveCardByKey(source.key, targetAttrs);
-    if (MA.setStatus) MA.setStatus(`Moved group to ${targetAttrs.time}.`, "success");
+    if (MA.ui && MA.ui.notify) MA.ui.notify(`Moved group to ${targetAttrs.time}.`, "success");
   } else {
     const affectedAttrs = makeSlotAttrs(affected.meta.time, affected.meta.hole, "");
     swapCardsByKey(source.key, affected.key, sourceAttrs, affectedAttrs);
-    if (MA.setStatus) MA.setStatus(`Swapped tee times with ${direction === "up" ? "previous" : "next"} group.`, "success");
+    if (MA.ui && MA.ui.notify) MA.ui.notify(`Swapped tee times with ${direction === "up" ? "previous" : "next"} group.`, "success");
   }
 
   setFlash(source.key, affected ? affected.key : "");
@@ -787,7 +787,7 @@ function promoteShotgunUp(playerKey) {
   const sourceAttrs = makeSlotAttrs(source.meta.time, source.meta.hole, source.meta.suffix);
   const targetAttrs = deriveShotgunUpTarget(source, cards);
   if (!targetAttrs) {
-    if (MA.setStatus) MA.setStatus("No earlier slot available.", "info");
+    if (MA.ui && MA.ui.notify) MA.ui.notify("No earlier slot available.", "info");
     return;
   }
 
@@ -795,11 +795,11 @@ function promoteShotgunUp(playerKey) {
 
   if (!affected) {
     moveCardByKey(source.key, targetAttrs);
-    if (MA.setStatus) MA.setStatus(`Moved group to Hole ${targetAttrs.hole}${targetAttrs.suffix}.`, "success");
+    if (MA.ui && MA.ui.notify) MA.ui.notify(`Moved group to Hole ${targetAttrs.hole}${targetAttrs.suffix}.`, "success");
   } else {
     const affectedAttrs = makeSlotAttrs(affected.meta.time, affected.meta.hole, affected.meta.suffix);
     swapCardsByKey(source.key, affected.key, sourceAttrs, affectedAttrs);
-    if (MA.setStatus) MA.setStatus("Swapped start positions with previous group.", "success");
+    if (MA.ui && MA.ui.notify) MA.ui.notify("Swapped start positions with previous group.", "success");
   }
 
   setFlash(source.key, affected ? affected.key : "");
@@ -814,7 +814,7 @@ function promoteShotgunDown(playerKey) {
   const sourceAttrs = makeSlotAttrs(source.meta.time, source.meta.hole, source.meta.suffix);
   const targetAttrs = deriveShotgunDownTarget(source);
   if (!targetAttrs) {
-    if (MA.setStatus) MA.setStatus("No later slot available.", "info");
+    if (MA.ui && MA.ui.notify) MA.ui.notify("No later slot available.", "info");
     return;
   }
 
@@ -822,7 +822,7 @@ function promoteShotgunDown(playerKey) {
 
   if (!affected) {
     moveCardByKey(source.key, targetAttrs);
-    if (MA.setStatus) MA.setStatus(`Moved group to Hole ${targetAttrs.hole}${targetAttrs.suffix}.`, "success");
+    if (MA.ui && MA.ui.notify) MA.ui.notify(`Moved group to Hole ${targetAttrs.hole}${targetAttrs.suffix}.`, "success");
     setFlash(source.key, "");
     render();
     return;
@@ -831,12 +831,12 @@ function promoteShotgunDown(playerKey) {
   // Downward shotgun rule: moving card takes target slot; displaced card moves to next open suffix on same hole.
   const displaced = displaceCardOnHole(cards, affected.key, targetAttrs);
   if (!displaced) {
-    if (MA.setStatus) MA.setStatus("No open suffix available to displace the affected group.", "warn");
+    if (MA.ui && MA.ui.notify) MA.ui.notify("No open suffix available to displace the affected group.", "warn");
     return;
   }
 
   moveCardByKey(source.key, targetAttrs);
-  if (MA.setStatus) MA.setStatus(`Moved group to Hole ${targetAttrs.hole}${targetAttrs.suffix}.`, "success");
+  if (MA.ui && MA.ui.notify) MA.ui.notify(`Moved group to Hole ${targetAttrs.hole}${targetAttrs.suffix}.`, "success");
   setFlash(source.key, affected.key);
   render();
 }
@@ -1208,7 +1208,7 @@ function applyAutoSlotGroups(slots) {
   });
 
   render();
-  if (MA.setStatus) MA.setStatus(`Auto-slotted ${slots.length} slots. Review and Save when ready.`, "success");
+  if (MA.ui && MA.ui.notify) MA.ui.notify(`Auto-slotted ${slots.length} slots. Review and Save when ready.`, "success");
 }
 
 function openAutoSlotModal() {
@@ -1319,13 +1319,20 @@ function openAutoSlotModal() {
     }, { once: false });
 }
 
-function onResetChanges() {
+async function onResetChanges() {
   if (state.dirty.size === 0) {
-    if (MA.setStatus) MA.setStatus("No unsaved changes to reset.", "info");
+    if (MA.ui && MA.ui.notify) MA.ui.notify("No unsaved changes to reset.", "info");
     return;
   }
 
-  if (confirm("Discard all unsaved changes and revert to last save?")) {
+  const approved = await MA.ui.confirm({
+    title: "Discard changes?",
+    message: "This reverts all slot assignments to the last save.",
+    confirmLabel: "Discard",
+    cancelLabel: "Keep editing",
+    danger: true
+  });
+  if (approved) {
     window.location.reload();
   }
 }
@@ -1334,7 +1341,7 @@ function onResetChanges() {
   async function doSave() {
     if (state.busy || state.dirty.size === 0) return;
     setBusy(true);
-    if (MA.setStatus) MA.setStatus("Saving slot assignments.", "info");
+    if (MA.ui && MA.ui.notify) MA.ui.notify("Saving slot assignments.", "info");
 
     const payload = {
       ggid: state.ggid,
@@ -1354,14 +1361,14 @@ function onResetChanges() {
       const res = await MA.postJson(MA.routes?.apiSave || "/api/game_pairings/savePairings.php", payload);
       if (res.ok) {
         state.dirty.clear();
-        if (MA.setStatus) MA.setStatus("Saved successfully.", "success");
+        if (MA.ui && MA.ui.notify) MA.ui.notify("Saved successfully.", "success");
         applyChrome();
         render();
       } else {
         throw new Error(res.message || "Save failed.");
       }
     } catch (e) {
-      if (MA.setStatus) MA.setStatus(e.message || "Save failed.", "danger");
+      if (MA.ui && MA.ui.notify) MA.ui.notify(e.message || "Save failed.", "danger");
     } finally {
       setBusy(false);
     }
@@ -1526,7 +1533,7 @@ function onResetChanges() {
 
     const msg = "WARNING: Some/All matches not set. Return to Pairings page and set Matches before setting tee times."
 
-    if (MA.setStatus) MA.setStatus(msg, "warn");
+    if (MA.ui && MA.ui.notify) MA.ui.notify(msg, "warn");
   }
 
   function applyChrome() {
