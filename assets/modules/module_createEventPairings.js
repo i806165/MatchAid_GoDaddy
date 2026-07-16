@@ -59,7 +59,8 @@
   }
 
   function setStatus(msg, level) {
-    if (typeof MA.setStatus === "function") MA.setStatus(msg, level || "info");
+    if (MA.ui && typeof MA.ui.notify === "function") MA.ui.notify(msg, level || "info");
+    else if (typeof MA.setStatus === "function") MA.setStatus(msg, level || "info");
   }
 
   async function postJson(url, payload) {
@@ -542,9 +543,16 @@
       });
 
       // Unpair group
-      card.querySelector("[data-action='unpairGroup']")?.addEventListener("click", e => {
+      card.querySelector("[data-action='unpairGroup']")?.addEventListener("click", async e => {
         e.stopPropagation();
-        if (confirm(`Remove all players from Pairing ${pid}?`)) unpairGroup(pid);
+        const approved = await MA.ui.confirm({
+          title: "Remove all players?",
+          message: `This removes every player currently assigned to Pairing ${pid}.`,
+          confirmLabel: "Remove all",
+          cancelLabel: "Cancel",
+          danger: true
+        });
+        if (approved) unpairGroup(pid);
       });
 
       // Remove player
@@ -769,42 +777,15 @@
     }
   }
 
-  const BUSY_ID = "cepBusyOverlay";
-
-  function _ensureBusyOverlay() {
-    if (document.getElementById(BUSY_ID)) return;
-
-    const overlay = document.createElement("div");
-    overlay.id = BUSY_ID;
-    overlay.className = "maModalOverlay";
-
-    const modal = document.createElement("section");
-    modal.className = "maModal";
-    modal.innerHTML = `
-      <header class="maModal__hdr">
-        <div class="maModal__titles">
-          <div class="maModal__title">Event Pairings</div>
-        </div>
-      </header>
-      <div class="maModal__body" id="cepBusyBody">
-        <p id="cepBusyMessage" style="line-height:1.6;"></p>
-      </div>`;
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-  }
-
+  // Delegates to MA.ui — stacks on top of this module's own open pairing
+  // editor the same way the old cepBusyOverlay did, just through the
+  // shared implementation instead of a duplicate one.
   function _showBusy(message) {
-    _ensureBusyOverlay();
-    const overlay = document.getElementById(BUSY_ID);
-    const body    = document.getElementById("cepBusyBody");
-    if (body) body.innerHTML = `<p style="line-height:1.6;">${message || "Processing — please wait..."}</p>`;
-    if (overlay) overlay.classList.add("is-open");
+    MA.ui.showBusy({ title: "Event Pairings", message: message || "Processing — please wait..." });
   }
 
   function _hideBusy() {
-    const overlay = document.getElementById(BUSY_ID);
-    if (overlay) overlay.classList.remove("is-open");
+    MA.ui.hideBusy();
   }
 
   // ── Mobile tray toggle ───────────────────────────────────────────────────────
@@ -939,10 +920,17 @@
     return overlay;
   }
 
-  function confirmClose() {
+  async function confirmClose() {
     if (_state?.busy) return;
     if (_state?.dirty) {
-      if (!confirm("Discard unsaved pairing changes?")) return;
+      const approved = await MA.ui.confirm({
+        title: "Discard changes?",
+        message: "You have unsaved pairing changes. Discard them and close?",
+        confirmLabel: "Discard",
+        cancelLabel: "Keep editing",
+        danger: true
+      });
+      if (!approved) return;
     }
     close();
   }

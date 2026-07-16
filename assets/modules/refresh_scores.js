@@ -24,39 +24,14 @@
 
   const MA = global.MA = global.MA || {};
 
-  function ensureModal() {
-    let overlay = document.getElementById("maRecalcModal");
-    if (!overlay) {
-      overlay = document.createElement("div");
-      overlay.id = "maRecalcModal";
-      overlay.className = "maModalOverlay";
-      overlay.innerHTML = `
-        <section class="maModal" role="dialog" aria-modal="true" aria-labelledby="maRecalcTitle">
-          <header class="maModal__hdr">
-            <div id="maRecalcTitle" class="maModal__title">Working</div>
-          </header>
-          <div class="maModal__body">
-            <div id="maRecalcMsg" style="text-align:center; padding:10px;">Processing...</div>
-          </div>
-        </section>
-      `;
-      document.body.appendChild(overlay);
-    }
-    return overlay;
-  }
-
+  // Delegates to MA.ui (ma_shared.js) instead of building its own overlay —
+  // same shell recalculate_handicaps.js now uses.
   function showModal(msg) {
-    const el = ensureModal();
-    const txt = document.getElementById("maRecalcMsg");
-    if (txt) txt.textContent = msg || "Processing...";
-    el.classList.add("is-open");
-    document.body.classList.add("maOverlayOpen");
+    MA.ui.showBusy({ title: "Working", message: msg || "Processing..." });
   }
 
   function hideModal() {
-    const el = document.getElementById("maRecalcModal");
-    if (el) el.classList.remove("is-open");
-    document.body.classList.remove("maOverlayOpen");
+    MA.ui.hideBusy();
   }
 
   function parseScores(raw) {

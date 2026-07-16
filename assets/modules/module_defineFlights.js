@@ -271,14 +271,14 @@
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
-  const NOTICE_ID = "dfNotice";
+  const NOTICE_ID = "dfNoticeSlot";
 
   function _renderModal() {
     const expanded = _isExpanded();
     return `
       <section class="maModal" role="dialog" aria-modal="true" aria-label="Define Flights">
         ${_renderHeader()}
-        ${_renderNoticeHtml()}
+        <div id="${NOTICE_ID}"></div>
         ${_renderConfigStrip()}
         <div class="maModal__body${expanded ? "" : " is-collapsed"}" id="dfRoster"
              style="padding:0; ${expanded ? "" : "display:none;"}">
@@ -300,35 +300,19 @@
   // overlay — the user can never see it while the modal is open. Every
   // save-failure/success/validation message inside this modal must go
   // through _showModalNotice() instead, never MA.setStatus() directly.
-  // Mirrors module_defineTeams.js's identical helper.
-  function _renderNoticeHtml() {
-    return `<div id="${NOTICE_ID}" class="maModalNotice" role="alert" aria-live="assertive"
-                 style="display:none; margin:10px 16px 0; padding:10px 12px; border-radius:6px; font-size:12.5px; font-weight:600; line-height:1.4;"></div>`;
-  }
-
-  function _noticeLevelStyle(level) {
-    const map = {
-      danger:  { bg: "rgba(211,47,47,.10)",  border: "#d32f2f", color: "#b71c1c" },
-      warn:    { bg: "rgba(237,158,0,.12)",  border: "#ed9e00", color: "#8a6100" },
-      success: { bg: "rgba(46,125,50,.10)",  border: "#2e7d32", color: "#1b5e20" },
-    };
-    return map[level] || map.warn;
-  }
-
+  // Delegates to MA.ui.showModalNotice/hideModalNotice (ma_shared.js) —
+  // same tinted-band component module_defineTeams.js and
+  // module_defineHandicapSettings.js now use too, instead of three copies
+  // of near-identical inline-styled markup.
   function _showModalNotice(message, level) {
-    const el = document.getElementById(NOTICE_ID);
-    if (!el) { MA.setStatus?.(message, level); return; }
-    const s = _noticeLevelStyle(level);
-    el.textContent = message;
-    el.style.display = "block";
-    el.style.background = s.bg;
-    el.style.borderLeft = `3px solid ${s.border}`;
-    el.style.color = s.color;
+    const slot = document.getElementById(NOTICE_ID);
+    if (!slot) { MA.setStatus?.(message, level); return; }
+    MA.ui.showModalNotice(slot, { message, tone: level });
   }
 
   function _hideModalNotice() {
-    const el = document.getElementById(NOTICE_ID);
-    if (el) el.style.display = "none";
+    const slot = document.getElementById(NOTICE_ID);
+    if (slot) MA.ui.hideModalNotice(slot);
   }
 
   function _renderHeader() {
@@ -703,12 +687,16 @@
   // Named "Clear", not "Reset" — this collapses every player into one
   // flight permanently; there's no prior/default state it's reverting to,
   // so "reset" would overstate an undo-ability that doesn't exist.
-  function _confirmClearFlights() {
+  async function _confirmClearFlights() {
     if (_flights.length === MIN_FLIGHTS) return; // already a single flight — nothing to clear
-    if (!window.confirm(
-      `This will clear all flights and move all ${_players.length} player${_players.length !== 1 ? "s" : ""} into one flight. ` +
-      `This won't take effect until you click Apply.`
-    )) return;
+    const approved = await MA.ui.confirm({
+      title: "Clear all flights?",
+      message: `This moves all ${_players.length} player${_players.length !== 1 ? "s" : ""} into one flight. This won't take effect until you click Apply.`,
+      confirmLabel: "Clear flights",
+      cancelLabel: "Cancel",
+      danger: true
+    });
+    if (!approved) return;
     _clearFlights();
   }
 
@@ -843,11 +831,13 @@
       const assignRes = await MA.postJson(apiPath("saveFlightAssignments.php"), { assignments });
       if (!assignRes?.ok) { _showModalNotice(assignRes?.message || "Unable to save flight assignments.", "danger"); return; }
 
-      // Modal closes right after this in the clean path — see
-      // module_defineTeams.js's identical comment for why a page-level
-      // toast is correct here specifically, unlike every other message
-      // in this function.
-      MA.setStatus("Flights saved.", "success");
+      // NOTE: this does NOT always run right before the modal closes —
+      // a few lines down, if hasIssue is true, the modal stays open for
+      // _showReconciledNotice() instead of closing. MA.ui.notify handles
+      // both cases correctly (toast if still open, chrome line if not);
+      // MA.setStatus() directly would have silently gone to the hidden
+      // chrome line in the hasIssue path.
+      MA.ui.notify("Flights saved.", "success");
 
       const reconcileSummary = assignRes.payload?.reconcile || null;   // event-shaped
       const reconciled       = assignRes.payload?.reconciled || [];    // round-shaped
@@ -880,76 +870,21 @@
     } finally { _busy = false; _hideBusy(); }
   }
 
-  const BUSY_ID = "dfBusyOverlay";
-
-  function _ensureBusyOverlay() {
-    if (document.getElementById(BUSY_ID)) return;
-
-    const overlay = document.createElement("div");
-    overlay.id = BUSY_ID;
-    overlay.className = "maModalOverlay";
-
-    const modal = document.createElement("section");
-    modal.className = "maModal";
-    modal.innerHTML = `
-      <header class="maModal__hdr">
-        <div class="maModal__titles">
-          <div class="maModal__title">Define Flights</div>
-        </div>
-      </header>
-      <div class="maModal__body" id="dfBusyBody">
-        <p id="dfBusyMessage" style="line-height:1.6;"></p>
-      </div>`;
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-  }
-
+  // Delegates to MA.ui — stacks on top of this module's own open modal the
+  // same way the old dfBusyOverlay did.
   function _showBusy(message) {
-    _ensureBusyOverlay();
-    const overlay = document.getElementById(BUSY_ID);
-    const body    = document.getElementById("dfBusyBody");
-    if (body) body.innerHTML = `<p style="line-height:1.6;">${message || "Processing — please wait..."}</p>`;
-    if (overlay) overlay.classList.add("is-open");
+    MA.ui.showBusy({ title: "Define Flights", message: message || "Processing — please wait..." });
   }
 
   function _hideBusy() {
-    const overlay = document.getElementById(BUSY_ID);
-    if (overlay) overlay.classList.remove("is-open");
+    MA.ui.hideBusy();
   }
 
-  const RECONCILED_ID = "dfReconciledOverlay";
-
   function _showReconciledNotice() {
-    let overlay = document.getElementById(RECONCILED_ID);
-    if (!overlay) {
-      overlay = document.createElement("div");
-      overlay.id = RECONCILED_ID;
-      overlay.className = "maModalOverlay";
-      document.body.appendChild(overlay);
-    }
-    overlay.innerHTML = `
-      <section class="maModal" role="dialog" aria-modal="true" aria-labelledby="dfReconciledTitle">
-        <header class="maModal__hdr">
-          <div class="maModal__titles">
-            <div id="dfReconciledTitle" class="maModal__title">Pairings Affected</div>
-          </div>
-        </header>
-        <div class="maModal__body">
-          <p style="line-height:1.6;">
-            This change affected one or more existing pairings. Please revisit the Pairings page to review and fix them.
-          </p>
-        </div>
-        <footer class="maModal__ftr" style="justify-content:flex-end;">
-          <div class="maModal__ftrActions">
-            <button type="button" class="maFtrBtn maFtrBtn--save" id="dfReconciledOk">OK</button>
-          </div>
-        </footer>
-      </section>`;
-    overlay.className = "maModalOverlay is-open";
-    overlay.querySelector("#dfReconciledOk")?.addEventListener("click", () => {
-      overlay.className = "maModalOverlay";
-      overlay.innerHTML = "";
+    MA.ui.confirm({
+      title: "Pairings affected",
+      message: "This change affected one or more existing pairings. Please revisit the Pairings page to review and fix them.",
+      okOnly: true
     });
   }
 

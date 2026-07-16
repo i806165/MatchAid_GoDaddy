@@ -225,7 +225,7 @@
     _busy = false;
   };
 
-  const NOTICE_ID = "mtNotice";
+  const NOTICE_ID = "mtNoticeSlot";
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -233,7 +233,7 @@
     return `
       <section class="maModal" role="dialog" aria-modal="true" aria-label="Manage Teams">
         ${_renderHeader()}
-        ${_renderNoticeHtml()}
+        <div id="${NOTICE_ID}"></div>
         ${hasTeams() ? _renderStateB() : _renderStateA()}
       </section>`;
   }
@@ -243,38 +243,23 @@
   // overlay — the user can never see it while the modal is open. Every
   // save-failure/success/validation message inside this modal must go
   // through _showModalNotice() instead, never MA.setStatus() directly.
-  function _renderNoticeHtml() {
-    return `<div id="${NOTICE_ID}" class="maModalNotice" role="alert" aria-live="assertive"
-                 style="display:none; margin:10px 16px 0; padding:10px 12px; border-radius:6px; font-size:12.5px; font-weight:600; line-height:1.4;"></div>`;
-  }
-
-  function _noticeLevelStyle(level) {
-    const map = {
-      danger:  { bg: "rgba(211,47,47,.10)",  border: "#d32f2f", color: "#b71c1c" },
-      warn:    { bg: "rgba(237,158,0,.12)",  border: "#ed9e00", color: "#8a6100" },
-      success: { bg: "rgba(46,125,50,.10)",  border: "#2e7d32", color: "#1b5e20" },
-    };
-    return map[level] || map.warn;
-  }
-
+  // Delegates to MA.ui.showModalNotice/hideModalNotice (ma_shared.js) —
+  // same component module_defineFlights.js and
+  // module_defineHandicapSettings.js now use too.
+  //
   // Every caller in this module should use this — never MA.setStatus()
   // directly — for anything the user needs to see while the modal is
   // open. Falls back to MA.setStatus() only defensively, if somehow
   // called with no modal on screen (shouldn't happen in practice).
   function _showModalNotice(message, level) {
-    const el = document.getElementById(NOTICE_ID);
-    if (!el) { MA.setStatus?.(message, level); return; }
-    const s = _noticeLevelStyle(level);
-    el.textContent = message;
-    el.style.display = "block";
-    el.style.background = s.bg;
-    el.style.borderLeft = `3px solid ${s.border}`;
-    el.style.color = s.color;
+    const slot = document.getElementById(NOTICE_ID);
+    if (!slot) { MA.setStatus?.(message, level); return; }
+    MA.ui.showModalNotice(slot, { message, tone: level });
   }
 
   function _hideModalNotice() {
-    const el = document.getElementById(NOTICE_ID);
-    if (el) el.style.display = "none";
+    const slot = document.getElementById(NOTICE_ID);
+    if (slot) MA.ui.hideModalNotice(slot);
   }
 
   function _renderHeader() {
@@ -791,13 +776,13 @@
       const assignRes = await MA.postJson(apiPath("saveTeamAssignments.php"), { assignments });
       if (!assignRes?.ok) { _showModalNotice(assignRes?.message || "Unable to save assignments.", "danger"); return; }
 
-      // Modal closes right after this in the clean path (below), so a
-      // page-level toast is correct here, unlike every other message in
-      // this function — there's no modal left on screen for it to hide
-      // behind. In the hasIssue+reconciled path the modal stays open via
-      // _showReconciledNotice() instead; this toast still fires but is a
-      // secondary concern to the reconciliation notice itself.
-      MA.setStatus("Teams saved.", "success");
+      // NOTE: this does NOT always run right before the modal closes —
+      // in the hasIssue+reconciled path below, the modal stays open for
+      // _showReconciledNotice() instead of closing. A direct MA.setStatus()
+      // call here wouldn't just be "secondary" in that path, it would be
+      // invisible (posted to the hidden chrome line behind the still-open
+      // modal). MA.ui.notify handles both cases correctly.
+      MA.ui.notify("Teams saved.", "success");
 
       const reconcileSummary = assignRes.payload?.reconcile || null;   // event-shaped
       const reconciled       = assignRes.payload?.reconciled || [];    // round-shaped
@@ -843,76 +828,21 @@
     } finally { _busy = false; _hideBusy(); }
   }
 
-  const BUSY_ID = "mtBusyOverlay";
-
-  function _ensureBusyOverlay() {
-    if (document.getElementById(BUSY_ID)) return;
-
-    const overlay = document.createElement("div");
-    overlay.id = BUSY_ID;
-    overlay.className = "maModalOverlay";
-
-    const modal = document.createElement("section");
-    modal.className = "maModal";
-    modal.innerHTML = `
-      <header class="maModal__hdr">
-        <div class="maModal__titles">
-          <div class="maModal__title">Manage Teams</div>
-        </div>
-      </header>
-      <div class="maModal__body" id="mtBusyBody">
-        <p id="mtBusyMessage" style="line-height:1.6;"></p>
-      </div>`;
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-  }
-
+  // Delegates to MA.ui — stacks on top of this module's own open modal the
+  // same way the old mtBusyOverlay did.
   function _showBusy(message) {
-    _ensureBusyOverlay();
-    const overlay = document.getElementById(BUSY_ID);
-    const body    = document.getElementById("mtBusyBody");
-    if (body) body.innerHTML = `<p style="line-height:1.6;">${message || "Processing — please wait..."}</p>`;
-    if (overlay) overlay.classList.add("is-open");
+    MA.ui.showBusy({ title: "Manage Teams", message: message || "Processing — please wait..." });
   }
 
   function _hideBusy() {
-    const overlay = document.getElementById(BUSY_ID);
-    if (overlay) overlay.classList.remove("is-open");
+    MA.ui.hideBusy();
   }
 
-  const RECONCILED_ID = "mtReconciledOverlay";
-
   function _showReconciledNotice() {
-    let overlay = document.getElementById(RECONCILED_ID);
-    if (!overlay) {
-      overlay = document.createElement("div");
-      overlay.id = RECONCILED_ID;
-      overlay.className = "maModalOverlay";
-      document.body.appendChild(overlay);
-    }
-    overlay.innerHTML = `
-      <section class="maModal" role="dialog" aria-modal="true" aria-labelledby="mtReconciledTitle">
-        <header class="maModal__hdr">
-          <div class="maModal__titles">
-            <div id="mtReconciledTitle" class="maModal__title">Pairings Affected</div>
-          </div>
-        </header>
-        <div class="maModal__body">
-          <p style="line-height:1.6;">
-            This change affected one or more existing pairings. Please revisit the Pairings page to review and fix them.
-          </p>
-        </div>
-        <footer class="maModal__ftr" style="justify-content:flex-end;">
-          <div class="maModal__ftrActions">
-            <button type="button" class="maFtrBtn maFtrBtn--save" id="mtReconciledOk">OK</button>
-          </div>
-        </footer>
-      </section>`;
-    overlay.className = "maModalOverlay is-open";
-    overlay.querySelector("#mtReconciledOk")?.addEventListener("click", () => {
-      overlay.className = "maModalOverlay";
-      overlay.innerHTML = "";
+    MA.ui.confirm({
+      title: "Pairings affected",
+      message: "This change affected one or more existing pairings. Please revisit the Pairings page to review and fix them.",
+      okOnly: true
     });
   }
 

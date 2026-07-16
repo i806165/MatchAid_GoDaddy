@@ -148,13 +148,13 @@
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
-  const NOTICE_ID = "dhNotice";
+  const NOTICE_ID = "dhNoticeSlot";
 
   function _renderModal() {
     return `
       <section class="maModal" role="dialog" aria-modal="true" aria-label="Define Handicaps">
         ${_renderHeader()}
-        ${_renderNoticeHtml()}
+        <div id="${NOTICE_ID}"></div>
         <div class="maModal__body">
           ${_renderApplyToggle()}
           <div style="${_opts.showModeToggle ? "border-top:1px solid var(--border); margin-top:12px; padding-top:12px;" : ""}">
@@ -174,36 +174,18 @@
   // to a page-chrome element that sits BEHIND this modal's full-screen
   // overlay — the user can never see it while the modal is open. Every
   // save-failure message inside this modal must go through
-  // _showModalNotice() instead, never MA.setStatus() directly. Mirrors
-  // module_defineTeams.js's / module_defineFlights.js's identical helper.
-  function _renderNoticeHtml() {
-    return `<div id="${NOTICE_ID}" class="maModalNotice" role="alert" aria-live="assertive"
-                 style="display:none; margin:10px 16px 0; padding:10px 12px; border-radius:6px; font-size:12.5px; font-weight:600; line-height:1.4;"></div>`;
-  }
-
-  function _noticeLevelStyle(level) {
-    const map = {
-      danger:  { bg: "rgba(211,47,47,.10)",  border: "#d32f2f", color: "#b71c1c" },
-      warn:    { bg: "rgba(237,158,0,.12)",  border: "#ed9e00", color: "#8a6100" },
-      success: { bg: "rgba(46,125,50,.10)",  border: "#2e7d32", color: "#1b5e20" },
-    };
-    return map[level] || map.warn;
-  }
-
+  // _showModalNotice() instead, never MA.setStatus() directly. Delegates
+  // to MA.ui.showModalNotice/hideModalNotice (ma_shared.js) — same
+  // component module_defineTeams.js and module_defineFlights.js now use.
   function _showModalNotice(message, level) {
-    const el = document.getElementById(NOTICE_ID);
-    if (!el) { MA.setStatus?.(message, level); return; }
-    const s = _noticeLevelStyle(level);
-    el.textContent = message;
-    el.style.display = "block";
-    el.style.background = s.bg;
-    el.style.borderLeft = `3px solid ${s.border}`;
-    el.style.color = s.color;
+    const slot = document.getElementById(NOTICE_ID);
+    if (!slot) { MA.setStatus?.(message, level); return; }
+    MA.ui.showModalNotice(slot, { message, tone: level });
   }
 
   function _hideModalNotice() {
-    const el = document.getElementById(NOTICE_ID);
-    if (el) el.style.display = "none";
+    const slot = document.getElementById(NOTICE_ID);
+    if (slot) MA.ui.hideModalNotice(slot);
   }
 
   function _renderHeader() {
@@ -372,10 +354,12 @@
       _effDate     = cfg.effDate     || _effDate;
       if (_opts.showModeToggle) _mode = res.payload?.mode || _mode;
 
-      // Modal closes right after this — see module_defineTeams.js's
-      // identical comment for why a page-level toast is correct here
-      // specifically, unlike the failure/error paths above and below.
-      MA.setStatus("Handicap settings saved.", "success");
+      // Unlike module_defineTeams.js/module_defineFlights.js's identical
+      // call, this one really is always followed by an unconditional
+      // close() below — this module has no reconcile-notice branch that
+      // keeps it open. Swapped to MA.ui.notify anyway for consistency,
+      // not because MA.setStatus was wrong here.
+      MA.ui.notify("Handicap settings saved.", "success");
       if (typeof _opts.onApply === "function") {
         _opts.onApply({
           method: _method,
@@ -392,42 +376,14 @@
     } finally { _busy = false; _hideBusy(); }
   }
 
-  const BUSY_ID = "dhBusyOverlay";
-
-  function _ensureBusyOverlay() {
-    if (document.getElementById(BUSY_ID)) return;
-
-    const overlay = document.createElement("div");
-    overlay.id = BUSY_ID;
-    overlay.className = "maModalOverlay";
-
-    const modal = document.createElement("section");
-    modal.className = "maModal";
-    modal.innerHTML = `
-      <header class="maModal__hdr">
-        <div class="maModal__titles">
-          <div class="maModal__title">Define Handicaps</div>
-        </div>
-      </header>
-      <div class="maModal__body" id="dhBusyBody">
-        <p id="dhBusyMessage" style="line-height:1.6;"></p>
-      </div>`;
-
-    overlay.appendChild(modal);
-    document.body.appendChild(overlay);
-  }
-
+  // Delegates to MA.ui — stacks on top of this module's own open modal the
+  // same way the old dhBusyOverlay did.
   function _showBusy(message) {
-    _ensureBusyOverlay();
-    const overlay = document.getElementById(BUSY_ID);
-    const body    = document.getElementById("dhBusyBody");
-    if (body) body.innerHTML = `<p style="line-height:1.6;">${message || "Processing — please wait..."}</p>`;
-    if (overlay) overlay.classList.add("is-open");
+    MA.ui.showBusy({ title: "Define Handicaps", message: message || "Processing — please wait..." });
   }
 
   function _hideBusy() {
-    const overlay = document.getElementById(BUSY_ID);
-    if (overlay) overlay.classList.remove("is-open");
+    MA.ui.hideBusy();
   }
 
   window.MA = MA;
