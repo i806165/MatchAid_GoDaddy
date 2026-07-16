@@ -504,6 +504,7 @@
     return `
       <footer class="maModal__ftr" style="justify-content:flex-end;">
         <div class="maModal__ftrActions">
+          <button type="button" class="maFtrBtn maFtrBtn--cancel" id="apBtnCancel" style="display:${_mode === "setup" ? "" : "none"};">Cancel</button>
           <button type="button" class="maFtrBtn maFtrBtn--cancel" id="apBtnRetry" style="display:${_mode === "review" ? "" : "none"};">Retry</button>
           <button type="button" class="maFtrBtn maFtrBtn--save" id="apBtnRun" style="display:${_mode === "setup" ? "" : "none"};" ${runDisabled ? "disabled" : ""}>Run</button>
           <button type="button" class="maFtrBtn maFtrBtn--save" id="apBtnApply" style="display:${_mode === "review" ? "" : "none"};">Apply</button>
@@ -637,6 +638,7 @@
     overlay.querySelector("#apOutcome")?.addEventListener("change", (e) => { _outcome = e.target.value; });
     overlay.querySelector("#apCombo")?.addEventListener("change", (e) => { _selComboIdx = Number(e.target.value); });
 
+    overlay.querySelector("#apBtnCancel")?.addEventListener("click", () => { if (!_busy) MA.runAutoPair.close(); });
     overlay.querySelector("#apBtnRun")?.addEventListener("click", _onRun);
     overlay.querySelector("#apBtnRetry")?.addEventListener("click", _onRetry);
     overlay.querySelector("#apBtnApply")?.addEventListener("click", _onApply);
@@ -751,6 +753,17 @@
     _pool = _pool.filter(p => !appliedGhins.has(p.playerGHIN));
 
     _previewGroups = [];
+
+    // Nothing left to pair — close automatically rather than reopening
+    // setup mode on an empty pool. Same threshold (_pool.length === 0)
+    // this module already uses elsewhere to disable the Run button
+    // (_renderFooter()'s runDisabled), not a new/different definition of
+    // "nothing left." Only reset-and-stay-open when players remain.
+    if (_pool.length === 0) {
+      MA.runAutoPair.close();
+      return;
+    }
+
     _mode = "setup";
     _resetScopeDefaults();
 
