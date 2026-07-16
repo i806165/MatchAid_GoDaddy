@@ -982,6 +982,26 @@
     return officialMetricIsGross() ? (row.grossDiffDisplay ?? '—') : (row.netDiffDisplay ?? '—');
   }
 
+  // Front/back companions to lbPairFieldKpiDisplay() — always shown for
+  // PairField (no scoringSegments toggle the way PairPair has one), reusing
+  // the same segment accessors PairPair already relies on since the row
+  // shapes now agree (grossDiffSegments/netDiffSegments, grossPoints/
+  // netPoints, grossSkins/netSkins). segNumDisplay/segCellDisplay already
+  // render '—' for a 9-hole round's invalid half, so no extra gating needed
+  // here beyond picking the right accessor for the active basis.
+  function lbPairFieldFrontBack(row) {
+    if (isSkinsBasis()) {
+      const seg = skinsSegments(row);
+      return { front: seg.front, back: seg.back };
+    }
+    if (isPointsBasis()) {
+      const seg = pointsSegments(row);
+      return { front: seg.front, back: seg.back };
+    }
+    const seg = strokeDiffSegments(row);
+    return { front: seg.front, back: seg.back };
+  }
+
   // Distinct from the existing pairFieldPointsDisplay() above, which shows
   // the game's own Points-basis score — this shows dbGames_PlacementPoints
   // ranking points, a different concept that happens to share the word
@@ -1000,6 +1020,8 @@
         <span class="maListRow__col--muted lbColRank">#</span>
         <span class="maListRow__col--muted lbColName">Pairing</span>
         <span class="maListRow__col--muted lbColThru">Thru</span>
+        <span class="maListRow__col--muted lbColThru">Front</span>
+        <span class="maListRow__col--muted lbColThru">Back</span>
         <span class="maListRow__col--muted lbColKpi">${esc(officialMetricLabel())}</span>
         <span class="maListRow__col--muted lbColPts">${esc(pointsColumnLabel(activePlacementCategoryKey()))}</span>
       </div>
@@ -1012,17 +1034,23 @@
       // service_ScoreSummary.php's own comment on this) — sorting within
       // the group by that same field-wide rank keeps display order
       // consistent with what the number itself means; it will not always
-      // read 1..N within a single flight section, by design.
+      // read 1..N within a single flight section, by design. Rows with a
+      // null rank (no declared scores at all) sort after every ranked row.
       const sorted = group.items.slice().sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999));
-      const body = sorted.map((row) => `
+      const body = sorted.map((row) => {
+        const fb = lbPairFieldFrontBack(row);
+        return `
         <div class="maListRow maListRow--static ${row.isLeader ? 'is-leading' : ''}">
-          <span class="maListRow__col lbColRank">${esc(row.rank ?? '')}</span>
+          <span class="maListRow__col lbColRank">${esc(row.rank ?? '—')}</span>
           <span class="maListRow__col lbColName">${lbTeamDotHtml(row.teamColor)}${esc(row.pairingLabel || '')}</span>
           <span class="maListRow__col--muted lbColThru">${esc(formatThru(row.thru))}</span>
+          <span class="maListRow__col--muted lbColThru">${esc(fb.front)}</span>
+          <span class="maListRow__col--muted lbColThru">${esc(fb.back)}</span>
           <span class="maListRow__col lbColKpi">${esc(lbPairFieldKpiDisplay(row))}</span>
           <span class="maListRow__col--muted lbColPts">${esc(lbPlacementPointsDisplay(row))}</span>
         </div>
-      `).join('');
+      `;
+      }).join('');
       return lbRenderFlightSection(group, header, body);
     }).join('');
   }
@@ -1111,6 +1139,8 @@
       <div class="maListRow maListRow--static lbHeaderRow">
         <span class="maListRow__col--muted lbColName">Player</span>
         <span class="maListRow__col--muted lbColThru">Thru</span>
+        <span class="maListRow__col--muted lbColThru">Front</span>
+        <span class="maListRow__col--muted lbColThru">Back</span>
         <span class="maListRow__col--muted lbColKpi">${esc(kpiLabel)}</span>
         <span class="maListRow__col--muted lbColPts">${esc(ptsLabel)}</span>
       </div>
@@ -1123,11 +1153,14 @@
       const body = sorted.map((p) => {
         const kpiDisplay = (kpiField === 'gross') ? p.grossDiffDisplay : p.netDiffDisplay;
         const ptsValue = (kpiField === 'gross') ? p.placementPointsGross : p.placementPointsNet;
+        const segs = (kpiField === 'gross') ? p.grossDiffSegments : p.netDiffSegments;
 
         return `
           <div class="maListRow maListRow--static">
             <span class="maListRow__col lbColName" data-lb-menu data-sort-key="playerLastName" data-display-value="${esc(p.playerName || '')}">${lbTeamDotHtml(p.teamColor)}${esc(p.playerName || '')}</span>
             <span class="maListRow__col--muted lbColThru" data-lb-menu data-sort-key="thru" data-display-value="${esc(formatThru(p.thru))}">${esc(formatThru(p.thru))}</span>
+            <span class="maListRow__col--muted lbColThru">${esc(segCellDisplay(segs?.front))}</span>
+            <span class="maListRow__col--muted lbColThru">${esc(segCellDisplay(segs?.back))}</span>
             <span class="maListRow__col lbColKpi" data-lb-menu data-sort-key="kpi" data-display-value="${esc(kpiDisplay ?? '—')}">${esc(kpiDisplay ?? '—')}</span>
             <span class="maListRow__col--muted lbColPts">${esc(fmtNum(ptsValue))}</span>
           </div>

@@ -142,6 +142,11 @@ final class ServiceScoreSummary
         // hole range, computed once here, not per spin-context row.
         $fullGameHoles = self::holesForGame($gameRow);
 
+        // Front/back always shown at Individual grain too, same convention
+        // as buildPairFieldRows() — no per-game toggle, just structural
+        // validity for this round's hole range.
+        $validSeg = self::validSegmentKeys($gameRow);
+
         // Whole-round flag, computed once — Scramble/Shamble/AltShot/Chapman
         // have no personal score at all, not a per-player condition. See
         // NON_PERSONAL_SCORE_FORMATS' doc comment for why this nulls rather
@@ -186,6 +191,41 @@ final class ServiceScoreSummary
 
                 $grossDisplay = $isTeamOnlyFormat ? null : ($player['totals']['grossDiff']['9c'] ?? null);
                 $netDisplay = $isTeamOnlyFormat ? null : ($player['totals']['netDiff']['9c'] ?? null);
+                $grossFrontDisplay = $isTeamOnlyFormat ? null : ($player['totals']['grossDiff']['9a'] ?? null);
+                $grossBackDisplay = $isTeamOnlyFormat ? null : ($player['totals']['grossDiff']['9b'] ?? null);
+                $netFrontDisplay = $isTeamOnlyFormat ? null : ($player['totals']['netDiff']['9a'] ?? null);
+                $netBackDisplay = $isTeamOnlyFormat ? null : ($player['totals']['netDiff']['9b'] ?? null);
+
+                // The real "hasn't started" signal — grossDisplay/netDisplay
+                // are formatted strings (see this function's doc comment),
+                // and a not-yet-played player still has a "-" placeholder
+                // string there, not a PHP null, so displayToNumeric() would
+                // otherwise silently resolve it to 0.0, indistinguishable
+                // from a genuine even-par round. countDeclaredScores() looks
+                // at the actual hole data instead of a display string.
+                $scoreCount = $isTeamOnlyFormat ? 0 : self::countDeclaredScores([$player], $fullGameHoles);
+
+                // Same {value,display} shape as buildPairFieldRows'
+                // grossDiffSegments/netDiffSegments, nulled per $validSeg on
+                // a 9-hole round — kept identical so score_summary.js's
+                // strokeDiffSegments() works unmodified at either grain.
+                $toCell = fn($display) => [
+                    'value' => $display !== null ? self::displayToNumeric((string)$display) : null,
+                    'display' => $display ?? '—',
+                ];
+                $nullCell = ['value' => null, 'display' => null];
+                $grossDiffSegments = $isTeamOnlyFormat ? ['front' => $nullCell, 'back' => $nullCell, 'total' => $nullCell]
+                    : self::nullInvalidValueDisplaySegments([
+                        'front' => $toCell($grossFrontDisplay),
+                        'back'  => $toCell($grossBackDisplay),
+                        'total' => $toCell($grossDisplay),
+                    ], $validSeg);
+                $netDiffSegments = $isTeamOnlyFormat ? ['front' => $nullCell, 'back' => $nullCell, 'total' => $nullCell]
+                    : self::nullInvalidValueDisplaySegments([
+                        'front' => $toCell($netFrontDisplay),
+                        'back'  => $toCell($netBackDisplay),
+                        'total' => $toCell($netDisplay),
+                    ], $validSeg);
 
                 $fullName = trim((string)($player['dbPlayers_Name'] ?? ''));
                 $lastName = trim((string)($player['dbPlayers_LName'] ?? ''));
@@ -205,6 +245,12 @@ final class ServiceScoreSummary
                     'grossDiffDisplay' => $isTeamOnlyFormat ? null : ($grossDisplay ?? '—'),
                     'netDiffValue' => ($netDisplay !== null) ? self::displayToNumeric((string)$netDisplay) : null,
                     'netDiffDisplay' => $isTeamOnlyFormat ? null : ($netDisplay ?? '—'),
+                    'grossDiffSegments' => $grossDiffSegments,
+                    'netDiffSegments' => $netDiffSegments,
+                    // The authoritative "has this player declared anything"
+                    // signal — see this loop's own comment on why
+                    // grossDiffValue/netDiffValue can't be used for that.
+                    'scoreCount' => $scoreCount,
                     'thru' => self::deriveThru([$player], $fullGameHoles),
                     'teamKey' => $teamKey !== '' ? $teamKey : null,
                     'teamName' => $teamInfo['name'] ?? null,
@@ -226,13 +272,16 @@ final class ServiceScoreSummary
      * the original handoff's scoping. Always computed regardless of the
      * individualGross/individualNet categories' active/disabled/default
      * state — state is display-only (score_summary.js), never a gate here.
-     * A player who hasn't started (grossDiffValue/netDiffValue null) ranks as
-     * if even-par, the same convention buildPairFieldRows already uses —
-     * except for a team-only-format round (NON_PERSONAL_SCORE_FORMATS),
-     * where that fallback is deliberately NOT applied: null there means "no
-     * personal score exists at all," not "hasn't started yet," so the whole
-     * round is excluded from ranking/points/rank rather than defaulted to
-     * even-par.
+     * A player who hasn't declared any scores (scoreCount === 0) is excluded
+     * from ranking/points/rank entirely, same treatment as a scoreless
+     * PairField pairing — not defaulted to even-par. grossDiffValue/
+     * netDiffValue can't be used for this check: they're derived from a
+     * formatted display string (see buildIndividualRows()' own doc comment),
+     * and an unstarted player still has a "-" placeholder there rather than
+     * a real null, so displayToNumeric() would silently resolve it to 0.0.
+     * Team-only-format rounds (NON_PERSONAL_SCORE_FORMATS) are handled
+     * separately below — there, null means "no personal score exists at
+     * all," a different condition from "hasn't started yet."
      *
      * rankGross/rankNet are standard competition ranking (ties share a rank,
      * next distinct value skips accordingly — "1,2,2,4") — a separate
@@ -262,10 +311,21 @@ final class ServiceScoreSummary
         $grossCat = $placement['categories']['individualGross'];
         $netCat = $placement['categories']['individualNet'];
 
+        // scoreCount === 0 means the player never entered a personal score
+        // at all (see this function's own doc comment above) — excluded
+        // from ranking independently per metric, rather than defaulted to
+        // even-par, so a player who hasn't started can't tie for and
+        // collect a real placement. gross/net are excluded together here
+        // (unlike PairField's per-metric scoreCount, this is a single
+        // per-player signal — a player either declared scores this round or
+        // didn't, there's no separate "gross started, net didn't" state).
         $flightKeyByIdx = [];
         $grossRankInput = [];
         $netRankInput = [];
         foreach ($individualRows as $idx => $row) {
+            if (($row['scoreCount'] ?? 0) <= 0) {
+                continue;
+            }
             $flightKeyByIdx[$idx] = $row['flightKey'] ?? 'F1';
             $grossRankInput[] = ['idx' => $idx, 'value' => (float)($row['grossDiffValue'] ?? 0)];
             $netRankInput[] = ['idx' => $idx, 'value' => (float)($row['netDiffValue'] ?? 0)];
@@ -286,8 +346,9 @@ final class ServiceScoreSummary
             fn(array $g) => self::computeStandardRanks($g));
 
         foreach ($individualRows as $idx => &$row) {
-            $row['placementPointsGross'] = $grossPts[$idx] ?? 0.0;
-            $row['placementPointsNet'] = $netPts[$idx] ?? 0.0;
+            $hasScores = (($row['scoreCount'] ?? 0) > 0);
+            $row['placementPointsGross'] = $hasScores ? ($grossPts[$idx] ?? 0.0) : null;
+            $row['placementPointsNet'] = $hasScores ? ($netPts[$idx] ?? 0.0) : null;
             $row['rankGross'] = $grossRanks[$idx] ?? null;
             $row['rankNet'] = $netRanks[$idx] ?? null;
         }
@@ -437,8 +498,6 @@ final class ServiceScoreSummary
                 $groupKey = $flightKey . '|' . $teamKey;
 
                 if (!isset($teams[$groupKey])) {
-                    $hasGrossPts = ($row['placementPointsGross'] !== null);
-                    $hasNetPts = ($row['placementPointsNet'] !== null);
                     $teams[$groupKey] = [
                         'flightKey' => $flightKey,
                         'flightName' => $flightName($flightKey),
@@ -448,18 +507,27 @@ final class ServiceScoreSummary
                         'teamSort' => $row['teamSort'] ?? null,
                         'grossDiffTotal' => 0.0,
                         'netDiffTotal' => 0.0,
-                        'placementPointsGrossTotal' => $hasGrossPts ? 0.0 : null,
-                        'placementPointsNetTotal' => $hasNetPts ? 0.0 : null,
+                        // Starts null, same "no member has a real value yet"
+                        // convention as a single scoreless row — upgraded to
+                        // 0.0 the first time ANY member of the team actually
+                        // has one, not decided by whichever member happens
+                        // to be encountered first. A team with one scoreless
+                        // pairing and one real one must still total the real
+                        // one's points, not silently stay null forever.
+                        'placementPointsGrossTotal' => null,
+                        'placementPointsNetTotal' => null,
                     ];
                 }
 
                 $teams[$groupKey]['grossDiffTotal'] += (float)($row['grossDiffValue'] ?? 0);
                 $teams[$groupKey]['netDiffTotal'] += (float)($row['netDiffValue'] ?? 0);
-                if ($teams[$groupKey]['placementPointsGrossTotal'] !== null) {
-                    $teams[$groupKey]['placementPointsGrossTotal'] += (float)($row['placementPointsGross'] ?? 0);
+                if ($row['placementPointsGross'] !== null) {
+                    $teams[$groupKey]['placementPointsGrossTotal'] =
+                        ($teams[$groupKey]['placementPointsGrossTotal'] ?? 0.0) + (float)$row['placementPointsGross'];
                 }
-                if ($teams[$groupKey]['placementPointsNetTotal'] !== null) {
-                    $teams[$groupKey]['placementPointsNetTotal'] += (float)($row['placementPointsNet'] ?? 0);
+                if ($row['placementPointsNet'] !== null) {
+                    $teams[$groupKey]['placementPointsNetTotal'] =
+                        ($teams[$groupKey]['placementPointsNetTotal'] ?? 0.0) + (float)$row['placementPointsNet'];
                 }
             }
         }
@@ -535,6 +603,13 @@ final class ServiceScoreSummary
         $pointsStrategy = trim((string)($pointsConfig['strategy'] ?? 'Stableford'));
         $isChicago = ($basis === 'points' && $pointsStrategy === 'Chicago');
 
+        // Front/back always shown for PairField (no per-game toggle, unlike
+        // PairPair's dbGames_ScoringSegments) — validSegmentKeys() still
+        // decides whether front/back are structurally real for this round's
+        // hole range (9-hole rounds only have one real half), same helper
+        // buildPairPairRows() already uses.
+        $validSeg = self::validSegmentKeys($gameRow);
+
         // Chicago quota — (points value at reltoPar=0) is the only part of
         // the quota base that's constant across the whole game; the hole
         // count it multiplies by is NOT constant when rotation is active
@@ -566,6 +641,21 @@ final class ServiceScoreSummary
                 $net = self::metricFromTotalRow($totalRow, 'netDiff', $metricKey);
                 $points = self::metricFromTotalRow($totalRow, 'points', $metricKey);
                 $shapeStats = self::buildPairFieldShapeStats($pairPlayers);
+
+                // Front/back Strokes breakdown — same {value,display} shape
+                // as gameSegments/grossDiffSegments elsewhere, nulled per
+                // $validSeg on a 9-hole round rather than showing a
+                // misleading real zero for the half that was never played.
+                $grossDiffSegments = self::nullInvalidValueDisplaySegments([
+                    'front' => self::metricFromTotalRow($totalRow, 'grossDiff', '9a'),
+                    'back'  => self::metricFromTotalRow($totalRow, 'grossDiff', '9b'),
+                    'total' => $gross,
+                ], $validSeg);
+                $netDiffSegments = self::nullInvalidValueDisplaySegments([
+                    'front' => self::metricFromTotalRow($totalRow, 'netDiff', '9a'),
+                    'back'  => self::metricFromTotalRow($totalRow, 'netDiff', '9b'),
+                    'total' => $net,
+                ], $validSeg);
 
                 // Team — every player in the pairing must actually agree on
                 // dbPlayers_TeamKey before it's trusted; see sideTeamKey()'s
@@ -608,6 +698,8 @@ final class ServiceScoreSummary
                     'grossDiffDisplay' => $gross['display'],
                     'netDiffValue' => $net['value'],
                     'netDiffDisplay' => $net['display'],
+                    'grossDiffSegments' => $grossDiffSegments,
+                    'netDiffSegments' => $netDiffSegments,
                     'pointsValue' => $points['value'],
                     'pointsDisplay' => $points['display'],
                     'quotaValue' => $quotaValue,
@@ -650,18 +742,24 @@ final class ServiceScoreSummary
 
 
         // ── Skins resolution for Traditional Skins (PairField) ───────────────────────
+        // grossSkins/netSkins are {front,back,total} objects here, same shape
+        // PairPair already carries — score_summary.js's skinsValue()/
+        // skinsSegments() read a .total/.front/.back off these regardless of
+        // competition type, so the two sides need to agree on shape.
         if ($basis === 'skins') {
             $skinsResult = self::resolvePairFieldSkins($out, $scorecardRows, $gameRow);
             foreach ($out as &$row) {
                 $pId = $row['pairingId'];
-                $row['grossSkins'] = $skinsResult['gross'][$pId] ?? 0;
-                $row['netSkins']   = $skinsResult['net'][$pId]   ?? 0;
+                $grossSk = $skinsResult['gross'][$pId] ?? ['front' => 0, 'back' => 0, 'total' => 0];
+                $netSk   = $skinsResult['net'][$pId]   ?? ['front' => 0, 'back' => 0, 'total' => 0];
+                $row['grossSkins'] = self::nullInvalidScalarSegments($grossSk, $validSeg);
+                $row['netSkins']   = self::nullInvalidScalarSegments($netSk, $validSeg);
             }
             unset($row);
         } else {
             foreach ($out as &$row) {
-                $row['grossSkins'] = 0;
-                $row['netSkins']   = 0;
+                $row['grossSkins'] = ['front' => 0, 'back' => 0, 'total' => 0];
+                $row['netSkins']   = ['front' => 0, 'back' => 0, 'total' => 0];
             }
             unset($row);
         }
@@ -674,8 +772,8 @@ final class ServiceScoreSummary
                 $pId      = $row['pairingId'];
                 $grossPts = $pointsResult['gross'][$pId] ?? ['front' => 0, 'back' => 0, 'total' => 0];
                 $netPts   = $pointsResult['net'][$pId]   ?? ['front' => 0, 'back' => 0, 'total' => 0];
-                $row['grossPoints']   = $grossPts;
-                $row['netPoints']     = $netPts;
+                $row['grossPoints']   = self::nullInvalidScalarSegments($grossPts, $validSeg);
+                $row['netPoints']     = self::nullInvalidScalarSegments($netPts, $validSeg);
                 // Override the columnTotals-derived values (which are zero since
                 // points are now calculated here, not in decorateScoredPlayers)
                 $row['pointsValue']   = (float)$netPts['total'];
@@ -711,10 +809,19 @@ final class ServiceScoreSummary
         });
 
         if ($out) {
+            // Rows with zero declared scores sort strictly after every row
+            // that has scores (see comparePairFieldRows()'s own leading
+            // check) — they never move a real leaderSeed. rank/isLeader are
+            // explicitly null/false for them rather than a real standings
+            // position: 'Cant rank null' — a pairing that never entered a
+            // score isn't in 4th place, it just hasn't played.
             $leaderSeed = $out[0];
+            $rankCounter = 0;
             foreach ($out as $idx => &$row) {
-                $row['rank'] = $idx + 1;
-                $row['isLeader'] = self::comparePairFieldRows($row, $leaderSeed, $basis, $isChicago) === 0;
+                $hasScores = (($row['scoreCount'] ?? 0) > 0);
+                $row['rank'] = $hasScores ? (++$rankCounter) : null;
+                $row['isLeader'] = $hasScores
+                    && self::comparePairFieldRows($row, $leaderSeed, $basis, $isChicago) === 0;
             }
             unset($row);
         }
@@ -733,10 +840,20 @@ final class ServiceScoreSummary
         $grossCat = $placement['categories']['gross'];
         $netCat = $placement['categories']['net'];
 
+        // A pairing with zero declared scores has no basis for a placement
+        // at all — leaving it in the ranking pool meant metricFromTotalRow's
+        // manufactured 0.0 (see its own comment) was indistinguishable from
+        // a genuine even-par round, so a scoreless pairing could tie for a
+        // real position and walk away with real points. Excluded here
+        // rather than ranked-then-zeroed, so it doesn't consume a tied rank
+        // or skew the split-tie math for pairings that actually played.
         $flightKeyByIdx = [];
         $grossRankInput = [];
         $netRankInput = [];
         foreach ($out as $idx => $row) {
+            if (($row['scoreCount'] ?? 0) <= 0) {
+                continue;
+            }
             $flightKeyByIdx[$idx] = $row['flightKey'] ?? 'F1';
             $grossRankInput[] = ['idx' => $idx, 'value' => (float)($row['grossDiffValue'] ?? 0)];
             $netRankInput[] = ['idx' => $idx, 'value' => (float)($row['netDiffValue'] ?? 0)];
@@ -747,8 +864,8 @@ final class ServiceScoreSummary
             fn(array $g) => self::assignPlacementPoints($g, $netCat['pointsConfig'], $netCat['tieRule']));
 
         foreach ($out as $idx => &$row) {
-            $row['placementPointsGross'] = $grossPts[$idx] ?? 0.0;
-            $row['placementPointsNet'] = $netPts[$idx] ?? 0.0;
+            $row['placementPointsGross'] = (($row['scoreCount'] ?? 0) > 0) ? ($grossPts[$idx] ?? 0.0) : null;
+            $row['placementPointsNet'] = (($row['scoreCount'] ?? 0) > 0) ? ($netPts[$idx] ?? 0.0) : null;
         }
         unset($row);
 
@@ -840,6 +957,17 @@ final class ServiceScoreSummary
 
     private static function comparePairFieldRows(array $a, array $b, string $basis, bool $isChicago = false): int
     {
+        // A pairing with zero declared scores always sorts last, regardless
+        // of basis — metricFromTotalRow() defaults an empty round to a raw
+        // 0.0 (see its own comment), which without this check would rank
+        // ahead of anyone actually over par instead of not being ranked at
+        // all.
+        $aHasScores = (($a['scoreCount'] ?? 0) > 0);
+        $bHasScores = (($b['scoreCount'] ?? 0) > 0);
+        if ($aHasScores !== $bHasScores) {
+            return $aHasScores ? -1 : 1;
+        }
+
         if ($basis === 'points') {
             if ($isChicago) {
                 // Chicago's winner is whoever most exceeds their own quota —
@@ -2276,15 +2404,50 @@ final class ServiceScoreSummary
             }
         }
 
+        // Front/back are resolved as their own self-contained skins pots —
+        // carryover chains reset at the 9-hole boundary rather than
+        // continuing through it — same "scored independently" convention
+        // module_definePlacementPoints.js already documents for PairPair's
+        // segments. $frontHoles/$backHoles are intersected with $holes so a
+        // 9-hole round (F9/B9) naturally only ever resolves the half that
+        // was actually played.
+        $frontHoles = array_values(array_intersect($holes, range(1, 9)));
+        $backHoles  = array_values(array_intersect($holes, range(10, 18)));
+
         // Each flight resolved independently, then merged back into one
         // pairingId-keyed map — pairingIds are unique game-wide, so there's
         // no collision risk in the merge regardless of how many flights
         // contributed to it.
-        $merged = ['gross' => [], 'net' => []];
+        $totals = ['gross' => [], 'net' => []];
+        $fronts = ['gross' => [], 'net' => []];
+        $backs  = ['gross' => [], 'net' => []];
         foreach ($pairingsByFlight as $pairings) {
-            $result = ServiceCalcSkins::resolveSkins(array_values($pairings), $holes);
-            $merged['gross'] += $result['gross'];
-            $merged['net']   += $result['net'];
+            $pairingsList = array_values($pairings);
+            $totalResult = ServiceCalcSkins::resolveSkins($pairingsList, $holes);
+            $totals['gross'] += $totalResult['gross'];
+            $totals['net']   += $totalResult['net'];
+
+            if ($frontHoles) {
+                $frontResult = ServiceCalcSkins::resolveSkins($pairingsList, $frontHoles);
+                $fronts['gross'] += $frontResult['gross'];
+                $fronts['net']   += $frontResult['net'];
+            }
+            if ($backHoles) {
+                $backResult = ServiceCalcSkins::resolveSkins($pairingsList, $backHoles);
+                $backs['gross'] += $backResult['gross'];
+                $backs['net']   += $backResult['net'];
+            }
+        }
+
+        $merged = ['gross' => [], 'net' => []];
+        foreach (['gross', 'net'] as $metric) {
+            foreach ($totals[$metric] as $pairingId => $totalCount) {
+                $merged[$metric][$pairingId] = [
+                    'front' => $fronts[$metric][$pairingId] ?? 0,
+                    'back'  => $backs[$metric][$pairingId]  ?? 0,
+                    'total' => $totalCount,
+                ];
+            }
         }
         return $merged;
     }
