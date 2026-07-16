@@ -386,6 +386,22 @@
   };
 
   // ----------------------------------------------------------------------------
+  // *** DEPRECATED — DO NOT USE IN NEW CODE ***
+  //
+  // MA.confirm() is superseded by MA.ui.confirm() (see the MA.ui section below).
+  // It is left fully intact and untouched here — not delegated, not rewired —
+  // so the one existing caller (game_players.js) keeps working exactly as it
+  // does today with zero risk from this change.
+  //
+  // MA.ui.confirm() covers everything this does (title/message/detail/danger/
+  // promise-based result) plus okOnly mode and renders through the shared
+  // .maModalOverlay/.maModal CSS shell instead of inline styles.
+  //
+  // Once game_players.js is migrated to MA.ui.confirm(), delete this entire
+  // block (through the closing of the MA.confirm function below).
+  // ----------------------------------------------------------------------------
+
+  // ----------------------------------------------------------------------------
   // MA.confirm — generic branded confirm dialog using maModal CSS tokens.
   //
   // Usage:
@@ -536,6 +552,266 @@
       document.body.appendChild(backdrop);
     });
   };
+
+  // ----------------------------------------------------------------------------
+  // MA.ui — centralized messaging surface (busy / confirm / modal-notice / notify)
+  //
+  // Replaces the ~15 duplicated custom overlay implementations scattered across
+  // page and module files. Everything here renders through the shared
+  // .maModalOverlay / .maModal CSS shell (see ma_shared.css §10 and the new
+  // §22 rules) so busy, confirm, and info dialogs are visually identical by
+  // construction rather than by convention.
+  //
+  // Public functions:
+  //   MA.ui.showBusy({ title, message })   — blocking overlay, no buttons
+  //   MA.ui.updateBusy({ title, message }) — update text on an open busy overlay
+  //   MA.ui.hideBusy()                     — close the busy overlay
+  //   MA.ui.confirm({ ...opts })           — OK-only or OK/Cancel dialog, returns Promise<boolean>
+  //   MA.ui.showModalNotice(target, opts)  — tinted band embedded inside a caller's own open modal
+  //   MA.ui.hideModalNotice(target)        — remove that band
+  //   MA.ui.notify(message, level)         — ambient status; auto-routes to a
+  //                                           floating toast when a modal is open,
+  //                                           otherwise writes the chrome status line
+  //                                           (fixes the setStatus-behind-modal bug)
+  // ----------------------------------------------------------------------------
+  MA.ui = MA.ui || {};
+
+  // ---- Overlay-open bookkeeping ----------------------------------------------
+  // Multiple MA.ui surfaces (busy, confirm) can toggle document.body's
+  // maOverlayOpen class. A depth counter means a confirm->busy sequence (very
+  // common: "Discard changes?" confirm followed by a save busy overlay) can
+  // never prematurely clear the class if calls ever end up overlapping.
+  // Callers should still treat these as sequential (await the confirm before
+  // calling showBusy) — this counter is a safety net, not license to run them
+  // concurrently.
+  let _maOverlayDepth = 0;
+
+  function _overlayOpened() {
+    _maOverlayDepth++;
+    document.body.classList.add("maOverlayOpen");
+  }
+
+  function _overlayClosed() {
+    _maOverlayDepth = Math.max(0, _maOverlayDepth - 1);
+    if (_maOverlayDepth === 0) document.body.classList.remove("maOverlayOpen");
+  }
+
+  // ---- MA.ui.showBusy / updateBusy / hideBusy --------------------------------
+  // Usage:
+  //   MA.ui.showBusy({ title: "Working", message: "Resolving players..." });
+  //   MA.ui.updateBusy({ message: "Adding 12 selected favorites..." });
+  //   MA.ui.hideBusy();
+  //
+  // Only one busy overlay is tracked at a time — calling showBusy while one is
+  // already open just updates its text (equivalent to updateBusy) rather than
+  // stacking a second overlay.
+  let _busyOverlayEl = null;
+
+  MA.ui.showBusy = function ({ title = "Working", message = "" } = {}) {
+    if (_busyOverlayEl) {
+      MA.ui.updateBusy({ title, message });
+      return;
+    }
+
+    const overlay = document.createElement("div");
+    overlay.className = "maModalOverlay is-open";
+
+    overlay.innerHTML = `
+      <section class="maModal maModal--busy" role="dialog" aria-modal="true" aria-busy="true" aria-labelledby="maBusyTitle">
+        <div class="maModal__body maModalBusy__body">
+          <div class="maModalBusy__spinner" aria-hidden="true"></div>
+          <div class="maModalBusy__title" id="maBusyTitle"></div>
+          <div class="maModalBusy__message"></div>
+        </div>
+      </section>`;
+
+    document.body.appendChild(overlay);
+    _busyOverlayEl = overlay;
+    _overlayOpened();
+
+    MA.ui.updateBusy({ title, message });
+  };
+
+  MA.ui.updateBusy = function ({ title, message } = {}) {
+    if (!_busyOverlayEl) return;
+    const titleEl = _busyOverlayEl.querySelector(".maModalBusy__title");
+    const msgEl   = _busyOverlayEl.querySelector(".maModalBusy__message");
+
+    if (title != null && titleEl) titleEl.textContent = String(title);
+    if (message != null && msgEl) msgEl.textContent = String(message);
+  };
+
+  MA.ui.hideBusy = function () {
+    if (!_busyOverlayEl) return;
+    _busyOverlayEl.remove();
+    _busyOverlayEl = null;
+    _overlayClosed();
+  };
+
+  // ---- MA.ui.confirm ----------------------------------------------------------
+  // Usage:
+  //   const ok = await MA.ui.confirm({
+  //     title: "Discard changes?",
+  //     message: "You have unsaved pairing changes.",
+  //     confirmLabel: "Discard",
+  //     cancelLabel: "Keep editing"
+  //   });
+  //   if (!ok) return;
+  //
+  // Options (all optional):
+  //   title         {string}  Default: "Are you sure?"
+  //   message       {string}  Body copy. HTML allowed, caller-owned. Default: ""
+  //   detail        {string}  Optional HTML block below message. Default: ""
+  //   confirmLabel  {string}  Default: "Confirm"
+  //   cancelLabel   {string}  Default: "Cancel". Ignored when okOnly is true.
+  //   danger        {boolean} Confirm button renders in --danger red. Default: false
+  //   okOnly        {boolean} Single acknowledgment button, no Cancel.
+  //                           Resolves true only. Default: false
+  //   dismissible   {boolean} Backdrop click closes the dialog (resolves false,
+  //                           or true for okOnly). Default: !danger
+  //
+  // Returns Promise<boolean> — true = confirmed/acknowledged, false = cancelled.
+  MA.ui.confirm = function ({
+    title        = "Are you sure?",
+    message      = "",
+    detail       = "",
+    confirmLabel = "Confirm",
+    cancelLabel  = "Cancel",
+    danger       = false,
+    okOnly       = false,
+    dismissible  = !danger
+  } = {}) {
+    return new Promise((resolve) => {
+
+      const overlay = document.createElement("div");
+      overlay.className = "maModalOverlay is-open";
+
+      const confirmClass = "maModalFtr__btn maModalFtr__btn--" + (danger ? "danger" : "confirm");
+      const role = danger ? "alertdialog" : "dialog";
+
+      const footerBtns = okOnly
+        ? `<button type="button" class="${confirmClass}" data-ma-action="confirm">${confirmLabel}</button>`
+        : `<button type="button" class="maModalFtr__btn maModalFtr__btn--cancel" data-ma-action="cancel">${cancelLabel}</button>
+           <button type="button" class="${confirmClass}" data-ma-action="confirm">${confirmLabel}</button>`;
+
+      overlay.innerHTML = `
+        <section class="maModal" role="${role}" aria-modal="true" aria-labelledby="maConfirmTitle">
+          <header class="maModal__hdr">
+            <span class="maModal__title" id="maConfirmTitle">${title}</span>
+          </header>
+          <div class="maModal__body">${message}${detail}</div>
+          <footer class="maModal__ftr maModalFtr--right">${footerBtns}</footer>
+        </section>`;
+
+      function close(result) {
+        overlay.remove();
+        _overlayClosed();
+        resolve(result);
+      }
+
+      const cancelBtn = overlay.querySelector("[data-ma-action='cancel']");
+      if (cancelBtn) cancelBtn.addEventListener("click", () => close(false));
+
+      overlay.querySelector("[data-ma-action='confirm']")
+        .addEventListener("click", () => close(true));
+
+      if (dismissible) {
+        overlay.addEventListener("click", (e) => {
+          if (e.target === overlay) close(okOnly ? true : false);
+        });
+      }
+
+      document.body.appendChild(overlay);
+      _overlayOpened();
+    });
+  };
+
+  // ---- MA.ui.showModalNotice / hideModalNotice --------------------------------
+  // A tinted band embedded INSIDE a modal/form the caller already has open —
+  // never opens its own overlay, so it can never stack on top of another
+  // modal. Deliberately kept separate from MA.ui.confirm/showBusy for exactly
+  // that reason.
+  //
+  // Usage:
+  //   MA.ui.showModalNotice(el.dfModalBody, {
+  //     message: "Move players out of this flight before removing it.",
+  //     tone: "warning"
+  //   });
+  //   ...
+  //   MA.ui.hideModalNotice(el.dfModalBody);
+  //
+  // target {Element} — container to render the notice into (its first child).
+  // opts.message {string} — plain text or simple HTML.
+  // opts.tone {string} — "info" | "success" | "warn" | "danger". Default: "warning" -> normalized to "warn".
+  MA.ui.showModalNotice = function (target, { message = "", tone = "warning" } = {}) {
+    if (!target) return;
+
+    const lvl = String(tone || "").toLowerCase() === "warning" ? "warn" : String(tone || "warn").toLowerCase();
+
+    let el = target.querySelector(":scope > .maInlineStatus");
+    if (!el) {
+      el = document.createElement("div");
+      el.className = "maInlineStatus";
+      target.insertBefore(el, target.firstChild);
+    }
+
+    el.innerHTML = String(message || "");
+    el.classList.remove("status-info", "status-success", "status-warn", "status-danger");
+    el.classList.add("status-" + lvl);
+  };
+
+  MA.ui.hideModalNotice = function (target) {
+    if (!target) return;
+    const el = target.querySelector(":scope > .maInlineStatus");
+    if (el) el.remove();
+  };
+
+  // ---- MA.ui.notify -------------------------------------------------------
+  // Ambient status — the setStatus replacement. Auto-routes:
+  //   - No overlay open  -> writes MA.setStatus() as before (chrome status line)
+  //   - An overlay IS open (busy, confirm, or any future maOverlayOpen surface)
+  //     -> shows a floating toast instead, since the chrome status line sits
+  //        behind the modal backdrop and would be invisible.
+  //
+  // This is the direct fix for the setStatus-behind-modal bug: callers keep
+  // calling one function and never have to know whether a modal happens to be
+  // open when their code runs (background polls, API callbacks, etc. usually
+  // don't know).
+  //
+  // Usage:  MA.ui.notify("Declared scores were recalculated.", "success");
+  let _toastEl = null;
+  let _toastTimer = null;
+
+  MA.ui.notify = function (message, level) {
+    if (document.body.classList.contains("maOverlayOpen")) {
+      _showToast(String(message || ""), level);
+    } else {
+      MA.setStatus(message, level);
+    }
+  };
+
+  function _showToast(message, level) {
+    const lvl = String(level || "info").toLowerCase();
+    const durations = { info: 3000, success: 3000, warn: 4500, danger: 6000 };
+    const cls = ["info", "success", "warn", "danger"].includes(lvl) ? lvl : "info";
+
+    if (!_toastEl) {
+      _toastEl = document.createElement("div");
+      _toastEl.className = "maToast";
+      _toastEl.addEventListener("click", _hideToast);
+      document.body.appendChild(_toastEl);
+    }
+
+    clearTimeout(_toastTimer);
+    _toastEl.textContent = message;
+    _toastEl.className = "maToast status-" + cls + " is-open";
+    _toastTimer = setTimeout(_hideToast, durations[cls]);
+  }
+
+  function _hideToast() {
+    clearTimeout(_toastTimer);
+    if (_toastEl) _toastEl.classList.remove("is-open");
+  }
 
   MA.chrome.openHub = function () {
     const tray = document.getElementById("chromeHubTray");

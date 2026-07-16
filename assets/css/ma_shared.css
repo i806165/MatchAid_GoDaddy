@@ -23,6 +23,8 @@
    17.  List Rows
    18.  Admin Picker
    19.  Misc (Empty State, Tab Panels)
+   20.  Source Module Shared Vocabulary
+   22.  MA.ui — Busy / Confirm Footer / Modal Notice / Toast
    ========================================================================== */
 
 
@@ -3145,4 +3147,141 @@ textarea {
   align-items: center;
   gap: 8px;
   flex: 0 0 auto;
+}
+
+/* ==========================================================================
+   22. MA.ui — BUSY / CONFIRM FOOTER / MODAL NOTICE / TOAST
+   Additive support for MA.ui.* (ma_shared.js). Reuses existing tokens only —
+   no new colors introduced.
+   ========================================================================== */
+
+/* ---------- Busy overlay body (MA.ui.showBusy) --------------------------- */
+.maModal--busy .maModal__body,
+.maModalBusy__body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 28px 20px;
+  text-align: center;
+}
+
+.maModalBusy__spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid var(--borderSubtle);
+  border-top-color: var(--brandAccent);
+  animation: maSpin 0.8s linear infinite;
+}
+
+.maModalBusy__title {
+  font-family: var(--fontFamilyBase);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.maModalBusy__message {
+  font-family: var(--fontFamilyBase);
+  font-size: 11px;
+  color: var(--mutedText);
+}
+
+@keyframes maSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- Confirm/info footer buttons (MA.ui.confirm) ------------------ */
+.maModalFtr--right {
+  justify-content: flex-end;
+}
+
+.maModalFtr__btn {
+  height: 38px;
+  padding: 0 var(--btnPadX);
+  border-radius: var(--controlRadius);
+  border: 1px solid transparent;
+  font-family: var(--fontFamilyBase);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.maModalFtr__btn:active {
+  transform: scale(.98);
+}
+
+.maModalFtr__btn--cancel {
+  background: var(--btnCancelBg);
+  color: var(--btnCancelText);
+  border-color: var(--btnCancelBorder);
+}
+
+.maModalFtr__btn--confirm {
+  background: var(--btnSaveBg);
+  color: #ffffff;
+}
+
+.maModalFtr__btn--danger {
+  background: var(--danger);
+  color: #ffffff;
+}
+
+/* ---------- Modal notice band tone (MA.ui.showModalNotice) --------------- */
+/* .maInlineStatus already exists (Sec 21f) for neutral bands; these add tone. */
+.maInlineStatus.status-info    { background: var(--statusInfoBg);    color: var(--statusInfoText); }
+.maInlineStatus.status-success { background: var(--statusSuccessBg); color: var(--statusSuccessText); }
+.maInlineStatus.status-warn    { background: var(--statusWarnBg);    color: var(--statusWarnText); }
+.maInlineStatus.status-danger  { background: var(--statusDangerBg);  color: var(--statusDangerText); }
+
+/* ---------- Toast (MA.ui.notify, shown only while a modal is open) ------- */
+:root {
+  --toastZ: 100000; /* above --overlayZ (99990) so it's never hidden behind a modal */
+}
+
+.maToast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  transform: translateX(-50%) translateY(8px);
+  z-index: var(--toastZ);
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 10px 16px;
+  border-radius: var(--radiusMd);
+  box-shadow: var(--modalShadow);
+  font-family: var(--fontFamilyBase);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .15s ease, transform .15s ease, visibility .15s;
+}
+
+.maToast.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.maToast.status-info    { background: var(--statusInfoBg);    color: var(--statusInfoText); }
+.maToast.status-success { background: var(--statusSuccessBg); color: var(--statusSuccessText); }
+.maToast.status-warn    { background: var(--statusWarnBg);    color: var(--statusWarnText); }
+.maToast.status-danger  { background: var(--statusDangerBg);  color: var(--statusDangerText); }
+
+@media (max-width: 600px) {
+  .maToast {
+    left: 12px;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    max-width: none;
+    transform: translateY(8px);
+  }
+
+  .maToast.is-open {
+    transform: translateY(0);
+  }
 }
