@@ -453,6 +453,25 @@
       && MA.isDimensionActive("team", state.game, state.game);
   }
 
+  /**
+   * Whether Flight is active for this round, per the shared Round-Level
+   * Dimension Activation hierarchy. Mirrors teamsActive() exactly, one
+   * function serving every caller that needs this fact — previously the
+   * Unpaired and Unmatched trays each computed their own local
+   * `hasFlights`/`hasTeams` from data presence (state.flightConfig /
+   * state.teamConfig truthiness), duplicated verbatim between
+   * renderUnpairedList() and renderUnmatchedList(). That inference meant
+   * a deactivated Flight with old config data still sitting in
+   * dbGames_FlightConfig would keep grouping the tray by flight even
+   * though Flight is off — exactly the class of bug teamsActive() itself
+   * was built to close off, just never applied to the tray-grouping call
+   * sites until now.
+   */
+  function flightsActive() {
+    return !!(window.MA && typeof MA.isDimensionActive === "function")
+      && MA.isDimensionActive("flight", state.game, state.game);
+  }
+
   // Shared collapsible group header + body wrapper for the nested
   // Flight→Team tray grouping (§4). Used by both renderUnpairedList() and
   // renderUnmatchedList(). `groupKey` must be unique within the tray's
@@ -812,11 +831,17 @@
     // fallback path's building block is gone; grouping now always goes
     // through renderTrayGroupHeader/Body above for collapse support).
 
-    const hasFlights = !!(state.flightConfig && Array.isArray(state.flightConfig.flights) && state.flightConfig.flights.length);
-    const hasTeams = !!state.teamConfig;
+    // Activation-aware, not data-presence — flightsActive()/teamsActive()
+    // read this round's actual declared state (dbGames_FlightMode/
+    // TeamMode via the shared isDimensionActive() hierarchy), not merely
+    // whether flightConfig/teamConfig happen to still hold old data. A
+    // deactivated dimension no longer groups the tray even if its config
+    // is still sitting in the database, untouched, ready to be reactivated.
+    const hasFlights = flightsActive();
+    const hasTeams = teamsActive();
 
     if (!hasFlights && !hasTeams) {
-      // Neither dimension configured — flat sorted list, unchanged from before.
+      // Neither dimension active — flat sorted list, unchanged from before.
       host.innerHTML = [...unpaired].sort(sortCmp).map(renderRow).join("") || `<div class="maEmpty">No unpaired players.</div>`;
       return;
     }
@@ -1037,8 +1062,12 @@
         </div>`;
     };
 
-    const hasFlights = !!(state.flightConfig && Array.isArray(state.flightConfig.flights) && state.flightConfig.flights.length);
-    const hasTeams = !!state.teamConfig;
+    // Activation-aware, not data-presence — same shared helpers as
+    // renderUnpairedList() above (flightsActive()/teamsActive()); this
+    // was previously an independent, verbatim-duplicated copy of the
+    // same data-presence inference, now closed off along with it.
+    const hasFlights = flightsActive();
+    const hasTeams = teamsActive();
 
     if (!hasFlights && !hasTeams) {
       host.innerHTML = rows.map(renderRow).join("") || `<div class="maEmpty">No unmatched pairings.</div>`;
