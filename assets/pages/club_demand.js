@@ -17,9 +17,11 @@
   const MA        = window.MA      || {};
   const chrome    = MA.chrome      || {};
   const postJson  = typeof MA.postJson  === "function" ? MA.postJson  : null;
-  const setStatus = typeof MA.setStatus === "function"
-    ? MA.setStatus
-    : function (m, lvl) { if (m) console.log("[STATUS]", lvl || "info", m); };
+  function setStatus(m, lvl) {
+    if (MA.ui && typeof MA.ui.notify === "function") MA.ui.notify(m, lvl);
+    else if (typeof MA.setStatus === "function") MA.setStatus(m, lvl);
+    else if (m) console.log("[STATUS]", lvl || "info", m);
+  }
 
   // ── State (source of truth) ────────────────────────────────────
   const state = {

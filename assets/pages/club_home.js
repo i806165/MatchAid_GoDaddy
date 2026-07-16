@@ -17,9 +17,11 @@
 
   const MA        = window.MA      || {};
   const chrome    = MA.chrome      || {};
-  const setStatus = typeof MA.setStatus === "function"
-    ? MA.setStatus
-    : function (m, lvl) { if (m) console.log("[STATUS]", lvl || "info", m); };
+  function setStatus(m, lvl) {
+    if (MA.ui && typeof MA.ui.notify === "function") MA.ui.notify(m, lvl);
+    else if (typeof MA.setStatus === "function") MA.setStatus(m, lvl);
+    else if (m) console.log("[STATUS]", lvl || "info", m);
+  }
 
   // ── State ──────────────────────────────────────────────────────
   const state = {
@@ -101,6 +103,7 @@
     renderModalList("");
     el.facilityModal.removeAttribute("aria-hidden");
     el.facilityModal.style.display = "flex";  // ← was "" which doesn't override inline none
+    document.documentElement.classList.add("maOverlayOpen");
     if (el.modalSearch) el.modalSearch.focus();
   }
 
@@ -108,6 +111,7 @@
     if (!el.facilityModal) return;
     el.facilityModal.setAttribute("aria-hidden", "true");
     el.facilityModal.style.display = "none";
+    document.documentElement.classList.remove("maOverlayOpen");
   }
 
   function renderModalList(query) {
