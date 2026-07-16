@@ -24,8 +24,13 @@
   const chromeStatus = MA.setStatus;
 
   // ---- Helpers ----
+  // Retargeted to MA.ui.notify (auto-routes to a toast when a modal is open,
+  // otherwise writes the chrome status line — same as before). Every
+  // setStatus(...) call site below is unchanged; this one function is the
+  // only thing that moved.
   function setStatus(message, level) {
-    if (typeof chromeStatus === "function") chromeStatus(message, level);
+    if (MA.ui && typeof MA.ui.notify === "function") MA.ui.notify(message, level);
+    else if (typeof chromeStatus === "function") chromeStatus(message, level);
     else if (message) console.warn("[STATUS]", level || "info", message);
   }
 
@@ -427,7 +432,14 @@ async function handleEventAction(args) {
   if (!eid) return;
 
   if (action === "deleteEvent") {
-    if (!confirm("Delete this event? This cannot be undone.")) return;
+    const approved = await MA.ui.confirm({
+      title: "Delete event?",
+      message: "This event will be permanently deleted. This can't be undone.",
+      confirmLabel: "Delete",
+      cancelLabel: "Cancel",
+      danger: true
+    });
+    if (!approved) return;
     try {
       const res = await postJsonEvents("deleteEvent.php", { eid });
       if (res?.ok) {
@@ -824,7 +836,14 @@ function wireDoorwayControls() {
     }
 
     if (action === "deleteGame") {
-      if (!confirm("Are you sure you want to delete this game?")) return;
+      const approved = await MA.ui.confirm({
+        title: "Delete game?",
+        message: "This game will be permanently deleted. This can't be undone.",
+        confirmLabel: "Delete",
+        cancelLabel: "Cancel",
+        danger: true
+      });
+      if (!approved) return;
       try {
         const res = await apiAdmin("deleteGame.php", { ggid });
         if (!res || !res.ok) throw new Error(res?.message || "Delete failed.");
@@ -1203,4 +1222,4 @@ function wireFiltersModal() {
       }
     })();
   });
-})();
+})();

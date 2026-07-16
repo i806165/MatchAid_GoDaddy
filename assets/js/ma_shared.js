@@ -577,23 +577,28 @@
   MA.ui = MA.ui || {};
 
   // ---- Overlay-open bookkeeping ----------------------------------------------
-  // Multiple MA.ui surfaces (busy, confirm) can toggle document.body's
+  // Multiple MA.ui surfaces (busy, confirm) can toggle document.documentElement's
   // maOverlayOpen class. A depth counter means a confirm->busy sequence (very
   // common: "Discard changes?" confirm followed by a save busy overlay) can
   // never prematurely clear the class if calls ever end up overlapping.
   // Callers should still treat these as sequential (await the confirm before
   // calling showBusy) — this counter is a safety net, not license to run them
   // concurrently.
+  //
+  // Targets <html> (document.documentElement), not <body> — matching
+  // ma_shared.css's ".maOverlayOpen body { ... }" rule, which can only ever
+  // match if the class sits on an ancestor of <body>, and matching pages
+  // (e.g. admin_home.js's setOverlayLock) that already do this correctly.
   let _maOverlayDepth = 0;
 
   function _overlayOpened() {
     _maOverlayDepth++;
-    document.body.classList.add("maOverlayOpen");
+    document.documentElement.classList.add("maOverlayOpen");
   }
 
   function _overlayClosed() {
     _maOverlayDepth = Math.max(0, _maOverlayDepth - 1);
-    if (_maOverlayDepth === 0) document.body.classList.remove("maOverlayOpen");
+    if (_maOverlayDepth === 0) document.documentElement.classList.remove("maOverlayOpen");
   }
 
   // ---- MA.ui.showBusy / updateBusy / hideBusy --------------------------------
@@ -769,7 +774,8 @@
   // ---- MA.ui.notify -------------------------------------------------------
   // Ambient status — the setStatus replacement. Auto-routes:
   //   - No overlay open  -> writes MA.setStatus() as before (chrome status line)
-  //   - An overlay IS open (busy, confirm, or any future maOverlayOpen surface)
+  //   - An overlay IS open (busy, confirm, or any future maOverlayOpen surface,
+  //     tracked via the maOverlayOpen class on <html> / document.documentElement)
   //     -> shows a floating toast instead, since the chrome status line sits
   //        behind the modal backdrop and would be invisible.
   //
@@ -783,7 +789,7 @@
   let _toastTimer = null;
 
   MA.ui.notify = function (message, level) {
-    if (document.body.classList.contains("maOverlayOpen")) {
+    if (document.documentElement.classList.contains("maOverlayOpen")) {
       _showToast(String(message || ""), level);
     } else {
       MA.setStatus(message, level);
