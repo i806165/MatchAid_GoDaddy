@@ -709,18 +709,26 @@
   async function _applyChanges() {
     if (_busy) return;
 
-    // All-or-none: a player roster where SOME players have a team and
-    // others don't is not a valid state to save. If mode is "fixed,"
-    // saving here propagates to every linked round — an unassigned
-    // player's blank TeamKey would propagate too, silently clearing
-    // whatever team that player already had at the round level. Blocking
-    // the mixed state here means Propagation never has a blank value to
-    // push out unless the admin genuinely means "no one has a team."
-    const assignedCount   = _players.filter(p => !!p.team).length;
-    const unassignedCount = _players.length - assignedCount;
-    if (assignedCount > 0 && unassignedCount > 0) {
+    // Teams-active requires full assignment: if Teams is ON for this
+    // context (event-fixed or round-active — same _isExpanded() check
+    // driving the roster's own expand/collapse), EVERY player must have
+    // a team before saving. This is stricter than "all-or-none" — a
+    // fully-unassigned roster is NOT a valid save while active, since
+    // "Teams is on" means teams are genuinely in use, not merely
+    // configured. If mode is "fixed," saving here also propagates to
+    // every linked round — an unassigned player's blank TeamKey would
+    // propagate too, silently clearing whatever team that player already
+    // had at the round level; blocking here means Propagation never has
+    // a blank value to push out while Teams is active.
+    //
+    // When Teams is OFF, no validation runs — the roster is hidden and
+    // not in current use, so an incomplete assignment underneath isn't
+    // this save's concern (Deactivating never clears data; whatever's
+    // there stays exactly as it was until reactivated).
+    const unassignedCount = _players.filter(p => !p.team).length;
+    if (_isExpanded() && unassignedCount > 0) {
       MA.setStatus(
-        `All players must be assigned to a team, or none at all — ${unassignedCount} player${unassignedCount === 1 ? "" : "s"} still need${unassignedCount === 1 ? "s" : ""} a team.`,
+        `All players must be assigned to a team while Teams is active — ${unassignedCount} player${unassignedCount === 1 ? "" : "s"} still need${unassignedCount === 1 ? "s" : ""} a team.`,
         "warn"
       );
       return;
