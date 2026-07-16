@@ -24,7 +24,7 @@
  *                                        multi-add confirm button "Enroll Players"
  *                                      - "gameplayers" (default): unchanged legacy behavior,
  *                                        shows tee-history subline, confirm button reads
- *                                        "Select Tee" (enrollment is staged behind tee pick)
+ *                                        "Add to Roster" (enrollment is staged behind tee pick)
  *   onSelect      {function(player)}   single-add callback
  *   onSelectMany  {function(players)}  multi-add confirm callback
  *
@@ -326,7 +326,7 @@
     const count = st.multiAddSelected.length;
     const confirmLabel = st.source === "eventroster"
       ? `Enroll Players${count ? ` (${count})` : ""}`
-      : `Select Tee${count ? ` (${count})` : ""}`;
+      : `Add to Roster${count ? ` (${count})` : ""}`;
     footerEl.innerHTML = `
       <div style="display:flex; gap:8px; align-items:center;">
         <button class="btn btnSecondary favSrcConfirmBtn"
