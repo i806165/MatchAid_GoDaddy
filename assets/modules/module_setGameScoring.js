@@ -6,6 +6,15 @@
  *
  * Zero injected CSS. All classes come from ma_shared.css.
  *
+ * ── Internal view-switching, not inline expansion ────────────────────────
+ * Scores Per Hole and Points Config no longer expand inline in the main
+ * view. Both get their own dedicated internal view — same modal, same
+ * overlay, same self-hydrated _ctx/_draft — with a full-width body instead
+ * of squeezed into a growing list, and a Back button returning to _view =
+ * "main". A mini router, not three separate modals: _renderBody() swaps
+ * what's inside .maModal__body based on _view; header/controls/footer
+ * never change.
+ *
  * Public API:
  *   MA.setGameScoring.open({ onDone })
  *   MA.setGameScoring.close()
@@ -18,51 +27,37 @@
  * in-modal errors, not MA.setStatus().
  *
  * ── GAME_LABELS duplicated here, deliberately ────────────────────────────
- * scoringSystemLock/bbCountLock aren't stored columns — they're derived by
- * looking up the current dbGames_GameLabel against GAME_LABELS, the same
- * table module_setGameFormat.js owns and writes from. Duplicated verbatim
- * here (same convention every module in this family already follows —
- * even esc() is copy-pasted into each file). Real drift risk if the table
- * is ever edited in one file and not the other — flagged, not solved.
+ * scoringSystemLock/bbCountLock aren't stored columns — derived by looking
+ * up dbGames_GameLabel against GAME_LABELS, the same table Format owns.
+ * Duplicated verbatim (same convention every module in this family
+ * follows). Real drift risk if edited in one file and not the other —
+ * flagged, not solved.
  *
  * ── Cross-domain write owned by THIS module's save ──────────────────────
  * Scoring Method GROSS -> NET transition resets Handicaps' own fields:
- * dbGames_HCMethod = "CH", dbGames_Allowance = 100. One-directional —
- * NET -> GROSS does nothing, values stay whatever they were (GROSS makes
- * HC fields dormant, not invalid — nothing downstream reads them while
- * GROSS, so nothing needs clearing). Detected by comparing the ORIGINAL
- * hydrated dbGames_ScoringMethod against the draft's current value at
- * save time, not just checking the current value in isolation.
+ * dbGames_HCMethod = "CH", dbGames_Allowance = 100. One-directional,
+ * detected by comparing the ORIGINALLY hydrated dbGames_ScoringMethod
+ * against the draft's current value at save time.
  *
- * ── Deprecated Hole Declaration modal — relocated inline ─────────────────
+ * ── Deprecated Hole Declaration modal — relocated as an internal view ───
  * The old #gsHoleDeclOverlay modal is gone. Its logic (Set All, Front/Back
- * 9 columns, par-text lookup from coursePars) is now an inline section
- * that toggles visible when Scoring System = "Declare per Hole" — same
- * show/hide mechanic every other conditional section in this module
- * family already uses, not a separate popup. No stepper class exists
+ * 9, par-text lookup) is now _view = "holes". No stepper class exists
  * anywhere in ma_shared.css — built from .iconBtn + a plain number input,
  * flagged as unverified, not a proven component.
  *
- * ── Stableford / Chicago grid — NOW EDITABLE, not the ported behavior ───
- * wizRenderPointsConfigSections() in game_settings.js used a FIXED
- * 6-row stablefordTemplate (-3 through +2). Per direct instruction, rows
- * are now addable/removable for Stableford and Chicago only — Nines stays
- * the original fixed 2-row structure (4-player / 3-player pools), and the
- * four strategies with hasConfig:false still show no config section at
- * all. Since rows are no longer fixed, the descriptive names ("Albatross",
- * "Eagle"...) only apply to the original six relToPar values — any
- * user-added row outside that range shows its raw relToPar number instead
- * of a name. This was an open question I didn't get an answer to; flagging
- * the default rather than blocking on it.
+ * ── Stableford / Chicago grid — editable, not the ported behavior ───────
+ * wizRenderPointsConfigSections() used a FIXED 6-row template. Rows are
+ * now addable/removable for Stableford and Chicago only, inside _view =
+ * "points". Nines stays the original fixed 2-row structure. Names
+ * ("Albatross", "Eagle"...) only apply to the original six relToPar
+ * values; anything added beyond that shows its raw number.
  *
  * ── Removed entirely ──────────────────────────────────────────────────────
- * Placement Points. Confirmed to live in its own module, its own menu row
- * — no summary, no launch button, nothing here at all.
+ * Placement Points — lives in its own module, its own menu row.
  *
  * ── Not yet resolved ─────────────────────────────────────────────────────
  * Save endpoint below (/api/game_settings/saveGameScoring.php) does not
- * exist yet — same open endpoint-architecture question as every other
- * new module.
+ * exist yet.
  */
 (function () {
   "use strict";
@@ -76,7 +71,6 @@
   const CONTEXT_ENDPOINT = "/api/game_settings/initGameSettings.php";
   const SAVE_ENDPOINT    = "/api/game_settings/saveGameScoring.php"; // TODO — does not exist yet
 
-  // ── Data tables — GAME_LABELS duplicated from module_setGameFormat.js ──
   const GAME_LABELS = [
     { label: "Stroke Play",  scoringSystem: null,            scoringSystemLock: false, bbCount: null, bbCountLock: false },
     { label: "Points",       scoringSystem: null,            scoringSystemLock: false, bbCount: null, bbCountLock: false },
@@ -95,17 +89,17 @@
   const WIZ_SYSTEMS = {
     AllScores:     { label: "All Scores",             hint: "Every player's score counts on every hole." },
     BestBall:      { label: "Best Ball",              hint: "The lowest N scores from the team count on each hole." },
-    DeclareHole:   { label: "Declare per Hole",       hint: "The administrator sets how many scores count on each hole before the round." },
-    DeclareManual: { label: "Declare Discretionally", hint: "Players declare which scores count at their own discretion." },
+    DeclareHole:   { label: "Best Ball per Hole",     hint: "The administrator sets how many scores count on each hole before the round." },
+    DeclareManual: { label: "Players Decide",         hint: "Players declare which scores count at their own discretion." },
   };
 
   const POINTS_STRATEGIES = [
-    { strategy: "Stableford",       label: "Stableford",              compFilter: "both",     hint: "Points awarded per hole based on score relative to par.",                                                              hasConfig: true },
-    { strategy: "Nines",            label: "9's",                     compFilter: "PairPair", hint: "A pool of 9 points is distributed each hole by finish position within the group.",                                     hasConfig: true },
-    { strategy: "LowBallLowTotal",  label: "Low-Ball / Low-Total",     compFilter: "PairPair", hint: "1 point for the side with the lowest individual score, 1 point for the lowest combined team score.",                   hasConfig: false },
-    { strategy: "LowBallHighBall",  label: "Low-Ball / High-Ball",     compFilter: "PairPair", hint: "1 point for the side with the lowest individual score, 1 point for the side with the lower high score between partners.", hasConfig: false },
-    { strategy: "Vegas",            label: "Vegas",                    compFilter: "PairPair", hint: "Each side's scores combine into a two-digit number. The difference between the two numbers determines points won or lost per hole.", hasConfig: false },
-    { strategy: "Chicago",          label: "Chicago",                  compFilter: "both",     hint: "Each player has a points quota based on handicap. The winner is whoever most exceeds their quota.",                    hasConfig: true },
+    { strategy: "Stableford",      label: "Stableford",          compFilter: "both",     hint: "Points awarded per hole based on score relative to par.",                                                              hasConfig: true },
+    { strategy: "Nines",           label: "9's",                 compFilter: "PairPair", hint: "A pool of 9 points is distributed each hole by finish position within the group.",                                     hasConfig: true },
+    { strategy: "LowBallLowTotal", label: "Low-Ball / Low-Total", compFilter: "PairPair", hint: "1 point for the side with the lowest individual score, 1 point for the lowest combined team score.",                   hasConfig: false },
+    { strategy: "LowBallHighBall", label: "Low-Ball / High-Ball", compFilter: "PairPair", hint: "1 point for the side with the lowest individual score, 1 point for the side with the lower high score between partners.", hasConfig: false },
+    { strategy: "Vegas",           label: "Vegas",                compFilter: "PairPair", hint: "Each side's scores combine into a two-digit number. The difference between the two numbers determines points won or lost per hole.", hasConfig: false },
+    { strategy: "Chicago",         label: "Chicago",              compFilter: "both",     hint: "Each player has a points quota based on handicap. The winner is whoever most exceeds their quota.",                    hasConfig: true },
   ];
 
   const STABLEFORD_TEMPLATE = [
@@ -130,6 +124,10 @@
   let _onEsc  = null;
   let _busy   = false;
   let _rowSeq = 0;
+  let _view   = "main"; // "main" | "holes" | "points"
+  let _stagedHoleDecls = null;
+  let _stagedStablefordRows = null;
+  let _stagedNinesValues = null;
 
   function _buildCourseParsByHole(arr) {
     const map = {};
@@ -173,20 +171,21 @@
     }
 
     return {
-      scoringMethod:   g.dbGames_ScoringMethod  || "NET",
-      scoringSystem:   g.dbGames_ScoringSystem  || "AllScores",
-      bestBall:        g.dbGames_BestBall       || null,
-      holeDecls:       fullHoleDecls,
-      pointsStrategy:  strategy,
+      scoringMethod:  g.dbGames_ScoringMethod  || "NET",
+      scoringSystem:  g.dbGames_ScoringSystem  || "AllScores",
+      bestBall:       g.dbGames_BestBall       || null,
+      holeDecls:      fullHoleDecls,
+      pointsStrategy: strategy,
       stablefordRows,
       ninesValues,
     };
   }
 
-  function _pairing()   { return _ctx.game.dbGames_Competition  || "PairField"; }
-  function _gameLabel() { return _ctx.game.dbGames_GameLabel    || null; }
-  function _basis()     { return _ctx.game.dbGames_ScoringBasis || "Strokes"; }
+  function _pairing()    { return _ctx.game.dbGames_Competition  || "PairField"; }
+  function _gameLabel()  { return _ctx.game.dbGames_GameLabel    || null; }
+  function _basis()      { return _ctx.game.dbGames_ScoringBasis || "Strokes"; }
   function _labelMatch() { return GAME_LABELS.find(gl => gl.label === _gameLabel()) || null; }
+  function _currentStrategyDef() { return POINTS_STRATEGIES.find(ps => ps.strategy === _draft.pointsStrategy) || null; }
 
   function _selectMethod(val) { _draft.scoringMethod = val; }
 
@@ -208,33 +207,32 @@
 
   function _selectPointsStrategy(val) {
     _draft.pointsStrategy = val;
-    if (val === "Stableford" || val === "Chicago") {
-      if (!_draft.stablefordRows.length) {
-        _draft.stablefordRows = STABLEFORD_TEMPLATE.map(r => ({ id: `r${_rowSeq++}`, reltoPar: r.reltoPar, points: r.points }));
-      }
+    if ((val === "Stableford" || val === "Chicago") && !_draft.stablefordRows.length) {
+      _draft.stablefordRows = STABLEFORD_TEMPLATE.map(r => ({ id: `r${_rowSeq++}`, reltoPar: r.reltoPar, points: r.points }));
     }
   }
 
-  function _addStablefordRow() {
-    _draft.stablefordRows.push({ id: `r${_rowSeq++}`, reltoPar: 0, points: 0 });
+  function _holeDeclSummary() {
+    const nonDefault = _draft.holeDecls.filter(r => r.count !== 1).length;
+    return nonDefault ? `${nonDefault} of 18 holes customized` : "All holes default to 1 score counted";
   }
 
-  function _removeStablefordRow(id) {
-    _draft.stablefordRows = _draft.stablefordRows.filter(r => r.id !== id);
-  }
-
-  function _setAllHoleDecls(count) {
-    _draft.holeDecls.forEach(r => r.count = count);
+  function _pointsConfigSummary() {
+    if (_draft.pointsStrategy === "Stableford" || _draft.pointsStrategy === "Chicago") {
+      return `${_draft.stablefordRows.length} point value${_draft.stablefordRows.length === 1 ? "" : "s"} configured`;
+    }
+    if (_draft.pointsStrategy === "Nines") return "9's distribution configured";
+    return "";
   }
 
   function _buildSavePayload() {
     const patch = {
-      dbGames_GGID:             _ctx.ggid,
-      dbGames_ScoringMethod:    _draft.scoringMethod,
-      dbGames_ScoringSystem:    _draft.scoringSystem,
-      dbGames_BestBall:         _draft.scoringSystem === "BestBall" ? _draft.bestBall : null,
-      dbGames_HoleDeclaration:  _draft.scoringSystem === "DeclareHole" ? _draft.holeDecls : [],
-      dbGames_PointsStrategy:   _basis() === "Points" ? _draft.pointsStrategy : null,
+      dbGames_GGID:            _ctx.ggid,
+      dbGames_ScoringMethod:   _draft.scoringMethod,
+      dbGames_ScoringSystem:   _draft.scoringSystem,
+      dbGames_BestBall:        _draft.scoringSystem === "BestBall" ? _draft.bestBall : null,
+      dbGames_HoleDeclaration: _draft.scoringSystem === "DeclareHole" ? _draft.holeDecls : [],
+      dbGames_PointsStrategy:  _basis() === "Points" ? _draft.pointsStrategy : null,
     };
 
     if (_basis() === "Points") {
@@ -304,14 +302,9 @@
         <div class="maModal__controls" id="sgcControls"></div>
         <div id="${NOTICE_ID}"></div>
 
-        <div class="maModal__body">
-          <div class="maCard" id="sgcCard"></div>
-        </div>
+        <div class="maModal__body" id="sgcBody"></div>
 
-        <footer class="maModal__ftr">
-          <button type="button" class="maFtrBtn maFtrBtn--cancel" id="sgcBtnCancel">Cancel</button>
-          <button type="button" class="maFtrBtn maFtrBtn--save" id="sgcBtnApply">Apply</button>
-        </footer>
+        <footer class="maModal__ftr" id="sgcFooter"></footer>
       </section>`;
   }
 
@@ -335,109 +328,98 @@
     return RELTOPAR_NAMES[String(reltoPar)] || `Rel. to par ${reltoPar > 0 ? "+" + reltoPar : reltoPar}`;
   }
 
-  function _renderCard() {
-    const card = document.getElementById("sgcCard");
-    if (!card || !_draft) return;
+  function _renderBody() {
+    const body = document.getElementById("sgcBody");
+    if (!body || !_draft) return;
+    if (_view === "holes")  { body.innerHTML = _viewHoles();  _renderFooter(); return; }
+    if (_view === "points") { body.innerHTML = _viewPoints(); _renderFooter(); return; }
+    body.innerHTML = _viewMain();
+    _renderFooter();
+  }
 
+  function _renderFooter() {
+    const el = document.getElementById("sgcFooter");
+    if (!el) return;
+    if (_view === "main") {
+      el.innerHTML = `
+        <button type="button" class="maFtrBtn maFtrBtn--cancel" id="sgcBtnCancel">Cancel</button>
+        <button type="button" class="maFtrBtn maFtrBtn--save" id="sgcBtnSave">Save</button>`;
+    } else {
+      el.innerHTML = `
+        <button type="button" class="maFtrBtn maFtrBtn--cancel" id="sgcBtnSubBack">Back</button>
+        <button type="button" class="maFtrBtn maFtrBtn--save" id="sgcBtnSubApply">Apply</button>`;
+    }
+  }
+
+  function _viewMain() {
     const locked = !!_labelMatch()?.scoringSystemLock;
     const bbLocked = !!_labelMatch()?.bbCountLock;
     const isPoints = _basis() === "Points";
-    const stratHint = filteredPointsStrategies(_pairing()).find(ps => ps.strategy === _draft.pointsStrategy)?.hint || "";
-    const showConfig = _draft.pointsStrategy === "Stableford" || _draft.pointsStrategy === "Chicago";
-    const showNines  = _draft.pointsStrategy === "Nines";
+    const strategyDef = _currentStrategyDef();
 
-    card.innerHTML = `
-      <div class="actionMenu_category">Scoring Method</div>
-      <div style="padding:14px;">
-        <div class="maSeg" id="sgcMethodSeg" style="width:auto;">
-          <button type="button" class="maSegBtn${_draft.scoringMethod === "NET" ? " is-active" : ""}" data-method="NET">NET</button>
-          <button type="button" class="maSegBtn${_draft.scoringMethod === "ADJ GROSS" ? " is-active" : ""}" data-method="ADJ GROSS">GROSS</button>
+    return `
+      <div class="maCard">
+
+        <div class="actionMenu_category">Scoring Method</div>
+        <div style="padding:14px;">
+          <div class="maSeg" style="width:auto;">
+            <button type="button" class="maSegBtn${_draft.scoringMethod === "NET" ? " is-active" : ""}" data-method="NET">NET</button>
+            <button type="button" class="maSegBtn${_draft.scoringMethod === "ADJ GROSS" ? " is-active" : ""}" data-method="ADJ GROSS">GROSS</button>
+          </div>
         </div>
-      </div>
 
-      <div class="actionMenu_category">Scoring System</div>
-      <div style="padding:14px;">
-        <div class="maChoiceChips" id="sgcSystemChips" style="margin-bottom:6px;">
-          ${Object.keys(WIZ_SYSTEMS).map(key => {
-            const isDisabled = locked && _draft.scoringSystem !== key;
-            const cls = isDisabled ? "maChoiceChip is-disabled" : `maChoiceChip${_draft.scoringSystem === key ? " is-selected" : ""}`;
-            return `<button type="button" class="${cls}" data-system="${key}" ${isDisabled ? "disabled" : ""}>${esc(WIZ_SYSTEMS[key].label)}</button>`;
-          }).join("")}
-        </div>
-        <div class="maHintText" id="sgcSystemHint">${esc(WIZ_SYSTEMS[_draft.scoringSystem]?.hint || "")}</div>
-
-        <div id="sgcBBWrap" style="${_draft.scoringSystem === "BestBall" ? "" : "display:none;"} margin-top:14px;">
-          <div class="maListRow__col" style="margin-bottom:6px;">Best Ball Count</div>
-          <div class="maChoiceChips">
-            ${_bbOptions().map(v => {
-              const isDisabled = bbLocked && _draft.bestBall !== v;
-              const cls = isDisabled ? "maChoiceChip is-disabled" : `maChoiceChip${_draft.bestBall === v ? " is-selected" : ""}`;
-              return `<button type="button" class="${cls}" data-bb="${v}" ${isDisabled ? "disabled" : ""}>${esc(v)}</button>`;
+        <div class="actionMenu_category">Scoring System</div>
+        <div style="padding:14px;">
+          <div class="maChoiceChips" style="margin-bottom:6px;">
+            ${Object.keys(WIZ_SYSTEMS).map(key => {
+              const isDisabled = locked && _draft.scoringSystem !== key;
+              const cls = isDisabled ? "maChoiceChip is-disabled" : `maChoiceChip${_draft.scoringSystem === key ? " is-selected" : ""}`;
+              return `<button type="button" class="${cls}" data-system="${key}" ${isDisabled ? "disabled" : ""}>${esc(WIZ_SYSTEMS[key].label)}</button>`;
             }).join("")}
           </div>
-        </div>
-      </div>
+          <div class="maHintText">${esc(WIZ_SYSTEMS[_draft.scoringSystem]?.hint || "")}</div>
 
-      <div id="sgcDeclareWrap" style="${_draft.scoringSystem === "DeclareHole" ? "" : "display:none;"}">
-        <div class="actionMenu_category">Scores Per Hole</div>
-        <div style="padding:14px;">
-          <div class="maHintText" style="margin-bottom:10px;">Set how many scores count per hole. Use Set All to apply one value, then adjust individually.</div>
-          <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
-            <span class="maListRow__col">Set all holes to:</span>
-            <div class="maChoiceChips" id="sgcSetAllChips">
-              ${[0,1,2,3,4].map(n => `<button type="button" class="maChoiceChip" data-setall="${n}">${n}</button>`).join("")}
+          <div style="${_draft.scoringSystem === "BestBall" ? "" : "display:none;"} margin-top:14px;">
+            <div class="maListRow__col" style="margin-bottom:6px;">Best Ball Count</div>
+            <div class="maChoiceChips">
+              ${_bbOptions().map(v => {
+                const isDisabled = bbLocked && _draft.bestBall !== v;
+                const cls = isDisabled ? "maChoiceChip is-disabled" : `maChoiceChip${_draft.bestBall === v ? " is-selected" : ""}`;
+                return `<button type="button" class="${cls}" data-bb="${v}" ${isDisabled ? "disabled" : ""}>${esc(v)}</button>`;
+              }).join("")}
             </div>
           </div>
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-            <div>
-              <div class="maListRow__col" style="margin-bottom:8px;">Front 9</div>
-              <div id="sgcHolesFront"></div>
+
+          <div style="${_draft.scoringSystem === "DeclareHole" ? "display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:14px;" : "display:none;"}">
+            <div class="maHintText" style="margin:0;">${esc(_holeDeclSummary())}</div>
+            <button type="button" class="btn btnSecondary" id="sgcOpenHoles" style="flex-shrink:0;">Configure per Hole</button>
+          </div>
+        </div>
+
+        <div style="${isPoints ? "" : "display:none;"}">
+          <div class="actionMenu_category">Points Strategy</div>
+          <div style="padding:14px;">
+            <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:6px;">
+              ${filteredPointsStrategies(_pairing()).map(ps => `
+                <button type="button" class="maChoiceChip${_draft.pointsStrategy === ps.strategy ? " is-selected" : ""}"
+                        style="display:block; width:100%; text-align:left;" data-strategy="${esc(ps.strategy)}">${esc(ps.label)}</button>
+              `).join("")}
             </div>
-            <div>
-              <div class="maListRow__col" style="margin-bottom:8px;">Back 9</div>
-              <div id="sgcHolesBack"></div>
+            <div class="maHintText">${esc(strategyDef?.hint || "")}</div>
+
+            <div style="${strategyDef?.hasConfig ? "display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:14px;" : "display:none;"}">
+              <div class="maHintText" style="margin:0;">${esc(_pointsConfigSummary())}</div>
+              <button type="button" class="btn btnSecondary" id="sgcOpenPoints" style="flex-shrink:0;">Configure Points</button>
             </div>
           </div>
         </div>
-      </div>
 
-      <div id="sgcPointsWrap" style="${isPoints ? "" : "display:none;"}">
-        <div class="actionMenu_category">Points Strategy</div>
-        <div style="padding:14px;">
-          <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:6px;" id="sgcStrategyChips">
-            ${filteredPointsStrategies(_pairing()).map(ps => `
-              <button type="button" class="maChoiceChip${_draft.pointsStrategy === ps.strategy ? " is-selected" : ""}"
-                      style="display:block; width:100%; text-align:left;" data-strategy="${esc(ps.strategy)}">${esc(ps.label)}</button>
-            `).join("")}
-          </div>
-          <div class="maHintText" id="sgcStrategyHint">${esc(stratHint)}</div>
-
-          <div id="sgcStablefordWrap" style="${showConfig ? "" : "display:none;"} margin-top:14px;">
-            <div class="maListRow__col" style="margin-bottom:8px;">${_draft.pointsStrategy === "Chicago" ? "Points per Score" : "Stableford Points"}</div>
-            <div id="sgcStablefordRows"></div>
-            <button type="button" class="btn btnSecondary" id="sgcAddRow" style="margin-top:8px;">+ Add Row</button>
-          </div>
-
-          <div id="sgcNinesWrap" style="${showNines ? "" : "display:none;"} margin-top:14px;">
-            <div class="maListRow__col" style="margin-bottom:8px;">4-Player Pool</div>
-            <div style="display:flex; gap:8px; margin-bottom:14px;" id="sgcNines4"></div>
-            <div class="maListRow__col" style="margin-bottom:8px;">3-Player Pool</div>
-            <div style="display:flex; gap:8px;" id="sgcNines3"></div>
-          </div>
-        </div>
       </div>`;
-
-    _renderHoleDeclRows();
-    _renderStablefordRows();
-    _renderNines();
   }
 
-  function _renderHoleDeclRows() {
-    const frontEl = document.getElementById("sgcHolesFront");
-    const backEl  = document.getElementById("sgcHolesBack");
-    if (!frontEl || !backEl) return;
+  function _viewHoles() {
     const rowHtml = (r) => `
-      <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--borderSubtle);" data-hole-row="${r.hole}">
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 0; border-bottom:1px solid var(--borderSubtle);">
         <span class="maListRow__subline">Hole ${r.hole}${_coursePars[r.hole] ? " · " + esc(_coursePars[r.hole]) : ""}</span>
         <div style="display:flex; align-items:center; gap:6px;">
           <button type="button" class="iconBtn" style="width:26px;height:26px;" data-step="-1" data-hole="${r.hole}">−</button>
@@ -445,100 +427,172 @@
           <button type="button" class="iconBtn" style="width:26px;height:26px;" data-step="1" data-hole="${r.hole}">+</button>
         </div>
       </div>`;
-    frontEl.innerHTML = _draft.holeDecls.filter(r => r.hole <= 9).map(rowHtml).join("");
-    backEl.innerHTML  = _draft.holeDecls.filter(r => r.hole > 9).map(rowHtml).join("");
+    return `
+      <div class="maCard">
+        <div class="actionMenu_category">Scores Per Hole</div>
+        <div style="padding:14px;">
+          <div class="maHintText" style="margin-bottom:10px;">Set how many scores count per hole. Use Set All to apply one value, then adjust individually.</div>
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px; flex-wrap:wrap;">
+            <span class="maListRow__col">Set all holes to:</span>
+            <div class="maChoiceChips">
+              ${[0,1,2,3,4].map(n => `<button type="button" class="maChoiceChip" data-setall="${n}">${n}</button>`).join("")}
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+            <div>
+              <div class="maListRow__col" style="margin-bottom:8px;">Front 9</div>
+              ${_stagedHoleDecls.filter(r => r.hole <= 9).map(rowHtml).join("")}
+            </div>
+            <div>
+              <div class="maListRow__col" style="margin-bottom:8px;">Back 9</div>
+              ${_stagedHoleDecls.filter(r => r.hole > 9).map(rowHtml).join("")}
+            </div>
+          </div>
+        </div>
+      </div>`;
   }
 
-  function _renderStablefordRows() {
-    const wrap = document.getElementById("sgcStablefordRows");
-    if (!wrap) return;
-    wrap.innerHTML = _draft.stablefordRows.map(r => `
-      <div style="display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--borderSubtle);" data-row-id="${r.id}">
-        <input type="number" value="${r.reltoPar}" style="width:60px; text-align:center;" class="maTextInput" data-row-field="reltoPar" data-row-id="${r.id}">
-        <span class="maListRow__subline" style="flex:1;">${esc(_stablefordRowLabel(r.reltoPar))}</span>
-        <input type="number" min="0" max="99" value="${r.points}" style="width:60px; text-align:center;" class="maTextInput" data-row-field="points" data-row-id="${r.id}">
-        <button type="button" class="iconBtn" style="width:26px;height:26px; color:var(--danger);" data-remove-row="${r.id}" aria-label="Remove row">&#10005;</button>
-      </div>`).join("");
+  function _viewPoints() {
+    const isStableford = _draft.pointsStrategy === "Stableford" || _draft.pointsStrategy === "Chicago";
+    const isNines = _draft.pointsStrategy === "Nines";
+
+    const stablefordHtml = () => `
+      <div class="maListRow__col" style="margin-bottom:8px;">${_draft.pointsStrategy === "Chicago" ? "Points per Score" : "Stableford Points"}</div>
+      <div>
+        ${_stagedStablefordRows.map(r => `
+          <div style="display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--borderSubtle);" data-row-id="${r.id}">
+            <input type="number" value="${r.reltoPar}" style="width:60px; text-align:center;" class="maTextInput" data-row-field="reltoPar" data-row-id="${r.id}">
+            <span class="maListRow__subline" style="flex:1;">${esc(_stablefordRowLabel(r.reltoPar))}</span>
+            <input type="number" min="0" max="99" value="${r.points}" style="width:60px; text-align:center;" class="maTextInput" data-row-field="points" data-row-id="${r.id}">
+            <button type="button" class="iconBtn" style="width:26px;height:26px; color:var(--danger);" data-remove-row="${r.id}" aria-label="Remove row">&#10005;</button>
+          </div>`).join("")}
+      </div>
+      <button type="button" class="btn btnSecondary" id="sgcAddRow" style="margin-top:8px;">+ Add Row</button>`;
+
+    const ninesHtml = () => `
+      <div class="maListRow__col" style="margin-bottom:8px;">4-Player Pool</div>
+      <div style="display:flex; gap:8px; margin-bottom:14px;">
+        ${_stagedNinesValues["4"].map((v, i) => `<input type="number" min="0" max="9" value="${v}" class="maTextInput" style="width:50px; text-align:center;" data-nines="4" data-idx="${i}">`).join("")}
+      </div>
+      <div class="maListRow__col" style="margin-bottom:8px;">3-Player Pool</div>
+      <div style="display:flex; gap:8px;">
+        ${_stagedNinesValues["3"].map((v, i) => `<input type="number" min="0" max="9" value="${v}" class="maTextInput" style="width:50px; text-align:center;" data-nines="3" data-idx="${i}">`).join("")}
+      </div>`;
+
+    return `
+      <div class="maCard">
+        <div class="actionMenu_category">Points Configuration</div>
+        <div style="padding:14px;">
+          ${isStableford ? stablefordHtml() : isNines ? ninesHtml() : ""}
+        </div>
+      </div>`;
   }
 
-  function _renderNines() {
-    const el4 = document.getElementById("sgcNines4");
-    const el3 = document.getElementById("sgcNines3");
-    if (el4) el4.innerHTML = _draft.ninesValues["4"].map((v, i) =>
-      `<input type="number" min="0" max="9" value="${v}" class="maTextInput" style="width:50px; text-align:center;" data-nines="4" data-idx="${i}">`).join("");
-    if (el3) el3.innerHTML = _draft.ninesValues["3"].map((v, i) =>
-      `<input type="number" min="0" max="9" value="${v}" class="maTextInput" style="width:50px; text-align:center;" data-nines="3" data-idx="${i}">`).join("");
-  }
+  // Single delegated listener, attached once (in open()), not re-attached
+  // per _renderBody() call. Handles all three views — only one view's
+  // markup exists in #sgcBody's DOM at any moment, so there's no
+  // ambiguity in handling every data-attribute in one place.
+  function _wireBody() {
+    const body = document.getElementById("sgcBody");
+    const footer = document.getElementById("sgcFooter");
+    if (!body || !footer) return;
 
-  function _wireEvents() {
-    const overlay = document.getElementById(OVERLAY_ID);
-    if (!overlay) return;
-
-    overlay.querySelector("#sgcBtnClose")?.addEventListener("click", () => { if (!_busy) _dismiss(); });
-    overlay.querySelector("#sgcBtnCancel")?.addEventListener("click", () => { if (!_busy) _dismiss(); });
-    overlay.querySelector("#sgcBtnApply")?.addEventListener("click", _apply);
-
-    const card = document.getElementById("sgcCard");
-    if (!card) return;
-
-    card.addEventListener("click", (e) => {
+    body.addEventListener("click", (e) => {
+      // Main view
       const method = e.target.closest("[data-method]");
-      if (method) { _selectMethod(method.dataset.method); _renderCard(); return; }
+      if (method) { _selectMethod(method.dataset.method); _renderBody(); return; }
 
       const system = e.target.closest("[data-system]");
-      if (system && !system.disabled) { _selectSystem(system.dataset.system); _renderCard(); return; }
+      if (system && !system.disabled) { _selectSystem(system.dataset.system); _renderBody(); return; }
 
       const bb = e.target.closest("[data-bb]");
-      if (bb && !bb.disabled) { _selectBestBall(bb.dataset.bb); _renderCard(); return; }
+      if (bb && !bb.disabled) { _selectBestBall(bb.dataset.bb); _renderBody(); return; }
 
+      const strategy = e.target.closest("[data-strategy]");
+      if (strategy) { _selectPointsStrategy(strategy.dataset.strategy); _renderBody(); return; }
+
+      if (e.target.closest("#sgcOpenHoles")) {
+        _stagedHoleDecls = _draft.holeDecls.map(r => ({ ...r }));
+        _view = "holes";
+        _renderBody();
+        return;
+      }
+      if (e.target.closest("#sgcOpenPoints")) {
+        _stagedStablefordRows = _draft.stablefordRows.map(r => ({ ...r }));
+        _stagedNinesValues = { "4": [..._draft.ninesValues["4"]], "3": [..._draft.ninesValues["3"]] };
+        _view = "points";
+        _renderBody();
+        return;
+      }
+
+      // Holes view — mutates the STAGED copy, not _draft, until Apply commits it
       const setAll = e.target.closest("[data-setall]");
-      if (setAll) { _setAllHoleDecls(Number(setAll.dataset.setall)); _renderHoleDeclRows(); return; }
+      if (setAll) { _stagedHoleDecls.forEach(r => r.count = Number(setAll.dataset.setall)); _renderBody(); return; }
 
       const step = e.target.closest("[data-step]");
       if (step) {
         const hole = Number(step.dataset.hole);
         const delta = Number(step.dataset.step);
-        const row = _draft.holeDecls.find(r => r.hole === hole);
+        const row = _stagedHoleDecls.find(r => r.hole === hole);
         if (row) row.count = Math.min(4, Math.max(0, row.count + delta));
-        _renderHoleDeclRows();
+        _renderBody();
         return;
       }
 
-      const strategy = e.target.closest("[data-strategy]");
-      if (strategy) { _selectPointsStrategy(strategy.dataset.strategy); _renderCard(); return; }
-
+      // Points view — mutates STAGED copies
       const addRow = e.target.closest("#sgcAddRow");
-      if (addRow) { _addStablefordRow(); _renderStablefordRows(); return; }
+      if (addRow) { _stagedStablefordRows.push({ id: `r${_rowSeq++}`, reltoPar: 0, points: 0 }); _renderBody(); return; }
 
       const removeRow = e.target.closest("[data-remove-row]");
-      if (removeRow) { _removeStablefordRow(removeRow.dataset.removeRow); _renderStablefordRows(); return; }
+      if (removeRow) { _stagedStablefordRows = _stagedStablefordRows.filter(r => r.id !== removeRow.dataset.removeRow); _renderBody(); return; }
     });
 
-    card.addEventListener("change", (e) => {
+    body.addEventListener("change", (e) => {
       const holeInput = e.target.closest("[data-hole-input]");
       if (holeInput) {
         const hole = Number(holeInput.dataset.holeInput);
-        const row = _draft.holeDecls.find(r => r.hole === hole);
+        const row = _stagedHoleDecls.find(r => r.hole === hole);
         if (row) row.count = Math.min(4, Math.max(0, parseInt(holeInput.value, 10) || 0));
         return;
       }
 
       const rowField = e.target.closest("[data-row-field]");
       if (rowField) {
-        const row = _draft.stablefordRows.find(r => r.id === rowField.dataset.rowId);
+        const row = _stagedStablefordRows.find(r => r.id === rowField.dataset.rowId);
         if (row) {
-          const val = parseInt(rowField.value, 10) || 0;
-          row[rowField.dataset.rowField] = val;
-          if (rowField.dataset.rowField === "reltoPar") _renderStablefordRows();
+          row[rowField.dataset.rowField] = parseInt(rowField.value, 10) || 0;
+          if (rowField.dataset.rowField === "reltoPar") _renderBody();
         }
         return;
       }
 
       const ninesInput = e.target.closest("[data-nines]");
       if (ninesInput) {
-        const pool = ninesInput.dataset.nines;
-        const idx = Number(ninesInput.dataset.idx);
-        _draft.ninesValues[pool][idx] = parseInt(ninesInput.value, 10) || 0;
+        _stagedNinesValues[ninesInput.dataset.nines][Number(ninesInput.dataset.idx)] = parseInt(ninesInput.value, 10) || 0;
+      }
+    });
+
+    // Footer — its own delegated listener since #sgcFooter's innerHTML is
+    // rebuilt by _renderFooter() the same way #sgcBody's is by _renderBody()
+    footer.addEventListener("click", (e) => {
+      if (e.target.closest("#sgcBtnCancel")) { if (!_busy) _dismiss(); return; }
+      if (e.target.closest("#sgcBtnSave"))   { _apply(); return; }
+
+      if (e.target.closest("#sgcBtnSubBack")) {
+        // Discard staged edits — _draft is untouched
+        _stagedHoleDecls = null; _stagedStablefordRows = null; _stagedNinesValues = null;
+        _view = "main";
+        _renderBody();
+        return;
+      }
+      if (e.target.closest("#sgcBtnSubApply")) {
+        // Commit staged edits into _draft
+        if (_view === "holes")  _draft.holeDecls = _stagedHoleDecls;
+        if (_view === "points") { _draft.stablefordRows = _stagedStablefordRows; _draft.ninesValues = _stagedNinesValues; }
+        _stagedHoleDecls = null; _stagedStablefordRows = null; _stagedNinesValues = null;
+        _view = "main";
+        _renderBody();
+        return;
       }
     });
   }
@@ -566,6 +620,7 @@
   MA.setGameScoring.open = async function (options) {
     _onDone = options?.onDone || null;
     _busy = false;
+    _view = "main";
 
     MA.ui?.showBusy?.({ title: "Scoring", message: "Loading..." });
     let ctx;
@@ -591,9 +646,11 @@
     overlay.setAttribute("aria-hidden", "false");
     _lockScroll(true);
 
+    document.getElementById("sgcBtnClose")?.addEventListener("click", () => { if (!_busy) _dismiss(); });
+
     _renderControls();
-    _renderCard();
-    _wireEvents();
+    _renderBody();
+    _wireBody();
 
     _onEsc = (e) => { if (e.key === "Escape" && !_busy) _dismiss(); };
     document.addEventListener("keydown", _onEsc);
