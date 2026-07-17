@@ -97,6 +97,7 @@
   let _effectivity = "PlayDate";
   let _effDate = "";
   let _mode = "none";
+  let _isGrossPlay = false; // target: "game" only — no single Scoring Method at the event level
 
   // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -290,6 +291,11 @@
           ? "fixed"
           : "none";
 
+      // Events span multiple games/rounds, which may each have a
+      // different Scoring Method — there's no single value to lock
+      // against here.
+      _isGrossPlay = false;
+
       return;
     }
 
@@ -325,6 +331,11 @@
      * Event inheritance mode.
      */
     _mode = "none";
+
+    // Relocated verbatim from wizRenderStep4()'s isAdjGross condition in
+    // game_settings.js.
+    _isGrossPlay =
+      String(game.dbGames_ScoringMethod || "NET") === "ADJ GROSS";
   }
 
   // ── Rendering ────────────────────────────────────────────────────────
@@ -408,9 +419,7 @@
                 : ""
             }"
           >
-            ${_renderMethodField()}
-            ${_renderAllowanceField()}
-            ${_renderEffectivityField()}
+            ${_isGrossPlay ? _renderGrossPlayIndicator() : `${_renderMethodField()} ${_renderAllowanceField()} ${_renderEffectivityField()}`}
           </div>
 
         </div>
@@ -430,6 +439,7 @@
               type="button"
               class="maFtrBtn maFtrBtn--save"
               id="sghBtnApply"
+              ${_isGrossPlay ? "disabled" : ""}
             >
               Save
             </button>
@@ -526,6 +536,21 @@
     return _mode === "fixed"
       ? "This handicap configuration will apply to every round in this event."
       : "Each round can set its own handicap rules. Changing this does not refresh existing handicaps.";
+  }
+
+  function _renderGrossPlayIndicator() {
+    return `
+      <div style="margin-top:12px;">
+        <button
+          type="button"
+          class="maChoiceChip is-selected is-disabled"
+          style="width:100%; text-align:center;"
+          disabled
+        >
+          GROSS PLAY
+        </button>
+      </div>
+    `;
   }
 
   function _renderMethodField() {
@@ -1139,6 +1164,13 @@
 
   async function _applyChanges() {
     if (_busy) {
+      return;
+    }
+
+    // Belt-and-suspenders — the Save button carries the disabled attribute
+    // for this case and browsers don't fire click on disabled buttons, but
+    // guarding here too matches the _busy check right above it.
+    if (_isGrossPlay) {
       return;
     }
 
