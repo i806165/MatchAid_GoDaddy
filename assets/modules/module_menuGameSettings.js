@@ -303,7 +303,7 @@
         row.setAttribute("data-setting", id);
         row.id = `gsMenuRow-${id}`;
         row.innerHTML = `
-          <span class="maListRow__avatar" aria-hidden="true">${iconHtml}</span>
+          <span class="maListRow__avatar" style="border-radius: var(--radiusSq); background: transparent;" aria-hidden="true">${iconHtml}</span>
           <div style="flex:1 1 auto; min-width:0;">
             <div class="maListRow__col">${esc(label)}</div>
             <div class="maListRow__subline">${esc(summaryText)}</div>
