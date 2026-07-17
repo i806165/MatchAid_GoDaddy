@@ -39,6 +39,8 @@ $_SESSION["SessionStoredGGID"] = 622;
 
   <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/module_menuGameSettings.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_setGameFormat.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_setGameSegments.js') ?>"></script>
   <script>
     document.getElementById("devOpenMenu").addEventListener("click", () => MA.menuGameSettings.open());
   </script>
