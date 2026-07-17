@@ -130,6 +130,10 @@
       summary: (g) => handicapSummary(g),
       open: (done) => MA.defineHandicapSettings?.open(_adaptHandicaps(done)),
     },
+    handicaps: {
+      summary: (g) => handicapSummary(g),
+      open: (done) => MA.setHandicapsGameEvent?.open({target: "game", onDone: done}),
+    },
     teams: {
       summary: (g) => (g.dbGames_TeamMode === "active" ? "Active" : "Off"),
       open: (done) => MA.manageTeams?.open(_adaptTeams(done)),

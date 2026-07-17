@@ -44,6 +44,7 @@ $_SESSION["SessionStoredGGID"] = 622;
   <script src="<?= ma_asset('/assets/modules/module_setGameBlindPlayer.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/module_setGameScoring.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/module_setGamePlacementPoints.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_setGameHandicaps.js') ?>"></script>
   <script>
     document.getElementById("devOpenMenu").addEventListener("click", () => MA.menuGameSettings.open());
   </script>
