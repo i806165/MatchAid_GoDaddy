@@ -85,20 +85,30 @@
   ];
 
   // ── Relocated verbatim from game_settings.js ────────────────────────
+  // 9-hole round: 3's (three 3-hole segments) is the original option; 9's
+  // (one segment spanning the whole round, no sub-division) is now also
+  // valid — added per direct correction, not ported. When segments="9" on
+  // a 9-hole round, buildRotationOptions() below locks Rotation to None
+  // (there's only one segment, nothing to rotate between), rather than the
+  // old approach of hiding the option to prevent 1324/1423 from applying.
   function buildSegmentsOptionsFromHoles(holesVal) {
     if (holesVal === "F9" || holesVal === "B9") {
-      return [{ label: "3's", value: "3" }];
+      return [{ label: "3's", value: "3" }, { label: "9's", value: "9" }];
     }
     return [{ label: "6's", value: "6" }, { label: "9's", value: "9" }];
   }
 
-  function buildRotationOptions(segmentsValue, competitionValue) {
+  // holesVal disambiguates what segments="9" means: two 9-hole segments on
+  // an 18-hole round (1324/1423 rotation meaningful) vs one single 9-hole
+  // segment on a 9-hole round (no rotation possible — None only).
+  function buildRotationOptions(segmentsValue, competitionValue, holesVal) {
     const seg  = String(segmentsValue    || "9");
     const comp = String(competitionValue || "PairField");
     if (comp === "PairField") return rotationBase.slice();
     const opts = rotationBase.slice();
+    const isNineHoleRound = (holesVal === "F9" || holesVal === "B9");
     if (seg === "6" || seg === "3") opts.push(rotationCOD);
-    if (seg === "9")                opts.push(rotation1324, rotation1423);
+    if (seg === "9" && !isNineHoleRound) opts.push(rotation1324, rotation1423);
     return opts;
   }
 
@@ -127,6 +137,23 @@
     };
   }
 
+  // Runs the same validation _selectHoles()/_selectSegments() apply on
+  // every manual change — but _draftFromGame() itself never called it, so
+  // stored data that predates a rule change (or a Holes edit made from
+  // Game Maintenance since this was last saved) rendered uncorrected on
+  // first open. Called once, right after _draftFromGame(), before the
+  // first render.
+  function _normalizeDraft() {
+    const segOpts = buildSegmentsOptionsFromHoles(_draft.holes);
+    const validSegs = segOpts.map(o => o.value);
+    if (!validSegs.includes(_draft.segments)) {
+      const def = defaultSegmentsForLabel(_gameLabel(), _draft.holes);
+      _draft.segments = validSegs.includes(def) ? def : validSegs[0];
+    }
+    _syncRotationAfterSegmentsChange();
+    if (!_allowStrokeDist()) _draft.strokeDistribution = "Standard";
+  }
+
   // isAdjGross/pairing/gameLabel are reads from the full context — every
   // module hydrates the whole game record, there is no dependency here.
   function _isAdjGross() { return _ctx.game.dbGames_ScoringMethod === "ADJ GROSS"; }
@@ -140,12 +167,16 @@
   // ── Selection — no cross-domain effects, computed once at Apply ─────
   function _selectHoles(val) {
     _draft.holes = val;
+    // Holes changing redefines what each segment VALUE means — "9" is two
+    // 9-hole segments on an 18-hole round, one whole-round segment on a
+    // 9-hole round. Always re-derive the default here rather than
+    // preserve the prior selection just because the same value string
+    // also happens to be valid in the new option set — a "9" carried over
+    // from an 18-hole context isn't the same choice on a 9-hole one.
     const segOpts = buildSegmentsOptionsFromHoles(val);
     const validSegs = segOpts.map(o => o.value);
-    if (!validSegs.includes(_draft.segments)) {
-      const def = defaultSegmentsForLabel(_gameLabel(), val);
-      _draft.segments = validSegs.includes(def) ? def : validSegs[0];
-    }
+    const def = defaultSegmentsForLabel(_gameLabel(), val);
+    _draft.segments = validSegs.includes(def) ? def : validSegs[0];
     _syncRotationAfterSegmentsChange();
   }
 
@@ -155,7 +186,7 @@
   }
 
   function _syncRotationAfterSegmentsChange() {
-    const rotOpts = buildRotationOptions(_draft.segments, _pairing());
+    const rotOpts = buildRotationOptions(_draft.segments, _pairing(), _draft.holes);
     const validRot = rotOpts.map(o => o.value);
     if (!validRot.includes(_draft.rotation)) _draft.rotation = validRot[0] || "None";
     if (_gameLabel() === "C-O-D") _draft.rotation = "COD";
@@ -249,7 +280,7 @@
             <div class="actionMenu_category">Rotation Method</div>
             <div style="padding:14px;" id="sgsRotationWrap"></div>
 
-            <div class="actionMenu_category">Method Used to apply Players Handicap Across Segments</div>
+            <div class="actionMenu_category">Handicap Allocation Method</div>
             <div style="padding:14px;" id="sgsStrokeDistWrap"></div>
 
           </div>
@@ -315,7 +346,7 @@
   function _renderRotation() {
     const wrap = document.getElementById("sgsRotationWrap");
     if (!wrap || !_draft) return;
-    const opts = buildRotationOptions(_draft.segments, _pairing());
+    const opts = buildRotationOptions(_draft.segments, _pairing(), _draft.holes);
     const isCOD = _gameLabel() === "C-O-D";
     const chips = opts.map(opt => {
       const locked = isCOD && opt.value === "COD";
@@ -345,6 +376,7 @@
     }).join("");
     const selectedOpt = strokeDistOptions.find(o => o.value === (allow ? _draft.strokeDistribution : "Standard"));
     wrap.innerHTML = `
+      <div class="maHintText" style="margin-bottom:10px;">Choose how player handicaps are allocated across playing segments.</div>
       <div style="display:flex; flex-direction:column; gap:8px;">${rows}</div>
       <div class="maHintText" style="margin-top:8px;">${esc(selectedOpt?.hint || "")}</div>`;
   }
@@ -434,6 +466,7 @@
 
     _ctx = ctx;
     _draft = _draftFromGame(ctx.game);
+    _normalizeDraft();
 
     const overlay = _ensureOverlay();
     overlay.innerHTML = _renderModal(!!ctx.game.dbGames_EID);
