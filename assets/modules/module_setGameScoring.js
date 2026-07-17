@@ -2,7 +2,10 @@
  *
  * MA.setGameScoring — Scoring editor module.
  * Owns: dbGames_ScoringMethod, dbGames_ScoringSystem, dbGames_BestBall,
- *       dbGames_HoleDeclaration, dbGames_PointsStrategy, dbGames_PointsConfig.
+ *       dbGames_HoleDeclaration, dbGames_PointsConfig.
+ *
+ * dbGames_PointsConfig.strategy is the sole source of truth for the
+ * selected Points strategy. There is no separate strategy field.
  *
  * Zero injected CSS. All classes come from ma_shared.css.
  *
@@ -156,7 +159,11 @@
     if (typeof pointsConfig === "string") { try { pointsConfig = JSON.parse(pointsConfig); } catch (e) { pointsConfig = {}; } }
     if (!pointsConfig || typeof pointsConfig !== "object") pointsConfig = {};
 
-    const strategy = g.dbGames_PointsStrategy || null;
+    const strategy =
+        typeof pointsConfig.strategy === "string" &&
+        pointsConfig.strategy.trim() !== ""
+          ? pointsConfig.strategy.trim()
+          : null;
     let stablefordRows = [];
     if (strategy === "Stableford" || strategy === "Chicago") {
       const saved = Array.isArray(pointsConfig.values) ? pointsConfig.values : STABLEFORD_TEMPLATE;
@@ -232,17 +239,43 @@
       dbGames_ScoringSystem:   _draft.scoringSystem,
       dbGames_BestBall:        _draft.scoringSystem === "BestBall" ? _draft.bestBall : null,
       dbGames_HoleDeclaration: _draft.scoringSystem === "DeclareHole" ? _draft.holeDecls : [],
-      dbGames_PointsStrategy:  _basis() === "Points" ? _draft.pointsStrategy : null,
     };
 
     if (_basis() === "Points") {
-      if (_draft.pointsStrategy === "Stableford" || _draft.pointsStrategy === "Chicago") {
-        patch.dbGames_PointsConfig = { values: _draft.stablefordRows.map(r => ({ reltoPar: r.reltoPar, points: r.points })) };
-      } else if (_draft.pointsStrategy === "Nines") {
-        patch.dbGames_PointsConfig = { values: _draft.ninesValues };
+      const strategy = _draft.pointsStrategy || null;
+
+      if (strategy === "Stableford" || strategy === "Chicago") {
+        patch.dbGames_PointsConfig = {
+          strategy,
+          values: _draft.stablefordRows.map((row) => ({
+            reltoPar: Number(row.reltoPar),
+            points: Number(row.points),
+          })),
+        };
+
+      } else if (strategy === "Nines") {
+        patch.dbGames_PointsConfig = {
+          strategy,
+          values: {
+            "4": _draft.ninesValues["4"].map(Number),
+            "3": _draft.ninesValues["3"].map(Number),
+          },
+        };
+
+      } else if (strategy) {
+        /*
+        * LowBallLowTotal, LowBallHighBall, and Vegas currently have no
+        * editable configuration in this module. Their strategy is still
+        * persisted in the common Points Config envelope.
+        */
+        patch.dbGames_PointsConfig = {
+          strategy,
+        };
+
       } else {
-        patch.dbGames_PointsConfig = {};
+        patch.dbGames_PointsConfig = null;
       }
+
     } else {
       patch.dbGames_PointsConfig = null;
     }

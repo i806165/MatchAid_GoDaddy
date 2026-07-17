@@ -1,7 +1,13 @@
 /* /assets/modules/module_setGamePlacementPoints.js
  *
  * MA.setGamePlacementPoints — Placement Points editor module.
- * Owns: dbGames_PlacementPoints.
+  * Owns: dbGames_PlacementPoints, dbGames_ScoringSegments.
+ *
+ * dbGames_ScoringSegments controls whether PairPair match-result points
+ * are awarded for one Overall result or for Front 9, Back 9, and Overall.
+ *
+ * dbGames_Segments is Playing Segments and is owned by
+ * module_setGameSegments.js.
  *
  * ── Rendering cloned verbatim from module_definePlacementPoints.js ──────
  * CATEGORY_DEFS, seedCategory(), parseIncoming(), resegmentMatchResult(),
@@ -20,8 +26,9 @@
  *     a caller — competition/scoringSegments/placementPoints are read from
  *     this module's own fetched context, same CONTEXT_ENDPOINT every other
  *     module uses. effectiveScoringSegments is computed the same way
- *     Format/Segments already do (Rotation forces 1; PairPair + segments
- *     === 3 gives 3; otherwise 1) — not passed in.
+ *     Placement Points owns dbGames_ScoringSegments. Rotation and
+ *     Competition may constrain the effective value to 1, but
+ *     dbGames_Segments is unrelated Playing Segments metadata.
  *   - Direct save: doApply() used to call _config.onApply(json, segments)
  *     and let the caller decide what to do with it. It now posts to its
  *     own save endpoint directly (saveGamePlacementPoints.php — TODO, does
@@ -117,13 +124,33 @@
     MA.ui.showModalNotice(slot, { message, tone: level });
   }
 
-  // Read-only. Mirrors buildPatchFromWiz()'s / module_setGameSegments.js's
-  // derivation — Rotation forces 1; PairPair + 3 segments gives 3;
-  // otherwise 1. Replaces the caller-supplied scoringSegments value.
-  function _effectiveScoringSegments(g) {
-    const rotationLocksTo1 = !!g.dbGames_RotationMethod && g.dbGames_RotationMethod !== "None";
-    if (g.dbGames_Competition !== "PairPair" || rotationLocksTo1) return 1;
-    return parseInt(g.dbGames_ScoringSegments || "1", 10) === 3 ? 3 : 1;
+/*
+ * Hydrate this module's owned Scoring Segments field.
+ *
+ * PairField games and rotation-based PairPair games can only have one
+ * Overall match result. Otherwise, the stored value may be 1 or 3.
+ *
+ * This does not read dbGames_Segments. That field represents Playing
+ * Segments and belongs to module_setGameSegments.js.
+ */
+  function _scoringSegmentsFromGame(g) {
+    const rotationActive =
+      !!g.dbGames_RotationMethod &&
+      g.dbGames_RotationMethod !== "None";
+
+    if (
+      g.dbGames_Competition !== "PairPair" ||
+      rotationActive
+    ) {
+      return 1;
+    }
+
+    return parseInt(
+      g.dbGames_ScoringSegments || "1",
+      10
+    ) === 3
+      ? 3
+      : 1;
   }
 
   // ── Seeding — cloned verbatim ────────────────────────────────────────
@@ -152,7 +179,7 @@
   // ── State — sourced from self-hydrated _ctx.game, not a caller config ──
   function initState(game) {
     const competition     = game.dbGames_Competition === "PairPair" ? "PairPair" : "PairField";
-    const scoringSegments = _effectiveScoringSegments(game);
+    const scoringSegments = _scoringSegmentsFromGame(game);
     const incoming        = parseIncoming(game.dbGames_PlacementPoints);
 
     const incomingByKey = {};
@@ -531,7 +558,16 @@
     MA.ui?.showBusy?.({ title: "Placement Points", message: "Saving — please wait..." });
     try {
       const result = collectState();
-      const payload = { dbGames_GGID: _ctx.ggid, dbGames_PlacementPoints: result };
+      const payload = {
+        dbGames_GGID: _ctx.ggid,
+
+        dbGames_ScoringSegments:
+          _state.competition === "PairPair"
+            ? _state.scoringSegments
+            : 1,
+
+        dbGames_PlacementPoints: result,
+      };
       const res = await MA.postJson(SAVE_ENDPOINT, { payload });
       if (!res?.ok) { _showModalNotice(res?.message || "Unable to save Placement Points.", "danger"); return; }
       MA.ui?.hideBusy?.();

@@ -1,8 +1,11 @@
 /* /assets/modules/module_setGameSegments.js
  *
  * MA.setGameSegments — Segments editor module.
- * Owns: dbGames_Holes, dbGames_Segments, dbGames_ScoringSegments (derived),
+ * Owns: dbGames_Holes, dbGames_Segments,
  *       dbGames_RotationMethod, dbGames_StrokeDistribution.
+ * dbGames_Segments represents Playing Segments.
+ * dbGames_ScoringSegments belongs to module_setGamePlacementPoints.js
+ * and is not read, derived, or written by this module.
  *
  * Zero injected CSS. All classes come from ma_shared.css — modal, choice
  * chips, action-menu category headers, hint text.
@@ -31,17 +34,15 @@
  * the same module that reads it.
  *
  * ── Cross-domain writes ──────────────────────────────────────────────────
- * None. dbGames_ScoringSegments is derived from Rotation + Competition,
- * but Rotation is this module's own field — the derivation is entirely
- * intra-module. Stroke Allocation's lock condition reads Scoring Method
- * (Scoring module's field) but only as a read influencing this module's
- * own dbGames_StrokeDistribution value, not a write into another
- * module's column.
+ * None. This module reads Competition, Game Label, and Scoring Method
+ * from the hydrated Game only to determine valid UI choices.
+ *
+ * It does not read or write dbGames_ScoringSegments. That field controls
+ * match-result scoring periods and belongs to Placement Points.
  *
  * ── Relocated verbatim from game_settings.js ─────────────────────────────
  * buildSegmentsOptionsFromHoles(), buildRotationOptions(),
- * defaultSegmentsForLabel(), the Scoring-Segments-forced-to-1 derivation
- * in buildPatchFromWiz(), and the Rotation hint text in wizUpdateRotNote().
+ * defaultSegmentsForLabel(), and the Rotation hint text in wizUpdateRotNote().
  * Stroke Allocation's lock condition (!isAdjGross && rotation === "COD")
  * relocated verbatim from wizRenderStep4(); its labels/hints are NEW
  * copy, not ported — see strokeDistOptions below.
@@ -203,21 +204,27 @@
   }
 
   // ── Save payload ─────────────────────────────────────────────────────
-  function _buildSavePayload() {
-    const rotationLocksTo1 = !!_draft.rotation && _draft.rotation !== "None";
-    const effectiveScoringSegments = (_pairing() === "PairPair" && !rotationLocksTo1)
-      ? (parseInt(_draft.segments || "1", 10) === 3 ? 3 : 1)
-      : 1;
+function _buildSavePayload() {
+  return {
+    dbGames_GGID:
+      _ctx.ggid,
 
-    return {
-      dbGames_GGID:               _ctx.ggid,
-      dbGames_Holes:               _draft.holes,
-      dbGames_Segments:            _draft.segments,
-      dbGames_ScoringSegments:     effectiveScoringSegments,
-      dbGames_RotationMethod:      _draft.rotation,
-      dbGames_StrokeDistribution:  _allowStrokeDist() ? _draft.strokeDistribution : "Standard",
-    };
-  }
+    dbGames_Holes:
+      _draft.holes,
+
+    // Playing Segments only: 3, 6, or 9.
+    dbGames_Segments:
+      _draft.segments,
+
+    dbGames_RotationMethod:
+      _draft.rotation,
+
+    dbGames_StrokeDistribution:
+      _allowStrokeDist()
+        ? _draft.strokeDistribution
+        : "Standard",
+  };
+}
 
   // ── Overlay ──────────────────────────────────────────────────────────
   function _ensureOverlay() {
