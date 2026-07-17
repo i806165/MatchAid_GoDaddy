@@ -35,16 +35,16 @@
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="3.4"/></svg>
   </div>
 
-  <div data-setting="placementPoints" data-label="Placement Points" data-category="setup">
+  <div data-setting="placementPoints" data-label="Placement Points" data-category="roster">
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8v3a4 4 0 0 1-8 0V3Z"/><path d="M10 10v3M7.5 16.5h5M8 16.5v-2.2h4v2.2"/></svg>
   </div>
 
-  <div data-setting="handicaps" data-label="Handicaps" data-category="setup">
+  <div data-setting="handicaps" data-label="Handicaps" data-category="roster">
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M15 5 5 15"/><circle cx="6.2" cy="6.2" r="1.6"/><circle cx="13.8" cy="13.8" r="1.6"/></svg>
   </div>
 
   <div data-setting="teams" data-label="Teams" data-category="roster">
-    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="7" cy="6.5" r="2.3"/><circle cx="14" cy="7.5" r="1.9"/><path d="M2.5 16v-1.2A4 4 0 0 1 6.5 11h1a4 4 0 0 1 4 3.6V16M12.5 11.5a3.4 3.4 0 0 1 5 3v1.5"/></svg>
+    <img src="/assets/nav_users.png" alt="" width="17" height="17" style="display:block; object-fit:contain;">
   </div>
 
   <div data-setting="flights" data-label="Flights" data-category="roster">

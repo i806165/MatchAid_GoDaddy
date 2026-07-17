@@ -291,7 +291,7 @@
       inCategory.forEach((entry) => {
         const id = entry.getAttribute("data-setting");
         const label = entry.getAttribute("data-label") || id;
-        const iconEl = entry.querySelector("svg");
+        const iconEl = entry.querySelector("svg, img");
         const iconHtml = iconEl ? iconEl.outerHTML : "";
         const behavior = ROW_BEHAVIOR[id];
         const summaryText = behavior ? behavior.summary(_ctx.game) : "";
