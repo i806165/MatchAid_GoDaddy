@@ -58,6 +58,8 @@ $maChromeLogoUrl = null;
 
 <?php require_once MA_INCLUDES . "/chromeFooter.php"; ?>
 
+<?php require_once MA_INCLUDES . "/gameSettingsMenuRows.php"; ?>
+
 <script>
   window.MA = window.MA || {};
   window.MA.paths = Object.assign({}, window.MA.paths || {}, {
@@ -72,6 +74,13 @@ $maChromeLogoUrl = null;
 </script>
 
 <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_menuGameSettings.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_setGameFormat.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_setGameSegments.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_setGameBlindPlayer.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_setGameScoring.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_setGamePlacementPoints.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_setHandicapsGameEvent.js') ?>"></script>
 <script src="<?= ma_asset('/assets/pages/game_scorecards.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>
 </body>

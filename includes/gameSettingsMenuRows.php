@@ -35,11 +35,11 @@
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="3.4"/></svg>
   </div>
 
-  <div data-setting="placementPoints" data-label="Placement Points" data-category="roster">
+  <div data-setting="placementPoints" data-label="Placement Points" data-category="setup">
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8v3a4 4 0 0 1-8 0V3Z"/><path d="M10 10v3M7.5 16.5h5M8 16.5v-2.2h4v2.2"/></svg>
   </div>
 
-  <div data-setting="handicaps" data-label="Handicaps" data-category="roster">
+  <div data-setting="handicaps" data-label="Handicaps" data-category="setup">
     <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M15 5 5 15"/><circle cx="6.2" cy="6.2" r="1.6"/><circle cx="13.8" cy="13.8" r="1.6"/></svg>
   </div>
 
