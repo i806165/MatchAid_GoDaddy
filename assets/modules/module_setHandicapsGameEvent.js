@@ -1134,6 +1134,18 @@
 
   // ── Save ─────────────────────────────────────────────────────────────
 
+  /*
+   * Field names here are deliberately NOT dbGames_/dbEvents_ prefixed.
+   * This is the only module in the family that serves two different
+   * tables through one shared shape — target: "game" writes dbGames_*
+   * columns, target: "event" writes dbEvents_*. A literal dbGames_HCMethod
+   * would be the wrong field name for the event target, which would force
+   * per-target branching back into this module — exactly what the target
+   * parameter exists to avoid. Neutral names here let each endpoint
+   * independently translate to its own table's columns; every other
+   * module in this family only ever writes one table, so they never
+   * needed this indirection.
+   */
   function _buildSaveBody() {
     const body = {
       method:
@@ -1201,7 +1213,7 @@
       const res =
         await MA.postJson(
           endpoint,
-          _buildSaveBody()
+          { payload: _buildSaveBody() }
         );
 
       if (!res?.ok) {
