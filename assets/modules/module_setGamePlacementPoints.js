@@ -545,10 +545,10 @@
     return overlay;
   }
 
-  function _dismiss() {
+  function _dismiss(wasSaved) {
     if (_busy) return;
     MA.setGamePlacementPoints.close();
-    if (typeof _onDone === "function") _onDone();
+    if (typeof _onDone === "function") _onDone(wasSaved);
   }
 
   // ── Apply — now saves directly instead of calling a caller callback ──
@@ -572,7 +572,7 @@
       if (!res?.ok) { _showModalNotice(res?.message || "Unable to save Placement Points.", "danger"); return; }
       MA.ui?.hideBusy?.();
       _busy = false;
-      _dismiss();
+      _dismiss(true);
       return;
     } catch (e) {
       console.error("[MA.setGamePlacementPoints]", e);

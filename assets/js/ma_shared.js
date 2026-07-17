@@ -101,8 +101,20 @@
     return postJson(url, { payload: payload || {} });
   }
 
+  // Generic dispatch table — this file has no knowledge of what gets
+  // registered here or by whom. Any module can claim a router action name
+  // by assigning a function to it; this file never mentions Game Settings,
+  // or any other specific module, by name.
+  MA.moduleActions = MA.moduleActions || {};
+
   // Router navigation wrapper
   async function routerGo(action, payload) {
+    // If a module has claimed this action, hand off to it and stop —
+    // never contact pageRouter.php, never navigate the browser.
+    if (MA.moduleActions[action]) {
+      return MA.moduleActions[action](payload);
+    }
+
     const url = MA.paths.routerApi;
     if (!url) throw new Error("MA.paths.routerApi missing");
     const body = Object.assign({ action }, payload || {});

@@ -194,6 +194,7 @@
 
   // ── Overlay ──────────────────────────────────────────────────────────
   let _ctx = null;
+  let _isDirty = false; // set true only when a child module confirms a real save
 
   function _ensureOverlay() {
     let el = document.getElementById(OVERLAY_ID);
@@ -202,7 +203,7 @@
       el.id = OVERLAY_ID;
       el.className = "maModalOverlay";
       el.setAttribute("aria-hidden", "true");
-      el.addEventListener("click", e => { if (e.target === el) MA.menuGameSettings.close(); });
+      el.addEventListener("click", e => { if (e.target === el) _finalClose(); });
       document.body.appendChild(el);
     }
     return el;
@@ -320,8 +321,11 @@
   function _openRow(id) {
     const behavior = ROW_BEHAVIOR[id];
     if (!behavior) return;
-    MA.menuGameSettings.close();
-    behavior.open(() => MA.menuGameSettings.open());
+    MA.menuGameSettings.close(); // transient teardown only — not a final exit, no dirty check here
+    behavior.open((wasSaved) => {
+      if (wasSaved === true) _isDirty = true;
+      MA.menuGameSettings.open();
+    });
   }
 
   // ── Public API ───────────────────────────────────────────────────────
@@ -344,8 +348,8 @@
     overlay.setAttribute("aria-hidden", "false");
     _lockScroll(true);
 
-    document.getElementById("gsMenuBtnClose")?.addEventListener("click", MA.menuGameSettings.close);
-    document.getElementById("gsMenuBtnFooterClose")?.addEventListener("click", MA.menuGameSettings.close);
+    document.getElementById("gsMenuBtnClose")?.addEventListener("click", _finalClose);
+    document.getElementById("gsMenuBtnFooterClose")?.addEventListener("click", _finalClose);
     _renderControls();
     _renderRows();
   };
@@ -359,5 +363,29 @@
     }
     _lockScroll(false);
   };
+
+  // The actual "user is leaving the whole menu" exit — X, footer Close,
+  // and backdrop click all route here, not to close() directly. close()
+  // alone is also used by _openRow() as a transient teardown between rows,
+  // where a dirty check would be wrong (the user hasn't left, they're
+  // diving into a row). This is the only place that decides whether a
+  // reload is warranted.
+  function _finalClose() {
+    const wasDirty = _isDirty;
+    _isDirty = false; // reset here, not in open() — this is the only true
+                       // session boundary; open() also runs on the
+                       // reopen-after-child cycle, where resetting would
+                       // wipe out a flag a prior row just set
+    MA.menuGameSettings.close();
+    if (wasDirty) {
+      window.location.reload();
+    }
+  }
+
+  // The only place in the codebase that maps these action names to this
+  // module — ma_shared.js's routerGo() just sees "something is
+  // registered," it never mentions Game Settings by name.
+  MA.moduleActions = MA.moduleActions || {};
+  MA.moduleActions.settings = MA.moduleActions.roundsettings = () => MA.menuGameSettings.open();
 
 })();

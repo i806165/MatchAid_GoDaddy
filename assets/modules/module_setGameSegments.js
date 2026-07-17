@@ -246,10 +246,10 @@ function _buildSavePayload() {
     document.documentElement.classList.toggle("maOverlayOpen", _lockDepth > 0);
   }
 
-  function _dismiss() {
+  function _dismiss(wasSaved) {
     if (_busy) return;
     MA.setGameSegments.close();
-    if (typeof _onDone === "function") _onDone();
+    if (typeof _onDone === "function") _onDone(wasSaved);
   }
 
   function _showModalNotice(message, level) {
@@ -446,7 +446,7 @@ function _buildSavePayload() {
       if (!res?.ok) { _showModalNotice(res?.message || "Unable to save Segments.", "danger"); return; }
       MA.ui?.hideBusy?.();
       _busy = false;
-      _dismiss();
+      _dismiss(true);
       return;
     } catch (e) {
       console.error("[MA.setGameSegments]", e);

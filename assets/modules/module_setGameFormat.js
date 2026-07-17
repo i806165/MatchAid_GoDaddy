@@ -229,10 +229,10 @@
     document.documentElement.classList.toggle("maOverlayOpen", _lockDepth > 0);
   }
 
-  function _dismiss() {
+  function _dismiss(wasSaved) {
     if (_busy) return;
     MA.setGameFormat.close();
-    if (typeof _onDone === "function") _onDone();
+    if (typeof _onDone === "function") _onDone(wasSaved);
   }
 
   // In-modal notice — MA.setStatus() writes to page chrome sitting BEHIND
@@ -376,7 +376,7 @@
       if (!res?.ok) { _showModalNotice(res?.message || "Unable to save Game Format.", "danger"); return; }
       MA.ui?.hideBusy?.();
       _busy = false;
-      _dismiss();
+      _dismiss(true);
       return;
     } catch (e) {
       console.error("[MA.setGameFormat]", e);

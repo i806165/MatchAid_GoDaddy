@@ -307,10 +307,10 @@
     document.documentElement.classList.toggle("maOverlayOpen", _lockDepth > 0);
   }
 
-  function _dismiss() {
+  function _dismiss(wasSaved) {
     if (_busy) return;
     MA.setGameScoring.close();
-    if (typeof _onDone === "function") _onDone();
+    if (typeof _onDone === "function") _onDone(wasSaved);
   }
 
   function _showModalNotice(message, level) {
@@ -639,7 +639,7 @@
       if (!res?.ok) { _showModalNotice(res?.message || "Unable to save Scoring.", "danger"); return; }
       MA.ui?.hideBusy?.();
       _busy = false;
-      _dismiss();
+      _dismiss(true);
       return;
     } catch (e) {
       console.error("[MA.setGameScoring]", e);

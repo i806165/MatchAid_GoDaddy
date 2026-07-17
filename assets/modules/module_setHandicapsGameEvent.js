@@ -1238,7 +1238,7 @@
        */
       _busy = false;
 
-      _dismiss();
+      _dismiss(true);
 
     } catch (error) {
       console.error(
@@ -1261,7 +1261,7 @@
 
   // ── Exit and teardown ────────────────────────────────────────────────
 
-  function _dismiss() {
+  function _dismiss(wasSaved) {
     if (_busy) {
       return;
     }
@@ -1275,7 +1275,7 @@
       typeof done ===
       "function"
     ) {
-      done();
+      done(wasSaved);
     }
   }
 
