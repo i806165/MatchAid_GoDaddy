@@ -3286,3 +3286,12 @@ textarea {
     transform: translateY(0);
   }
 }
+
+/* Event-context modal header — mirrors .maChrome__hdr.is-event-context
+   (Section 4) for modals. The existing rule can't cascade here: it relies
+   on a sibling combinator (~ main) that assumes page layout, which a
+   floating .maModal doesn't have. Same class name, same token, just
+   extended to a second element type — not a new visual language. */
+.maModal__hdr.is-event-context {
+  background: var(--brandTertiary);
+}

@@ -208,10 +208,10 @@
     return el;
   }
 
-  function _renderModal() {
+  function _renderModal(isEvent) {
     return `
       <section class="maModal" role="dialog" aria-modal="true" aria-labelledby="gsMenuTitle">
-        <header class="maModal__hdr">
+        <header class="maModal__hdr${isEvent ? " is-event-context" : ""}">
           <div class="maModal__title" id="gsMenuTitle">Game Settings</div>
           <button type="button" class="iconBtn btnPrimary" id="gsMenuBtnClose" aria-label="Close">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
@@ -255,6 +255,14 @@
       ${line3 ? `<div class="maListRow__subline">${line3}</div>` : ""}`;
   }
 
+  const CATEGORY_ORDER = ["setup", "roster"];
+
+  function _categoryLabels(isEvent) {
+    return isEvent
+      ? { setup: "ROUND SETUP", roster: "ROUND ROSTER SETUP" }
+      : { setup: "GAME SETUP", roster: "GAME ROSTER SETUP" };
+  }
+
   function _renderRows() {
     const container = document.getElementById("gsMenuRows");
     const catalog = document.getElementById("gsMenuRowCatalog");
@@ -266,29 +274,46 @@
       return;
     }
 
-    catalog.querySelectorAll("[data-setting]").forEach((entry) => {
-      const id = entry.getAttribute("data-setting");
-      const label = entry.getAttribute("data-label") || id;
-      const iconEl = entry.querySelector("svg");
-      const iconHtml = iconEl ? iconEl.outerHTML : "";
-      const behavior = ROW_BEHAVIOR[id];
-      const summaryText = behavior ? behavior.summary(_ctx.game) : "";
+    const isEvent = !!_ctx.game.dbGames_EID;
+    const labels = _categoryLabels(isEvent);
+    const entries = Array.from(catalog.querySelectorAll("[data-setting]"));
 
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "maListRow";
-      btn.setAttribute("role", "listitem");
-      btn.setAttribute("data-setting", id);
-      btn.id = `gsMenuRow-${id}`;
-      btn.innerHTML = `
-        <span class="maListRow__avatar" aria-hidden="true">${iconHtml}</span>
-        <div style="flex:1 1 auto; min-width:0;">
-          <div class="maListRow__col">${esc(label)}</div>
-          <div class="maListRow__subline">${esc(summaryText)}</div>
-        </div>
-        <span class="maHubRow__arrow" aria-hidden="true">&rsaquo;</span>`;
-      btn.addEventListener("click", () => _openRow(id));
-      container.appendChild(btn);
+    CATEGORY_ORDER.forEach((cat) => {
+      const inCategory = entries.filter(e => e.getAttribute("data-category") === cat);
+      if (!inCategory.length) return;
+
+      const header = document.createElement("div");
+      header.className = "actionMenu_category";
+      header.textContent = labels[cat];
+      container.appendChild(header);
+
+      inCategory.forEach((entry) => {
+        const id = entry.getAttribute("data-setting");
+        const label = entry.getAttribute("data-label") || id;
+        const iconEl = entry.querySelector("svg");
+        const iconHtml = iconEl ? iconEl.outerHTML : "";
+        const behavior = ROW_BEHAVIOR[id];
+        const summaryText = behavior ? behavior.summary(_ctx.game) : "";
+
+        const row = document.createElement("div");
+        row.className = "maListRow";
+        row.setAttribute("role", "button");
+        row.setAttribute("tabindex", "0");
+        row.setAttribute("data-setting", id);
+        row.id = `gsMenuRow-${id}`;
+        row.innerHTML = `
+          <span class="maListRow__avatar" aria-hidden="true">${iconHtml}</span>
+          <div style="flex:1 1 auto; min-width:0;">
+            <div class="maListRow__col">${esc(label)}</div>
+            <div class="maListRow__subline">${esc(summaryText)}</div>
+          </div>
+          <span class="maHubRow__arrow" aria-hidden="true">&rsaquo;</span>`;
+        row.addEventListener("click", () => _openRow(id));
+        row.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); _openRow(id); }
+        });
+        container.appendChild(row);
+      });
     });
   }
 
@@ -314,7 +339,7 @@
     _ctx = ctx;
 
     const overlay = _ensureOverlay();
-    overlay.innerHTML = _renderModal();
+    overlay.innerHTML = _renderModal(!!_ctx.game.dbGames_EID);
     overlay.className = "maModalOverlay is-open";
     overlay.setAttribute("aria-hidden", "false");
     _lockScroll(true);
