@@ -123,7 +123,7 @@
   function _effectiveScoringSegments(g) {
     const rotationLocksTo1 = !!g.dbGames_RotationMethod && g.dbGames_RotationMethod !== "None";
     if (g.dbGames_Competition !== "PairPair" || rotationLocksTo1) return 1;
-    return parseInt(g.dbGames_Segments || "1", 10) === 3 ? 3 : 1;
+    return parseInt(g.dbGames_ScoringSegments || "1", 10) === 3 ? 3 : 1;
   }
 
   // ── Seeding — cloned verbatim ────────────────────────────────────────

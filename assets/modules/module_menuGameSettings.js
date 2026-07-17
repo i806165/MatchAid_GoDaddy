@@ -124,7 +124,7 @@
     },
     placementPoints: {
       summary: () => "Configured",
-      open: (done) => MA.definePlacementPoints?.open(_adaptPlacementPoints(done)),
+      open: (done) => MA.setGamePlacementPoints?.open({ onDone: done }),
     },
     handicaps: {
       summary: (g) => handicapSummary(g),
