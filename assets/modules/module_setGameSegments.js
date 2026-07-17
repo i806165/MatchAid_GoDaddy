@@ -297,7 +297,7 @@ function _buildSavePayload() {
 
         <footer class="maModal__ftr">
           <button type="button" class="maFtrBtn maFtrBtn--cancel" id="sgsBtnCancel">Cancel</button>
-          <button type="button" class="maFtrBtn maFtrBtn--save" id="sgsBtnApply">Apply</button>
+          <button type="button" class="maFtrBtn maFtrBtn--save" id="sgsBtnApply">Save</button>
         </footer>
       </section>`;
   }

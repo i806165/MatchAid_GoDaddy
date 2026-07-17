@@ -191,7 +191,7 @@
 
         <footer class="maModal__ftr">
           <button type="button" class="maFtrBtn maFtrBtn--cancel" id="sgbBtnCancel">Cancel</button>
-          <button type="button" class="maFtrBtn maFtrBtn--save" id="sgbBtnApply">Apply</button>
+          <button type="button" class="maFtrBtn maFtrBtn--save" id="sgbBtnApply">Save</button>
         </footer>
       </section>`;
   }

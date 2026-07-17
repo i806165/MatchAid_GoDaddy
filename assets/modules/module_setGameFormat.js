@@ -272,7 +272,7 @@
 
         <footer class="maModal__ftr">
           <button type="button" class="maFtrBtn maFtrBtn--cancel" id="sgfBtnCancel">Cancel</button>
-          <button type="button" class="maFtrBtn maFtrBtn--save" id="sgfBtnApply">Apply</button>
+          <button type="button" class="maFtrBtn maFtrBtn--save" id="sgfBtnApply">Save</button>
         </footer>
       </section>`;
   }
