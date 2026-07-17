@@ -19,35 +19,35 @@
 ?>
 <div id="gsMenuRowCatalog" hidden>
 
-  <div data-setting="format" data-label="Game Format" data-category="setup">
+  <div data-setting="format" data-label="Setup the Game Format" data-category="setup">
     <img src="/assets/images/nav-format.png" alt="" width="34" height="34" style="display:block; object-fit:contain;">
   </div>
 
-  <div data-setting="segments" data-label="Segments" data-category="setup">
+  <div data-setting="segments" data-label="Segmenting Play (6's) & Partner Rotation " data-category="setup">
     <img src="/assets/images/nav-segments.png" alt="" width="34" height="34" style="display:block; object-fit:contain;">
   </div>
 
-  <div data-setting="blindPlayer" data-label="Blind Player" data-category="setup">
-    <img src="/assets/images/nav-eye.png" alt="" width="34" height="34" style="display:block; object-fit:contain;">
-  </div>
-
-  <div data-setting="scoring" data-label="Scoring" data-category="setup">
-    <img src="/assets/images/nav-bullseye.png" alt="" width="34" height="34" style="display:block; object-fit:contain;">
-  </div>
-
-  <div data-setting="placementPoints" data-label="Placement Points" data-category="roster">
-      <img src="/assets/images/nav-event.png" alt="" width="34" height="34" style="display:block; object-fit:contain;">
-  </div>
-
-  <div data-setting="handicaps" data-label="Handicaps" data-category="roster">
+  <div data-setting="handicaps" data-label="Setup Handicapping" data-category="setup">
       <img src="/assets/images/nav-handicaps.png" alt="" width="34" height="34" style="display:block; object-fit:contain;">
   </div>
 
-  <div data-setting="teams" data-label="Teams" data-category="roster">
+  <div data-setting="scoring" data-label="Methods for Scoring" data-category="setup">
+    <img src="/assets/images/nav-bullseye.png" alt="" width="34" height="34" style="display:block; object-fit:contain;">
+  </div>
+
+  <div data-setting="placementPoints" data-label="Place Winning and Awards" data-category="setup">
+      <img src="/assets/images/nav-event.png" alt="" width="34" height="34" style="display:block; object-fit:contain;">
+  </div>
+
+  <div data-setting="blindPlayer" data-label="Setup Blind Player" data-category="roster">
+    <img src="/assets/images/nav-eye.png" alt="" width="34" height="34" style="display:block; object-fit:contain;">
+  </div>
+
+  <div data-setting="teams" data-label="Divide Roster into Teams" data-category="roster">
     <img src="/assets/images/nav-players.png" alt="" width="34" height="34" style="display:block; object-fit:contain;">
   </div>
 
-  <div data-setting="flights" data-label="Flights" data-category="roster">
+  <div data-setting="flights" data-label="Separate Roster into Flights" data-category="roster">
     <img src="/assets/images/nav-flights.png" alt="" width="34" height="34" style="display:block; object-fit:contain;">
   </div>
 
