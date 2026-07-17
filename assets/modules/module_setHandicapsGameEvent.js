@@ -9,12 +9,12 @@
  *
  * Public API:
  *
- *   MA.setGameHandicaps.open({
+ *   MA.setHandicapsGameEvent.open({
  *     target: "game" | "event",
  *     onDone: function
  *   });
  *
- *   MA.setGameHandicaps.close();
+ *   MA.setHandicapsGameEvent.close();
  *
  * The caller supplies only the target and completion callback.
  * Current values, identifying context, toggle visibility, hydration
@@ -1198,7 +1198,7 @@
 
     } catch (error) {
       console.error(
-        "[MA.setGameHandicaps]",
+        "[MA.setHandicapsGameEvent]",
         error
       );
 
@@ -1225,7 +1225,7 @@
     const done =
       _onDone;
 
-    MA.setGameHandicaps.close();
+    MA.setHandicapsGameEvent.close();
 
     if (
       typeof done ===
@@ -1235,7 +1235,7 @@
     }
   }
 
-  MA.setGameHandicaps.close =
+  MA.setHandicapsGameEvent.close =
     function () {
       if (_overlay) {
         _overlay.remove();
@@ -1266,12 +1266,12 @@
 
   // ── Public open ──────────────────────────────────────────────────────
 
-  MA.setGameHandicaps.open =
+  MA.setHandicapsGameEvent.open =
     async function (
       options = {}
     ) {
       if (_overlay) {
-        MA.setGameHandicaps.close();
+        MA.setHandicapsGameEvent.close();
       }
 
       _target =

@@ -128,10 +128,6 @@
     },
     handicaps: {
       summary: (g) => handicapSummary(g),
-      open: (done) => MA.defineHandicapSettings?.open(_adaptHandicaps(done)),
-    },
-    handicaps: {
-      summary: (g) => handicapSummary(g),
       open: (done) => MA.setHandicapsGameEvent?.open({target: "game", onDone: done}),
     },
     teams: {
