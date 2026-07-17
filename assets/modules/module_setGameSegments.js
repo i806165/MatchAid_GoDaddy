@@ -281,11 +281,13 @@ function _buildSavePayload() {
             <div class="actionMenu_category">Holes</div>
             <div style="padding:14px;" id="sgsHolesWrap"></div>
 
-            <div class="actionMenu_category">Playing Segments</div>
-            <div style="padding:14px;" id="sgsSegmentsWrap"></div>
+            <div id="sgsPairPairOnly">
+              <div class="actionMenu_category">Playing Segments</div>
+              <div style="padding:14px;" id="sgsSegmentsWrap"></div>
 
-            <div class="actionMenu_category">Rotation Method</div>
-            <div style="padding:14px;" id="sgsRotationWrap"></div>
+              <div class="actionMenu_category">Rotation Method</div>
+              <div style="padding:14px;" id="sgsRotationWrap"></div>
+            </div>
 
             <div class="actionMenu_category">Handicap Allocation Method</div>
             <div style="padding:14px;" id="sgsStrokeDistWrap"></div>
@@ -389,6 +391,8 @@ function _buildSavePayload() {
   }
 
   function _renderAll() {
+    const pairPairOnly = document.getElementById("sgsPairPairOnly");
+    if (pairPairOnly) pairPairOnly.style.display = (_pairing() === "PairPair") ? "" : "none";
     _renderHoles();
     _renderSegments();
     _renderRotation();
