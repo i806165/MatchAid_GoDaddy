@@ -25,23 +25,12 @@
  * signals it's done. Never stacked (scroll-lock is a boolean toggle
  * elsewhere in this module family, not a reference count).
  *
- * ── Child module contracts — TWO DIFFERENT SHAPES RIGHT NOW ────────────
- * New modules (Format, Segments, Blind Player, Scoring) do not exist yet.
- * Calls below use optional chaining and no-op until each is built, one at
- * a time. They're expected to self-hydrate like this module does — no
- * data passed in, just an onDone callback.
- *
- * Existing modules (Placement Points, Handicaps, Teams, Flights) are NOT
- * refactored yet — left intact deliberately, refactored last. They still
- * expect caller-supplied data in their current shapes. The _adapt*()
- * functions below exist ONLY to bridge that gap using this module's fresh
- * context — delete each adapter the moment its module is refactored to
- * self-hydrate.
- *
- * KNOWN GAP, accepted for this build: those same four modules only fire
- * onApply, never on Cancel or backdrop-dismiss. Until each is retrofitted
- * with a real exit-path signal, backing out of one without saving strands
- * the user with no menu to return to.
+ * ── Child module contracts — all eight rows, one shape ──────────────────
+ * Every row's module self-hydrates (no data passed in) and takes only
+ * { onDone } (plus { target: "game" } for the two dual-scope modules,
+ * Handicaps and Teams/Flights — this menu only ever opens the game side).
+ * onDone(wasSaved) fires on every exit path, not just a successful save —
+ * see _openRow()'s dirty-flag handling below for why that matters.
  */
 (function () {
   "use strict";
@@ -93,14 +82,6 @@
     return named ? `Assigned · ${named.name || named.ghin}` : "Group-selected";
   }
 
-  // Read-only. Mirrors buildPatchFromWiz()'s derivation in game_settings.js
-  // — no write, just needed by the Placement Points adapter below.
-  function effectiveScoringSegments(g) {
-    const rotationLocksTo1 = !!g.dbGames_RotationMethod && g.dbGames_RotationMethod !== "None";
-    if (g.dbGames_Competition !== "PairPair" || rotationLocksTo1) return 1;
-    return parseInt(g.dbGames_ScoringSegments || "1", 10) === 3 ? 3 : 1;
-  }
-
   // ── Row behavior — summary + open, keyed by id. Label/icon/order are
   // NOT here — they live in the DOM catalog (includes/gameSettingsMenuRows.php),
   // read at render time. This object only supplies what has to be code:
@@ -132,57 +113,13 @@
     },
     teams: {
       summary: (g) => (g.dbGames_TeamMode === "active" ? "Active" : "Off"),
-      open: (done) => MA.manageTeams?.open(_adaptTeams(done)),
+      open: (done) => MA.manageTeams?.open({ target: "game", onDone: done }),
     },
     flights: {
       summary: (g) => (g.dbGames_FlightMode === "active" ? "Active" : "Off"),
-      open: (done) => MA.defineFlights?.open(_adaptFlights(done)),
+      open: (done) => MA.defineFlights?.open({ target: "game", onDone: done }),
     },
   };
-
-  // ── TEMPORARY adapters — delete each one the moment its module is
-  // refactored to self-hydrate. Built from this menu's freshly-fetched
-  // _ctx, not from any caller-supplied data (there isn't any anymore).
-  function _adaptPlacementPoints(done) {
-    const g = _ctx.game;
-    return {
-      competition:     g.dbGames_Competition,
-      scoringSegments: effectiveScoringSegments(g),
-      placementPoints: g.dbGames_PlacementPoints,
-      // Ignore returned values — self-hydration means the next open()
-      // re-fetches fresh; no need to patch anything locally.
-      onApply: () => done(),
-    };
-  }
-
-  function _adaptHandicaps(done) {
-    const g = _ctx.game;
-    return {
-      method:      g.dbGames_HCMethod,
-      allowance:   g.dbGames_Allowance,
-      effectivity: g.dbGames_HCEffectivity,
-      effDate:     g.dbGames_HCEffectivityDate,
-      apiBase:     "/api/game_settings",
-      saveEndpoint: "saveGameHandicapSettings.php",
-      onApply:     () => done(),
-    };
-  }
-
-  function _adaptTeams(done) {
-    return {
-      players:    _ctx.roster,
-      teamConfig: _ctx.game.dbGames_TeamConfig,
-      onApply:    () => done(),
-    };
-  }
-
-  function _adaptFlights(done) {
-    return {
-      players:      _ctx.roster,
-      flightConfig: _ctx.game.dbGames_FlightConfig,
-      onApply:      () => done(),
-    };
-  }
 
   // ── Context fetch ────────────────────────────────────────────────────
   async function _fetchContext() {
