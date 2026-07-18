@@ -81,6 +81,8 @@ $maChromeLogoUrl = null;
 <script src="<?= ma_asset('/assets/modules/module_setGameScoring.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/module_setGamePlacementPoints.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/module_setHandicapsGameEvent.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_defineFlightsGameEvent.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_defineTeamsGameEvent.js') ?>"></script>
 <script src="<?= ma_asset('/assets/pages/game_scorecards.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>
 </body>
