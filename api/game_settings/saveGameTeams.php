@@ -77,22 +77,21 @@ try {
     }
 
     /*
-     * Server-side backstop for "Teams-active requires full assignment" —
-     * module_defineTeamsGameEvent.js already blocks this client-side, but
-     * this endpoint doesn't trust that alone, same precedent as every
-     * other save endpoint in this family.
+     * Server-side backstop for "all or none" — see
+     * module_defineTeamsGameEvent.js's _isPartiallyAssigned(). Same rule,
+     * unconditional now, not gated on $mode === "active" — a fully
+     * unassigned roster is valid regardless of activation state.
      */
-    if ($mode === "active") {
-        $unassigned = 0;
-        foreach ($cleanAssignments as $a) {
-            if ($a["team"] === "") $unassigned++;
-        }
-        if ($unassigned > 0) {
-            ma_respond(400, [
-                "ok"      => false,
-                "message" => "All players must be assigned to a team while Teams is active — {$unassigned} player(s) still need a team.",
-            ]);
-        }
+    $assignedCount = 0;
+    foreach ($cleanAssignments as $a) {
+        if ($a["team"] !== "") $assignedCount++;
+    }
+    $unassigned = count($cleanAssignments) - $assignedCount;
+    if ($assignedCount > 0 && $unassigned > 0) {
+        ma_respond(400, [
+            "ok"      => false,
+            "message" => "Team assignment must be all or none — {$unassigned} player(s) still need a team.",
+        ]);
     }
 
     $patch = [

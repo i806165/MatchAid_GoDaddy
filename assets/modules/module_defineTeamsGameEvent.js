@@ -4,13 +4,26 @@
  * (game/event) retrofit of module_defineTeams.js.
  *
  * ── What's preserved verbatim from module_defineTeams.js ────────────────
- * Every render function (_renderHeader/_renderStateA/_renderStateB/
- * _renderTeamNameInput/_renderRosterRows/_renderPlayerRow/the two toggle
- * renderers), every helper (badgeLabel/countByTeam/sortedPlayers/etc.),
- * every partial-refresh function, the auto-split-by-handicap/random
- * logic, the "Teams-active requires full assignment" validation, the
- * reconciliation notice, and the "no Reset teams" design note — all
- * unchanged. Same classes, same markup, same business rules.
+ * _renderHeader/_renderTeamNameInput/_renderRosterRows/_renderPlayerRow/
+ * the two toggle renderers, every helper (badgeLabel/countByTeam/
+ * sortedPlayers/etc.), every partial-refresh function, the
+ * auto-split-by-handicap/random logic, the "Teams-active requires full
+ * assignment" validation, the reconciliation notice, and the "no Reset
+ * teams" design note — all unchanged. Same classes, same markup, same
+ * business rules. ONE EXCEPTION — see below.
+ *
+ * ── REAL BEHAVIOR CHANGE — the two-step flow is gone ─────────────────────
+ * module_defineTeams.js opened in one of two states: State A (no teams
+ * saved yet — just two name inputs and a "Create Teams" button, no
+ * roster shown at all) and State B (teams exist — full roster with
+ * assignment badges). Per direct correction, that split is removed
+ * entirely. The module now always opens in one view: default "Red"/
+ * "Blue" names (or whatever's saved) and the full roster together,
+ * matching exactly how module_defineFlightsGameEvent.js already worked
+ * — Flights never had a two-step gate. Team names are editable inline at
+ * any time; there's no separate "creation" step. The only thing that
+ * still hides the roster is the existing activation toggle
+ * (_isExpanded()) — an orthogonal, unchanged concern.
  *
  * ── What changed — plumbing, not rendering ──────────────────────────────
  * - Self-hydration: open({ target, onDone }) — no more players/teamConfig/
@@ -139,7 +152,12 @@
   function getTeamName(id) { return getTeam(id)?.name || id; }
   function countByTeam(id) { return _players.filter(p => p.team === id).length; }
   function unassignedCount() { return _players.filter(p => !p.team).length; }
-  function hasTeams() { return Array.isArray(_teamConfig?.teams) && _teamConfig.teams.length === 2; }
+  // All-or-none: valid states are everyone assigned or no one assigned.
+  // Anything in between is invalid regardless of the activation toggle.
+  function _isPartiallyAssigned() {
+    const u = unassignedCount();
+    return u > 0 && u < _players.length;
+  }
 
   function sortedPlayers() {
     return [..._players].sort((a, b) => {
@@ -204,7 +222,7 @@
       <section class="maModal" role="dialog" aria-modal="true" aria-label="Manage Teams">
         ${_renderHeader()}
         <div id="${NOTICE_ID}"></div>
-        ${hasTeams() ? _renderStateB() : _renderStateA()}
+        ${_renderBody()}
       </section>`;
   }
 
@@ -240,9 +258,7 @@
   function _renderHeader() {
     const n = _players.length;
     const u = unassignedCount();
-    const subtitle = !hasTeams()
-      ? `${n} Player${n !== 1 ? "s" : ""}`
-      : u > 0 ? `${n} Players — ${u} unassigned` : `${n} Players — All assigned`;
+    const subtitle = u > 0 ? `${n} Players — ${u} unassigned` : `${n} Players — All assigned`;
     return `
       <header class="maModal__hdr">
         <div class="maModal__titles">
@@ -258,25 +274,7 @@
       </header>`;
   }
 
-  function _renderStateA() {
-    const toggle = _showModeToggle() ? _renderApplyToggle() : _renderActivationToggle();
-    return `
-      <div class="maModal__controls" id="mtTeamCfgStrip">
-        <div class="maListRow__subline" style="margin-bottom:10px;">Get started by naming your teams.</div>
-        ${toggle}
-        <div style="${toggle ? "border-top:1px solid var(--border); margin-top:12px; padding-top:12px;" : ""} display:flex; flex-direction:column; gap:8px;">
-          ${_renderTeamNameInput("T1", "Red")}
-          ${_renderTeamNameInput("T2", "Blue")}
-        </div>
-      </div>
-      <div class="maModal__body"></div>
-      <footer class="maModal__ftr">
-        <button type="button" class="maFtrBtn maFtrBtn--cancel" id="mtBtnCancel">Cancel</button>
-        <button type="button" class="maFtrBtn maFtrBtn--save" id="mtBtnCreate" disabled>Create Teams</button>
-      </footer>`;
-  }
-
-  function _renderStateB() {
+  function _renderBody() {
     const toggle = _showModeToggle() ? _renderApplyToggle() : _renderActivationToggle();
     const expanded = _isExpanded();
     return `
@@ -316,7 +314,7 @@
       </div>
       <footer class="maModal__ftr">
         <button type="button" class="maFtrBtn maFtrBtn--cancel" id="mtBtnCancel">Cancel</button>
-        <button type="button" class="maFtrBtn maFtrBtn--save" id="mtBtnApply">Apply</button>
+        <button type="button" class="maFtrBtn maFtrBtn--save" id="mtBtnApply" ${_isPartiallyAssigned() ? "disabled" : ""}>Apply</button>
       </footer>`;
   }
 
@@ -364,9 +362,7 @@
     const slot  = TEAM_SLOTS.find(s => s.id === slotId);
     const color = slot?.color || "red";
     const count = countByTeam(slotId);
-    const countHtml = hasTeams()
-      ? `<span class="maListRow__subline" data-team-count="${esc(slotId)}" aria-label="${count} player${count !== 1 ? "s" : ""}">${count}</span>`
-      : "";
+    const countHtml = `<span class="maListRow__subline" data-team-count="${esc(slotId)}" aria-label="${count} player${count !== 1 ? "s" : ""}">${count}</span>`;
     return `
       <div class="maConfigRow">
         <span class="maSwatch maSwatch--${esc(color)}" aria-hidden="true"></span>
@@ -439,7 +435,7 @@
       _refreshRosterVisibility();
     });
 
-    if (!hasTeams()) { _wireStateA(overlay); } else { _wireStateB(overlay); }
+    _wireBody(overlay);
   }
 
   function _refreshModeToggle() {
@@ -477,30 +473,12 @@
     if (hint) hint.style.display = expanded ? "none" : "";
   }
 
-  function _wireStateA(overlay) {
-    const inp1      = overlay.querySelector("#mtTeamNameT1");
-    const inp2      = overlay.querySelector("#mtTeamNameT2");
-    const btnCreate = overlay.querySelector("#mtBtnCreate");
-
-    const validate = () => { if (btnCreate) btnCreate.disabled = !(safe(inp1?.value) && safe(inp2?.value)); };
-    inp1?.addEventListener("input", validate);
-    inp2?.addEventListener("input", validate);
-    validate();
-
-    btnCreate?.addEventListener("click", async () => {
-      const n1 = safe(inp1?.value);
-      const n2 = safe(inp2?.value);
-      if (!n1 || !n2) return;
-      _teamConfig = { teams: [
-        { id: "T1", name: n1, color: "red",  sort: 1 },
-        { id: "T2", name: n2, color: "blue", sort: 2 },
-      ] };
-      const modal = document.querySelector(`#${OVERLAY_ID} .maModal`);
-      if (modal) { modal.innerHTML = _renderHeader() + `<div id="${NOTICE_ID}"></div>` + _renderStateB(); _wireEvents(); }
-    });
+  function _refreshApplyButtonState() {
+    const btn = document.getElementById("mtBtnApply");
+    if (btn) btn.disabled = _isPartiallyAssigned();
   }
 
-  function _wireStateB(overlay) {
+  function _wireBody(overlay) {
     overlay.querySelectorAll(".maTextInput[data-slot]").forEach(inp => {
       inp.addEventListener("input", () => {
         const team = getTeam(inp.dataset.slot);
@@ -522,17 +500,18 @@
       _refreshPlayerRow(player.ghin);
       _refreshTeamCounts();
       _refreshSubtitle();
+      _refreshApplyButtonState();
     });
 
     overlay.querySelector("#mtBtnSplitHC")?.addEventListener("click", () => {
-      _autoSplitByHandicap(); _refreshRoster(); _refreshTeamCounts(); _refreshSubtitle();
+      _autoSplitByHandicap(); _refreshRoster(); _refreshTeamCounts(); _refreshSubtitle(); _refreshApplyButtonState();
     });
     overlay.querySelector("#mtBtnRandom")?.addEventListener("click", () => {
-      _autoSplitRandom(); _refreshRoster(); _refreshTeamCounts(); _refreshSubtitle();
+      _autoSplitRandom(); _refreshRoster(); _refreshTeamCounts(); _refreshSubtitle(); _refreshApplyButtonState();
     });
     overlay.querySelector("#mtBtnClearAll")?.addEventListener("click", () => {
       _players.forEach(p => p.team = "");
-      _refreshRoster(); _refreshTeamCounts(); _refreshSubtitle();
+      _refreshRoster(); _refreshTeamCounts(); _refreshSubtitle(); _refreshApplyButtonState();
     });
 
     overlay.querySelector("#mtBtnApply")?.addEventListener("click", _applyChanges);
@@ -593,10 +572,22 @@
 
   async function _applyChanges() {
     if (_busy) return;
-    const unassigned = _players.filter(p => !p.team).length;
-    if (_isExpanded() && unassigned > 0) {
+
+    const t1 = safe(getTeamName("T1"));
+    const t2 = safe(getTeamName("T2"));
+    if (!t1 || !t2) {
+      _showModalNotice("Both team names are required.", "warn");
+      return;
+    }
+
+    // Defensive backstop behind the disabled button — see
+    // _isPartiallyAssigned(). Unconditional now, not gated on activation:
+    // "everyone assigned" and "no one assigned" are both valid regardless
+    // of whether Teams is active for this round/event.
+    if (_isPartiallyAssigned()) {
+      const unassigned = unassignedCount();
       _showModalNotice(
-        `All players must be assigned to a team while Teams is active — ${unassigned} player${unassigned === 1 ? "" : "s"} still need${unassigned === 1 ? "s" : ""} a team.`,
+        `Team assignment must be all or none — ${unassigned} player${unassigned === 1 ? "" : "s"} still need${unassigned === 1 ? "s" : ""} a team.`,
         "warn"
       );
       return;
@@ -682,7 +673,12 @@
     }
     _ctx = { ggid, game };
 
-    _teamConfig = deepClone(game.dbGames_TeamConfig || game.dbEvents_TeamConfig || null);
+    _teamConfig = deepClone(game.dbGames_TeamConfig || game.dbEvents_TeamConfig || null) || {
+      teams: [
+        { id: "T1", name: "Red",  color: "red",  sort: 1 },
+        { id: "T2", name: "Blue", color: "blue", sort: 2 },
+      ],
+    };
     _players    = roster.map(normalizePlayer);
     _mode       = ((game.dbEvents_TeamMode) === "fixed") ? "fixed" : "none";
     _activation = ((game.dbGames_TeamMode) === "active") ? "active" : "disabled";

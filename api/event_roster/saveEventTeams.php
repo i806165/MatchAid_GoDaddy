@@ -71,19 +71,18 @@ try {
         $cleanAssignments[] = ["ghin" => $ghin, "team" => $team];
     }
 
-    // Same server-side backstop as saveGameTeams.php, applied to the
-    // event's own "fixed" (cascading) state.
-    if ($mode === "fixed") {
-        $unassigned = 0;
-        foreach ($cleanAssignments as $a) {
-            if ($a["team"] === "") $unassigned++;
-        }
-        if ($unassigned > 0) {
-            ma_respond(400, [
-                "ok"      => false,
-                "message" => "All players must be assigned to a team while Teams is active — {$unassigned} player(s) still need a team.",
-            ]);
-        }
+    // Same all-or-none backstop as saveGameTeams.php, unconditional —
+    // not gated on $mode === "fixed".
+    $assignedCount = 0;
+    foreach ($cleanAssignments as $a) {
+        if ($a["team"] !== "") $assignedCount++;
+    }
+    $unassigned = count($cleanAssignments) - $assignedCount;
+    if ($assignedCount > 0 && $unassigned > 0) {
+        ma_respond(400, [
+            "ok"      => false,
+            "message" => "Team assignment must be all or none — {$unassigned} player(s) still need a team.",
+        ]);
     }
 
     $patch = [
