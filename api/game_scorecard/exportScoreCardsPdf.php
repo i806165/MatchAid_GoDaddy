@@ -193,8 +193,9 @@ function maDrawScoreCardGroup(TCPDF $pdf, array $game, array $group, float $yTop
     foreach ($courseRows as $r) {
         $pdf->SetX($x);
         $label = maBuildCourseRowLabel($r);
-        maSetFont($pdf, '', 8);
+        maSetFont($pdf, 'B', 8);
         $pdf->Cell(PDF_LABEL_W, PDF_COURSE_ROW_H, $label, 1, 0, 'L');
+        maSetFont($pdf, '', 8);
         for ($h = 1; $h <= 9; $h++) $pdf->Cell($holeColW, PDF_COURSE_ROW_H, (string)($r['h' . $h] ?? ''), 1, 0, 'C');
         maSetFont($pdf, 'B', 8);
         $pdf->Cell(PDF_META_W, PDF_COURSE_ROW_H, (string)($r['9a'] ?? ''), 1, 0, 'C');
@@ -223,12 +224,12 @@ function maDrawScoreCardGroup(TCPDF $pdf, array $game, array $group, float $yTop
             $hc   = is_numeric($p['playerHC'] ?? null) ? " ({$p['playerHC']})" : '';
             $tee  = (string)($p['tee'] ?? '');
 
-            $pdf->SetXY($x + 3, $rowY + 2);
+            $pdf->SetXY($x + 3, $rowY);
             maSetFont($pdf, 'B', 8);
             $pdf->Cell(PDF_LABEL_W - 6, 10, $name . $hc, 0, 0, 'L');
 
             if ($tee !== '') {
-                $pdf->SetXY($x + 3, $rowY + 12);
+                $pdf->SetXY($x + 3, $rowY + 10);
                 maSetFont($pdf, '', 8);
                 $pdf->Cell(PDF_LABEL_W - 6, 8, $tee, 0, 0, 'L');
             }
@@ -260,9 +261,7 @@ function maDrawScoreCardGroup(TCPDF $pdf, array $game, array $group, float $yTop
 
     // ---- Footer (SCORER / ATTEST lines + Game/Pairings + copyright) ------
     $footerY = $pdf->GetY() + 8;
-    if ($footerY < $yTop + $maxH - 14) {
-        maDrawFooter($pdf, $gh, $group, $x, $footerY, $w);
-    }
+    maDrawFooter($pdf, $gh, $group, $x, $footerY, $w);
 }
 
 /**
@@ -286,24 +285,50 @@ function maDrawHeaderBlock(TCPDF $pdf, array $game, array $gh, array $group, flo
         }
     }
 
-    $textW = $w - ($textX - $x) - PDF_QR_SIZE - 12;
+    // ---- Live-scoring text + QR geometry, computed up front -------------
+    // Measured (not guessed) so the title row knows exactly how much room
+    // to leave for the text sitting beside it. Rows 2-4 don't share their
+    // row with anything on the right, so they get the full width later.
+    $scoreCardId = trim((string)($gh['playerKey'] ?? ''));
+    $hasQr = ($scoreCardId !== '' && !empty($gh['GGID']));
+    $qrX   = $x + $w - PDF_QR_SIZE;
+    $qrY   = $y;
+
+    $linkTx = '';
+    $linkX  = $qrX;
+    $linkW  = 0.0;
+    if ($hasQr) {
+        $host   = parse_url(MA_SITE_URL, PHP_URL_HOST) ?: MA_SITE_URL;
+        $linkTx = "Live Scoring at {$host}/score/{$scoreCardId}";
+        maSetFont($pdf, '', 8);
+        $linkW  = $pdf->GetStringWidth($linkTx) + 6;
+        $linkX  = $qrX - 8 - $linkW;
+    }
+
+    $titleW = ($hasQr ? $linkX : $x + $w) - 8 - $textX; // shares the row with the live-scoring text
+    $fullW  = $qrX - 8 - $textX;                        // rows below have the whole row to themselves
+
+    // Tight padding for just these 4 header lines (this is the actual
+    // source of the gap under the QR code) -- restored to normal right
+    // after line 4, before the grid or anything else draws.
+    $pdf->setCellPaddings(1, 0.5, 1, 0.5);
 
     // Title
     $pdf->SetXY($textX, $y);
     maSetFont($pdf, 'B', 13);
-    $pdf->Cell($textW, 15, (string)($gh['gameTitle'] ?? 'Game'), 0, 1, 'L');
+    $pdf->Cell($titleW, 14, (string)($gh['gameTitle'] ?? 'Game'), 0, 1, 'L');
 
-    // Sub-line: course • date • tee time • start hole
+    // Sub-line: course • date • tee time • start hole -- stretches to the QR
     $pdf->SetX($textX);
     maSetFont($pdf, '', 9);
-    $pdf->Cell($textW, 11, maBuildSubLine($game, $gh, $group), 0, 1, 'L');
+    $pdf->Cell($fullW, 10, maBuildSubLine($game, $gh, $group), 0, 1, 'L');
 
     // Line 3: format / HC effectivity / allowance / stroke distribution
     $line3 = maBuildLine3($game, $gh);
     if ($line3 !== '') {
         $pdf->SetX($textX);
         maSetFont($pdf, 'B', 8);
-        $pdf->Cell($textW, 10, $line3, 0, 1, 'L');
+        $pdf->Cell($fullW, 9, $line3, 0, 1, 'L');
     }
 
     // Line 4: scoring system
@@ -311,23 +336,18 @@ function maDrawHeaderBlock(TCPDF $pdf, array $game, array $gh, array $group, flo
     if ($line4 !== '') {
         $pdf->SetX($textX);
         maSetFont($pdf, '', 8);
-        $pdf->Cell($textW, 10, $line4, 0, 1, 'L');
+        $pdf->Cell($fullW, 9, $line4, 0, 1, 'L');
     }
+
+    $pdf->setCellPaddings(2, 2, 2, 2); // restore normal padding for everything after the header
 
     $leftBottom = $pdf->GetY();
 
-    // ---- Right side: live-scoring link + QR code --------------------------
-    $scoreCardId = trim((string)($gh['playerKey'] ?? ''));
-    $qrX = $x + $w - PDF_QR_SIZE;
-    $qrY = $y;
-
-    if ($scoreCardId !== '' && !empty($gh['GGID'])) {
-        $host   = parse_url(MA_SITE_URL, PHP_URL_HOST) ?: MA_SITE_URL;
-        $linkTx = "Live Scoring at {$host}/score/{$scoreCardId}";
-
-        $pdf->SetXY($x, $y);
+    // ---- Right side: live-scoring link (top-aligned, left of QR) + QR ----
+    if ($hasQr) {
+        $pdf->SetXY($linkX, $y + 2); // nudged to optically align with the title's cap-height, not its full line box
         maSetFont($pdf, '', 8);
-        $pdf->Cell($w - PDF_QR_SIZE - 12, 12, $linkTx, 0, 1, 'R');
+        $pdf->Cell($linkW, 12, $linkTx, 0, 0, 'L');
 
         $qrUrl = rtrim(MA_SITE_URL, '/') . '/score/' . rawurlencode($scoreCardId);
         $qrStyle = [
@@ -337,10 +357,10 @@ function maDrawHeaderBlock(TCPDF $pdf, array $game, array $gh, array $group, flo
             'fgcolor'  => [0, 0, 0],
             'bgcolor'  => false,
         ];
-        $pdf->write2DBarcode($qrUrl, 'QRCODE,M', $qrX, $qrY + 12, PDF_QR_SIZE, PDF_QR_SIZE, $qrStyle, 'N');
+        $pdf->write2DBarcode($qrUrl, 'QRCODE,M', $qrX, $qrY, PDF_QR_SIZE, PDF_QR_SIZE, $qrStyle, 'N');
     }
 
-    $rightBottom = $qrY + 12 + PDF_QR_SIZE;
+    $rightBottom = $qrY + PDF_QR_SIZE;
 
     return max($leftBottom, $rightBottom, $y + PDF_LOGO_SIZE);
 }
@@ -482,12 +502,6 @@ function maBuildLine4(array $game): string {
 
 /** Mirrors renderFooter(): SCORER/ATTEST lines + Game/Match/Pairings left, copyright right. */
 function maDrawFooter(TCPDF $pdf, array $gh, array $group, float $x, float $y, float $w): void {
-    maSetFont($pdf, '', 7);
-    $pdf->SetXY($x, $y);
-    $pdf->Cell($w * 0.38, 10, '_____________________  SCORER', 0, 0, 'L');
-    $pdf->SetXY($x + $w * 0.5, $y);
-    $pdf->Cell($w * 0.38, 10, '_____________________  ATTEST', 0, 1, 'L');
-
     $isPairPair = trim((string)($gh['dbGames_Competition'] ?? '')) === 'PairPair';
     $pairingIDs = array_filter(is_array($group['pairingIDs'] ?? null) ? $group['pairingIDs'] : (array)($group['pairingID'] ?? []));
     $flightIDs  = array_filter(is_array($group['flightIDs'] ?? null) ? $group['flightIDs'] : (array)($group['flightID'] ?? []));
@@ -496,13 +510,37 @@ function maDrawFooter(TCPDF $pdf, array $gh, array $group, float $x, float $y, f
     if (!empty($gh['GGID'])) $leftParts[] = "Game {$gh['GGID']}";
     if ($isPairPair && $flightIDs) $leftParts[] = 'Match ' . implode(', ', $flightIDs);
     if ($pairingIDs) $leftParts[] = 'Pairings ' . implode(', ', $pairingIDs);
+    $leftText = implode('  •  ', $leftParts);
+    $copyText = '© ' . date('Y') . ' MatchAid';
 
-    $pdf->SetXY($x, $y + 12);
     maSetFont($pdf, '', 7);
-    $pdf->SetTextColor(120, 120, 120);
-    $pdf->Cell($w * 0.6, 10, implode('  •  ', $leftParts), 0, 0, 'L');
-    $pdf->Cell($w * 0.4, 10, '© ' . date('Y') . ' MatchAid', 0, 1, 'R');
-    $pdf->SetTextColor(0, 0, 0);
+    $leftW = $leftText !== '' ? $pdf->GetStringWidth($leftText) + 6 : 0.0;
+    $copyW = $pdf->GetStringWidth($copyText) + 6;
+
+    // Game/Match/Pairings -- far left, small/gray
+    if ($leftText !== '') {
+        $pdf->SetTextColor(120, 120, 120);
+        $pdf->SetXY($x, $y);
+        $pdf->Cell($leftW, 10, $leftText, 0, 0, 'L');
+        $pdf->SetTextColor(0, 0, 0);
+    }
+
+    // SCORER / ATTEST -- split the remaining middle space evenly
+    $gap = 16.0;
+    $middleW = $w - $leftW - $copyW - (2 * $gap);
+    $halfW   = $middleW / 2;
+
+    $scorerX = $x + $leftW + $gap;
+    $pdf->SetXY($scorerX, $y);
+    $pdf->Cell($halfW, 10, 'SCORER  _____________________', 0, 0, 'L');
+
+    $attestX = $scorerX + $halfW;
+    $pdf->SetXY($attestX, $y);
+    $pdf->Cell($halfW, 10, 'ATTEST  _____________________', 0, 0, 'L');
+
+    // Copyright -- far right
+    $pdf->SetXY($x + $w - $copyW, $y);
+    $pdf->Cell($copyW, 10, $copyText, 0, 1, 'R');
 }
 
 function maFormatPdfDate(string $s): string {
