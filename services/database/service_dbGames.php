@@ -415,7 +415,17 @@ public static function queryGames(array $args): array {
       "dbGames_StrokeDistribution", "dbGames_HCEffectivity", "dbGames_HCEffectivityDate",
       // Array fields (will be json_encoded)
       "dbGames_BlindPlayers", "dbGames_PointsConfig", "dbGames_PlacementPoints", "dbGames_HoleDeclaration",
-      "dbGames_CustomScores"
+      "dbGames_CustomScores",
+      // Added — saveGameTeams.php/saveGameFlights.php write these, but
+      // they were never in this allowlist. saveGameSettings() silently
+      // drops any patch field not listed here, so both endpoints'
+      // dbGames_TeamConfig/TeamMode/FlightConfig/FlightMode writes were
+      // being discarded before the UPDATE ever ran — the player-table
+      // writes in those same saves succeeded because they go through a
+      // completely separate function (ServiceDbPlayers::
+      // updateGamePlayerFields()) with no tie to this allowlist at all,
+      // which is why only half of each save appeared to work.
+      "dbGames_TeamConfig", "dbGames_TeamMode", "dbGames_FlightConfig", "dbGames_FlightMode"
     ];
 
     $clean = [];

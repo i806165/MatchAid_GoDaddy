@@ -436,6 +436,11 @@ final class ServiceDbEvents
       "dbEvents_HandicapMode",
       // EVENT COMPETITION
       "dbEvents_KPIConfig",
+      // Added — saveEventTeams.php/saveEventFlights.php write these, same
+      // gap and same fix as service_dbGames.php's saveGameSettings()
+      // allowlist. Confirmed missing by direct inspection, not assumed —
+      // an earlier claim that these were already present here was wrong.
+      "dbEvents_TeamConfig", "dbEvents_TeamMode", "dbEvents_FlightConfig", "dbEvents_FlightMode",
     ];
 
     foreach ($allow as $k) {
