@@ -251,9 +251,9 @@
               type="button" aria-label="Clear filter">×</button>
           </div>
         </div>
-        <button class="btn btnSecondary favSrcMultiBtn"
+        <button class="btn btnSecondary favSrcMultiBtn ${st.multiAddMode ? "isHidden" : ""}"
           type="button" style="flex-shrink:0;">
-          ${st.multiAddMode ? "Cancel" : "Multi-Add"}
+          Multi-Add
         </button>
       </div>
       <div class="favSrcHint maHelpText${st.favBroadened ? "" : " isHidden"}"
@@ -296,15 +296,13 @@
       });
     }
 
-    // Wire Multi-Add / Cancel button
+    // Wire Multi-Add button — only ever visible in single-add mode (hidden
+    // once multiAddMode is true), so it only ever begins multi-add. Cancel
+    // is handled exclusively by the footer's Cancel button (see _renderFooter).
     const multiBtn = controlsEl.querySelector(".favSrcMultiBtn");
     if (multiBtn) {
       multiBtn.addEventListener("click", () => {
-        if (st.multiAddMode) {
-          _cancelMultiAdd(st, controlsEl);
-        } else {
-          _beginMultiAdd(st, controlsEl);
-        }
+        _beginMultiAdd(st, controlsEl);
       });
     }
 
@@ -509,7 +507,7 @@
 
       bodyEl.innerHTML = `
         <div class="maMultiToggle">
-          <span class="maMultiToggle__action favSrcToggleAll">${esc(toggleText)}</span>
+          <button type="button" class="btn btnLink favSrcToggleAll">${esc(toggleText)}</button>
         </div>
         <div class="maListRows">
           ${youMultiRow}

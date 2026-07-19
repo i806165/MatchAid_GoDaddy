@@ -12,6 +12,7 @@
  * mount() cfg:
  *   controlsEl    {HTMLElement}        renders controls (filter + Multi-Add)
  *   bodyEl        {HTMLElement}        renders rows
+ *   footerEl      {HTMLElement}        renders multi-add confirm/cancel footer (required)
  *   eventId       {string}             EID for the linked event
  *   apiPath       {string}             getEventRoster endpoint
  *   existingGHINs {Set}                players already enrolled in this round
@@ -70,6 +71,7 @@
       apiPath:          cfg.apiPath      || "",
       eventId:          safe(cfg.eventId || ""),
       bodyEl:           cfg.bodyEl       || null,
+      footerEl:         cfg.footerEl     || null,
       _controlsEl:      controlsEl,
     };
     _states.set(controlsEl, st);
@@ -150,8 +152,9 @@
               type="button" aria-label="Clear">×</button>
           </div>
         </div>
-        <button class="btn btnSecondary erSrcMultiBtn" type="button" style="flex-shrink:0;">
-          ${st.multiAddMode ? "Cancel" : "Multi-Add"}
+        <button class="btn btnSecondary erSrcMultiBtn ${st.multiAddMode ? "isHidden" : ""}"
+          type="button" style="flex-shrink:0;">
+          Multi-Add
         </button>
       </div>`;
 
@@ -177,19 +180,59 @@
 
     if (multiBtn) {
       multiBtn.addEventListener("click", () => {
-        if (st.multiAddMode) {
-          _cancelMultiAdd(st, controlsEl);
-        } else {
-          _beginMultiAdd(st, controlsEl);
+        _beginMultiAdd(st, controlsEl);
+      });
+    }
+
+    // Render multi-add footer if in multi-add mode
+    _renderFooter(st, controlsEl);
+  }
+
+  // ── Render: footer (multi-add confirm strip) ────────────────────────────────
+  // Mirrors module_sourceFavorites.js's _renderFooter — sole source of the
+  // Cancel action while in multi-add mode. The top controls button (above)
+  // never relabels to Cancel and is hidden while multiAddMode is true, so
+  // this footer is the only Cancel affordance on screen.
+  function _renderFooter(st, controlsEl) {
+    const footerEl = st.footerEl;
+    if (!footerEl) return;
+
+    if (!st.multiAddMode) {
+      footerEl.innerHTML = "";
+      return;
+    }
+
+    const count = st.multiAddSelected.length;
+    footerEl.innerHTML = `
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="btn btnSecondary erSrcConfirmBtn"
+          type="button" ${count ? "" : "disabled"}>
+          Add to Roster${count ? ` (${count})` : ""}
+        </button>
+        <button class="btn erSrcCancelBtn" type="button">Cancel</button>
+      </div>`;
+
+    const confirmBtn = footerEl.querySelector(".erSrcConfirmBtn");
+    const cancelBtn  = footerEl.querySelector(".erSrcCancelBtn");
+
+    if (confirmBtn) {
+      confirmBtn.addEventListener("click", () => {
+        if (!count) return;
+        const filtered = _getFiltered(st);
+        const selected  = filtered.filter(p => {
+          const g = safe(p.dbEventPlayers_GHIN);
+          return st.multiAddSelected.includes(g) && !st.existingGHINs.has(g);
+        });
+        if (selected.length && typeof st.onSelectMany === "function") {
+          st.onSelectMany(selected.map(_normalize));
         }
       });
     }
-  }
 
-  // ── Render: footer (multi-add confirm) ─────────────────────────────────────
-  // Note: eventRosterSource has no footerEl — multi-add confirm is handled
-  // inline via the controls Multi-Add / Cancel button per spec §11.3.
-  // onSelectMany is called directly when multi-add confirm fires.
+    if (cancelBtn) {
+      cancelBtn.addEventListener("click", () => _cancelMultiAdd(st, controlsEl));
+    }
+  }
 
   // ── Render: body ────────────────────────────────────────────────────────────
   function _renderBody(st) {
@@ -295,14 +338,13 @@
 
       bodyEl.innerHTML = `
         <div class="maMultiToggle">
-          <span class="maMultiToggle__action erSrcToggleAll">${allSelected ? "Clear All" : "Select All"}</span>
-          ${st.multiAddSelected.length
-            ? `&nbsp;·&nbsp;<span class="maMultiToggle__action erSrcConfirm">Add Selected (${st.multiAddSelected.length})</span>`
-            : ""}
+          <button type="button" class="btn btnLink erSrcToggleAll">${allSelected ? "Clear All" : "Select All"}</button>
         </div>
         <div class="maListRows">${rows}</div>`;
 
-      // Wire Select All / Clear All
+      // Wire Select All / Clear All — confirm/cancel now live exclusively
+      // in the footer (see _renderFooter), so this only updates selection
+      // state and re-renders the footer's count/enabled state to match.
       bodyEl.querySelector(".erSrcToggleAll")?.addEventListener("click", () => {
         const sel = filtered
           .map(p => safe(p.dbEventPlayers_GHIN))
@@ -310,17 +352,7 @@
         const all = sel.length > 0 && sel.every(g => _isSelected(st, g));
         st.multiAddSelected = all ? [] : sel.slice();
         _renderBody(st);
-      });
-
-      // Wire confirm
-      bodyEl.querySelector(".erSrcConfirm")?.addEventListener("click", () => {
-        const selected = filtered.filter(p => {
-          const g = safe(p.dbEventPlayers_GHIN);
-          return st.multiAddSelected.includes(g) && !st.existingGHINs.has(g);
-        });
-        if (selected.length && typeof st.onSelectMany === "function") {
-          st.onSelectMany(selected.map(_normalize));
-        }
+        _renderFooter(st, st._controlsEl);
       });
 
       // Wire row clicks
@@ -335,6 +367,7 @@
             st.multiAddSelected = st.multiAddSelected.concat(ghin);
           }
           _renderBody(st);
+          _renderFooter(st, st._controlsEl);
         });
       });
     }
@@ -355,6 +388,7 @@
   function _cancelMultiAdd(st, controlsEl) {
     st.multiAddMode     = false;
     st.multiAddSelected = [];
+    if (st.footerEl) st.footerEl.innerHTML = "";
     _renderControls(controlsEl, st);
     _renderBody(st);
   }
@@ -384,9 +418,11 @@
       st.existingGHINs = existingGHINs;
       st.onSelect      = cfg.onSelect      || st.onSelect;
       st.onSelectMany  = cfg.onSelectMany  || st.onSelectMany;
+      st.footerEl      = cfg.footerEl      || st.footerEl;
       st.bodyEl        = bodyEl;
 
       _renderBody(st);
+      _renderFooter(st, controlsEl);
 
       if (st.scrollTop && bodyEl) {
         requestAnimationFrame(() => { bodyEl.scrollTop = st.scrollTop; });
