@@ -195,6 +195,26 @@ function be_calculateGamePHSO(string $action, ?string $id, array $parmGameData, 
         ];
     }
 
+    // Pass-B's per-group GHIN call (playing_handicaps.json) only matters
+    // for the Shots Off method — it's what resolves group-relative PH/SO.
+    // Any other dbGames_HCMethod (today just "CH") has no group-relative
+    // component: Pass-A already wrote a correct, self-contained baseline
+    // PH (CH x allowance) with SO fixed at "0", and that's the final
+    // value for those methods — Pass-B would only overwrite it with the
+    // same shape of number via an unnecessary network round trip per
+    // group. Written as <> "SO" rather than === "CH" so any future
+    // non-group-relative method added later is skipped here too without
+    // this gate needing to change.
+    if ((string)($parmGameData["dbGames_HCMethod"] ?? "") !== "SO") {
+        return [
+            "status" => "ok",
+            "message" => "PH/SO skipped, Course Handicap method.",
+            "groups" => 0,
+            "updated" => 0,
+            "allowance" => $varAllowance
+        ];
+    }
+
     // 1) Acquire players based on Action/Scope
     // Actions: "all" (or "game"), "player", "pairing", "flight", "scorecard" (new)
     $allPlayers = $repo->getGamePlayers($txtGGID);
