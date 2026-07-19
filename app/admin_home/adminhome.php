@@ -207,6 +207,7 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   </main>
 
   <?php include __DIR__ . '/../../includes/chromeFooter.php'; ?>
+  <?php require_once MA_INCLUDES . "/gameSettingsMenuRows.php"; ?>
 
   <?php
   // Render help modal into the DOM (hidden until ? button is clicked)
@@ -241,6 +242,17 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   <script src="<?= ma_asset('/assets/modules/pageHelp.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/module_sourceGames.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/module_sourceEvents.js') ?>"></script>
+
+  <script src="<?= ma_asset('/assets/modules/module_menuGameSettings.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_setGameFormat.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_setGameSegments.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_setGameBlindPlayer.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_setGameScoring.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_setGamePlacementPoints.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_setHandicapsGameEvent.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_defineFlightsGameEvent.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_defineTeamsGameEvent.js') ?>"></script>
+
   <script src="<?= ma_asset('/assets/pages/admin_home.js') ?>"></script>
 </body>
 </html>
