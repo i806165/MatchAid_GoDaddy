@@ -541,7 +541,7 @@
     if (el.rosterCount) el.rosterCount.textContent = count ? `${count} players` : "";
   }
 
-  // ── Canvas controls — sort strip + Define Teams + HCP date ────────────────
+  // ── Canvas controls — sort strip + HCP date ───────────────────────────────
   function renderCanvasControls(){
     const g = state.game || {};
     const eff = g.dbGames_HCEffectivity || "PlayDate";
@@ -565,35 +565,6 @@
       ${sorts.map(s => `<button class="maSeg--sortBtn ${state.rosterSort === s.id ? "is-active" : ""}" type="button" data-roster-sort="${esc(s.id)}">${esc(s.label)}</button>`).join("")}
     </div>`;
 
-    // Round with TeamMode "fixed" no longer hides this button — the button
-    // always renders, and the lock is enforced when clicked instead (see
-    // onManageTeams's showBlockedModal guard). This protects both this
-    // canvas button and the "Define Teams" entry in the Actions menu, since
-    // both call the same onManageTeams() function — a hidden button gave no
-    // way to tell "delegated to the event" apart from "broken" or "no
-    // permission"; a click-through message says so explicitly.
-    const teamsBtn = `<button id="gpBtnManageTeams" class="btn btnSecondary" type="button">Define Teams</button>`;
-
-    // Same reasoning as Teams — always rendered, locked via the click guard
-    // in onDefineFlights() instead of being hidden.
-    const flightsBtn = `<button id="gpBtnDefineFlights" class="btn btnSecondary" type="button">Define Flights</button>`;
-
-    // Same reasoning as Teams/Flights for the event-lock case — always
-    // rendered, locked via the click guard in onDefineHandicapSettings().
-    // Gross-scored games are a genuinely different, separate condition and
-    // keep the existing disable-with-tooltip treatment: "not applicable at
-    // all" (gross) reads differently from "delegated elsewhere, click to
-    // find out" (event-locked), so the two stay visually distinct rather
-    // than collapsing into one pattern. This disable is Game/Round-only by
-    // design — an event has no single ScoringMethod (different rounds
-    // under the same event can be NET and ADJ GROSS simultaneously), so
-    // Event Roster's own button never gross-disables (see event_roster.js).
-    const isGrossGame = (state.game?.dbGames_ScoringMethod === "ADJ GROSS");
-    const handicapsBtn = `<button id="gpBtnDefineHandicaps" class="btn btnSecondary" type="button"
-                 ${isGrossGame ? 'disabled title="Not applicable — this game uses gross scoring."' : ""}>
-           Define Handicaps
-         </button>`;
-
     // Promoted from Actions-menu-only to a visible canvas button, matching
     // Event Roster's Refresh Handicaps. Never disabled on gross games —
     // per the earlier decision, this action already self-guards server-side
@@ -610,9 +581,6 @@
         </div>
         <div class="gpCanvasControls__right maDesktopActions">
           ${recalcBtn}
-          ${handicapsBtn}
-          ${teamsBtn}
-          ${flightsBtn}
           <span class="gpHcpDate">${esc(hcLabel)}</span>
         </div>
       </div>`;
@@ -625,17 +593,8 @@
       });
     });
 
-    const teamsButton = document.getElementById("gpBtnManageTeams");
-    if (teamsButton) teamsButton.onclick = onManageTeams;
-
-    const flightsButton = document.getElementById("gpBtnDefineFlights");
-    if (flightsButton) flightsButton.onclick = onDefineFlights;
-
     const recalcButton = document.getElementById("gpBtnRecalcHandicaps");
     if (recalcButton) recalcButton.onclick = onRecalcHandicaps;
-
-    const handicapsButton = document.getElementById("gpBtnDefineHandicaps");
-    if (handicapsButton) handicapsButton.onclick = onDefineHandicapSettings;
   }
 
 
@@ -669,146 +628,11 @@
     MA.ui.openActionsMenu("Actions", [
       { category: "Roster Management" },
       { label: "Recalculate Handicaps",    indent: true, action: onRecalcHandicaps },
-      { label: "Define Handicap Settings", indent: true, action: onDefineHandicapSettings },
-      { label: "Define Teams",             indent: true, action: onManageTeams },
-      { label: "Define Flights",           indent: true, action: onDefineFlights },
       { separator: true },
       { category: "Messaging" },
       { label: "Send Message to Players", action: onNotify },
     ]);
   }
-
-  // ── Locked-by-event notice ──────────────────────────────────────────────
-  // Delegates to MA.ui.confirm (okOnly mode) instead of this file's own
-  // overlay. Same three call sites below (onManageTeams/onDefineFlights/
-  // onDefineHandicapSettings) are unchanged. Mirrors the identical
-  // "managed at event level" pattern in game_pairings.js — same wording,
-  // now the same rendering too.
-  function showBlockedModal(message, title) {
-    MA.ui.confirm({
-      title: title || "Managed at event level",
-      message: message || "This action isn't available here.",
-      okOnly: true
-    });
-  }
-
-  function onManageTeams() {
-    if (state.game?.dbEvents_TeamMode === "fixed") {
-      showBlockedModal("Teams are managed at the event level for this event.");
-      return;
-    }
-    if (!MA.manageTeams || typeof MA.manageTeams.open !== "function") {
-      MA.ui.notify("Define Teams module not loaded.", "warn");
-      return;
-    }
-    const teamConfig = (window.__MA_INIT__ || {}).teamConfig || {
-      teams: [
-        { id: "T1", name: "Red",  color: "red",  sort: 1 },
-        { id: "T2", name: "Blue", color: "blue", sort: 2 },
-      ]
-    };
-    MA.manageTeams.open({
-      players:    state.players,
-      teamConfig,
-      apiBase:    MA.paths?.apiGamePlayers || "/api/game_players",
-      // Round-Level Dimension Activation — this round's OWN dbGames_TeamMode,
-      // wholly independent of the event's dbEvents_TeamMode checked above.
-      // showActivationToggle is safe unconditionally here: this function
-      // already returned early above whenever the event IS authoritative,
-      // so by the time we reach this call the event is guaranteed not to
-      // be, and the round-level toggle is always the right thing to show.
-      activation:           state.game?.dbGames_TeamMode || "disabled",
-      showActivationToggle: true,
-      onApply: ({ players, teamConfig, activation }) => {
-        if (Array.isArray(players) && players.length) {
-          players.forEach(saved => {
-            const ghin = String(saved.dbPlayers_PlayerGHIN || saved.ghin || "");
-            const p = state.players.find(x => String(x.dbPlayers_PlayerGHIN || "") === ghin);
-            if (p) p.dbPlayers_TeamKey = String(saved.dbPlayers_TeamKey || saved.team || "");
-          });
-        }
-        if (window.__MA_INIT__) window.__MA_INIT__.teamConfig = teamConfig;
-        if (state.game) state.game.dbGames_TeamMode = activation || state.game.dbGames_TeamMode;
-        renderRoster();
-        renderTrayBody();
-      }
-    });
-  }
-
-  function onDefineFlights() {
-    if (state.game?.dbEvents_FlightMode === "fixed") {
-      showBlockedModal("Flights are managed at the event level for this event.");
-      return;
-    }
-    if (!MA.defineFlights || typeof MA.defineFlights.open !== "function") {
-      MA.ui.notify("Define Flights module not loaded.", "warn");
-      return;
-    }
-    const flightConfig = (window.__MA_INIT__ || {}).flightConfig || null;
-
-    MA.defineFlights.open({
-      players:      state.players,   // native dbPlayers_* shape, no mapping needed
-      flightConfig,
-      apiBase:      MA.paths?.apiGamePlayers || "/api/game_players",
-      // Round-Level Dimension Activation — this round's OWN dbGames_FlightMode,
-      // wholly independent of the event's dbEvents_FlightMode checked above.
-      // Same reasoning as onManageTeams(): the event-lock guard above has
-      // already returned early whenever the event IS authoritative, so
-      // showActivationToggle is safe unconditionally here.
-      activation:           state.game?.dbGames_FlightMode || "disabled",
-      showActivationToggle: true,
-      onApply: ({ players, flightConfig: newConfig, activation }) => {
-        if (Array.isArray(players) && players.length) {
-          players.forEach(saved => {
-            const ghin = String(saved.dbPlayers_PlayerGHIN || "");
-            const p = state.players.find(x => String(x.dbPlayers_PlayerGHIN || "") === ghin);
-            if (p) p.dbPlayers_FlightKey = String(saved.dbPlayers_FlightKey || "");
-          });
-        }
-        if (window.__MA_INIT__) window.__MA_INIT__.flightConfig = newConfig;
-        if (state.game) state.game.dbGames_FlightMode = activation || state.game.dbGames_FlightMode;
-        renderRoster();
-        renderTrayBody();
-      }
-    });
-  }
-
-  function onDefineHandicapSettings() {
-    if (state.game?.dbEvents_HandicapMode === "fixed") {
-      showBlockedModal("Handicaps are managed at the event level for this event.");
-      return;
-    }
-    if (!MA.defineHandicapSettings || typeof MA.defineHandicapSettings.open !== "function") {
-      MA.ui.notify("Define Handicaps module not loaded.", "warn");
-      return;
-    }
-    const g = state.game || {};
-
-    // Read directly off state.game's own plain columns — unlike Teams/
-    // Flights (JSON-blob config needing separate top-level init hydration),
-    // Method/Allowance/Effectivity/Date are already plain scalar fields on
-    // the full game record, no extra plumbing required.
-    MA.defineHandicapSettings.open({
-      method:       String(g.dbGames_HCMethod || "CH"),
-      allowance:    Number(g.dbGames_Allowance ?? 100),
-      effectivity:  String(g.dbGames_HCEffectivity || "PlayDate"),
-      effDate:      String(g.dbGames_HCEffectivityDate || ""),
-      apiBase:      MA.paths?.apiGamePlayers || "/api/game_players",
-      saveEndpoint: "saveGameHandicapSettings.php",
-      // no mode, no showModeToggle — round/flat game owns its own rules
-      onApply: ({ method, allowance, effectivity, effDate }) => {
-        if (state.game) {
-          state.game.dbGames_HCMethod          = method;
-          state.game.dbGames_Allowance         = allowance;
-          state.game.dbGames_HCEffectivity     = effectivity;
-          state.game.dbGames_HCEffectivityDate = effDate;
-        }
-        renderCanvasControls(); // HCP-as-of label reads dbGames_HCEffectivity live
-      }
-    });
-  }
-
-
 
   function onRecalcHandicaps() {
     if (!ggid) return;
