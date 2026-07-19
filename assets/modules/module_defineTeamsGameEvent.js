@@ -117,6 +117,7 @@
   let _onEsc      = null;
   let _lockDepth  = 0;
   let _lockedByEvent = false; // target: "game" only — see header note
+  let _cfgOpen = true; // always starts expanded — no per-content default like Flights has
 
   // ── Helpers — unchanged from module_defineTeams.js ──────────────────
   function esc(s) {
@@ -126,6 +127,21 @@
   }
   function safe(v) { return String(v ?? "").trim(); }
   function deepClone(obj) { return obj ? JSON.parse(JSON.stringify(obj)) : null; }
+
+  // FIX — dbGames_TeamConfig/dbEvents_TeamConfig arrive as a raw JSON
+  // string (same as every other JSON-blob field in this app), not a
+  // pre-parsed object. deepClone() alone never parses a string — it just
+  // round-trips one unchanged. Every other module in this family
+  // (Placement Points' parseIncoming(), Scoring's _draftFromGame()) does
+  // this exact string check before touching the value; this module
+  // skipped it, which is what produced literal "T1"/"T2" in the name
+  // inputs and an empty teams array at save time.
+  function parseConfigField(raw) {
+    if (typeof raw === "string" && raw.trim() !== "") {
+      try { return JSON.parse(raw); } catch (e) { return null; }
+    }
+    return (raw && typeof raw === "object") ? raw : null;
+  }
 
   // Branches on _target — two different tables, two different GHIN field
   // names. See header note.
@@ -274,38 +290,12 @@
       </header>`;
   }
 
+  function _cfgSummaryText() { return _cfgOpen ? "Collapse team section" : "Expand team section"; }
+
   function _renderBody() {
-    const toggle = _showModeToggle() ? _renderApplyToggle() : _renderActivationToggle();
     const expanded = _isExpanded();
     return `
-      <div class="maModal__controls" id="mtTeamCfgStrip">
-        ${toggle}
-        <div style="${toggle ? "border-top:1px solid var(--border); margin-top:12px; padding-top:12px;" : ""} display:flex; flex-direction:column; gap:8px;">
-          ${_renderTeamNameInput("T1", getTeamName("T1"))}
-          ${_renderTeamNameInput("T2", getTeamName("T2"))}
-        </div>
-        <div style="display:flex; gap:8px; margin-top:10px;">
-          <button type="button" class="btn btnSecondary" id="mtBtnSplitHC" style="flex:1; font-size:12px; gap:5px;">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-              <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
-              <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
-              <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
-              <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/>
-              <line x1="17" y1="16" x2="23" y2="16"/>
-            </svg>
-            Auto-split by handicap
-          </button>
-          <button type="button" class="btn btnSecondary" id="mtBtnRandom" style="flex:1; font-size:12px; gap:5px;">
-            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-              <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
-              <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
-              <line x1="4" y1="4" x2="9" y2="9"/>
-            </svg>
-            Auto-split randomly
-          </button>
-        </div>
-        <button type="button" class="btn" id="mtBtnClearAll" style="width:100%; font-size:12px; margin-top:8px;">Clear all</button>
-      </div>
+      ${_renderConfigStrip()}
       <div class="maModal__body${expanded ? "" : " is-collapsed"}" id="mtRoster" style="padding:0; ${expanded ? "" : "display:none;"}">
         <div class="maListRows">${_renderRosterRows()}</div>
       </div>
@@ -316,6 +306,59 @@
         <button type="button" class="maFtrBtn maFtrBtn--cancel" id="mtBtnCancel">Cancel</button>
         <button type="button" class="maFtrBtn maFtrBtn--save" id="mtBtnApply" ${_isPartiallyAssigned() ? "disabled" : ""}>Apply</button>
       </footer>`;
+  }
+
+  // Matches module_defineFlightsGameEvent.js's _renderConfigStrip() exactly
+  // — same toggle button, same chevron, same collapse mechanic. Unlike
+  // Flights, Teams never adds/removes rows, so there's no need for a
+  // Flights-style _refreshConfigStrip() full rebuild — the panel's
+  // content never changes shape, only its visibility.
+  function _renderConfigStrip() {
+    const toggle = _showModeToggle() ? _renderApplyToggle() : _renderActivationToggle();
+    return `
+      <div id="mtCfgStrip">
+        <div class="maModal__controls" style="padding:0;">
+          <button type="button" id="mtBtnToggleCfg" aria-expanded="${_cfgOpen}"
+                  style="width:100%; display:flex; align-items:center; justify-content:space-between;
+                         padding:10px 16px; border:none; border-radius:0; background:var(--rowBgEnrolled,rgba(0,0,0,.03));
+                         font-size:12px; font-weight:800; cursor:pointer;">
+            <span id="mtCfgSummary" style="color:var(--mutedText);">${esc(_cfgSummaryText())}</span>
+            <svg id="mtCfgChevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+                 style="transition:transform .15s; transform:rotate(${_cfgOpen ? 180 : 0}deg);">
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
+          </button>
+          <div id="mtCfgPanel" style="padding:10px 16px 14px; display:${_cfgOpen ? "block" : "none"};">
+            ${toggle}
+            <div style="${toggle ? "border-top:1px solid var(--border); margin-top:12px; padding-top:12px;" : ""} display:flex; flex-direction:column; gap:8px;">
+              ${_renderTeamNameInput("T1", getTeamName("T1"))}
+              ${_renderTeamNameInput("T2", getTeamName("T2"))}
+            </div>
+            <div style="display:flex; gap:8px; margin-top:10px;">
+              <button type="button" class="btn btnSecondary" id="mtBtnSplitHC" style="flex:1; font-size:12px; gap:5px;">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+                  <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+                  <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+                  <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+                  <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/>
+                  <line x1="17" y1="16" x2="23" y2="16"/>
+                </svg>
+                Auto-split by handicap
+              </button>
+              <button type="button" class="btn btnSecondary" id="mtBtnRandom" style="flex:1; font-size:12px; gap:5px;">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+                  <polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/>
+                  <polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/>
+                  <line x1="4" y1="4" x2="9" y2="9"/>
+                </svg>
+                Auto-split randomly
+              </button>
+            </div>
+            <button type="button" class="btn" id="mtBtnClearAll" style="width:100%; font-size:12px; margin-top:8px;">Clear all</button>
+          </div>
+        </div>
+      </div>`;
   }
 
   function _renderApplyToggle() {
@@ -478,7 +521,22 @@
     if (btn) btn.disabled = _isPartiallyAssigned();
   }
 
+  function _refreshCfgSummary() {
+    const el = document.getElementById("mtCfgSummary");
+    if (el) el.textContent = _cfgSummaryText();
+  }
+
   function _wireBody(overlay) {
+    overlay.querySelector("#mtBtnToggleCfg")?.addEventListener("click", () => {
+      _cfgOpen = !_cfgOpen;
+      const panel = overlay.querySelector("#mtCfgPanel");
+      const chevron = overlay.querySelector("#mtCfgChevron");
+      if (panel) panel.style.display = _cfgOpen ? "block" : "none";
+      if (chevron) chevron.style.transform = `rotate(${_cfgOpen ? 180 : 0}deg)`;
+      overlay.querySelector("#mtBtnToggleCfg")?.setAttribute("aria-expanded", String(_cfgOpen));
+      _refreshCfgSummary();
+    });
+
     overlay.querySelectorAll(".maTextInput[data-slot]").forEach(inp => {
       inp.addEventListener("input", () => {
         const team = getTeam(inp.dataset.slot);
@@ -646,6 +704,7 @@
     _onDone = options?.onDone || null;
     _busy = false;
     _lockedByEvent = false;
+    _cfgOpen = true;
 
     MA.ui?.showBusy?.({ title: "Manage Teams", message: "Loading..." });
     let raw;
@@ -673,7 +732,7 @@
     }
     _ctx = { ggid, game };
 
-    _teamConfig = deepClone(game.dbGames_TeamConfig || game.dbEvents_TeamConfig || null) || {
+    _teamConfig = deepClone(parseConfigField(game.dbGames_TeamConfig || game.dbEvents_TeamConfig)) || {
       teams: [
         { id: "T1", name: "Red",  color: "red",  sort: 1 },
         { id: "T2", name: "Blue", color: "blue", sort: 2 },

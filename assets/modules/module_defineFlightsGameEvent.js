@@ -73,8 +73,24 @@
   function safe(v) { return String(v ?? "").trim(); }
   function deepClone(obj) { return obj ? JSON.parse(JSON.stringify(obj)) : null; }
 
+  // FIX — same bug and same fix as module_defineTeamsGameEvent.js:
+  // dbGames_FlightConfig/dbEvents_FlightConfig arrive as a raw JSON
+  // string, not a pre-parsed object. Without this, cfg?.flights was
+  // always undefined, silently falling back to the single-default-flight
+  // case every time real, saved flight data existed — quieter than
+  // Teams' bug (no literal "F1"/"F2" names shown, since flights already
+  // display generated names), but just as wrong: it discarded whatever
+  // was actually saved.
+  function parseConfigField(raw) {
+    if (typeof raw === "string" && raw.trim() !== "") {
+      try { return JSON.parse(raw); } catch (e) { return null; }
+    }
+    return (raw && typeof raw === "object") ? raw : null;
+  }
+
   function normalizeFlightConfig(cfg) {
-    const list = Array.isArray(cfg?.flights) ? cfg.flights : [];
+    const parsed = parseConfigField(cfg);
+    const list = Array.isArray(parsed?.flights) ? parsed.flights : [];
     if (!list.length) return [{ id: "F1", name: "Flight 1", sort: 1 }];
     return list.slice(0, MAX_FLIGHTS).map((f, i) => ({
       id: `F${i + 1}`, name: safe(f.name) || `Flight ${i + 1}`, sort: i + 1,
