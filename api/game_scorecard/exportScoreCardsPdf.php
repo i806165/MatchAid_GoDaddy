@@ -271,7 +271,7 @@ function maDrawScoreCardGroup(TCPDF $pdf, array $game, array $group, float $yTop
  * Returns the Y coordinate where the table should start.
  */
 function maDrawHeaderBlock(TCPDF $pdf, array $game, array $gh, array $group, float $x, float $y, float $w): float {
-    $logoPath = MA_ROOT . '/assets/images/MatchAid Logo - Square.jpeg';
+    $logoPath = MA_ROOT . '/assets/images/MatchAidLogoSquare.jpeg';
     $textX    = $x;
 
     if (is_file($logoPath) && is_readable($logoPath)) {
