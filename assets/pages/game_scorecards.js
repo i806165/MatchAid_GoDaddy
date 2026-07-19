@@ -429,6 +429,64 @@ function renderGroup(group) {
     }
   }
 
+  async function downloadScoreCardsPdf(layout) {
+    const endpoint = String(paths.pdfScoreCards || "/api/game_scorecard/exportScoreCardsPdf.php").trim();
+    const ggid = String(game.dbGames_GGID || game.dbGames_GGIDnum || "");
+
+    const params = new URLSearchParams({ ggid, layout });
+    const url = endpoint + (endpoint.includes("?") ? "&" : "?") + params.toString();
+
+    try {
+      setStatus("Creating print-ready PDF…", "info");
+
+      const response = await fetch(url, {
+        method: "GET",
+        credentials: "same-origin",
+        cache: "no-store"
+      });
+
+      const contentType = response.headers.get("content-type") || "";
+
+      if (!response.ok) {
+        let message = "Could not create the scorecard PDF.";
+        if (contentType.includes("application/json")) {
+          const payload = await response.json();
+          message = payload?.error || message;
+        } else {
+          const text = await response.text();
+          if (text.trim()) message = text.trim();
+        }
+        throw new Error(message);
+      }
+
+      if (!contentType.includes("application/pdf")) {
+        throw new Error("The server did not return a PDF.");
+      }
+
+      const blob = await response.blob();
+      const disposition = response.headers.get("content-disposition") || "";
+      const match = disposition.match(/filename="?([^"]+)"?/i);
+      const filename = match?.[1] ? match[1] : `MatchAid_ScoreCards_${ggid}_${layout}.pdf`;
+
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+
+      setStatus("Scorecard PDF downloaded.", "success");
+
+    } catch (error) {
+      console.error("[MA][SCORECARD_PDF_EXPORT]", error);
+      setStatus(String(error?.message || "Scorecard PDF export failed."), "error");
+    }
+  }
+
   function openActionsMenu() {
     if (!MA.ui || typeof MA.ui.openActionsMenu !== "function") {
       setStatus("Actions menu module is unavailable.", "error");
@@ -436,6 +494,8 @@ function renderGroup(group) {
     }
 
     const items = [
+      { label: "Print ScoreCard (1 per Page)", action: () => downloadScoreCardsPdf("1up") },
+      { label: "Print ScoreCard (2 per Page)", action: () => downloadScoreCardsPdf("2up") },
       { label: "Download Point Scorecards (2x9)", action: () => downloadPointScorecards("2x9") },
       { label: "Download Point Scorecards (3x6)", action: () => downloadPointScorecards("3x6") }
     ];
