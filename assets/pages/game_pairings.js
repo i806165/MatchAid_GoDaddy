@@ -156,6 +156,21 @@
     });
   }
 
+  // ── Match tab gate notice ────────────────────────────────────────────────
+  // Shown when the user clicks the Match tab on a game whose competition
+  // type isn't Pair vs Pair. The tab itself stays enabled (see wireEvents'
+  // tabs click handler) — this replaces the old disabled+tooltip pattern
+  // with an explanatory, click-triggered modal so the requirement is
+  // discoverable rather than hidden. OK-only: no routing to Game Settings
+  // is wired up yet, per current scope.
+  function showMatchRequiresPairPairModal() {
+    MA.ui.confirm({
+      title: "Match Play requires Pair vs Pair",
+      message: "This game's competition type doesn't support Match Play. Open Game Settings to change the competition type.",
+      okOnly: true
+    });
+  }
+
   function pad3(v) {
     const n = parseInt(String(v || "0"), 10);
     if (!Number.isFinite(n) || n <= 0) return "000";
@@ -537,12 +552,15 @@
   }
 
   // ---- Rendering helpers ----
+  // Match tab is always enabled — no more disabled/tooltip gating here.
+  // The Pair vs Pair requirement is now enforced at click time (see
+  // wireEvents' tabs click handler), which shows an explanatory modal
+  // instead of silently disabling the tab. Kept as a function (rather than
+  // deleted outright) since render() still calls it every render cycle;
+  // it's a no-op today but is the natural place to re-introduce any future
+  // tab-level rendering needs.
   function renderTabs() {
-    const allowMatch = isPairPair();
-    if (el.tabMatchBtn) {
-      el.tabMatchBtn.disabled = !allowMatch;
-      el.tabMatchBtn.title = allowMatch ? "" : "Matches only apply for Pair vs Pair.";
-    }
+    // intentionally empty
   }
 
   function setActiveTab(tabId) {
@@ -1614,7 +1632,19 @@
     if (el.tabs) {
       el.tabs.addEventListener("click", (e) => {
         const btn = e.target.closest(".maSegBtn");
-        if (btn && !btn.disabled) setActiveTab(btn.dataset.tab);
+        if (!btn) return;
+        const tabId = btn.dataset.tab;
+
+        // Match tab is always clickable now. If the game's competition
+        // type doesn't support Match Play, intercept the click — show the
+        // explanatory modal and do NOT switch tabs (state.activeTab and
+        // the current panel are left untouched).
+        if (tabId === "match" && !isPairPair()) {
+          showMatchRequiresPairPairModal();
+          return;
+        }
+
+        setActiveTab(tabId);
       });
     }
 
