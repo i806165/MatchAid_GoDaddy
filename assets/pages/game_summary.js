@@ -562,7 +562,7 @@
   // Pairing summary — the subtotal row at the bottom of each pairing's
   // player rows, same indentation as those rows (see .gsPairIndent),
   // distinguished only by bold weight + a top rule, no background tint.
-  function buildPairingSummaryRow(pairing, colspan) {
+  function buildPairingSummaryRow(pairing) {
     const players = pairing.players || [];
     let sHI = 0, sCH = 0, sPH = 0, cHI = 0, cCH = 0, cPH = 0;
     players.forEach(p => {
@@ -573,12 +573,40 @@
     const avgHI = cHI ? (sHI / cHI).toFixed(1) : "0.0";
     const avgCH = cCH ? (sCH / cCH).toFixed(1) : "0.0";
     const avgPH = cPH ? (sPH / cPH).toFixed(1) : "0.0";
-    const stats = `Avg HI: ${avgHI} · CH: ${avgCH} · PH: ${avgPH}`;
 
     const prefix = pairingLabelPrefix(pairing);
     const label = prefix ? (prefix + ", Pair " + pairing.pairingId) : ("Pair " + pairing.pairingId);
 
-    return `<tr class="gsPairSummary"><td class="gsPairIndent" colspan="${colspan - 1}">${esc(label)}</td><td class="gsCenter gsMono">${esc(stats)}</td></tr>`;
+    // One real <td> per column, in the exact same order and with the
+    // exact same col-flight/col-team/col-match/col-flightpos hide/show
+    // classes player rows use — NOT colspan math against a fixed total.
+    // Flight/Team/Match/Side are display:none'd out of the table
+    // entirely when inactive (not just visually hidden), which shrinks
+    // the table's real column count; a hardcoded colspan sized against
+    // the full 15/13 total then no longer matches, and this row's
+    // second cell drifts off to the right of the actual visible columns.
+    // Giving every column its own cell — same as a player row — means
+    // this row hides/shows in perfect sync automatically, same
+    // mechanism as everything else in the table.
+    return (
+      "<tr class=\"gsPairSummary\">" +
+        "<td class=\"gsPairIndent\">" + esc(label) + "</td>" +
+        "<td></td>" +
+        "<td class=\"col-flight\"></td>" +
+        "<td class=\"col-team\"></td>" +
+        "<td class=\"col-match\"></td>" +
+        "<td class=\"col-flightpos\"></td>" +
+        "<td></td>" +
+        "<td></td>" +
+        "<td class=\"gsCenter gsMono\">" + esc(avgHI) + "</td>" +
+        "<td class=\"gsCenter gsMono\">" + esc(avgCH) + "</td>" +
+        "<td class=\"gsCenter gsMono\">" + esc(avgPH) + "</td>" +
+        "<td></td>" +
+        "<td></td>" +
+        "<td></td>" +
+        "<td></td>" +
+      "</tr>"
+    );
   }
 
   // Divider between the two sibling pairings within one Match. Never
@@ -1039,7 +1067,7 @@
             );
           });
 
-          desktopParts.push(buildPairingSummaryRow(pairing, colspan));
+          desktopParts.push(buildPairingSummaryRow(pairing));
 
           // Divider only between sibling pairings within the same group
           // (i.e. only ever fires for PairPair's two pairings under one
