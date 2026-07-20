@@ -32,9 +32,11 @@
 
     <!-- ROSTER -->
     <section class="maCard" aria-label="Roster">
-      <header class="maCard__hdr">
+      <header class="maCard__hdr maCard__hdr--wrap">
         <div class="maCard__title" id="gsCardTitle">ROSTER</div>
-        <div class="maCard__actions"></div>
+        <div class="maCard__actions">
+          <span class="maHintText">Refresh handicaps from the Actions menu for the most current results.</span>
+        </div>
       </header>
 
       <div class="maCard__body">

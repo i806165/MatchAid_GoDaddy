@@ -8,10 +8,10 @@
 
 <div class="maCards" id="scCards">
   <section class="maCard" id="scHostCard" aria-label="Scorecards">
-    <header class="maCard__hdr">
+    <header class="maCard__hdr maCard__hdr--wrap">
       <div class="maCard__title">SCORECARDS</div>
       <div class="maCard__actions">
-        <span class="maHint" id="scHint">Preview below. Print for best results.</span>
+        <span class="maHintText" id="scHint">Refresh handicaps from the Actions menu for the most current results.</span>
       </div>
     </header>
     <div class="maCard__body">

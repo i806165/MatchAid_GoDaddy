@@ -77,6 +77,13 @@
     flightConfig: null, // null | { flights: [{id,name,sort},...] } — from dbGames_FlightConfig
   // Dirty map by GHIN
     dirty: new Set(),
+    // Set on any successful save; cleared only once a handicap
+    // recalculation actually completes. Deliberately independent of
+    // `dirty` — dirty clears on every successful save (nothing left
+    // unsaved), but recalc debt from that save persists until paid off,
+    // which now happens once on leaving the page rather than after every
+    // individual save. See ensureRecalculatedBeforeLeaving().
+    needsRecalc: false,
     allCollapsed: false, // Global expand/collapse state
     busy: false,
     // Per-tray collapsed-group tracking for the nested Flight→Team grouping
@@ -391,9 +398,20 @@
       { label: "Open Automated Pairing", action: onAutoPair },
       { separator: true },
       { separator: true },
+      { label: "Recalculate Handicaps", action: onRecalcHandicaps },
+      { separator: true },
+      { separator: true },
       { label: "Reset Pairings and Matches to last Save", action: onResetPairings, danger: true }
     ];
     MA.ui.openActionsMenu("Actions", items);
+  }
+
+  // Manual escape hatch — runs the same recalculation the leave-flow gate
+  // (ensureRecalculatedBeforeLeaving) runs automatically, but on demand.
+  // Reuses runRecalculation() so a successful manual run also clears
+  // needsRecalc, same as the automatic path — no separate bookkeeping.
+  function onRecalcHandicaps() {
+    runRecalculation();
   }
 
   /**
@@ -526,24 +544,70 @@
           ? ["eventrounds", "roundedit", "roundsettings", "roundroster", "roundpairings", "roundteetimes", "roundsummary", "roundscorecard"]
           : ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"],
         active: isEvent ? "roundpairings" : "pairings",
-        onNavigate: (id) => {
-          if (typeof MA.routerGo === "function") MA.routerGo(id);
+        onNavigate: async (id) => {
+          const canLeave = await ensureRecalculatedBeforeLeaving();
+          if (canLeave && typeof MA.routerGo === "function") MA.routerGo(id);
         }
       });
     }
   }
 
-  async function onBack() {
+  // ── Leave-page handicap recalculation ────────────────────────────────────
+  // Recalculation used to ride along with every individual save (see the
+  // removed Trigger-4 block in doSave) — disruptive when a user makes many
+  // interim saves while working through pairings. It now runs at most once
+  // per editing session, as a requisite of actually leaving the page,
+  // regardless of how many saves happened along the way.
+
+  // Runs the recalculation itself. MA.recalculateHandicaps already owns
+  // all user-facing feedback for this (busy overlay, error modal) — see
+  // recalculate_handicaps.js — so this is just the state bookkeeping
+  // around it. On failure, needsRecalc is deliberately left true rather
+  // than cleared: this is a reporting-integrity concern (stale PH/SO),
+  // not a data-integrity one, so a failed recalc never blocks navigation
+  // — it just stays owed for the next opportunity (next leave attempt, or
+  // a manual recalculation elsewhere in the app).
+  async function runRecalculation() {
+    if (!MA.recalculateHandicaps) return;
+    const ok = await MA.recalculateHandicaps(apiGHIN);
+    if (ok) state.needsRecalc = false;
+  }
+
+  // Gate called by every way of leaving this page (Back, bottom nav).
+  // Always resolves true (safe to leave) EXCEPT when there are unsaved
+  // edits and the save the user asked for fails — that's a real
+  // data-loss risk, so navigation is held back in that one case only.
+  // Recalculation itself is never optional once owed, and never blocks
+  // leaving — see runRecalculation() above.
+  async function ensureRecalculatedBeforeLeaving() {
     if (state.dirty.size > 0) {
-      const approved = await MA.ui.confirm({
-        title: "Discard changes?",
-        message: "You have unsaved pairing changes. Discard them and go back?",
-        confirmLabel: "Discard",
-        cancelLabel: "Keep editing",
-        danger: true
+      const wantsSave = await MA.ui.confirm({
+        title: "Save before leaving?",
+        message: "You have unsaved pairing changes. Save them before you go?",
+        confirmLabel: "Save",
+        cancelLabel: "Discard"
       });
-      if (!approved) return;
+
+      if (wantsSave) {
+        const saved = await doSave();
+        if (!saved) return false; // save failed — stay put, don't lose their edits
+      } else {
+        // Discard — abandon the in-memory edits. No reload needed here;
+        // nothing was persisted, and we're navigating away regardless.
+        state.dirty.clear();
+      }
     }
+
+    if (state.needsRecalc) {
+      await runRecalculation();
+    }
+
+    return true;
+  }
+
+  async function onBack() {
+    const canLeave = await ensureRecalculatedBeforeLeaving();
+    if (!canLeave) return;
     if (typeof MA.routerGo === "function") {
       MA.routerGo("admin");
       return;
@@ -1577,8 +1641,11 @@
   }
 
   async function doSave() {
-    if (state.busy) return;
-    if (!state.dirty.size) return setStatus("No changes to save.", "info");
+    if (state.busy) return false;
+    if (!state.dirty.size) {
+      setStatus("No changes to save.", "info");
+      return false;
+    }
 
     // Pre-save validation: PairPair max 2 per pairing
     if (isPairPair()) {
@@ -1591,7 +1658,8 @@
       });
       const badPairing = Object.keys(pairingCounts).find(pid => pairingCounts[pid] > 2);
       if (badPairing) {
-        return setStatus(`Cannot save: Pairing ${badPairing} has more than 2 players (Match Play limit).`, "danger");
+        setStatus(`Cannot save: Pairing ${badPairing} has more than 2 players (Match Play limit).`, "danger");
+        return false;
       }
     }
 
@@ -1608,20 +1676,20 @@
         state.players = normalizePlayers(res.payload.players);
       }
 
-      // Trigger-4: Recalculate handicaps (Pass-A + Pass-B)
-      if (MA.recalculateHandicaps) {
-        const ok = await MA.recalculateHandicaps(apiGHIN);
-        if (ok) {
-          window.location.reload(); // Refresh UI with new PH/SO values
-          return;
-        }
-      }
+      // Handicap recalculation no longer rides along with every save.
+      // Interim saves during active pairing work can be many; this just
+      // records that a recalculation is now owed. It's paid off exactly
+      // once, when the user actually leaves the page — see
+      // ensureRecalculatedBeforeLeaving().
+      state.needsRecalc = true;
 
       clearDirty();
       render();
+      return true;
     } catch (e) {
       console.error(e);
       setStatus(String(e.message || e), "error");
+      return false;
     } finally {
       setBusy(false);
     }

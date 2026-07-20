@@ -487,6 +487,15 @@ function renderGroup(group) {
     }
   }
 
+  async function recalculateHandicaps() {
+    if (!MA.recalculateHandicaps) {
+      setStatus("Recalculate module not loaded.", "error");
+      return;
+    }
+    const ok = await MA.recalculateHandicaps(paths.apiGHIN);
+    if (ok) setStatus("Handicaps recalculated.", "success");
+  }
+
   function openActionsMenu() {
     if (!MA.ui || typeof MA.ui.openActionsMenu !== "function") {
       setStatus("Actions menu module is unavailable.", "error");
@@ -497,7 +506,10 @@ function renderGroup(group) {
       { label: "Print ScoreCard (1 per Page)", action: () => downloadScoreCardsPdf("1up") },
       { label: "Print ScoreCard (2 per Page)", action: () => downloadScoreCardsPdf("2up") },
       { label: "Download Point Scorecards (2x9)", action: () => downloadPointScorecards("2x9") },
-      { label: "Download Point Scorecards (3x6)", action: () => downloadPointScorecards("3x6") }
+      { label: "Download Point Scorecards (3x6)", action: () => downloadPointScorecards("3x6") },
+      { separator: true },
+      { separator: true },
+      { label: "Recalculate Handicaps", action: recalculateHandicaps }
     ];
 
     MA.ui.openActionsMenu("Actions", items);

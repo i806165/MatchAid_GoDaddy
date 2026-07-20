@@ -19,7 +19,13 @@
     scope: "byPairing", // byPlayer | byPairing | byPlayingGroup
     game: null,
     roster: [],
-    portal: ""
+    portal: "",
+    // Which flight groups are collapsed. A single Set at this level (not
+    // per-scope-tab) is deliberate — Flight is now the outermost grouping
+    // shared by all three scope views, so a collapsed flight stays
+    // collapsed when switching between By Player / By Pairing / By
+    // Playing Group, rather than resetting per tab.
+    collapsedFlights: new Set()
   };
 
   // ---- DOM ----
@@ -115,7 +121,22 @@
 
   function normalizeRosterForPlayerDisplay(records) {
     const copy = Array.isArray(records) ? records.slice() : [];
+    const useFlights = flightsActive();
+    const useTeams = teamsActive();
+
     copy.sort((a, b) => {
+      if (useFlights) {
+        const flA = flightSortValue(a);
+        const flB = flightSortValue(b);
+        if (flA !== flB) return flA.localeCompare(flB, undefined, { numeric: true });
+      }
+
+      if (useTeams) {
+        const tmA = teamSortValue(a);
+        const tmB = teamSortValue(b);
+        if (tmA !== tmB) return numericOrTextCompare(tmA, tmB);
+      }
+
       const lnA = safeString(a.dbPlayers_LName).trim();
       const lnB = safeString(b.dbPlayers_LName).trim();
       if (lnA !== lnB) return lnA.localeCompare(lnB);
@@ -135,9 +156,64 @@
     return String(state.game?.dbGames_Competition || "").trim() === "PairPair";
   }
 
-  function hasTeamConfig() {
-    const v = state.game?.dbGames_TeamConfig;
-    return v !== null && v !== undefined && String(v).trim() !== "";
+  /**
+   * Whether Team is active for this round, per the shared Round-Level
+   * Dimension Activation hierarchy (MA.isDimensionActive(), from
+   * ma_SharedBusLogic.js). Mirrors game_pairings.js's teamsActive()
+   * exactly — replaces this file's previous local presence-check
+   * (merely "is a dbGames_TeamConfig present"), which had the same bug
+   * class game_pairings.js already fixed elsewhere: a deactivated Team
+   * with old config data still sitting on the row would have kept
+   * reading as active here.
+   */
+  function teamsActive() {
+    return !!(window.MA && typeof MA.isDimensionActive === "function")
+      && MA.isDimensionActive("team", state.game, state.game);
+  }
+
+  /**
+   * Whether Flight is active for this round. Mirrors teamsActive() and
+   * game_pairings.js's own flightsActive() exactly.
+   */
+  function flightsActive() {
+    return !!(window.MA && typeof MA.isDimensionActive === "function")
+      && MA.isDimensionActive("flight", state.game, state.game);
+  }
+
+  /**
+   * Parses dbGames_FlightConfig (Men's/Women's-style dbPlayers_FlightKey
+   * grouping) the same way resolveTeamName() below already parses
+   * dbGames_TeamConfig. NOT to be confused with dbPlayers_MatchID /
+   * dbPlayers_MatchPos (the Match Pairings tab's Side A/B container) —
+   * those are unrelated fields historically mislabeled "flight" in this
+   * file's own variable names; see the renamed matchId/matchPos usages
+   * below.
+   */
+  function getFlightConfig() {
+    try {
+      const raw = state.game?.dbGames_FlightConfig;
+      if (!raw) return null;
+      const config = typeof raw === "string" ? JSON.parse(raw) : raw;
+      return (config && Array.isArray(config.flights)) ? config : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function resolveFlightName(flightKey) {
+    if (!flightKey || flightKey === "—") return flightKey;
+    const config = getFlightConfig();
+    if (!config) return flightKey;
+    const match = config.flights.find(f => f.id === flightKey);
+    return match?.name || flightKey;
+  }
+
+  function flightSortValue(p) {
+    return pairingSortValue(p.dbPlayers_FlightKey) || "—";
+  }
+
+  function teamSortValue(p) {
+    return pairingSortValue(p.dbPlayers_TeamKey) || "—";
   }
 
   function resolveTeamName(teamKey) {
@@ -167,16 +243,29 @@
   function normalizeRosterForPairingDisplay(records) {
     const copy = Array.isArray(records) ? records.slice() : [];
     const pairPair = isPairPairCompetition();
+    const useFlights = flightsActive();
+    const useTeams = teamsActive();
 
     copy.sort((a, b) => {
-      if (pairPair) {
-        const flightA = pairingSortValue(a.dbPlayers_MatchID) || "—";
-        const flightB = pairingSortValue(b.dbPlayers_MatchID) || "—";
-        if (flightA !== flightB) return flightA.localeCompare(flightB, undefined, { numeric: true });
+      if (useFlights) {
+        const flA = flightSortValue(a);
+        const flB = flightSortValue(b);
+        if (flA !== flB) return flA.localeCompare(flB, undefined, { numeric: true });
+      }
 
-        const teamA = pairingSortValue(a.dbPlayers_MatchPos) || "—";
-        const teamB = pairingSortValue(b.dbPlayers_MatchPos) || "—";
-        if (teamA !== teamB) return numericOrTextCompare(teamA, teamB);
+      if (pairPair) {
+        // dbPlayers_MatchID / dbPlayers_MatchPos — the Match Pairings
+        // tab's Match / Side A-B container. Previously named
+        // flightA/flightB/teamA/teamB here, which collided with the
+        // unrelated real Flight (dbPlayers_FlightKey) and Team
+        // (dbPlayers_TeamKey) concepts.
+        const matchA = pairingSortValue(a.dbPlayers_MatchID) || "—";
+        const matchB = pairingSortValue(b.dbPlayers_MatchID) || "—";
+        if (matchA !== matchB) return matchA.localeCompare(matchB, undefined, { numeric: true });
+
+        const sideA = pairingSortValue(a.dbPlayers_MatchPos) || "—";
+        const sideB = pairingSortValue(b.dbPlayers_MatchPos) || "—";
+        if (sideA !== sideB) return numericOrTextCompare(sideA, sideB);
       }
 
       const pairA = pairingSortValue(a.dbPlayers_PairingID) || "—";
@@ -186,6 +275,12 @@
       const posA = pairingSortValue(a.dbPlayers_PairingPos) || "999";
       const posB = pairingSortValue(b.dbPlayers_PairingPos) || "999";
       if (posA !== posB) return numericOrTextCompare(posA, posB);
+
+      if (useTeams) {
+        const tmA = teamSortValue(a);
+        const tmB = teamSortValue(b);
+        if (tmA !== tmB) return numericOrTextCompare(tmA, tmB);
+      }
 
       const lnA = pairingSortValue(a.dbPlayers_LName);
       const lnB = pairingSortValue(b.dbPlayers_LName);
@@ -237,7 +332,19 @@
       return s;
     }
 
+    const useFlights = flightsActive();
+    const useTeams = teamsActive();
+
     copy.sort((a, b) => {
+      // Flight is the outermost grouping across every scope view,
+      // including this one — it takes precedence even over physical
+      // tee-time/shotgun scheduling below.
+      if (useFlights) {
+        const flA = flightSortValue(a);
+        const flB = flightSortValue(b);
+        if (flA !== flB) return flA.localeCompare(flB, undefined, { numeric: true });
+      }
+
       if (isTeeTimes) {
         const tA = parseTimeToMinutes(a.dbPlayers_TeeTime) ?? 9999;
         const tB = parseTimeToMinutes(b.dbPlayers_TeeTime) ?? 9999;
@@ -259,13 +366,16 @@
       if (groupA !== groupB) return groupA.localeCompare(groupB, undefined, { numeric: true });
 
       if (pairPair) {
-        const flightA = pairingSortValue(a.dbPlayers_MatchID) || "—";
-        const flightB = pairingSortValue(b.dbPlayers_MatchID) || "—";
-        if (flightA !== flightB) return flightA.localeCompare(flightB, undefined, { numeric: true });
+        // dbPlayers_MatchID / dbPlayers_MatchPos — Match Pairings tab's
+        // Match / Side A-B container, not the real Flight/Team concepts.
+        // Previously named flightA/flightB/teamA/teamB here.
+        const matchA = pairingSortValue(a.dbPlayers_MatchID) || "—";
+        const matchB = pairingSortValue(b.dbPlayers_MatchID) || "—";
+        if (matchA !== matchB) return matchA.localeCompare(matchB, undefined, { numeric: true });
 
-        const teamA = pairingSortValue(a.dbPlayers_MatchPos) || "—";
-        const teamB = pairingSortValue(b.dbPlayers_MatchPos) || "—";
-        if (teamA !== teamB) return numericOrTextCompare(teamA, teamB);
+        const sideA = pairingSortValue(a.dbPlayers_MatchPos) || "—";
+        const sideB = pairingSortValue(b.dbPlayers_MatchPos) || "—";
+        if (sideA !== sideB) return numericOrTextCompare(sideA, sideB);
       }
 
       const pairA = pairingSortValue(a.dbPlayers_PairingID) || "—";
@@ -275,6 +385,12 @@
       const posA = pairingSortValue(a.dbPlayers_PairingPos) || "999";
       const posB = pairingSortValue(b.dbPlayers_PairingPos) || "999";
       if (posA !== posB) return numericOrTextCompare(posA, posB);
+
+      if (useTeams) {
+        const tmA = teamSortValue(a);
+        const tmB = teamSortValue(b);
+        if (tmA !== tmB) return numericOrTextCompare(tmA, tmB);
+      }
 
       const lnA = pairingSortValue(a.dbPlayers_LName);
       const lnB = pairingSortValue(b.dbPlayers_LName);
@@ -293,16 +409,20 @@
     const groupMap = new Map();
 
     sortedRoster.forEach((p) => {
-      const flightId = pairPair ? (pairingSortValue(p.dbPlayers_MatchID) || "—") : "";
-      const flightPos = pairPair ? (pairingSortValue(p.dbPlayers_MatchPos) || "—") : "";
+      // dbPlayers_MatchID / dbPlayers_MatchPos — Match Pairings tab's
+      // Match / Side A-B container. Previously named flightId/flightPos
+      // here, which collided with the real dbPlayers_FlightKey concept
+      // now handled separately by partitionByFlight().
+      const matchId = pairPair ? (pairingSortValue(p.dbPlayers_MatchID) || "—") : "";
+      const matchPos = pairPair ? (pairingSortValue(p.dbPlayers_MatchPos) || "—") : "";
       const pairingId = pairingSortValue(p.dbPlayers_PairingID) || "—";
 
       const key = pairPair
-        ? [flightId, flightPos, pairingId].join("||")
+        ? [matchId, matchPos, pairingId].join("||")
         : pairingId;
 
       if (!groupMap.has(key)) {
-        groupMap.set(key, { flightId, flightPos, pairingId, players: [] });
+        groupMap.set(key, { matchId, matchPos, pairingId, players: [] });
       }
 
       groupMap.get(key).players.push(p);
@@ -317,12 +437,12 @@
 
     sortedRoster.forEach((p) => {
       const playerKey = pairingSortValue(p.dbPlayers_PlayerKey) || "—";
-      const flightId = pairPair ? (pairingSortValue(p.dbPlayers_MatchID) || "—") : "";
-      const flightPos = pairPair ? (pairingSortValue(p.dbPlayers_MatchPos) || "—") : "";
+      const matchId = pairPair ? (pairingSortValue(p.dbPlayers_MatchID) || "—") : "";
+      const matchPos = pairPair ? (pairingSortValue(p.dbPlayers_MatchPos) || "—") : "";
       const pairingId = pairingSortValue(p.dbPlayers_PairingID) || "—";
 
       if (!groupMap.has(playerKey)) {
-        groupMap.set(playerKey, { playerKey, flightId, flightPos, pairingId, players: [] });
+        groupMap.set(playerKey, { playerKey, matchId, matchPos, pairingId, players: [] });
       }
 
       groupMap.get(playerKey).players.push(p);
@@ -345,7 +465,7 @@
     const stats = `Avg HI: ${avgHI} · CH: ${avgCH} · PH: ${avgPH}`;
 
     if (isPairPairCompetition()) {
-      return `<strong>Match ${esc(group.flightId)} · Side ${esc(group.flightPos)} · Pair ${esc(group.pairingId)}</strong> <span class="gsHdrMeta">· ${stats}</span>`;
+      return `<strong>Match ${esc(group.matchId)} · Side ${esc(group.matchPos)} · Pair ${esc(group.pairingId)}</strong> <span class="gsHdrMeta">· ${stats}</span>`;
     }
     return `<strong>Pairing ${esc(group.pairingId)}</strong> <span class="gsHdrMeta">· ${stats}</span>`;
   }
@@ -353,6 +473,96 @@
   function buildPlayingGroupHeader(group) {
     return `<strong>Playing Group ${esc(group.playerKey)}</strong>`;
   }
+
+  // ---- Flight partitioning (outermost grouping, all three scope views) ----
+  // The roster passed in is already sorted with Flight as the leading
+  // sort key (when active) — see the normalize* functions above — so a
+  // single linear pass is enough to partition it into flight-ordered
+  // runs. When Flight isn't active, this returns one pass-through group
+  // so callers don't need a separate unflighted code path.
+  function partitionByFlight(sortedRoster) {
+    if (!flightsActive()) {
+      return [{ flightKey: "", flightLabel: "", players: sortedRoster }];
+    }
+
+    const groups = [];
+    let current = null;
+
+    sortedRoster.forEach((p) => {
+      const key = flightSortValue(p);
+      if (!current || current.flightKey !== key) {
+        current = {
+          flightKey: key,
+          flightLabel: key === "—" ? "Unassigned" : resolveFlightName(key),
+          players: []
+        };
+        groups.push(current);
+      }
+      current.players.push(p);
+    });
+
+    return groups;
+  }
+
+  // Collapse-toggle icons — reused verbatim from game_pairings.js's tray
+  // group headers, per the request to match that interaction exactly.
+  const flightIconMinus = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+  const flightIconPlus = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+
+  // Desktop flight header row — colored/sized like this page's own
+  // .gsGroupHdr band (not the tray's muted small text), but the
+  // collapse affordance itself (icon + button) matches game_pairings.js.
+  function buildFlightHeaderRow(fg, colspan) {
+    const collapsed = state.collapsedFlights.has(fg.flightKey);
+    const count = fg.players.length;
+    return `<tr class="gsGroupHdr gsFlightHdr" data-action="toggle-flight-group" data-flight-key="${esc(fg.flightKey)}" style="cursor:pointer;">
+      <td colspan="${colspan}">
+        <button class="iconBtn btnSecondary" type="button" data-action="toggle-flight-group" data-flight-key="${esc(fg.flightKey)}"
+          title="${collapsed ? "Expand" : "Collapse"}" aria-label="${collapsed ? "Expand" : "Collapse"} Flight ${esc(fg.flightLabel)}"
+          style="width:20px; height:20px; padding:0; margin-right:6px; vertical-align:middle;">${collapsed ? flightIconPlus : flightIconMinus}</button>
+        <strong>Flight ${esc(fg.flightLabel)}</strong> <span class="gsHdrMeta">· ${count} player${count !== 1 ? "s" : ""}</span>
+      </td>
+    </tr>`;
+  }
+
+  // Mobile flight header — same collapse affordance, styled to match the
+  // existing .maListRow__group treatment already used for Pairing/
+  // Playing Group headers in the mobile list.
+  function buildFlightHeaderMobile(fg) {
+    const collapsed = state.collapsedFlights.has(fg.flightKey);
+    const count = fg.players.length;
+    return `<div class="maListRow__group gsFlightHdr" data-action="toggle-flight-group" data-flight-key="${esc(fg.flightKey)}"
+      style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+      <button class="iconBtn btnSecondary" type="button" data-action="toggle-flight-group" data-flight-key="${esc(fg.flightKey)}"
+        title="${collapsed ? "Expand" : "Collapse"}" aria-label="${collapsed ? "Expand" : "Collapse"} Flight ${esc(fg.flightLabel)}"
+        style="width:20px; height:20px; padding:0; flex:0 0 auto;">${collapsed ? flightIconPlus : flightIconMinus}</button>
+      <span><strong>Flight ${esc(fg.flightLabel)}</strong> · ${count} player${count !== 1 ? "s" : ""}</span>
+    </div>`;
+  }
+
+  // Re-queried and re-wired on every render, same convention as
+  // wireScoreLinks() below — old nodes (and their listeners) are
+  // discarded wholesale each time innerHTML is replaced, so there's no
+  // accumulation to guard against. Both the header row/div AND the icon
+  // button inside it carry the same data-action, so a click on the
+  // button fires once (stopPropagation keeps it from also bubbling to
+  // the row's own listener); a click elsewhere on the row fires once too.
+  function wireFlightToggles() {
+    document.querySelectorAll('[data-action="toggle-flight-group"]').forEach((node) => {
+      node.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const key = node.getAttribute("data-flight-key") || "";
+        if (state.collapsedFlights.has(key)) {
+          state.collapsedFlights.delete(key);
+        } else {
+          state.collapsedFlights.add(key);
+        }
+        renderRoster();
+      });
+    });
+  }
+
+
 
   // ---- mobile card builder (shared across all three scope views) ----
   function buildMobilePlayerCard(p) {
@@ -422,12 +632,14 @@
     if (el.scoreIdHeader) el.scoreIdHeader.textContent = "GroupID";
 
     const isPairPair = isPairPairCompetition();
-    const hasTeams = hasTeamConfig();
+    const hasTeams = teamsActive();
+    const hasFlights = flightsActive();
     if (el.rosterTbody) {
       const table = el.rosterTbody.closest("table");
       if (table) {
         table.classList.toggle("is-match-play", isPairPair);
         table.classList.toggle("is-has-teams", hasTeams);
+        table.classList.toggle("is-has-flights", hasFlights);
       }
     }
     if (el.mobileList) {
@@ -450,8 +662,20 @@
   }
 
   function renderRosterByPlayer(sorted) {
-    if (el.rosterTbody) {
-      el.rosterTbody.innerHTML = sorted.map(p => {
+    const flightGroups = partitionByFlight(sorted);
+    const useFlights = flightsActive();
+    const colspan = isPairPairCompetition() ? 15 : 13;
+    const desktopParts = [];
+    const mob = [];
+
+    flightGroups.forEach((fg) => {
+      if (useFlights) {
+        desktopParts.push(buildFlightHeaderRow(fg, colspan));
+        mob.push(buildFlightHeaderMobile(fg));
+      }
+      if (useFlights && state.collapsedFlights.has(fg.flightKey)) return;
+
+      fg.players.forEach((p) => {
         const name    = valueOrDash(p.dbPlayers_Name);
         const tee     = valueOrDash(p.dbPlayers_TeeSetName);
         const hi      = numberOrDash(p.dbPlayers_HI);
@@ -460,20 +684,22 @@
         const so      = numberOrDash(p.dbPlayers_SO);
         const time    = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
         const start   = valueOrDash(getFormattedStartHole(p));
-        const flight  = valueOrDash(p.dbPlayers_MatchID);
-        const fPos    = valueOrDash(p.dbPlayers_MatchPos);
+        const flight  = valueOrDash(resolveFlightName(p.dbPlayers_FlightKey) || p.dbPlayers_FlightKey);
+        const match   = valueOrDash(p.dbPlayers_MatchID);
+        const side    = valueOrDash(p.dbPlayers_MatchPos);
         const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
         const pair    = valueOrDash(p.dbPlayers_PairingID);
         const pos     = valueOrDash(p.dbPlayers_PairingPos);
         const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
 
-        return (
+        desktopParts.push(
           "<tr>" +
             "<td title=\"" + esc(name) + "\">" + esc(name) + "</td>" +
             "<td title=\"" + esc(tee) + "\">" + esc(tee) + "</td>" +
+            "<td class=\"gsCenter gsMono col-flight\">" + esc(flight) + "</td>" +
             "<td class=\"gsCenter gsMono col-team\">" + esc(teamKey) + "</td>" +
-            "<td class=\"gsCenter gsMono col-match\">" + esc(flight) + "</td>" +
-            "<td class=\"gsCenter gsMono col-flightpos\">" + esc(fPos) + "</td>" +
+            "<td class=\"gsCenter gsMono col-match\">" + esc(match) + "</td>" +
+            "<td class=\"gsCenter gsMono col-flightpos\">" + esc(side) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(pair) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(pos) + "</td>" +
             "<td class=\"gsCenter gsMono\">" + esc(hi) + "</td>" +
@@ -485,138 +711,157 @@
             "<td class=\"gsCenter gsMono\"><a class=\"gsScoreLink\" href=\"#\" data-scoreid=\"" + esc(scoreId) + "\">" + esc(scoreId) + "</a></td>" +
           "</tr>"
         );
-      }).join("");
-    }
+        mob.push(buildMobilePlayerCard(p));
+      });
+    });
 
-    if (el.mobileList) {
-      el.mobileList.innerHTML = sorted.map(p => buildMobilePlayerCard(p)).join("");
-    }
+    if (el.rosterTbody) el.rosterTbody.innerHTML = desktopParts.join("");
+    if (el.mobileList) el.mobileList.innerHTML = mob.join("");
 
     wireScoreLinks();
+    wireFlightToggles();
   }
 
   function renderRosterByPairing(sorted) {
-    const groups = groupRosterForPairing(sorted);
+    const flightGroups = partitionByFlight(sorted);
     const isPairPair = isPairPairCompetition();
+    const useFlights = flightsActive();
+    const colspan = isPairPair ? 15 : 13;
     const desktopParts = [];
+    const mob = [];
 
-    groups.forEach((group) => {
-      const colspan = isPairPair ? 14 : 12;
-      desktopParts.push(
-        '<tr class="gsGroupHdr"><td colspan="' + colspan + '">' + buildPairingHeader(group) + '</td></tr>'
-      );
+    flightGroups.forEach((fg) => {
+      if (useFlights) {
+        desktopParts.push(buildFlightHeaderRow(fg, colspan));
+        mob.push(buildFlightHeaderMobile(fg));
+      }
+      if (useFlights && state.collapsedFlights.has(fg.flightKey)) return;
 
-      group.players.forEach((p) => {
-        const name    = valueOrDash(p.dbPlayers_Name);
-        const tee     = valueOrDash(p.dbPlayers_TeeSetName);
-        const hi      = numberOrDash(p.dbPlayers_HI);
-        const ch      = numberOrDash(p.dbPlayers_CH);
-        const ph      = numberOrDash(p.dbPlayers_PH);
-        const so      = numberOrDash(p.dbPlayers_SO);
-        const time    = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
-        const start   = valueOrDash(getFormattedStartHole(p));
-        const match   = valueOrDash(p.dbPlayers_MatchID);
-        const team    = valueOrDash(p.dbPlayers_MatchPos);
-        const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
-        const pair    = valueOrDash(p.dbPlayers_PairingID);
-        const pos     = valueOrDash(p.dbPlayers_PairingPos);
-        const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
+      const groups = groupRosterForPairing(fg.players);
 
+      groups.forEach((group) => {
         desktopParts.push(
-          "<tr>" +
-            "<td>" + esc(name) + "</td>" +
-            "<td>" + esc(tee) + "</td>" +
-            "<td class=\"gsCenter gsMono col-team\">" + esc(teamKey) + "</td>" +
-            "<td class=\"gsCenter gsMono col-match\">" + esc(match) + "</td>" +
-            "<td class=\"gsCenter gsMono col-flightpos\">" + esc(team) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(pair) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(pos) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(hi) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(ch) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(ph) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(so) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(time) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(start) + "</td>" +
-            "<td class=\"gsCenter gsMono\"><a class=\"gsScoreLink\" href=\"#\" data-scoreid=\"" + esc(scoreId) + "\">" + esc(scoreId) + "</a></td>" +
-          "</tr>"
+          '<tr class="gsGroupHdr"><td colspan="' + colspan + '">' + buildPairingHeader(group) + '</td></tr>'
         );
+        mob.push('<div class="maListRow__group">' + buildPairingHeader(group) + '</div>');
+
+        group.players.forEach((p) => {
+          const name    = valueOrDash(p.dbPlayers_Name);
+          const tee     = valueOrDash(p.dbPlayers_TeeSetName);
+          const hi      = numberOrDash(p.dbPlayers_HI);
+          const ch      = numberOrDash(p.dbPlayers_CH);
+          const ph      = numberOrDash(p.dbPlayers_PH);
+          const so      = numberOrDash(p.dbPlayers_SO);
+          const time    = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
+          const start   = valueOrDash(getFormattedStartHole(p));
+          const flight  = valueOrDash(resolveFlightName(p.dbPlayers_FlightKey) || p.dbPlayers_FlightKey);
+          const match   = valueOrDash(p.dbPlayers_MatchID);
+          const side    = valueOrDash(p.dbPlayers_MatchPos);
+          const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
+          const pair    = valueOrDash(p.dbPlayers_PairingID);
+          const pos     = valueOrDash(p.dbPlayers_PairingPos);
+          const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
+
+          desktopParts.push(
+            "<tr>" +
+              "<td>" + esc(name) + "</td>" +
+              "<td>" + esc(tee) + "</td>" +
+              "<td class=\"gsCenter gsMono col-flight\">" + esc(flight) + "</td>" +
+              "<td class=\"gsCenter gsMono col-team\">" + esc(teamKey) + "</td>" +
+              "<td class=\"gsCenter gsMono col-match\">" + esc(match) + "</td>" +
+              "<td class=\"gsCenter gsMono col-flightpos\">" + esc(side) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(pair) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(pos) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(hi) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(ch) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(ph) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(so) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(time) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(start) + "</td>" +
+              "<td class=\"gsCenter gsMono\"><a class=\"gsScoreLink\" href=\"#\" data-scoreid=\"" + esc(scoreId) + "\">" + esc(scoreId) + "</a></td>" +
+            "</tr>"
+          );
+          mob.push(buildMobilePlayerCard(p));
+        });
       });
     });
 
     if (el.rosterTbody) el.rosterTbody.innerHTML = desktopParts.join("");
-
-    if (el.mobileList) {
-      const mob = [];
-      groups.forEach((group) => {
-        mob.push('<div class="maListRow__group">' + buildPairingHeader(group) + '</div>');
-        group.players.forEach((p) => { mob.push(buildMobilePlayerCard(p)); });
-      });
-      el.mobileList.innerHTML = mob.join("");
-    }
+    if (el.mobileList) el.mobileList.innerHTML = mob.join("");
 
     wireScoreLinks();
+    wireFlightToggles();
   }
 
   function renderRosterByPlayingGroup(sorted) {
-    const groups = groupRosterForPlayingGroup(sorted);
+    const flightGroups = partitionByFlight(sorted);
     const isPairPair = isPairPairCompetition();
+    const useFlights = flightsActive();
+    const colspan = isPairPair ? 15 : 13;
     const desktopParts = [];
+    const mob = [];
 
-    groups.forEach((group) => {
-      const colspan = isPairPair ? 14 : 12;
-      desktopParts.push(
-        '<tr class="gsGroupHdr"><td colspan="' + colspan + '">' + buildPlayingGroupHeader(group) + '</td></tr>'
-      );
+    flightGroups.forEach((fg) => {
+      if (useFlights) {
+        desktopParts.push(buildFlightHeaderRow(fg, colspan));
+        mob.push(buildFlightHeaderMobile(fg));
+      }
+      if (useFlights && state.collapsedFlights.has(fg.flightKey)) return;
 
-      group.players.forEach((p) => {
-        const name    = valueOrDash(p.dbPlayers_Name);
-        const tee     = valueOrDash(p.dbPlayers_TeeSetName);
-        const hi      = numberOrDash(p.dbPlayers_HI);
-        const ch      = numberOrDash(p.dbPlayers_CH);
-        const ph      = numberOrDash(p.dbPlayers_PH);
-        const so      = numberOrDash(p.dbPlayers_SO);
-        const time    = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
-        const start   = valueOrDash(getFormattedStartHole(p));
-        const match   = valueOrDash(p.dbPlayers_MatchID);
-        const team    = valueOrDash(p.dbPlayers_MatchPos);
-        const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
-        const pair    = valueOrDash(p.dbPlayers_PairingID);
-        const pos     = valueOrDash(p.dbPlayers_PairingPos);
-        const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
+      const groups = groupRosterForPlayingGroup(fg.players);
 
+      groups.forEach((group) => {
         desktopParts.push(
-          "<tr>" +
-            "<td>" + esc(name) + "</td>" +
-            "<td>" + esc(tee) + "</td>" +
-            "<td class=\"gsCenter gsMono col-team\">" + esc(teamKey) + "</td>" +
-            "<td class=\"gsCenter gsMono col-match\">" + esc(match) + "</td>" +
-            "<td class=\"gsCenter gsMono col-flightpos\">" + esc(team) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(pair) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(pos) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(hi) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(ch) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(ph) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(so) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(time) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(start) + "</td>" +
-            "<td class=\"gsCenter gsMono\"><a class=\"gsScoreLink\" href=\"#\" data-scoreid=\"" + esc(scoreId) + "\">" + esc(scoreId) + "</a></td>" +
-          "</tr>"
+          '<tr class="gsGroupHdr"><td colspan="' + colspan + '">' + buildPlayingGroupHeader(group) + '</td></tr>'
         );
+        mob.push('<div class="maListRow__group">' + buildPlayingGroupHeader(group) + '</div>');
+
+        group.players.forEach((p) => {
+          const name    = valueOrDash(p.dbPlayers_Name);
+          const tee     = valueOrDash(p.dbPlayers_TeeSetName);
+          const hi      = numberOrDash(p.dbPlayers_HI);
+          const ch      = numberOrDash(p.dbPlayers_CH);
+          const ph      = numberOrDash(p.dbPlayers_PH);
+          const so      = numberOrDash(p.dbPlayers_SO);
+          const time    = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
+          const start   = valueOrDash(getFormattedStartHole(p));
+          const flight  = valueOrDash(resolveFlightName(p.dbPlayers_FlightKey) || p.dbPlayers_FlightKey);
+          const match   = valueOrDash(p.dbPlayers_MatchID);
+          const side    = valueOrDash(p.dbPlayers_MatchPos);
+          const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
+          const pair    = valueOrDash(p.dbPlayers_PairingID);
+          const pos     = valueOrDash(p.dbPlayers_PairingPos);
+          const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
+
+          desktopParts.push(
+            "<tr>" +
+              "<td>" + esc(name) + "</td>" +
+              "<td>" + esc(tee) + "</td>" +
+              "<td class=\"gsCenter gsMono col-flight\">" + esc(flight) + "</td>" +
+              "<td class=\"gsCenter gsMono col-team\">" + esc(teamKey) + "</td>" +
+              "<td class=\"gsCenter gsMono col-match\">" + esc(match) + "</td>" +
+              "<td class=\"gsCenter gsMono col-flightpos\">" + esc(side) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(pair) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(pos) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(hi) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(ch) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(ph) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(so) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(time) + "</td>" +
+              "<td class=\"gsCenter gsMono\">" + esc(start) + "</td>" +
+              "<td class=\"gsCenter gsMono\"><a class=\"gsScoreLink\" href=\"#\" data-scoreid=\"" + esc(scoreId) + "\">" + esc(scoreId) + "</a></td>" +
+            "</tr>"
+          );
+          mob.push(buildMobilePlayerCard(p));
+        });
       });
     });
 
     if (el.rosterTbody) el.rosterTbody.innerHTML = desktopParts.join("");
-
-    if (el.mobileList) {
-      const mob = [];
-      groups.forEach((group) => {
-        mob.push('<div class="maListRow__group">' + buildPlayingGroupHeader(group) + '</div>');
-        group.players.forEach((p) => { mob.push(buildMobilePlayerCard(p)); });
-      });
-      el.mobileList.innerHTML = mob.join("");
-    }
+    if (el.mobileList) el.mobileList.innerHTML = mob.join("");
 
     wireScoreLinks();
+    wireFlightToggles();
   }
 
   function wireScoreLinks() {
