@@ -94,6 +94,7 @@ $maChromeLogoUrl  = null;
 </script>
 
   <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/js/ma_SharedBusLogic.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/addCalendar.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/composeEmail.js') ?>"></script>
