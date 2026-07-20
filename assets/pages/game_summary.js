@@ -422,33 +422,6 @@
     return copy;
   }
 
-  function groupRosterForPairing(sortedRoster) {
-    const pairPair = isPairPairCompetition();
-    const groupMap = new Map();
-
-    sortedRoster.forEach((p) => {
-      // dbPlayers_MatchID / dbPlayers_MatchPos — Match Pairings tab's
-      // Match / Side A-B container. Previously named flightId/flightPos
-      // here, which collided with the real dbPlayers_FlightKey concept
-      // now handled separately by partitionByFlight().
-      const matchId = pairPair ? (pairingSortValue(p.dbPlayers_MatchID) || "—") : "";
-      const matchPos = pairPair ? (pairingSortValue(p.dbPlayers_MatchPos) || "—") : "";
-      const pairingId = pairingSortValue(p.dbPlayers_PairingID) || "—";
-
-      const key = pairPair
-        ? [matchId, matchPos, pairingId].join("||")
-        : pairingId;
-
-      if (!groupMap.has(key)) {
-        groupMap.set(key, { matchId, matchPos, pairingId, players: [] });
-      }
-
-      groupMap.get(key).players.push(p);
-    });
-
-    return Array.from(groupMap.values());
-  }
-
   function groupRosterForPlayingGroup(sortedRoster) {
     const pairPair = isPairPairCompetition();
     const groupMap = new Map();
@@ -469,32 +442,14 @@
     return Array.from(groupMap.values());
   }
 
-  function buildPairingHeader(group) {
-    const players = group.players || [];
-    let sHI = 0, sCH = 0, sPH = 0, cHI = 0, cCH = 0, cPH = 0;
-    players.forEach(p => {
-      const hi = parseFloat(p.dbPlayers_HI); if (!isNaN(hi)) { sHI += hi; cHI++; }
-      const ch = parseFloat(p.dbPlayers_CH); if (!isNaN(ch)) { sCH += ch; cCH++; }
-      const ph = parseFloat(p.dbPlayers_PH); if (!isNaN(ph)) { sPH += ph; cPH++; }
-    });
-    const avgHI = cHI ? (sHI / cHI).toFixed(1) : "0.0";
-    const avgCH = cCH ? (sCH / cCH).toFixed(1) : "0.0";
-    const avgPH = cPH ? (sPH / cPH).toFixed(1) : "0.0";
-    const stats = `Avg HI: ${avgHI} · CH: ${avgCH} · PH: ${avgPH}`;
-
-    if (isPairPairCompetition()) {
-      return `<strong>Match ${esc(group.matchId)} · Side ${esc(group.matchPos)} · Pair ${esc(group.pairingId)}</strong> <span class="gsHdrMeta">· ${stats}</span>`;
-    }
-    return `<strong>Pairing ${esc(group.pairingId)}</strong> <span class="gsHdrMeta">· ${stats}</span>`;
-  }
-
   function buildPlayingGroupHeader(group) {
     return `<strong>Playing Group ${esc(group.playerKey)}</strong>`;
   }
 
-  // ── By Pairing desktop structure: Match → Pairing(s) ────────────────────
-  // Desktop-only — mobile still uses groupRosterForPairing/buildPairingHeader
-  // above unchanged, until that view gets its own redesign pass.
+  // ── By Pairing structure: Match → Pairing(s) ─────────────────────────────
+  // Shared by desktop rendering, mobile cards, and the HTML clipboard
+  // export — all three build on this same nested shape rather than each
+  // having their own grouping logic.
   //
   // PairPair: two nested levels. Match is the real outer grouping — head
   // to head — with exactly two Pairing sub-groups inside it (pairings are
@@ -1344,14 +1299,16 @@
         ? normalizeRosterForPairingDisplay(state.roster || [])
         : normalizeRosterForPlayingGroupDisplay(state.roster || []);
 
-    const header = ["Name","Tee","Team","Match","Side","Pair","Pos","HI","CH","PH","SO","Time","Start","GroupID"];
+    const header = ["Name","Tee","Flight","Team","Match","Side","Pair","Pos","HI","CH","PH","SO","Time","Start","PlayGroup"];
     const lines = [header.join(",")];
 
     rows.forEach(p => {
       const teeName = safeString(p.dbPlayers_TeeSetName);
+      const flightName = resolveFlightName(p.dbPlayers_FlightKey) || safeString(p.dbPlayers_FlightKey);
       const vals = [
         `"` + safeString(p.dbPlayers_Name).replace(/"/g, '""') + `"`,
         teeName.includes('/') ? `="` + teeName.replace(/"/g, '""') + `"` : `"` + teeName.replace(/"/g, '""') + `"`,
+        `"` + safeString(flightName).replace(/"/g, '""') + `"`,
         `"` + safeString(resolveTeamName(p.dbPlayers_TeamKey)).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_MatchID).replace(/"/g, '""') + `"`,
         `"` + safeString(p.dbPlayers_MatchPos).replace(/"/g, '""') + `"`,
@@ -1412,18 +1369,20 @@
       <table border="1" cellpadding="5" cellspacing="0" style="border-collapse: collapse; font-family: sans-serif; font-size: 10pt; width: 100%;">
         <thead style="background-color: #f2f2f2;">
           <tr>
-            <th>Name</th><th>Tee</th><th>Team</th><th>Match</th><th>Side</th>
+            <th>Name</th><th>Tee</th><th>Flight</th><th>Team</th><th>Match</th><th>Side</th>
             <th>Pair</th><th>Pos</th><th>HI</th><th>CH</th><th>PH</th><th>SO</th>
-            <th>Time</th><th>Start</th><th>GroupID</th>
+            <th>Time</th><th>Start</th><th>PlayGroup</th>
           </tr>
         </thead>
         <tbody>`;
 
     const buildRow = (p) => {
       const startHole = getFormattedStartHole(p);
+      const flightName = resolveFlightName(p.dbPlayers_FlightKey) || safeString(p.dbPlayers_FlightKey);
       return `<tr>
         <td>${esc(p.dbPlayers_Name)}</td>
         <td>${esc(p.dbPlayers_TeeSetName)}</td>
+        <td align="center">${esc(flightName)}</td>
         <td align="center">${esc(resolveTeamName(p.dbPlayers_TeamKey))}</td>
         <td align="center">${esc(p.dbPlayers_MatchID)}</td>
         <td align="center">${esc(p.dbPlayers_MatchPos)}</td>
@@ -1439,16 +1398,50 @@
       </tr>`;
     };
 
+    // 15 real columns now (Flight added) — this export is a static,
+    // fully-inlined table with no CSS-driven column hiding, so a fixed
+    // colspan here is safe (unlike the live page, where col-flight/
+    // col-team can be display:none'd out of the table entirely).
     if (state.scope === "byPairing") {
-      const groups = groupRosterForPairing(rows);
-      groups.forEach((group) => {
-        html += `<tr style="background-color:#f9f9f9;"><td colspan="14">${buildPairingHeader(group)}</td></tr>`;
-        group.players.forEach((p) => { html += buildRow(p); });
+      const flightGroups = partitionByFlight(rows);
+      const showFlights = flightsActive();
+
+      flightGroups.forEach((fg) => {
+        if (showFlights) {
+          html += `<tr style="background-color:#e5e5e5;"><td colspan="15"><strong>Flight ${esc(fg.flightLabel)}</strong></td></tr>`;
+        }
+
+        const desktopGroups = buildPairingDesktopGroups(fg.players);
+        desktopGroups.forEach((group) => {
+          if (group.matchId) {
+            html += `<tr style="background-color:#eaf5ef;"><td colspan="15"><strong>Match ${esc(group.matchId)}</strong></td></tr>`;
+          } else if (group.pairings.length === 1) {
+            const prefix = pairingLabelPrefix(group.pairings[0]);
+            const pid = group.pairings[0].pairingId;
+            const label = prefix ? `${prefix}, Pairing ${pid}` : `Pairing ${pid}`;
+            html += `<tr style="background-color:#eaf5ef;"><td colspan="15"><strong>${esc(label)}</strong></td></tr>`;
+          }
+
+          group.pairings.forEach((pairing) => {
+            pairing.players.forEach((p) => { html += buildRow(p); });
+
+            const { avgHI, avgCH, avgPH } = computePairingAverages(pairing);
+            const prefix = pairingLabelPrefix(pairing);
+            const label = prefix ? `${prefix}, Pair ${pairing.pairingId}` : `Pair ${pairing.pairingId}`;
+            html += `<tr>
+              <td colspan="8" style="font-weight:bold; border-top:2px solid #333;">${esc(label)}</td>
+              <td align="center" style="font-weight:bold; border-top:2px solid #333;">${esc(avgHI)}</td>
+              <td align="center" style="font-weight:bold; border-top:2px solid #333;">${esc(avgCH)}</td>
+              <td align="center" style="font-weight:bold; border-top:2px solid #333;">${esc(avgPH)}</td>
+              <td colspan="4" style="border-top:2px solid #333;"></td>
+            </tr>`;
+          });
+        });
       });
     } else if (state.scope === "byPlayingGroup") {
       const groups = groupRosterForPlayingGroup(rows);
       groups.forEach((group) => {
-        html += `<tr style="background-color:#f9f9f9;"><td colspan="14">${buildPlayingGroupHeader(group)}</td></tr>`;
+        html += `<tr style="background-color:#f9f9f9;"><td colspan="15">${buildPlayingGroupHeader(group)}</td></tr>`;
         group.players.forEach((p) => { html += buildRow(p); });
       });
     } else {
