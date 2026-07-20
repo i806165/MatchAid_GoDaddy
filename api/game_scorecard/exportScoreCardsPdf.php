@@ -97,7 +97,7 @@ try {
     $filename  = "MatchAid_ScoreCards_{$ggidLabel}_{$layout}.pdf";
 
     header('Content-Type: application/pdf');
-    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Content-Disposition: inline; filename="' . $filename . '"');
     header('X-MA-ScoreCard-Layout: ' . $layout);
     echo $pdf->Output($filename, 'S');
 
