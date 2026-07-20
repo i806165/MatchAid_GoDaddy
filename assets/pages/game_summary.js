@@ -121,22 +121,8 @@
 
   function normalizeRosterForPlayerDisplay(records) {
     const copy = Array.isArray(records) ? records.slice() : [];
-    const useFlights = flightsActive();
-    const useTeams = teamsActive();
 
     copy.sort((a, b) => {
-      if (useFlights) {
-        const flA = flightSortValue(a);
-        const flB = flightSortValue(b);
-        if (flA !== flB) return flA.localeCompare(flB, undefined, { numeric: true });
-      }
-
-      if (useTeams) {
-        const tmA = teamSortValue(a);
-        const tmB = teamSortValue(b);
-        if (tmA !== tmB) return numericOrTextCompare(tmA, tmB);
-      }
-
       const lnA = safeString(a.dbPlayers_LName).trim();
       const lnB = safeString(b.dbPlayers_LName).trim();
       if (lnA !== lnB) return lnA.localeCompare(lnB);
@@ -595,6 +581,154 @@
     );
   }
 
+  // ── By Player mobile row (2-line, whole row opens the detail modal) ────────
+  // Distinct from buildMobilePlayerCard above, which By Pairing / By Playing
+  // Group still use — those views' mobile content hasn't been re-aligned yet.
+  function buildPlayerRowMobile(p) {
+    const ghin = safeString(p.dbPlayers_PlayerGHIN);
+    const name  = valueOrDash(p.dbPlayers_Name);
+    const tee   = valueOrDash(p.dbPlayers_TeeSetName);
+    const time  = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
+    const start = valueOrDash(getFormattedStartHole(p));
+    const hi    = numberOrDash(p.dbPlayers_HI);
+    const ph    = numberOrDash(p.dbPlayers_PH);
+    const so    = numberOrDash(p.dbPlayers_SO);
+    const team  = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
+    const flight = valueOrDash(resolveFlightName(p.dbPlayers_FlightKey) || p.dbPlayers_FlightKey);
+
+    const metaParts = [
+      time + " · Hole " + start,
+      "HI " + hi + " · PH " + ph + " · SO " + so
+    ];
+    if (teamsActive()) metaParts.push(team);
+    if (flightsActive()) metaParts.push(flight);
+
+    return (
+      '<div class="gsPlayerRow" data-ghin="' + esc(ghin) + '">' +
+        '<div class="gsPlayerRow__main">' +
+          '<div class="gsPlayerRow__name">' + esc(name) + (tee !== "—" ? " · Tee " + esc(tee) : "") + '</div>' +
+          '<div class="gsPlayerRow__meta">' + esc(metaParts.join(" · ")) + '</div>' +
+        '</div>' +
+        '<svg class="gsPlayerRow__chev" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"></polyline></svg>' +
+      '</div>'
+    );
+  }
+
+  function wirePlayerRows(sorted) {
+    document.querySelectorAll(".gsPlayerRow[data-ghin]").forEach((row) => {
+      row.addEventListener("click", () => {
+        const ghin = row.getAttribute("data-ghin") || "";
+        const p = sorted.find(x => safeString(x.dbPlayers_PlayerGHIN) === ghin);
+        if (p) openPlayerDetailModal(p);
+      });
+    });
+  }
+
+  // ── Player detail modal ─────────────────────────────────────────────────
+  // Built the same way MA.ui.confirm() builds its own overlay (see
+  // ma_shared.js) — created fresh on open, torn down on close — since
+  // there's no generic "open arbitrary content in the shared modal shell"
+  // helper exposed on MA.ui to call into instead.
+  function syncOverlayOpenClass() {
+    const anyOpen = !!document.querySelector(".maModalOverlay.is-open");
+    document.documentElement.classList.toggle("maOverlayOpen", anyOpen);
+  }
+
+  function openPlayerDetailModal(p) {
+    const name    = valueOrDash(p.dbPlayers_Name);
+    const tee     = valueOrDash(p.dbPlayers_TeeSetName);
+    const time    = valueOrDash(formatTimeAmPm(p.dbPlayers_TeeTime));
+    const start   = valueOrDash(getFormattedStartHole(p));
+    const flight  = valueOrDash(resolveFlightName(p.dbPlayers_FlightKey) || p.dbPlayers_FlightKey);
+    const team    = valueOrDash(resolveTeamName(p.dbPlayers_TeamKey));
+    const match   = valueOrDash(p.dbPlayers_MatchID);
+    const side    = valueOrDash(p.dbPlayers_MatchPos);
+    const pair    = valueOrDash(p.dbPlayers_PairingID);
+    const pos     = valueOrDash(p.dbPlayers_PairingPos);
+    const hi      = numberOrDash(p.dbPlayers_HI);
+    const ch      = numberOrDash(p.dbPlayers_CH);
+    const ph      = numberOrDash(p.dbPlayers_PH);
+    const so      = numberOrDash(p.dbPlayers_SO);
+    const scoreId = safeString(p.dbPlayers_PlayerKey).trim();
+    const ownGhin = safeString(p.dbPlayers_PlayerGHIN);
+
+    const isPairPair = isPairPairCompetition();
+
+    const fieldRows = [];
+    fieldRows.push(["Time · Start", esc(time) + " · " + esc(start)]);
+    if (flightsActive()) fieldRows.push(["Flight", esc(flight)]);
+    if (teamsActive()) fieldRows.push(["Team", esc(team)]);
+    if (isPairPair) fieldRows.push(["Match · Side", esc(match) + " · " + esc(side)]);
+    fieldRows.push(["Pair · Pos", esc(pair) + " · " + esc(pos)]);
+    fieldRows.push(["HI · CH", esc(hi) + " · " + esc(ch)]);
+    fieldRows.push(["PH · SO", esc(ph) + " · " + esc(so)]);
+
+    const fieldRowsHtml = fieldRows.map(([label, val]) =>
+      '<tr><td class="gsPlayerModal__fieldLabel">' + label + '</td>' +
+      '<td class="gsPlayerModal__fieldVal">' + val + '</td></tr>'
+    ).join("");
+
+    // "Playing with" — other players sharing this player's PlayerKey
+    // (the physical scorecard group), self excluded. Section omitted
+    // entirely when there's no group (no PlayerKey, or nobody else on it).
+    const groupmates = scoreId
+      ? (state.roster || []).filter(x =>
+          safeString(x.dbPlayers_PlayerKey).trim() === scoreId &&
+          safeString(x.dbPlayers_PlayerGHIN) !== ownGhin
+        )
+      : [];
+
+    const groupmatesHtml = groupmates.length
+      ? '<div class="gsPlayerModal__groupmates">' +
+          '<div class="gsPlayerModal__groupmatesLabel">Playing with</div>' +
+          groupmates.map(m => {
+            const mName = valueOrDash(m.dbPlayers_Name);
+            const initials = mName.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase();
+            return '<div class="gsPlayerModal__mate">' +
+              '<span class="gsPlayerModal__mateAvatar">' + esc(initials) + '</span>' +
+              '<span>' + esc(mName) + '</span>' +
+            '</div>';
+          }).join("") +
+        '</div>'
+      : "";
+
+    const overlay = document.createElement("div");
+    overlay.className = "maModalOverlay is-open";
+    overlay.innerHTML = `
+      <section class="maModal" role="dialog" aria-modal="true" aria-labelledby="gsPlayerModalTitle">
+        <header class="maModal__hdr">
+          <div>
+            <div class="maModal__title" id="gsPlayerModalTitle">${esc(name)}</div>
+            <div class="maModal__subtitle">${esc([flightsActive() ? flight : "", teamsActive() ? team : "", tee !== "—" ? "Tee " + tee : ""].filter(Boolean).join(" · "))}</div>
+          </div>
+          <button type="button" class="iconBtn btnSecondary" data-ma-action="close" aria-label="Close"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+        </header>
+        <div class="maModal__body">
+          <table class="gsPlayerModal__fields">${fieldRowsHtml}</table>
+          ${groupmatesHtml}
+        </div>
+        <footer class="maModal__ftr maModalFtr--right">
+          <button type="button" class="maModalFtr__btn maModalFtr__btn--cancel" data-ma-action="close">Close</button>
+          <button type="button" class="maModalFtr__btn maModalFtr__btn--confirm" data-ma-action="scorecard">Go to scorecard</button>
+        </footer>
+      </section>`;
+
+    function close() {
+      overlay.remove();
+      syncOverlayOpenClass();
+    }
+
+    overlay.querySelectorAll("[data-ma-action='close']").forEach(btn => btn.addEventListener("click", close));
+    overlay.querySelector("[data-ma-action='scorecard']").addEventListener("click", () => {
+      close();
+      goToScorecard(scoreId);
+    });
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+
+    document.body.appendChild(overlay);
+    syncOverlayOpenClass();
+  }
+
   function renderScopeButtons() {
     const byPlayer = state.scope === "byPlayer";
     const byPairing = state.scope === "byPairing";
@@ -629,7 +763,7 @@
 
     if (el.emptyHint) el.emptyHint.style.display = sorted.length ? "none" : "block";
 
-    if (el.scoreIdHeader) el.scoreIdHeader.textContent = "GroupID";
+    if (el.scoreIdHeader) el.scoreIdHeader.textContent = "PlayGroup";
 
     const isPairPair = isPairPairCompetition();
     const hasTeams = teamsActive();
@@ -662,64 +796,53 @@
   }
 
   function renderRosterByPlayer(sorted) {
-    const flightGroups = partitionByFlight(sorted);
-    const useFlights = flightsActive();
-    const colspan = isPairPairCompetition() ? 15 : 13;
     const desktopParts = [];
     const mob = [];
 
-    flightGroups.forEach((fg) => {
-      if (useFlights) {
-        desktopParts.push(buildFlightHeaderRow(fg, colspan));
-        mob.push(buildFlightHeaderMobile(fg));
-      }
-      if (useFlights && state.collapsedFlights.has(fg.flightKey)) return;
+    sorted.forEach((p) => {
+      const name    = valueOrDash(p.dbPlayers_Name);
+      const tee     = valueOrDash(p.dbPlayers_TeeSetName);
+      const hi      = numberOrDash(p.dbPlayers_HI);
+      const ch      = numberOrDash(p.dbPlayers_CH);
+      const ph      = numberOrDash(p.dbPlayers_PH);
+      const so      = numberOrDash(p.dbPlayers_SO);
+      const time    = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
+      const start   = valueOrDash(getFormattedStartHole(p));
+      const flight  = valueOrDash(resolveFlightName(p.dbPlayers_FlightKey) || p.dbPlayers_FlightKey);
+      const match   = valueOrDash(p.dbPlayers_MatchID);
+      const side    = valueOrDash(p.dbPlayers_MatchPos);
+      const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
+      const pair    = valueOrDash(p.dbPlayers_PairingID);
+      const pos     = valueOrDash(p.dbPlayers_PairingPos);
+      const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
 
-      fg.players.forEach((p) => {
-        const name    = valueOrDash(p.dbPlayers_Name);
-        const tee     = valueOrDash(p.dbPlayers_TeeSetName);
-        const hi      = numberOrDash(p.dbPlayers_HI);
-        const ch      = numberOrDash(p.dbPlayers_CH);
-        const ph      = numberOrDash(p.dbPlayers_PH);
-        const so      = numberOrDash(p.dbPlayers_SO);
-        const time    = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
-        const start   = valueOrDash(getFormattedStartHole(p));
-        const flight  = valueOrDash(resolveFlightName(p.dbPlayers_FlightKey) || p.dbPlayers_FlightKey);
-        const match   = valueOrDash(p.dbPlayers_MatchID);
-        const side    = valueOrDash(p.dbPlayers_MatchPos);
-        const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
-        const pair    = valueOrDash(p.dbPlayers_PairingID);
-        const pos     = valueOrDash(p.dbPlayers_PairingPos);
-        const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
-
-        desktopParts.push(
-          "<tr>" +
-            "<td title=\"" + esc(name) + "\">" + esc(name) + "</td>" +
-            "<td title=\"" + esc(tee) + "\">" + esc(tee) + "</td>" +
-            "<td class=\"gsCenter gsMono col-flight\">" + esc(flight) + "</td>" +
-            "<td class=\"gsCenter gsMono col-team\">" + esc(teamKey) + "</td>" +
-            "<td class=\"gsCenter gsMono col-match\">" + esc(match) + "</td>" +
-            "<td class=\"gsCenter gsMono col-flightpos\">" + esc(side) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(pair) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(pos) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(hi) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(ch) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(ph) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(so) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(time) + "</td>" +
-            "<td class=\"gsCenter gsMono\">" + esc(start) + "</td>" +
-            "<td class=\"gsCenter gsMono\"><a class=\"gsScoreLink\" href=\"#\" data-scoreid=\"" + esc(scoreId) + "\">" + esc(scoreId) + "</a></td>" +
-          "</tr>"
-        );
-        mob.push(buildMobilePlayerCard(p));
-      });
+      desktopParts.push(
+        "<tr>" +
+          "<td title=\"" + esc(name) + "\">" + esc(name) + "</td>" +
+          "<td title=\"" + esc(tee) + "\">" + esc(tee) + "</td>" +
+          "<td class=\"gsCenter gsMono col-flight\">" + esc(flight) + "</td>" +
+          "<td class=\"gsCenter gsMono col-team\">" + esc(teamKey) + "</td>" +
+          "<td class=\"gsCenter gsMono col-match\">" + esc(match) + "</td>" +
+          "<td class=\"gsCenter gsMono col-flightpos\">" + esc(side) + "</td>" +
+          "<td class=\"gsCenter gsMono\">" + esc(pair) + "</td>" +
+          "<td class=\"gsCenter gsMono\">" + esc(pos) + "</td>" +
+          "<td class=\"gsCenter gsMono\">" + esc(hi) + "</td>" +
+          "<td class=\"gsCenter gsMono\">" + esc(ch) + "</td>" +
+          "<td class=\"gsCenter gsMono\">" + esc(ph) + "</td>" +
+          "<td class=\"gsCenter gsMono\">" + esc(so) + "</td>" +
+          "<td class=\"gsCenter gsMono\">" + esc(time) + "</td>" +
+          "<td class=\"gsCenter gsMono\">" + esc(start) + "</td>" +
+          "<td class=\"gsCenter gsMono\"><a class=\"gsScoreLink\" href=\"#\" data-scoreid=\"" + esc(scoreId) + "\">" + esc(scoreId) + "</a></td>" +
+        "</tr>"
+      );
+      mob.push(buildPlayerRowMobile(p));
     });
 
     if (el.rosterTbody) el.rosterTbody.innerHTML = desktopParts.join("");
     if (el.mobileList) el.mobileList.innerHTML = mob.join("");
 
     wireScoreLinks();
-    wireFlightToggles();
+    wirePlayerRows(sorted);
   }
 
   function renderRosterByPairing(sorted) {
@@ -864,32 +987,39 @@
     wireFlightToggles();
   }
 
+  // Shared by the desktop PlayGroup link (wireScoreLinks) and the mobile
+  // detail modal's "Go to scorecard" button — same destination, same
+  // fallback, one place to change it.
+  function goToScorecard(scoreId) {
+    const id = String(scoreId || "").trim();
+    if (!id || id === "—") return;
+
+    if (typeof MA.routerGo === "function") {
+      try {
+        MA.routerGo("scorehome", { scoreId: id });
+        return;
+      } catch (err) {
+        console.warn(err);
+      }
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(id).then(() => {
+        setStatus("ScoreID copied: " + id, "ok");
+      }).catch(() => {
+        setStatus("ScoreID: " + id, "info");
+      });
+    } else {
+      setStatus("ScoreID: " + id, "info");
+    }
+  }
+
   function wireScoreLinks() {
     const links = document.querySelectorAll(".gsScoreLink[data-scoreid]");
     links.forEach(a => {
       a.addEventListener("click", (e) => {
         e.preventDefault();
-        const scoreId = String(a.getAttribute("data-scoreid") || "").trim();
-        if (!scoreId || scoreId === "—") return;
-
-        if (typeof MA.routerGo === "function") {
-          try {
-            MA.routerGo("scorehome", { scoreId: scoreId });
-            return;
-          } catch (err) {
-            console.warn(err);
-          }
-        }
-
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(scoreId).then(() => {
-            setStatus("ScoreID copied: " + scoreId, "ok");
-          }).catch(() => {
-            setStatus("ScoreID: " + scoreId, "info");
-          });
-        } else {
-          setStatus("ScoreID: " + scoreId, "info");
-        }
+        goToScorecard(a.getAttribute("data-scoreid"));
       });
     });
   }

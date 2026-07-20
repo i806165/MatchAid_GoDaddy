@@ -99,6 +99,11 @@
 .gsMobileList.is-match-play .col-match,
 .gsMobileList.is-match-play .col-flightpos { display: inline; }
 
+/* ===== Flight column ===== */
+.col-flight { display: none; }
+
+.gsTable.is-has-flights .col-flight { display: table-cell; }
+
 /* ===== Team column ===== */
 .col-team { display: none; }
 
@@ -170,4 +175,105 @@
     font-size: var(--fieldValueSublineSize);
     flex-shrink: 0;
   }
+
+  /* ===== By Player mobile row (replaces gsPlayerCard for this view) ===== */
+  .gsPlayerRow{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 4px;
+    border-bottom: 1px solid rgba(0,0,0,.08);
+    cursor: pointer;
+  }
+
+  .gsPlayerRow:active{ background: rgba(0,0,0,.03); }
+
+  .gsPlayerRow__main{
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .gsPlayerRow__name{
+    font-size: var(--labelTextSize);
+    font-weight: 900;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .gsPlayerRow__meta{
+    font-size: var(--fieldValueSize);
+    color: var(--mutedText);
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+  }
+
+  .gsPlayerRow__chev{
+    flex: 0 0 auto;
+    font-size: 18px;
+    color: var(--mutedText);
+  }
+}
+
+/* ===== Player detail modal content =====
+   Not nested in the mobile media query — the modal is only ever launched
+   from the mobile row above, but its own markup is appended straight to
+   document.body (see openPlayerDetailModal in game_summary.js), outside
+   .gsMobileList's DOM subtree, so it isn't reachable by selectors scoped
+   under that media query in the first place. */
+.gsPlayerModal__fields{
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.gsPlayerModal__fields td{
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0,0,0,.08);
+}
+
+.gsPlayerModal__fields tr:last-child td{ border-bottom: none; }
+
+.gsPlayerModal__fieldLabel{ color: var(--mutedText); font-weight: 700; }
+.gsPlayerModal__fieldVal{ text-align: right; font-weight: 800; }
+
+.gsPlayerModal__groupmates{
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0,0,0,.08);
+}
+
+.gsPlayerModal__groupmatesLabel{
+  font-size: 11px;
+  font-weight: 900;
+  color: var(--mutedText);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  margin-bottom: 6px;
+}
+
+.gsPlayerModal__mate{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.gsPlayerModal__mateAvatar{
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--brandPrimaryBg);
+  color: var(--brandAccent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 900;
+  flex: 0 0 auto;
 }
