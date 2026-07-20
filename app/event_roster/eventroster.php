@@ -118,11 +118,11 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
     <script src="<?= ma_asset('/assets/modules/module_sourceFavorites.js') ?>"></script>
     <script src="<?= ma_asset('/assets/modules/module_sourceNonRated.js') ?>"></script>
     <script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>
-    <script src="<?= ma_asset('/assets/modules/module_defineTeams.js') ?>"></script>
+    <script src="<?= ma_asset('/assets/modules/module_defineTeamsGameEvent.js') ?>"></script>
     <script src="<?= ma_asset('/assets/modules/pageHelp.js') ?>"></script>
     <script src="<?= ma_asset('/assets/modules/module_parseImportPlayers.js') ?>"></script>
     <script src="<?= ma_asset('/assets/modules/module_createEventPairings.js') ?>"></script>
-    <script src="<?= ma_asset('/assets/modules/module_defineFlights.js') ?>"></script>
+    <script src="<?= ma_asset('/assets/modules/module_defineFlightsGameEvent.js') ?>"></script>
     <script src="<?= ma_asset('/assets/modules/module_defineHandicapSettings.js') ?>"></script>
     <script src="<?= ma_asset('/assets/pages/event_roster.js') ?>"></script>
 </body>
