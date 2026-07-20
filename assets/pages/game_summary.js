@@ -99,7 +99,7 @@
 
   function getFormattedStartHole(player) {
     if (!player) return "";
-    const isShotgun = state.game?.dbGames_TOMethod === 'Shotgun';
+    const isShotgun = state.game?.dbGames_TOMethod === 'ShotGun';
     let startHole = player.dbPlayers_StartHole;
     if (isShotgun && player.dbPlayers_StartHoleSuffix) {
         startHole = `${startHole || ''}${player.dbPlayers_StartHoleSuffix}`;
@@ -380,9 +380,18 @@
         const matchB = pairingSortValue(b.dbPlayers_MatchID) || "—";
         if (matchA !== matchB) return matchA.localeCompare(matchB, undefined, { numeric: true });
 
-        const sideA = pairingSortValue(a.dbPlayers_MatchPos) || "—";
-        const sideB = pairingSortValue(b.dbPlayers_MatchPos) || "—";
-        if (sideA !== sideB) return numericOrTextCompare(sideA, sideB);
+        // Team when active, else Side — mutually exclusive, same rule
+        // as By Pairing, so Team consistently replaces Side rather than
+        // both being applied.
+        if (useTeams) {
+          const tmA = teamSortValue(a);
+          const tmB = teamSortValue(b);
+          if (tmA !== tmB) return numericOrTextCompare(tmA, tmB);
+        } else {
+          const sideA = pairingSortValue(a.dbPlayers_MatchPos) || "—";
+          const sideB = pairingSortValue(b.dbPlayers_MatchPos) || "—";
+          if (sideA !== sideB) return numericOrTextCompare(sideA, sideB);
+        }
       }
 
       const pairA = pairingSortValue(a.dbPlayers_PairingID) || "—";
@@ -393,7 +402,9 @@
       const posB = pairingSortValue(b.dbPlayers_PairingPos) || "999";
       if (posA !== posB) return numericOrTextCompare(posA, posB);
 
-      if (useTeams) {
+      // PairField only — PairPair already applied Team above (as Side's
+      // replacement), so applying it again here would be a no-op at best.
+      if (!pairPair && useTeams) {
         const tmA = teamSortValue(a);
         const tmB = teamSortValue(b);
         if (tmA !== tmB) return numericOrTextCompare(tmA, tmB);
@@ -562,7 +573,7 @@
   // Pairing summary — the subtotal row at the bottom of each pairing's
   // player rows, same indentation as those rows (see .gsPairIndent),
   // distinguished only by bold weight + a top rule, no background tint.
-  function buildPairingSummaryRow(pairing) {
+  function computePairingAverages(pairing) {
     const players = pairing.players || [];
     let sHI = 0, sCH = 0, sPH = 0, cHI = 0, cCH = 0, cPH = 0;
     players.forEach(p => {
@@ -570,9 +581,15 @@
       const ch = parseFloat(p.dbPlayers_CH); if (!isNaN(ch)) { sCH += ch; cCH++; }
       const ph = parseFloat(p.dbPlayers_PH); if (!isNaN(ph)) { sPH += ph; cPH++; }
     });
-    const avgHI = cHI ? (sHI / cHI).toFixed(1) : "0.0";
-    const avgCH = cCH ? (sCH / cCH).toFixed(1) : "0.0";
-    const avgPH = cPH ? (sPH / cPH).toFixed(1) : "0.0";
+    return {
+      avgHI: cHI ? (sHI / cHI).toFixed(1) : "0.0",
+      avgCH: cCH ? (sCH / cCH).toFixed(1) : "0.0",
+      avgPH: cPH ? (sPH / cPH).toFixed(1) : "0.0"
+    };
+  }
+
+  function buildPairingSummaryRow(pairing) {
+    const { avgHI, avgCH, avgPH } = computePairingAverages(pairing);
 
     const prefix = pairingLabelPrefix(pairing);
     const label = prefix ? (prefix + ", Pair " + pairing.pairingId) : ("Pair " + pairing.pairingId);
@@ -614,6 +631,91 @@
   // single-pairing groups, which never have a "next" pairing at all).
   function buildPairingDividerRow(colspan) {
     return `<tr class="gsPairDivider"><td colspan="${colspan}"></td></tr>`;
+  }
+
+  // ── By Pairing mobile cards ─────────────────────────────────────────────
+  // One .maCard per Match (PairPair, holding both its pairings) or per
+  // Pairing (PairField, no Match tier). Reuses buildPairingDesktopGroups'
+  // output directly — same Match/Pairing shape either way, just a
+  // different renderer.
+
+  function buildPlayerLineMobile(p) {
+    const name  = valueOrDash(p.dbPlayers_Name);
+    const tee   = valueOrDash(p.dbPlayers_TeeSetName);
+    const hi    = numberOrDash(p.dbPlayers_HI);
+    const ch    = numberOrDash(p.dbPlayers_CH);
+    const ph    = numberOrDash(p.dbPlayers_PH);
+    const so    = numberOrDash(p.dbPlayers_SO);
+    const team  = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
+
+    const metaParts = ["HI " + hi, "CH " + ch, "PH " + ph, "SO " + so];
+    if (teamsActive()) metaParts.push(team);
+
+    return (
+      '<div class="gsPairPlayerLine">' +
+        '<div class="gsPairPlayerLine__name">' + esc(name) + (tee !== "—" ? " · Tee " + esc(tee) : "") + '</div>' +
+        '<div class="gsPairPlayerLine__meta">' + esc(metaParts.join(" · ")) + '</div>' +
+      '</div>'
+    );
+  }
+
+  function buildPairSummaryLineMobile(pairing) {
+    const { avgHI, avgCH, avgPH } = computePairingAverages(pairing);
+    return (
+      '<div class="gsPairSummaryMobile">Pair Summary — Avg HI ' + esc(avgHI) +
+      ' · CH ' + esc(avgCH) + ' · PH ' + esc(avgPH) + '</div>'
+    );
+  }
+
+  // PairPair — one card per Match, both pairings inside, divider between
+  // them. No Team in the card header (the card holds both teams) — Team
+  // only ever appears per-player, via buildPlayerLineMobile.
+  function buildMatchCardMobile(group) {
+    const allPlayers = group.pairings.reduce((acc, pr) => acc.concat(pr.players), []);
+    const first = allPlayers[0] || {};
+    const time  = formatTimeAmPm(valueOrDash(first.dbPlayers_TeeTime));
+    const start = valueOrDash(getFormattedStartHole(first));
+
+    const body = group.pairings.map((pairing, idx) => {
+      const lines = pairing.players.map(buildPlayerLineMobile).join("");
+      const summary = buildPairSummaryLineMobile(pairing);
+      const divider = idx < group.pairings.length - 1 ? '<div class="gsPairDividerMobile"></div>' : "";
+      return lines + summary + divider;
+    }).join("");
+
+    return (
+      '<section class="maCard gsMatchCard">' +
+        '<header class="maCard__hdr">' +
+          '<div class="maCard__title">Match ' + esc(group.matchId) + '</div>' +
+          '<div class="maCard__actions">' + esc(time) + ' · Hole ' + esc(start) + '</div>' +
+        '</header>' +
+        '<div class="maCard__body">' + body + '</div>' +
+      '</section>'
+    );
+  }
+
+  // PairField — one card per Pairing, no Match tier. Card header carries
+  // Team/Pairing identity (same pairingLabelPrefix as desktop); Team
+  // still repeats per-player line too, matching the confirmed mockup.
+  function buildPairingFieldCardMobile(pairing) {
+    const first = pairing.players[0] || {};
+    const time  = formatTimeAmPm(valueOrDash(first.dbPlayers_TeeTime));
+    const start = valueOrDash(getFormattedStartHole(first));
+    const prefix = pairingLabelPrefix(pairing);
+    const title = prefix ? (prefix + ", Pairing " + pairing.pairingId) : ("Pairing " + pairing.pairingId);
+
+    const lines = pairing.players.map(buildPlayerLineMobile).join("");
+    const summary = buildPairSummaryLineMobile(pairing);
+
+    return (
+      '<section class="maCard gsMatchCard">' +
+        '<header class="maCard__hdr">' +
+          '<div class="maCard__title">' + esc(title) + '</div>' +
+          '<div class="maCard__actions">' + esc(time) + ' · Hole ' + esc(start) + '</div>' +
+        '</header>' +
+        '<div class="maCard__body">' + lines + summary + '</div>' +
+      '</section>'
+    );
   }
 
   // ---- Flight partitioning (outermost grouping, all three scope views) ----
@@ -707,39 +809,7 @@
 
 
   // ---- mobile card builder (shared across all three scope views) ----
-  function buildMobilePlayerCard(p) {
-    const name    = valueOrDash(p.dbPlayers_Name);
-    const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
-    const time    = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
-    const start   = valueOrDash(getFormattedStartHole(p));
-    const tee     = valueOrDash(p.dbPlayers_TeeSetName);
-    const hi      = numberOrDash(p.dbPlayers_HI);
-    const ch      = numberOrDash(p.dbPlayers_CH);
-    const ph      = numberOrDash(p.dbPlayers_PH);
-    const so      = numberOrDash(p.dbPlayers_SO);
-    const pair    = valueOrDash(p.dbPlayers_PairingID);
-    const pos     = valueOrDash(p.dbPlayers_PairingPos);
-
-    return (
-      '<div class="gsPlayerCard">' +
-        '<div class="gsLine1">' +
-          '<div class="gsName">' + esc(name) + '</div>' +
-          '<a class="gsScoreLink gsMono" href="#" data-scoreid="' + esc(scoreId) + '">' + esc(scoreId) + '</a>' +
-        '</div>' +
-        '<div class="gsLine2">' +
-          esc(time) + ' &nbsp;·&nbsp; Hole ' + esc(start) + ' &nbsp;·&nbsp; Tee ' + esc(tee) +
-        '</div>' +
-        '<div class="gsLine3">' +
-          '<span class="gsLine3__hc">HI ' + esc(hi) + ' &nbsp;·&nbsp; CH ' + esc(ch) + ' &nbsp;·&nbsp; PH ' + esc(ph) + ' &nbsp;·&nbsp; SO ' + esc(so) + '</span>' +
-          '<span class="gsLine3__pair">Pair ' + esc(pair) + ' · Pos ' + esc(pos) + '</span>' +
-        '</div>' +
-      '</div>'
-    );
-  }
-
   // ── By Player mobile row (2-line, whole row opens the detail modal) ────────
-  // Distinct from buildMobilePlayerCard above, which By Pairing / By Playing
-  // Group still use — those views' mobile content hasn't been re-aligned yet.
   function buildPlayerRowMobile(p) {
     const ghin = safeString(p.dbPlayers_PlayerGHIN);
     const name  = valueOrDash(p.dbPlayers_Name);
@@ -923,7 +993,14 @@
 
     const isPairPair = isPairPairCompetition();
     const hasTeams = teamsActive();
-    const hasFlights = flightsActive();
+    // Flight is redundant as a per-row column wherever the view already
+    // groups by Flight (currently just By Pairing — its own outer Match/
+    // Pairing grouping already shows it once per group, not once per
+    // player). By Player has no grouping at all, so it still needs the
+    // column as the only place that info appears. By Playing Group still
+    // groups by Flight too but hasn't had its own redesign pass yet —
+    // worth revisiting when that view gets the same treatment.
+    const hasFlights = flightsActive() && state.scope !== "byPairing";
     if (el.rosterTbody) {
       const table = el.rosterTbody.closest("table");
       if (table) {
@@ -1079,12 +1156,14 @@
         });
       });
 
-      // ── Mobile: unchanged — same grouping/rendering as before this
-      // pass, until this view's mobile layout gets its own redesign. ────
-      const mobileGroups = groupRosterForPairing(fg.players);
-      mobileGroups.forEach((group) => {
-        mob.push('<div class="maListRow__group">' + buildPairingHeader(group) + '</div>');
-        group.players.forEach((p) => { mob.push(buildMobilePlayerCard(p)); });
+      // ── Mobile: one card per Match (PairPair) or per Pairing (PairField),
+      // built from the exact same desktopGroups computed above. ──────────
+      desktopGroups.forEach((group) => {
+        if (group.matchId) {
+          mob.push(buildMatchCardMobile(group));
+        } else {
+          mob.push(buildPairingFieldCardMobile(group.pairings[0]));
+        }
       });
     });
 
@@ -1093,6 +1172,58 @@
 
     wireScoreLinks();
     wireFlightToggles();
+  }
+
+  // ── By Playing Group mobile cards ───────────────────────────────────────
+  // One .maCard per PlayerKey group — no Match/Pairing nesting, no
+  // summary line (this view has no subtotals). Match/Side and Pair/Pos
+  // are shown per-player here (unlike By Pairing's cards) since there's
+  // no card-level Match/Pairing identity implying them.
+  function buildPlayingGroupPlayerLineMobile(p) {
+    const name  = valueOrDash(p.dbPlayers_Name);
+    const tee   = valueOrDash(p.dbPlayers_TeeSetName);
+    const hi    = numberOrDash(p.dbPlayers_HI);
+    const ch    = numberOrDash(p.dbPlayers_CH);
+    const ph    = numberOrDash(p.dbPlayers_PH);
+    const so    = numberOrDash(p.dbPlayers_SO);
+    const pair  = valueOrDash(p.dbPlayers_PairingID);
+    const pos   = valueOrDash(p.dbPlayers_PairingPos);
+    const team  = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
+
+    const metaParts = ["HI " + hi, "CH " + ch, "PH " + ph, "SO " + so];
+
+    if (isPairPairCompetition()) {
+      const match = valueOrDash(p.dbPlayers_MatchID);
+      const side  = valueOrDash(p.dbPlayers_MatchPos);
+      metaParts.push("Match " + match + " · Side " + side);
+    }
+    metaParts.push("Pair " + pair + " · Pos " + pos);
+    if (teamsActive()) metaParts.push(team);
+
+    return (
+      '<div class="gsPairPlayerLine">' +
+        '<div class="gsPairPlayerLine__name">' + esc(name) + (tee !== "—" ? " · Tee " + esc(tee) : "") + '</div>' +
+        '<div class="gsPairPlayerLine__meta">' + esc(metaParts.join(" · ")) + '</div>' +
+      '</div>'
+    );
+  }
+
+  function buildPlayingGroupCardMobile(group) {
+    const first = group.players[0] || {};
+    const time  = formatTimeAmPm(valueOrDash(first.dbPlayers_TeeTime));
+    const start = valueOrDash(getFormattedStartHole(first));
+
+    const lines = group.players.map(buildPlayingGroupPlayerLineMobile).join("");
+
+    return (
+      '<section class="maCard gsMatchCard">' +
+        '<header class="maCard__hdr">' +
+          '<div class="maCard__title">Playing Group ' + esc(group.playerKey) + '</div>' +
+          '<div class="maCard__actions">' + esc(time) + ' · Hole ' + esc(start) + '</div>' +
+        '</header>' +
+        '<div class="maCard__body">' + lines + '</div>' +
+      '</section>'
+    );
   }
 
   function renderRosterByPlayingGroup(sorted) {
@@ -1116,7 +1247,7 @@
         desktopParts.push(
           '<tr class="gsGroupHdr"><td colspan="' + colspan + '">' + buildPlayingGroupHeader(group) + '</td></tr>'
         );
-        mob.push('<div class="maListRow__group">' + buildPlayingGroupHeader(group) + '</div>');
+        mob.push(buildPlayingGroupCardMobile(group));
 
         group.players.forEach((p) => {
           const name    = valueOrDash(p.dbPlayers_Name);
@@ -1154,7 +1285,6 @@
               "<td class=\"gsCenter gsMono\"><a class=\"gsScoreLink\" href=\"#\" data-scoreid=\"" + esc(scoreId) + "\">" + esc(scoreId) + "</a></td>" +
             "</tr>"
           );
-          mob.push(buildMobilePlayerCard(p));
         });
       });
     });

@@ -32,11 +32,9 @@
 
     <!-- ROSTER -->
     <section class="maCard" aria-label="Roster">
-      <header class="maCard__hdr maCard__hdr--wrap">
+      <header class="maCard__hdr">
         <div class="maCard__title" id="gsCardTitle">ROSTER</div>
-        <div class="maCard__actions">
-          <span class="maHintText">Refresh handicaps from the Actions menu for the most current results.</span>
-        </div>
+        <div class="maCard__actions"></div>
       </header>
 
       <div class="maCard__body">
@@ -46,6 +44,7 @@
               <tr>
                 <th>Name</th>
                 <th>Tee</th>
+                <th class="gsCenter col-flight">Flight</th>
                 <th class="gsCenter col-team">Team</th>
                 <th class="gsCenter col-match">Match</th>
                 <th class="gsCenter col-flightpos">Side</th>
@@ -57,7 +56,7 @@
                 <th class="gsCenter">SO</th>
                 <th class="gsCenter">Time</th>
                 <th class="gsCenter">Start</th>
-                <th class="gsCenter gsMono" id="gsScoreIdHeader">GroupID</th>
+                <th class="gsCenter" id="gsScoreIdHeader">PlayGroup</th>
               </tr>
             </thead>
             <tbody id="rosterTableBody"></tbody>

@@ -157,58 +157,6 @@
     gap: var(--cardsGap);
   }
 
-  .gsPlayerCard{
-    border: 1px solid var(--cardBorder);
-    border-radius: var(--cardRadius);
-    background: var(--cardBg);
-    box-shadow: var(--cardShadow);
-    padding: var(--cardPad) var(--cardHdrPadX);
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .gsLine1{
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-
-  .gsName{
-    font-size: var(--labelTextSize);
-    font-weight: 900;
-    color: var(--ink);
-    flex: 1;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .gsLine2,
-  .gsLine3{
-    font-size: var(--fieldValueSize);
-    color: var(--mutedText);
-    font-weight: 800;
-  }
-
-  .gsLine3{
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .gsLine3__hc{
-    color: var(--mutedText);
-  }
-
-  .gsLine3__pair{
-    color: var(--mutedText);
-    font-size: var(--fieldValueSublineSize);
-    flex-shrink: 0;
-  }
-
   /* ===== By Player mobile row (replaces gsPlayerCard for this view) ===== */
   .gsPlayerRow{
     display: flex;
@@ -249,6 +197,62 @@
     flex: 0 0 auto;
     font-size: 18px;
     color: var(--mutedText);
+  }
+
+  /* ===== By Pairing mobile cards (Match / Pairing) ===== */
+  /* ===== By Pairing / By Playing Group mobile cards ===== */
+  .gsFlightHdr{
+    background: rgba(0,0,0,.05);
+    padding: 8px 6px;
+    border-radius: 6px;
+  }
+
+  .gsMatchCard .maCard__hdr{
+    background: var(--brandSecondary);
+    color: var(--brandSecondaryText);
+  }
+
+  .gsMatchCard .maCard__title,
+  .gsMatchCard .maCard__actions{
+    color: var(--brandSecondaryText);
+  }
+
+  .gsMatchCard .maCard__body{
+    padding-top: 4px;
+    padding-bottom: 4px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .gsPairPlayerLine{
+    padding: 4px 0;
+  }
+
+  .gsPairPlayerLine__name{
+    font-size: var(--labelTextSize);
+    font-weight: 900;
+    color: var(--ink);
+  }
+
+  .gsPairPlayerLine__meta{
+    font-size: var(--fieldValueSublineSize);
+    color: var(--mutedText);
+    font-weight: 700;
+    margin-top: 1px;
+  }
+
+  .gsPairSummaryMobile{
+    font-size: var(--fieldValueSublineSize);
+    font-weight: 900;
+    color: var(--ink);
+    padding: 3px 0;
+    border-top: 1px solid rgba(0,0,0,.18);
+  }
+
+  .gsPairDividerMobile{
+    height: 0;
+    margin: 2px 0;
+    border-top: 1px solid rgba(0,0,0,.28);
   }
 }
 
