@@ -95,6 +95,23 @@
     state.roster = Array.isArray(res.payload?.roster) ? res.payload.roster : [];
   }
 
+  // module_defineTeamsGameEvent.js / module_defineFlightsGameEvent.js are
+  // self-hydrating AND self-saving now — their onDone(wasSaved) contract
+  // hands back a boolean only, no config/players payload. Re-fetch both the
+  // event record (dbEvents_TeamConfig/TeamMode, dbEvents_FlightConfig/
+  // FlightMode) and the roster (per-player TeamKey/FlightKey) from the same
+  // endpoint the modules themselves use to hydrate, so state.event and
+  // state.roster end up consistent with what was actually persisted.
+  async function refreshEventAndRoster() {
+    const res = await MA.postJson(
+      (MA.paths?.apiEventRoster || "/api/event_roster") + "/initEventRoster.php",
+      {}
+    );
+    if (!res?.ok) throw new Error(res?.message || "Failed to refresh event roster.");
+    state.event  = res.event  || state.event;
+    state.roster = Array.isArray(res.roster) ? res.roster : state.roster;
+  }
+
   function enrolledGHINs() {
     return new Set((state.roster || []).map(p => safe(p.dbEventPlayers_GHIN)));
   }
@@ -183,7 +200,21 @@
   // ── Render: canvas roster ───────────────────────────────────────────────────
   function renderRoster() {
     const favoriteSet = new Set((state.favorites || []).map(f => safe(f.playerGHIN)));
-    const teamConfig  = (window.__MA_INIT__ || {}).teamConfig || null;
+
+    // Parse teamConfig from the event record itself — window.__MA_INIT__ has
+    // no top-level teamConfig key, only __MA_INIT__.event.dbEvents_TeamConfig
+    // (a JSON string). Same parse pattern as onManagePairings() below.
+    let teamConfig = null;
+    try {
+      const raw = state.event?.dbEvents_TeamConfig;
+      if (raw && typeof raw === "string" && raw !== "") {
+        teamConfig = JSON.parse(raw);
+      } else if (raw && typeof raw === "object") {
+        teamConfig = raw;
+      }
+    } catch (_) {
+      teamConfig = null;
+    }
 
     const sorted = [...(state.roster || [])].sort((a, b) => {
       const s = state.rosterSort;
@@ -422,55 +453,21 @@
       return;
     }
 
-    const teamConfig = (window.__MA_INIT__ || {}).teamConfig || {
-      teams: [
-        { id: "T1", name: "Red",  color: "red",  sort: 1 },
-        { id: "T2", name: "Blue", color: "blue", sort: 2 },
-      ]
-    };
-
-    // Read directly off state.event, same pattern as onDefineFlights and
-    // onDefineHandicapSettings use — NOT a separate __MA_INIT__.teamMode
-    // field. That field was never actually hydrated by eventroster.php's
-    // initPayload (only teamConfig is), so reading it always silently
-    // fell back to "none" regardless of the real saved dbEvents_TeamMode —
-    // this is the fix for that bug.
-    const teamMode = state.event?.dbEvents_TeamMode || "none";
-
-    // Build a players-shaped array from roster for MA.manageTeams
-    // manageTeams expects dbPlayers_* keys — map from dbEventPlayers_*
-    const playersForTeams = (state.roster || []).map(p => ({
-      dbPlayers_PlayerGHIN: safe(p.dbEventPlayers_GHIN),
-      dbPlayers_Name:       safe(p.dbEventPlayers_Name),
-      dbPlayers_LName:      safe(p.dbEventPlayers_LName),
-      dbPlayers_Gender:     safe(p.dbEventPlayers_Gender),
-      dbPlayers_HI:         safe(p.dbEventPlayers_HI),
-      dbPlayers_TeamKey:    safe(p.dbEventPlayers_TeamKey),
-    }));
-
+    // module_defineTeamsGameEvent.js self-hydrates (via initEventRoster.php)
+    // and self-saves (via saveEventTeams.php) internally now — it no longer
+    // takes players/teamConfig/mode/apiBase, and it already shows its own
+    // "Teams saved." notification, so onDone just needs to bring this page's
+    // state back in sync with what was persisted.
     MA.manageTeams.open({
-      players:        playersForTeams,
-      teamConfig,
-      mode:           teamMode,
-      showModeToggle: true,
-      apiBase:        MA.paths?.apiEventRoster || "/api/event_roster",
-      onApply: ({ players, teamConfig: newConfig, mode: newMode }) => {
-        // Write team keys back to state.roster.
-        // saveTeamAssignments.php returns ServiceDbEventPlayers::getEventRoster()
-        // rows — dbEventPlayers_*-keyed, not the dbPlayers_* shape Game Players'
-        // endpoint returns. Read the actual key the endpoint sends.
-        if (Array.isArray(players) && players.length) {
-          players.forEach(saved => {
-            const ghin = safe(saved.dbEventPlayers_GHIN || "");
-            const p = state.roster.find(x => safe(x.dbEventPlayers_GHIN) === ghin);
-            if (p) p.dbEventPlayers_TeamKey = safe(saved.dbEventPlayers_TeamKey || "");
-          });
+      target: "event",
+      onDone: async (wasSaved) => {
+        if (!wasSaved) return;
+        try {
+          await refreshEventAndRoster();
+          renderRoster();
+        } catch (e) {
+          MA.ui.notify(e?.message || "Failed to refresh roster after saving teams.", "warn");
         }
-        if (window.__MA_INIT__) {
-          window.__MA_INIT__.teamConfig = newConfig;
-        }
-        if (state.event) state.event.dbEvents_TeamMode = newMode || "none";
-        renderRoster();
       }
     });
   }
@@ -482,50 +479,17 @@
       return;
     }
 
-    let flightConfig = null;
-    try {
-      const raw = state.event?.dbEvents_FlightConfig;
-      if (raw && typeof raw === "string" && raw !== "") {
-        flightConfig = JSON.parse(raw);
-      } else if (raw && typeof raw === "object") {
-        flightConfig = raw;
-      }
-    } catch (_) {
-      flightConfig = null;
-    }
-
-    const flightMode = state.event?.dbEvents_FlightMode || "none";
-
-    // module_defineFlights.js expects dbPlayers_* keys — map from
-    // dbEventPlayers_*, same convention as onManageTeams above.
-    const playersForFlights = (state.roster || []).map(p => ({
-      dbPlayers_PlayerGHIN: safe(p.dbEventPlayers_GHIN),
-      dbPlayers_Name:       safe(p.dbEventPlayers_Name),
-      dbPlayers_LName:      safe(p.dbEventPlayers_LName),
-      dbPlayers_Gender:     safe(p.dbEventPlayers_Gender),
-      dbPlayers_HI:         safe(p.dbEventPlayers_HI),
-      dbPlayers_FlightKey:  safe(p.dbEventPlayers_FlightKey),
-    }));
-
+    // Same self-hydrating/self-saving contract as onManageTeams above.
     MA.defineFlights.open({
-      players:        playersForFlights,
-      flightConfig,
-      mode:           flightMode,
-      showModeToggle: true,
-      apiBase:        MA.paths?.apiEventRoster || "/api/event_roster",
-      onApply: ({ players, flightConfig: newConfig, mode: newMode }) => {
-        if (Array.isArray(players) && players.length) {
-          players.forEach(saved => {
-            const ghin = safe(saved.dbEventPlayers_GHIN || "");
-            const p = state.roster.find(x => safe(x.dbEventPlayers_GHIN) === ghin);
-            if (p) p.dbEventPlayers_FlightKey = safe(saved.dbEventPlayers_FlightKey || "");
-          });
+      target: "event",
+      onDone: async (wasSaved) => {
+        if (!wasSaved) return;
+        try {
+          await refreshEventAndRoster();
+          renderRoster();
+        } catch (e) {
+          MA.ui.notify(e?.message || "Failed to refresh roster after saving flights.", "warn");
         }
-        if (state.event) {
-          state.event.dbEvents_FlightConfig = newConfig ? JSON.stringify(newConfig) : null;
-          state.event.dbEvents_FlightMode   = newMode || "none";
-        }
-        renderRoster();
       }
     });
   }
