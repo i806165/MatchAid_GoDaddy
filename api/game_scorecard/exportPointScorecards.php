@@ -255,6 +255,28 @@ function maPopulateHoleHeadings(Spreadsheet $spreadsheet, Worksheet $sheet, stri
 }
 
 // ==========================================================================
+// Tee Set Name Population — Player1-4 tee set names shown once in the
+// summary/legend block at the bottom of the sheet. Table1 holds the
+// group's 4 players once; Table2/Table3 (3x6) or Table2 (2x9) are just the
+// same players' later hole segments, so tee set (unlike per-segment score)
+// only needs to be sourced from Table1 and written once per group sheet.
+// ==========================================================================
+
+function maPopulateTeeSetNames(Spreadsheet $spreadsheet, Worksheet $sheet, array $sourcePlayers): void
+{
+    for ($slot = 1; $slot <= 4; $slot++) {
+        $player = $sourcePlayers[$slot - 1] ?? null;
+
+        maSetLocalNamedValue(
+            $spreadsheet,
+            $sheet,
+            "Table1_Player{$slot}_TeeSetName",
+            is_array($player) ? trim((string)($player['dbPlayers_TeeSetName'] ?? '')) : null
+        );
+    }
+}
+
+// ==========================================================================
 // Group Sheet Population — 2x9 layout (holes 1-9 / 10-18, or a single
 // 9-hole table for F9/B9 games)
 // ==========================================================================
@@ -296,6 +318,8 @@ function maPopulateGroupSheet2x9(Spreadsheet $spreadsheet, Worksheet $sheet, arr
         // in a single pass.
         maClearAndHideLocalRange($spreadsheet, $sheet, 'Table2');
     }
+
+    maPopulateTeeSetNames($spreadsheet, $sheet, $sourcePlayers);
 }
 
 // ==========================================================================
@@ -335,6 +359,8 @@ function maPopulateGroupSheet3x6(Spreadsheet $spreadsheet, Worksheet $sheet, arr
         maPopulateHoleHeadings($spreadsheet, $sheet, $tablePrefix, $startHole, 6);
         maPopulateTablePlayers($spreadsheet, $sheet, $tablePrefix, $sourcePlayers, $game);
     }
+
+    maPopulateTeeSetNames($spreadsheet, $sheet, $sourcePlayers);
 }
 
 // ==========================================================================
