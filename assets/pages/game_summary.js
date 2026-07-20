@@ -1212,14 +1212,17 @@
     const first = group.players[0] || {};
     const time  = formatTimeAmPm(valueOrDash(first.dbPlayers_TeeTime));
     const start = valueOrDash(getFormattedStartHole(first));
+    const scoreId = valueOrDash(group.playerKey);
 
     const lines = group.players.map(buildPlayingGroupPlayerLineMobile).join("");
 
     return (
       '<section class="maCard gsMatchCard">' +
         '<header class="maCard__hdr">' +
-          '<div class="maCard__title">Playing Group ' + esc(group.playerKey) + '</div>' +
-          '<div class="maCard__actions">' + esc(time) + ' · Hole ' + esc(start) + '</div>' +
+          '<div class="maCard__title">' + esc(time) + ' · Hole ' + esc(start) + '</div>' +
+          '<div class="maCard__actions">' +
+            '<a class="gsScoreLink gsScoreBadge" href="#" data-scoreid="' + esc(scoreId) + '">' + esc(scoreId) + '</a>' +
+          '</div>' +
         '</header>' +
         '<div class="maCard__body">' + lines + '</div>' +
       '</section>'

@@ -217,6 +217,19 @@
     color: var(--brandSecondaryText);
   }
 
+  .gsScoreBadge{
+    display: inline-block;
+    background: #fff;
+    color: var(--brandSecondary);
+    font-weight: 900;
+    font-size: 12px;
+    line-height: 1;
+    padding: 5px 10px;
+    border-radius: 999px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
   .gsMatchCard .maCard__body{
     padding-top: 4px;
     padding-bottom: 4px;
