@@ -240,18 +240,45 @@
       }
 
       if (pairPair) {
-        // dbPlayers_MatchID / dbPlayers_MatchPos — the Match Pairings
-        // tab's Match / Side A-B container. Previously named
-        // flightA/flightB/teamA/teamB here, which collided with the
-        // unrelated real Flight (dbPlayers_FlightKey) and Team
-        // (dbPlayers_TeamKey) concepts.
+        // Match is the outer grouping — head to head. dbPlayers_MatchID /
+        // dbPlayers_MatchPos are the Match Pairings tab's Match / Side
+        // A-B container, unrelated to the real Flight/Team concepts
+        // sorted above.
         const matchA = pairingSortValue(a.dbPlayers_MatchID) || "—";
         const matchB = pairingSortValue(b.dbPlayers_MatchID) || "—";
         if (matchA !== matchB) return matchA.localeCompare(matchB, undefined, { numeric: true });
 
-        const sideA = pairingSortValue(a.dbPlayers_MatchPos) || "—";
-        const sideB = pairingSortValue(b.dbPlayers_MatchPos) || "—";
-        if (sideA !== sideB) return numericOrTextCompare(sideA, sideB);
+        // Within a Match: Team when active, else Side — mutually
+        // exclusive, not both — so every Match consistently renders
+        // Team-1 (or Side-A) above Team-2 (or Side-B).
+        if (useTeams) {
+          const tmA = teamSortValue(a);
+          const tmB = teamSortValue(b);
+          if (tmA !== tmB) return numericOrTextCompare(tmA, tmB);
+        } else {
+          const sideA = pairingSortValue(a.dbPlayers_MatchPos) || "—";
+          const sideB = pairingSortValue(b.dbPlayers_MatchPos) || "—";
+          if (sideA !== sideB) return numericOrTextCompare(sideA, sideB);
+        }
+
+        const lnA = pairingSortValue(a.dbPlayers_LName);
+        const lnB = pairingSortValue(b.dbPlayers_LName);
+        if (lnA !== lnB) return lnA.localeCompare(lnB);
+
+        const nmA = pairingSortValue(a.dbPlayers_Name);
+        const nmB = pairingSortValue(b.dbPlayers_Name);
+        return nmA.localeCompare(nmB);
+      }
+
+      // PairField — PairingID is an arbitrary/meaningless number on its
+      // own, so when Teams are active, Team orders the pairing groups
+      // first (so team order stays consistent regardless of what the
+      // underlying PairingID happens to be), with PairingID only as the
+      // tiebreak/grouping key beneath that.
+      if (useTeams) {
+        const tmA = teamSortValue(a);
+        const tmB = teamSortValue(b);
+        if (tmA !== tmB) return numericOrTextCompare(tmA, tmB);
       }
 
       const pairA = pairingSortValue(a.dbPlayers_PairingID) || "—";
@@ -261,12 +288,6 @@
       const posA = pairingSortValue(a.dbPlayers_PairingPos) || "999";
       const posB = pairingSortValue(b.dbPlayers_PairingPos) || "999";
       if (posA !== posB) return numericOrTextCompare(posA, posB);
-
-      if (useTeams) {
-        const tmA = teamSortValue(a);
-        const tmB = teamSortValue(b);
-        if (tmA !== tmB) return numericOrTextCompare(tmA, tmB);
-      }
 
       const lnA = pairingSortValue(a.dbPlayers_LName);
       const lnB = pairingSortValue(b.dbPlayers_LName);
@@ -458,6 +479,113 @@
 
   function buildPlayingGroupHeader(group) {
     return `<strong>Playing Group ${esc(group.playerKey)}</strong>`;
+  }
+
+  // ── By Pairing desktop structure: Match → Pairing(s) ────────────────────
+  // Desktop-only — mobile still uses groupRosterForPairing/buildPairingHeader
+  // above unchanged, until that view gets its own redesign pass.
+  //
+  // PairPair: two nested levels. Match is the real outer grouping — head
+  // to head — with exactly two Pairing sub-groups inside it (pairings are
+  // clamped to one team/side each). PairField: one level — Pairing only,
+  // no Match concept applies.
+  //
+  // Built as a single shape either way (an array of "match-like" groups,
+  // each holding one or more nested pairings) so the renderer doesn't
+  // need two divergent code paths — a PairField group simply has
+  // matchId === null and exactly one nested pairing, so no Match band
+  // and no inter-pairing divider ever render for it (both are gated on
+  // there being a matchId / more than one pairing, which naturally never
+  // happens in PairField either way).
+  function buildPairingDesktopGroups(sortedRoster) {
+    const pairPair = isPairPairCompetition();
+    const groups = [];
+    let currentGroup = null;
+    let currentPairing = null;
+
+    sortedRoster.forEach((p) => {
+      const matchId = pairPair ? (pairingSortValue(p.dbPlayers_MatchID) || "—") : null;
+      const pairingId = pairingSortValue(p.dbPlayers_PairingID) || "—";
+      const groupKey = pairPair ? matchId : pairingId;
+
+      if (!currentGroup || currentGroup.key !== groupKey) {
+        currentGroup = { key: groupKey, matchId, pairings: [] };
+        groups.push(currentGroup);
+        currentPairing = null;
+      }
+
+      if (!currentPairing || currentPairing.pairingId !== pairingId) {
+        currentPairing = { pairingId, players: [] };
+        currentGroup.pairings.push(currentPairing);
+      }
+
+      currentPairing.players.push(p);
+    });
+
+    return groups;
+  }
+
+  // Bare Match band — deliberately no metadata beyond the label itself;
+  // all substantive content (Team/Side, Pair ID, averages) lives one
+  // level down on each Pairing's own summary row.
+  function buildMatchBandRow(matchId, colspan) {
+    return `<tr class="gsGroupHdr gsMatchHdr"><td colspan="${colspan}">Match ${esc(matchId)}</td></tr>`;
+  }
+
+  // Resolves the Team-or-Side prefix used in both the PairField group
+  // band and every Pairing summary row — Team when active, else Side
+  // (PairPair only; PairField without Teams has neither, just the bare
+  // Pair ID). Team name is shown as-is (no literal "Team" word prefix),
+  // matching how the Team column itself displays; Side has no configured
+  // name to fall back on, so it gets a literal "Side" label.
+  function pairingLabelPrefix(pairing) {
+    const first = (pairing.players && pairing.players[0]) || {};
+    if (teamsActive()) {
+      return resolveTeamName(safeString(first.dbPlayers_TeamKey));
+    }
+    if (isPairPairCompetition()) {
+      const side = pairingSortValue(first.dbPlayers_MatchPos);
+      return side ? ("Side " + side) : "";
+    }
+    return "";
+  }
+
+  // PairField's own group band — same tinted treatment as the Match band,
+  // just labeled with Team/Pairing instead of Match, since PairField has
+  // no Match tier to nest under.
+  function buildPairingFieldBandRow(pairing, colspan) {
+    const prefix = pairingLabelPrefix(pairing);
+    const label = prefix ? (prefix + ", Pairing " + pairing.pairingId) : ("Pairing " + pairing.pairingId);
+    return `<tr class="gsGroupHdr gsMatchHdr"><td colspan="${colspan}">${esc(label)}</td></tr>`;
+  }
+
+  // Pairing summary — the subtotal row at the bottom of each pairing's
+  // player rows, same indentation as those rows (see .gsPairIndent),
+  // distinguished only by bold weight + a top rule, no background tint.
+  function buildPairingSummaryRow(pairing, colspan) {
+    const players = pairing.players || [];
+    let sHI = 0, sCH = 0, sPH = 0, cHI = 0, cCH = 0, cPH = 0;
+    players.forEach(p => {
+      const hi = parseFloat(p.dbPlayers_HI); if (!isNaN(hi)) { sHI += hi; cHI++; }
+      const ch = parseFloat(p.dbPlayers_CH); if (!isNaN(ch)) { sCH += ch; cCH++; }
+      const ph = parseFloat(p.dbPlayers_PH); if (!isNaN(ph)) { sPH += ph; cPH++; }
+    });
+    const avgHI = cHI ? (sHI / cHI).toFixed(1) : "0.0";
+    const avgCH = cCH ? (sCH / cCH).toFixed(1) : "0.0";
+    const avgPH = cPH ? (sPH / cPH).toFixed(1) : "0.0";
+    const stats = `Avg HI: ${avgHI} · CH: ${avgCH} · PH: ${avgPH}`;
+
+    const prefix = pairingLabelPrefix(pairing);
+    const label = prefix ? (prefix + ", Pair " + pairing.pairingId) : ("Pair " + pairing.pairingId);
+
+    return `<tr class="gsPairSummary"><td class="gsPairIndent" colspan="${colspan - 1}">${esc(label)}</td><td class="gsCenter gsMono">${esc(stats)}</td></tr>`;
+  }
+
+  // Divider between the two sibling pairings within one Match. Never
+  // rendered after the last pairing in a group (including PairField's
+  // single-pairing groups, which never have a "next" pairing at all).
+  function buildPairingDividerRow(colspan) {
+    return `<tr class="gsPairDivider"><td colspan="${colspan}"></td></tr>`;
   }
 
   // ---- Flight partitioning (outermost grouping, all three scope views) ----
@@ -860,52 +988,75 @@
       }
       if (useFlights && state.collapsedFlights.has(fg.flightKey)) return;
 
-      const groups = groupRosterForPairing(fg.players);
+      // ── Desktop: Match → Pairing(s), with per-pairing summary rows ──────
+      const desktopGroups = buildPairingDesktopGroups(fg.players);
 
-      groups.forEach((group) => {
-        desktopParts.push(
-          '<tr class="gsGroupHdr"><td colspan="' + colspan + '">' + buildPairingHeader(group) + '</td></tr>'
-        );
-        mob.push('<div class="maListRow__group">' + buildPairingHeader(group) + '</div>');
+      desktopGroups.forEach((group) => {
+        if (group.matchId) {
+          desktopParts.push(buildMatchBandRow(group.matchId, colspan));
+        } else if (group.pairings.length === 1) {
+          // PairField — no Match tier, so the Pairing itself carries the
+          // top band, same tinted treatment.
+          desktopParts.push(buildPairingFieldBandRow(group.pairings[0], colspan));
+        }
 
-        group.players.forEach((p) => {
-          const name    = valueOrDash(p.dbPlayers_Name);
-          const tee     = valueOrDash(p.dbPlayers_TeeSetName);
-          const hi      = numberOrDash(p.dbPlayers_HI);
-          const ch      = numberOrDash(p.dbPlayers_CH);
-          const ph      = numberOrDash(p.dbPlayers_PH);
-          const so      = numberOrDash(p.dbPlayers_SO);
-          const time    = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
-          const start   = valueOrDash(getFormattedStartHole(p));
-          const flight  = valueOrDash(resolveFlightName(p.dbPlayers_FlightKey) || p.dbPlayers_FlightKey);
-          const match   = valueOrDash(p.dbPlayers_MatchID);
-          const side    = valueOrDash(p.dbPlayers_MatchPos);
-          const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
-          const pair    = valueOrDash(p.dbPlayers_PairingID);
-          const pos     = valueOrDash(p.dbPlayers_PairingPos);
-          const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
+        group.pairings.forEach((pairing, idx) => {
+          pairing.players.forEach((p) => {
+            const name    = valueOrDash(p.dbPlayers_Name);
+            const tee     = valueOrDash(p.dbPlayers_TeeSetName);
+            const hi      = numberOrDash(p.dbPlayers_HI);
+            const ch      = numberOrDash(p.dbPlayers_CH);
+            const ph      = numberOrDash(p.dbPlayers_PH);
+            const so      = numberOrDash(p.dbPlayers_SO);
+            const time    = formatTimeAmPm(valueOrDash(p.dbPlayers_TeeTime));
+            const start   = valueOrDash(getFormattedStartHole(p));
+            const flight  = valueOrDash(resolveFlightName(p.dbPlayers_FlightKey) || p.dbPlayers_FlightKey);
+            const match   = valueOrDash(p.dbPlayers_MatchID);
+            const side    = valueOrDash(p.dbPlayers_MatchPos);
+            const teamKey = resolveTeamName(valueOrDash(p.dbPlayers_TeamKey));
+            const pair    = valueOrDash(p.dbPlayers_PairingID);
+            const pos     = valueOrDash(p.dbPlayers_PairingPos);
+            const scoreId = valueOrDash(p.dbPlayers_PlayerKey);
 
-          desktopParts.push(
-            "<tr>" +
-              "<td>" + esc(name) + "</td>" +
-              "<td>" + esc(tee) + "</td>" +
-              "<td class=\"gsCenter gsMono col-flight\">" + esc(flight) + "</td>" +
-              "<td class=\"gsCenter gsMono col-team\">" + esc(teamKey) + "</td>" +
-              "<td class=\"gsCenter gsMono col-match\">" + esc(match) + "</td>" +
-              "<td class=\"gsCenter gsMono col-flightpos\">" + esc(side) + "</td>" +
-              "<td class=\"gsCenter gsMono\">" + esc(pair) + "</td>" +
-              "<td class=\"gsCenter gsMono\">" + esc(pos) + "</td>" +
-              "<td class=\"gsCenter gsMono\">" + esc(hi) + "</td>" +
-              "<td class=\"gsCenter gsMono\">" + esc(ch) + "</td>" +
-              "<td class=\"gsCenter gsMono\">" + esc(ph) + "</td>" +
-              "<td class=\"gsCenter gsMono\">" + esc(so) + "</td>" +
-              "<td class=\"gsCenter gsMono\">" + esc(time) + "</td>" +
-              "<td class=\"gsCenter gsMono\">" + esc(start) + "</td>" +
-              "<td class=\"gsCenter gsMono\"><a class=\"gsScoreLink\" href=\"#\" data-scoreid=\"" + esc(scoreId) + "\">" + esc(scoreId) + "</a></td>" +
-            "</tr>"
-          );
-          mob.push(buildMobilePlayerCard(p));
+            desktopParts.push(
+              "<tr>" +
+                "<td class=\"gsPairIndent\">" + esc(name) + "</td>" +
+                "<td>" + esc(tee) + "</td>" +
+                "<td class=\"gsCenter gsMono col-flight\">" + esc(flight) + "</td>" +
+                "<td class=\"gsCenter gsMono col-team\">" + esc(teamKey) + "</td>" +
+                "<td class=\"gsCenter gsMono col-match\">" + esc(match) + "</td>" +
+                "<td class=\"gsCenter gsMono col-flightpos\">" + esc(side) + "</td>" +
+                "<td class=\"gsCenter gsMono\">" + esc(pair) + "</td>" +
+                "<td class=\"gsCenter gsMono\">" + esc(pos) + "</td>" +
+                "<td class=\"gsCenter gsMono\">" + esc(hi) + "</td>" +
+                "<td class=\"gsCenter gsMono\">" + esc(ch) + "</td>" +
+                "<td class=\"gsCenter gsMono\">" + esc(ph) + "</td>" +
+                "<td class=\"gsCenter gsMono\">" + esc(so) + "</td>" +
+                "<td class=\"gsCenter gsMono\">" + esc(time) + "</td>" +
+                "<td class=\"gsCenter gsMono\">" + esc(start) + "</td>" +
+                "<td class=\"gsCenter gsMono\"><a class=\"gsScoreLink\" href=\"#\" data-scoreid=\"" + esc(scoreId) + "\">" + esc(scoreId) + "</a></td>" +
+              "</tr>"
+            );
+          });
+
+          desktopParts.push(buildPairingSummaryRow(pairing, colspan));
+
+          // Divider only between sibling pairings within the same group
+          // (i.e. only ever fires for PairPair's two pairings under one
+          // Match) — never after the last pairing, and never at all for
+          // PairField's single-pairing groups.
+          if (idx < group.pairings.length - 1) {
+            desktopParts.push(buildPairingDividerRow(colspan));
+          }
         });
+      });
+
+      // ── Mobile: unchanged — same grouping/rendering as before this
+      // pass, until this view's mobile layout gets its own redesign. ────
+      const mobileGroups = groupRosterForPairing(fg.players);
+      mobileGroups.forEach((group) => {
+        mob.push('<div class="maListRow__group">' + buildPairingHeader(group) + '</div>');
+        group.players.forEach((p) => { mob.push(buildMobilePlayerCard(p)); });
       });
     });
 

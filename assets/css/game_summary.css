@@ -89,6 +89,39 @@
 
 .gsGroupHdr td{ background: var(--brandPrimaryBg); }
 
+/* Flight is a plain gray band — distinguished from Match/Pairing bands
+   below it (which keep the green .gsGroupHdr tint) by indentation and
+   weight as well as this lighter, neutral tint. */
+.gsGroupHdr.gsFlightHdr td{ background: rgba(0,0,0,.05); font-weight: 900; }
+
+/* Match band (PairPair) / Pairing band (PairField, no Match tier) —
+   same tinted treatment as .gsGroupHdr generally, just indented one
+   level in from Flight. */
+.gsMatchHdr td{ padding-left: 26px; font-weight: 900; }
+
+/* Player rows' Name cell, and the pairing summary row's label cell,
+   share this same indentation — flush with the Match/Pairing band
+   above them, not further out. */
+.gsPairIndent{ padding-left: 26px !important; }
+
+/* Pairing summary (subtotal) row — same indentation as players, no
+   background tint; distinguished only by weight and a top rule. Tight
+   vertical padding to keep it visually attached to its own pairing. */
+.gsPairSummary td{
+  font-weight: 900;
+  padding-top: 4px;
+  padding-bottom: 4px;
+  border-top: 1px solid rgba(0,0,0,.18);
+}
+
+/* Divider between the two sibling pairings inside one Match — a single
+   rule, minimal vertical space, never a full empty row's worth of gap. */
+.gsPairDivider td{
+  padding: 2px 0;
+  border-top: 1px solid rgba(0,0,0,.28);
+  line-height: 0;
+}
+
 /* ===== Match-play columns ===== */
 .col-match,
 .col-flightpos { display: none; }
