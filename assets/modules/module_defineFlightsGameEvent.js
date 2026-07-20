@@ -213,7 +213,7 @@
           </button>
         </header>
         <div class="maModal__body" style="padding:14px;">
-          <div class="maHintText">Flights are set for this event and apply to every round. Manage Flights from the Event Roster page.</div>
+          <div class="maHintText">Flights are managed at the EVENT level. Go to the Event Roster to change the Flight setups.</div>
         </div>
         <footer class="maModal__ftr">
           <button type="button" class="maFtrBtn maFtrBtn--cancel" id="dfBtnCancel">Close</button>
