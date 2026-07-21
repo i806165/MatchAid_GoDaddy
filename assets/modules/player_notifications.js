@@ -17,6 +17,17 @@
  *     ggid      : string|number|null  — game ID; omit or null for favorites-only
  *     apiPath   : string              — URL to initPlayerNotifications.php
  *     onClose   : function()          — optional callback when panel is dismissed
+ *     subject   : string              — optional. Overrides the default
+ *                                        "{title} — {venue} — {when}" subject.
+ *     body      : string              — optional. Prepended to the default
+ *                                        "View or Register at {siteUrl}/game/{ggid}"
+ *                                        link (the link always appears) —
+ *                                        e.g. a caller-built tee-sheet
+ *                                        summary (game_summary.js's
+ *                                        buildPlayingGroupsText()) so the
+ *                                        admin never has to copy/paste
+ *                                        anything into the mail draft.
+ *                                        Plain text — not escaped/altered.
  *   }
  *
  * Modal structure (all regions use ma_shared.css):
@@ -852,13 +863,26 @@
     let subject   = "";
     let body      = "";
 
+    const subjectOverride = safeStr(_state.opts.subject);
+    const bodyOverride    = typeof _state.opts.body === "string" ? _state.opts.body : "";
+
     if (game) {
       const venue = game.facilityName || game.courseName || "";
       const when  = formatDateShort(game.playDate, game.playTime);
-      subject     = [game.title, venue, when].filter(Boolean).join(" \u2014 ");
-      body        = siteUrl + "/game/" + game.ggid;
+      subject     = subjectOverride || [game.title, venue, when].filter(Boolean).join(" \u2014 ");
+
+      const link = siteUrl + "/game/" + game.ggid;
+      // A caller-supplied body (e.g. game_summary.js's tee-sheet text)
+      // still gets the "View or Register" link appended — the two are
+      // complementary, not either/or. The link is the one piece every
+      // notification should carry regardless of how much other detail
+      // is in the body.
+      body = bodyOverride
+        ? (bodyOverride + "\n\nView or Register at " + link)
+        : link;
     } else {
-      body = "Attention players;";
+      subject = subjectOverride || "";
+      body    = bodyOverride || "Attention players;";
     }
 
     if (MA.email && typeof MA.email.compose === "function") {

@@ -74,6 +74,7 @@ $maChromeLogoUrl = null;
 </script>
 
 <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
+<script src="<?= ma_asset('/assets/js/ma_SharedBusLogic.js') ?>"></script>
 
 <script src="<?= ma_asset('/assets/modules/module_menuGameSettings.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/module_setGameFormat.js') ?>"></script>

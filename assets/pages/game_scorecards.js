@@ -146,117 +146,19 @@ function renderGroup(group) {
   const subLine = [courseName, dateStr, teeTime, startHole].filter(Boolean).join(" • ");
 
   // ==========================================================================
-  // Header Line 3
+  // Header Line 3 / Line 4 — via shared MA.describeGameFormat()
+  // (ma_SharedBusLogic.js). `gh` (group.gameHeader) fields win over the
+  // outer `game` object, same precedence the old inline code used field
+  // by field; merge once here rather than each field falling back
+  // individually. describeGameFormat() returns plain, UNESCAPED text —
+  // esc() is applied below at the actual render site, same as before.
   // ==========================================================================
-  const gameFormat = String(gh.dbGames_GameFormat || game.dbGames_GameFormat || "").trim();
-  const scoringBasis = String(game.dbGames_ScoringBasis || "").trim();
-  const scoringMethod = String(game.dbGames_ScoringMethod || "").trim();
-  const strokeDist = String(game.dbGames_StrokeDistribution || "").trim();
-  const allowanceRaw = String(game.dbGames_Allowance || "").trim();
+  const fmt = (MA.describeGameFormat)
+    ? MA.describeGameFormat({ ...game, ...gh })
+    : { detailLine: "", scoringSystemLine: "" };
 
-  const hcEff = String(game.dbGames_HCEffectivity || "").trim();
-  const hcDate = String(game.dbGames_HCEffectivityDate || "").trim();
-
-  let formatLabel = "";
-  if (gameFormat && scoringBasis && scoringMethod) {
-    formatLabel = `Format: ${esc(gameFormat)} based on ${esc(scoringBasis)} using ${esc(scoringMethod)} scoring`;
-  } else if (gameFormat && scoringBasis) {
-    formatLabel = `Format: ${esc(gameFormat)} based on ${esc(scoringBasis)}`;
-  } else if (gameFormat && scoringMethod) {
-    formatLabel = `Format: ${esc(gameFormat)} using ${esc(scoringMethod)} scoring`;
-  } else if (gameFormat) {
-    formatLabel = `Format: ${esc(gameFormat)}`;
-  }
-
-  const isGrossScoring = scoringMethod.toUpperCase() === "GROSS" || scoringMethod.toUpperCase() === "ADJ GROSS";
-
-  let hcLabel = "";
-  if (!isGrossScoring) {
-    if (hcEff === "Date" && hcDate) hcLabel = `HC Effective as of ${esc(hcDate)}`;
-    else if (hcEff) hcLabel = `HCP Effective using ${esc(hcEff)}`;
-  }
-
-  let allowanceLabel = "";
-  if (!isGrossScoring && allowanceRaw) {
-    allowanceLabel = `Allowance ${esc(allowanceRaw)}%`;
-  }
-
-  let strokeDistLabel = "";
-  if (strokeDist) strokeDistLabel = `Stroke Distribution ${esc(strokeDist)}`;
-
-  let segmentLabel = "";
-  if (String(gh.dbGames_RotationMethod || game.dbGames_RotationMethod || "").trim() !== "None") {
-    const seg = String(gh.dbGames_Segments || game.dbGames_Segments || "").trim();
-    if (seg) segmentLabel = `${esc(seg)}-Hole Segments`;
-  }
-
-  const line3 = [
-    formatLabel,
-    hcLabel,
-    allowanceLabel,
-    strokeDistLabel,
-    segmentLabel
-  ].filter(Boolean).join(" • ");
-
-  // ==========================================================================
-  // Header Line 4
-  // ==========================================================================
-  const sys = String(game.dbGames_ScoringSystem || "").trim();
-  let line4 = "";
-
-  if (sys === "BestBall") {
-    const cnt =
-      String(
-        game.dbGames_BestBallCnt ||
-        game.dbGames_BestBall ||
-        ""
-      ).trim();
-
-    line4 = cnt
-      ? `Scoring System: Best ${esc(cnt)} Ball${cnt === "1" ? "" : "s"}`
-      : "Scoring System: Best Ball";
-
-  } else if (sys === "DeclareHole") {
-    try {
-      const raw = game.dbGames_HoleDeclaration;
-      const parsed = typeof raw === "string" ? JSON.parse(raw || "{}") : (raw || {});
-      const map = {};
-
-      if (Array.isArray(parsed)) {
-        parsed.forEach((r) => {
-          if (r && r.hole != null) map[r.hole] = r.count;
-        });
-      } else {
-        Object.assign(map, parsed);
-      }
-
-      const pairs = [];
-      for (let h = 1; h <= 18; h++) {
-        const val = map[h] ?? map[String(h)];
-        if (val != null && val !== "") pairs.push(`H${h}:${val}`);
-      }
-
-      line4 = pairs.length
-        ? `Scoring System: Declare by Hole (${pairs.join(" • ")})`
-        : "Scoring System: Declare by Hole";
-
-    } catch (e) {
-      line4 = "Scoring System: Declare by Hole";
-    }
-
-  } else if (sys === "DeclarePlayer") {
-    const perPlayer = String(game.dbGames_PlayerDeclaration || "1").trim();
-    line4 = `Scoring System: Declare by Player (${esc(perPlayer)}x per player)`;
-
-  } else if (sys === "DeclareManual") {
-    line4 = "Scoring System: Declare Scores Discretionally";
-
-  } else if (sys === "AllScores") {
-    line4 = "Scoring System: Use All Scores";
-
-  } else if (sys) {
-    line4 = `Scoring System: ${esc(sys)}`;
-  }
+  const line3 = fmt.detailLine;
+  const line4 = fmt.scoringSystemLine;
 
   // ==========================================================================
   // QR / Right Side

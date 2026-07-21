@@ -1529,125 +1529,91 @@
     setStatus("CSV downloaded.", "ok");
   }
 
-  async function copyThenNotify() {
-      openNotifyModal();
-      try {
-          await copyRichTextToClipboard();
-      } catch (e) {
-          console.warn("[MA] Clipboard copy failed:", e);
-          // modal still opens regardless
+  // ── Playing-groups tee sheet — plain text ──────────────────────────────
+  // Names grouped by tee time (or shotgun start hole), further organized
+  // by Match/Side (PairPair only) and Pairing — independent of
+  // state.scope, since this always describes the same playing-group
+  // structure regardless of which tab (By Player / By Pairing / By
+  // Playing Group) the admin happens to be viewing. This is what seeds
+  // the plain-text email body in emailSelectedRecipients() below, so an
+  // admin who can't copy/paste still gets a fully usable draft with zero
+  // extra steps. Game format/scoring description comes from the shared
+  // MA.describeGameFormat() (ma_SharedBusLogic.js) in its condensed
+  // form, so this matches the scorecard's own wording rather than
+  // inventing a separate phrasing.
+  function buildPlayingGroupsText() {
+    const g = state.game || {};
+    const sorted = normalizeRosterForPlayingGroupDisplay(state.roster || []);
+    const flightGroups = partitionByFlight(sorted);
+    const isPairPair = isPairPairCompetition();
+    const useFlights = flightsActive();
+
+    const fmt = (window.MA && typeof MA.describeGameFormat === "function")
+      ? MA.describeGameFormat(g, { condensed: true })
+      : { condensedLine: "" };
+
+    const lines = [];
+
+    if (fmt.condensedLine) lines.push(fmt.condensedLine);
+    if (lines.length) lines.push("");
+
+    flightGroups.forEach((fg) => {
+      if (useFlights) {
+        lines.push(`Flight ${fg.flightLabel}`);
       }
+
+      const groups = groupRosterForPlayingGroup(fg.players);
+      groups.forEach((group) => {
+        const first = group.players[0] || {};
+        const time  = formatTimeAmPm(valueOrDash(first.dbPlayers_TeeTime));
+        const start = valueOrDash(getFormattedStartHole(first));
+        const when  = (time !== "\u2014") ? `${time} \u00b7 Hole ${start}` : `Hole ${start}`;
+
+        const label = isPairPair
+          ? `Match ${valueOrDash(group.matchId)}, Side ${valueOrDash(group.matchPos)}, Pairing ${valueOrDash(group.pairingId)}`
+          : `Pairing ${valueOrDash(group.pairingId)}`;
+
+        const names = group.players
+          .map(p => safeString(p.dbPlayers_Name).trim())
+          .filter(Boolean)
+          .join(", ");
+
+        lines.push(`${when} \u2014 ${label}: ${names}`);
+      });
+
+      lines.push("");
+    });
+
+    return lines.join("\n").trim();
   }
 
-  function openNotifyModal() {
+  // ── Email playing groups to selected recipients ───────────────────────
+  // Opens the recipient picker (MA.notify) seeded with the plain-text tee
+  // sheet above as the mailto body, so a non-technical admin can hit Send
+  // with no copy/paste required. The rich HTML table is still copied to
+  // the clipboard in the background (same as before) purely as an
+  // affordance for admins who do know how to paste — they can overlay it
+  // into the draft if they want the fuller table instead of the tee sheet.
+  async function emailSelectedRecipients() {
     if (!MA.notify || typeof MA.notify.open !== "function") {
       setStatus("Messaging module not loaded.", "error");
       return;
     }
+
     const g = state.game || {};
     const ggid = String(g.dbGames_GGID || g.dbGames_GGIDnum || "").trim();
+
     MA.notify.open({
       ggid:    ggid,
       apiPath: MA.paths?.apiNotify,
+      body:    buildPlayingGroupsText(),
     });
-  }
 
-  async function emailSummary() {
-    await copyRichTextToClipboard();
-
-    const g = state.game || {};
-    const subject = "MatchAid Game Summary - " + (g.dbGames_Title || "Game");
-
-    const body =
-      "(Note: use ctrl+v / cmd+v to paste the game summary here)\n\n" +
-      "Game: " + (g.dbGames_Title || "") + "\n" +
-      "Facility: " + (g.dbGames_FacilityName || "") + "\n" +
-      "Course: " + (g.dbGames_CourseName || "") + "\n" +
-      "Date: " + (g.dbGames_PlayDate || "") + "\n";
-
-    const recipients = (state.roster || [])
-      .filter(p => p.contactEmail)
-      .map(p => ({ name: p.dbPlayers_Name, email: p.contactEmail }));
-
-    if (MA.email && MA.email.compose) {
-      MA.email.compose({
-        bcc: recipients,
-        subject: subject,
-        body: body,
-        bodyIsHtml: false
-      });
-    } else {
-      setStatus("Email module not loaded.", "error");
-    }
-  }
-
-  function shortDow(dateStr) {
-    const s = String(dateStr || "").trim();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return "";
-
-    const [y, m, d] = s.split("-").map(Number);
-    const dt = new Date(y, m - 1, d);
-    if (isNaN(dt.getTime())) return "";
-
-    return dt.toLocaleDateString("en-US", { weekday: "short" }).slice(0, 2);
-  }
-
-  function buildShortMessageBody() {
-    const g = state.game || {};
-    const title = safeString(g.dbGames_Title || "Game").trim();
-    const date = safeString(g.dbGames_PlayDate || "").trim();
-    const time = formatTimeAmPm(safeString(g.dbGames_PlayTime || "").trim());
-    const ggid = safeString(g.dbGames_GGID || g.dbGames_GGIDnum || "").trim();
-
-    let mmdd = date;
-    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      const parts = date.split("-");
-      mmdd = `${parts[1]}/${parts[2]}`;
-    }
-
-    const dow = shortDow(date);
-    const dateText = [dow, mmdd].filter(Boolean).join(" ");
-
-    return `${title} on ${dateText} at ${time}. View or Register at www.matchaid.org/game/${ggid}`;
-  }
-
-  function emailShortMessage() {
-    const recipients = (state.roster || []).reduce((out, p) => {
-      const method   = safeString(p.contactMethod).trim();
-      const smsEmail = safeString(p.contactSmsEmail).trim();
-      const email    = safeString(p.contactEmail).trim();
-      const name     = safeString(p.dbPlayers_Name).trim();
-
-      if (method === "SMS" && smsEmail) {
-        out.push({ name, email: smsEmail });
-      } else if (method === "Email" && email) {
-        out.push({ name, email: email });
-      }
-
-      return out;
-    }, []);
-
-    if (!recipients.length) {
-      setStatus("No players have a valid preferred contact destination.", "warn");
-      return;
-    }
-
-    const body = buildShortMessageBody();
-    if (body.length > 160) {
-      setStatus("Short message exceeds 160 characters.", "error");
-      return;
-    }
-
-    if (MA.email && MA.email.compose) {
-      MA.email.compose({
-        bcc: recipients,
-        subject: "Game Notice",
-        body: body,
-        bodyIsHtml: false
-      });
-      setStatus("Short message ready.", "success");
-    } else {
-      setStatus("Email module not loaded.", "error");
+    try {
+      await copyRichTextToClipboard();
+    } catch (e) {
+      console.warn("[MA] Clipboard copy failed:", e);
+      // modal still opens regardless
     }
   }
 
@@ -1726,17 +1692,16 @@
     if (!MA.ui || !MA.ui.openActionsMenu) return;
 
     const items = [
-      { label: "Add Game to Calendar",          action: downloadIcsForGame },
-      //{ label: "Send Message to Players", action: openNotifyModal },
-      { label: "Send Message to Players",        action: copyThenNotify },
-      { separator: true },
-      { separator: true },
-      { label: "Copy View to clipboard",         action: copyRichTextToClipboard },
-      { label: "Copy View to clipboard (csv)",   action: copySummaryToClipboard },
-      { label: "Export View to .csv file",       action: downloadCsv },
-      { separator: true },
-      { separator: true },
-      { label: "Recalculate Handicaps",          action: recalculateHandicaps },
+      { category: "EMail" },
+      { label: "Email playing groups to selected recipients", action: emailSelectedRecipients, indent: true },
+
+      { category: "Export" },
+      { label: "Download View to CSV",   action: downloadCsv,            indent: true },
+      { label: "Copy View to Clipboard", action: copySummaryToClipboard, indent: true },
+
+      { category: "Admin Services" },
+      { label: "Add Game to Calendar",  action: downloadIcsForGame,   indent: true },
+      { label: "Recalculate Handicaps", action: recalculateHandicaps, indent: true },
     ];
     MA.ui.openActionsMenu("Actions", items);
   }

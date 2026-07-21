@@ -86,6 +86,166 @@
     return false;
   };
 
+  /**
+   * describeGameFormat(game, opts)
+   * ---------------------------------------------------------------------
+   * Single source of truth for turning a game's raw dbGames_* config
+   * fields into the plain-English format/scoring description shown on
+   * printed scorecards (game_scorecards.js's renderGroup(), "Header
+   * Line 3" / "Header Line 4") and, condensed, in player-facing email
+   * notifications (game_summary.js's tee-sheet email body).
+   *
+   * Originally lived only in game_scorecards.js's renderGroup(); moved
+   * here so both callers describe a game's format identically instead
+   * of maintaining two independently-drifting phrasings.
+   *
+   * Returns everything UNESCAPED (plain text) — callers own HTML
+   * escaping at their own render site (game_scorecards.js still calls
+   * esc() before inserting into innerHTML; a mailto plain-text body
+   * should NOT be escaped). This function does no HTML handling at all.
+   *
+   * Returns every constituent field individually (not just pre-joined
+   * lines) so a future caller can compose its own cut of this
+   * information without touching this function.
+   *
+   * @param {object} game - flat object carrying the dbGames_* fields
+   *   (e.g. state.game). Callers whose data is split across a group
+   *   header + outer game object (game_scorecards.js's `gh` vs `game`)
+   *   should merge before calling: describeGameFormat({ ...game, ...gh }).
+   * @param {object} [opts]
+   * @param {boolean} [opts.condensed=false] - also populate condensedLine.
+   * @return {{
+   *   formatLine: string,
+   *   hcLabel: string,
+   *   allowanceLabel: string,
+   *   strokeDistLabel: string,
+   *   segmentLabel: string,
+   *   scoringSystemLine: string,
+   *   detailLine: string,
+   *   condensedLine: string
+   * }}
+   */
+  MA.describeGameFormat = function (game, opts) {
+    const g = game || {};
+    const o = opts || {};
+
+    const gameFormat    = String(g.dbGames_GameFormat || "").trim();
+    const scoringBasis  = String(g.dbGames_ScoringBasis || "").trim();
+    const scoringMethod = String(g.dbGames_ScoringMethod || "").trim();
+    const strokeDist    = String(g.dbGames_StrokeDistribution || "").trim();
+    const allowanceRaw  = String(g.dbGames_Allowance || "").trim();
+    const hcEff         = String(g.dbGames_HCEffectivity || "").trim();
+    const hcDate        = String(g.dbGames_HCEffectivityDate || "").trim();
+
+    // ── Format sentence ────────────────────────────────────────────────
+    let formatLine = "";
+    if (gameFormat && scoringBasis && scoringMethod) {
+      formatLine = `Format: ${gameFormat} based on ${scoringBasis} using ${scoringMethod} scoring`;
+    } else if (gameFormat && scoringBasis) {
+      formatLine = `Format: ${gameFormat} based on ${scoringBasis}`;
+    } else if (gameFormat && scoringMethod) {
+      formatLine = `Format: ${gameFormat} using ${scoringMethod} scoring`;
+    } else if (gameFormat) {
+      formatLine = `Format: ${gameFormat}`;
+    }
+
+    const isGrossScoring = scoringMethod.toUpperCase() === "GROSS" || scoringMethod.toUpperCase() === "ADJ GROSS";
+
+    // ── Handicap / allowance / stroke distribution ────────────────────
+    let hcLabel = "";
+    if (!isGrossScoring) {
+      if (hcEff === "Date" && hcDate) hcLabel = `HC Effective as of ${hcDate}`;
+      else if (hcEff) hcLabel = `HCP Effective using ${hcEff}`;
+    }
+
+    let allowanceLabel = "";
+    if (!isGrossScoring && allowanceRaw) {
+      allowanceLabel = `Allowance ${allowanceRaw}%`;
+    }
+
+    let strokeDistLabel = "";
+    if (strokeDist) strokeDistLabel = `Stroke Distribution ${strokeDist}`;
+
+    // ── Segments ────────────────────────────────────────────────────────
+    let segmentLabel = "";
+    if (String(g.dbGames_RotationMethod || "").trim() !== "None") {
+      const seg = String(g.dbGames_Segments || "").trim();
+      if (seg) segmentLabel = `${seg}-Hole Segments`;
+    }
+
+    const detailLine = [formatLine, hcLabel, allowanceLabel, strokeDistLabel, segmentLabel]
+      .filter(Boolean).join(" \u2022 ");
+
+    // ── Scoring system sentence ────────────────────────────────────────
+    const sys = String(g.dbGames_ScoringSystem || "").trim();
+    let scoringSystemLine = "";
+
+    if (sys === "BestBall") {
+      const cnt = String(g.dbGames_BestBallCnt || g.dbGames_BestBall || "").trim();
+      scoringSystemLine = cnt
+        ? `Scoring System: Best ${cnt} Ball${cnt === "1" ? "" : "s"}`
+        : "Scoring System: Best Ball";
+
+    } else if (sys === "DeclareHole") {
+      try {
+        const raw = g.dbGames_HoleDeclaration;
+        const parsed = typeof raw === "string" ? JSON.parse(raw || "{}") : (raw || {});
+        const map = {};
+        if (Array.isArray(parsed)) {
+          parsed.forEach((r) => { if (r && r.hole != null) map[r.hole] = r.count; });
+        } else {
+          Object.assign(map, parsed);
+        }
+        const pairs = [];
+        for (let h = 1; h <= 18; h++) {
+          const val = map[h] ?? map[String(h)];
+          if (val != null && val !== "") pairs.push(`H${h}:${val}`);
+        }
+        scoringSystemLine = pairs.length
+          ? `Scoring System: Declare by Hole (${pairs.join(" \u2022 ")})`
+          : "Scoring System: Declare by Hole";
+      } catch (e) {
+        scoringSystemLine = "Scoring System: Declare by Hole";
+      }
+
+    } else if (sys === "DeclarePlayer") {
+      const perPlayer = String(g.dbGames_PlayerDeclaration || "1").trim();
+      scoringSystemLine = `Scoring System: Declare by Player (${perPlayer}x per player)`;
+
+    } else if (sys === "DeclareManual") {
+      scoringSystemLine = "Scoring System: Declare Scores Discretionally";
+
+    } else if (sys === "AllScores") {
+      scoringSystemLine = "Scoring System: Use All Scores";
+
+    } else if (sys) {
+      scoringSystemLine = `Scoring System: ${sys}`;
+    }
+
+    // ── Condensed line — for short/plain-text contexts (email) ────────
+    // Deliberately keeps just game format + scoring system (the two
+    // pieces that change what a player should expect to do/see) and
+    // drops the "Format:"/"Scoring System:" labels plus the handicap/
+    // allowance/stroke-distribution detail, which matters for scoring
+    // but not for "what game am I showing up to".
+    let condensedLine = "";
+    if (o.condensed) {
+      const shortSys = scoringSystemLine.replace(/^Scoring System:\s*/, "");
+      condensedLine = [gameFormat, shortSys].filter(Boolean).join(" \u2022 ");
+    }
+
+    return {
+      formatLine,
+      hcLabel,
+      allowanceLabel,
+      strokeDistLabel,
+      segmentLabel,
+      scoringSystemLine,
+      detailLine,
+      condensedLine
+    };
+  };
+
   window.MA = MA;
 
 })();
