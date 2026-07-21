@@ -113,8 +113,8 @@
   };
 
   const PAIRING_HINTS = {
-    PairField: "Each pairing competes against the full field of players.",
-    PairPair:  "Each pairing competes head-to-head against one other pairing.",
+    PairField: "Medal Play: Each pairing group competes against the field within a flight.",
+    PairPair:  "Match Play: Two pairing groups compete head-to-head.",
   };
 
   function filteredGameLabels(pairing) {
