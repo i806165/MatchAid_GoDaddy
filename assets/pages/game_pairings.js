@@ -781,8 +781,8 @@
 
       const body = rows.map(p => {
         const safeGHIN = esc(p.playerGHIN);
-        // Row Info: Name, Team (if teamConfig), TeeSet, HI:#, CH:#, PH:#, SO:#
-        const teamName = state.teamConfig ? resolveTeamName(p.team, state.teamConfig) : "";
+        // Row Info: Name, Team (if teams active), TeeSet, HI:#, CH:#, PH:#, SO:#
+        const teamName = teamsActive() ? resolveTeamName(p.team, state.teamConfig) : "";
         const info = [
           p.name,
           teamName,
@@ -875,8 +875,8 @@
         p.so ? `SO:${p.so}` : ""
       ].filter(Boolean).join(" • ");
 
-      // Team name: inserted between player name and tee set name when teamConfig is active
-      const teamName = state.teamConfig ? resolveTeamName(p.team, state.teamConfig) : "";
+      // Team name: inserted between player name and tee set name when Team is active
+      const teamName = teamsActive() ? resolveTeamName(p.team, state.teamConfig) : "";
       const primaryParts = [esc(p.name), teamName ? esc(teamName) : "", esc(p.teeSetName)].filter(Boolean).join(" • ");
 
       return `
@@ -1044,13 +1044,19 @@
 
   // Formats: "Pair-3 • Smith, Jones Eagles" (all same team) or
   //          "Pair-3 • Smith Eagles, Jones Hawks" (mixed)
-  // Falls back to no team suffix when teamConfig is null.
+  // Falls back to no team suffix when Team isn't active — same
+  // activation-aware gate as renderUnpairedList()'s teamName (teamsActive(),
+  // not raw teamConfig presence), so a deactivated Team with old config
+  // data still sitting in dbGames_TeamConfig doesn't keep appending team
+  // suffixes to every pairing label (Match summary titles, flight/match
+  // slot card rows, and the unmatched-pairings list all render through
+  // this one function).
   function formatPairingLabel(pairingId, players) {
     const pid = parseInt(pairingId, 10);
     const prefix = `Pair-${pid}`;
     if (!players.length) return prefix;
 
-    if (!state.teamConfig) {
+    if (!teamsActive()) {
       return `${prefix} • ${players.map(p => p.lname || p.name).join(", ")}`;
     }
 
@@ -1291,23 +1297,45 @@
 
     // Boundary clamp: every player in the selected group — plus any
     // existing occupants of the target pairing — must share the same
-    // team AND the same flightKey. All-or-nothing: if anyone mismatches,
-    // skip the whole group, nothing gets seated. Reference comes from
-    // existing occupants when adding to an already-seated pairing (its
-    // boundary is already established and can't be overridden by a new
-    // selection); otherwise from the selected group itself. Blank team/
-    // flightKey ("") is treated as its own value — two unassigned players
-    // match each other, but not an assigned one.
+    // team AND the same flightKey, but ONLY for whichever dimension is
+    // actually active right now (teamsActive()/flightsActive() — the
+    // shared isDimensionActive() hierarchy, not raw data presence).
+    // dbPlayers_TeamKey/dbPlayers_FlightKey persist on a player row even
+    // after that dimension is deactivated (deactivating doesn't clear
+    // stale values, by design), so comparing them unconditionally would
+    // false-positive a mismatch between two players who both have
+    // leftover-but-now-irrelevant keys from before the dimension was
+    // turned off. This mirrors the same activation-aware clamp already
+    // applied in violatesBoundary() below — that one got it right from
+    // the start, this one hadn't. All-or-nothing: if anyone mismatches
+    // on an active dimension, skip the whole group, nothing gets seated.
+    // Reference comes from existing occupants when adding to an
+    // already-seated pairing (its boundary is already established and
+    // can't be overridden by a new selection); otherwise from the
+    // selected group itself. Blank team/flightKey ("") is treated as its
+    // own value — two unassigned players match each other, but not an
+    // assigned one — but only when that dimension is active; inactive
+    // dimensions are skipped entirely regardless of value.
     const selectedPlayers = Array.from(state.selectedPlayerGHINs)
       .map(ghin => getPlayerByGHIN(ghin))
       .filter(Boolean);
     const referencePlayer = existingRows[0] || selectedPlayers[0];
     if (referencePlayer) {
+      const checkTeam = teamsActive();
+      const checkFlight = flightsActive();
       const refTeam = referencePlayer.team || "";
       const refFlight = referencePlayer.flightKey || "";
-      const mismatch = selectedPlayers.some(p => (p.team || "") !== refTeam || (p.flightKey || "") !== refFlight);
+      const mismatch = selectedPlayers.some(p =>
+        (checkTeam && (p.team || "") !== refTeam) ||
+        (checkFlight && (p.flightKey || "") !== refFlight)
+      );
       if (mismatch) {
-        return setStatus("Selected players don't share the same team and flight — nothing was paired.", "warn");
+        const what = checkTeam && checkFlight
+          ? "the same team and flight"
+          : checkTeam
+            ? "the same team"
+            : "the same flight";
+        return setStatus(`Selected players don't share ${what} — nothing was paired.`, "warn");
       }
     }
 
