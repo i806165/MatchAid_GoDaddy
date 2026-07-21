@@ -20,6 +20,7 @@ return [
     "AT&T Wireless"     => "@txt.att.net",       // AT&T email-to-text support may be deprecated/limited
     "Verizon"           => "@vtext.com",        // Verizon legacy email-to-text may be deprecated/limited
     "T-Mobile"          => "@tmomail.net",
+    "T-Mobile USA, Inc." => "@tmomail.net",
     "Sprint PCS"        => "@messaging.sprintpcs.com",
     // Common U.S. regional / prepaid / MVNO carriers
     "US Cellular"       => "@email.uscc.net",
