@@ -1540,7 +1540,7 @@ async function onResetChanges() {
     const isEvent = !!(init.game?.dbGames_EID);
     if (chrome.setHeaderLines) {
       chrome.setHeaderLines([
-        isEvent ? "Round TeeTimes" : "Game TeeTimes",
+        isEvent ? "Round Playing Groups" : "Game Playing Groups",
         init.game?.dbGames_Title || "Slotting Board",
         init.game?.dbGames_CourseName || ""
       ]);

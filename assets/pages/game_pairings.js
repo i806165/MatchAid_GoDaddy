@@ -521,7 +521,7 @@
 
     const isEvent = !!(state.game?.dbGames_EID);
     if (chrome && typeof chrome.setHeaderLines === "function") {
-      chrome.setHeaderLines([isEvent ? "Round Pairings" : "Game Pairings", title, subTitle]);
+      chrome.setHeaderLines([isEvent ? "Round Competing Groups" : "Game Competing Groups", title, subTitle]);
     }
 
     if (chrome && typeof chrome.setActions === "function") {

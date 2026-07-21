@@ -56,7 +56,7 @@
                 <line x1="5" y1="12" x2="19" y2="12"></line>
               </svg>
             </button>
-            <div class="gpPanelHdr__title">ASSIGNED GROUPS</div>
+            <div class="gpPanelHdr__title">ASSIGNED PLAYING GROUPS</div>
             <div class="gpPanelHdr__actions">
             <div class="gpPanelHdr__actions"></div>
             </div>
