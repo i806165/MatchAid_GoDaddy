@@ -1,5 +1,5 @@
 <?php
-// /api/admin_home/init.php (optional fallback; primary INIT is server-embedded in games list.php)
+// /api/admin_home/initAdminHome.php (optional fallback; primary INIT is server-embedded in games list.php)
 declare(strict_types=1);
 
 
@@ -29,12 +29,13 @@ $context = [
 ];
 
 // Apply default filters: today .. today+30 or restore last used from session
-// Default filters (used only if no persisted session filters exist)
-$today  = new DateTimeImmutable("today");
-$plus30 = $today->modify("+30 days");
-
-$defaultFrom = $today->format("Y-m-d");
-$defaultTo   = $plus30->format("Y-m-d");
+// Default filters (used only if no persisted session filters exist).
+// "Today" resolved from the browser's local date via MA_dateClientToday
+// (see ma_SharedBusLogic.php) — falls back to server time only if the
+// cookie hasn't been set yet.
+$defaultWindow = ma_resolveDefaultDateWindow(30);
+$defaultFrom = $defaultWindow["dateFrom"];
+$defaultTo   = $defaultWindow["dateTo"];
 
 // --- Restore from session (legacy keys) ---
 $sFromRaw  = trim((string)($_SESSION["AP_FILTERDATEFROM"] ?? ""));

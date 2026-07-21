@@ -101,7 +101,7 @@ if (!is_array($data) || !array_key_exists("games", $data)) {
   exit;
 }
 
-// Stamp yourPlayerKey onto each row — same function init.php/query.php
+// Stamp yourPlayerKey onto each row — same function initAdminHome.php/query.php
 // already call via hydrateAdminGamesList(). Without this, every game
 // row returned by this endpoint is missing yourPlayerKey entirely,
 // which module_sourceGames.js reads as "no player key" (same as an

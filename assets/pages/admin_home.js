@@ -1213,7 +1213,7 @@ function wireFiltersModal() {
     // Fallback: fetch init if not embedded
     (async () => {
       try {
-        const res = await apiAdmin("init.php", {});
+        const res = await apiAdmin("initAdminHome.php", {});
         applyInit(res?.payload || {});
         wireFiltersModal();
       } catch (e) {
@@ -1222,4 +1222,4 @@ function wireFiltersModal() {
       }
     })();
   });
-})();
+})();

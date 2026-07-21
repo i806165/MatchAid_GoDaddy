@@ -32,6 +32,7 @@ define('MA_API_AUTH',  MA_API  . '/auth');
 define('MA_SERVICES',  MA_ROOT . '/services');
 define('MA_SVC_CTX',   MA_SERVICES . '/context');
 define('MA_SVC_DB',    MA_SERVICES . '/database');
+define('MA_SVC_SHARED', MA_SERVICES . '/shared');
 define('MA_SVC_GHIN',  MA_SERVICES . '/GHIN');
 define('MA_APP',       MA_ROOT . '/app');
 define('MA_INCLUDES',  MA_ROOT . '/includes');
@@ -227,6 +228,12 @@ Logger::info("SESSION_CONFIG", [
 
 // Help service — available globally on all pages
 require_once MA_SVC_HELP . '/service_PageHelp.php';
+
+// Cross-page business rules (PHP counterpart to ma_SharedBusLogic.js) —
+// available globally on all pages. Kept separate from the plumbing above
+// on purpose: this file is for domain rules like date-window resolution,
+// not paths/session/config mechanics.
+require_once MA_SVC_SHARED . '/ma_SharedBusLogic.php';
 
 // Optional helper: JSON response
 function ma_respond(int $code, array $body): void {

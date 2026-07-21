@@ -8,6 +8,20 @@
   const MA = (window.MA = window.MA || {});
   MA.paths = MA.paths || {};
 
+  // Refresh the client's local "today" on every page load so PHP can use
+  // it on the *next* request — this load's own SSR payload was already
+  // computed server-side before this script ever runs, so this cookie
+  // can't fix the render it's set during, only the one after it.
+  // Consumed by ma_resolveDefaultDateWindow() in
+  // services/shared/ma_SharedBusLogic.php.
+  (function setClientTodayCookie() {
+    const d = new Date();
+    const ymd = d.getFullYear() + "-" +
+      String(d.getMonth() + 1).padStart(2, "0") + "-" +
+      String(d.getDate()).padStart(2, "0");
+    document.cookie = "MA_dateClientToday=" + ymd + "; path=/; max-age=86400; samesite=Lax; secure";
+  })();
+
   function _jsonHeaders(extra) {
     return Object.assign({ "Content-Type": "application/json" }, extra || {});
   }

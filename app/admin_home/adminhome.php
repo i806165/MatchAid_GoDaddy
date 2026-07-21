@@ -60,13 +60,16 @@ if ($isEventMode) {
   $initPayload = hydrateAdminGamesList($context, $defaultFilters);
   $initPayload['portal'] = $_SESSION["SessionPortal"];
 } else {
-$today  = new DateTimeImmutable("today");
-$plus30 = $today->modify("+30 days");
+// "Today" resolved from the browser's local date via MA_dateClientToday
+// (see ma_SharedBusLogic.php) — falls back to server time only if the
+// cookie hasn't been set yet.
+$defaultWindow = ma_resolveDefaultDateWindow(30);
+$today = DateTimeImmutable::createFromFormat("Y-m-d", $defaultWindow["dateFrom"]);
 
 // Hard-coded "fresh" defaults
 $defaultMode = "current";
-$defaultDateFrom = $today->format("Y-m-d");
-$defaultDateTo   = $plus30->format("Y-m-d");
+$defaultDateFrom = $defaultWindow["dateFrom"];
+$defaultDateTo   = $defaultWindow["dateTo"];
 $defaultScope    = "ME";
 $defaultSelected = [ strval($context["userGHIN"] ?? "") ];
 
