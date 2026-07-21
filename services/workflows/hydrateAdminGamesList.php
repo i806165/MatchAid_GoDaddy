@@ -120,24 +120,20 @@ function hydrateAdminGamesList(array $context, array $filters): array {
 
   // ----------------------------
   // Default date window (match Wix intent)
-  // - current: today .. today+14
-  // - past:    today-14 .. today
+  // - current: today .. today+30
+  // - past:    today-30 .. today
+  // Delegates to ma_resolveDefaultDateWindow() (see ma_SharedBusLogic.php)
+  // — sign of the day count picks the direction, so this no longer needs
+  // its own window math, just its own sign.
   // ----------------------------
   $mode = strval($filters["mode"] ?? "current");
 
   if ($dateFrom === "" || $dateTo === "") {
-    $today = new DateTimeImmutable("today");
+    $spanDays = ($mode === "past") ? -30 : 30;
+    $window = ma_resolveDefaultDateWindow($spanDays);
 
-    if ($mode === "past") {
-      $from = $today->modify("-14 days");
-      $to   = $today;
-    } else { // "current" (default)
-      $from = $today;
-      $to   = $today->modify("+14 days");
-    }
-
-    if ($dateFrom === "") $dateFrom = $from->format("Y-m-d");
-    if ($dateTo === "")   $dateTo   = $to->format("Y-m-d");
+    if ($dateFrom === "") $dateFrom = $window["dateFrom"];
+    if ($dateTo === "")   $dateTo   = $window["dateTo"];
   }
 
   // Dedup/sanitize UI keys for selection rendering

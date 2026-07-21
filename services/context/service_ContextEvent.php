@@ -177,7 +177,11 @@ final class ServiceContextEvent
 
   public static function defaultEventForAdd(): array
   {
-    $today = (new DateTimeImmutable("today"))->format("Y-m-d");
+    // "Today" resolved via ma_resolveClientToday() (see
+    // ma_SharedBusLogic.php) rather than the server's own clock — this
+    // is just a form pre-fill (user can still edit it before save), same
+    // pattern as ServiceContextGame::defaultGameForAdd().
+    $today = ma_resolveClientToday()->format("Y-m-d");
 
     $facilityName = (string)($_SESSION["SessionFacilityName"] ?? $_SESSION["SessionGHINFacilityName"] ?? "");
 

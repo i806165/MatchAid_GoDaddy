@@ -29,8 +29,11 @@ if (empty($_SESSION["clubhomeSession_FacilityID"])) {
 //    - Return visit: restore from CD_FILTER* session vars
 //    - Fresh visit:  default today → today+30
 // ----------------------------------------------------------------
-$today  = new DateTimeImmutable("today");
-$plus30 = $today->modify("+30 days");
+// "Today" resolved via ma_resolveClientToday() (see ma_SharedBusLogic.php)
+// — browser's local date when available, server time only as a
+// last-resort fallback. Same fix already applied to adminhome.php and
+// playerhome.php for this same bug.
+$defaultWindow = ma_resolveDefaultDateWindow(30);
 
 $sessFrom = trim(strval($_SESSION["CD_FILTERDATEFROM"] ?? ""));
 $sessTo   = trim(strval($_SESSION["CD_FILTERDATETO"]   ?? ""));
@@ -38,8 +41,8 @@ $sessTo   = trim(strval($_SESSION["CD_FILTERDATETO"]   ?? ""));
 $isReturn = ($sessFrom !== "" && $sessTo !== "");
 
 $filters = [
-  "dateFrom"   => $isReturn ? $sessFrom : $today->format("Y-m-d"),
-  "dateTo"     => $isReturn ? $sessTo   : $plus30->format("Y-m-d"),
+  "dateFrom"   => $isReturn ? $sessFrom : $defaultWindow["dateFrom"],
+  "dateTo"     => $isReturn ? $sessTo   : $defaultWindow["dateTo"],
   "facilityId" => strval($_SESSION["clubhomeSession_FacilityID"] ?? ""),
 ];
 

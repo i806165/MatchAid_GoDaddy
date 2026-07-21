@@ -38,7 +38,12 @@ public static function queryGames(array $args): array {
   // Decide whether to run "new" logic:
   $hasNew = ($clubId !== "" || $facilityId !== "" || $dateFrom !== "" || $dateTo !== "" || $adminScope !== "" || !empty($selectedKeys));
 
-  $today = (new DateTime("today", new DateTimeZone("America/New_York")))->format("Y-m-d");
+  // "Today" resolved via ma_resolveClientToday() (see ma_SharedBusLogic.php)
+  // — browser's local date when available, server time only as a
+  // last-resort fallback. Previously hardcoded to America/New_York,
+  // which was an earlier fix for this same problem that only worked for
+  // admins in Eastern time.
+  $today = ma_resolveClientToday()->format("Y-m-d");
 
   $where = [];
   $params = [];
@@ -213,7 +218,9 @@ public static function queryGames(array $args): array {
   {
       $msDay = 86400000;
 
-      $today = new DateTimeImmutable('today');
+      // "Today" resolved via ma_resolveClientToday() — see
+      // ma_SharedBusLogic.php and this class's queryGames() for context.
+      $today = ma_resolveClientToday();
       $todayMs = ((int)$today->format('U')) * 1000;
 
       $hasFrom = is_string($fromISO) && $fromISO !== '';
@@ -585,9 +592,11 @@ public static function queryGames(array $args): array {
 
   private static function applyDefaultsForAdd(array &$g, array $ctx): void
   {
-    // UI usually supplies PlayDate, but defaulting keeps DB constraints happy
+    // UI usually supplies PlayDate, but defaulting keeps DB constraints happy.
+    // "Today" resolved via ma_resolveClientToday() — see this class's
+    // queryGames() for why this used to be hardcoded to America/New_York.
     if (empty($g["dbGames_PlayDate"])) {
-      $g["dbGames_PlayDate"] = (new DateTime("today", new DateTimeZone("America/New_York")))->format("Y-m-d");
+      $g["dbGames_PlayDate"] = ma_resolveClientToday()->format("Y-m-d");
     }
 
     $g["dbGames_AdminGHIN"] = (string)($ctx["adminGhin"] ?? "");

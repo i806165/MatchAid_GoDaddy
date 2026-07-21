@@ -157,7 +157,14 @@ function playerGamesBuildVmRow(
   $daysUntil = null;
   if ($playDate !== '') {
     try {
-      $daysUntil = (int)((new DateTimeImmutable('today'))->diff(new DateTimeImmutable($playDate))->format('%r%a'));
+      // Reuses the same $todayYmd already resolved once by the caller
+      // (via ma_resolveClientToday()) rather than independently
+      // re-resolving "today" here — this function used to call
+      // `new DateTimeImmutable('today')` on its own, a second,
+      // server-timezone-dependent resolution sitting right next to the
+      // $todayYmd param it was already being handed.
+      $todayDt = DateTimeImmutable::createFromFormat('Y-m-d', $todayYmd) ?: new DateTimeImmutable('today');
+      $daysUntil = (int)($todayDt->diff(new DateTimeImmutable($playDate))->format('%r%a'));
     } catch (Throwable $e) {
       $daysUntil = null;
     }
@@ -209,9 +216,12 @@ function playerGamesBuildVmRow(
 
 
 function hydratePlayerGamesList(string $userGHIN, array $filters, string $userClubId = '', array $options = []): array {
-  $today = new DateTimeImmutable('today');
-  $defFrom = $today->format('Y-m-d');
-  $defTo = $today->modify('+30 days')->format('Y-m-d');
+  // "Today" resolved via ma_resolveClientToday() (see ma_SharedBusLogic.php)
+  // — browser's local date when available, server time only as a
+  // last-resort fallback.
+  $defaultWindow = ma_resolveDefaultDateWindow(30);
+  $defFrom = $defaultWindow['dateFrom'];
+  $defTo = $defaultWindow['dateTo'];
 
   $dateFrom = trim((string)($filters['dateFrom'] ?? $defFrom));
   $dateTo   = trim((string)($filters['dateTo'] ?? $defTo));
@@ -346,7 +356,11 @@ function hydratePlayerGamesList(string $userGHIN, array $filters, string $userCl
   }
 
   // 6) Apply visibility (security) + derive VM
-  $todayYmd = (new DateTimeImmutable('today'))->format('Y-m-d');
+  // "Today" resolved via ma_resolveClientToday() (see ma_SharedBusLogic.php)
+  // — this single resolution now feeds both isCurrent (below) and
+  // daysUntil inside playerGamesBuildVmRow(), which previously
+  // re-resolved "today" independently a second time.
+  $todayYmd = ma_resolveClientToday()->format('Y-m-d');
   $vm = [];
   $rawVisible = [];
 

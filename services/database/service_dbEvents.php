@@ -39,7 +39,14 @@ final class ServiceDbEvents
     if (!in_array($mode, ["current", "past", "all"], true)) $mode = "current";
 
     $includeCounts = !empty($args["includeCounts"]);
-    $today = (new DateTime("today", new DateTimeZone("America/New_York")))->format("Y-m-d");
+    // "Today" resolved via ma_resolveClientToday() (see ma_SharedBusLogic.php)
+    // — browser's local date when available, server time only as a
+    // last-resort fallback. Previously hardcoded to America/New_York
+    // (same earlier, incomplete fix as service_dbGames.php's queryGames()
+    // legacy branch), but unlike that one, this computation is NOT gated
+    // behind a legacy branch — it runs unconditionally on every call,
+    // making it live on every single Events Home page load.
+    $today = ma_resolveClientToday()->format("Y-m-d");
 
     $selectSql = "SELECT e.*";
     if ($includeCounts) {

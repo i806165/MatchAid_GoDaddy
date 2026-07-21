@@ -27,12 +27,15 @@ if (!$context || empty($context['ok'])) {
   exit;
 }
 
-$today = new DateTimeImmutable('today');
-$plus30 = $today->modify('+30 days');
+// "Today" resolved via ma_resolveClientToday() (see ma_SharedBusLogic.php)
+// — browser's local date when available, server time only as a
+// last-resort fallback. Mirrors the fix already applied to adminhome.php
+// for the same bug.
+$defaultWindow = ma_resolveDefaultDateWindow(30);
 
 // Hard-coded "fresh" defaults
-$defaultDateFrom = $today->format('Y-m-d');
-$defaultDateTo   = $plus30->format('Y-m-d');
+$defaultDateFrom = $defaultWindow['dateFrom'];
+$defaultDateTo   = $defaultWindow['dateTo'];
 $defaultSelected = [];
 $defaultPreset   = 'OPEN'; // Default to "Open Games" (All Available)
 

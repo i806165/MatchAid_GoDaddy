@@ -243,7 +243,12 @@ final class ServiceContextGame
    */
     public static function defaultGameForAdd(): array
     {
-      $today = (new DateTimeImmutable("today"))->format("Y-m-d");
+      // "Today" resolved via ma_resolveClientToday() (see
+      // ma_SharedBusLogic.php) rather than the server's own clock —
+      // this is just a form pre-fill (user can still edit it before
+      // save), but there's no reason for it to disagree with the
+      // browser's actual local date.
+      $today = ma_resolveClientToday()->format("Y-m-d");
 
       // Start with a minimal shell for screen-driven fields.
       // NOTE: any additional DB fields not shown on screen will be filled by applyAddDefaults().

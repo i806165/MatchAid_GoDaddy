@@ -46,11 +46,13 @@ function hydrateClubDemand(array $context, array $filters): array {
   $dateTo   = trim(strval($filters["dateTo"]   ?? ""));
 
   if ($dateFrom === "" || $dateTo === "") {
-    $today  = new DateTimeImmutable("today");
-    $plus30 = $today->modify("+30 days");
+    // "Today" resolved via ma_resolveClientToday() (see
+    // ma_SharedBusLogic.php) — browser's local date when available,
+    // server time only as a last-resort fallback.
+    $defaultWindow = ma_resolveDefaultDateWindow(30);
 
-    if ($dateFrom === "") $dateFrom = $today->format("Y-m-d");
-    if ($dateTo   === "") $dateTo   = $plus30->format("Y-m-d");
+    if ($dateFrom === "") $dateFrom = $defaultWindow["dateFrom"];
+    if ($dateTo   === "") $dateTo   = $defaultWindow["dateTo"];
   }
 
   // ----------------------------------------------------------------
