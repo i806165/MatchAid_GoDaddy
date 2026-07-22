@@ -783,6 +783,17 @@ function markDirty(playerId, rawScore, declared) {
       });
     }
 
+    if (MA.enterScoresBatch) {
+      items.push({ separator: true });
+      items.push({
+        label:  'Score Batch Entry',
+        action: () => MA.enterScoresBatch.open({
+          playerKey: getBaselinePlayerKey(),
+          onSaved:   () => window.location.reload(),
+        }),
+      });
+    }
+
     MA.ui.openActionsMenu("Scoring Actions", items);
   }
 

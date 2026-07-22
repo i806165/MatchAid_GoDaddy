@@ -397,44 +397,6 @@ final class ServiceScoreEntry
      * @param string $scoringMethod 'NET' or 'ADJ GROSS'
      * @return array                Keyed by GHIN => bool (true = declared)
      */
-    /**
-     * Resolve the declare count (N) for a single hole, based on the game's
-     * scoring system. Single source of truth — used by both the live
-     * scoring path (resolveDeclaredScores) and the safety-net recalculation
-     * path (ServiceBlindPlayer::recalculateDeclaredFlags) so they can't
-     * drift out of sync with each other.
-     *
-     * @param array $gameRow        Game record (dbGames_* fields)
-     * @param int   $holeNumber     Hole in question (1-18)
-     * @param int   $validRowCount  Number of players with a valid score on this hole
-     *                              (used for the AllScores system)
-     * @return int  Number of scores to declare on this hole
-     */
-    public static function resolveNForHole(array $gameRow, int $holeNumber, int $validRowCount): int
-    {
-        $scoringSystem = (string)($gameRow['dbGames_ScoringSystem'] ?? 'BestBall');
-
-        if ($scoringSystem === 'AllScores') {
-            return $validRowCount;
-        }
-        if ($scoringSystem === 'DeclareHole') {
-            $holeDecls = $gameRow['dbGames_HoleDeclaration'] ?? [];
-            if (is_string($holeDecls)) {
-                $holeDecls = json_decode($holeDecls, true) ?: [];
-            }
-            $found = array_values(array_filter(
-                $holeDecls,
-                static fn($h) => (int)($h['hole'] ?? 0) === $holeNumber
-            ));
-            return (int)($found[0]['count'] ?? 1);
-        }
-        if ($scoringSystem === 'BestBall') {
-            return (int)($gameRow['dbGames_BestBall'] ?? 1);
-        }
-
-        return 1;
-    }
-
     public static function resolveDeclaredForHole(
         array  $scoreRows,
         int    $n,
@@ -489,7 +451,22 @@ final class ServiceScoreEntry
         foreach ($partitions as $pairingId => $rows) {
             $validRows = array_values(array_filter($rows, static fn($r) => is_numeric($r['raw'])));
 
-            $n = self::resolveNForHole($gameRow, $holeNumber, count($validRows));
+            $n = 1;
+            if ($scoringSystem === 'AllScores') {
+                $n = count($validRows);
+            } elseif ($scoringSystem === 'DeclareHole') {
+                $holeDecls = $gameRow['dbGames_HoleDeclaration'] ?? [];
+                if (is_string($holeDecls)) {
+                    $holeDecls = json_decode($holeDecls, true) ?: [];
+                }
+                $foundHole = array_values(array_filter(
+                    $holeDecls,
+                    static fn($h) => (int)($h['hole'] ?? 0) === $holeNumber
+                ));
+                $n = (int)($foundHole[0]['count'] ?? 1);
+            } elseif ($scoringSystem === 'BestBall') {
+                $n = (int)($gameRow['dbGames_BestBall'] ?? 1);
+            }
 
             $declared = self::resolveDeclaredForHole($rows, $n, $scoringMethod);
 
@@ -751,6 +728,67 @@ final class ServiceScoreEntry
     // 6. Save / Conflict Handling
     // ==========================================================================
 
+    // ==========================================================================
+    // 6a. Batch Entry (self-hydrating: playerKey in, gameRow+players out)
+    // ==========================================================================
+
+    /**
+     * Hydration for module_enterScoresBatch.js. Scoped to the requesting
+     * scorecard only (getPlayersByPlayerKey), not the full game roster.
+     * Lighter than buildLaunchPayload() — no rotation context, no per-hole
+     * declare resolution at load time (declare is resolved server-side on
+     * save, per the locked batch-entry contract).
+     */
+    public static function buildScoresBatchPayload(string $playerKey): array
+    {
+        $players = ServiceDbPlayers::getPlayersByPlayerKey($playerKey);
+        if (!$players) {
+            return ['ok' => false, 'message' => 'ScoreCard ID not found.'];
+        }
+        $players = array_map([self::class, 'hydratePlayerFields'], $players);
+
+        $ggid = (int)($players[0]['dbPlayers_GGID'] ?? 0);
+        if ($ggid <= 0) {
+            return ['ok' => false, 'message' => 'Game not found for ScoreCard ID.'];
+        }
+
+        $gameRow = ServiceDbGames::getGameByGGID($ggid);
+        if (!$gameRow) {
+            return ['ok' => false, 'message' => 'Game context not found.'];
+        }
+
+        $players = self::sortLaunchPlayers($gameRow, $players);
+
+        // Par row — same canonical source applyHoleScore()/buildScoreEntryRow()
+        // already use, keyed by hole number. First player's tee is canonical
+        // for the pairing (locked decision — mixed-tee groups are rare and
+        // not specially handled).
+        $parByHole = [];
+        $courseMap = ServiceScoreCard::getCourseInfoMap($gameRow, $players[0]);
+        foreach ($courseMap as $holeNumber => $info) {
+            $parByHole[(int)$holeNumber] = self::numOrNull($info['par'] ?? null);
+        }
+
+        $playersPayload = [];
+        foreach ($players as $playerRow) {
+            $scoresJson = self::buildOrHydratePlayerScores($gameRow, $playerRow);
+            $playersPayload[] = [
+                'playerRow'          => $playerRow,
+                'scoresJson'         => $scoresJson,
+                // Snapshot at hydration — round-tripped by the client at save
+                // time so detectSaveConflict() can diff against fresh DB state.
+                'originalScoresJson' => $scoresJson,
+            ];
+        }
+
+        return [
+            'ok'         => true,
+            'gameRow'    => $gameRow,
+            'players'    => $playersPayload,
+            'parByHole'  => $parByHole,
+        ];
+    }
+
     public static function persistScores(array $request): array
     {
         $gameRow = is_array($request['gameRow'] ?? null) ? $request['gameRow'] : [];
@@ -857,6 +895,179 @@ final class ServiceScoreEntry
             'message' => 'Scores saved.',
             'players' => $savedPlayers,
             'nextHole' => $nextHole
+        ];
+    }
+
+    /**
+     * Batch save for module_enterScoresBatch.js. One DB write per player
+     * after the full hole-loop completes — not one write per hole.
+     *
+     * $request['players'][] shape: { playerRow, originalScoresJson, holeScores }
+     * holeScores: { "1": 4, "2": 5, ... } — string or int hole-number keys,
+     * only holes the person actually entered.
+     *
+     * Conflict detection follows persistScores() exactly: does not trust the
+     * submitted playerRow as current, re-fetches via getPlayersByPlayerKey()
+     * itself, then reuses detectSaveConflict() unmodified against each
+     * player's originalScoresJson snapshot. Any conflict rejects the whole
+     * batch untouched — nothing partially saved.
+     */
+    public static function persistScoresBatch(array $request): array
+    {
+        $playerKey = trim((string)($request['playerKey'] ?? ''));
+        $scorerGHIN = trim((string)($request['scorerGHIN'] ?? ''));
+        $submittedPlayers = is_array($request['players'] ?? null) ? $request['players'] : [];
+
+        if ($playerKey === '') {
+            return ['ok' => false, 'conflict' => false, 'message' => 'Missing scorecard key.'];
+        }
+        if ($scorerGHIN === '') {
+            return ['ok' => false, 'conflict' => false, 'message' => 'Scorekeeper is required.'];
+        }
+        if (!$submittedPlayers) {
+            return ['ok' => false, 'conflict' => false, 'message' => 'No player data submitted.'];
+        }
+
+        $currentDbPlayers = ServiceDbPlayers::getPlayersByPlayerKey($playerKey);
+        if (!$currentDbPlayers) {
+            return ['ok' => false, 'conflict' => false, 'message' => 'Scoring group not found.'];
+        }
+        $currentDbPlayers = array_map([self::class, 'hydratePlayerFields'], $currentDbPlayers);
+
+        $ggid = trim((string)($currentDbPlayers[0]['dbPlayers_GGID'] ?? ''));
+        if ($ggid === '') {
+            return ['ok' => false, 'conflict' => false, 'message' => 'Missing group identity.'];
+        }
+
+        $gameRow = ServiceDbGames::getGameByGGID((int)$ggid);
+        if (!$gameRow) {
+            return ['ok' => false, 'conflict' => false, 'message' => 'Game context not found.'];
+        }
+
+        $conflictWrappers = array_map(static function (array $p): array {
+            return [
+                'playerRow'          => is_array($p['playerRow'] ?? null) ? $p['playerRow'] : [],
+                'originalScoresJson' => $p['originalScoresJson'] ?? null,
+            ];
+        }, $submittedPlayers);
+
+        $conflicts = self::detectSaveConflict($conflictWrappers, $currentDbPlayers, $gameRow);
+        if ($conflicts) {
+            return [
+                'ok'      => false,
+                'conflict'=> true,
+                'message' => 'Another scorer is already updating this scorecard. Nothing was saved.',
+                'players' => [],
+            ];
+        }
+
+        $holesLabel = (string)($gameRow['dbGames_Holes'] ?? 'All 18');
+        $validHoleRange = $holesLabel === 'F9' ? range(1, 9) : ($holesLabel === 'B9' ? range(10, 18) : range(1, 18));
+
+        $working = [];
+        foreach ($submittedPlayers as $i => $submitted) {
+            $submittedPlayerRow = is_array($submitted['playerRow'] ?? null) ? $submitted['playerRow'] : [];
+            $ghin = trim((string)($submittedPlayerRow['dbPlayers_PlayerGHIN'] ?? ''));
+            if ($ghin === '') {
+                return ['ok' => false, 'conflict' => false, 'message' => 'One or more players are missing GHIN IDs.'];
+            }
+
+            $currentDbPlayer = null;
+            foreach ($currentDbPlayers as $dbPlayer) {
+                if ((string)($dbPlayer['dbPlayers_PlayerGHIN'] ?? '') === $ghin) {
+                    $currentDbPlayer = $dbPlayer;
+                    break;
+                }
+            }
+            if (!$currentDbPlayer) {
+                return ['ok' => false, 'conflict' => false, 'message' => 'One or more players could not be reloaded.'];
+            }
+
+            $working[$i] = [
+                'playerRow'   => $currentDbPlayer,
+                'scoresJson'  => self::buildOrHydratePlayerScores($gameRow, $currentDbPlayer),
+                'holeScores'  => is_array($submitted['holeScores'] ?? null) ? $submitted['holeScores'] : [],
+            ];
+        }
+
+        // Apply each edited hole, then resolve declarations for that hole —
+        // mirrors the live page's per-hole save exactly, just looped across
+        // every edited hole in this batch instead of a single current hole.
+        foreach ($validHoleRange as $holeNumber) {
+            $touchedAny = false;
+
+            foreach ($working as $i => &$w) {
+                $raw = $w['holeScores'][(string)$holeNumber] ?? $w['holeScores'][$holeNumber] ?? null;
+                if ($raw === null || $raw === '') continue;
+                $touchedAny = true;
+
+                self::assertValidRawScore($raw);
+                $w['scoresJson'] = self::applyHoleScore(
+                    $gameRow, $w['playerRow'], $w['scoresJson'], $holeNumber, (float)$raw, false
+                );
+                // buildScoreEntryRow() below re-derives scoresJson internally
+                // from playerRow['dbPlayers_Scores'] rather than trusting a
+                // passed-in copy — keep playerRow mirrored to this hole's
+                // update so that call sees it.
+                $w['playerRow']['dbPlayers_Scores'] = $w['scoresJson'];
+            }
+            unset($w);
+
+            if (!$touchedAny) continue;
+
+            foreach ($working as $i => &$w) {
+                $w['scoreEntryRow'] = self::buildScoreEntryRow($gameRow, $w['playerRow'], $w['scoresJson'], $holeNumber);
+            }
+            unset($w);
+
+            self::resolveDeclaredScores($gameRow, $working, $holeNumber);
+
+            foreach ($working as $i => &$w) {
+                $w['playerRow']['dbPlayers_Scores'] = $w['scoresJson'];
+            }
+            unset($w);
+        }
+
+        $savedPlayers = [];
+        foreach ($working as $w) {
+            $ghin = (string)($w['playerRow']['dbPlayers_PlayerGHIN'] ?? '');
+
+            $pairingPos = (string)($w['playerRow']['dbPlayers_PairingPos'] ?? '');
+            if (!in_array($pairingPos, ['1', '2'], true)) {
+                $pairingPos = '1';
+            }
+
+            $fields = [
+                'dbPlayers_Scores'     => json_encode($w['scoresJson']),
+                'dbPlayers_ScoreKeeper'=> $scorerGHIN,
+                // Left untouched, per locked decision — batch has no
+                // current-hole concept to derive a start hole from.
+                'dbPlayers_StartHole'  => (string)($w['playerRow']['dbPlayers_StartHole'] ?? ''),
+                'dbPlayers_PairingPos' => $pairingPos,
+            ];
+
+            $saved = ServiceDbPlayers::updateGamePlayerFields($ggid, $ghin, $fields);
+            if (!$saved) {
+                return ['ok' => false, 'conflict' => false, 'message' => 'Unable to persist score updates.'];
+            }
+
+            $savedScores = $saved['dbPlayers_Scores'] ?? null;
+            if (is_string($savedScores)) {
+                $decoded = json_decode($savedScores, true);
+                if (is_array($decoded)) $savedScores = $decoded;
+            }
+
+            $savedPlayers[] = [
+                'dbPlayers_PlayerGHIN' => $ghin,
+                'dbPlayers_Scores'     => $savedScores,
+            ];
+        }
+
+        return [
+            'ok'      => true,
+            'conflict'=> false,
+            'message' => 'Scores saved.',
+            'players' => $savedPlayers,
         ];
     }
 
