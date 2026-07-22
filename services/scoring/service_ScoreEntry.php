@@ -397,6 +397,44 @@ final class ServiceScoreEntry
      * @param string $scoringMethod 'NET' or 'ADJ GROSS'
      * @return array                Keyed by GHIN => bool (true = declared)
      */
+    /**
+     * Resolve the declare count (N) for a single hole, based on the game's
+     * scoring system. Single source of truth — used by both the live
+     * scoring path (resolveDeclaredScores) and the safety-net recalculation
+     * path (ServiceBlindPlayer::recalculateDeclaredFlags) so they can't
+     * drift out of sync with each other.
+     *
+     * @param array $gameRow        Game record (dbGames_* fields)
+     * @param int   $holeNumber     Hole in question (1-18)
+     * @param int   $validRowCount  Number of players with a valid score on this hole
+     *                              (used for the AllScores system)
+     * @return int  Number of scores to declare on this hole
+     */
+    public static function resolveNForHole(array $gameRow, int $holeNumber, int $validRowCount): int
+    {
+        $scoringSystem = (string)($gameRow['dbGames_ScoringSystem'] ?? 'BestBall');
+
+        if ($scoringSystem === 'AllScores') {
+            return $validRowCount;
+        }
+        if ($scoringSystem === 'DeclareHole') {
+            $holeDecls = $gameRow['dbGames_HoleDeclaration'] ?? [];
+            if (is_string($holeDecls)) {
+                $holeDecls = json_decode($holeDecls, true) ?: [];
+            }
+            $found = array_values(array_filter(
+                $holeDecls,
+                static fn($h) => (int)($h['hole'] ?? 0) === $holeNumber
+            ));
+            return (int)($found[0]['count'] ?? 1);
+        }
+        if ($scoringSystem === 'BestBall') {
+            return (int)($gameRow['dbGames_BestBall'] ?? 1);
+        }
+
+        return 1;
+    }
+
     public static function resolveDeclaredForHole(
         array  $scoreRows,
         int    $n,
@@ -451,22 +489,7 @@ final class ServiceScoreEntry
         foreach ($partitions as $pairingId => $rows) {
             $validRows = array_values(array_filter($rows, static fn($r) => is_numeric($r['raw'])));
 
-            $n = 1;
-            if ($scoringSystem === 'AllScores') {
-                $n = count($validRows);
-            } elseif ($scoringSystem === 'DeclareHole') {
-                $holeDecls = $gameRow['dbGames_HoleDeclaration'] ?? [];
-                if (is_string($holeDecls)) {
-                    $holeDecls = json_decode($holeDecls, true) ?: [];
-                }
-                $foundHole = array_values(array_filter(
-                    $holeDecls,
-                    static fn($h) => (int)($h['hole'] ?? 0) === $holeNumber
-                ));
-                $n = (int)($foundHole[0]['count'] ?? 1);
-            } elseif ($scoringSystem === 'BestBall') {
-                $n = (int)($gameRow['dbGames_BestBall'] ?? 1);
-            }
+            $n = self::resolveNForHole($gameRow, $holeNumber, count($validRows));
 
             $declared = self::resolveDeclaredForHole($rows, $n, $scoringMethod);
 

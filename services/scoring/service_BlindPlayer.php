@@ -270,7 +270,6 @@ final class ServiceBlindPlayer
             if (!$gameRow) {
                 return ['ok' => false, 'message' => 'Game not found.'];
             }
-            $n             = (int)($gameRow['dbGames_BestBall'] ?? 1);
             $scoringMethod = (string)($gameRow['dbGames_ScoringMethod'] ?? 'NET');
             $holesLabel    = (string)($gameRow['dbGames_Holes'] ?? 'All 18');
 
@@ -365,6 +364,7 @@ final class ServiceBlindPlayer
                         ];
                     }
 
+                    $n        = ServiceScoreEntry::resolveNForHole($gameRow, $holeNumber, count($scoreRows));
                     $declared = ServiceScoreEntry::resolveDeclaredForHole($scoreRows, $n, $scoringMethod);
 
                     foreach ($members as $member) {
