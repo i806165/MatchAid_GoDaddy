@@ -591,7 +591,7 @@
   // -------------------------------------------------------------------------
 
   function renderGroupKeySwitcher() {
-    const canSwitch = state.isGameAdmin && state.scorecards.length > 0;
+    const canSwitch = !!state.sessionGhin && state.scorecards.length > 0;
 
     if (el.groupKeyBtn) {
       el.groupKeyBtn.disabled = !canSwitch;
@@ -622,7 +622,7 @@
   }
 
   function openScorecardSwitcher() {
-    if (!state.isGameAdmin) return;
+    if (!state.sessionGhin) return;
     if (!MA.ui || !MA.ui.openActionsMenu) return;
 
     const items = buildScorecardSwitcherItems();
