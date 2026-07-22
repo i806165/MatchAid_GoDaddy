@@ -321,7 +321,7 @@ function maDrawHeaderBlock(TCPDF $pdf, array $game, array $gh, array $group, flo
         } catch (Throwable $e) {
             // A bad/corrupt/unsupported logo file should never take down
             // the whole PDF -- log it and just render without the logo.
-            Logger::error('SCORECARD_PDF_LOGO_SKIPPED', ['path' => $logoPath, 'err' => $e->getMessage()]);
+            //Logger::error('SCORECARD_PDF_LOGO_SKIPPED', ['path' => $logoPath, 'err' => $e->getMessage()]);
         }
     }
 

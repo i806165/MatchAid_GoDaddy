@@ -268,6 +268,36 @@ try {
             ]);
         }
 
+        /*
+         * Applicability mirrors the client's isShown() check: a category
+         * is relevant to this game only if its scope is "individual" or
+         * matches this competition's pairing scope.
+         *
+         * Irrelevant or disabled categories are never displayed/edited by
+         * the user, so their underlying data (segments/pointsConfig) is
+         * not something the client can be expected to have shaped
+         * correctly. Pass such categories through untouched rather than
+         * validating or reshaping them — the screen had no data to base
+         * an adjustment on.
+         */
+        $applicable =
+            $scope === "individual" ||
+            $scope === ($competition === "PairPair" ? "pairpair" : "pairfield");
+
+        if (!$applicable || $state === "disabled") {
+            $normalizedByKey[$key] = [
+                "key"   => $key,
+                "kind"  => $kind,
+                "scope" => $scope,
+                "state" => "disabled",
+            ] + array_intersect_key(
+                $category,
+                ["pointsConfig" => true, "tieRule" => true, "segments" => true]
+            );
+
+            continue;
+        }
+
         // ── Placement categories ───────────────────────────────────────
 
         if ($kind === "placement") {

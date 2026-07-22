@@ -35,6 +35,7 @@ return [
     "Visible"           => "@vtext.com",        // Verizon network
     "Xfinity Mobile"    => "@vtext.com",        // Verizon network
     "Spectrum Mobile"   => "@vtext.com",        // Verizon network
+    "CSC Wireless, LLC" => "@vtext.com",        // U.S. Cellular network
     // Legacy/common listings
     "Virgin Mobile"     => "@vmobl.com",
     "Nextel"            => "@messaging.nextel.com",

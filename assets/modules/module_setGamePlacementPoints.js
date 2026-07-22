@@ -195,7 +195,10 @@
       categories[def.key]._expanded = categories[def.key]._checked;
     });
 
-    resegmentMatchResult(categories.matchResult, scoringSegments);
+    const matchResultDef = CATEGORY_DEFS.find(d => d.key === "matchResult");
+    if (matchResultDef && isShown(matchResultDef, competition)) {
+      resegmentMatchResult(categories.matchResult, scoringSegments);
+    }
 
     _state = { competition, scoringSegments, categories };
   }
@@ -223,8 +226,12 @@
     const out = CATEGORY_DEFS.map(def => {
       const cat = _state.categories[def.key];
       if (!isShown(def, _state.competition)) {
+        // Irrelevant for this game type: force disabled and leave the
+        // underlying data (segments/pointsConfig) completely untouched.
+        // The screen never rendered this category, so nothing here
+        // reflects a user decision or valid current shape.
         const { _checked, _expanded, ...rest } = cat;
-        return rest;
+        return { ...rest, state: "disabled" };
       }
       const base = { key: def.key, kind: def.kind, scope: def.scope, state: cat._checked ? "active" : "disabled" };
       if (def.kind === "segments") {
