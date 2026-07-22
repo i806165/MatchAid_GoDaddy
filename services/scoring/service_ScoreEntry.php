@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . "/../../bootstrap.php";
 require_once __DIR__ . '/service_ScoreCard.php';
 require_once MA_SVC_DB . '/service_dbPlayers.php';
+require_once MA_SVC_DB . '/service_dbGames.php';
 require_once __DIR__ . '/service_ScoreRotation.php';
 
 /**
