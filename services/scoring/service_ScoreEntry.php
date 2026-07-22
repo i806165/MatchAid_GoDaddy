@@ -758,6 +758,18 @@ final class ServiceScoreEntry
             return ['ok' => false, 'message' => 'Game context not found.'];
         }
 
+        // Gate: batch entry doesn't account for rotation-aware PairPair
+        // pairing changes across spin segments — declare partitioning would
+        // silently use the baseline pairing for every hole instead of the
+        // hole-specific effective pairing. Not safe until that's built.
+        if (ServiceScoreRotation::isRotationAwarePairPair($gameRow)) {
+            return [
+                'ok'      => false,
+                'gated'   => true,
+                'message' => 'Batch score entry is not available for games that rotate partners.',
+            ];
+        }
+
         $players = self::sortLaunchPlayers($gameRow, $players);
 
         // Par row — same canonical source applyHoleScore()/buildScoreEntryRow()
@@ -905,8 +917,12 @@ final class ServiceScoreEntry
      * after the full hole-loop completes — not one write per hole.
      *
      * $request['players'][] shape: { playerRow, originalScoresJson, holeScores }
-     * holeScores: { "1": 4, "2": 5, ... } — string or int hole-number keys,
-     * only holes the person actually entered.
+     * holeScores keys only the holes actually touched this save — an entry
+     * with a numeric value applies that score, an entry with null clears it,
+     * and any hole not present in the map is left completely alone. Holes
+     * with pre-existing scores that weren't edited this session must NOT
+     * appear here — including them would cause every one of the player's
+     * scores to be reprocessed (and declare flags recomputed) on every save.
      *
      * Conflict detection follows persistScores() exactly: does not trust the
      * submitted playerRow as current, re-fetches via getPlayersByPlayerKey()
@@ -944,6 +960,15 @@ final class ServiceScoreEntry
         $gameRow = ServiceDbGames::getGameByGGID((int)$ggid);
         if (!$gameRow) {
             return ['ok' => false, 'conflict' => false, 'message' => 'Game context not found.'];
+        }
+
+        if (ServiceScoreRotation::isRotationAwarePairPair($gameRow)) {
+            return [
+                'ok'      => false,
+                'conflict'=> false,
+                'gated'   => true,
+                'message' => 'Batch score entry is not available for games that rotate partners.',
+            ];
         }
 
         $conflictWrappers = array_map(static function (array $p): array {
@@ -999,14 +1024,23 @@ final class ServiceScoreEntry
             $touchedAny = false;
 
             foreach ($working as $i => &$w) {
-                $raw = $w['holeScores'][(string)$holeNumber] ?? $w['holeScores'][$holeNumber] ?? null;
-                if ($raw === null || $raw === '') continue;
+                $hasInt = array_key_exists($holeNumber, $w['holeScores']);
+                $hasStr = array_key_exists((string)$holeNumber, $w['holeScores']);
+                if (!$hasInt && !$hasStr) continue; // not touched this save — leave alone
                 $touchedAny = true;
 
-                self::assertValidRawScore($raw);
-                $w['scoresJson'] = self::applyHoleScore(
-                    $gameRow, $w['playerRow'], $w['scoresJson'], $holeNumber, (float)$raw, false
-                );
+                $raw = $hasInt ? $w['holeScores'][$holeNumber] : $w['holeScores'][(string)$holeNumber];
+
+                if ($raw === null || $raw === '') {
+                    $w['scoresJson'] = self::clearHoleScore(
+                        $gameRow, $w['playerRow'], $w['scoresJson'], $holeNumber
+                    );
+                } else {
+                    self::assertValidRawScore($raw);
+                    $w['scoresJson'] = self::applyHoleScore(
+                        $gameRow, $w['playerRow'], $w['scoresJson'], $holeNumber, (float)$raw, false
+                    );
+                }
                 // buildScoreEntryRow() below re-derives scoresJson internally
                 // from playerRow['dbPlayers_Scores'] rather than trusting a
                 // passed-in copy — keep playerRow mirrored to this hole's

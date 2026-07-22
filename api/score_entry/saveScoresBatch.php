@@ -32,6 +32,10 @@ try {
         respond(200, $result);
     }
 
+    if (!empty($result['gated'])) {
+        respond(200, $result);
+    }
+
     if (!empty($result['conflict'])) {
         respond(409, $result);
     }

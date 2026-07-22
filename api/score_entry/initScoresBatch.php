@@ -35,6 +35,10 @@ try {
 
     $result = ServiceScoreEntry::buildScoresBatchPayload($playerKey);
 
+    if (!empty($result['gated'])) {
+        respond(200, $result);
+    }
+
     if (empty($result['ok'])) {
         respond(404, $result);
     }

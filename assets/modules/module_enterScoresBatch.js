@@ -91,6 +91,7 @@
       showTabs,
       activeSide: holesLabel === "B9" ? "B9" : "F9",
       holeScores: {},   // { ghin: { holeNumber: rawScore } }
+      touchedHoles: new Set(), // "ghin|hole" — only cells actually edited this session
       dirty: false,
       busy: false,
     };
@@ -297,6 +298,7 @@
         } else {
           _state.holeScores[ghin][hole] = val;
         }
+        _state.touchedHoles.add(ghin + "|" + hole);
         markDirty();
 
         const holes = activeHoles();
@@ -329,10 +331,17 @@
       scorerGHIN,
       players: _state.players.map(p => {
         const ghin = ghinOf(p);
+        const holeScores = {};
+        _state.touchedHoles.forEach(key => {
+          const [g, h] = key.split("|");
+          if (g !== ghin) return;
+          const v = _state.holeScores[ghin]?.[h];
+          holeScores[h] = (v === undefined) ? null : v;
+        });
         return {
           playerRow: p.playerRow,
           originalScoresJson: p.originalScoresJson,
-          holeScores: _state.holeScores[ghin] || {},
+          holeScores,
         };
       }),
     };
@@ -346,6 +355,16 @@
         const onSaved = _config.onSaved;
         close();
         if (typeof onSaved === "function") onSaved();
+        return;
+      }
+
+      if (res && res.gated) {
+        await MA.ui.confirm({
+          title: "Not available for this game",
+          message: res.message || "Batch score entry is not available for games that rotate partners.",
+          okOnly: true,
+        });
+        close();
         return;
       }
 
@@ -392,6 +411,15 @@
       const res = await MA.postJson(`${base}/initScoresBatch.php`, { playerKey: _config.playerKey });
 
       MA.ui.hideBusy();
+
+      if (res && res.gated) {
+        await MA.ui.confirm({
+          title: "Not available for this game",
+          message: res.message || "Batch score entry is not available for games that rotate partners.",
+          okOnly: true,
+        });
+        return;
+      }
 
       if (!res || !res.ok) {
         MA.ui.notify(res?.message || "Unable to load scorecard.", "danger");
