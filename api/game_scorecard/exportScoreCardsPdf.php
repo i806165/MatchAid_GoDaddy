@@ -172,7 +172,7 @@ function maDrawScoreCardGroup(TCPDF $pdf, array $game, array $group, float $yTop
     // ---- Table -------------------------------------------------------
     $courseRows  = is_array($group['courseInfo'] ?? null) ? $group['courseInfo'] : [];
     $players     = is_array($group['players'] ?? null) ? $group['players'] : [];
-    $isMatchPlay = strtolower((string)($group['competition'] ?? '')) === 'pairpair';
+    $isMatchPlay = strtolower(trim((string)($gh['dbGames_Competition'] ?? ''))) === 'pairpair';
 
     // FIX: 3 meta columns (Out, In, Tot), not 2 -- see const block above.
     $holeColW = ($w - PDF_LABEL_W - (3 * PDF_META_W)) / 18;
@@ -208,18 +208,21 @@ function maDrawScoreCardGroup(TCPDF $pdf, array $game, array $group, float $yTop
 
     // player rows (blank score boxes with small stroke-mark numerals)
     $slots = $isMatchPlay
-        ? [$players[0] ?? null, $players[1] ?? null, null, $players[2] ?? null, $players[3] ?? null, null]
+        ? maBuildMatchPlaySlots($players)
         : array_pad(array_slice($players, 0, 4), 6, null);
 
     foreach ($slots as $p) {
         $rowY = $pdf->GetY();
         $pdf->SetX($x);
 
+        $isSeparator = is_array($p) && !empty($p['__separator__']);
+        $isPlayer    = $p && !$isSeparator;
+
         // Draw the bordered name cell empty first, then overlay two lines
         // of text on top of it (name+HC bold, tee small/gray beneath) --
         // Cell() can't do two lines on its own.
         $pdf->Cell(PDF_LABEL_W, PDF_PLAYER_ROW_H, '', 1, 0, 'L');
-        if ($p) {
+        if ($isPlayer) {
             $name = (string)($p['playerName'] ?? '');
             $hc   = is_numeric($p['playerHC'] ?? null) ? " ({$p['playerHC']})" : '';
             $tee  = (string)($p['tee'] ?? '');
@@ -233,13 +236,18 @@ function maDrawScoreCardGroup(TCPDF $pdf, array $game, array $group, float $yTop
                 maSetFont($pdf, '', 8);
                 $pdf->Cell(PDF_LABEL_W - 6, 8, $tee, 0, 0, 'L');
             }
+        } elseif ($isSeparator) {
+            // Pairing separator row only -- right-justified "+/-" in place of a name.
+            $pdf->SetXY($x + 3, $rowY);
+            maSetFont($pdf, 'B', 8);
+            $pdf->Cell(PDF_LABEL_W - 6, PDF_PLAYER_ROW_H, '+/-', 0, 0, 'R');
         }
 
         $cx = $x + PDF_LABEL_W;
         for ($h = 1; $h <= 9; $h++) {
             $pdf->SetXY($cx, $rowY);
             $pdf->Cell($holeColW, PDF_PLAYER_ROW_H, '', 1, 0, 'C');
-            if ($p) maDrawStrokeMark($pdf, $cx, $rowY, $holeColW, $p['strokes']['h' . $h] ?? null);
+            if ($isPlayer) maDrawStrokeMark($pdf, $cx, $rowY, $holeColW, $p['strokes']['h' . $h] ?? null);
             $cx += $holeColW;
         }
         $pdf->SetXY($cx, $rowY);
@@ -248,7 +256,7 @@ function maDrawScoreCardGroup(TCPDF $pdf, array $game, array $group, float $yTop
         for ($h = 10; $h <= 18; $h++) {
             $pdf->SetXY($cx, $rowY);
             $pdf->Cell($holeColW, PDF_PLAYER_ROW_H, '', 1, 0, 'C');
-            if ($p) maDrawStrokeMark($pdf, $cx, $rowY, $holeColW, $p['strokes']['h' . $h] ?? null);
+            if ($isPlayer) maDrawStrokeMark($pdf, $cx, $rowY, $holeColW, $p['strokes']['h' . $h] ?? null);
             $cx += $holeColW;
         }
         $pdf->SetXY($cx, $rowY);
@@ -262,6 +270,38 @@ function maDrawScoreCardGroup(TCPDF $pdf, array $game, array $group, float $yTop
     // ---- Footer (SCORER / ATTEST lines + Game/Pairings + copyright) ------
     $footerY = $pdf->GetY() + 8;
     maDrawFooter($pdf, $gh, $group, $x, $footerY, $w);
+}
+
+/**
+ * Builds the 6 player-row slots for a PairPair (match play) scorecard, with
+ * exactly one blank row placed between the two pairing sides.
+ *
+ * The outer grouping (which match/scorecard this is) is already handled
+ * upstream -- $players here only ever contains the players for one
+ * PlayerKey group. The inner grouping, which splits that group into its
+ * two head-to-head sides, is dbPlayers_PairingID: all players on one side
+ * share a PairingID, the other side has a different one. This field
+ * survives into $players because buildPlayersArray() in service_ScoreCard.php
+ * array_merges the original player row into its output. Each side is
+ * clamped to 1 or 2 players.
+ *
+ * Total rows stay fixed at 6 (same budget as before); any blanks left over
+ * after the single separator are pushed to the end, same as today.
+ */
+function maBuildMatchPlaySlots(array $players): array {
+    $groups = []; // pairingID => [players...], in first-seen order
+    foreach ($players as $p) {
+        $pid = trim((string)($p['dbPlayers_PairingID'] ?? ''));
+        $groups[$pid][] = $p;
+    }
+
+    $sides = array_values($groups);
+    $sideA = array_slice($sides[0] ?? [], 0, 2);
+    $sideB = array_slice($sides[1] ?? [], 0, 2);
+
+    $slots = array_merge($sideA, [['__separator__' => true]], $sideB);
+
+    return array_pad(array_slice($slots, 0, 6), 6, null);
 }
 
 /**
