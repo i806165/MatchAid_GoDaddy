@@ -86,6 +86,7 @@
       gameRow: payload.gameRow || {},
       players,
       parByHole: payload.parByHole || {},
+      scorerGHIN: payload.scorerGHIN || "",
       holesLabel,
       showTabs,
       activeSide: holesLabel === "B9" ? "B9" : "F9",
@@ -309,12 +310,18 @@
 
   async function save() {
     if (_state.busy) return;
+
+    if (!_state.scorerGHIN) {
+      MA.ui.notify("Please choose the scorekeeper before entering scores.", "danger");
+      return;
+    }
+
     _state.busy = true;
 
     const saveBtn = _overlay.querySelector("#esbBtnSave");
     if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = "Saving..."; }
 
-    const scorerGHIN = window.__MA_INIT__?.user?.ghin || window.__INIT__?.user?.ghin || "";
+    const scorerGHIN = _state.scorerGHIN;
     const playerKey = String(_state.players[0]?.playerRow?.dbPlayers_PlayerKey || "");
 
     const payload = {

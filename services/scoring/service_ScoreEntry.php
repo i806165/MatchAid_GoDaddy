@@ -787,6 +787,7 @@ final class ServiceScoreEntry
             'gameRow'    => $gameRow,
             'players'    => $playersPayload,
             'parByHole'  => $parByHole,
+            'scorerGHIN' => self::getEffectivePlayerGHIN() ?? '',
         ];
     }
 
