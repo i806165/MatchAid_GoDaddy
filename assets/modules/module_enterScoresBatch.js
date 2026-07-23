@@ -57,15 +57,43 @@
     .esbCell {
       font-size: 13px !important;
       text-align: center;
+      min-height: 28px !important;
     }
     .esbTotalCell {
-      min-height: 32px;
-      border-radius: 10px;
+      min-height: 28px;
+      border-radius: 8px;
       border: 1px solid var(--controlBorder);
       background: rgba(0,0,0,.04);
       display: flex;
       align-items: center;
       justify-content: center;
+    }
+    .esbCard {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .esbRow {
+      display: grid;
+      gap: 6px;
+      padding: 8px 10px;
+      align-items: center;
+    }
+    .esbHead {
+      background: var(--panelControlsBg);
+      border-bottom: 1px solid var(--border);
+    }
+    .esbHPar {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--mutedText);
+      text-align: center;
+    }
+    .esbName {
+      border-right: 1px solid var(--border);
+    }
+    .esbRowAlt {
+      background: #f9f9f8;
     }
   `;
 
@@ -163,30 +191,26 @@
     const holes = activeHoles();
     const players = _state.players;
     const totalLabel = _state.activeSide === "B9" ? "IN" : "OUT";
-    const holeColWidth = "42px";
+    const cols = `150px repeat(${holes.length},40px) 48px`;
 
-    let cols = `130px repeat(${holes.length},${holeColWidth}) 56px`;
-    let html = `<div class="esbGrid" style="display:grid;grid-template-columns:${cols};gap:3px">`;
-
-    html += `<div></div>`;
-    holes.forEach(h => {
-      html += `<div class="esbGridText" style="text-align:center">${h}</div>`;
-    });
-    html += `<div class="esbGridText" style="text-align:center">${totalLabel}</div>`;
-
+    let html = `<div class="esbCard"><div class="esbRow esbHead" style="grid-template-columns:${cols}">`;
     html += `<div></div>`;
     holes.forEach(h => {
       const par = _state.parByHole[h];
-      html += `<div class="esbGridText" style="text-align:center">${par != null ? "Par " + par : ""}</div>`;
+      html += `<div><div class="esbGridText" style="text-align:center">${h}</div><div class="esbHPar">${par != null ? "Par " + par : ""}</div></div>`;
     });
-    html += `<div></div>`;
+    html += `<div class="esbGridText" style="text-align:center">${totalLabel}</div>`;
+    html += `</div>`;
 
-    players.forEach(p => {
+    players.forEach((p, i) => {
       const ghin = ghinOf(p);
-      html += `<div class="esbGridText" style="display:flex;align-items:center">${playerLabel(p)}</div>`;
-      holes.forEach(h => { html += `<div>${cellInput(ghin, h)}</div>`; });
+      const altClass = (i % 2 === 1) ? " esbRowAlt" : "";
+      html += `<div class="esbRow${altClass}" style="grid-template-columns:${cols}">`;
+      html += `<div class="esbGridText esbName">${playerLabel(p)}</div>`;
+      holes.forEach(h => { html += cellInput(ghin, h); });
       const tot = sideTotal(ghin, holes);
       html += `<div class="esbGridText esbTotalCell">${tot ?? ""}</div>`;
+      html += `</div>`;
     });
 
     html += `</div>`;
@@ -230,7 +254,7 @@
       return `<div class="maHelpText" style="font-weight:900">${label}</div>`;
     }
     return `
-      <div class="maSeg" style="width:180px">
+      <div class="maSeg">
         <button type="button" class="maSegBtn esbTab ${_state.activeSide === "F9" ? "is-active" : ""}" data-side="F9">Front 9</button>
         <button type="button" class="maSegBtn esbTab ${_state.activeSide === "B9" ? "is-active" : ""}" data-side="B9">Back 9</button>
       </div>`;
@@ -249,7 +273,7 @@
     const subtitleLine = [courseName, esc(dateStr)].filter(Boolean).join(" &bull; ");
 
     _overlay.innerHTML = `
-      <section class="maModal esbModal" role="dialog" aria-modal="true" style="--modalMaxW: 900px;">
+      <section class="maModal esbModal" role="dialog" aria-modal="true" style="--modalMaxW: 640px;">
         <header class="maModal__hdr">
           <div class="maModal__titles">
             <div class="maModal__title">${titleLine}</div>
