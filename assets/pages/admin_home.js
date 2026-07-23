@@ -1120,7 +1120,7 @@ function wireFiltersModal() {
       MA.chrome.setBottomNav({
         visible: isEventMode
           ? ["eventhome", "eventedit", "eventroster", "eventrounds", "eventsummary"]
-          : ["home", "favorites", "import"],
+          : ["home", "player", "favorites", "import"],
         active: isEventMode ? "eventrounds" : "admin",
         onNavigate: (id) => {
           try {
