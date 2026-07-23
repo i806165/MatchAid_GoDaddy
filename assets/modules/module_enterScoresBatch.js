@@ -96,6 +96,26 @@
     .esbRowAlt {
       background: #f9f9f8;
     }
+    .esbMobileGrid .esbCell {
+      font-size: 15px !important;
+      min-height: 30px !important;
+    }
+    .esbMobileGrid .esbTotalCell {
+      font-size: 15px;
+      min-height: 30px;
+    }
+    .esbPH {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--mutedText);
+      text-align: center;
+    }
+    .esbHoleNum {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--ink);
+      text-align: center;
+    }
   `;
 
   function injectStyles() {
@@ -176,6 +196,16 @@
     return (ph !== undefined && ph !== null && ph !== "") ? `${name} (${esc(String(ph))})` : name;
   }
 
+  function mobilePlayerHeader(p) {
+    const lname = String(p.playerRow?.dbPlayers_LName || "").trim();
+    const fullName = String(p.playerRow?.dbPlayers_Name || "").trim();
+    const first2 = esc(fullName.slice(0, 2));
+    const namePart = lname ? `${esc(lname)}, ${first2}` : esc(fullName);
+    const ph = p.playerRow?.dbPlayers_PH;
+    const phPart = (ph !== undefined && ph !== null && ph !== "") ? `(${esc(String(ph))})` : "";
+    return `<div class="esbGridText">${namePart}</div><div class="esbPH">${phPart}</div>`;
+  }
+
   function ghinOf(p) {
     return String(p.playerRow?.dbPlayers_PlayerGHIN || "");
   }
@@ -222,28 +252,29 @@
     const holes = activeHoles();
     const players = _state.players;
     const totalLabel = _state.activeSide === "B9" ? "IN" : "OUT";
-    const playerColWidth = "42px";
+    const cols = `44px repeat(${players.length},58px)`;
 
-    const cols = `26px 50px repeat(${players.length},${playerColWidth})`;
-    let html = `<div class="esbGrid" style="display:grid;grid-template-columns:${cols};gap:3px">`;
+    let html = `<div class="esbCard"><div class="esbRow esbHead" style="grid-template-columns:${cols}">`;
+    html += `<div></div>`;
+    players.forEach(p => { html += `<div>${mobilePlayerHeader(p)}</div>`; });
+    html += `</div>`;
 
-    html += `<div></div><div></div>`;
-    players.forEach(p => {
-      html += `<div class="esbGridText" style="text-align:center">${playerLabel(p)}</div>`;
-    });
-
-    holes.forEach(h => {
+    holes.forEach((h, i) => {
       const par = _state.parByHole[h];
-      html += `<div class="esbGridText" style="display:flex;align-items:center;justify-content:center">${h}</div>`;
-      html += `<div class="esbGridText" style="display:flex;align-items:center;justify-content:center">${par != null ? "Par " + par : ""}</div>`;
-      players.forEach(p => { html += `<div>${cellInput(ghinOf(p), h)}</div>`; });
+      const altClass = (i % 2 === 1) ? " esbRowAlt" : "";
+      html += `<div class="esbRow${altClass}" style="grid-template-columns:${cols}">`;
+      html += `<div><div class="esbHoleNum">${h}</div><div class="esbPH">${par != null ? "Par " + par : ""}</div></div>`;
+      players.forEach(p => { html += cellInput(ghinOf(p), h); });
+      html += `</div>`;
     });
 
-    html += `<div class="esbGridText" style="grid-column:1/3;display:flex;align-items:center">${totalLabel}</div>`;
+    html += `<div class="esbRow esbHead" style="grid-template-columns:${cols};border-top:1px solid var(--border)">`;
+    html += `<div class="esbGridText">${totalLabel}</div>`;
     players.forEach(p => {
       const tot = sideTotal(ghinOf(p), holes);
       html += `<div class="esbGridText esbTotalCell">${tot ?? ""}</div>`;
     });
+    html += `</div>`;
 
     html += `</div>`;
     return html;
