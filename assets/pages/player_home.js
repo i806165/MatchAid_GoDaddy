@@ -129,7 +129,7 @@
     }
     if (chrome && typeof chrome.setBottomNav === 'function') {
       chrome.setBottomNav({
-        visible: ['home','player'],
+        visible: ['home','admin', 'player'],
         active: 'player',
         onNavigate: (id) => {
           if (id === 'player') return;
