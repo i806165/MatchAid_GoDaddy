@@ -87,12 +87,33 @@
   const DEFAULT_OUTCOME = { win: 1, halve: 0.5, loss: 0 };
 
   const CATEGORY_DEFS = [
-    { key: "gross",           kind: "placement", scope: "pairfield",  label: "Pairing Gross",   desc: "Ranks pairings by gross score for the round." },
-    { key: "net",             kind: "placement", scope: "pairfield",  label: "Pairing Net",     desc: "Ranks pairings by net score for the round." },
+    { key: "gross",           kind: "placement", scope: "pairfield",  label: "Medal using Gross Scores", desc: "Ranks pairings by gross score for the round." },
+    { key: "net",             kind: "placement", scope: "pairfield",  label: "Medal using Net Scores",   desc: "Ranks pairings by net score for the round." },
+    // Static fallback only — actual display label is dynamic, see
+    // categoryLabel() below. Kept here so this def always has *a* label
+    // even if categoryLabel() were ever bypassed.
     { key: "matchResult",     kind: "segments",  scope: "pairpair",   label: "Match Result",    desc: "Points awarded for each match outcome, by scoring segment." },
     { key: "individualGross", kind: "placement", scope: "individual", label: "Individual Gross", desc: "Ranks each player by their own gross score, independent of pairing." },
     { key: "individualNet",   kind: "placement", scope: "individual", label: "Individual Net",   desc: "Ranks each player by their own net score, independent of pairing." },
   ];
+
+  /*
+   * Match's label reflects whichever score basis is actually deciding the
+   * match outcome — dbGames_ScoringMethod ("ADJ GROSS"/"NET") is display-
+   * mapped to "Gross"/"Net" here; the stored value itself is untouched,
+   * this is presentation only. See service_ScoreSummary.php's
+   * pairPairComparisonValue() (isGross = scoringMethod === "ADJ GROSS")
+   * for where ScoringMethod actually drives the computation this label
+   * is describing — Medal's two categories don't need this treatment
+   * since Gross and Net are already two separate, always-static labels.
+   */
+  function categoryLabel(def) {
+    if (def.key === "matchResult") {
+      const isGross = _state.scoringMethod === "ADJ GROSS";
+      return `Match using ${isGross ? "Gross" : "Net"} Scores`;
+    }
+    return def.label;
+  }
 
   const SEGMENT_LABELS_MULTI = { "1": "Overall", "2": "Front 9", "3": "Back 9" };
   function segmentLabel(key) { return SEGMENT_LABELS_MULTI[key] || `Segment ${key}`; }
@@ -179,6 +200,12 @@
   // ── State — sourced from self-hydrated _ctx.game, not a caller config ──
   function initState(game) {
     const competition     = game.dbGames_Competition === "PairPair" ? "PairPair" : "PairField";
+    // Read-only, display purposes only — categoryLabel() is the only
+    // consumer. This module never gates or clamps anything on
+    // ScoringMethod; it's read live at score-computation time by
+    // service_ScoreSummary.php, not something Placement Points needs to
+    // branch on at save time.
+    const scoringMethod   = game.dbGames_ScoringMethod === "ADJ GROSS" ? "ADJ GROSS" : "NET";
     const scoringSegments = _scoringSegmentsFromGame(game);
     const incoming        = parseIncoming(game.dbGames_PlacementPoints);
 
@@ -200,7 +227,7 @@
       resegmentMatchResult(categories.matchResult, scoringSegments);
     }
 
-    _state = { competition, scoringSegments, categories };
+    _state = { competition, scoringMethod, scoringSegments, categories };
   }
 
   function resegmentMatchResult(mr, targetCount) {
@@ -328,13 +355,14 @@
     const cat = _state.categories[def.key];
     const checked  = cat._checked;
     const expanded = cat._expanded;
+    const label    = categoryLabel(def);
 
     return `
       <div class="dpp-row" data-row="${esc(def.key)}">
         <div class="maCheckbox ${checked ? "is-checked" : ""}" data-check-cat="${esc(def.key)}"
-          role="checkbox" aria-checked="${checked}" tabindex="0" aria-label="${esc(def.label)}"></div>
+          role="checkbox" aria-checked="${checked}" tabindex="0" aria-label="${esc(label)}"></div>
         <div class="dpp-row-body">
-          <div class="dpp-row-label">${esc(def.label)}</div>
+          <div class="dpp-row-label">${esc(label)}</div>
           <div class="dpp-row-desc">${esc(def.desc)}</div>
           ${def.kind === "segments" ? renderScoringSegmentsControl() : ""}
           ${checked ? `

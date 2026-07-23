@@ -33,8 +33,13 @@ try {
      *
      * dbGames_Segments means Playing Segments.
      *
-     * dbGames_ScoringSegments is intentionally absent. It belongs to
-     * Placement Points.
+     * dbGames_ScoringSegments itself still belongs to Placement Points —
+     * this endpoint never accepts it from the client and never lets Holes
+     * or Rotation choose its value going forward. The one exception is a
+     * narrow backstop below: if Holes is dropping to F9/B9 while the
+     * game's existing ScoringSegments is still 3, that combination is
+     * about to become structurally invalid, and this is the only place
+     * that can catch it.
      */
     $input = ma_json_in();
     $payload = $input["payload"] ?? null;
@@ -303,11 +308,56 @@ try {
     ];
 
     /*
-     * dbGames_ScoringSegments is deliberately not included.
+     * ── Cross-domain: Holes -> Scoring Segments / Match structural backstop ──
      *
-     * Changing Playing Segments or Rotation does not directly rewrite
-     * the separately owned Scoring Segments field through this endpoint.
+     * Front 9 vs. Back 9 has no meaning once the round itself is already
+     * only 9 holes — a 3-way Overall/Front9/Back9 split becomes exactly
+     * as structurally invalid as it already is once Rotation turns on
+     * (see saveGamePlacementPoints.php's own clamp for that half of the
+     * rule). This endpoint is the only place Holes can change, so it's
+     * the only place that can catch this side of it.
+     *
+     * Scoped narrowly: only Match's segments and dbGames_ScoringSegments
+     * are touched here. Category state (active/disabled) stays entirely
+     * Competition's concern, owned by saveGameFormat.php — this backstop
+     * never writes any other category and never changes Placement
+     * Points' top-level state, only the one structural key that dropping
+     * to F9/B9 invalidates. Going back to All 18 later does not restore
+     * 3 segments automatically — that's always a deliberate choice made
+     * through Placement Points itself.
      */
+    $existingScoringSegments = (int)($game["dbGames_ScoringSegments"] ?? 1);
+
+    if ($holes !== "All 18" && $existingScoringSegments === 3) {
+        $rawPlacement = $game["dbGames_PlacementPoints"] ?? null;
+        $decodedPlacement = is_array($rawPlacement)
+            ? $rawPlacement
+            : ((is_string($rawPlacement) && trim($rawPlacement) !== "") ? json_decode($rawPlacement, true) : null);
+
+        // Falls back to the same canonical shape game creation seeds —
+        // keeps this backstop correct even for a row whose PlacementPoints
+        // is null or failed to decode.
+        $categoriesByKey = ServiceDbGames::defaultPlacementPointsCategories();
+
+        if (is_array($decodedPlacement["categories"] ?? null)) {
+            foreach ($decodedPlacement["categories"] as $existingCategory) {
+                $existingKey = is_array($existingCategory) ? ($existingCategory["key"] ?? "") : "";
+                if ($existingKey !== "" && isset($categoriesByKey[$existingKey])) {
+                    $categoriesByKey[$existingKey] = array_merge($categoriesByKey[$existingKey], $existingCategory);
+                }
+            }
+        }
+
+        $categoriesByKey["matchResult"]["segments"] = ["1" => ["win" => 1, "halve" => 0.5, "loss" => 0]];
+
+        $patch["dbGames_PlacementPoints"] = [
+            "top"        => $decodedPlacement["top"] ?? "default",
+            "categories" => array_values($categoriesByKey),
+        ];
+
+        $patch["dbGames_ScoringSegments"] = 1;
+    }
+
     $result = ServiceDbGames::saveGameSettings(
         $ggid,
         $patch

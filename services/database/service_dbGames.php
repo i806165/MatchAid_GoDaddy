@@ -590,6 +590,33 @@ public static function queryGames(array $args): array {
     return $base;
   }
 
+  /**
+   * Canonical Placement Points category defaults, keyed by category key.
+   * Single source of truth for both game creation (applyDefaultsForAdd(),
+   * above) and saveGameFormat.php's fallback shape when a game has no
+   * dbGames_PlacementPoints saved yet (older data, or a row where the
+   * JSON failed to decode). matchResult seeds "disabled" — every new
+   * game is born PairField (see dbGames_Competition default below), and
+   * matchResult (scope: pairpair) is inapplicable to PairField by the
+   * same rule saveGamePlacementPoints.php's own $applicable check already
+   * enforces on first save.
+   */
+  public static function defaultPlacementPointsCategories(): array
+  {
+    return [
+      "gross" => ["key" => "gross", "kind" => "placement", "scope" => "pairfield", "state" => "default",
+        "pointsConfig" => ["1" => 100, "2" => 75, "3" => 50], "tieRule" => "split"],
+      "net" => ["key" => "net", "kind" => "placement", "scope" => "pairfield", "state" => "default",
+        "pointsConfig" => ["1" => 100, "2" => 75, "3" => 50], "tieRule" => "split"],
+      "matchResult" => ["key" => "matchResult", "kind" => "segments", "scope" => "pairpair", "state" => "disabled",
+        "segments" => ["1" => ["win" => 1, "halve" => 0.5, "loss" => 0]]],
+      "individualGross" => ["key" => "individualGross", "kind" => "placement", "scope" => "individual", "state" => "default",
+        "pointsConfig" => ["1" => 100, "2" => 75, "3" => 50], "tieRule" => "split"],
+      "individualNet" => ["key" => "individualNet", "kind" => "placement", "scope" => "individual", "state" => "default",
+        "pointsConfig" => ["1" => 100, "2" => 75, "3" => 50], "tieRule" => "split"],
+    ];
+  }
+
   private static function applyDefaultsForAdd(array &$g, array $ctx): void
   {
     // UI usually supplies PlayDate, but defaulting keeps DB constraints happy.
@@ -615,10 +642,10 @@ public static function queryGames(array $args): array {
     $g["dbGames_PlayerDeclaration"] = $g["dbGames_PlayerDeclaration"] ?? "11";
     $g["dbGames_Segments"] = $g["dbGames_Segments"] ?? "9";
     $g["dbGames_ScoringSegments"] = $g["dbGames_ScoringSegments"] ?? 1;
-    // Prime all five categories at "default" from the moment a game exists,
-    // regardless of which competition it actually starts as — this is what
-    // lets an admin flip PairField <-> PairPair later without ever landing on
-    // an unconfigured category. dbGames_ScoringSegments is always 1 at this
+    // Prime all five categories from the moment a game exists, regardless
+    // of which competition it actually starts as — this is what lets an
+    // admin flip PairField <-> PairPair later without ever landing on an
+    // unconfigured category. dbGames_ScoringSegments is always 1 at this
     // point (set immediately above, and PairPair/3-segment selection only
     // happens later via the Settings page), so matchResult is seeded with
     // just its permanent Overall entry (key "1"); module_definePlacementPoints.js
@@ -628,21 +655,15 @@ public static function queryGames(array $args): array {
     // part of that expansion/contraction.
     // "default" behaves identically to "active" everywhere this is read —
     // it's provenance only (has a human ever consciously saved this?), not a
-    // second on/off gate.
+    // second on/off gate. matchResult is the one exception: every game is
+    // born PairField (this function's own dbGames_Competition default,
+    // below), and matchResult (scope: pairpair) is inapplicable to
+    // PairField by the same rule saveGamePlacementPoints.php enforces on
+    // first save — so it's seeded "disabled" here rather than "default",
+    // matching what that first save would already converge it to.
     $g["dbGames_PlacementPoints"] = $g["dbGames_PlacementPoints"] ?? json_encode([
       "top" => "default",
-      "categories" => [
-        ["key" => "gross", "kind" => "placement", "scope" => "pairfield", "state" => "default",
-          "pointsConfig" => ["1" => 100, "2" => 75, "3" => 50], "tieRule" => "split"],
-        ["key" => "net", "kind" => "placement", "scope" => "pairfield", "state" => "default",
-          "pointsConfig" => ["1" => 100, "2" => 75, "3" => 50], "tieRule" => "split"],
-        ["key" => "matchResult", "kind" => "segments", "scope" => "pairpair", "state" => "default",
-          "segments" => ["1" => ["win" => 1, "halve" => 0.5, "loss" => 0]]],
-        ["key" => "individualGross", "kind" => "placement", "scope" => "individual", "state" => "default",
-          "pointsConfig" => ["1" => 100, "2" => 75, "3" => 50], "tieRule" => "split"],
-        ["key" => "individualNet", "kind" => "placement", "scope" => "individual", "state" => "default",
-          "pointsConfig" => ["1" => 100, "2" => 75, "3" => 50], "tieRule" => "split"],
-      ],
+      "categories" => array_values(self::defaultPlacementPointsCategories()),
     ], JSON_UNESCAPED_SLASHES);
 
     // Ensure stepper fields exist (stored as text in schema)
