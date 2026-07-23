@@ -418,7 +418,12 @@
     updateTotalCellDOM(ghin);
 
     const target = nextCellTarget(ghin, hole);
-    const nextInput = _overlay.querySelector(
+    // Both grids exist in the DOM at once (CSS hides whichever doesn't
+    // match the breakpoint) — search only within the same grid the current
+    // input lives in, or this can match the hidden copy and silently no-op.
+    const grid = input.closest(".esbDesktopGrid, .esbMobileGrid");
+    const scope = grid || _overlay;
+    const nextInput = scope.querySelector(
       `.esbCell[data-ghin="${target.ghin}"][data-hole="${target.hole}"]`
     );
     if (nextInput) nextInput.focus();
