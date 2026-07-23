@@ -961,6 +961,12 @@ textarea {
 
 /* ==========================================================================
    9. MULTI-PANEL LAYOUT
+   
+   CONTRACT: .maPanel__body is the ONLY scrollable region, at every
+   breakpoint. hdr/controls/ftr are fixed. Every panel's scrollable
+   content MUST be wrapped in .maPanel__body — do not apply overflow
+   directly to .maPanel or any custom panel variant.
+
    Expected markup:
      <main class="maPage maPage--multi">
        <div class="maPanels maPanels--2"> (or --3 / --4)

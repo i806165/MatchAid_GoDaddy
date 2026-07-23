@@ -5,11 +5,18 @@
   - Desktop (>=900px): .maPanels--playerHome two-column grid.
     Left  = .maPanel--sidebar  (uses .maPanel + .maPanel__body + .maPanel__ftr from shared CSS)
     Right = .maPanel--cards    (transparent, no chrome — just the card list)
-  - Sidebar uses shared CSS classes throughout:
+  - Both panels use shared CSS classes throughout:
       layout   → .maPanel / .maPanel__body / .maPanel__ftr
       button   → .btn .btnSecondary  (Apply filters)
       links    → .btnLink            (Select all, Clear all, Favorites, Show more)
       inputs   → .maTextInput        (date From/To)
+  - FIX (mobile scroll bug): #emptyState/#cards are now wrapped in
+    .maPanel__body, same as the sidebar and the admin portal's panels.
+    .maPanel__body is the ONLY scrollable region app-wide, at every
+    breakpoint — hdr/controls/ftr are fixed. Previously these two divs
+    were direct children of .maPanel--cards, so mobile (<900px) had no
+    overflow:auto region and the card list was clipped instead of
+    scrolling. Do not remove this wrapper.
   - Modal (#overlay) PRESERVED in full — mobile uses it via Actions menu.
   - All existing IDs intact (dateFrom, dateTo, adminRows, btnApplyFilters, etc.)
   - Sidebar IDs all prefixed sb- to avoid any collision.
@@ -117,11 +124,15 @@
        ============================================================ -->
   <div class="maPanel maPanel--cards">
 
-    <div id="emptyState" class="maEmptyState" style="display:none;">
-      No games match your current filters.
-    </div>
+    <div class="maPanel__body">
 
-    <div id="cards" class="maCards"></div>
+      <div id="emptyState" class="maEmptyState" style="display:none;">
+        No games match your current filters.
+      </div>
+
+      <div id="cards" class="maCards"></div>
+
+    </div>
 
   </div>
 
