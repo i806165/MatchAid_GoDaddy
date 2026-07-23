@@ -55,6 +55,18 @@ try {
         respond(404, ['ok' => false, 'message' => 'Game context not found.']);
     }
 
+    // Step 3b: Clamp the requested hole to whatever this game actually plays.
+    // The client can't know the game's dbGames_Holes format until after its
+    // first launch response, so it may send holeNumber=1 (its default) even
+    // for a Back-9 game. Left unclamped, that mismatched hole gets echoed
+    // back in the payload and desyncs the client's hole-navigation state.
+    $holesLabel = $gameRow['dbGames_Holes'] ?? 'All 18';
+    if ($holesLabel === 'B9' && $holeNumber < 10) {
+        $holeNumber = 10;
+    } elseif ($holesLabel === 'F9' && $holeNumber > 9) {
+        $holeNumber = 9;
+    }
+
     // Step 4: Build the baseline payload exactly as score entry expects today
     $baselinePayload = ServiceScoreEntry::buildLaunchPayload($gameRow, $groupPlayers, $holeNumber, $playerKey);
 

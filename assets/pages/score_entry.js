@@ -158,6 +158,16 @@
       if (h === state.currentHole) opt.selected = true;
       el.holeSelect.appendChild(opt);
     }
+
+    // Guard against a stale/out-of-range currentHole (e.g. a leftover
+    // default of 1 on a Back-9 game). Without this, the <select> falls
+    // back to displaying its first option while state.currentHole still
+    // points at a hole that isn't in the list, which makes moveHole()'s
+    // indexOf() lookup fail silently and locks navigation entirely.
+    if (state.currentHole < start || state.currentHole > end) {
+      state.currentHole = start;
+      el.holeSelect.value = String(start);
+    }
   }
 
   // ==========================================================================
