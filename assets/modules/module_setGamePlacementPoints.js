@@ -148,8 +148,10 @@
 /*
  * Hydrate this module's owned Scoring Segments field.
  *
- * PairField games and rotation-based PairPair games can only have one
- * Overall match result. Otherwise, the stored value may be 1 or 3.
+ * PairField games, rotation-based PairPair games, and 9-hole rounds
+ * (F9/B9) can only have one Overall match result — a Front 9/Back 9
+ * split is meaningless once the round itself is already only 9 holes.
+ * Otherwise, the stored value may be 1 or 3.
  *
  * This does not read dbGames_Segments. That field represents Playing
  * Segments and belongs to module_setGameSegments.js.
@@ -159,9 +161,14 @@
       !!g.dbGames_RotationMethod &&
       g.dbGames_RotationMethod !== "None";
 
+    const isNineHoleRound =
+      g.dbGames_Holes === "F9" ||
+      g.dbGames_Holes === "B9";
+
     if (
       g.dbGames_Competition !== "PairPair" ||
-      rotationActive
+      rotationActive ||
+      isNineHoleRound
     ) {
       return 1;
     }
@@ -200,6 +207,9 @@
   // ── State — sourced from self-hydrated _ctx.game, not a caller config ──
   function initState(game) {
     const competition     = game.dbGames_Competition === "PairPair" ? "PairPair" : "PairField";
+    const holes           = (game.dbGames_Holes === "F9" || game.dbGames_Holes === "B9")
+      ? game.dbGames_Holes
+      : "All 18";
     // Read-only, display purposes only — categoryLabel() is the only
     // consumer. This module never gates or clamps anything on
     // ScoringMethod; it's read live at score-computation time by
@@ -227,22 +237,30 @@
       resegmentMatchResult(categories.matchResult, scoringSegments);
     }
 
-    _state = { competition, scoringMethod, scoringSegments, categories };
+    _state = { competition, scoringMethod, holes, scoringSegments, categories };
   }
 
   function resegmentMatchResult(mr, targetCount) {
     const seg1 = mr.segments?.["1"] || { ...DEFAULT_OUTCOME };
-    const next = { ...mr.segments };
-    if (!next["1"]) next["1"] = { ...seg1 };
+    // Rebuilt from scratch each time (not spread from mr.segments) so
+    // shrinking back to 1 segment — via this module's own segment-count
+    // toggle, or via the Holes-driven clamp in _scoringSegmentsFromGame()
+    // forcing a 9-hole round down to 1 on load — actually drops stale
+    // keys "2"/"3" instead of silently carrying them forward into a
+    // shape that no longer matches targetCount. See
+    // saveGamePlacementPoints.php's own segment-key shape check for what
+    // rejects the mismatch if a stale shape like that ever reaches save.
+    const next = { "1": mr.segments?.["1"] ? { ...mr.segments["1"] } : { ...seg1 } };
     if (targetCount === 3) {
-      if (!next["2"]) next["2"] = { ...seg1 };
-      if (!next["3"]) next["3"] = { ...seg1 };
+      next["2"] = mr.segments?.["2"] ? { ...mr.segments["2"] } : { ...seg1 };
+      next["3"] = mr.segments?.["3"] ? { ...mr.segments["3"] } : { ...seg1 };
     }
     mr.segments = next;
   }
 
   function setScoringSegments(count) {
-    const target = count === 3 ? 3 : 1;
+    const isNineHoleRound = _state.holes === "F9" || _state.holes === "B9";
+    const target = (count === 3 && !isNineHoleRound) ? 3 : 1;
     if (target === _state.scoringSegments) return;
     resegmentMatchResult(_state.categories.matchResult, target);
     _state.scoringSegments = target;
@@ -382,14 +400,19 @@
 
   function renderScoringSegmentsControl() {
     const segCount = _state.scoringSegments;
+    const isNineHoleRound = _state.holes === "F9" || _state.holes === "B9";
+    const hint = isNineHoleRound
+      ? "One overall result — Front 9 / Back 9 segments require an 18-hole round."
+      : (segCount === 1 ? "One overall result" : "Front 9 / Back 9 / Overall, scored independently");
+
     return `
       <div class="dpp-seg-control">
         <span class="dpp-seg-control-label">Scoring Segments</span>
         <div class="maChoiceChips" id="dppScoringSegChips">
           <button class="maChoiceChip ${segCount === 1 ? "is-selected" : ""}" data-seg-count="1" type="button">1</button>
-          <button class="maChoiceChip ${segCount === 3 ? "is-selected" : ""}" data-seg-count="3" type="button">3</button>
+          ${isNineHoleRound ? "" : `<button class="maChoiceChip ${segCount === 3 ? "is-selected" : ""}" data-seg-count="3" type="button">3</button>`}
         </div>
-        <span class="dpp-seg-control-hint">${segCount === 1 ? "One overall result" : "Front 9 / Back 9 / Overall, scored independently"}</span>
+        <span class="dpp-seg-control-hint">${hint}</span>
       </div>
       ${segCount === 1 ? `
         <div class="dpp-info-banner">
