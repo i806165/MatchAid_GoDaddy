@@ -49,19 +49,20 @@
       .esbDesktopGrid { display: block; overflow-x: auto; }
     }
     .esbGridText {
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 800;
       color: var(--ink);
       font-family: var(--fontFamilyBase);
     }
     .esbCell {
-      font-size: 13px !important;
+      font-size: 14px !important;
       text-align: center;
       min-height: 28px !important;
+      border-radius: var(--radiusSq) !important;
     }
     .esbTotalCell {
       min-height: 28px;
-      border-radius: 8px;
+      border-radius: var(--radiusSq);
       border: 1px solid var(--controlBorder);
       background: rgba(0,0,0,.04);
       display: flex;
@@ -84,7 +85,7 @@
       border-bottom: 1px solid var(--border);
     }
     .esbHPar {
-      font-size: 10px;
+      font-size: 11px;
       font-weight: 700;
       color: var(--mutedText);
       text-align: center;
@@ -273,7 +274,7 @@
     const subtitleLine = [courseName, esc(dateStr)].filter(Boolean).join(" &bull; ");
 
     _overlay.innerHTML = `
-      <section class="maModal esbModal" role="dialog" aria-modal="true" style="--modalMaxW: 640px;">
+      <section class="maModal esbModal" role="dialog" aria-modal="true" style="--modalMaxW: 700px;">
         <header class="maModal__hdr">
           <div class="maModal__titles">
             <div class="maModal__title">${titleLine}</div>
@@ -291,8 +292,8 @@
           <div class="esbMobileGrid">${renderMobileGrid()}</div>
         </div>
         <footer class="maModal__ftr">
-          <button id="esbBtnCancel" class="btn btnPrimary" type="button">Cancel</button>
-          <button id="esbBtnSave" class="btn btnSecondary" type="button" ${_state.dirty ? "" : "disabled"}>Save</button>
+          <button id="esbBtnCancel" class="maFtrBtn maFtrBtn--cancel" type="button">Cancel</button>
+          <button id="esbBtnSave" class="maFtrBtn maFtrBtn--save" type="button" ${_state.dirty ? "" : "disabled"}>Save</button>
         </footer>
       </section>`;
 
