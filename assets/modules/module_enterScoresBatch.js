@@ -84,6 +84,11 @@
       background: var(--panelControlsBg);
       border-bottom: 1px solid var(--border);
     }
+    .esbMobileGrid .esbCard > .esbHead:first-child {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
     .esbHPar {
       font-size: 11px;
       font-weight: 700;
@@ -199,7 +204,7 @@
   function mobilePlayerHeader(p) {
     const lname = String(p.playerRow?.dbPlayers_LName || "").trim();
     const fullName = String(p.playerRow?.dbPlayers_Name || "").trim();
-    const first2 = esc(fullName.slice(0, 2));
+    const first2 = esc(fullName.slice(0, 1));
     const namePart = lname ? `${esc(lname)}, ${first2}` : esc(fullName);
     const ph = p.playerRow?.dbPlayers_PH;
     const phPart = (ph !== undefined && ph !== null && ph !== "") ? `(${esc(String(ph))})` : "";
@@ -344,6 +349,10 @@
     });
 
     _overlay.querySelectorAll(".esbCell").forEach(input => {
+      input.addEventListener("focus", () => {
+        input.select();
+      });
+
       input.addEventListener("change", () => {
         const ghin = input.dataset.ghin;
         const hole = parseInt(input.dataset.hole, 10);
