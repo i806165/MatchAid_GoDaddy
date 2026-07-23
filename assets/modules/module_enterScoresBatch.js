@@ -42,7 +42,7 @@
   // ma_shared.css classes used as-is.
 
   const STYLES = `
-    .esbMobileGrid { display: block; }
+    .esbMobileGrid { display: block; overflow-x: auto; overflow-y: visible; }
     .esbDesktopGrid { display: none; }
     @media (min-width: 900px) {
       .esbMobileGrid { display: none; }
@@ -84,10 +84,20 @@
       background: var(--panelControlsBg);
       border-bottom: 1px solid var(--border);
     }
-    .esbMobileGrid .esbCard > .esbHead:first-child {
+    .esbHeadCell {
+      background: var(--panelControlsBg);
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--ink);
+      font-family: var(--fontFamilyBase);
+      text-align: center;
+      padding: 2px 0;
+    }
+    .esbMobileGrid .esbStickyLeft {
       position: sticky;
-      top: 0;
+      left: 0;
       z-index: 1;
+      background: #fff;
     }
     .esbHPar {
       font-size: 11px;
@@ -215,12 +225,12 @@
     return String(p.playerRow?.dbPlayers_PlayerGHIN || "");
   }
 
-  function cellInput(ghin, hole) {
+  function cellInput(ghin, hole, extraStyle) {
     const v = _state.holeScores[ghin]?.[hole];
     const val = (v === undefined || v === null) ? "" : esc(String(v));
     return `<input class="maTextInput esbCell" type="text" inputmode="numeric"
               data-ghin="${esc(ghin)}" data-hole="${hole}"
-              value="${val}" placeholder="-" />`;
+              value="${val}" placeholder="-" style="${extraStyle || ""}" />`;
   }
 
   function renderDesktopGrid() {
@@ -245,7 +255,7 @@
       html += `<div class="esbGridText esbName">${playerLabel(p)}</div>`;
       holes.forEach(h => { html += cellInput(ghin, h); });
       const tot = sideTotal(ghin, holes);
-      html += `<div class="esbGridText esbTotalCell">${tot ?? ""}</div>`;
+      html += `<div class="esbGridText esbTotalCell" data-ghin-total="${esc(ghin)}">${tot ?? ""}</div>`;
       html += `</div>`;
     });
 
@@ -257,31 +267,37 @@
     const holes = activeHoles();
     const players = _state.players;
     const totalLabel = _state.activeSide === "B9" ? "IN" : "OUT";
-    const cols = `44px repeat(${players.length},58px)`;
+    const cols = `44px repeat(${players.length},minmax(58px,1fr))`;
+    const totalRow = 2 + holes.length;
 
-    let html = `<div class="esbCard"><div class="esbRow esbHead" style="grid-template-columns:${cols}">`;
-    html += `<div></div>`;
-    players.forEach(p => { html += `<div>${mobilePlayerHeader(p)}</div>`; });
-    html += `</div>`;
+    // Single grid, every cell explicitly placed via grid-row/grid-column.
+    // DOM order is player-major (all of player 1's cells, then player 2's,
+    // etc.) so the native iOS chevron follows "same player, next hole" —
+    // visual position is unaffected, since placement is explicit either way.
+    let html = `<div class="esbCard"><div style="display:grid;grid-template-columns:${cols};gap:4px;padding:6px 8px">`;
 
-    holes.forEach((h, i) => {
+    html += `<div class="esbHeadCell esbStickyLeft" style="grid-row:1;grid-column:1"></div>`;
+
+    holes.forEach((h, j) => {
       const par = _state.parByHole[h];
-      const altClass = (i % 2 === 1) ? " esbRowAlt" : "";
-      html += `<div class="esbRow${altClass}" style="grid-template-columns:${cols}">`;
-      html += `<div><div class="esbHoleNum">${h}</div><div class="esbPH">${par != null ? "Par " + par : ""}</div></div>`;
-      players.forEach(p => { html += cellInput(ghinOf(p), h); });
-      html += `</div>`;
+      const bg = (j % 2 === 1) ? "background:#f9f9f8" : "";
+      html += `<div class="esbStickyLeft" style="grid-row:${2 + j};grid-column:1;${bg}"><div class="esbHoleNum">${h}</div><div class="esbPH">${par != null ? "Par " + par : ""}</div></div>`;
+    });
+    html += `<div class="esbGridText esbHeadCell esbStickyLeft" style="grid-row:${totalRow};grid-column:1">${totalLabel}</div>`;
+
+    players.forEach((p, i) => {
+      const ghin = ghinOf(p);
+      const col = 2 + i;
+      html += `<div class="esbHeadCell" style="grid-row:1;grid-column:${col}">${mobilePlayerHeader(p)}</div>`;
+      holes.forEach((h, j) => {
+        const bg = (j % 2 === 1) ? "background:#f9f9f8" : "";
+        html += cellInput(ghin, h, `grid-row:${2 + j};grid-column:${col};${bg}`);
+      });
+      const tot = sideTotal(ghin, holes);
+      html += `<div class="esbGridText esbTotalCell esbHeadCell" data-ghin-total="${esc(ghin)}" style="grid-row:${totalRow};grid-column:${col}">${tot ?? ""}</div>`;
     });
 
-    html += `<div class="esbRow esbHead" style="grid-template-columns:${cols};border-top:1px solid var(--border)">`;
-    html += `<div class="esbGridText">${totalLabel}</div>`;
-    players.forEach(p => {
-      const tot = sideTotal(ghinOf(p), holes);
-      html += `<div class="esbGridText esbTotalCell">${tot ?? ""}</div>`;
-    });
-    html += `</div>`;
-
-    html += `</div>`;
+    html += `</div></div>`;
     return html;
   }
 
@@ -336,6 +352,83 @@
     bindEvents();
   }
 
+  // ── Auto-advance ─────────────────────────────────────────────────────────
+  // Rule: after a score is entered, advance to the SAME PLAYER's next hole —
+  // never a different player. On mobile that's visually "down" (holes are
+  // rows); on desktop that's visually "across" (holes are columns) — the
+  // rule itself doesn't care about orientation, it's driven by data
+  // (_state.players / activeHoles()), not DOM or visual position.
+  //
+  // Digit ambiguity: 2-9 are always a complete single-digit score (no valid
+  // score 1-15 continues past them), so they commit immediately. "1" is
+  // ambiguous — final on its own (a hole-in-one) or the start of 10-15 — so
+  // it holds briefly (HOLD_MS) waiting for a possible second digit before
+  // committing. A second digit arriving cancels the hold and commits the
+  // combined value immediately.
+
+  const HOLD_MS = 550;
+  let _holdTimer = null;
+  let _holdInput = null;
+
+  function clearHoldTimer() {
+    if (_holdTimer) { clearTimeout(_holdTimer); _holdTimer = null; _holdInput = null; }
+  }
+
+  function nextCellTarget(ghin, hole) {
+    const holes = activeHoles();
+    const playerIdx = _state.players.findIndex(p => ghinOf(p) === ghin);
+    const holeIdx = holes.indexOf(hole);
+
+    if (holeIdx < holes.length - 1) {
+      return { ghin, hole: holes[holeIdx + 1] };
+    }
+    const nextPlayerIdx = playerIdx + 1;
+    if (nextPlayerIdx < _state.players.length) {
+      return { ghin: ghinOf(_state.players[nextPlayerIdx]), hole: holes[0] };
+    }
+    // last player, last hole — wrap to first player, first hole
+    return { ghin: ghinOf(_state.players[0]), hole: holes[0] };
+  }
+
+  function saveCellValue(input) {
+    const ghin = input.dataset.ghin;
+    const hole = parseInt(input.dataset.hole, 10);
+    const val = input.value.trim();
+
+    if (val === "") {
+      delete _state.holeScores[ghin][hole];
+    } else {
+      _state.holeScores[ghin][hole] = val;
+    }
+    _state.touchedHoles.add(ghin + "|" + hole);
+    markDirty();
+    return { ghin, hole };
+  }
+
+  function updateTotalCellDOM(ghin) {
+    const holes = activeHoles();
+    const tot = sideTotal(ghin, holes);
+    _overlay.querySelectorAll(`.esbTotalCell[data-ghin-total="${ghin}"]`).forEach(cell => {
+      cell.textContent = tot ?? "";
+    });
+  }
+
+  function commitAndAdvance(input) {
+    const { ghin, hole } = saveCellValue(input);
+    updateTotalCellDOM(ghin);
+
+    const target = nextCellTarget(ghin, hole);
+    const nextInput = _overlay.querySelector(
+      `.esbCell[data-ghin="${target.ghin}"][data-hole="${target.hole}"]`
+    );
+    if (nextInput) nextInput.focus();
+  }
+
+  function commitOnly(input) {
+    const { ghin } = saveCellValue(input);
+    updateTotalCellDOM(ghin);
+  }
+
   function bindEvents() {
     _overlay.querySelector("#esbBtnClose")?.addEventListener("click", () => confirmClose());
     _overlay.querySelector("#esbBtnCancel")?.addEventListener("click", () => confirmClose());
@@ -351,24 +444,40 @@
     _overlay.querySelectorAll(".esbCell").forEach(input => {
       input.addEventListener("focus", () => {
         input.select();
+        input.scrollIntoView({ block: "center", behavior: "smooth" });
       });
 
-      input.addEventListener("change", () => {
-        const ghin = input.dataset.ghin;
-        const hole = parseInt(input.dataset.hole, 10);
+      input.addEventListener("blur", () => {
+        if (_holdInput === input) {
+          clearHoldTimer();
+          commitOnly(input);
+        }
+      });
+
+      input.addEventListener("input", () => {
+        if (_holdInput === input) clearHoldTimer();
+
         const val = input.value.trim();
 
         if (val === "") {
-          delete _state.holeScores[ghin][hole];
-        } else {
-          _state.holeScores[ghin][hole] = val;
+          saveCellValue(input);
+          return;
         }
-        _state.touchedHoles.add(ghin + "|" + hole);
-        markDirty();
 
-        const holes = activeHoles();
-        _overlay.querySelectorAll(`.esbTotalCell`).forEach(() => {});
-        renderAll();
+        if (val.length === 1 && val === "1") {
+          _holdInput = input;
+          _holdTimer = setTimeout(() => {
+            _holdTimer = null;
+            _holdInput = null;
+            commitAndAdvance(input);
+          }, HOLD_MS);
+          return;
+        }
+
+        // Any other single digit is always final (no valid score 1-15
+        // continues past 2-9); two-or-more digits means the ambiguous "1"
+        // just got resolved into a combined value. Either way, commit now.
+        commitAndAdvance(input);
       });
     });
   }
