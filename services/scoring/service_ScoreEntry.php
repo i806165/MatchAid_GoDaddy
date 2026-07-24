@@ -758,18 +758,6 @@ final class ServiceScoreEntry
             return ['ok' => false, 'message' => 'Game context not found.'];
         }
 
-        // Gate: batch entry doesn't account for rotation-aware PairPair
-        // pairing changes across spin segments — declare partitioning would
-        // silently use the baseline pairing for every hole instead of the
-        // hole-specific effective pairing. Not safe until that's built.
-        if (ServiceScoreRotation::isRotationAwarePairPair($gameRow)) {
-            return [
-                'ok'      => false,
-                'gated'   => true,
-                'message' => 'Batch score entry is not available for games that rotate partners.',
-            ];
-        }
-
         $players = self::sortLaunchPlayers($gameRow, $players);
 
         // Par row — same canonical source applyHoleScore()/buildScoreEntryRow()
@@ -1116,6 +1104,168 @@ final class ServiceScoreEntry
             'ok'      => true,
             'conflict'=> false,
             'message' => 'Scores saved.',
+            'players' => $savedPlayers,
+        ];
+    }
+
+    /**
+     * Rebuild stroke_allocation/net_score/declared for every already-scored
+     * hole in one scoring group, against whatever handicap is currently on
+     * file — the fix for a handicap correction (e.g. Effectivity Date) made
+     * after scores were captured, which otherwise leaves stroke_allocation
+     * permanently frozen at its value from the moment each hole was entered
+     * (see applyHoleScore() / calculateEffectiveHandicap()).
+     *
+     * Deliberately not a variant call into persistScoresBatch(): that
+     * function's contract is "trust what a live scorer just submitted,"
+     * which brings conflict detection and a ScoreKeeper stamp along with
+     * it — neither belongs here. This replays each player's own current
+     * data back through the same per-hole engine, with no submitted
+     * payload and no scorer identity to attribute the write to.
+     *
+     * Conflict detection is deliberately omitted — out of scope by
+     * design; this routine is authoritative over whatever the live
+     * score_entry page has stored.
+     *
+     * Blind Player rows (db_Scores) are NOT touched here — they're a
+     * separate table, cloned from a donor at the time Blind Player was
+     * applied, with no live link back to the donor's row. If
+     * dbGames_BlindPlayers is non-empty for this game, the caller is
+     * responsible for re-running ServiceBlindPlayer::applyBlindPlayer()
+     * game-wide after this completes, so the clone gets refreshed from
+     * the now-corrected donor data.
+     */
+    public static function resetScoresForGroup(string $playerKey): array
+    {
+        $playerKey = trim($playerKey);
+        if ($playerKey === '') {
+            return ['ok' => false, 'message' => 'Missing scorecard key.'];
+        }
+
+        $currentDbPlayers = ServiceDbPlayers::getPlayersByPlayerKey($playerKey);
+        if (!$currentDbPlayers) {
+            return ['ok' => false, 'message' => 'Scoring group not found.'];
+        }
+        $currentDbPlayers = array_map([self::class, 'hydratePlayerFields'], $currentDbPlayers);
+
+        $ggid = trim((string)($currentDbPlayers[0]['dbPlayers_GGID'] ?? ''));
+        if ($ggid === '') {
+            return ['ok' => false, 'message' => 'Missing group identity.'];
+        }
+
+        $gameRow = ServiceDbGames::getGameByGGID((int)$ggid);
+        if (!$gameRow) {
+            return ['ok' => false, 'message' => 'Game context not found.'];
+        }
+
+        $holesLabel = (string)($gameRow['dbGames_Holes'] ?? 'All 18');
+        $validHoleRange = $holesLabel === 'F9' ? range(1, 9) : ($holesLabel === 'B9' ? range(10, 18) : range(1, 18));
+
+        // Build $working directly from each player's own current record —
+        // nothing submitted, nothing to trust from a caller. holeScores is
+        // synthesized from whichever holes already carry a raw score;
+        // holes with nothing recorded are simply absent, so the per-hole
+        // loop below skips them exactly as it would skip an untouched
+        // cell in a live batch save.
+        $working = [];
+        foreach ($currentDbPlayers as $i => $playerRow) {
+            $scoresJson = self::buildOrHydratePlayerScores($gameRow, $playerRow);
+            $holeDetails = self::normalizeHoleDetails($scoresJson['Scores'][0]['hole_details'] ?? []);
+
+            $holeScores = [];
+            foreach ($holeDetails as $detail) {
+                $h = intval($detail['hole_number'] ?? 0);
+                if ($h < 1) continue;
+                $raw = $detail['raw_score'] ?? $detail['adjusted_gross_score'] ?? null;
+                if (!is_numeric($raw)) continue; // nothing recorded for this hole — leave it out entirely
+                $holeScores[$h] = $raw;
+            }
+
+            $working[$i] = [
+                'playerRow'  => $playerRow,
+                'scoresJson' => $scoresJson,
+                'holeScores' => $holeScores,
+            ];
+        }
+
+        // Same per-hole sequence as persistScoresBatch(): apply each
+        // hole's score (forcing a fresh stroke_allocation/net_score from
+        // today's handicap), build the score entry row, resolve this
+        // hole's effective pairing exactly as the live page and batch
+        // entry both do, then resolve declared against it.
+        foreach ($validHoleRange as $holeNumber) {
+            $touchedAny = false;
+
+            foreach ($working as $i => &$w) {
+                if (!array_key_exists($holeNumber, $w['holeScores'])) continue;
+                $touchedAny = true;
+
+                $raw = $w['holeScores'][$holeNumber];
+                $w['scoresJson'] = self::applyHoleScore(
+                    $gameRow, $w['playerRow'], $w['scoresJson'], $holeNumber, (float)$raw, false
+                );
+                $w['playerRow']['dbPlayers_Scores'] = $w['scoresJson'];
+            }
+            unset($w);
+
+            if (!$touchedAny) continue;
+
+            foreach ($working as $i => &$w) {
+                $w['scoreEntryRow'] = self::buildScoreEntryRow($gameRow, $w['playerRow'], $w['scoresJson'], $holeNumber);
+            }
+            unset($w);
+
+            $rotationContext = ServiceScoreRotation::buildNormalizedContexts(
+                $gameRow,
+                $currentDbPlayers,
+                $holeNumber,
+                []
+            );
+            $working = self::applyActiveContextToLaunchPlayers(
+                $working,
+                $rotationContext['activeContext']['players'] ?? []
+            );
+
+            self::resolveDeclaredScores($gameRow, $working, $holeNumber);
+
+            foreach ($working as $i => &$w) {
+                $w['playerRow']['dbPlayers_Scores'] = $w['scoresJson'];
+            }
+            unset($w);
+        }
+
+        // Persist — Scores only. ScoreKeeper is deliberately absent from
+        // this patch so updateGamePlayerFields() leaves it untouched,
+        // preserving whoever actually scored the round. StartHole and
+        // PairingPos are likewise never written here — nothing about a
+        // handicap-driven reset should touch either.
+        $savedPlayers = [];
+        foreach ($working as $w) {
+            $ghin = (string)($w['playerRow']['dbPlayers_PlayerGHIN'] ?? '');
+            if ($ghin === '') continue;
+
+            $saved = ServiceDbPlayers::updateGamePlayerFields($ggid, $ghin, [
+                'dbPlayers_Scores' => json_encode($w['scoresJson']),
+            ]);
+            if (!$saved) {
+                return ['ok' => false, 'message' => "Unable to persist reset for {$ghin}."];
+            }
+
+            $savedScores = $saved['dbPlayers_Scores'] ?? null;
+            if (is_string($savedScores)) {
+                $decoded = json_decode($savedScores, true);
+                if (is_array($decoded)) $savedScores = $decoded;
+            }
+
+            $savedPlayers[] = [
+                'dbPlayers_PlayerGHIN' => $ghin,
+                'dbPlayers_Scores'     => $savedScores,
+            ];
+        }
+
+        return [
+            'ok'      => true,
+            'message' => 'Scores reset.',
             'players' => $savedPlayers,
         ];
     }
