@@ -962,15 +962,6 @@ final class ServiceScoreEntry
             return ['ok' => false, 'conflict' => false, 'message' => 'Game context not found.'];
         }
 
-        if (ServiceScoreRotation::isRotationAwarePairPair($gameRow)) {
-            return [
-                'ok'      => false,
-                'conflict'=> false,
-                'gated'   => true,
-                'message' => 'Batch score entry is not available for games that rotate partners.',
-            ];
-        }
-
         $conflictWrappers = array_map(static function (array $p): array {
             return [
                 'playerRow'          => is_array($p['playerRow'] ?? null) ? $p['playerRow'] : [],
@@ -1055,6 +1046,28 @@ final class ServiceScoreEntry
                 $w['scoreEntryRow'] = self::buildScoreEntryRow($gameRow, $w['playerRow'], $w['scoresJson'], $holeNumber);
             }
             unset($w);
+
+            // Resolve this hole's effective pairing the same way the live
+            // single-hole page already does (launch.php), rather than
+            // reusing whichever pairing happened to be static at fetch
+            // time. buildNormalizedContexts() is pure — same four inputs,
+            // same output, whether called once per page load or, as here,
+            // once per hole in a batch loop. $currentDbPlayers is this
+            // playing group's baseline roster, fetched once above and
+            // unchanged by the per-hole edits happening in $working.
+            // seatOverrides is [] here for the same reason launch.php
+            // passes [] today — ServiceScoreEntry::getSeatOverrides() is
+            // a stub with no implementation yet.
+            $rotationContext = ServiceScoreRotation::buildNormalizedContexts(
+                $gameRow,
+                $currentDbPlayers,
+                $holeNumber,
+                []
+            );
+            $working = self::applyActiveContextToLaunchPlayers(
+                $working,
+                $rotationContext['activeContext']['players'] ?? []
+            );
 
             self::resolveDeclaredScores($gameRow, $working, $holeNumber);
 
