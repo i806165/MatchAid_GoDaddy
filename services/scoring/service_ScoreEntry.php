@@ -423,6 +423,64 @@ final class ServiceScoreEntry
         return $result;
     }
 
+    /**
+     * Resolves how many scores count toward "declared" for a given hole,
+     * based on the game's scoring system.
+     *
+     * Single source of truth for this derivation — previously duplicated
+     * inline inside resolveDeclaredScores() only, with
+     * service_BlindPlayer.php's recalculateDeclaredFlags() calling a
+     * method of this exact name that never actually existed. Every
+     * recalculateDeclaredFlags() call threw immediately on this missing
+     * method and persisted nothing — meaning Blind Player insertion's
+     * declared-flag reconciliation across the newly-expanded pool has
+     * never actually run. This is that fix: a real implementation,
+     * extracted from resolveDeclaredScores() below rather than
+     * reimplemented, so there's one version, not two.
+     *
+     * @param array $gameRow    Game row — dbGames_ScoringSystem plus
+     *                          whichever config field that system needs
+     *                          (dbGames_HoleDeclaration, dbGames_BestBall).
+     * @param int   $holeNumber Only used for DeclareHole's per-hole count.
+     * @param int   $poolSize   Used as-is for AllScores. Callers decide
+     *                          what "pool" means for their own call —
+     *                          resolveDeclaredScores() below passes the
+     *                          count of rows with a numeric raw score;
+     *                          recalculateDeclaredFlags() passes the full
+     *                          row count for that hole/pairing. Minor,
+     *                          pre-existing difference between the two
+     *                          callers, only relevant for AllScores games —
+     *                          not changed here, since correcting it would
+     *                          be a second, separate behavior change beyond
+     *                          fixing the missing method itself.
+     */
+    public static function resolveNForHole(array $gameRow, int $holeNumber, int $poolSize): int
+    {
+        $scoringSystem = (string)($gameRow['dbGames_ScoringSystem'] ?? 'BestBall');
+
+        if ($scoringSystem === 'AllScores') {
+            return $poolSize;
+        }
+
+        if ($scoringSystem === 'DeclareHole') {
+            $holeDecls = $gameRow['dbGames_HoleDeclaration'] ?? [];
+            if (is_string($holeDecls)) {
+                $holeDecls = json_decode($holeDecls, true) ?: [];
+            }
+            $foundHole = array_values(array_filter(
+                $holeDecls,
+                static fn($h) => (int)($h['hole'] ?? 0) === $holeNumber
+            ));
+            return (int)($foundHole[0]['count'] ?? 1);
+        }
+
+        if ($scoringSystem === 'BestBall') {
+            return (int)($gameRow['dbGames_BestBall'] ?? 1);
+        }
+
+        return 1;
+    }
+
     public static function resolveDeclaredScores(array $gameRow, array &$players, int $holeNumber): void
     {
         $scoringSystem = (string)($gameRow['dbGames_ScoringSystem'] ?? 'BestBall');
@@ -451,23 +509,7 @@ final class ServiceScoreEntry
 
         foreach ($partitions as $pairingId => $rows) {
             $validRows = array_values(array_filter($rows, static fn($r) => is_numeric($r['raw'])));
-
-            $n = 1;
-            if ($scoringSystem === 'AllScores') {
-                $n = count($validRows);
-            } elseif ($scoringSystem === 'DeclareHole') {
-                $holeDecls = $gameRow['dbGames_HoleDeclaration'] ?? [];
-                if (is_string($holeDecls)) {
-                    $holeDecls = json_decode($holeDecls, true) ?: [];
-                }
-                $foundHole = array_values(array_filter(
-                    $holeDecls,
-                    static fn($h) => (int)($h['hole'] ?? 0) === $holeNumber
-                ));
-                $n = (int)($foundHole[0]['count'] ?? 1);
-            } elseif ($scoringSystem === 'BestBall') {
-                $n = (int)($gameRow['dbGames_BestBall'] ?? 1);
-            }
+            $n = self::resolveNForHole($gameRow, $holeNumber, count($validRows));
 
             $declared = self::resolveDeclaredForHole($rows, $n, $scoringMethod);
 
@@ -483,19 +525,55 @@ final class ServiceScoreEntry
         }
     }
 
-    private static function syncHoleDetailDeclaration(array &$wrapper, int $holeNumber, bool $isDeclared): void
+    /**
+     * Find one hole's detail entry within a raw scores structure
+     * (['Scores'=>[['hole_details'=>[...]]]]). Returns [] if not found.
+     *
+     * Public, shared — service_BlindPlayer.php calls this instead of its
+     * own former private copy (findHoleDetail()), which was a genuine
+     * duplicate of this exact lookup.
+     */
+    public static function findHoleDetail(array $scores, int $holeNumber): array
     {
-        if (!isset($wrapper['scoresJson']['Scores'][0])) return;
-        $details = &$wrapper['scoresJson']['Scores'][0]['hole_details'];
-        if (!is_array($details)) return;
+        $details = $scores['Scores'][0]['hole_details'] ?? [];
+        foreach ($details as $detail) {
+            if ((int)($detail['hole_number'] ?? 0) === $holeNumber) {
+                return $detail;
+            }
+        }
+        return [];
+    }
 
-        foreach ($details as &$detail) {
+    /**
+     * Patch one hole's declared flag (and declaredSource provenance
+     * stamp) within a raw scores structure. Returns the whole structure
+     * with that one hole updated.
+     *
+     * Public, shared — service_BlindPlayer.php calls this instead of its
+     * own former private copy (patchHoleDeclared()), which duplicated
+     * this logic but never stamped declaredSource — a real, confirmed
+     * divergence: a declared flag corrected via live/batch entry carried
+     * that provenance marker, the exact same flag corrected via Blind
+     * Player recalc did not.
+     */
+    public static function patchHoleDeclaredFlag(array $scores, int $holeNumber, bool $isDeclared): array
+    {
+        if (!isset($scores['Scores'][0]['hole_details'])) return $scores;
+        foreach ($scores['Scores'][0]['hole_details'] as &$detail) {
             if ((int)($detail['hole_number'] ?? 0) === $holeNumber) {
                 $detail['declared'] = $isDeclared;
                 $detail['declaredSource'] = 'system';
                 break;
             }
         }
+        unset($detail);
+        return $scores;
+    }
+
+    private static function syncHoleDetailDeclaration(array &$wrapper, int $holeNumber, bool $isDeclared): void
+    {
+        if (!isset($wrapper['scoresJson'])) return;
+        $wrapper['scoresJson'] = self::patchHoleDeclaredFlag($wrapper['scoresJson'], $holeNumber, $isDeclared);
     }
 
     // ==========================================================================

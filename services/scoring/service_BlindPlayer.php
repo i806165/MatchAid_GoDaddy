@@ -393,7 +393,7 @@ final class ServiceBlindPlayer
                 foreach ($holeRange as $holeNumber) {
                     $scoreRows = [];
                     foreach ($members as $member) {
-                        $holeDetail  = self::findHoleDetail($member['scores'], $holeNumber);
+                        $holeDetail  = ServiceScoreEntry::findHoleDetail($member['scores'], $holeNumber);
                         // Use three-part key for blind members so two clones of the
                         // same donor in the same pairing resolve independently.
                         $scoreRows[] = [
@@ -419,13 +419,13 @@ final class ServiceBlindPlayer
 
                         if ($member['isBlind']) {
                             $bsKey = self::blindKeyFromParts($member['ghin'], $pairingId, $member['pos']);
-                            $blindPlayerScores[$bsKey] = self::patchHoleDeclared(
+                            $blindPlayerScores[$bsKey] = ServiceScoreEntry::patchHoleDeclaredFlag(
                                 $blindPlayerScores[$bsKey] ?? [],
                                 $holeNumber,
                                 $isDeclared
                             );
                         } else {
-                            $realPlayerScores[$member['ghin']] = self::patchHoleDeclared(
+                            $realPlayerScores[$member['ghin']] = ServiceScoreEntry::patchHoleDeclaredFlag(
                                 $realPlayerScores[$member['ghin']] ?? [],
                                 $holeNumber,
                                 $isDeclared
@@ -569,30 +569,6 @@ final class ServiceBlindPlayer
     // =========================================================================
     // Private helpers
     // =========================================================================
-
-    private static function findHoleDetail(array $scores, int $holeNumber): array
-    {
-        $details = $scores['Scores'][0]['hole_details'] ?? [];
-        foreach ($details as $detail) {
-            if ((int)($detail['hole_number'] ?? 0) === $holeNumber) {
-                return $detail;
-            }
-        }
-        return [];
-    }
-
-    private static function patchHoleDeclared(array $scores, int $holeNumber, bool $isDeclared): array
-    {
-        if (!isset($scores['Scores'][0]['hole_details'])) return $scores;
-        foreach ($scores['Scores'][0]['hole_details'] as &$detail) {
-            if ((int)($detail['hole_number'] ?? 0) === $holeNumber) {
-                $detail['declared'] = $isDeclared;
-                break;
-            }
-        }
-        unset($detail);
-        return $scores;
-    }
 
     private static function blindKey(array $bs): string
     {
