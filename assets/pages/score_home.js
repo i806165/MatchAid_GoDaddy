@@ -489,13 +489,10 @@
   // happens immediately on confirm, via removePlayerFromGroup.php.
   //
   // Does NOT delete the player from the game — only their pairing/slot
-  // assignment. Does NOT trigger a handicap/PHSO recalc for the remaining
-  // players in the group — FLAGGED, not decided: removing a player
-  // changes group composition, which game_players.js's own delete flow
-  // treats as PHSO-relevant (calcPHSO scoped to the remaining
-  // pairing/flight when the deleted player wasPaired). Whether this
-  // affordance needs the same follow-up is an open question, not
-  // something resolved here.
+  // assignment. Does NOT call MA.recalculateHandicaps() itself — it sets
+  // state.dirty instead, so the actual recalc runs via onGoClick()'s
+  // existing forced-trigger path (same mechanism saveScoreHomeTeeChange()
+  // already uses), not duplicated here.
   async function removePlayerFromGroup(player) {
     const confirmed = await MA.ui.confirm({
       title:        'Remove from Pairing?',
@@ -510,6 +507,16 @@
       if (!res || !res.ok) throw new Error(res?.message || 'Unable to remove player from pairing.');
 
       MA.ui.notify('Player removed from pairing.', 'success');
+
+      // Same deferred-recalc mechanism as saveScoreHomeTeeChange() above:
+      // removing a player changes the remaining group's composition,
+      // which (per game_players.js's own delete flow, which calls
+      // calcPHSO for the remaining pairing/flight) is PHSO-relevant.
+      // state.dirty forces onGoClick()'s recalc regardless of
+      // ScoreKeeper state, rather than waiting for the next natural
+      // scorer-transition trigger — which might not come at all if
+      // scoring hasn't started yet.
+      state.dirty = true;
 
       // Re-fetch this scorecard's players so the row list (and, if this
       // was the last/only remaining player, the whole group card) reflects
