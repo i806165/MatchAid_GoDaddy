@@ -1439,6 +1439,19 @@ async function onResetChanges() {
   }
 
   function unslotBlock(blockId) {
+    // NOTE: score_home.js needs a "remove player from pairing" affordance
+    // for a no-show at score time — see the matching note on
+    // removePlayerFromPairing() in game_pairings.js, the fuller reference
+    // field list (also clears pairingId/pairingPos/flightId/flightPos).
+    //
+    // This function's set is intentionally narrower — no pairing fields —
+    // by design, not drift: Pairing builds on top of Slotting. Unslotting
+    // a player retains their pairing (a slot can be removed independently
+    // while the competitive pairing stays intact). Unpairing, by
+    // definition, cascades down and unslots too — which is exactly what
+    // removePlayerFromPairing()'s fuller field list reflects. So
+    // score_home.js's "remove from pairing" affordance should replicate
+    // removePlayerFromPairing()'s full 8-field list, not this one.
     const block = getBlockPlayers(blockId);
     block.forEach(p => {
       p.teeTime = "";
@@ -1453,6 +1466,7 @@ async function onResetChanges() {
   }
 
   function unslotCard(sid) {
+    // NOTE: same as unslotBlock() above — see that comment.
     const players = getPlayersInSlot(sid);
     players.forEach(p => {
       p.teeTime = "";

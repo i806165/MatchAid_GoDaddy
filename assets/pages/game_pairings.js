@@ -1408,6 +1408,17 @@
   }
 
   function removePlayerFromPairing(ghin) {
+    // NOTE: score_home.js needs a "remove player from pairing" affordance
+    // for a no-show at score time (player-actions menu, red/destructive
+    // item, confirm-first). This exact field list is the reference for
+    // it — but score_home.js has no local staged-edit/markDirty layer
+    // like this page does, so it must write these as dbPlayers_* columns
+    // directly via an immediate endpoint call, not by mutating an
+    // in-memory object here. See ma_SharedBusLogic.js's docblock for why
+    // this wasn't centralized: a static field list, not branching logic
+    // like isDimensionActive()/describeGameFormat() — low drift risk,
+    // not worth the three-file churn today. Revisit if this list ever
+    // needs a real conditional rule instead of fixed reset values.
     if (pairingsLockedByEvent()) {
       showBlockedModal("Pairings are managed at the event level for this event.");
       return;
@@ -1430,6 +1441,9 @@
   }
 
   function unpairGroup(pairingId) {
+    // NOTE: same field list as removePlayerFromPairing() above, applied
+    // per-row across the group — see that function's comment re:
+    // score_home.js needing this same set replicated as a direct write.
     if (pairingsLockedByEvent()) {
       showBlockedModal("Pairings are managed at the event level for this event.");
       return;

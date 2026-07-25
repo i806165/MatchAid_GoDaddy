@@ -10,6 +10,7 @@
     scoreHome:            (paths.apiScoreHome || '/api/score_home') + '/initScoreHome.php',
     setScorerContext:     (paths.apiScoreHome || '/api/score_home') + '/setScorerContext.php',
     getPlayersForRefresh: (paths.apiScoreHome || '/api/score_home') + '/getPlayersForRefresh.php',
+    removePlayerFromGroup:(paths.apiScoreHome || '/api/score_home') + '/removePlayerFromGroup.php',
     scoreEntry:            paths.scoreEntry   || '/app/score_entry/scoreentry.php',
     scoreSummary:          paths.scoreSummary || '/app/score_summary/scoresummary.php',
     // Change Tee Box (Phase 1) — same endpoint Player Home uses for
@@ -449,12 +450,88 @@
         action:   () => openTeeChangeForPlayer(player),
         disabled: !canChangeTeeBox(player),
       },
-      // Phase 2-4 (Swap Player Position / Replace Player / Remove Player)
-      // land here — category headers / indentation can come back once
-      // there's more than one item to group.
+      // Phase 2-4 (Swap Player Position / Replace Player) still land
+      // here — category headers / indentation can come back once
+      // there's more than one non-destructive item to group.
+      {
+        label:    'Remove from Pairing',
+        action:   () => removePlayerFromGroup(player),
+        disabled: !canRemoveFromGroup(player),
+        // ASSUMPTION, not confirmed against actions_menu.js (not
+        // available in this session): styling flag name matches
+        // MA.ui.confirm's own `danger: true` convention used elsewhere
+        // in this codebase (e.g. game_players.js's delete-player flow).
+        // If actions_menu.js doesn't honor this property, the item will
+        // simply render unstyled rather than fail — worth a visual
+        // check.
+        danger:   true,
+      },
     ];
 
     MA.ui.openActionsMenu(player.name || 'Player Actions', items);
+  }
+
+  // Same availability-check-only caveat as canChangeTeeBox() above — not
+  // a security gate, real enforcement belongs server-side.
+  function canRemoveFromGroup(player) {
+    if (!player || !player.ghin) return false;
+    if (!state.game || !state.game.dbGames_GGID) return false;
+    return true;
+  }
+
+  // "Remove from Pairing" — for a no-show at score time. Clears the same
+  // 8-field set as game_pairings.js's removePlayerFromPairing() (see
+  // that function's own comment for why this list, and its confirmed
+  // relationship to game_slotting.js's unslotBlock()/unslotCard(): Pairing
+  // builds on Slotting, so unpairing cascades down and unslots too, by
+  // design). Unlike those two pages, this is a direct write — score_home.js
+  // has no staged-edit/markDirty layer to defer this through; the clear
+  // happens immediately on confirm, via removePlayerFromGroup.php.
+  //
+  // Does NOT delete the player from the game — only their pairing/slot
+  // assignment. Does NOT trigger a handicap/PHSO recalc for the remaining
+  // players in the group — FLAGGED, not decided: removing a player
+  // changes group composition, which game_players.js's own delete flow
+  // treats as PHSO-relevant (calcPHSO scoped to the remaining
+  // pairing/flight when the deleted player wasPaired). Whether this
+  // affordance needs the same follow-up is an open question, not
+  // something resolved here.
+  async function removePlayerFromGroup(player) {
+    const confirmed = await MA.ui.confirm({
+      title:        'Remove from Pairing?',
+      message:      `<strong>${player.name || 'This player'}</strong> will be removed from this pairing and playing group. They will stay in the game and can be re-slotted/re-paired later.<br><br><span style="color:var(--mutedText);font-size:12px;">Are you sure you want to continue?</span>`,
+      confirmLabel: 'Remove',
+      danger:       true,
+    });
+    if (!confirmed) return;
+
+    try {
+      const res = await MA.postJson(apiUrls.removePlayerFromGroup, { ghin: player.ghin });
+      if (!res || !res.ok) throw new Error(res?.message || 'Unable to remove player from pairing.');
+
+      MA.ui.notify('Player removed from pairing.', 'success');
+
+      // Re-fetch this scorecard's players so the row list (and, if this
+      // was the last/only remaining player, the whole group card) reflects
+      // the removal immediately.
+      const ggidStr = String(state.game?.dbGames_GGID || '');
+      const scorecardKey = String(el.groupKeyText?.textContent || '').trim().toUpperCase();
+      if (ggidStr && scorecardKey) {
+        const refreshed = await MA.postJson(apiUrls.getPlayersForRefresh, {
+          ggid: ggidStr,
+          scorecardKey,
+        });
+        if (refreshed && refreshed.ok) {
+          state.players = normalizePlayers(refreshed.players || []);
+        }
+      }
+
+      renderPlayerRows();
+      renderGroupContext();
+    } catch (e) {
+      console.error(e);
+      MA.ui.notify(e.message || 'Unable to remove player from pairing.', 'error');
+    }
   }
 
   // Availability check only — NOT a security gate. Every field here is
