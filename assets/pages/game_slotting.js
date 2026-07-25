@@ -22,6 +22,9 @@
 
   const state = {
     ggid: init.ggid,
+    // Set true after any successful save; cleared once the owed
+    // recalculation actually runs. See ensureRecalculatedBeforeLeaving().
+    needsRecalc: false,
     players: [],
     competition: init.game?.dbGames_Competition || "PairField",
     toMethod: init.meta?.toMethod || "TeeTimes",
@@ -1339,7 +1342,7 @@ async function onResetChanges() {
 
   // ---- Actions ----
   async function doSave() {
-    if (state.busy || state.dirty.size === 0) return;
+    if (state.busy || state.dirty.size === 0) return true; // nothing to save is not a failure
     setBusy(true);
     if (MA.ui && MA.ui.notify) MA.ui.notify("Saving slot assignments.", "info");
 
@@ -1361,17 +1364,74 @@ async function onResetChanges() {
       const res = await MA.postJson(MA.routes?.apiSave || "/api/game_pairings/savePairings.php", payload);
       if (res.ok) {
         state.dirty.clear();
+        // Slotting reassigns dbPlayers_PlayerKey — who's riding with whom
+        // for scoring purposes. Recalculation is deferred to leaving the
+        // page (see ensureRecalculatedBeforeLeaving()), same pattern as
+        // game_pairings.js, rather than riding along with every interim
+        // save during active slotting work.
+        state.needsRecalc = true;
         if (MA.ui && MA.ui.notify) MA.ui.notify("Saved successfully.", "success");
         applyChrome();
         render();
+        return true;
       } else {
         throw new Error(res.message || "Save failed.");
       }
     } catch (e) {
       if (MA.ui && MA.ui.notify) MA.ui.notify(e.message || "Save failed.", "danger");
+      return false;
     } finally {
       setBusy(false);
     }
+  }
+
+  // ── Leave-page handicap/score recalculation ──────────────────────────────
+  // Mirrors game_pairings.js's own pattern. Runs at most once per editing
+  // session, as a requisite of actually leaving the page, rather than
+  // riding along with every interim save during active slotting work.
+  //
+  // Scope is deliberately GAME, not PlayerKey: slotting reassigns
+  // dbPlayers_PlayerKey itself, and precisely determining the minimal
+  // affected-card blast radius of a given slotting session is non-trivial
+  // (a session can touch multiple cards). Made inexpensive by the
+  // diff-skip in ServiceScoreEntry::resetScoresForGroup() — a group whose
+  // handicap didn't actually change is recomputed in memory but never
+  // rewritten to the database.
+
+  async function runRecalculation() {
+    if (!MA.recalculateHandicaps) return;
+    const ok = await MA.recalculateHandicaps(null);
+    if (ok) state.needsRecalc = false;
+  }
+
+  // Gate called by the one way of leaving this page today — the bottom
+  // nav (see applyChrome()'s onNavigate below). Always resolves true
+  // (safe to leave) except when there are unsaved edits and the save the
+  // user asked for fails — a real data-loss risk, so navigation is held
+  // back in that one case only. Recalculation itself is never optional
+  // once owed, and never blocks leaving.
+  async function ensureRecalculatedBeforeLeaving() {
+    if (state.dirty.size > 0) {
+      const wantsSave = await MA.ui.confirm({
+        title: "Save before leaving?",
+        message: "You have unsaved slot assignment changes. Save them before you go?",
+        confirmLabel: "Save",
+        cancelLabel: "Discard"
+      });
+
+      if (wantsSave) {
+        const saved = await doSave();
+        if (!saved) return false; // save failed — stay put, don't lose their edits
+      } else {
+        state.dirty.clear();
+      }
+    }
+
+    if (state.needsRecalc) {
+      await runRecalculation();
+    }
+
+    return true;
   }
 
   function isMobile() {
@@ -1566,7 +1626,10 @@ async function onResetChanges() {
           ? ["eventrounds", "roundedit", "roundsettings", "roundroster", "roundpairings", "roundteetimes", "roundsummary", "roundscorecard"]
           : ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"],
         active: isEvent ? "roundteetimes" : "teetimes",
-        onNavigate: (id) => MA.routerGo?.(id)
+        onNavigate: async (id) => {
+          const canLeave = await ensureRecalculatedBeforeLeaving();
+          if (canLeave && typeof MA.routerGo === "function") MA.routerGo(id);
+        }
       });
     }
   }

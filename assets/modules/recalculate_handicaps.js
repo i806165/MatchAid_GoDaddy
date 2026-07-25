@@ -1,7 +1,20 @@
 /* /assets/modules/recalculate_handicaps.js
- * Shared module to refresh GHIN data and recalculate competition handicaps (PH/SO).
- * UI feedback now goes through MA.ui (ma_shared.js) — see MA.recalculateHandicaps
- * below. No self-built modal in this file anymore.
+ * Shared module to refresh GHIN data, recalculate competition handicaps
+ * (PH/SO), remove any now-possibly-stale blind player assignment, and
+ * rebuild already-recorded scores against the refreshed handicap — all as
+ * one consolidated, synchronous server-side call.
+ *
+ * Previously this module made two sequential HTTP requests
+ * (refreshHandicaps.php then calcPHSO.php), narrating "Step 1 of 2" /
+ * "Step 2 of 2" between them. That two-request chain is retired: outdoor,
+ * mobile, cellular use makes a multi-request front-end chain vulnerable to
+ * a dropped connection or an iOS-suspended tab between requests, leaving
+ * handicaps updated but scores never rebuilt — silently. One consolidated
+ * backend call (recalculateHandicapsAndScores.php ->
+ * workflow_recalculateHandicapsScores.php) either fully completes or fails
+ * as one unit from the client's perspective. The cost is coarser progress
+ * UI — one static message for the full call duration instead of two
+ * distinct steps — an accepted tradeoff.
  */
 (function() {
   "use strict";
@@ -10,15 +23,9 @@
 
   /**
    * @param {string} apiBase
-   * @param {{ scorecardKey?: string }} [scope] - omit for whole-game (existing
-   *   "all" behavior, unchanged). Pass scorecardKey to scope both passes to
-   *   one playing group's dbPlayers_PlayerKey.
-   *
-   * NOTE: this only threads the scope through to refreshHandicaps.php /
-   * calcPHSO.php — those two endpoint files still need to accept a
-   * scorecardKey param and forward it to workflow_Handicaps.php's
-   * be_recalculateGameHandicaps()/be_calculateGamePHSO(), which already
-   * support it. Not yet confirmed those endpoint files have been updated.
+   * @param {{ scorecardKey?: string }} [scope] - omit for whole-game scope.
+   *   Pass scorecardKey to scope the refresh to one playing group's
+   *   dbPlayers_PlayerKey. See spec Section 4 for which trigger uses which.
    */
   MA.recalculateHandicaps = async function(apiBase, scope) {
     const base = apiBase || (MA.paths && MA.paths.apiGHIN) || "/api/GHIN";
@@ -35,40 +42,34 @@
     }
 
     try {
-      MA.ui.showBusy({ title: "Working", message: "Recalculating handicaps..." });
+      MA.ui.showBusy({ title: "Working", message: "Recalculating handicaps and scores..." });
 
-      // Pass 1: Refresh from GHIN (HI, CH)
-      MA.ui.updateBusy({ message: "(Step 1 OF 2) Refreshing Player Handicaps (HI/CH)..." });
-      const res1 = await MA.postJson(`${base}/refreshHandicaps.php`, {
-        ghin: scorecardKey ? undefined : "all",
-        scorecardKey: scorecardKey || undefined,
+      const res = await MA.postJson(`${base}/recalculateHandicapsAndScores.php`, {
+        scope: scorecardKey ? "playerKey" : "game",
+        playerKey: scorecardKey || undefined,
       });
-      if (!res1 || !res1.ok) throw new Error(res1?.message || "Refresh failed.");
-
-      // Gross-scored game — refreshHandicaps.php already reset HI/CH/PH/SO
-      // to "0" directly with no GHIN calls. Pass 2 would just self-skip
-      // anyway (be_calculateGamePHSO() already no-ops on ADJ GROSS), so
-      // skip the round trip entirely. The only caller of this module
-      // (game_players.js's onRecalcHandicaps()) does no follow-up status
-      // handling of its own — this busy overlay is the sole feedback
-      // surface — so hold the message visible briefly rather than hiding
-      // instantly.
-      if (res1.skipped) {
-        MA.ui.updateBusy({ message: res1.message || "Handicaps skipped." });
-        await new Promise(r => setTimeout(r, 1400));
-        MA.ui.hideBusy();
-        return true;
-      }
-
-      // Pass 2: Calculate Competition (PH, SO)
-      MA.ui.updateBusy({ message: "(Step 2 OF 2) Refreshing Handicap Competition Values (PH/SO)..." });
-      const res2 = await MA.postJson(`${base}/calcPHSO.php`, {
-        action: scorecardKey ? "scorecard" : "all",
-        id: scorecardKey || undefined,
-      });
-      if (!res2 || !res2.ok) throw new Error(res2?.message || "Calculation failed.");
 
       MA.ui.hideBusy();
+
+      if (!res || !res.ok) {
+        throw new Error(res?.message || "Recalculation failed.");
+      }
+
+      // Blind Player Removal (Pass 3) is non-negotiable whenever a stale
+      // row is found — this must-tap dialog is how the user learns it
+      // happened, since deletion alone would otherwise be silent. Never
+      // an auto-dismissing toast: this is used outdoors, on mobile, where
+      // a timed toast can't be relied on to be seen.
+      if (res.blindPlayerRemoved) {
+        await MA.ui.confirm({
+          title: "Blind Player Removed",
+          message: "Handicap refresh completed. A blind player was found for this group and removed. Please reapply the blind player selection.",
+          confirmLabel: "OK",
+          okOnly: true,
+          dismissible: false
+        });
+      }
+
       return true;
     } catch (e) {
       console.error(e);

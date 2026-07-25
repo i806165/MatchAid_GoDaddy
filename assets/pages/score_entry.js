@@ -158,16 +158,6 @@
       if (h === state.currentHole) opt.selected = true;
       el.holeSelect.appendChild(opt);
     }
-
-    // Guard against a stale/out-of-range currentHole (e.g. a leftover
-    // default of 1 on a Back-9 game). Without this, the <select> falls
-    // back to displaying its first option while state.currentHole still
-    // points at a hole that isn't in the list, which makes moveHole()'s
-    // indexOf() lookup fail silently and locks navigation entirely.
-    if (state.currentHole < start || state.currentHole > end) {
-      state.currentHole = start;
-      el.holeSelect.value = String(start);
-    }
   }
 
   // ==========================================================================
@@ -198,7 +188,7 @@
         const saveResult = await saveScoresSilently(nextHole);
         if (!saveResult.ok) {
           if (saveResult.conflict) {
-            resetToLaunch(saveResult.message || 'Another scorer is already updating this scorecard.');
+            await refreshHoleAfterConflict(state.currentHole, saveResult.message);
             return;
           }
           setPageStatus(saveResult.message || 'Unable to save scores.', 'error');
@@ -810,6 +800,65 @@ function markDirty(playerId, rawScore, declared) {
   // ==========================================================================
   // 11. Chrome and Status Helpers
   // ==========================================================================
+
+  /*
+   * A save conflict here means something else (most likely an admin-
+   * triggered handicap/score reset — see resetScoresForGroup()) already
+   * rewrote this scorecard's data underneath the live scorer. The reset
+   * is authoritative and wins; the scorer's unsaved edit for this one
+   * hole is discarded. Previously this ejected the whole session back to
+   * launch (resetToLaunch()) — now it re-fetches just the conflicted
+   * hole's current data, the same way an ordinary hole transition does,
+   * and lets the scorer simply re-enter that hole and continue. Nothing
+   * about scorerGHIN, currentHole (beyond re-landing on the same hole),
+   * or the rest of the session is torn down.
+   */
+  async function refreshHoleAfterConflict(holeNumber, message) {
+    const pKey = getBaselinePlayerKey();
+
+    if (pKey) {
+      const res = await fetch(apiUrls.launch, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerKey: pKey, holeNumber })
+      });
+      const json = await res.json();
+      if (json.ok && json.payload) {
+        state.payload = json.payload;
+        state.currentHole = holeNumber;
+        state.dirty = false;
+        activePlayers().forEach((wrapper) => {
+          wrapper.originalScoresJson = deepClone(wrapper.scoresJson || null);
+        });
+        reconcileDeclaredState();
+      }
+    }
+
+    // Render the refreshed hole now, so it's already correct on screen by
+    // the time the dialog below is dismissed.
+    renderHoleOptions();
+    renderRows();
+    el.holeSelect.value = String(holeNumber);
+
+    // Close the "Saving..." spinner before showing the dialog — otherwise
+    // it would sit behind/around the dialog until transitionHole()'s own
+    // finally block gets to it, which doesn't happen until after the user
+    // dismisses. hideSavingOverlay() is idempotent, so the later call in
+    // that finally block is a harmless no-op.
+    hideSavingOverlay();
+
+    // On-course use on a phone — an auto-dismissing toast can't be relied
+    // on to be seen while walking or driving between holes. This requires
+    // an explicit tap to dismiss (dismissible: false — no accidental
+    // backdrop-tap dismissal either) before the scorer can continue.
+    await MA.ui.confirm({
+      title: 'Scorecard Updated',
+      message: message || `The game administrator has updated the game handicaps. Please re-enter the scores for hole ${holeNumber}.`,
+      confirmLabel: 'OK',
+      okOnly: true,
+      dismissible: false
+    });
+  }
 
   function resetToLaunch(message) {
     state.payload = null;

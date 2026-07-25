@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once MA_SVC_DB . '/service_dbGames.php';
 require_once MA_SVC_DB . '/service_dbPlayers.php';
+require_once MA_SVC_DB . '/service_dbScores.php';
 require_once MA_SERVICES . '/scoring/service_ScoreEntry.php';
 
 final class ServiceBlindPlayer
@@ -128,17 +129,10 @@ final class ServiceBlindPlayer
             // ── Step 5: Delete existing blind rows ────────────────────────────
             // Scoped to the target pairing when in scoring context;
             // game-wide when called without a pairingId.
-            $pdo = Db::pdo();
             if ($isScoringContext) {
-                $delStmt = $pdo->prepare(
-                    'DELETE FROM db_Scores WHERE dbScores_GGID = ? AND dbScores_isBlind = 1 AND dbScores_PairingID = ?'
-                );
-                $delStmt->execute([$ggid, $pairingId]);
+                ServiceDbScores::deleteBlindRowsForPairing($ggid, (string)$pairingId);
             } else {
-                $delStmt = $pdo->prepare(
-                    'DELETE FROM db_Scores WHERE dbScores_GGID = ? AND dbScores_isBlind = 1'
-                );
-                $delStmt->execute([$ggid]);
+                ServiceDbScores::deleteBlindRowsForGame($ggid);
             }
             Logger::info('BLIND_APPLY', ['ggid' => $ggid, 'pairingId' => $pairingId, 'step' => 'deleted_old_blind_rows']);
 
@@ -201,14 +195,7 @@ final class ServiceBlindPlayer
             }
 
             // ── Step 8: Insert blind clones into short pairings ───────────────
-            $insertSql = '
-                INSERT INTO db_Scores
-                    (dbScores_GGID, dbScores_GHIN, dbScores_PairingID, dbScores_PairingPos, dbScores_isBlind, dbScores_Scores)
-                VALUES (?, ?, ?, ?, 1, ?)
-                ON DUPLICATE KEY UPDATE dbScores_Scores = VALUES(dbScores_Scores), _updatedDate = NOW()
-            ';
-            $insertStmt = $pdo->prepare($insertSql);
-            $blindIdx   = 0;
+            $blindIdx = 0;
 
             foreach ($shortPairings as $shortPairingId => $members) {
                 $shortBy = $target - count($members);
@@ -229,9 +216,9 @@ final class ServiceBlindPlayer
                     // In current usage there is always exactly one GHIN.
                     $blindGHIN   = $blindGHINs[$blindIdx % count($blindGHINs)];
                     $blindRecord = $blindRecords[$blindGHIN];
-                    $scoresJson  = json_encode($blindRecord['dbPlayers_Scores'] ?? []);
+                    $scoresJson  = $blindRecord['dbPlayers_Scores'] ?? [];
 
-                    $insertStmt->execute([$ggid, $blindGHIN, $shortPairingId, $nextPos, $scoresJson]);
+                    ServiceDbScores::upsertBlindRow($ggid, $blindGHIN, (string)$shortPairingId, $nextPos, $scoresJson);
                     Logger::info('BLIND_APPLY', [
                         'ggid'      => $ggid,
                         'ghin'      => $blindGHIN,
@@ -255,6 +242,63 @@ final class ServiceBlindPlayer
         } catch (Throwable $e) {
             Logger::error('BLIND_APPLY_FAIL', ['ggid' => $ggid, 'err' => $e->getMessage()]);
             return ['ok' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Delete-only Blind Player removal — the "Pass 3" step of
+     * workflow_recalculateHandicapsScores.php (see spec Section 3.3).
+     *
+     * Deliberately NOT a variant of applyBlindPlayer(): this never
+     * reinserts a clone and never touches dbGames_BlindPlayers. Config
+     * describes intent (target size, donor mode); the deleted rows are
+     * only a derived artifact of that intent applied to a prior roster
+     * snapshot. Leaving config untouched means a later, deliberate,
+     * human-driven re-application (existing module_BlindPlayer.js flow)
+     * requires no reconfiguration.
+     *
+     * Declared flags for REAL players are intentionally not touched
+     * here — that's the subsequent Score Reset pass's job, and it runs
+     * immediately after this one in the workflow's execution order.
+     *
+     * @param int         $ggid       Game identifier.
+     * @param string|null $playerKey  When non-null, scopes the delete to
+     *                                whichever PairingIDs fall within
+     *                                this PlayerKey's roster. When null,
+     *                                deletes every blind row in the game.
+     *
+     * @return array{ok:bool, deletedCount:int, anyDeleted:bool, message?:string}
+     *   anyDeleted is what the caller uses to decide whether the
+     *   required user-facing notification (spec Section 3.3.1) fires.
+     */
+    public static function removeBlindPlayersForScope(int $ggid, ?string $playerKey = null): array
+    {
+        try {
+            if ($playerKey === null || $playerKey === '') {
+                $deletedCount = ServiceDbScores::deleteBlindRowsForGame($ggid);
+            } else {
+                $groupPlayers = ServiceDbPlayers::getPlayersByPlayerKey($playerKey);
+                $pairingIds = [];
+                foreach ($groupPlayers as $p) {
+                    if ((string)($p['dbPlayers_GGID'] ?? '') !== (string)$ggid) continue;
+                    $pid = (string)($p['dbPlayers_PairingID'] ?? '');
+                    if ($pid !== '' && $pid !== '000') $pairingIds[] = $pid;
+                }
+                $deletedCount = $pairingIds ? ServiceDbScores::deleteBlindRowsForPairings($ggid, $pairingIds) : 0;
+            }
+
+            if ($deletedCount > 0) {
+                Logger::info('BLIND_REMOVE', ['ggid' => $ggid, 'playerKey' => $playerKey, 'deletedCount' => $deletedCount]);
+            }
+
+            return [
+                'ok'           => true,
+                'deletedCount' => $deletedCount,
+                'anyDeleted'   => $deletedCount > 0,
+            ];
+        } catch (Throwable $e) {
+            Logger::error('BLIND_REMOVE_FAIL', ['ggid' => $ggid, 'playerKey' => $playerKey, 'err' => $e->getMessage()]);
+            return ['ok' => false, 'deletedCount' => 0, 'anyDeleted' => false, 'message' => $e->getMessage()];
         }
     }
 
@@ -403,21 +447,15 @@ final class ServiceBlindPlayer
             }
 
             // Persist blind score updates
-            $pdo     = Db::pdo();
-            $updSql  = 'UPDATE db_Scores
-                        SET dbScores_Scores = ?, _updatedDate = NOW()
-                        WHERE dbScores_GGID = ? AND dbScores_GHIN = ? AND dbScores_PairingID = ? AND dbScores_PairingPos = ?';
-            $updStmt = $pdo->prepare($updSql);
-
             foreach ($blindScores as $bs) {
                 $key = self::blindKey($bs);
-                $updStmt->execute([
-                    json_encode($blindPlayerScores[$key] ?? []),
+                ServiceDbScores::updateBlindRowScores(
                     $ggid,
                     (string)($bs['dbScores_GHIN'] ?? ''),
                     (string)($bs['dbScores_PairingID'] ?? ''),
                     (int)($bs['dbScores_PairingPos'] ?? 1),
-                ]);
+                    $blindPlayerScores[$key] ?? []
+                );
             }
 
             Logger::info('BLIND_RECALC', ['ggid' => $ggid, 'pairings' => count($pairingPool)]);
@@ -439,10 +477,7 @@ final class ServiceBlindPlayer
      */
     public static function getBlindScoresForGame(int $ggid): array
     {
-        $pdo  = Db::pdo();
-        $stmt = $pdo->prepare('SELECT * FROM db_Scores WHERE dbScores_GGID = ? AND dbScores_isBlind = 1');
-        $stmt->execute([$ggid]);
-        return $stmt->fetchAll() ?: [];
+        return ServiceDbScores::getBlindRowsForGame($ggid);
     }
 
     /**
@@ -451,16 +486,7 @@ final class ServiceBlindPlayer
      */
     public static function getBlindScoreForPairing(int $ggid, string $pairingId): ?string
     {
-        if ($pairingId === '' || $pairingId === '000') return null;
-        $pdo  = Db::pdo();
-        $stmt = $pdo->prepare(
-            'SELECT dbScores_GHIN FROM db_Scores
-             WHERE dbScores_GGID = ? AND dbScores_isBlind = 1 AND dbScores_PairingID = ?
-             LIMIT 1'
-        );
-        $stmt->execute([$ggid, $pairingId]);
-        $row = $stmt->fetch();
-        return $row ? (string)$row['dbScores_GHIN'] : null;
+        return ServiceDbScores::getBlindGHINForPairing($ggid, $pairingId);
     }
 
     /**

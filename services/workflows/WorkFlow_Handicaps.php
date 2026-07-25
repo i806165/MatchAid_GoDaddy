@@ -235,22 +235,37 @@ function be_calculateGamePHSO(string $action, ?string $id, array $parmGameData, 
         );
     }
     elseif ($action === "player" && $id) {
-        // Smart Scope: Find player's group based on competition type
+        // Confirmed ruleset (see spec Section 3.2.1):
+        //   1. dbGames_HCMethod <> "SO"        -> exit (handled by the
+        //      isGrossPlay/HCMethod guard above this branch already ran)
+        //   2. dbPlayers_PairingID = "000"     -> exit (not yet paired)
+        //   3. dbPlayers_PlayerKey = null/""   -> exit (not yet slotted)
+        //   4. Grouping: MatchID if present, else PlayerKey
+        //
+        // Replaces the previous Competition-branched logic, which assumed
+        // PairingID/MatchID was always the correct grouping unit. It is
+        // not: dbPlayers_PlayerKey ("who's riding together") is a physical
+        // grouping distinct from competitive PairingID/MatchID, and is
+        // assigned earlier in the page flow (Slotting) than PairingID/
+        // MatchID (Pairings). In a 1-vs-1 head-to-head, two distinct
+        // Matches can share one PlayerKey — grouping by PlayerKey alone
+        // would incorrectly merge two separate matches' PHSO calculations
+        // into one, so MatchID (when present) always takes precedence.
         $target = null;
         foreach ($allPlayers as $p) {
             if (($p["dbPlayers_PlayerGHIN"] ?? "") === $id) { $target = $p; break; }
         }
         if ($target) {
-            if ($txtCompetition === "PairPair") {
-                $fid = (string)($target["dbPlayers_MatchID"] ?? "");
-                if ($fid !== "" && $fid !== "0") {
-                    $players = array_filter($allPlayers, fn($p) => ((string)($p["dbPlayers_MatchID"] ?? "") === $fid));
-                }
-            } else {
-                // PairField (or others) use PairingID
-                $pid = (string)($target["dbPlayers_PairingID"] ?? "");
-                if ($pid !== "" && $pid !== "000") {
-                    $players = array_filter($allPlayers, fn($p) => ((string)($p["dbPlayers_PairingID"] ?? "") === $pid));
+            $targetPairingId = (string)($target["dbPlayers_PairingID"] ?? "");
+            $targetPlayerKey = (string)($target["dbPlayers_PlayerKey"] ?? "");
+
+            if ($targetPairingId !== "" && $targetPairingId !== "000" && $targetPlayerKey !== "") {
+                $targetMatchId = (string)($target["dbPlayers_MatchID"] ?? "");
+
+                if ($targetMatchId !== "" && $targetMatchId !== "0") {
+                    $players = array_filter($allPlayers, fn($p) => ((string)($p["dbPlayers_MatchID"] ?? "") === $targetMatchId));
+                } else {
+                    $players = array_filter($allPlayers, fn($p) => ((string)($p["dbPlayers_PlayerKey"] ?? "") === $targetPlayerKey));
                 }
             }
         }

@@ -530,7 +530,18 @@
       const res = await MA.postJson(`${base}/saveScoresBatch.php`, payload);
 
       if (res && res.ok) {
-        MA.ui.notify(res.message || "Scores saved.", "success");
+        const scoringSystem = _state.gameRow?.dbGames_ScoringSystem || "";
+        if (["DeclareManual", "DeclarePlayer"].includes(scoringSystem)) {
+          await MA.ui.confirm({
+            title: "Manual Declare Required",
+            message: "The scores have been saved. This game's scoring system requires the user to manually declare scores. Please revisit the hole by hole score entry screen and reconfirm the correct scores are declared.",
+            confirmLabel: "OK",
+            okOnly: true,
+            dismissible: false,
+          });
+        } else {
+          MA.ui.notify(res.message || "Scores saved.", "success");
+        }
         const onSaved = _config.onSaved;
         close();
         if (typeof onSaved === "function") onSaved();

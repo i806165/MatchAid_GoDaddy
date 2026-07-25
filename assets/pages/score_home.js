@@ -926,20 +926,28 @@
         state.scorerGHIN = state.autoScorerGhin;
       }
 
-      // Refresh Scores — always, regardless of game day. Purely local
-      // recompute against already-entered scores, no external dependency,
-      // no reason to gate it. Scoped to this playing group only.
-      const ggidStr = String(state.game?.dbGames_GGID || '');
-      if (ggidStr) {
-        await MA.refreshScores({ ggid: ggidStr, gameRow: state.game, scorecardKey: key });
-      }
+      // Score/declared reconciliation used to run here unconditionally via
+      // MA.refreshScores() (cheap, local, no network calls, every launch
+      // regardless of game day). That module is retired — its job is now
+      // a byproduct of Pass 4 inside the consolidated
+      // MA.recalculateHandicaps() call below. But that call is still
+      // game-day gated (Passes 1-2 make real GHIN network calls, and that
+      // gate exists deliberately to bound latency/rate-limit exposure to
+      // the window it actually matters). NET EFFECT, FLAGGED FOR SIGN-OFF:
+      // a non-game-day preview/test launch now gets NO score/declared
+      // reconciliation at all, where it previously always did. If that's
+      // not acceptable, this needs to either run unconditionally (at the
+      // cost of GHIN calls outside game day) or the workflow needs
+      // splitting back apart for this one case.
 
-      // Handicap refresh — game-day only. Real GHIN network calls; gated to
-      // bound latency/reliability/rate-limit exposure to the one window it
-      // actually matters, and to avoid re-fetching an HI that hasn't moved
-      // for someone previewing/testing a game days out. Also scoped to this
-      // playing group only — never the whole field, regardless of how many
-      // groups are launching at once.
+      // Handicap refresh (+ PHSO, Blind Player removal, Score Reset) —
+      // game-day only. Real GHIN network calls; gated to bound latency/
+      // reliability/rate-limit exposure to the one window it actually
+      // matters, and to avoid re-fetching an HI that hasn't moved for
+      // someone previewing/testing a game days out. Also scoped to this
+      // playing group only — never the whole field, regardless of how
+      // many groups are launching at once.
+      const ggidStr = String(state.game?.dbGames_GGID || '');
       if (state.isGameDay && ggidStr) {
         await MA.recalculateHandicaps(null, { scorecardKey: key });
       }

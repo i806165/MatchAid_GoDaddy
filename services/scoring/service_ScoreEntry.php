@@ -1182,10 +1182,30 @@ final class ServiceScoreEntry
             }
 
             $working[$i] = [
-                'playerRow'  => $playerRow,
-                'scoresJson' => $scoresJson,
-                'holeScores' => $holeScores,
+                'playerRow'          => $playerRow,
+                'scoresJson'         => $scoresJson,
+                'holeScores'         => $holeScores,
+                // Captured before the per-hole loop below mutates
+                // scoresJson — the persist step diffs against this to
+                // skip writing a player whose recomputed values came out
+                // identical to what was already stored.
+                'originalScoresJson' => $scoresJson,
             ];
+        }
+
+        // Group-level gate: if nobody in this scoring group has a single
+        // recorded hole, there's nothing to reset — skip the per-hole
+        // loop, rotation resolution, and every write entirely rather
+        // than running the full engine just to no-op at the end.
+        $anyScoresInGroup = false;
+        foreach ($working as $w) {
+            if (!empty($w['holeScores'])) {
+                $anyScoresInGroup = true;
+                break;
+            }
+        }
+        if (!$anyScoresInGroup) {
+            return ['ok' => true, 'message' => 'No recorded scores for this group — nothing to reset.', 'players' => []];
         }
 
         // Same per-hole sequence as persistScoresBatch(): apply each
@@ -1200,9 +1220,24 @@ final class ServiceScoreEntry
                 if (!array_key_exists($holeNumber, $w['holeScores'])) continue;
                 $touchedAny = true;
 
+                // Preserve whatever this hole's declared value already is —
+                // applyHoleScore() fully replaces the hole record (it does
+                // not merge), so passing a hardcoded false here would
+                // silently wipe a manual declaration on DeclareManual /
+                // DeclarePlayer games. Auto-declare systems are unaffected
+                // either way, since resolveDeclaredScores() below
+                // recomputes and overwrites this value correctly for them.
+                $existingDeclared = false;
+                foreach (self::normalizeHoleDetails($w['scoresJson']['Scores'][0]['hole_details'] ?? []) as $d) {
+                    if (intval($d['hole_number'] ?? 0) === $holeNumber) {
+                        $existingDeclared = !empty($d['declared']);
+                        break;
+                    }
+                }
+
                 $raw = $w['holeScores'][$holeNumber];
                 $w['scoresJson'] = self::applyHoleScore(
-                    $gameRow, $w['playerRow'], $w['scoresJson'], $holeNumber, (float)$raw, false
+                    $gameRow, $w['playerRow'], $w['scoresJson'], $holeNumber, (float)$raw, $existingDeclared
                 );
                 $w['playerRow']['dbPlayers_Scores'] = $w['scoresJson'];
             }
@@ -1241,8 +1276,28 @@ final class ServiceScoreEntry
         // handicap-driven reset should touch either.
         $savedPlayers = [];
         foreach ($working as $w) {
+            // Per-player gate: this player had nothing to reset (e.g. a
+            // roster slot with no scores yet in an otherwise-active
+            // group) — skip rewriting their unchanged blank record.
+            if (empty($w['holeScores'])) continue;
+
             $ghin = (string)($w['playerRow']['dbPlayers_PlayerGHIN'] ?? '');
             if ($ghin === '') continue;
+
+            // Diff-skip: always recompute (above), but only write when the
+            // recomputed result actually differs from what's already
+            // stored. This is what makes broad, safety-first scoping (e.g.
+            // a game-wide reset triggered by a slotting change) cheap — a
+            // player whose handicap didn't actually change gets recomputed
+            // in memory but never rewritten to the database.
+            if (self::canonicalizeJsonish($w['scoresJson']) === self::canonicalizeJsonish($w['originalScoresJson'])) {
+                $savedPlayers[] = [
+                    'dbPlayers_PlayerGHIN' => $ghin,
+                    'dbPlayers_Scores'     => $w['scoresJson'],
+                    'unchanged'            => true,
+                ];
+                continue;
+            }
 
             $saved = ServiceDbPlayers::updateGamePlayerFields($ggid, $ghin, [
                 'dbPlayers_Scores' => json_encode($w['scoresJson']),

@@ -1547,13 +1547,14 @@ function renderTrayBody(){
     const existing = state.players.find(p => safe(p.dbPlayers_PlayerGHIN) === ghin);
     let wasPaired = false;
     if (existing) {
-      const comp = state.game?.dbGames_Competition || "PairField";
-      const pid = safe(existing.dbPlayers_PairingID || "000");
-      const fid = safe(existing.dbPlayers_MatchID || "");
-      wasPaired = (comp === "PairPair") ? (pid !== "000" && fid !== "" && fid !== "0") : (pid !== "000");
+      // Ruleset (spec Section 3.2.1): paired AND slotted into a playing
+      // group. MatchID-vs-PlayerKey grouping is resolved server-side in
+      // be_calculateGamePHSO()'s "player" action — this gate only decides
+      // whether to call it at all, not how it groups.
+      const pairingId = safe(existing.dbPlayers_PairingID || "000");
+      const playerKey = safe(existing.dbPlayers_PlayerKey || "");
+      wasPaired = (pairingId !== "000") && (playerKey !== "");
     }
-
-    // When enrolling from the event roster, carry event-specific fields
     // into the db_Players upsert so TeamKey and PairingID cascade correctly.
     const player = Object.assign({}, state.pendingPlayer);
     if (player.source === "eventRoster") {
@@ -1596,12 +1597,22 @@ function renderTrayBody(){
     let pid = "000";
     let fid = "";
     let comp = "PairField";
+    let playerKey = "";
 
     if (p) {
       comp = state.game?.dbGames_Competition || "PairField";
       pid = safe(p.dbPlayers_PairingID || "000");
       fid = safe(p.dbPlayers_MatchID || "");
-      wasPaired = (comp === "PairPair") ? (pid !== "000" && fid !== "" && fid !== "0") : (pid !== "000");
+      playerKey = safe(p.dbPlayers_PlayerKey || "");
+      // Ruleset (spec Section 3.2.1): paired AND slotted into a playing
+      // group — same gate as commitPending() above. Note: the
+      // flight-vs-pairing action choice just below this block still
+      // branches on Competition/MatchID directly (unchanged) — that
+      // branch targets an explicit remaining-group id after a deletion,
+      // not a "resolve group from a player" lookup, so the "player"-
+      // action ruleset fix doesn't directly apply to it. Flagged for a
+      // separate review rather than folded in here.
+      wasPaired = (pid !== "000") && (playerKey !== "");
     }
 
     try {
