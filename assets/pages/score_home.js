@@ -539,10 +539,11 @@
         throw new Error(res?.message || 'Unable to update tee box.');
       }
 
-      // Pull fresh player rows for this Scorecard ID — read-only, no
-      // recalc/refresh side effects — so the tapped row's tee/HI/CH
-      // reflect the save immediately without triggering onLaunch()'s
-      // isGameDay-gated recalc or the deferred group-wide one.
+      // Pull fresh player rows for this Scorecard ID — read-only, so the
+      // tapped row's tee/HI/CH reflect the save immediately without
+      // triggering a recalc here. This fetch is independent of the
+      // retired refresh_scores.js/MA.refreshScores() — it's a plain
+      // display re-fetch, not declared reconciliation.
       if (ggidStr && scorecardKey) {
         const refreshed = await MA.postJson(apiUrls.getPlayersForRefresh, {
           ggid: ggidStr,
@@ -552,10 +553,14 @@
           state.players = normalizePlayers(refreshed.players || []);
         }
 
-        // Local, cheap recompute against already-entered scores — same
-        // reasoning as onLaunch(): no external dependency, safe to run
-        // immediately, not part of the deferred recalc.
-        await MA.refreshScores({ ggid: ggidStr, gameRow: state.game, scorecardKey });
+        // Declared reconciliation for this tee change is NOT run
+        // immediately here anymore — MA.refreshScores() is retired.
+        // Strokes/net/declared for this group get rebuilt together, once,
+        // by the deferred recalc that state.dirty (below) forces on
+        // Go-to-Digital-Scoring — same "compute the whole chain together"
+        // principle as everywhere else in this workflow, rather than a
+        // separate declared-only pass disconnected from the strokes fix
+        // still pending in state.dirty.
       }
 
       // The real handicap recalculation is deferred — it's a live GHIN
