@@ -63,6 +63,7 @@ function playerGamesIsVisible(
   array $myGGIDs,
   array $buddyAdmins,
   array $favSet,
+  array $favPlayerTags,
   string $quickPreset,
   bool $directLinkMode
 ): array {
@@ -372,6 +373,7 @@ function hydratePlayerGamesList(string $userGHIN, array $filters, string $userCl
       $myGGIDs,
       $buddyAdmins,
       $favSet,
+      $favPlayerTags,
       $quickPreset,
       $directLinkMode
     );

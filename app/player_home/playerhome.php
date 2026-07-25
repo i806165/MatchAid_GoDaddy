@@ -37,7 +37,7 @@ $defaultWindow = ma_resolveDefaultDateWindow(30);
 $defaultDateFrom = $defaultWindow['dateFrom'];
 $defaultDateTo   = $defaultWindow['dateTo'];
 $defaultSelected = [];
-$defaultPreset   = 'OPEN'; // Default to "Open Games" (All Available)
+$defaultPreset   = 'FAVORITES'; // Default to "Games from Admins I Follow"
 
 // Session restore (Return path)
 $sessDf     = trim((string)($_SESSION['PP_FILTERDATEFROM'] ?? ''));

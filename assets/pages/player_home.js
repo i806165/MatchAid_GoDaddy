@@ -875,10 +875,21 @@ function getGameAdminMeta(g){
     
     if (btnApply) {
       btnApply.onclick = async () => {
+        // Guard: block "select none" instead of silently applying no admin filter.
+        const committedAdmins = state.uiFilters.selectedAdminKeys || [];
+        if (committedAdmins.length === 0) {
+          setStatus('Select at least one admin before applying filters.', 'error');
+          return;
+        }
+
         state.filters.dateFrom = String(dateFromEl?.value || '');
         state.filters.dateTo = String(dateToEl?.value || '');
-        state.filters.selectedAdminKeys = [...state.uiFilters.selectedAdminKeys];
-        
+        state.filters.selectedAdminKeys = [...committedAdmins];
+
+        // Clear quickPreset when user manually applies filters — matches
+        // desktop sidebar Apply behavior (see wireSidebar()).
+        state.filters.quickPreset = '';
+
         closeModal(false);
         await reloadGames();
       };
@@ -1121,18 +1132,18 @@ function getGameAdminMeta(g){
       if (!g) { card.style.display = 'none'; return; }
       const { enrollmentStatus } = inferStatuses(g);
       const adminMeta = getGameAdminMeta(g);
-      const keep = enrollmentStatus === 'Registered' || !!adminMeta.adminKey;
+      const currentUserGhin = String(init.user?.ghin || '');
+      const isSelfAdmin = !!adminMeta.adminKey && adminMeta.adminKey === currentUserGhin;
+      const keep = enrollmentStatus === 'Registered' || isSelfAdmin;
       card.style.display = keep ? '' : 'none';
     });
   }
 
-  // Client-side course filter applied on top of rendered cards
+  // Client-side course filter applied on top of rendered cards.
+  // NOTE: relies on the Apply-button guard (see wireSidebar()) to prevent
+  // checkedCourses from ever being empty while allCourses is non-empty —
+  // this function no longer silently re-selects all courses as a fallback.
   function sbApplyCourseFilter() {
-    // Empty at Apply time means no filter — treat as select all
-    if (sbState.checkedCourses.size === 0) {
-      sbState.allCourses.forEach(c => sbState.checkedCourses.add(c.name));
-      sbRenderCourseRows();
-    }
     const allChecked = sbState.allCourses.every(c => sbState.checkedCourses.has(c.name));
     if (allChecked) return; // All selected — nothing to hide
     const cards = el.cards ? el.cards.querySelectorAll('.maCard') : [];
@@ -1259,6 +1270,20 @@ function getGameAdminMeta(g){
     const applyBtn = document.getElementById('sbApplyBtn');
     if (applyBtn) {
       applyBtn.addEventListener('click', async () => {
+        // Guard: block "select none" instead of silently expanding to "select all".
+        const committedAdmins = state.uiFilters.selectedAdminKeys || [];
+        if (committedAdmins.length === 0) {
+          setStatus('Select at least one admin before applying filters.', 'error');
+          return;
+        }
+
+        // Guard: same clamp for Courses — empty means "hide everything,"
+        // which is never useful, so block it instead of silently selecting all.
+        if (sbState.checkedCourses.size === 0 && sbState.allCourses.length > 0) {
+          setStatus('Select at least one course before applying filters.', 'error');
+          return;
+        }
+
         applyBtn.disabled = true;
         applyBtn.textContent = 'Applying…';
 
@@ -1271,11 +1296,7 @@ function getGameAdminMeta(g){
         }
 
         // Commit admin selection from uiFilters to filters.
-        // Empty at Apply time means no filter — treat as select all.
-        const committedAdmins = state.uiFilters.selectedAdminKeys || [];
-        state.filters.selectedAdminKeys = committedAdmins.length
-          ? [...committedAdmins]
-          : (state.admins || []).map(a => String(a.key || a.adminKey || '')).filter(Boolean);
+        state.filters.selectedAdminKeys = [...committedAdmins];
 
         // Clear quickPreset when user is using sidebar (custom filter state)
         state.filters.quickPreset = '';
