@@ -250,6 +250,7 @@
       startHoleSuffix: String(r.dbPlayers_StartHoleSuffix ?? ''),
       playerKey:     String(r.dbPlayers_PlayerKey    ?? ''),
       team:          String(r.dbPlayers_TeamKey      ?? ''),
+      scoreKeeper:   String(r.dbPlayers_ScoreKeeper   ?? ''),
       scoresJson:    r.dbPlayers_Scores || null,
     }));
   }
@@ -926,31 +927,23 @@
         state.scorerGHIN = state.autoScorerGhin;
       }
 
-      // Score/declared reconciliation used to run here unconditionally via
-      // MA.refreshScores() (cheap, local, no network calls, every launch
-      // regardless of game day). That module is retired — its job is now
-      // a byproduct of Pass 4 inside the consolidated
-      // MA.recalculateHandicaps() call below. But that call is still
-      // game-day gated (Passes 1-2 make real GHIN network calls, and that
-      // gate exists deliberately to bound latency/rate-limit exposure to
-      // the window it actually matters). NET EFFECT, FLAGGED FOR SIGN-OFF:
-      // a non-game-day preview/test launch now gets NO score/declared
-      // reconciliation at all, where it previously always did. If that's
-      // not acceptable, this needs to either run unconditionally (at the
-      // cost of GHIN calls outside game day) or the workflow needs
-      // splitting back apart for this one case.
-
-      // Handicap refresh (+ PHSO, Blind Player removal, Score Reset) —
-      // game-day only. Real GHIN network calls; gated to bound latency/
-      // reliability/rate-limit exposure to the one window it actually
-      // matters, and to avoid re-fetching an HI that hasn't moved for
-      // someone previewing/testing a game days out. Also scoped to this
-      // playing group only — never the whole field, regardless of how
-      // many groups are launching at once.
+      // Handicap refresh (+ PHSO, Blind Player removal, Score Reset) no
+      // longer runs on launch at all. Previously fired on every game-day
+      // launch (via MA.refreshScores(), then later the consolidated
+      // MA.recalculateHandicaps() call) — confirmed in live field use to
+      // be a real UX problem: a blocking "Updating Handicaps" overlay on
+      // every single re-entry into the scoring portal, not just when
+      // something actually needed refreshing.
+      //
+      // The trigger has moved to the actual save paths (score_entry.js's
+      // first-hole-save handler, module_enterScoresBatch.js's save
+      // success handler), firing only on a genuine dbPlayers_ScoreKeeper
+      // transition (blank -> user, or user A -> user B) — not on every
+      // launch, and not on every subsequent hole by the same scorer.
+      // Manual recalculation remains available via the Actions menu
+      // (game_maintenance.js / game_summary.js / game_scorecards.js /
+      // game_pairings.js — all unchanged).
       const ggidStr = String(state.game?.dbGames_GGID || '');
-      if (state.isGameDay && ggidStr) {
-        await MA.recalculateHandicaps(null, { scorecardKey: key });
-      }
 
       // Show group card, hide launch card
       el.launchCard.classList.add('isHidden');
@@ -1312,25 +1305,43 @@
   async function onGoClick() {
     if (el.btnGo.disabled) return;
 
-    // Deferred group-wide handicap recalculation — only if something
-    // changed this session (state.dirty) and only on game day, matching
-    // the existing isGameDay gate onLaunch() already uses for the same
-    // real GHIN network call. Not gated by dirty+isGameDay together
-    // anywhere else — this is the one place the deferred correction
-    // actually runs.
-    if (state.dirty && state.isGameDay) {
+    // Routing — reads dbPlayers_ScoreKeeper, never writes it. Writing it
+    // is reserved to the save paths (persistScoresBatch() /
+    // buildSavedPlayerFields() in service_ScoreEntry.php), which is also
+    // where the handicap/score recalc trigger normally lives now, firing
+    // once per genuine scorer handoff rather than on every launch or
+    // every click here.
+    //
+    //   ScoreKeeper blank              -> Score Entry (nobody's scored yet)
+    //   ScoreKeeper === this user       -> Score Entry (established scorer, continue)
+    //   ScoreKeeper === someone else    -> Score Summary (leaderboard) — this
+    //                                      card already has an active scorer
+    const groupScoreKeeper = String(state.players?.[0]?.scoreKeeper || '').trim();
+    const isEstablishedScorekeeper =
+      groupScoreKeeper === '' || groupScoreKeeper === state.sessionGhin;
+
+    if (!state.isGameDay) {
+      window.location.href = apiUrls.scoreSummary;
+      return;
+    }
+
+    // Forced exception to "recalc only fires on a ScoreKeeper transition":
+    // a tee-box correction made on this screen (saveScoreHomeTeeChange())
+    // invalidates already-recorded strokes regardless of who the
+    // established scorekeeper is or whether a handoff occurred. state.dirty
+    // is the only signal that happened, so it forces the recalc here,
+    // independent of the ScoreKeeper-based routing decision above.
+    if (state.dirty) {
       const scorecardKey = String(
         state.players?.[0]?.playerKey || el.groupKeyText?.textContent || ''
       ).trim().toUpperCase();
 
       if (scorecardKey) {
         el.btnGo.disabled = true;
-        MA.ui.notify('Recalculating handicaps…', 'info');
         try {
           const ok = await MA.recalculateHandicaps(null, { scorecardKey });
           if (!ok) throw new Error('Handicap recalculation failed.');
           state.dirty = false;
-          MA.ui.notify('Handicaps updated.', 'success');
         } catch (e) {
           MA.ui.notify(e.message || 'Unable to recalculate handicaps.', 'error');
           el.btnGo.disabled = false;
@@ -1340,7 +1351,7 @@
       }
     }
 
-    window.location.href = state.isGameDay ? apiUrls.scoreEntry : apiUrls.scoreSummary;
+    window.location.href = isEstablishedScorekeeper ? apiUrls.scoreEntry : apiUrls.scoreSummary;
   }
 
   // Cart drawer

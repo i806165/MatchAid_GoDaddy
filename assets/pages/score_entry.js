@@ -114,6 +114,14 @@
 
       state.payload = json.payload;
       state.scorerGHIN = json.payload.scorerGHIN || '';
+      // Baseline for the handicap/score recalc trigger below — the
+      // group's ScoreKeeper as it stood before any save this session.
+      // Read once, at launch; a completed save updates this to whatever
+      // was just stamped, so the trigger only fires again on a genuine
+      // further handoff, not on every subsequent hole.
+      state.groupScoreKeeperBaseline = String(
+        activePlayers()[0]?.playerRow?.dbPlayers_ScoreKeeper || ''
+      ).trim();
       activePlayers().forEach((wrapper) => {
         if (!wrapper.originalScoresJson) {
           wrapper.originalScoresJson = deepClone(wrapper.scoresJson || null);
@@ -197,6 +205,23 @@
         }
         patchReturnedScores(saveResult);
         state.dirty = false;
+
+        // Handicap/score recalc trigger — fires only on a genuine
+        // dbPlayers_ScoreKeeper transition (blank -> this scorer, or a
+        // different prior scorer -> this scorer), not on every save.
+        // Replaces the old launch-time trigger in score_home.js, which
+        // fired on every re-entry into the scoring portal regardless of
+        // whether anything actually needed refreshing — confirmed in
+        // live field use to be a real, disruptive UX problem. Blocking
+        // (MA.recalculateHandicaps already shows its own busy overlay) —
+        // accepted, since this now fires rarely rather than constantly.
+        if (state.scorerGHIN && state.scorerGHIN !== state.groupScoreKeeperBaseline) {
+          const scorecardKeyForRecalc = getBaselinePlayerKey();
+          if (scorecardKeyForRecalc && MA.recalculateHandicaps) {
+            await MA.recalculateHandicaps(null, { scorecardKey: scorecardKeyForRecalc });
+          }
+          state.groupScoreKeeperBaseline = state.scorerGHIN;
+        }
       }
 
       const pKey = getBaselinePlayerKey();
@@ -853,7 +878,7 @@ function markDirty(playerId, rawScore, declared) {
     // backdrop-tap dismissal either) before the scorer can continue.
     await MA.ui.confirm({
       title: 'Scorecard Updated',
-      message: message || `The game administrator has updated the game handicaps. Please re-enter the scores for hole ${holeNumber}.`,
+      message: message || `Hole ${holeNumber} was updated elsewhere and has been refreshed. Please re-enter the score.`,
       confirmLabel: 'OK',
       okOnly: true,
       dismissible: false

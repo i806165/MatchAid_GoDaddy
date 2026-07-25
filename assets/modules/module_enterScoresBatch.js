@@ -151,6 +151,10 @@
       players,
       parByHole: payload.parByHole || {},
       scorerGHIN: payload.scorerGHIN || "",
+      // Baseline for the handicap/score recalc trigger — the group's
+      // ScoreKeeper as it stood before this batch save. See save()'s
+      // success handler below.
+      groupScoreKeeperBaseline: String(players[0]?.playerRow?.dbPlayers_ScoreKeeper || "").trim(),
       holesLabel,
       showTabs,
       activeSide: holesLabel === "B9" ? "B9" : "F9",
@@ -530,6 +534,21 @@
       const res = await MA.postJson(`${base}/saveScoresBatch.php`, payload);
 
       if (res && res.ok) {
+        // Handicap/score recalc trigger — fires only on a genuine
+        // dbPlayers_ScoreKeeper transition (blank -> this scorer, or a
+        // different prior scorer -> this scorer), not on every batch
+        // save. Same trigger as score_entry.js's single-hole save path —
+        // see that file for why this replaced the old launch-time
+        // trigger in score_home.js. Blocking (MA.recalculateHandicaps
+        // shows its own busy overlay) — accepted, fires rarely.
+        if (_state.scorerGHIN && _state.scorerGHIN !== _state.groupScoreKeeperBaseline) {
+          const scorecardKeyForRecalc = String(_state.players[0]?.playerRow?.dbPlayers_PlayerKey || "");
+          if (scorecardKeyForRecalc && MA.recalculateHandicaps) {
+            await MA.recalculateHandicaps(null, { scorecardKey: scorecardKeyForRecalc });
+          }
+          _state.groupScoreKeeperBaseline = _state.scorerGHIN;
+        }
+
         const scoringSystem = _state.gameRow?.dbGames_ScoringSystem || "";
         if (["DeclareManual", "DeclarePlayer"].includes(scoringSystem)) {
           await MA.ui.confirm({
