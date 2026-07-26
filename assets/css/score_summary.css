@@ -522,8 +522,14 @@
    the name truncated to a couple characters. Instead of one crowded line,
    split each entry across two rows using a shared grid so every value still
    lands directly under its own header:
-     Row 1: rank/name ......................................... Pts
-     Row 2:  Thru (under name)      Front      Back      Net
+     Row 1: name ............................................... Pts
+     Row 2: "Thru 18" (under name)      Front      Back      Net
+   Thru's data sits under the name, not under its own header column, and
+   self-labels ("Thru 18") — so the header's standalone "Thru" cell is
+   hidden on mobile (Front/Back/Net/Pts still get theirs). That column was
+   otherwise dead weight: 5 tracks, not 6 — the width it would have taken
+   goes to the name column instead, which is where a team-configured game's
+   red/blue dot (lbTeamDotHtml) eats into name width most.
    Scoped to .lbRowIndividual only (set alongside .lbHeaderRow / the data
    row in lbRenderPairFieldIndividualRows) so Pairing/Team leaderboard rows,
    which have a different column set, are untouched. Desktop/tablet keep the
@@ -533,17 +539,18 @@
 @media (max-width: 480px) {
   .lbRowIndividual {
     display: grid;
-    grid-template-columns: 1fr 40px 40px 40px 44px 44px;
+    grid-template-columns: 1fr 40px 40px 44px 44px;
     column-gap: 8px;
     row-gap: 2px;
   }
 
-  /* Header stays a single row — Thru/Front/Back/Net/Pts each still get a
-     labeled column even though data splits across two rows below them. */
+  /* Header stays a single row. Thru's own header cell is hidden — its data
+     no longer occupies a header-aligned column (see comment above) — so
+     Front/Back/Net/Pts auto-place into the freed-up tracks in DOM order. */
   .lbRowIndividual.lbHeaderRow {
     grid-template-rows: auto;
   }
-  .lbRowIndividual.lbHeaderRow .lbColThru:nth-of-type(2) { text-align: left; }
+  .lbRowIndividual.lbHeaderRow .lbColThru:nth-of-type(2) { display: none; }
   .lbRowIndividual.lbHeaderRow .lbColThru:nth-of-type(3),
   .lbRowIndividual.lbHeaderRow .lbColThru:nth-of-type(4) { text-align: right; }
 
@@ -566,21 +573,26 @@
 
   /* Points — first row, right-justified under its header, no label. */
   .lbRowIndividual:not(.lbHeaderRow) .lbColPts {
-    grid-column: 6 / 7;
+    grid-column: 5 / 6;
     grid-row: 1;
   }
 
-  /* Thru — second row, left-aligned directly under the player's name. */
+  /* Thru — second row, left-aligned directly under the player's name.
+     Self-labeled ("Thru 18") since it no longer sits under a "Thru"
+     header column. */
   .lbRowIndividual:not(.lbHeaderRow) .lbColThru:nth-of-type(2) {
     grid-column: 1 / 2;
     grid-row: 2;
     text-align: left;
     font-size: 12px;
   }
+  .lbRowIndividual:not(.lbHeaderRow) .lbColThru:nth-of-type(2)::before {
+    content: "Thru ";
+  }
 
   /* Front — second row, under its own header column. */
   .lbRowIndividual:not(.lbHeaderRow) .lbColThru:nth-of-type(3) {
-    grid-column: 3 / 4;
+    grid-column: 2 / 3;
     grid-row: 2;
     text-align: right;
     font-size: 12px;
@@ -588,7 +600,7 @@
 
   /* Back — second row, under its own header column. */
   .lbRowIndividual:not(.lbHeaderRow) .lbColThru:nth-of-type(4) {
-    grid-column: 4 / 5;
+    grid-column: 3 / 4;
     grid-row: 2;
     text-align: right;
     font-size: 12px;
@@ -596,7 +608,7 @@
 
   /* Net/Gross (Kpi) — second row, under its own header column. */
   .lbRowIndividual:not(.lbHeaderRow) .lbColKpi {
-    grid-column: 5 / 6;
+    grid-column: 4 / 5;
     grid-row: 2;
     font-size: 12px;
   }

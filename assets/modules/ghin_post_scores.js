@@ -231,7 +231,7 @@
           </div>` : ''}
         </div>
         <div class="maModal__body maModal__body--flush">
-          <div class="maListRow maListRow--static" style="font-size:12px; font-weight:900;">
+          <div class="maListRow maListRow--static" style="font-size:12px; font-weight:900; background:var(--brandPrimaryBg); border-top:0.5px solid var(--borderSubtle); border-bottom:0.5px solid var(--borderSubtle);">
             <span class="maListRow__col" style="flex:1 1 auto;">Hole</span>
             <span class="maListRow__col maListRow__col--right" style="flex:0 0 44px;">Par</span>
             <span class="maListRow__col maListRow__col--right" style="flex:0 0 56px;">Gross</span>

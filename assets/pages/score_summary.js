@@ -1128,7 +1128,6 @@
     if (typeof ui?.openActionsMenu !== 'function') return;
 
     const sortKey = cell.dataset.sortKey || '';
-    const displayVal = cell.dataset.displayValue || cell.textContent.trim();
     const label = lbIndividualSortLabel(sortKey);
     const isNumeric = (sortKey === 'thru' || sortKey === 'kpi' || sortKey === 'front' || sortKey === 'back');
     const actions = isNumeric
@@ -1141,7 +1140,7 @@
           { label: `Sort ${label} Z to A`, action: () => lbSetIndividualSort(sortKey, 'desc') },
         ];
 
-    ui.openActionsMenu(displayVal || label, actions, label);
+    ui.openActionsMenu(label, actions);
   }
 
   function lbRenderPairFieldIndividualRows() {
