@@ -402,9 +402,20 @@
 
     // ── Wire interactions ──────────────────────────────────────────────────
 
-    let selectedGHIN = isPreAssigned ? (blindConfig.ghin || null) : null;
+    // Rerun case: existingGHIN is already applied for this pairing, shown
+    // locked/unclickable at the top (buildSelectModal above) so it can't
+    // be double-listed in the pickable roster below. Pre-select it here
+    // and enable Apply immediately — otherwise there was no way to
+    // re-confirm the same donor without first picking someone else to
+    // enable the button, then picking back... which the locked row's own
+    // non-selectability made impossible anyway.
+    let selectedGHIN = isPreAssigned
+      ? (blindConfig.ghin || null)
+      : (existingGHIN || null);
     const confirmBtn = modal.querySelector('.bpm-confirm');
     const statusEl   = modal.querySelector('.bpm-status');
+
+    if (confirmBtn && selectedGHIN) confirmBtn.disabled = false;
 
     function setStatus(msg, isError = true) {
       if (!statusEl) return;
