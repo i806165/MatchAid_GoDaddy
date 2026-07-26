@@ -330,7 +330,20 @@ public static function buildEffectiveBaselinePlayers(array $players, array $seat
             $row['baselineFlightID'] = $baseline['flightID'];
             $row['baselinePairingID'] = self::normStr($player['dbPlayers_PairingID'] ?? '', '000');
             $row['virtualPlayerKey'] = $baseline['playerKey'];
-            $row['virtualFlightID'] = $baseline['flightID'];
+            // Each player's own dbPlayers_MatchID — NOT $baseline['flightID'],
+            // which is only ever the FIRST player in the group's MatchID
+            // (see buildBaselineContext()). For 2v2 that's a no-op, since
+            // every player sharing a physical scorecard group also shares
+            // one MatchID there. For 1v1 games where a tee-time foursome is
+            // two independent head-to-head matches sharing one printed
+            // scorecard, though, that collapse silently overwrote every
+            // player's real match with whichever match happened to sort
+            // first — exactly what let two unrelated matches get merged
+            // into one downstream in ServiceScoreSummary::buildPairPairRows(),
+            // despite that function itself already being scoped correctly.
+            // dbPlayers_MatchPos two lines below was already done correctly,
+            // per-player, for the same reason.
+            $row['virtualFlightID'] = self::normStr($player['dbPlayers_MatchID'] ?? '', $baseline['flightID']);
             $row['virtualPairingID'] = self::normStr($player['dbPlayers_PairingID'] ?? '', '000');
             $row['virtualFlightPos'] = self::normStr($player['dbPlayers_MatchPos'] ?? '', '');
             $row['effectivePlayerKey'] = $row['virtualPlayerKey'];
