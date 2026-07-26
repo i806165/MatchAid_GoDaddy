@@ -98,6 +98,7 @@
   let _effDate = "";
   let _mode = "none";
   let _isGrossPlay = false; // target: "game" only — no single Scoring Method at the event level
+  let _isPairField = false; // target: "game" only — Shots-Off has no meaning without a Field to be off against
 
   // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -296,15 +297,32 @@
       // against here.
       _isGrossPlay = false;
 
+      // Same reasoning — events span multiple games/rounds, which may
+      // each have a different Competition, so there's no single pairing
+      // to lock Shots-Off against here either.
+      _isPairField = false;
+
       return;
     }
 
     const game =
       ctx.game || {};
 
+    // Shots-Off has no meaning for a Pair vs. Field game — there's no
+    // "field" for a pair to be off against, only for Pair vs. Pair. If a
+    // record somehow still carries a stale "SO" from before a Competition
+    // change, coerce it back to CH here on hydrate rather than surfacing
+    // an option the UI is about to disable anyway.
+    _isPairField =
+      String(
+        game.dbGames_Competition ||
+          "PairField"
+      ) === "PairField";
+
     _method =
       game.dbGames_HCMethod ===
-      "SO"
+        "SO" &&
+      !_isPairField
         ? "SO"
         : "CH";
 
@@ -601,6 +619,10 @@
               _method === "SO"
                 ? " is-selected"
                 : ""
+            }${
+              _isPairField
+                ? " is-disabled"
+                : ""
             }"
             style="
               flex:1;
@@ -610,11 +632,23 @@
             aria-pressed="${
               _method === "SO"
             }"
+            ${
+              _isPairField
+                ? "disabled"
+                : ""
+            }
           >
             Shots-Off
           </button>
 
         </div>
+
+        ${
+          _isPairField
+            ? `<div class="maHintText" style="margin-top:6px;">Shots-Off is not available for Pair vs. Field games.</div>`
+            : ""
+        }
+
       </div>
     `;
   }
@@ -987,6 +1021,14 @@
             return;
           }
 
+          if (
+            chip.dataset.method ===
+              "SO" &&
+            _isPairField
+          ) {
+            return;
+          }
+
           _method =
             chip.dataset.method ===
             "SO"
@@ -1304,6 +1346,7 @@
       _effectivity = "PlayDate";
       _effDate = "";
       _mode = "none";
+      _isPairField = false;
 
       _lockScroll(false);
     };

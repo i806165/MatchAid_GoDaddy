@@ -147,6 +147,28 @@ try {
         $allowance = 100;
     }
 
+    /*
+     * ── PairField backstop ───────────────────────────────────────────
+     *
+     * Shots-Off has no meaning for a Pair vs. Field game — there's no
+     * "field" for a pair to be off against, only for Pair vs. Pair. Same
+     * precedent as the Gross Play backstop directly above: the client
+     * already disables the Shots-Off chip for a PairField game, but this
+     * endpoint doesn't trust that alone — checked here independently
+     * against the freshly-loaded Game.
+     *
+     * Coerces rather than rejects, matching the Gross Play backstop's own
+     * choice: a stale "SO" reaching this endpoint (e.g. Competition
+     * changed to PairField in a race with this save) is silently
+     * normalized to CH rather than failing the whole save over one
+     * now-invalid field.
+     */
+    $competition = trim((string)($game["dbGames_Competition"] ?? "PairField"));
+
+    if ($competition === "PairField" && $method === "SO") {
+        $method = "CH";
+    }
+
     // ── Persist module-owned fields only ───────────────────────────────
 
     $patch = [

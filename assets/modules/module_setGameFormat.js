@@ -206,6 +206,22 @@
       patch.dbGames_BlindPlayers = [];
     }
 
+    // Shots-Off is PairPair-only (saveGameHandicapSettings.php rejects
+    // saving "SO" once Competition is PairField) — so a Shots-Off method
+    // left over from a prior PairPair era is orphaned the moment
+    // Competition becomes PairField here, with no other save path left
+    // that could ever correct it. Read from g, not _draft — this module
+    // doesn't own dbGames_HCMethod, same as the g.dbGames_Holes read
+    // above for the C-O-D branch. Checked against the existing value,
+    // not applied on every PairField save: Allowance is meaningful under
+    // CH regardless of Competition (e.g. a legitimate 80% CH allowance),
+    // so resetting it unconditionally on every resave would clobber a
+    // value this transition never actually invalidated.
+    if (_draft.pairing === "PairField" && String(g.dbGames_HCMethod || "CH") === "SO") {
+      patch.dbGames_HCMethod  = "CH";
+      patch.dbGames_Allowance = 100;
+    }
+
     return patch;
   }
 
