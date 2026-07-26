@@ -98,15 +98,31 @@ final class ServiceBuildEventSummary
         $kpiConfig      = self::parseEventKPIConfig($eventRow);
         $teamConfigById = self::parseEventTeamConfig($eventRow);
 
+        // Individual has no cascade-mode flag of its own (unlike
+        // pairingFixed/teamFixed below) — its only gate is the KPI
+        // modal's own state, previously parsed and then never consulted
+        // (see parseEventKPIConfig()'s old docblock). "default" reads as
+        // active, same as module_defineEventKPI.js's checkbox — only
+        // "disabled" is off.
+        $individualGrossActive = ($kpiConfig['grossPlacement']['state'] ?? 'default') !== 'disabled';
+        $individualNetActive   = ($kpiConfig['netPlacement']['state'] ?? 'default')   !== 'disabled';
+
         $flightBuckets = self::partitionRosterByFlight($eventRow, $rosterByGhin, $flightFixed);
 
         $flights = [];
         foreach ($flightBuckets as $flightKey => $bucket) {
             $ghinSet = array_flip($bucket['ghins']);
 
-            $individual = self::buildIndividualSection(
-                $roundPayloads, $ghinSet, $rosterByGhin, $teamConfigById, $teamFixed, $kpiConfig
-            );
+            // Neither metric active means Individual isn't a valid view
+            // for this event at all — omitted the same way Pairing/Team
+            // are omitted (null) when their mode isn't fixed, not
+            // computed-and-hidden.
+            $individual = ($individualGrossActive || $individualNetActive)
+                ? self::buildIndividualSection(
+                    $roundPayloads, $ghinSet, $rosterByGhin, $teamConfigById, $teamFixed, $kpiConfig,
+                    $individualGrossActive, $individualNetActive
+                )
+                : [];
 
             // Pairing and Team both resolve Flight (and Team resolves Team
             // too) from the Event Roster via each pairing/side row's
@@ -146,6 +162,8 @@ final class ServiceBuildEventSummary
                 'flightMode'  => $flightFixed  ? 'fixed' : 'none',
                 'teamMode'    => $teamFixed    ? 'fixed' : 'none',
                 'pairingMode' => $pairingFixed ? 'fixed' : 'none',
+                'individualGrossActive' => $individualGrossActive,
+                'individualNetActive'   => $individualNetActive,
                 'rounds' => array_map(static function (array $r): array {
                     return [
                         'roundNumber' => $r['roundNumber'] ?? null,
@@ -219,10 +237,17 @@ final class ServiceBuildEventSummary
      * Parses dbEvents_KPIConfig — flat map keyed by kpiKey, harmonized
      * with dbGames_PlacementPoints' "state" vocabulary (see
      * module_defineEventKPI.js's header comment for the full contract).
-     * State is never consulted here to gate computation — same server-
-     * side philosophy as ServiceScoreSummary::parsePlacementPoints():
-     * always computed regardless of active/disabled/default; state is
-     * display-only.
+     *
+     * grossPlacement/netPlacement's state IS consulted — see
+     * buildEventSummaryPayload()'s $individualGrossActive/
+     * $individualNetActive — because Individual has no cascade-mode flag
+     * of its own to gate on the way Pairing/Team do. pairingPlacement/
+     * teamPlacement's state is still display-only: those two sections are
+     * gated entirely by dbEvents_PairingMode/TeamMode ("fixed" or not),
+     * same as ServiceScoreSummary::parsePlacementPoints() — a locked
+     * category's checkbox state was never meant to double as a second,
+     * independent on/off switch for a section that's already gated
+     * upstream.
      *
      * This method TRUSTS the saved config completely — it does not
      * re-validate or second-guess a category's shape. The fallbacks
@@ -364,7 +389,9 @@ final class ServiceBuildEventSummary
         array $rosterByGhin,
         array $teamConfigById,
         bool $teamFixed,
-        array $kpiConfig
+        array $kpiConfig,
+        bool $grossActive,
+        bool $netActive
     ): array {
         $players = [];
 
@@ -445,17 +472,29 @@ final class ServiceBuildEventSummary
         // placement." Same higher-is-better mechanism Pairing/Team already
         // use (rankByPointsDescending), not the lower-is-better strokes
         // convention this used to (incorrectly) rank by.
-        $grossPts = self::rankByPointsDescending(
-            array_map(static fn(array $p): float => $p['totalPerformancePointsGross'], $players),
-            $kpiConfig['grossPlacement']
-        );
-        $netPts = self::rankByPointsDescending(
-            array_map(static fn(array $p): float => $p['totalPerformancePointsNet'], $players),
-            $kpiConfig['netPlacement']
-        );
+        //
+        // Gated on $grossActive/$netActive (module_defineEventKPI.js's
+        // grossPlacement/netPlacement state) — an inactive metric skips
+        // the ranking pass entirely and is left null, the same "not
+        // valid for this event, don't compute it" treatment
+        // buildPairingSection/buildTeamSection get from pairingFixed/
+        // teamFixed. This method is only reached at all when at least one
+        // of the two is active — see buildEventSummaryPayload().
+        $grossPts = $grossActive
+            ? self::rankByPointsDescending(
+                array_map(static fn(array $p): float => $p['totalPerformancePointsGross'], $players),
+                $kpiConfig['grossPlacement']
+            )
+            : [];
+        $netPts = $netActive
+            ? self::rankByPointsDescending(
+                array_map(static fn(array $p): float => $p['totalPerformancePointsNet'], $players),
+                $kpiConfig['netPlacement']
+            )
+            : [];
         foreach (array_keys($players) as $playerId) {
-            $players[$playerId]['eventPlacementPointsGross'] = $grossPts[$playerId] ?? 0.0;
-            $players[$playerId]['eventPlacementPointsNet'] = $netPts[$playerId] ?? 0.0;
+            $players[$playerId]['eventPlacementPointsGross'] = $grossActive ? ($grossPts[$playerId] ?? 0.0) : null;
+            $players[$playerId]['eventPlacementPointsNet'] = $netActive ? ($netPts[$playerId] ?? 0.0) : null;
         }
 
         return array_values($players);

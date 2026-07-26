@@ -11,6 +11,14 @@
   const meta = payload.meta || {};
   const pairingFixed = String(meta.pairingMode || 'none') === 'fixed';
   const teamFixed = String(meta.teamMode || 'none') === 'fixed';
+  // Individual has no cascade-mode flag of its own — these come straight
+  // from the KPI modal's own state (module_defineEventKPI.js's
+  // grossPlacement/netPlacement), same source pairingFixed/teamFixed use
+  // for Pairing/Team, just via a different field since Individual isn't
+  // gated by a PairingMode/TeamMode-style column.
+  const individualGrossActive = meta.individualGrossActive !== false;
+  const individualNetActive = meta.individualNetActive !== false;
+  const individualValid = individualGrossActive || individualNetActive;
   const rounds = Array.isArray(meta.rounds) ? meta.rounds : [];
 
   // Same four values as ServiceBuildEventSummary::NON_PERSONAL_SCORE_FORMATS
@@ -22,7 +30,7 @@
 
   const state = {
     view: 'individual',       // 'individual' | 'pairing' | 'team'
-    metric: 'gross',          // Individual only — 'gross' | 'net'
+    metric: individualGrossActive ? 'gross' : 'net', // Individual only — 'gross' | 'net'
     collapsedFlights: new Set(),
   };
 
@@ -93,7 +101,15 @@
       dom.metricPills.innerHTML = '';
       return;
     }
-    dom.metricPills.innerHTML = ['net', 'gross'].map((key) => `
+    const options = ['net', 'gross'].filter((key) => (key === 'gross' ? individualGrossActive : individualNetActive));
+    // Only one metric active for this event — nothing to toggle between,
+    // so no pills at all rather than a single, effectively-inert chip.
+    if (options.length < 2) {
+      if (options.length === 1 && state.metric !== options[0]) state.metric = options[0];
+      dom.metricPills.innerHTML = '';
+      return;
+    }
+    dom.metricPills.innerHTML = options.map((key) => `
       <button class="maChoiceChip ${state.metric === key ? 'is-selected' : ''}"
         data-metric="${key}" type="button">${key === 'gross' ? 'Gross' : 'Net'}</button>
     `).join('');
@@ -101,7 +117,13 @@
 
   function renderViewPills() {
     if (!dom.viewPills) return;
-    const individualDisabled = allRoundsNonPersonal();
+    // Individual is invalid either when every round's format has no
+    // personal score (existing check) OR when neither Individual Gross
+    // nor Individual Net Placement Points is active for this event —
+    // same "not valid for this event, don't render it" treatment
+    // Pairing/Team already get from pairingFixed/teamFixed, just gated
+    // by KPI state instead of a cascade-mode column.
+    const individualDisabled = allRoundsNonPersonal() || !individualValid;
 
     if (individualDisabled && state.view === 'individual') {
       state.view = pairingFixed ? 'pairing' : (teamFixed ? 'team' : 'individual');

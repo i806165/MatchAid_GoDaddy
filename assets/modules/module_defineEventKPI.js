@@ -66,6 +66,35 @@
  * MA.defineEventKPI.catalog is also exposed (read-only) so callers like
  * event_maintenance.js can resolve a key to its label for hint text
  * without needing their own copy of the catalog.
+ *
+ * ── UI aligned to module_setGamePlacementPoints.js (the more recently
+ * updated module in this family) ─────────────────────────────────────
+ * Brought into visual/behavioral alignment: shared .maCheckbox in place
+ * of a bespoke checkbox, row-label weight, points-table sizing, "Tie
+ * Rule" casing, toggle-button wording ("Unhide points table"), section-
+ * header treatment, header context class (is-event-context) in place of
+ * an inline background style, a collapsed-state summary line, Escape-to-
+ * close, and counted scroll-lock. The footer's active-count/list readout
+ * was also dropped to match Game's plain Cancel/Save footer.
+ *
+ * NOT aligned, and intentionally left alone:
+ *   - The locked-row treatment (greyed row + reason text for
+ *     pairingFixed/teamFixed/comingSoon). Game has no equivalent — it
+ *     filters inapplicable categories out of the DOM entirely rather
+ *     than showing them disabled — because its categories are gated by
+ *     the game's fixed competition type, not a mode that can later
+ *     become available. Event's categories genuinely can unlock later
+ *     in the same session, so showing-and-explaining stays.
+ *   - The .maModal__controls context block (game title/GGID, course/
+ *     date, event/EID) Game added under its header. Reproducing it here
+ *     needs the event's title/EID passed into open()'s config, which
+ *     the current caller (event_maintenance.js) doesn't supply — a
+ *     caller-side change, not something this file can do alone.
+ *   - Game's onDone-on-every-exit-path contract and its self-hydrating,
+ *     direct-POST save (with busy spinner + inline error notice). This
+ *     module's contract is caller-driven (onApply only, no onDone) and
+ *     synchronous by design; switching architectures would need an
+ *     event-side save endpoint and caller updates, not just this file.
  */
 (function (global) {
   "use strict";
@@ -159,6 +188,13 @@
   let _overlay = null;
   let _config  = null;
   let _state   = null;   // { kpiKey: { state, pointsConfig, tieRule } } — lock status is derived on render via lockInfo(), not stored
+  let _onEsc   = null;
+  let _lockDepth = 0;
+
+  function _lockScroll(on) {
+    _lockDepth = Math.max(0, _lockDepth + (on ? 1 : -1));
+    document.documentElement.classList.toggle("maOverlayOpen", _lockDepth > 0);
+  }
 
   // ── Locking ──────────────────────────────────────────────────────────────────
 
@@ -249,24 +285,6 @@
     return out;
   }
 
-  // Locked rows (mode-gated or comingSoon) always render unchecked in the
-  // UI regardless of their stored state — see renderKPIRow()'s `checked`
-  // computation — so they're excluded here too; otherwise the footer
-  // count could read "6 active" while several checkboxes visibly show
-  // unchecked and greyed.
-  function activeCount() {
-    return Object.entries(_state || {})
-      .filter(([key, s]) => s.state !== "disabled" && !lockInfo(CATALOG[key]).locked)
-      .length;
-  }
-
-  function activeLabels() {
-    return Object.entries(_state || {})
-      .filter(([key, s]) => s.state !== "disabled" && !lockInfo(CATALOG[key]).locked)
-      .map(([k]) => CATALOG[k]?.label || k)
-      .join(" · ");
-  }
-
   // Segment tags (Individual/Pairing/Team/Flight badges) intentionally not
   // part of the catalog at all — kpi_catalog.php's old "segments" array
   // was display-only and never consumed here; dropped rather than carried
@@ -276,6 +294,17 @@
   // Rendered whenever a hasConfig row is checked and unlocked; the table
   // itself can be collapsed via the toggle button, but — unlike the prior
   // design — collapsing it shows nothing in its place (no summary line).
+
+  // Collapsed-state one-liner — mirrors module_setGamePlacementPoints.js's
+  // rowSummary(). Shown in place of the points table when collapsed.
+  function kpiSummary(kpiKey) {
+    const s = _state[kpiKey];
+    if (!s) return "";
+    const places = Object.keys(s.pointsConfig || {}).length;
+    const vals   = Object.values(s.pointsConfig || {}).join(", ");
+    const tie    = s.tieRule === "split" ? "Split ties" : s.tieRule === "high" ? "High ties" : "Low ties";
+    return `${places} place${places !== 1 ? "s" : ""} · ${vals} pts · ${tie}`;
+  }
 
   function renderPointsEditor(kpiKey) {
     const s = _state[kpiKey];
@@ -303,12 +332,12 @@
         aria-expanded="${expanded}"
         aria-controls="dek-editor-${esc(kpiKey)}">
         <i class="ti ti-settings" aria-hidden="true"></i>
-        <span class="dek-toggle-label">${expanded ? "Hide points table" : "Edit points table"}</span>
+        <span class="dek-toggle-label">${expanded ? "Hide points table" : "Unhide points table"}</span>
         <i class="ti ti-chevron-down dek-chevron" aria-hidden="true"></i>
       </button>
 
-      <div class="dek-editor" id="dek-editor-${esc(kpiKey)}"
-        style="${expanded ? "" : "display:none;"}">
+      ${expanded ? `
+      <div class="dek-editor" id="dek-editor-${esc(kpiKey)}">
         <div class="dek-editor-title">Points awarded per finishing position</div>
         <table class="dek-pts-table">
           <thead>
@@ -323,14 +352,15 @@
           <i class="ti ti-plus" aria-hidden="true"></i> Add place
         </button>
         <div class="dek-tie-row">
-          <span class="dek-tie-label">Tie rule</span>
+          <span class="dek-tie-label">Tie Rule</span>
           <select class="dek-tie-select" data-tie-kpi="${esc(kpiKey)}">
             <option value="split" ${s.tieRule === "split" ? "selected" : ""}>Split — average the tied positions' points</option>
             <option value="high"  ${s.tieRule === "high"  ? "selected" : ""}>High — all tied players receive the higher points</option>
             <option value="low"   ${s.tieRule === "low"   ? "selected" : ""}>Low — all tied players receive the lower points</option>
           </select>
         </div>
-      </div>`;
+      </div>` : `
+      <div class="dek-summary"><i class="ti ti-check" aria-hidden="true"></i>${esc(kpiSummary(kpiKey))}</div>`}`;
   }
 
   // ── KPI row ──────────────────────────────────────────────────────────────────
@@ -345,7 +375,7 @@
 
     return `
       <div class="dek-kpi-row ${locked ? "is-locked" : ""}" data-kpi-key="${esc(kpiKey)}">
-        <div class="dek-check ${checked ? "on" : ""} ${locked ? "is-locked" : ""}"
+        <div class="maCheckbox ${checked ? "is-checked" : ""} ${locked ? "is-locked" : ""}"
           data-check="${locked ? "" : esc(kpiKey)}" role="checkbox"
           aria-checked="${checked}" aria-disabled="${locked}"
           tabindex="${locked ? "-1" : "0"}"
@@ -400,17 +430,6 @@
     return html;
   }
 
-  // ── Footer ───────────────────────────────────────────────────────────────────
-
-  function updateFooter() {
-    const countEl = _overlay?.querySelector("#dekActiveCount");
-    const labelEl = _overlay?.querySelector("#dekActiveList");
-    const saveBtn = _overlay?.querySelector("#dekBtnApply");
-    if (countEl) countEl.textContent = `${activeCount()} competition${activeCount() !== 1 ? "s" : ""} active`;
-    if (labelEl) labelEl.textContent = activeLabels() || "None selected";
-    if (saveBtn) saveBtn.textContent = activeCount() ? `Save (${activeCount()} active)` : "Save";
-  }
-
   // ── Full re-render of body ───────────────────────────────────────────────────
 
   function renderBody() {
@@ -418,7 +437,6 @@
     if (!body) return;
     body.innerHTML = renderContent();
     wireBodyEvents(body);
-    updateFooter();
   }
 
   // ── Wire events ──────────────────────────────────────────────────────────────
@@ -500,42 +518,39 @@
       /* Widen modal slightly for the KPI checklist */
       #dekOverlay .maModal{ max-width:min(640px,calc(100vw - 16px)); font-family:var(--fontFamilyBase); }
       /* Sections */
-      .dek-section-hdr{font-size:10px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;color:var(--mutedText);padding:10px 16px 6px;background:var(--surfaceChrome);border-bottom:0.5px solid var(--borderSubtle);border-top:0.5px solid var(--borderSubtle);}
+      .dek-section-hdr{font-size:11px;font-weight:500;letter-spacing:.3px;text-transform:uppercase;color:var(--mutedText);padding:14px 16px 4px;}
       .dek-kpi-row{display:flex;align-items:flex-start;gap:12px;padding:10px 16px;border-bottom:0.5px solid var(--borderSubtle);}
       .dek-kpi-row:last-child{border-bottom:none;}
       .dek-kpi-row.is-locked{opacity:.55;}
-      /* Checkbox — same shape as .maCheckbox, accent blue at this level
-         (module_definePlacementPoints.js's game-level checkbox stays the
-         default green; tracked separately, not touched here) */
-      .dek-check{width:18px;height:18px;border:1.5px solid var(--borderStrong,#bbb);border-radius:4px;flex-shrink:0;margin-top:2px;background:var(--surface);cursor:pointer;position:relative;}
-      .dek-check.on{background:var(--brandAccent);border-color:var(--brandAccent);}
-      .dek-check.on::after{content:"";position:absolute;left:4px;top:1px;width:6px;height:10px;border:1.5px solid #fff;border-top:0;border-left:0;transform:rotate(45deg);}
-      .dek-check.is-locked{cursor:default;}
+      /* Checkbox — shared .maCheckbox component, same as the game-level
+         rows in module_setGamePlacementPoints.js (was a bespoke blue box;
+         now matches, including its green accent). is-locked is local to
+         this module — .maCheckbox itself has no locked concept, since
+         Game never renders a locked row. */
+      .maCheckbox.is-locked{cursor:default;opacity:.7;}
       /* KPI text */
       .dek-kpi-body{flex:1;min-width:0;}
-      .dek-kpi-label{font-size:13px;font-weight:500;color:var(--ink);display:flex;align-items:center;gap:6px;}
+      .dek-kpi-label{font-size:13px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px;}
       .dek-kpi-label .ti-lock{font-size:13px;color:var(--mutedText);}
       .dek-kpi-desc{font-size:12px;color:var(--mutedText);margin-top:2px;line-height:1.4;}
       /* Config toggle */
       .dek-config-toggle{display:inline-flex;align-items:center;gap:4px;margin-top:7px;font-size:11px;color:var(--brandAccent);background:transparent;border:none;cursor:pointer;padding:0;font-family:inherit;}
       .dek-config-toggle .dek-chevron{font-size:11px;transition:transform .15s;}
       .dek-config-toggle.open .dek-chevron{transform:rotate(180deg);}
+      .dek-summary{display:flex;align-items:center;gap:4px;margin-top:6px;font-size:11px;font-style:italic;color:var(--mutedText);}
+      .dek-summary i{color:var(--brandSecondary);}
       /* Points editor */
       .dek-editor{margin-top:10px;background:var(--surfaceChrome);border:0.5px solid var(--borderSubtle);border-radius:var(--radiusMd,6px);padding:12px;}
       .dek-editor-title{font-size:11px;font-weight:500;color:var(--mutedText);margin-bottom:8px;}
-      .dek-pts-table{width:100%;border-collapse:collapse;font-size:12px;}
-      .dek-pts-table th{text-align:left;color:var(--mutedText);font-weight:500;padding:4px 8px;border-bottom:0.5px solid var(--borderSubtle);}
-      .dek-pts-table td{padding:4px 8px;border-bottom:0.5px solid var(--borderSubtle);}
+      .dek-pts-table{width:100%;border-collapse:collapse;font-size:13px;}
+      .dek-pts-table th{text-align:left;color:var(--mutedText);font-weight:500;padding:6px 8px;border-bottom:0.5px solid var(--borderSubtle);}
+      .dek-pts-table td{padding:6px 8px;border-bottom:0.5px solid var(--borderSubtle);}
       .dek-pts-table tr:last-child td{border-bottom:none;}
-      .dek-pts-input{width:64px;border:0.5px solid var(--borderStrong,#bbb);border-radius:var(--radiusSq,4px);padding:2px 6px;font-size:12px;text-align:right;background:var(--surface);color:var(--ink);}
+      .dek-pts-input{width:72px;border:0.5px solid var(--borderStrong,#bbb);border-radius:var(--radiusSq,4px);padding:4px 8px;font-size:13px;text-align:right;background:var(--surface);color:var(--ink);}
       .dek-add-btn{font-size:11px;color:var(--brandAccent);background:transparent;border:none;cursor:pointer;padding:4px 0;display:flex;align-items:center;gap:3px;margin-top:6px;font-family:inherit;}
       .dek-tie-row{display:flex;align-items:center;gap:8px;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--borderSubtle);}
       .dek-tie-label{font-size:11px;font-weight:500;color:var(--mutedText);white-space:nowrap;}
       .dek-tie-select{border:0.5px solid var(--borderStrong,#bbb);border-radius:var(--radiusSq,4px);padding:3px 8px;font-size:12px;background:var(--surface);color:var(--ink);flex:1;}
-      /* Footer info */
-      .dek-footer-info{flex:1;min-width:0;}
-      .dek-footer-count{font-size:12px;font-weight:700;color:var(--ink);}
-      .dek-footer-list{font-size:11px;color:var(--mutedText);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;}
     `;
     document.head.appendChild(s);
   }
@@ -550,7 +565,7 @@
     overlay.innerHTML = `
       <div class="maModal" role="dialog" aria-modal="true" aria-label="Event Competition">
 
-        <div class="maModal__hdr" style="background:var(--brandTertiary);">
+        <div class="maModal__hdr is-event-context">
           <div class="maModal__titles">
             <div class="maModal__title">Event Competition</div>
             <div class="maModal__subtitle">Select which competitions are active for this event</div>
@@ -567,11 +582,7 @@
         <div class="maModal__body maModal__body--flush" id="dekBody"></div>
 
         <div class="maModal__ftr">
-          <div class="dek-footer-info">
-            <div class="dek-footer-count" id="dekActiveCount">0 competitions active</div>
-            <div class="dek-footer-list"  id="dekActiveList">None selected</div>
-          </div>
-          <div class="maModal__ftrActions" style="flex:0 0 auto;width:auto;">
+          <div class="maModal__ftrActions">
             <button id="dekBtnCancel" class="maFtrBtn maFtrBtn--cancel" type="button">Cancel</button>
             <button id="dekBtnApply"  class="maFtrBtn maFtrBtn--save"   type="button">Save</button>
           </div>
@@ -607,14 +618,20 @@
 
     _overlay = buildOverlay();
     document.body.appendChild(_overlay);
+    _lockScroll(true);
 
     renderBody();
+
+    _onEsc = (e) => { if (e.key === "Escape") close(); };
+    document.addEventListener("keydown", _onEsc);
   }
 
   function close() {
     if (_overlay) { _overlay.remove(); _overlay = null; }
     _config = null;
     _state  = null;
+    _lockScroll(false);
+    if (_onEsc) { document.removeEventListener("keydown", _onEsc); _onEsc = null; }
   }
 
   MA.defineEventKPI = {
