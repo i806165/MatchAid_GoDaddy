@@ -401,9 +401,20 @@ final class ServiceBlindPlayer
                                 ? ($member['ghin'] . '_' . $pairingId . '_' . $member['pos'])
                                 : $member['ghin'],
                             'raw'  => isset($holeDetail['raw_score']) ? (float)$holeDetail['raw_score'] : null,
+                            // hole_detail.net_score is never actually written
+                            // by any current write path (applyHoleScore()
+                            // only stores raw_score/stroke_allocation/
+                            // adjusted_gross_score at the hole level) — so
+                            // the old net_score-then-gross fallback here
+                            // always fell through to gross, silently, on
+                            // every hole. True net is always derivable from
+                            // what IS reliably stored: raw minus the
+                            // player's own stroke allocation for this hole.
                             'net'  => isset($holeDetail['net_score'])
                                 ? (float)$holeDetail['net_score']
-                                : (isset($holeDetail['adjusted_gross_score']) ? (float)$holeDetail['adjusted_gross_score'] : null),
+                                : (isset($holeDetail['raw_score'])
+                                    ? (float)$holeDetail['raw_score'] - (float)($holeDetail['stroke_allocation'] ?? 0)
+                                    : null),
                             'pos'  => $member['pos'],
                         ];
                     }
