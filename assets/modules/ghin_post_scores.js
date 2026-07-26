@@ -16,34 +16,31 @@
 
   function esc(s) { return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
-  // TeeSetDetails rides along on the player row as a JSON string (same
-  // pattern as dbPlayers_Scores elsewhere in the app) — decode defensively
-  // since callers may have already hydrated it to an object upstream.
-  function decodeTeeSetDetails(raw) {
-    if (!raw) return null;
-    if (typeof raw === 'object') return raw;
-    try { return JSON.parse(raw); } catch (e) { return null; }
-  }
-
-  // Par-per-hole for the tee actually being played lives at
-  // TeeSetDetails.Course.Holes[].Par, keyed by .Number (1-18) — not a
-  // course default, so this reflects the exact tee this round was played
-  // from.
-  function getHoleParMap(p) {
-    const details = decodeTeeSetDetails(p?.dbPlayers_TeeSetDetails);
-    const holes = details?.Course?.Holes;
-    const map = {};
-    if (Array.isArray(holes)) {
-      holes.forEach((h) => { if (h && h.Number != null) map[h.Number] = h.Par; });
-    }
-    return map;
-  }
-
   function toParDisplay(gross, par) {
     if (gross == null || par == null || isNaN(gross) || isNaN(par)) return '—';
     const diff = gross - par;
     if (diff === 0) return 'E';
     return diff > 0 ? `+${diff}` : `${diff}`;
+  }
+
+  // dbPlayers_Scores is a JSON string on the row, same as elsewhere in the
+  // app. This does exactly one thing — turn the string into an object —
+  // and nothing else. No entry selection, no field renaming.
+  function decodeScoresJson(raw) {
+    if (typeof raw !== 'string') return null;
+    const trimmed = raw.trim();
+    if (trimmed === '' || trimmed.toUpperCase() === 'NULL') return null;
+    try { return JSON.parse(trimmed); } catch (e) { return null; }
+  }
+
+  // Takes the first entry in Scores[] — no "used"-flag selection or any
+  // other interpretation of which entry is authoritative. If a player can
+  // ever legitimately have more than one entry here, that's a decision to
+  // make explicitly, not one to bury in this helper.
+  function getHoleDetails(playerRow) {
+    const decoded = decodeScoresJson(playerRow?.dbPlayers_Scores);
+    const entries = Array.isArray(decoded?.Scores) ? decoded.Scores : [];
+    return Array.isArray(entries[0]?.hole_details) ? entries[0].hole_details : [];
   }
 
   function formatDate(s) {
@@ -90,7 +87,7 @@
       if (MA.ui && typeof MA.ui.notify === 'function') MA.ui.notify("Preparing score review...", "info");
       else if (typeof MA.setStatus === 'function') MA.setStatus("Preparing score review...", "info");
       const payload = await fetchReviewData();
-      const holeScope = payload?.meta?.holes || 'All 18';
+      const holeScope = payload?.game?.dbGames_Holes || 'All 18';
       _activeNine = (holeScope === 'B9') ? 'back' : 'front';
 
       const blocker = getPostingBlocker(payload);
@@ -101,25 +98,12 @@
   }
 
   function getPostingBlocker(payload) {
-    const p = payload?.scorecards?.rows?.[0]?.players?.[0];
-    // This module is shared across pages with genuinely different init
-    // payload shapes: player_home's page hydrates a real, working
-    // context.ghin/user.ghin (see player_home.js's own getUserCtx() —
-    // "Player portal canonical: user info is hydrated under init.context"),
-    // while scorehome.php/scoreentry.php expose a flat sessionGhin
-    // instead, with no user/context object at all. Checking all three,
-    // in the same preference order player_home.js itself uses
-    // (context before user), covers every page this module is actually
-    // loaded from rather than assuming one shape is universal.
+    const p = payload?.player;
     // Authoritative — lauchGHINPostScores.php already validated this
     // against $_SESSION["SessionGHINLogonID"] server-side (see that
-    // file's own gate) and rides it along in the response. Reading it
-    // from here, rather than window.__INIT__/window.__MA_INIT__, removes
-    // the page-shape-guessing problem entirely: different pages that
-    // load this shared module have different init payload shapes
-    // (player_home's context.ghin/user.ghin vs. scorehome/scoreentry's
-    // flat sessionGhin, or neither) — this value doesn't depend on any
-    // of that.
+    // file's own gate) and rides it along in the response, rather than
+    // this module guessing at whichever window.__INIT__/window.__MA_INIT__
+    // shape the calling page happens to have.
     const userGhin = payload?.sessionGhin || "";
     const gameFormat = String(payload?.game?.dbGames_GameFormat || '').trim();
 
@@ -134,24 +118,31 @@
     }
 
     // 3. Determine Hole Scope (F9, B9, or 18)
-    const holeScope = payload?.meta?.holes || 'All 18';
-    const holes = holeScope === 'B9' 
-      ? Array.from({length:9},(_,i)=>i+10) 
+    const holeScope = payload?.game?.dbGames_Holes || 'All 18';
+    const holeRange = holeScope === 'B9'
+      ? Array.from({length:9},(_,i)=>i+10)
       : Array.from({length:holeScope === 'F9' ? 9 : 18},(_,i)=>i+1);
 
-    // 3. Minimum Played Holes Guard (USGA: Need 9 for a valid side)
-    const playedHoles = holes.filter(h => {
-      const val = p.holes?.['h' + h]?.display?.gross;
-      return val && val !== '—' && !isNaN(parseFloat(val)) && parseFloat(val) > 0;
+    const holeDetails = getHoleDetails(p);
+    const grossByHole = {};
+    holeDetails.forEach((hd) => { grossByHole[hd?.hole_number] = hd?.raw_score; });
+
+    // 4. Minimum Played Holes Guard (USGA: Need 9 for a valid side)
+    const playedHoles = holeRange.filter(h => {
+      const gross = grossByHole[h];
+      return gross != null && !isNaN(gross) && Number(gross) > 0;
     });
 
     if (playedHoles.length < 9) {
       return "A minimum of 9 holes with scores are required to post.";
     }
 
-    // 4. Total Score Sanity Check
-    const scoreTot = parseFloat(p?.totals?.gross?.['9c']);
-    if (isNaN(scoreTot) || scoreTot <= 0) {
+    // 5. Total Score Sanity Check
+    const scoreTot = holeRange.reduce((sum, h) => {
+      const gross = Number(grossByHole[h]);
+      return sum + (isNaN(gross) ? 0 : gross);
+    }, 0);
+    if (!scoreTot || scoreTot <= 0) {
       return "Total score must be greater than zero to post.";
     }
 
@@ -160,20 +151,26 @@
 
   function renderModal(payload, blockerMessage) {
     const game = payload?.game || {};
-    const p = payload?.scorecards?.rows?.[0]?.players?.[0];
-    const playerName = p?.dbPlayers_Name || p?.playerName || "Player";
+    const p = payload?.player;
+    const playerName = p?.dbPlayers_Name || "Player";
 
     const playDate = formatDate(game.dbGames_PlayDate);
     const gameTitle = game.dbGames_Title || "Post Scores";
-    const courseTeeLine = [playDate, game.dbGames_CourseName, p?.tee ? `Tee ${p.tee}` : ""].filter(Boolean).join(" \u00b7 ");
+    const courseTeeLine = [playDate, game.dbGames_CourseName, p?.dbPlayers_TeeSetName ? `Tee ${p.dbPlayers_TeeSetName}` : ""].filter(Boolean).join(" \u00b7 ");
 
-    // Extract summary scores from the payload totals
-    const scoreOut = p?.totals?.gross?.['9a'] || '—';
-    const scoreIn  = p?.totals?.gross?.['9b'] || '—';
-    const scoreTot = p?.totals?.gross?.['9c'] || '—';
+    const holeDetails = p ? getHoleDetails(p) : [];
+    const byHole = {};
+    holeDetails.forEach((hd) => { if (hd?.hole_number != null) byHole[hd.hole_number] = hd; });
 
-    const parMap = p ? getHoleParMap(p) : {};
-    const holeScope = payload?.meta?.holes || 'All 18';
+    const sum = (holes) => holes.reduce((total, h) => {
+      const gross = Number(byHole[h]?.raw_score);
+      return isNaN(gross) ? total : total + gross;
+    }, 0);
+    const scoreOut = sum(Array.from({length:9},(_,i)=>i+1)) || '—';
+    const scoreIn  = sum(Array.from({length:9},(_,i)=>i+10)) || '—';
+    const scoreTot = sum(Array.from({length:18},(_,i)=>i+1)) || '—';
+
+    const holeScope = game.dbGames_Holes || 'All 18';
     const showNineTabs = (holeScope === 'All 18');
 
     let activeHoles;
@@ -190,17 +187,17 @@
     let scoreRowsHtml = '';
     if (p) {
       activeHoles.forEach((h) => {
-        const grossRaw = p.holes?.['h' + h]?.display?.gross;
-        const gross = parseFloat(grossRaw);
-        const par = parMap[h];
-        const diffDisplay = toParDisplay(isNaN(gross) ? null : gross, par);
+        const hd = byHole[h] || {};
+        const gross = hd.raw_score;
+        const par = hd.par;
+        const diffDisplay = toParDisplay(gross, par);
         const diffStyle = diffDisplay.startsWith('+') ? 'color:var(--danger);'
           : (diffDisplay.startsWith('-') ? 'color:var(--success);' : '');
         scoreRowsHtml += `
           <div class="maListRow maListRow--static" style="font-size:var(--labelTextSize);">
             <span class="maListRow__col" style="flex:1 1 auto;">Hole ${h}</span>
             <span class="maListRow__col maListRow__col--right" style="flex:0 0 44px;">${esc(par ?? '—')}</span>
-            <span class="maListRow__col maListRow__col--right" style="flex:0 0 56px;">${esc(isNaN(gross) ? '—' : gross)}</span>
+            <span class="maListRow__col maListRow__col--right" style="flex:0 0 56px;">${esc(gross ?? '—')}</span>
             <span class="maListRow__col maListRow__col--right" style="flex:0 0 44px;${diffStyle}">${esc(diffDisplay)}</span>
           </div>`;
       });

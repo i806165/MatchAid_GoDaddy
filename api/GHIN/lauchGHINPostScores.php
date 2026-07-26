@@ -3,7 +3,8 @@ declare(strict_types=1);
 /* /api/GHIN/lauchGHINPostScores.php */
 
 require_once __DIR__ . "/../../bootstrap.php";
-require_once MA_API . "/game_scorecard/initScoreCard.php";
+require_once MA_SVC_DB . "/service_dbGames.php";
+require_once MA_SVC_DB . "/service_dbPlayers.php";
 
 header("Content-Type: application/json; charset=utf-8");
 
@@ -17,19 +18,36 @@ try {
         exit;
     }
 
-    // Call the library function internally, manually passing the session GHIN as the scope.
-    // This bypasses the need for URL parameters and satisfies the "No URL Tagging" rule.
-    $out = initScoredScoreCard($ggid, "player", $ghin);
+    $game = ServiceDbGames::getGameByGGID((int)$ggid);
+    if (!$game) {
+        echo json_encode(["ok" => false, "message" => "Game not found."]);
+        exit;
+    }
 
-    // Ride the already-verified session GHIN along in the response —
-    // this is the one authoritative identity value (this endpoint
-    // already gated on it above), and ghin_post_scores.js's
-    // getPostingBlocker() reads it from here now instead of guessing at
-    // whichever window.__INIT__/window.__MA_INIT__ shape the calling
-    // page happens to have (those differ page to page: some have
-    // context.ghin/user.ghin, others only a flat sessionGhin, some
-    // neither).
-    $out["sessionGhin"] = $ghin;
+    // GHIN posting is single-player — go straight to that player's own row
+    // rather than through ServiceScoreCard's rotation/team/format pipeline,
+    // which this screen doesn't need.
+    $playerRow = ServiceDbPlayers::getPlayerByGGIDGHIN($ggid, $ghin);
+    if (!$playerRow) {
+        echo json_encode(["ok" => false, "message" => "Player record not found for this game."]);
+        exit;
+    }
+
+    // Deliberately no decoding, selection, or computation here.
+    // dbPlayers_Scores is handed back exactly as it sits in the table —
+    // still a JSON string — same for every other field on the row.
+    // ghin_post_scores.js owns all interpretation of this data; this
+    // endpoint's only job is identity/session gating and the raw fetch.
+    $out = [
+        "ok" => true,
+        // Authoritative — already validated against
+        // $_SESSION["SessionGHINLogonID"] above. ghin_post_scores.js reads
+        // it from here rather than guessing at whichever init-payload
+        // shape the calling page happens to have.
+        "sessionGhin" => $ghin,
+        "game" => $game,
+        "player" => $playerRow,
+    ];
 
     echo json_encode($out, JSON_UNESCAPED_SLASHES);
 
