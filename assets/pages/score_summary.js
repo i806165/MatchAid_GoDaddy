@@ -1153,7 +1153,7 @@
     const ptsLabel = pointsColumnLabel(activePlacementCategoryKey());
 
     const header = `
-      <div class="maListRow maListRow--static lbHeaderRow">
+      <div class="maListRow maListRow--static lbHeaderRow lbRowIndividual">
         <span class="maListRow__col--muted lbColName">Player</span>
         <span class="maListRow__col--muted lbColThru">Thru</span>
         <span class="maListRow__col--muted lbColThru">Front</span>
@@ -1173,7 +1173,7 @@
         const segs = (kpiField === 'gross') ? p.grossDiffSegments : p.netDiffSegments;
 
         return `
-          <div class="maListRow maListRow--static">
+          <div class="maListRow maListRow--static lbRowIndividual">
             <span class="maListRow__col lbColName" data-lb-menu data-sort-key="playerLastName" data-display-value="${esc(p.playerName || '')}">${lbTeamDotHtml(p.teamColor)}${esc(p.playerName || '')}</span>
             <span class="maListRow__col--muted lbColThru" data-lb-menu data-sort-key="thru" data-display-value="${esc(formatThru(p.thru))}">${esc(formatThru(p.thru))}</span>
             <span class="maListRow__col--muted lbColThru" data-lb-menu data-sort-key="front" data-display-value="${esc(segCellDisplay(segs?.front))}">${esc(segCellDisplay(segs?.front))}</span>

@@ -515,3 +515,89 @@
     padding: 2px 0;
   }
 }
+
+/* ==========================================================================
+   Individual leaderboard — mobile two-row layout
+   Below 480px, six columns on one line (Player/Thru/Front/Back/Net/Pts) left
+   the name truncated to a couple characters. Instead of one crowded line,
+   split each entry across two rows using a shared grid so every value still
+   lands directly under its own header:
+     Row 1: rank/name ......................................... Pts
+     Row 2:  Thru (under name)      Front      Back      Net
+   Scoped to .lbRowIndividual only (set alongside .lbHeaderRow / the data
+   row in lbRenderPairFieldIndividualRows) so Pairing/Team leaderboard rows,
+   which have a different column set, are untouched. Desktop/tablet keep the
+   existing single-line .maListRow flex layout from ma_shared.css — this
+   only fires under the breakpoint below.
+   ========================================================================== */
+@media (max-width: 480px) {
+  .lbRowIndividual {
+    display: grid;
+    grid-template-columns: 1fr 40px 40px 40px 44px 44px;
+    column-gap: 8px;
+    row-gap: 2px;
+  }
+
+  /* Header stays a single row — Thru/Front/Back/Net/Pts each still get a
+     labeled column even though data splits across two rows below them. */
+  .lbRowIndividual.lbHeaderRow {
+    grid-template-rows: auto;
+  }
+  .lbRowIndividual.lbHeaderRow .lbColThru:nth-of-type(2) { text-align: left; }
+  .lbRowIndividual.lbHeaderRow .lbColThru:nth-of-type(3),
+  .lbRowIndividual.lbHeaderRow .lbColThru:nth-of-type(4) { text-align: right; }
+
+  /* Data rows: two grid rows, placed by column position rather than DOM
+     order, so no JS/markup reordering is needed beyond the class tag. */
+  .lbRowIndividual:not(.lbHeaderRow) {
+    grid-template-rows: auto auto;
+    align-items: baseline;
+    padding-block: 8px;
+  }
+
+  .lbRowIndividual:not(.lbHeaderRow) .lbColName {
+    grid-column: 1 / 2;
+    grid-row: 1;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    font-weight: 700;
+  }
+
+  /* Points — first row, right-justified under its header, no label. */
+  .lbRowIndividual:not(.lbHeaderRow) .lbColPts {
+    grid-column: 6 / 7;
+    grid-row: 1;
+  }
+
+  /* Thru — second row, left-aligned directly under the player's name. */
+  .lbRowIndividual:not(.lbHeaderRow) .lbColThru:nth-of-type(2) {
+    grid-column: 1 / 2;
+    grid-row: 2;
+    text-align: left;
+    font-size: 12px;
+  }
+
+  /* Front — second row, under its own header column. */
+  .lbRowIndividual:not(.lbHeaderRow) .lbColThru:nth-of-type(3) {
+    grid-column: 3 / 4;
+    grid-row: 2;
+    text-align: right;
+    font-size: 12px;
+  }
+
+  /* Back — second row, under its own header column. */
+  .lbRowIndividual:not(.lbHeaderRow) .lbColThru:nth-of-type(4) {
+    grid-column: 4 / 5;
+    grid-row: 2;
+    text-align: right;
+    font-size: 12px;
+  }
+
+  /* Net/Gross (Kpi) — second row, under its own header column. */
+  .lbRowIndividual:not(.lbHeaderRow) .lbColKpi {
+    grid-column: 5 / 6;
+    grid-row: 2;
+    font-size: 12px;
+  }
+}
