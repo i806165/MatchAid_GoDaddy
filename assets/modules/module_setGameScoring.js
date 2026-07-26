@@ -430,7 +430,10 @@
         </div>
 
         <div style="${isPoints ? "" : "display:none;"}">
-          <div class="actionMenu_category">Points Strategy</div>
+          <div class="actionMenu_category" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+            <span>Points Strategy</span>
+            <button type="button" class="btn btnSecondary" id="sgcOpenPoints" style="${strategyDef?.hasConfig ? "flex-shrink:0;" : "display:none;"}">Configure Points</button>
+          </div>
           <div style="padding:14px;">
             <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:6px;">
               ${filteredPointsStrategies(_pairing()).map(ps => `
@@ -440,9 +443,8 @@
             </div>
             <div class="maHintText">${esc(strategyDef?.hint || "")}</div>
 
-            <div style="${strategyDef?.hasConfig ? "display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:14px;" : "display:none;"}">
+            <div style="${strategyDef?.hasConfig ? "margin-top:14px;" : "display:none;"}">
               <div class="maHintText" style="margin:0;">${esc(_pointsConfigSummary())}</div>
-              <button type="button" class="btn btnSecondary" id="sgcOpenPoints" style="flex-shrink:0;">Configure Points</button>
             </div>
           </div>
         </div>
@@ -496,7 +498,7 @@
           <div style="display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--borderSubtle);" data-row-id="${r.id}">
             <input type="number" value="${r.reltoPar}" style="width:60px; text-align:center;" class="maTextInput" data-row-field="reltoPar" data-row-id="${r.id}">
             <span class="maListRow__subline" style="flex:1;">${esc(_stablefordRowLabel(r.reltoPar))}</span>
-            <input type="number" min="0" max="99" value="${r.points}" style="width:60px; text-align:center;" class="maTextInput" data-row-field="points" data-row-id="${r.id}">
+            <input type="number" min="-99" max="99" value="${r.points}" style="width:60px; text-align:center;" class="maTextInput" data-row-field="points" data-row-id="${r.id}">
             <button type="button" class="iconBtn" style="width:26px;height:26px; color:var(--danger);" data-remove-row="${r.id}" aria-label="Remove row">&#10005;</button>
           </div>`).join("")}
       </div>

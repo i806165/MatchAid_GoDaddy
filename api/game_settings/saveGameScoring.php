@@ -311,10 +311,10 @@ try {
                     ]);
                 }
 
-                if ($points < 0 || $points > 99) {
+                if ($points < -99 || $points > 99) {
                     ma_respond(400, [
                         "ok"      => false,
-                        "message" => "Points values must be between 0 and 99.",
+                        "message" => "Points values must be between -99 and 99.",
                     ]);
                 }
 
