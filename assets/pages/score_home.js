@@ -961,6 +961,26 @@
       });
     }
 
+    // Score Batch Entry — same module/invocation score_entry.js's own
+    // Actions menu uses (MA.enterScoresBatch.open({ playerKey, onSaved })).
+    // Reuses scorecardKeyForRecalc, already resolved above for the
+    // Recalculate-current-group item, as the scorecard to hydrate against —
+    // same source, same fallback chain, so both items agree on "current
+    // playing group" without a second independent lookup. Disabled rather
+    // than hidden when no scorecard is established yet, matching the
+    // Recalculate item's own convention right above.
+    if (MA.enterScoresBatch) {
+      items.push({ separator: true });
+      items.push({
+        label:    'Score Batch Entry',
+        disabled: !scorecardKeyForRecalc,
+        action:   () => MA.enterScoresBatch.open({
+          playerKey: scorecardKeyForRecalc,
+          onSaved:   () => window.location.reload(),
+        }),
+      });
+    }
+
     MA.ui.openActionsMenu('Actions', items);
   }
 
