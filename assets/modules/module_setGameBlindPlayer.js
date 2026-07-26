@@ -27,6 +27,15 @@
  * not-applicable message rather than hiding some sections and keeping
  * others live.
  *
+ * ── Also not-applicable under DeclareManual scoring ──────────────────────
+ * Same not-applicable body swap, same reasoning, second trigger: Player
+ * Declare (Manual) scoring is incompatible with Blind Player (server-side,
+ * saveGameBlindPlayer.php rejects assigning one under DeclareManual, and
+ * saveGameScoring.php proactively clears any existing assignment the
+ * moment DeclareManual is saved). This module just mirrors that state —
+ * PairField-but-DeclareManual and PairPair are both routed through the
+ * same locked view, distinguished only by hint text.
+ *
  * ── Relocated verbatim from game_settings.js ─────────────────────────────
  * The dbGames_BlindPlayers array parse (load) and rebuild (save) shapes,
  * the roster-select population/sort logic, and the expand/collapse rules
@@ -86,6 +95,7 @@
   }
 
   function _pairing() { return _ctx.game.dbGames_Competition || "PairField"; }
+  function _scoringSystem() { return _ctx.game.dbGames_ScoringSystem || ""; }
 
   // ── Selection ────────────────────────────────────────────────────────
   function _toggleBlind(on) {
@@ -232,7 +242,13 @@
     const body = document.getElementById("sgbBody");
     if (!body || !_draft) return;
 
-    if (_pairing() !== "PairField") {
+    const notPairField    = _pairing() !== "PairField";
+    const isDeclareManual = _scoringSystem() === "DeclareManual";
+
+    if (notPairField || isDeclareManual) {
+      const hint = notPairField
+        ? "Not applicable for Pair vs. Pair games."
+        : "Not applicable for Player Declare scoring.";
       body.innerHTML = `
         <div class="maCard">
           <div class="actionMenu_category">Use a Blind Player</div>
@@ -244,7 +260,7 @@
             </div>
           </div>
           <div style="padding:0 14px 14px;">
-            <div class="maHintText">Not applicable for Pair vs. Pair games.</div>
+            <div class="maHintText">${hint}</div>
           </div>
         </div>`;
       return;

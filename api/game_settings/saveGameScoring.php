@@ -424,6 +424,23 @@ try {
     }
 
     /*
+     * ── Cross-domain: DeclareManual disables Blind Player ──
+     *
+     * Player Declare (Manual) scoring is not compatible with Blind
+     * Player (saveGameBlindPlayer.php's own guard rejects assigning one
+     * under DeclareManual). Scoring System can only ever change through
+     * this endpoint, so this is the only place that can proactively
+     * clear a Blind Player configuration left over from before the
+     * switch — unconditional on every save while DeclareManual is
+     * selected, not just on the transition edge, since a resave with
+     * DeclareManual already active should never leave a stale
+     * assignment sitting in the row either.
+     */
+    if ($scoringSystem === "DeclareManual") {
+        $patch["dbGames_BlindPlayers"] = [];
+    }
+
+    /*
      * ServiceDbGames remains the authoritative persistence layer:
      * - master allowlist
      * - JSON encoding

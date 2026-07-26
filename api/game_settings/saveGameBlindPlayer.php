@@ -199,6 +199,22 @@ try {
     }
 
     /*
+     * Blind Player is not compatible with Player Declare (Manual) scoring.
+     * Same shape as the PairField guard above: only rejects when the
+     * client is actually trying to set a blind player. Disabling
+     * (empty $normalized) always passes through regardless of scoring
+     * system.
+     */
+    $scoringSystem = trim((string)($game["dbGames_ScoringSystem"] ?? ""));
+
+    if ($scoringSystem === "DeclareManual" && !empty($normalized)) {
+        ma_respond(409, [
+            "ok"      => false,
+            "message" => "Blind Player is not available for Player Declare scoring.",
+        ]);
+    }
+
+    /*
      * Optional but recommended:
      * when a specific player is assigned, verify that the GHIN belongs
      * to the current Game roster before saving.
