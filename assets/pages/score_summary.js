@@ -1016,7 +1016,7 @@
     if (!dataRows.length) return `<div class="maEmptyState">No standings available.</div>`;
 
     const header = `
-      <div class="maListRow maListRow--static lbHeaderRow">
+      <div class="maListRow maListRow--static lbHeaderRow lbRowPairing">
         <span class="maListRow__col--muted lbColRank">#</span>
         <span class="maListRow__col--muted lbColName">Pairing</span>
         <span class="maListRow__col--muted lbColThru">Thru</span>
@@ -1040,9 +1040,9 @@
       const body = sorted.map((row) => {
         const fb = lbPairFieldFrontBack(row);
         return `
-        <div class="maListRow maListRow--static ${row.isLeader ? 'is-leading' : ''}">
+        <div class="maListRow maListRow--static lbRowPairing ${row.isLeader ? 'is-leading' : ''}">
           <span class="maListRow__col lbColRank">${esc(row.rank ?? '—')}</span>
-          <span class="maListRow__col lbColName">${lbTeamDotHtml(row.teamColor)}${esc(row.pairingLabel || '')}</span>
+          <span class="maListRow__col lbColName" data-rank="${esc(row.rank ?? '—')}">${lbTeamDotHtml(row.teamColor)}${esc(row.pairingLabel || '')}</span>
           <span class="maListRow__col--muted lbColThru">${esc(formatThru(row.thru))}</span>
           <span class="maListRow__col--muted lbColThru">${esc(fb.front)}</span>
           <span class="maListRow__col--muted lbColThru">${esc(fb.back)}</span>
