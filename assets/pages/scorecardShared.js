@@ -137,7 +137,7 @@ function isMobileLandscapeLike(){
       });
     }
 
-    if (state.mode === 'player' && MA.ghinPostScores) {
+    if (MA.ghinPostScores) {
       const p = rows[0]?.players?.[0];
       const postedId = p?.dbPlayers_GHINPostID || '';
       const postLabel = postedId ? 'Score Already Posted to GHIN' : 'Post Score to GHIN';
