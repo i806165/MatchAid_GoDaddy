@@ -430,9 +430,9 @@
         </div>
 
         <div style="${isPoints ? "" : "display:none;"}">
-          <div class="actionMenu_category" style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+          <div class="actionMenu_category" style="display:flex; align-items:center; justify-content:space-between; gap:10px; position:relative; z-index:1; min-height:20px; padding:10px 14px;">
             <span>Points Strategy</span>
-            <button type="button" class="btn btnSecondary" id="sgcOpenPoints" style="${strategyDef?.hasConfig ? "flex-shrink:0;" : "display:none;"}">Configure Points</button>
+            <button type="button" class="btn btnSecondary" id="sgcOpenPoints" style="${strategyDef?.hasConfig ? "flex-shrink:0; position:relative; z-index:2; pointer-events:auto;" : "display:none;"}">Configure Points</button>
           </div>
           <div style="padding:14px;">
             <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:6px;">
