@@ -7,12 +7,10 @@ require_once __DIR__ . '/service_ScoreCard.php';
 require_once __DIR__ . '/service_ScoreRotation.php';
 require_once __DIR__ . '/service_CalcSkins.php';
 require_once __DIR__ . '/service_CalcPoints.php';
-// NOTE: checkTeamIntegrity() below calls ma_pairingViolatesBoundary() from
-// ma_SharedBusLogic.php without its own require_once here — per that
-// file's docblock it's already required once from bootstrap.php on every
-// entry point, and scoresummary.php goes through bootstrap.php first.
-// Flagging here rather than guessing a require_once path — same note as
-// workflow_ReconcilePairingBoundaries.php; please confirm this holds.
+// checkTeamIntegrity() below calls ma_pairingViolatesBoundary() from
+// ma_SharedBusLogic.php, required globally in bootstrap.php
+// (require_once MA_SVC_SHARED . '/ma_SharedBusLogic.php') ahead of any
+// page-specific code — confirmed available here without a local require.
 
 final class ServiceScoreSummary
 {
@@ -1285,7 +1283,24 @@ final class ServiceScoreSummary
             $scopedHoles = self::scopedHolesForRow($ctx, $gameRow);
             $metricKey = self::summaryMetricCellKey($ctx, $gameRow);
 
-            $sides = self::groupPlayersByFlightPos($players);
+            // One scorecardRow (a physical/printed scorecard group — see
+            // dbPlayers_PlayerKey) holds exactly one PairPair match for 2v2
+            // games, where PlayerKey and MatchID have always coincided — so
+            // this loop is a single iteration there and nothing changes.
+            // For 1v1/singles games, though, a tee-time foursome can be TWO
+            // independent head-to-head matches sharing one printed card,
+            // each with its own dbPlayers_MatchID — grouping straight off
+            // the row's raw MatchPos (as this used to) would wrongly merge
+            // two unrelated matches into one displayed row. This
+            // groupPlayersByMatchId() scopes to the real match boundary
+            // first — the same helper checkTeamIntegrity() uses — so
+            // everything below only ever sees one match's players, and
+            // $out[] gets one row per real match instead of one per
+            // scorecardRow. $ctx (spin/rotation) stays row-scoped above,
+            // since it's shared by every match in the row.
+            foreach (self::groupPlayersByMatchId($players) as $matchId => $matchPlayers) {
+
+            $sides = self::groupPlayersByFlightPos($matchPlayers);
             if (!$sides) continue;
 
             $sideKeys = array_keys($sides);
@@ -1503,7 +1518,12 @@ final class ServiceScoreSummary
             }
             // ─────────────────────────────────────────────────────────────────────
 
-            $flightId = (string)($row['flightIDs'][0] ?? $row['flightID'] ?? $ctx['virtualFlightId'] ?? '');
+            // Real per-match id. Previously $row['flightIDs'][0] ?? ... —
+            // that plural, array-shaped field was itself the tell that a
+            // row could carry more than one match; grabbing index [0] just
+            // silently discarded any others. $matchId (from
+            // groupPlayersByMatchId() above) is this specific match's own id.
+            $flightId = (string)$matchId;
             $spinPrefix = ($ctx['spinLabel'] ?? 'Round') !== 'Round'
                 ? trim((string)$ctx['spinLabel']) . ' • '
                 : '';
@@ -1638,6 +1658,7 @@ final class ServiceScoreSummary
                     'spinNumber' => $ctx['spinNumber'],
                 ],
             ];
+            } // end foreach (groupPlayersByMatchId) — one real match per iteration
         }
 
         usort($out, function (array $a, array $b): int {
