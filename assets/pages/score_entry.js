@@ -769,26 +769,8 @@ function markDirty(playerId, rawScore, declared) {
 
     const items = [
       {
-        label: 'Restart Scoring Session',
-        danger: true,
-          action: async () => {
-            const approved = await MA.ui.confirm({
-              title: "Restart scoring session?",
-              message: "This clears the current session and starts over.",
-              confirmLabel: "Restart",
-              cancelLabel: "Cancel",
-              danger: true
-            });
-            if (approved) {
-              await fetch(apiUrls.clearContext);
-              const key = getBaselinePlayerKey();
-              if (typeof MA.routerGo === 'function') {
-                MA.routerGo('scorehome', { scoreId: key });
-              } else {
-                window.location.href = apiUrls.scoreHome;
-              }
-            }
-          }
+        label: 'View game details',
+        action: () => MA.gameDetails && MA.gameDetails.open(state.payload?.gameRow),
       }
     ];
 
