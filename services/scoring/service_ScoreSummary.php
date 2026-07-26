@@ -7,6 +7,12 @@ require_once __DIR__ . '/service_ScoreCard.php';
 require_once __DIR__ . '/service_ScoreRotation.php';
 require_once __DIR__ . '/service_CalcSkins.php';
 require_once __DIR__ . '/service_CalcPoints.php';
+// NOTE: checkTeamIntegrity() below calls ma_pairingViolatesBoundary() from
+// ma_SharedBusLogic.php without its own require_once here — per that
+// file's docblock it's already required once from bootstrap.php on every
+// entry point, and scoresummary.php goes through bootstrap.php first.
+// Flagging here rather than guessing a require_once path — same note as
+// workflow_ReconcilePairingBoundaries.php; please confirm this holds.
 
 final class ServiceScoreSummary
 {
@@ -1972,6 +1978,33 @@ final class ServiceScoreSummary
     }
 
     /**
+     * Groups players by their real dbPlayers_MatchID — the actual
+     * head-to-head match boundary for PairPair (1v1 or 2v2), independent
+     * of which scorecardRow/tee-time group they happen to be displayed
+     * in. A scorecardRow can legitimately contain more than one match
+     * (e.g. a singles day: two 1v1 matches sharing a tee time) — anything
+     * that needs to compare "sides of THIS match" must scope to MatchID
+     * first, then apply groupPlayersByFlightPos() within that subset.
+     * Same field-name fallback chain used elsewhere in this file for a
+     * player's MatchID (see pairPairSortSeed()).
+     */
+    private static function groupPlayersByMatchId(array $players): array
+    {
+        $out = [];
+        foreach ($players as $player) {
+            $matchId = trim((string)(
+                $player['flightID']
+                ?? $player['effectiveFlightID']
+                ?? $player['dbPlayers_MatchID']
+                ?? ''
+            ));
+            if ($matchId === '') continue;
+            $out[$matchId][] = $player;
+        }
+        return $out;
+    }
+
+    /**
      * Detects team-assignment data problems and returns an admin-facing
      * message directing them to check Team Configuration — surfaced as a
      * blocking pop-up by score_summary.js. Returns null when everything's
@@ -2031,31 +2064,55 @@ final class ServiceScoreSummary
         }
 
         // ── 2. Partners/pairing agreement (both competition types) ───────
-        // PairPair: the two partners on each match side must agree.
+        // PairPair: the two partners on each match side must agree — scoped
+        // to a single dbPlayers_MatchID, NOT the whole scorecardRow. A row
+        // (tee-time/playing group) can contain more than one independent
+        // match (e.g. a singles day: two 1v1 matches sharing a tee time),
+        // each with its own A/B pairing — grouping straight off raw
+        // MatchPos across the whole row would wrongly cluster the "A"
+        // player from one match with the unrelated "A" player from
+        // another. groupPlayersByMatchId() establishes the real match
+        // boundary first; groupPlayersByFlightPos() then only ever sees
+        // one match's players at a time.
         // PairField: the two players in each pairing must agree — this
         // check used to be PairPair-only, on the theory that PairField
         // pairings couldn't have this problem; a real PairField game then
         // showed the identical pattern (TeamKey assigned by position within
         // the pairing rather than by pairing), so this now covers both.
+        // ma_pairingViolatesBoundary() is the shared implementation (also
+        // used by WorkflowReconcilePairingBoundaries) — see its docblock
+        // in ma_SharedBusLogic.php. Only its 'team'/'team+flight' verdicts
+        // matter here; this function has never checked flight agreement
+        // and still doesn't — a pure 'flight' mismatch is left to other
+        // machinery. Unconditional on Team-active status, same as before:
+        // when Teams is off, this whole block simply never finds two
+        // team-tagged partners to disagree in the first place.
         foreach ($scorecardRows as $row) {
             $players = is_array($row['players'] ?? null) ? $row['players'] : [];
             if (!$players) continue;
-            $groups = ($competition === 'PairPair')
-                ? self::groupPlayersByFlightPos($players)
-                : self::groupPlayersByPairing($players);
-            foreach ($groups as $groupPlayers) {
-                if (count($groupPlayers) < 2) continue;
-                $keys = [];
-                foreach ($groupPlayers as $p) {
-                    $k = trim((string)($p['dbPlayers_TeamKey'] ?? ''));
-                    if ($k !== '') $keys[$k] = true;
+
+            if ($competition === 'PairPair') {
+                $matches = self::groupPlayersByMatchId($players);
+                foreach ($matches as $matchPlayers) {
+                    $sides = self::groupPlayersByFlightPos($matchPlayers);
+                    foreach ($sides as $sidePlayers) {
+                        if (count($sidePlayers) < 2) continue;
+                        $violation = ma_pairingViolatesBoundary($sidePlayers);
+                        if ($violation === 'team' || $violation === 'team+flight') {
+                            return 'Partners on the same side of a match are assigned to different teams. '
+                                . 'Check Team Configuration for this game.';
+                        }
+                    }
                 }
-                if (count($keys) > 1) {
-                    return ($competition === 'PairPair')
-                        ? 'Partners on the same side of a match are assigned to different teams. '
-                            . 'Check Team Configuration for this game.'
-                        : 'The two players in a pairing are assigned to different teams. '
+            } else {
+                $groups = self::groupPlayersByPairing($players);
+                foreach ($groups as $groupPlayers) {
+                    if (count($groupPlayers) < 2) continue;
+                    $violation = ma_pairingViolatesBoundary($groupPlayers);
+                    if ($violation === 'team' || $violation === 'team+flight') {
+                        return 'The two players in a pairing are assigned to different teams. '
                             . 'Check Team Configuration for this game.';
+                    }
                 }
             }
         }

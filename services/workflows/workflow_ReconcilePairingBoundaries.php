@@ -28,6 +28,14 @@ declare(strict_types=1);
 require_once MA_SVC_DB . "/service_dbPlayers.php";
 require_once MA_SVC_DB . "/service_dbGames.php";
 require_once MA_SVC_DB . "/service_dbEvents.php";
+// NOTE: this file calls ma_pairingViolatesBoundary() / ma_matchSideViolatesBoundary()
+// / ma_normFlightPos() from ma_SharedBusLogic.php without its own require_once —
+// per that file's docblock it's already required once from bootstrap.php on
+// every entry point, and every caller of this workflow (gamepairings.php, the
+// game_players team/flight-assignment saves) goes through bootstrap.php first.
+// Flagging here rather than guessing a require_once path I can't verify —
+// please confirm this holds, or add an explicit require_once with the correct
+// path/constant if this file can ever be invoked outside that chain.
 
 final class WorkflowReconcilePairingBoundaries
 {
@@ -80,8 +88,11 @@ final class WorkflowReconcilePairingBoundaries
 
     // Pass 1 — pairing-level: every member of a pairing must share both
     // team AND flightKey (mirrors assignSelectedPlayerToPairing's clamp).
+    // ma_pairingViolatesBoundary() is the shared implementation (also used
+    // by ServiceScoreSummary::checkTeamIntegrity()) — see its docblock in
+    // ma_SharedBusLogic.php.
     foreach ($byPairing as $pid => $members) {
-      if (self::pairingViolates($members)) {
+      if (ma_pairingViolatesBoundary($members) !== '') {
         $players = [];
         foreach ($members as $m) {
           $ghin = (string)($m["dbPlayers_PlayerGHIN"] ?? "");
@@ -110,7 +121,7 @@ final class WorkflowReconcilePairingBoundaries
       $ghin = (string)($r["dbPlayers_PlayerGHIN"] ?? "");
       if ($fid === "" || $pid === "" || $pid === "000") continue;
       if (isset($toReset[$ghin])) continue; // already being reset via Pass 1
-      $pos = self::normFlightPos($r["dbPlayers_MatchPos"] ?? "");
+      $pos = ma_normFlightPos($r["dbPlayers_MatchPos"] ?? "");
       if ($pos !== "A" && $pos !== "B") continue;
       $byMatch[$fid][$pos][] = $r;
     }
@@ -120,11 +131,13 @@ final class WorkflowReconcilePairingBoundaries
       $sideB = $sides["B"][0] ?? null;
       if (!$sideA || !$sideB) continue; // only one side occupied — nothing to violate yet
 
-      $sameFlight = (string)($sideA["dbPlayers_FlightKey"] ?? "") === (string)($sideB["dbPlayers_FlightKey"] ?? "");
-      $sameTeam   = (string)($sideA["dbPlayers_TeamKey"]   ?? "") === (string)($sideB["dbPlayers_TeamKey"]   ?? "");
-      $violates   = !$sameFlight || ($teamsActive && $sameTeam);
+      // ma_matchSideViolatesBoundary() is the shared implementation (also
+      // used by ServiceScoreSummary::checkTeamIntegrity() and mirrored by
+      // game_pairings.js's own write-time clamp) — see its docblock in
+      // ma_SharedBusLogic.php.
+      $violation = ma_matchSideViolatesBoundary($sideA, $sideB, $teamsActive);
 
-      if ($violates) {
+      if ($violation !== '') {
         $pidA = (string)($sideA["dbPlayers_PairingID"] ?? "");
         $pidB = (string)($sideB["dbPlayers_PairingID"] ?? "");
         $allMembers = array_merge($byPairing[$pidA] ?? [], $byPairing[$pidB] ?? []);
@@ -149,19 +162,6 @@ final class WorkflowReconcilePairingBoundaries
     }
 
     return $report;
-  }
-
-  private static function pairingViolates(array $members): bool
-  {
-    if (count($members) < 2) return false;
-    $ref       = $members[0];
-    $refTeam   = (string)($ref["dbPlayers_TeamKey"]   ?? "");
-    $refFlight = (string)($ref["dbPlayers_FlightKey"] ?? "");
-    foreach ($members as $m) {
-      if ((string)($m["dbPlayers_TeamKey"]   ?? "") !== $refTeam)   return true;
-      if ((string)($m["dbPlayers_FlightKey"] ?? "") !== $refFlight) return true;
-    }
-    return false;
   }
 
   /**
@@ -189,13 +189,5 @@ final class WorkflowReconcilePairingBoundaries
     }
 
     return ServiceDbEvents::isDimensionActive("team", $game, $event);
-  }
-
-  private static function normFlightPos($v): string
-  {
-    $s = strtoupper(trim((string)($v ?? "")));
-    if ($s === "1") return "A";
-    if ($s === "2") return "B";
-    return ($s === "A" || $s === "B") ? $s : "";
   }
 }

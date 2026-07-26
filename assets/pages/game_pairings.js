@@ -480,6 +480,36 @@
       && MA.isDimensionActive("flight", state.game, state.game);
   }
 
+  /**
+   * Hard rule: when Team is active for this round, dbPlayers_MatchPos is
+   * DERIVED from dbPlayers_TeamKey — Team T1 always gets Side A, Team T2
+   * always gets Side B — never decided by click/selection order. This
+   * keeps MatchPos from ever contradicting TeamKey for newly-assigned
+   * matches (a historical disagreement here is exactly what produced a
+   * false-positive "Partners... assigned to different teams" warning
+   * downstream, in ServiceScoreSummary::checkTeamIntegrity()).
+   *
+   * Only used by assignSelectedPairingToFlight() — click order (and the
+   * "first empty slot" default in toggleFlightEditMode(), which only
+   * sets an initial UI suggestion, not a final write) still governs when
+   * Team is inactive, since there's no TeamKey to derive a slot from.
+   *
+   * @param  {string} pairingId
+   * @return {string|null}  'A' | 'B' | null — null means Team is
+   *                        inactive, or this pairing's team id isn't
+   *                        T1/T2 (an unrecognized/blank team — falls
+   *                        back to whatever the caller was already
+   *                        going to do).
+   */
+  function matchPosForTeam(pairingId) {
+    if (!teamsActive()) return null;
+    const ref = playersInPairing(pairingId)[0];
+    const team = ref?.team || "";
+    if (team === "T1") return "A";
+    if (team === "T2") return "B";
+    return null;
+  }
+
   // Shared collapsible group header + body wrapper for the nested
   // Flight→Team tray grouping (§4). Used by both renderUnpairedList() and
   // renderUnmatchedList(). `groupKey` must be unique within the tray's
@@ -1498,7 +1528,8 @@
     // Create new match if no target selected
     if (!fid) {
       fid = nextFlightId();
-      fp = "A";
+      // Hard rule: Team decides the slot when active, not a hardcoded "A".
+      fp = matchPosForTeam(Array.from(state.selectedPairingIds)[0]) || "A";
       isNew = true;
     }
 
@@ -1514,6 +1545,16 @@
       return setStatus("Maximum 2 pairings for a new match.", "warn");
     }
 
+    const pids = Array.from(state.selectedPairingIds);
+
+    // Hard rule: for a single-pairing assignment, Team overrides whichever
+    // slot was tapped/targeted in the UI — that tap is only a starting
+    // point, never the final source of truth once Team is active.
+    if (!isNew) {
+      const forced = matchPosForTeam(pids[0]);
+      if (forced) fp = forced;
+    }
+
     // Check collision if not new
     if (!isNew) {
       const existing = buildTeamSummary(fid, fp);
@@ -1521,8 +1562,6 @@
         return setStatus(`That slot already has pairing ${existing.pairingId}. Remove it first.`, "warn");
       }
     }
-
-    const pids = Array.from(state.selectedPairingIds);
 
     // Boundary clamp: the two pairings occupying a match's Side A / Side B
     // must share the same flightKey. The "different team" half only
@@ -1588,19 +1627,30 @@
     };
 
     if (isNew && pids.length === 2) {
-      doAssign(pids[0], "A");
-      doAssign(pids[1], "B");
-      setStatus(`Created Match ${fid} with Pairings ${pids[0]} & ${pids[1]}.`, "success");
+      // Hard rule: whichever pairing is actually Team T1 gets Side A,
+      // Team T2 gets Side B — the boundary clamp above already guarantees
+      // these two pairings are on different teams (when Team is active),
+      // so this only decides which literal slot each one lands in, never
+      // which pairing "wins." Falls back to selection order when Team is
+      // inactive or the team id isn't recognized (matchPosForTeam -> null).
+      let firstPid = pids[0], secondPid = pids[1];
+      if (matchPosForTeam(pids[0]) === "B") {
+        firstPid = pids[1];
+        secondPid = pids[0];
+      }
+      doAssign(firstPid, "A");
+      doAssign(secondPid, "B");
+      setStatus(`Created Match ${fid} with Pairings ${firstPid} & ${secondPid}.`, "success");
       state.targetFlightId = "";
       state.targetFlightPos = "";
     } else {
       // Single assignment
       doAssign(pids[0], fp);
       if (isNew) {
-        setStatus(`Created Match ${fid}. Assigned Pairing ${pids[0]} to Side A.`, "success");
-        // Auto-advance to B for convenience
+        setStatus(`Created Match ${fid}. Assigned Pairing ${pids[0]} to Side ${fp}.`, "success");
+        // Auto-advance to the other slot for convenience
         state.targetFlightId = fid;
-        state.targetFlightPos = "B";
+        state.targetFlightPos = (fp === "A") ? "B" : "A";
       } else {
         setStatus(`Assigned Pairing ${pids[0]} to Match ${fid} Team ${fp === "A" ? "A" : "B"}.`, "success");
         state.targetFlightId = "";
