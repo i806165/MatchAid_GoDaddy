@@ -239,10 +239,7 @@
           </div>
           ${scoreRowsHtml || '<div class="maEmptyState">No score data available.</div>'}
         </div>
-        ${isBlocked ? `
-          <div class="maInlineStatus status-warn" style="padding:12px; font-size:13px; font-weight:700; text-align:center; border-top:1px solid rgba(0,0,0,0.1);">
-            ${esc(blockerMessage)}
-          </div>` : ''}
+        <div id="ghinNoticeTarget"></div>
         <footer class="maModal__ftr">
           <button id="btnGhinCancel" class="maModalFtr__btn maModalFtr__btn--cancel" type="button">Cancel</button>
           <button id="btnGhinConfirm" class="maModalFtr__btn maModalFtr__btn--confirm" type="button"
@@ -255,6 +252,13 @@
 
     _overlay.classList.add("is-open");
     document.documentElement.classList.add("maOverlayOpen");
+
+    const noticeTarget = _overlay.querySelector('#ghinNoticeTarget');
+    if (isBlocked && MA.ui && typeof MA.ui.showModalNotice === 'function') {
+      MA.ui.showModalNotice(noticeTarget, { message: esc(blockerMessage), tone: 'warning' });
+    } else if (MA.ui && typeof MA.ui.hideModalNotice === 'function') {
+      MA.ui.hideModalNotice(noticeTarget);
+    }
 
     _overlay.querySelector('#btnGhinClose').onclick = close;
     _overlay.querySelector('#btnGhinCancel').onclick = close;
