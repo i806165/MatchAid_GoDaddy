@@ -103,7 +103,7 @@
     const items = [
       { label: "Edit Event", action: () => fire("editEvent") },
       { separator: true },
-      { label: "View/MaintainRounds for the Event", action: () => fire("eventGames") },
+      { label: "View/Maintain Rounds for the Event", action: () => fire("eventGames") },
       { label: "View/Maintain Event Roster", action: () => fire("eventRoster") },
       { separator: true },
       { label: "Display Event Leaderboard", action: () => fire("eventLeaderboard") },
