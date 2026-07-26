@@ -68,7 +68,25 @@
 
   function getPostingBlocker(payload) {
     const p = payload?.scorecards?.rows?.[0]?.players?.[0];
-    const userGhin = window.__MA_INIT__?.user?.ghin || window.__INIT__?.user?.ghin;
+    // This module is shared across pages with genuinely different init
+    // payload shapes: player_home's page hydrates a real, working
+    // context.ghin/user.ghin (see player_home.js's own getUserCtx() —
+    // "Player portal canonical: user info is hydrated under init.context"),
+    // while scorehome.php/scoreentry.php expose a flat sessionGhin
+    // instead, with no user/context object at all. Checking all three,
+    // in the same preference order player_home.js itself uses
+    // (context before user), covers every page this module is actually
+    // loaded from rather than assuming one shape is universal.
+    // Authoritative — lauchGHINPostScores.php already validated this
+    // against $_SESSION["SessionGHINLogonID"] server-side (see that
+    // file's own gate) and rides it along in the response. Reading it
+    // from here, rather than window.__INIT__/window.__MA_INIT__, removes
+    // the page-shape-guessing problem entirely: different pages that
+    // load this shared module have different init payload shapes
+    // (player_home's context.ghin/user.ghin vs. scorehome/scoreentry's
+    // flat sessionGhin, or neither) — this value doesn't depend on any
+    // of that.
+    const userGhin = payload?.sessionGhin || "";
     const gameFormat = String(payload?.game?.dbGames_GameFormat || '').trim();
 
     // 1. Identity & Data Checks

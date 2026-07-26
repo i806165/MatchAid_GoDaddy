@@ -915,8 +915,29 @@
     const isPaired     = pairingId !== '' && pairingId !== '000';
     const groupIsShort = isPaired && state.players.length < Number(state.blindConfig?.target ?? 0);
 
+    // Manual recalc — same underlying MA.recalculateHandicaps() call the
+    // automatic triggers use (score_entry.js/module_enterScoresBatch.js's
+    // scorer-transition trigger, onGoClick()'s state.dirty trigger).
+    // Available here for any edge case those don't cover — matches the
+    // same "manual recalc stays in the Actions menu" pattern already
+    // used on game_maintenance.js/game_summary.js/game_scorecards.js/
+    // game_pairings.js.
+    const scorecardKeyForRecalc = String(
+      state.players?.[0]?.playerKey || el.groupKeyText?.textContent || ''
+    ).trim().toUpperCase();
+
     const items = [
       { label: 'View game details', action: () => MA.gameDetails && MA.gameDetails.open(state.game) },
+      { separator: true },
+      {
+        label:  'Recalculate Handicaps — All Players',
+        action: () => MA.recalculateHandicaps && MA.recalculateHandicaps(null),
+      },
+      {
+        label:    'Recalculate Handicaps — Current Playing Group',
+        disabled: !scorecardKeyForRecalc,
+        action:   () => MA.recalculateHandicaps && MA.recalculateHandicaps(null, { scorecardKey: scorecardKeyForRecalc }),
+      },
       ...(state.flags.blindConfigured ? [{ separator: true }] : []),
       ...(state.flags.blindConfigured ? [{
         label:    'Invoke Blind Player',
