@@ -117,6 +117,7 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
     <script src="<?= ma_asset('/assets/modules/module_sourceGHINPlayers.js') ?>"></script>
     <script src="<?= ma_asset('/assets/modules/module_sourceFavorites.js') ?>"></script>
     <script src="<?= ma_asset('/assets/modules/module_sourceNonRated.js') ?>"></script>
+    <script src="<?= ma_asset('/assets/modules/module_sourceImportPlayer.js') ?>"></script>
     <script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>
     <script src="<?= ma_asset('/assets/modules/module_defineTeamsGameEvent.js') ?>"></script>
     <script src="<?= ma_asset('/assets/modules/pageHelp.js') ?>"></script>
