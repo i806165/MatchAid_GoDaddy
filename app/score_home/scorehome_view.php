@@ -81,7 +81,7 @@
 
     <!-- Primary CTA — full width, smart-routed by JS -->
      <button id="shBtnGo" class="btn btnSecondary" type="button" disabled>
-      Go to Digital Scoring
+      Enter Digital Scoring
     </button>
 
     <!-- Secondary actions: change cart / change scorer (rendered by JS in ready mode) -->
