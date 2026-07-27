@@ -470,7 +470,12 @@
           ? ["eventrounds", "roundedit", "roundsettings", "roundroster", "roundpairings", "roundteetimes", "roundsummary", "roundscorecard"]
           : ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"];
 
-      MA.chrome.setBottomNav({ visible: visible, active: isEvent ? "roundroster" : "roster", onNavigate:(id)=>MA.routerGo(id) });
+      MA.chrome.setBottomNav({
+        visible: visible,
+        root: isPlayer ? ["player"] : (isEvent ? ["eventrounds"] : ["admin"]),
+        active: isEvent ? "roundroster" : "roster",
+        onNavigate:(id)=>MA.routerGo(id)
+      });
     }
   }
 

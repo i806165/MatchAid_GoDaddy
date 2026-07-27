@@ -1121,6 +1121,7 @@ function wireFiltersModal() {
         visible: isEventMode
           ? ["eventhome", "eventedit", "eventroster", "eventrounds", "eventsummary"]
           : ["home", "player", "favorites", "import"],
+        root: isEventMode ? ["eventhome"] : ["home"],
         active: isEventMode ? "eventrounds" : "admin",
         onNavigate: (id) => {
           try {
