@@ -452,7 +452,14 @@ final class service_dbFavPlayers
 
     /**
      * resolveEmailsToGHINs
-     * (unchanged)
+     * Batch email -> {ghin, name, gender} lookup against db_FavPlayers,
+     * unscoped across all admins' saved favorites (no dbFav_UserGHIN
+     * filter — intentional, confirmed correct).
+     *
+     * Sole caller: resolveImportIdentifiers.php (Player Import feature).
+     *
+     * @param  string[] $emails
+     * @return array  [lowercased email => ["ghin"=>string,"name"=>string,"gender"=>string]]
      */
     public static function resolveEmailsToGHINs(array $emails): array
     {
@@ -469,8 +476,13 @@ final class service_dbFavPlayers
 
             $placeholders = implode(",", array_fill(0, count($emails), "?"));
 
-            $sql = "SELECT LOWER(dbFav_PlayerEMail) AS email,
-                           dbFav_PlayerGHIN          AS ghin
+            // SELECT * — matches getFavoritesForUser()'s convention above.
+            // Import review rows need Name/Gender in addition to the GHIN
+            // itself; no reason to under-select when the full row costs
+            // nothing extra and keeps this method's contract consistent
+            // with the rest of the class.
+            $sql = "SELECT *,
+                           LOWER(dbFav_PlayerEMail) AS _matchEmail
                     FROM   db_FavPlayers
                     WHERE  LOWER(dbFav_PlayerEMail) IN ($placeholders)
                       AND  dbFav_PlayerEMail IS NOT NULL
@@ -483,22 +495,100 @@ final class service_dbFavPlayers
 
             $rows = $st->fetchAll(PDO::FETCH_ASSOC);
 
+            // Map keyed by email, first row wins on duplicates. The review
+            // screen is a best-effort preview, not the accuracy boundary
+            // (that's the Import commit step) — no ORDER BY needed to
+            // pick a "canonical" row among admins who each favorited the
+            // same player independently.
             $map = [];
             foreach ($rows as $row) {
-                $email = (string)($row["email"] ?? "");
-                $ghin  = (string)($row["ghin"]  ?? "");
+                $email = (string)($row["_matchEmail"] ?? "");
+                $ghin  = (string)($row["dbFav_PlayerGHIN"] ?? "");
                 if ($email === "" || $ghin === "") continue;
-                if (!isset($map[$email])) $map[$email] = $ghin;
+                if (!isset($map[$email])) {
+                    $map[$email] = [
+                        "ghin"   => $ghin,
+                        "name"   => (string)($row["dbFav_PlayerName"]   ?? ""),
+                        "gender" => (string)($row["dbFav_PlayerGender"] ?? ""),
+                    ];
+                }
             }
 
             return $map;
 
         } catch (Throwable $e) {
             Logger::error("DEBUG_resolveEmailsToGHINs_EXCEPTION", [
-                "error"  => $e->getMessage(),
-                "file"   => $e->getFile(),
-                "line"   => $e->getLine(),
-                "emails" => $emails,
+                "err" => $e->getMessage()
+            ]);
+            return [];
+        }
+    }
+
+    /**
+     * resolveGHINsToNames
+     * Batch GHIN -> {name, gender} lookup against db_FavPlayers, same
+     * table and unscoped convention as resolveEmailsToGHINs() above,
+     * keyed on dbFav_PlayerGHIN instead of email.
+     *
+     * Used as the Favorites-first check for GHIN-typed import tokens,
+     * before falling back to a live GHIN API lookup — same "Favorites
+     * first, GHIN API as backup" pattern as the email path, applied to
+     * directly-typed GHIN numbers.
+     *
+     * Sole caller: resolveImportIdentifiers.php (Player Import feature).
+     *
+     * @param  string[] $ghins
+     * @return array  [ghin => ["name"=>string,"gender"=>string]]
+     */
+    public static function resolveGHINsToNames(array $ghins): array
+    {
+        if (empty($ghins)) return [];
+
+        $ghins = array_values(array_unique(array_filter(
+            array_map(fn($g) => trim((string)$g), $ghins)
+        )));
+
+        if (empty($ghins)) return [];
+
+        try {
+            $pdo = Db::pdo();
+
+            $placeholders = implode(",", array_fill(0, count($ghins), "?"));
+
+            $sql = "SELECT *
+                    FROM   db_FavPlayers
+                    WHERE  dbFav_PlayerGHIN IN ($placeholders)
+                      AND  dbFav_PlayerGHIN IS NOT NULL
+                      AND  dbFav_PlayerGHIN <> ''";
+
+            $st = $pdo->prepare($sql);
+            $st->execute(array_values($ghins));
+
+            $rows = $st->fetchAll(PDO::FETCH_ASSOC);
+
+            // First row wins on duplicates — same reasoning as
+            // resolveEmailsToGHINs(): this is a preview, not the
+            // accuracy boundary, no ORDER BY needed.
+            $map = [];
+            foreach ($rows as $row) {
+                $ghin = (string)($row["dbFav_PlayerGHIN"] ?? "");
+                if ($ghin === "") continue;
+                if (!isset($map[$ghin])) {
+                    $map[$ghin] = [
+                        "name"   => (string)($row["dbFav_PlayerName"]   ?? ""),
+                        "gender" => (string)($row["dbFav_PlayerGender"] ?? ""),
+                    ];
+                }
+            }
+
+            return $map;
+
+        } catch (Throwable $e) {
+            Logger::error("DEBUG_resolveGHINsToNames_EXCEPTION", [
+                "error" => $e->getMessage(),
+                "file"  => $e->getFile(),
+                "line"  => $e->getLine(),
+                "ghins" => $ghins,
             ]);
             return [];
         }

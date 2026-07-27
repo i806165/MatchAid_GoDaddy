@@ -29,32 +29,46 @@ try {
     $in          = ma_json_in();
     $identifiers = is_array($in["identifiers"] ?? null) ? $in["identifiers"] : [];
 
-    Logger::error("DEBUG_IDENTIFIERS", ["identifiers" => $identifiers]);
-
     if (empty($identifiers)) {
         http_response_code(400);
         echo json_encode(["ok" => false, "message" => "No identifiers provided."]);
         exit;
     }
 
-    // ── Collect emails for batch DB lookup ───────────────────────────────────
+    // ── Collect emails and GHINs for batch Favorites lookups ────────────────
+    // Favorites-first for BOTH token types — this endpoint's job now
+    // covers name/gender resolution, not just identity resolution, so
+    // both paths get a shot at avoiding the live GHIN API call downstream.
     $emailInputs = [];
+    $ghinInputs  = [];
 
     foreach ($identifiers as $item) {
         $type  = (string)($item["type"]  ?? "");
         $value = (string)($item["value"] ?? "");
         if ($type === "email" && $value !== "") {
             $emailInputs[strtolower($value)] = $item;
+        } elseif ($type === "ghin" && $value !== "") {
+            $ghinInputs[$value] = $item;
         }
     }
 
-    // ── Batch email → GHIN resolution ────────────────────────────────────────
-    $emailToGhin = [];
+    // ── Batch Favorites lookups ──────────────────────────────────────────────
+    $emailMatches = [];
     if (!empty($emailInputs)) {
-        $emailToGhin = service_dbFavPlayers::resolveEmailsToGHINs(array_keys($emailInputs));
+        $emailMatches = service_dbFavPlayers::resolveEmailsToGHINs(array_keys($emailInputs));
+    }
+
+    $ghinMatches = [];
+    if (!empty($ghinInputs)) {
+        $ghinMatches = service_dbFavPlayers::resolveGHINsToNames(array_keys($ghinInputs));
     }
 
     // ── Build response arrays ─────────────────────────────────────────────────
+    // "resolved" carries name/gender when Favorites had a match; the caller
+    // (module_sourceImportPlayer.js) only falls back to a live GHIN API
+    // lookup for rows still missing name/gender after this step — found-
+    // but-incomplete never happens, since a Favorites match always carries
+    // whatever the table has, even if a field is blank.
     $resolved   = [];
     $unresolved = [];
 
@@ -64,23 +78,30 @@ try {
         $raw   = (string)($item["raw"]   ?? $value);
 
         if ($type === "ghin") {
-            // Pass numeric GHINs through — existence validated later by searchPlayers.php
+            $match = $ghinMatches[$value] ?? null;
             $resolved[] = [
-                "input" => $raw,
-                "type"  => "ghin",  
-                "ghin"  => $value,
+                "input"  => $raw,
+                "type"   => "ghin",
+                "ghin"   => $value,
+                "name"   => $match["name"]   ?? "",
+                "gender" => $match["gender"] ?? "",
+                "source" => $match ? "favorites" : "",
             ];
             continue;
         }
 
         if ($type === "email") {
             $email = strtolower($value);
-            if (isset($emailToGhin[$email])) {
+            $match = $emailMatches[$email] ?? null;
+            if ($match) {
                 $resolved[] = [
-                    "input" => $raw,
-                    "type"  => "email",
-                    "value" => $email, 
-                    "ghin"  => $emailToGhin[$email],
+                    "input"  => $raw,
+                    "type"   => "email",
+                    "value"  => $email,
+                    "ghin"   => $match["ghin"],
+                    "name"   => $match["name"]   ?? "",
+                    "gender" => $match["gender"] ?? "",
+                    "source" => "favorites",
                 ];
             } else {
                 $unresolved[] = [

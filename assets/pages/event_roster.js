@@ -34,6 +34,7 @@
       { id: "favorites", label: "Favorites"  },
       { id: "ghin",      label: "Search"     },
       { id: "nonrated",  label: "Non-Rated"  },
+      { id: "import",    label: "Import"     },
     ];
   }
 
@@ -547,6 +548,10 @@
         const p = findTabPanel(el.trayControls, "nonrated");
         if (p) MA.nonRatedSource.clearSelection(p);
       }
+      if (leaving === "import") {
+        const p = findTabPanel(el.trayControls, "import");
+        if (p) MA.importPlayerSource.cancel(p);
+      }
 
       state.activeTab = btn.dataset.tab;
       render();
@@ -635,6 +640,30 @@
         onUpdate(player) {
           upsertNonRated(player);
         }
+      });
+      return;
+    }
+
+    if (state.activeTab === "import") {
+      // No tee logic anywhere in this call — event rosters carry no tee
+      // concept. modes:["external","game","event"] — Events get all three
+      // per the agreed scope table (flat games are limited to two, but
+      // that's game_players.js's concern in Phase 2, not this page's).
+      MA.importPlayerSource.mount({
+        controlsEl:    getTabPanel(el.trayControls, "import"),
+        bodyEl:        getTabPanel(el.trayBody, "import"),
+        footerEl:      el.trayFtr,
+        modes:         ["external", "game", "event"],
+        existingGHINs: enrolledGHINs(),
+        paths: {
+          resolveIdentifiers:     MA.paths.resolveImportIdentifiers,
+          ghinSearch:              MA.paths.ghinPlayerSearch,
+          sourceGames:             MA.paths.getImportSourceGames,
+          gamePlayersEventImport:  MA.paths.getGamePlayersEventImport,
+          sourceEvents:            MA.paths.getImportSourceEvents,
+          eventPlayersEventImport: MA.paths.getEventPlayersEventImport,
+        },
+        onImportMany(players) { enrollMany(players); }
       });
       return;
     }
