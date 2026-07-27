@@ -67,6 +67,13 @@ $paths = [
     "saveEventRosterPairings"=> MA_ROUTE_API_EVENT_ROSTER . "/saveEventRosterPairings.php",
     "favPlayersInit"         => MA_ROUTE_API_FAVORITE_PLAYERS . "/initFavPlayers.php",
     "ghinPlayerSearch"       => MA_ROUTE_API_GHIN . "/searchPlayers.php",
+
+    // Player Import — added
+    "resolveImportIdentifiers"     => MA_ROUTE_API_GAME_PLAYERS  . "/resolveImportIdentifiers.php",
+    "getImportSourceGames"         => MA_ROUTE_API_GAME_PLAYERS  . "/getImportSourceGames.php",
+    "getGamePlayersEventImport"    => MA_ROUTE_API_EVENT_ROSTER  . "/getGamePlayersEventImport.php",
+    "getImportSourceEvents"        => MA_ROUTE_API_EVENT_ROSTER  . "/getImportSourceEvents.php",
+    "getEventPlayersEventImport"   => MA_ROUTE_API_EVENT_ROSTER  . "/getEventPlayersEventImport.php",
 ];
 
 $maChromeTitle    = "Event Roster";
