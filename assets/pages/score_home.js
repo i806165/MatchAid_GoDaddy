@@ -878,8 +878,9 @@
                       : portal === 'PLAYER PORTAL' ? 'player'
                       : 'home';
       chrome.setBottomNav({
-        visible: [homeRoute],
-        active:  '',
+        visible: ["home", "admin", "player", "scorehome"],
+        root: ["home"],
+        active:  'scorehome',
         onNavigate: (id) => {
           if (typeof MA.routerGo === 'function') MA.routerGo(id);
         },

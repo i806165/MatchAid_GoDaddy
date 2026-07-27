@@ -131,6 +131,7 @@
       chrome.setBottomNav({
         visible: ['home','admin', 'player'],
         active: 'player',
+        root: ['home'],
         onNavigate: (id) => {
           if (id === 'player') return;
           if (routerGo) return routerGo(id);

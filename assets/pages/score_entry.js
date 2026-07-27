@@ -918,8 +918,9 @@ function markDirty(playerId, rawScore, declared) {
                       : (portal === "PLAYER PORTAL" ? "player" : "home");
 
       chrome.setBottomNav({
-        visible: [homeRoute, 'scorehome','scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoresummary', 'scoreskins'],
+        visible: ['scorehome','scoreentry', 'scorecardPlayer', 'scorecardGame', 'scoresummary', 'scoreskins'],
         active: 'scoreentry',
+        root: ['scorehome'],
         onNavigate: (id) => {
           if (!state.dirty) {
             if (typeof MA.routerGo === 'function') MA.routerGo(id);
