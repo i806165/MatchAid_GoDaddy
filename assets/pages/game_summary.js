@@ -1737,6 +1737,7 @@
 
       chrome.setBottomNav({
         visible: visible,
+        root: isPlayerPortal ? ["player"] : (isEventGame ? ["eventrounds"] : ["admin"]),
         active: isEventGame ? "roundsummary" : "summary",
         onNavigate: (id) => (typeof MA.routerGo === "function" ? MA.routerGo(id) : null),
       });

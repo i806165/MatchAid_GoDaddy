@@ -467,6 +467,7 @@ function renderGroup(group) {
         visible: isEvent
           ? ["eventrounds", "roundedit", "roundsettings", "roundroster", "roundpairings", "roundteetimes", "roundsummary", "roundscorecard"]
           : ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"],
+        root: isEvent ? ["eventrounds"] : ["admin"],
         active: isEvent ? "roundscorecard" : "scorecard", onNavigate: (id) => MA.routerGo?.(id) 
       });
   }

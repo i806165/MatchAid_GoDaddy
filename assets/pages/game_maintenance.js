@@ -308,6 +308,7 @@
         visible: evCtx
           ? ["eventrounds", "roundedit", "roundsettings", "roundroster", "roundpairings", "roundteetimes", "roundsummary", "roundscorecard"]
           : ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"],
+        root: [backRoute],
         active: "edit",
         disabled: (state.mode === "add") ? ["roster", "pairings", "teetimes", "summary"] : [],
         onNavigate: (id) => MA.routerGo(id)

@@ -573,6 +573,7 @@
         visible: isEvent
           ? ["eventrounds", "roundedit", "roundsettings", "roundroster", "roundpairings", "roundteetimes", "roundsummary", "roundscorecard"]
           : ["admin", "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"],
+        root: isEvent ? ["eventrounds"] : ["admin"],
         active: isEvent ? "roundpairings" : "pairings",
         onNavigate: async (id) => {
           const canLeave = await ensureRecalculatedBeforeLeaving();
