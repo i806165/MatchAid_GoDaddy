@@ -299,29 +299,49 @@
 
   // Bottom nav: show/hide items + disabled/current-stage + compact centering when <=2 visible
   // On mobile, also populates the hub tray rows from the same visible/active/onNavigate state.
+  // root: array of nav ids that should render as "root" (exits the
+  // current object/page entirely) ON THIS PAGE. Root is page-relative,
+  // not a fixed property of a given nav id — e.g. "admin" is root three
+  // levels deep in a game, but not on the admin list page itself, where
+  // "home" plays that role instead. Pages opt in the same way they
+  // already do for `active`; pages that don't pass `root` render exactly
+  // as before (no divider, no indentation, no root styling).
   MA.chrome.setBottomNav = function (state) {
     const nav = document.getElementById("chromeBottomNav");
     if (!nav) return;
 
     const visible    = new Set((state && state.visible)  ? state.visible  : []);
     const disabled   = new Set((state && state.disabled) ? state.disabled : []);
+    const root       = new Set((state && state.root)     ? state.root     : []);
     const active     = state && state.active ? String(state.active) : "";
     const onNavigate = (state && typeof state.onNavigate === "function") ? state.onNavigate : null;
 
     let visibleCount = 0;
+    let prevIsRoot = null; // tracks scope of the last VISIBLE button walked past
 
     nav.querySelectorAll(".maNavBtn[data-nav]").forEach((btn) => {
-      const id = String(btn.getAttribute("data-nav") || "");
+      const id     = String(btn.getAttribute("data-nav") || "");
+      const isRoot = root.has(id);
 
       const isVisible = visible.size ? visible.has(id) : true;
       btn.style.display = isVisible ? "" : "none";
-      if (isVisible) visibleCount++;
+
+      if (isVisible) {
+        visibleCount++;
+        // Divider fires on any transition between root and object scope
+        // among currently-visible buttons — self-gating: if root is empty,
+        // prevIsRoot never differs from isRoot (both always false), so no
+        // divider appears on pages that haven't adopted `root` yet.
+        btn.classList.toggle("maNavBtn--scope-start", prevIsRoot !== null && prevIsRoot !== isRoot);
+        prevIsRoot = isRoot;
+      }
 
       const isDisabled = disabled.has(id) || (active && id === active);
       btn.classList.toggle("is-disabled", isDisabled);
       btn.disabled = isDisabled;
 
-      btn.classList.toggle("is-active", active && id === active);
+      btn.classList.toggle("is-selected", !!(active && id === active));
+      btn.classList.toggle("maNavBtn--root", isRoot);
 
       // bind click once
       if (!btn.__ma_bound) {
@@ -342,6 +362,7 @@
     MA.chrome._hubActive   = active;
     MA.chrome._hubVisible  = visible;
     MA.chrome._hubDisabled = disabled;
+    MA.chrome._hubRoot     = root;
     MA.chrome._buildHubRows();
   };
 
@@ -352,6 +373,7 @@
   // --------------------------------------------------------------------------
   MA.chrome._hubVisible  = new Set();
   MA.chrome._hubDisabled = new Set();
+  MA.chrome._hubRoot     = new Set();
   MA.chrome._hubActive   = "";
   MA.chrome._hubNavigate = null;
 
@@ -362,6 +384,7 @@
     const visible  = MA.chrome._hubVisible;
     const disabled = MA.chrome._hubDisabled;
     const active   = MA.chrome._hubActive;
+    const root     = MA.chrome._hubRoot || new Set();
 
     // Collect visible ids in the order they appear in the icon nav markup
     const nav = document.getElementById("chromeBottomNav");
@@ -373,28 +396,38 @@
       if (visible.size ? visible.has(id) : true) orderedIds.push(id);
     });
 
-    container.innerHTML = "";
+    // Only indent child rows when this tray actually has a root row —
+    // guards against every row on an unrefactored page (no root: passed)
+    // shifting right for no reason.
+    const hasRoot = orderedIds.some((id) => root.has(id));
 
-    orderedIds.forEach((id, idx) => {
+    container.innerHTML = "";
+    let prevIsRoot = null;
+
+    orderedIds.forEach((id) => {
       const navBtn     = nav.querySelector(`.maNavBtn[data-nav="${id}"]`);
       const label      = navBtn?.querySelector(".maNavLabel")?.textContent?.trim() || id;
       const icon       = navBtn?.querySelector(".maNavIcon")?.innerHTML?.trim()    || "›";
-      const isActive   = active && id === active;
-      const isDisabled = disabled.has(id) || isActive;
+      const isRoot     = root.has(id);
+      const isSelected = !!(active && id === active);
+      const isDisabled = disabled.has(id) || isSelected;
 
-      // Optional divider — insert before the first scoring-related item
-      // to mirror the grouping shown in our design mockups.
-      const scoringIds = new Set(["scoreentry","scorecardPlayer","scorecardGroup","scorecardGame","scoreskins","scoresummary","import","favorites"]);
-      if (idx > 0 && scoringIds.has(id) && !scoringIds.has(orderedIds[idx - 1])) {
+      // Divider on any root/object transition — replaces the old hardcoded
+      // scoringIds Set with the same general mechanism the desktop bar uses.
+      if (prevIsRoot !== null && prevIsRoot !== isRoot) {
         const hr = document.createElement("hr");
         hr.className = "maHubDivider";
         container.appendChild(hr);
       }
+      prevIsRoot = isRoot;
 
       const btn = document.createElement("button");
-      btn.type      = "button";
-      btn.className = "maHubRow" + (isActive ? " is-active" : "");
-      btn.disabled  = isDisabled;
+      btn.type = "button";
+      btn.className = "maHubRow" +
+        (isSelected ? " is-selected" : "") +
+        (isRoot ? " maHubRow--root" : "") +
+        (hasRoot && !isRoot ? " maHubRow--indented" : "");
+      btn.disabled = isDisabled;
       btn.setAttribute("data-nav", id);
       btn.innerHTML =
         `<span class="maHubRow__icon" aria-hidden="true">${icon}</span>` +

@@ -117,12 +117,26 @@
   --statusDangerText: #ffffff;
 
   /* --- Bottom Nav (icon bar) --- */
-  --tabBarHeight: 56px;
-  --tabBarBg: #ffffff;
-  --tabItemText: #4b5563;
-  --tabItemActiveText: var(--brandAccent);
-  --tabItemFontSize: 11px;
-  --navIconSize: 18px;
+  /* Desktop icon nav bar (.maNavBtn family) */
+  --navBarHeight: 66px;
+  --navBarBg: #ffffff;
+  --navBarText: #4b5563;
+  --navBarTextSelected: var(--brandPrimary);
+  --navBarFontSize: 15px;
+  --navBarIconBox: 34px;
+  --navBarIconSize: 24px;
+
+  /* Mobile hub tray rows (.maHubRow family) */
+  --hubRowBg: #f5f5f0;
+  --hubRowText: var(--ink);
+  --hubRowSelectedBg: color-mix(in srgb, var(--brandPrimary) 14%, white);
+  --hubRowRootBg: var(--brandPrimary);
+  --hubRowRootText: var(--brandPrimaryText);
+  --hubRowFontSize: 20px;
+  --hubRowIconSize: 18px;
+  --hubRowIndent: 20px;
+  --hubHeaderBg: var(--brandAccent);   /* one-off blue — matches the Navigate button that opens this tray */
+  --hubHeaderText: var(--brandPrimaryText);
 
   /* --- Buttons --- */
   --btnHeight: 34px;
@@ -505,15 +519,18 @@ textarea {
    ========================================================================== */
 
 .maChrome__bottomNav {
-  height: var(--tabBarHeight, 56px);
+  height: var(--navBarHeight);
   display: flex;
   align-items: stretch;
   justify-content: space-between;
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  background: var(--tabBarBg);
+  background: var(--navBarBg);
 }
 
-/* Each nav button: icon stacked over label */
+/* Each nav button: icon stacked over label.
+   Normal/Selected both carry a 1px border so neither state shifts the
+   button's box size relative to the other — see .is-selected below,
+   which uses outline (not border) for the same reason. */
 .maNavBtn {
   flex: 1 1 0;
   display: flex;
@@ -523,25 +540,34 @@ textarea {
   gap: 3px;
   padding: 6px 4px;
   margin: 0;
-  border: 1px solid var(--controlBorder);
-  background: transparent;
+  border: 1px solid #c4c4c0;
+  background: #f0f0ee;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
-  color: var(--tabItemText);
+  color: var(--navBarText);
 }
 
 .maNavIcon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  font-size: var(--navIconSize);
+  width: var(--navBarIconBox);
+  height: var(--navBarIconBox);
+  font-size: var(--navBarIconSize);
   line-height: 1;
 }
 
+/* img/svg icons hardcode their own width/height attributes in markup —
+   this overrides them so every icon type obeys one token regardless of
+   how it's marked up. */
+.maNavIcon img,
+.maNavIcon svg {
+  width: var(--navBarIconSize);
+  height: var(--navBarIconSize);
+}
+
 .maNavLabel {
-  font-size: var(--tabItemFontSize);
+  font-size: var(--navBarFontSize);
   line-height: 1.1;
   letter-spacing: .2px;
   white-space: nowrap;
@@ -555,22 +581,47 @@ textarea {
 .maNavBtn:disabled {
   opacity: .55;
   transform: none;
-  background: transparent;
   cursor: default;
 }
 
-.maNavBtn.is-active {
-  color: var(--tabItemActiveText);
+/* Selected: current page. Outline (not border) so the box size never
+   changes between Normal and Selected. */
+.maNavBtn.is-selected {
+  background: color-mix(in srgb, var(--brandPrimary) 12%, white);
+  color: var(--navBarTextSelected);
+  border-color: transparent;
+  outline: 1.5px solid var(--brandPrimary);
+  outline-offset: -1.5px;
 }
 
-/* iOS-style active indicator line */
-.maNavBtn.is-active::after {
-  content: "";
-  width: 18px;
-  height: 2px;
-  border-radius: 999px;
-  margin-top: 2px;
-  background: var(--tabItemActiveText);
+/* Root: this button exits the current object/page entirely (set per-page
+   via MA.chrome.setBottomNav({ root: [...] }) — see ma_shared.js).
+   Solid fill is the strongest step in the same brandPrimary ramp Selected
+   uses, so Normal -> Selected -> Root reads as one continuous signal. */
+.maNavBtn--root {
+  background: var(--brandPrimary);
+  border-color: var(--brandPrimary);
+  color: var(--brandPrimaryText);
+}
+
+.maNavBtn--root .maNavLabel {
+  color: var(--brandPrimaryText);
+}
+
+/* Root + Selected (rare — e.g. standing on the page a root button points
+   to). A dark outline would vanish against the dark fill, so this uses a
+   light outline instead. */
+.maNavBtn--root.is-selected {
+  outline: 1.5px solid rgba(255,255,255,.7);
+  outline-offset: -1.5px;
+}
+
+/* Divider marking a scope change among the currently-visible buttons —
+   toggled in JS based on the page-supplied root set, not a fixed markup
+   attribute (root is page-relative, see ma_shared.js setBottomNav). */
+.maNavBtn--scope-start {
+  border-left: 2px solid var(--borderSubtle);
+  margin-left: 4px;
 }
 
 /* Compact mode: 1–2 visible items centered */
@@ -823,27 +874,26 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 14px 8px;
-  border-bottom: 0.5px solid #eee;
+  padding: 12px 14px;
+  background: var(--hubHeaderBg);
+  border-radius: 16px 16px 0 0;
   flex-shrink: 0;
 }
 
 .maChrome__hubTitle {
-  font-size: 11px;
+  font-size: 15px;
   font-weight: 500;
-  color: #999;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
+  color: var(--hubHeaderText);
 }
 
 .maChrome__hubClose {
-  background: #f0efe8;
+  background: rgba(255,255,255,.2);
   border: none;
   border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  font-size: 12px;
-  color: #555;
+  width: 26px;
+  height: 26px;
+  font-size: 13px;
+  color: var(--hubHeaderText);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -869,14 +919,19 @@ textarea {
   height: 8px;
 }
 
-/* Hub tray nav rows (injected by setBottomNav) */
+/* Hub tray nav rows (injected by setBottomNav / _buildHubRows).
+   Text and icon color stay black/high-contrast in every state — this app
+   is used outdoors in daylight, so state is communicated through
+   background tint, a left accent bar, and indentation, never through
+   muted or light-colored text. */
 .maHubRow {
   display: flex;
   align-items: center;
   gap: 10px;
   width: 100%;
-  background: #f5f5f0;
+  background: var(--hubRowBg);
   border: none;
+  border-left: 3px solid transparent;
   border-radius: 8px;
   padding: 10px 12px;
   margin-bottom: 6px;
@@ -890,39 +945,63 @@ textarea {
   background: #e8e8e0;
 }
 
-.maHubRow.is-active {
-  background: #e8f0fe;
+/* Indented child rows — only applied when this tray actually has a root
+   row (guarded in JS so pages without a `root:` config render flush-left
+   exactly as before, with no stray margin). */
+.maHubRow--indented {
+  margin-left: var(--hubRowIndent);
 }
 
 .maHubRow__icon {
-  font-size: 16px;
+  font-size: var(--hubRowIconSize);
   width: 22px;
   text-align: center;
   flex-shrink: 0;
+  color: var(--hubRowText);
 }
 
 .maHubRow__label {
-  font-size: 20px;
+  font-size: var(--hubRowFontSize);
   font-weight: 500;
-  color: #222;
+  color: var(--hubRowText);
   flex: 1;
 }
 
-.maHubRow.is-active .maHubRow__label {
-  color: var(--brandAccent);
-}
-
 .maHubRow__arrow {
-  font-size: 13px;
-  color: #ccc;
+  font-size: var(--hubRowIconSize);
+  color: var(--hubRowText);
   flex-shrink: 0;
 }
 
-.maHubRow.is-active .maHubRow__arrow {
-  color: var(--brandAccent);
+/* Selected: current page. Background tint + left accent bar carry the
+   signal, since text/icon color can't (daylight constraint above). */
+.maHubRow.is-selected {
+  background: var(--hubRowSelectedBg);
+  border-left-color: var(--brandPrimary);
 }
 
-/* Section divider between row groups */
+/* Root: this row exits the current object entirely (page-supplied via
+   root:, same as desktop — see ma_shared.js). Full-contrast white on a
+   solid fill, so the daylight constraint doesn't require any change here. */
+.maHubRow--root {
+  background: var(--hubRowRootBg);
+  border-left-color: transparent;
+}
+
+.maHubRow--root .maHubRow__icon,
+.maHubRow--root .maHubRow__label,
+.maHubRow--root .maHubRow__arrow {
+  color: var(--hubRowRootText);
+}
+
+/* Root + Selected (rare) — light outline distinguishes it from plain
+   Root, since a dark accent bar would vanish against the dark fill. */
+.maHubRow--root.is-selected {
+  outline: 1px solid rgba(255,255,255,.6);
+  outline-offset: -1px;
+}
+
+/* Section divider between root and object-scoped rows */
 .maHubDivider {
   border: none;
   border-top: 0.5px solid #eee;

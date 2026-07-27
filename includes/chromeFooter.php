@@ -29,7 +29,7 @@
     <div class="maChrome__hubSheet" role="document">
       <div class="maChrome__hubHandle" aria-hidden="true"></div>
       <div class="maChrome__hubHeader">
-        <span class="maChrome__hubTitle">Go to</span>
+        <span class="maChrome__hubTitle">Navigate to</span>
         <button id="chromeHubClose" type="button" class="maChrome__hubClose" aria-label="Close navigation">&#10005;</button>
       </div>
       <div class="maChrome__hubScroll" id="chromeHubRows">
