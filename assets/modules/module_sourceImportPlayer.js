@@ -148,13 +148,19 @@
     controlsEl.style.display = "";
 
     const HINTS = {
-      external: `<div class="maHelpText">Accepts golf network ID and email addresses.</div>
-                  <div class="maHelpText">Paste content using comma/semicolon separators.</div>`,
+      external: `<div class="maHelpText">Accepts golf network ID and email addresses. Paste content using comma/semicolon separators.</div>`,
       game:     `<div class="maHelpText">Select a Game to copy its roster.</div>`,
       event:    `<div class="maHelpText">Select an Event to copy its roster.</div>`,
     };
 
-    controlsEl.innerHTML = HINTS[st.activeMode] || "";
+    // Mode title bar — same brandSecondary green as .maPanel__hdr on the
+    // Game Pairings page (game_pairings.css), applied here as its own
+    // element rather than restyling .maPanel__hdr itself, since that
+    // class is shared by every page's real panel header (this page's own
+    // "Add Players" bar included) and isn't scoped per-mode.
+    const titleBar = `<div style="width:100%; margin:-6px -8px 8px; padding:8px 12px; background:var(--brandSecondary); color:var(--brandSecondaryText); font-weight:800; font-size:13px;">${esc(MODE_LABELS[st.activeMode] || "")}</div>`;
+
+    controlsEl.innerHTML = titleBar + (HINTS[st.activeMode] || "");
   }
 
   function _renderFooter(st) {
