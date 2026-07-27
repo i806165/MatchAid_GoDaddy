@@ -108,13 +108,17 @@
     };
   }
 
-  function canImportAllRows(){
-    // Already-on-roster rows are skipped during commit — they must not
-    // block the button. Only require that at least one actionable row
-    // exists and that all actionable rows are valid.
-    const actionable = state.importRows.filter(r => !r.alreadyOnRoster);
-    if (!actionable.length) return false;
-    return actionable.every(r => r.ok && !!safe(r.assignedTeeId));
+  // Rows that will actually be committed if the user clicks Import:
+  // not already on roster, resolved OK, and have a tee assigned.
+  function getValidImportRows(){
+    return state.importRows.filter(r => !r.alreadyOnRoster && r.ok && !!safe(r.assignedTeeId));
+  }
+
+  // Import is allowed as soon as there's at least one valid, importable row.
+  // Already-on-roster and unresolved/invalid rows are simply skipped at
+  // commit time rather than blocking the whole batch.
+  function hasImportableRows(){
+    return getValidImportRows().length > 0;
   }
 
   function hydrateImportTeeOptionsFromPayload(){
@@ -950,7 +954,15 @@ function renderTrayBody(){
           </div>`;
         }).join("");
 
-        const actionable = state.importRows.filter(r => !r.alreadyOnRoster).length;
+        const validRows = getValidImportRows();
+        const validCount = validRows.length;
+        const invalidCount = state.importRows.filter(r => !r.alreadyOnRoster && !r.ok).length;
+        const skipCount = state.importRows.filter(r => !!r.alreadyOnRoster).length;
+
+        const countParts = [`${validCount} player${validCount !== 1 ? "s" : ""} ready`];
+        if (invalidCount) countParts.push(`${invalidCount} unresolved (will be skipped)`);
+        if (skipCount) countParts.push(`${skipCount} already on roster`);
+
         importBody.innerHTML = `<section class="maPanel gpImportPanel">
           <div class="maListRow maListRow--hdr gpRow--import">
             <div class="maListRow__col" style="flex:2;">Input</div>
@@ -961,10 +973,10 @@ function renderTrayBody(){
           </div>
           <div class="maListRows">${rows || `<div class="gpEmpty">No import rows evaluated.</div>`}</div>
           <div class="gpImportFooter">
-            <div class="gpImportFooter__count">${actionable} player${actionable !== 1 ? "s" : ""} evaluated</div>
+            <div class="gpImportFooter__count">${esc(countParts.join(" · "))}</div>
             <div class="gpImportFooter__actions">
               <button id="gpBtnImportBack" class="btn btnPrimary" type="button">Back</button>
-              <button id="gpBtnImportRun" class="btn btnSecondary" type="button" ${canImportAllRows() ? "" : "disabled"}>Import ${actionable} Player${actionable !== 1 ? "s" : ""}</button>
+              <button id="gpBtnImportRun" class="btn btnSecondary" type="button" ${validCount ? "" : "disabled"}>Import ${validCount} Player${validCount !== 1 ? "s" : ""}</button>
             </div>
           </div>
         </section>`;
@@ -1003,9 +1015,14 @@ function renderTrayBody(){
             </div>`;
           }).join("");
 
-          const actionable = state.importRows.filter(r => !r.alreadyOnRoster).length;
-          const skipped    = state.importRows.filter(r => !!r.alreadyOnRoster).length;
-          const footerCount = `${actionable} player${actionable !== 1 ? "s" : ""} to import${skipped ? ` · ${skipped} skipped` : ""}`;
+          const validRows   = getValidImportRows();
+          const validCount  = validRows.length;
+          const invalidCount = state.importRows.filter(r => !r.alreadyOnRoster && !r.ok).length;
+          const skipped     = state.importRows.filter(r => !!r.alreadyOnRoster).length;
+
+          const countParts = [`${validCount} player${validCount !== 1 ? "s" : ""} to import`];
+          if (invalidCount) countParts.push(`${invalidCount} unresolved (will be skipped)`);
+          if (skipped) countParts.push(`${skipped} already on roster`);
 
           importBody.innerHTML = `<section class="maPanel gpImportPanel">
             <div class="maListRow maListRow--hdr gpRow--import">
@@ -1018,10 +1035,10 @@ function renderTrayBody(){
             </div>
             <div class="maListRows">${reviewRows || `<div class="gpEmpty">No players loaded.</div>`}</div>
             <div class="gpImportFooter">
-              <div class="gpImportFooter__count">${esc(footerCount)}</div>
+              <div class="gpImportFooter__count">${esc(countParts.join(" · "))}</div>
               <div class="gpImportFooter__actions">
                 <button id="gpBtnImportExistingClear" class="btn btnPrimary" type="button">Choose Different Game</button>
-                <button id="gpBtnImportExistingRun" class="btn btnSecondary" type="button" ${canImportAllRows() ? "" : "disabled"}>Import ${actionable} Player${actionable !== 1 ? "s" : ""}</button>
+                <button id="gpBtnImportExistingRun" class="btn btnSecondary" type="button" ${validCount ? "" : "disabled"}>Import ${validCount} Player${validCount !== 1 ? "s" : ""}</button>
               </div>
             </div>
           </section>`;
@@ -1333,8 +1350,15 @@ function renderTrayBody(){
       state.importMode        = "review";
       render();
 
-      if (canImportAllRows()) MA.ui.notify(`Evaluated ${rows.length} rows. All rows valid.`, "success");
-      else MA.ui.notify(`Evaluated ${rows.length} rows. Fix errors before import.`, "warn");
+      const validCount = getValidImportRows().length;
+      const invalidCount = rows.filter(r => !r.alreadyOnRoster && !r.ok).length;
+      if (!invalidCount) {
+        MA.ui.notify(`Evaluated ${rows.length} rows. All rows valid.`, "success");
+      } else if (validCount) {
+        MA.ui.notify(`Evaluated ${rows.length} rows. ${invalidCount} unresolved and will be skipped.`, "warn");
+      } else {
+        MA.ui.notify(`Evaluated ${rows.length} rows. None could be resolved.`, "warn");
+      }
 
     } finally {
       state.importBusy = false;
@@ -1344,8 +1368,8 @@ function renderTrayBody(){
 
   async function beginImportBatch(){
     if (state.importBusy) return;
-    if (!canImportAllRows()) {
-      MA.ui.notify("All rows must be valid before import can proceed.", "warn");
+    if (!hasImportableRows()) {
+      MA.ui.notify("No valid players to import. Resolve at least one row before importing.", "warn");
       return;
     }
     await commitImportBatch(state.importRows.slice());
@@ -1357,8 +1381,8 @@ function renderTrayBody(){
       MA.ui.notify("Select a source game first.", "warn");
       return;
     }
-    if (!canImportAllRows()) {
-      MA.ui.notify("No importable players found. All players may already be on the roster.", "warn");
+    if (!hasImportableRows()) {
+      MA.ui.notify("No importable players found. All players may already be on the roster or unresolved.", "warn");
       return;
     }
     await commitImportBatch(state.importRows.slice());
@@ -1372,6 +1396,7 @@ function renderTrayBody(){
     let added = 0;
     let failed = 0;
     let skipped = 0;
+    let unresolved = 0;
 
     try {
       let index = 0;
@@ -1381,6 +1406,14 @@ function renderTrayBody(){
 
         if (row.alreadyOnRoster) {
           skipped++;
+          continue;
+        }
+
+        // Unresolved / invalid rows (e.g. "Not Found", "Duplicate") are
+        // skipped here rather than blocking the whole batch — they were
+        // already surfaced to the user in the review table.
+        if (!row.ok) {
+          unresolved++;
           continue;
         }
 
@@ -1417,8 +1450,12 @@ function renderTrayBody(){
       resetExistingGameImport();
       render();
 
-      if (failed) MA.ui.notify(`Imported ${added} players. ${skipped} skipped. ${failed} failed.`, "warn");
-      else MA.ui.notify(`Imported ${added} players. ${skipped} already existed.`, "success");
+      const summaryParts = [`Imported ${added} player${added !== 1 ? "s" : ""}.`];
+      if (skipped)    summaryParts.push(`${skipped} already existed.`);
+      if (unresolved) summaryParts.push(`${unresolved} unresolved and skipped.`);
+      if (failed)     summaryParts.push(`${failed} failed.`);
+
+      MA.ui.notify(summaryParts.join(" "), (failed || unresolved) ? "warn" : "success");
     } finally {
       state.importBusy = false;
       hideBusyModal();
