@@ -327,7 +327,7 @@
       });
       if (!ok) return;
     }
-    const backRoute = (state.eventContext) ? "eventgames" : "admin";
+    const backRoute = (state.eventContext) ? "eventrounds" : "admin";
     if (typeof MA.routerGo === "function") {
       MA.routerGo(backRoute);
       return;
