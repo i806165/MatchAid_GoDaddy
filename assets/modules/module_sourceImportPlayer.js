@@ -26,6 +26,11 @@
  *                                       never assumes a fixed 2-vs-3 split.
  *   existingGHINs {Set}                 destination roster GHINs, refreshed on
  *                                       every mount call
+ *   excludeGGID   {string}              omits this GGID from the Existing
+ *                                       Game picker — a game can't import
+ *                                       its own roster into itself.
+ *   excludeEID    {string}              omits this EID from the Existing
+ *                                       Event picker — same reasoning.
  *   paths         {object}              { resolveIdentifiers, ghinSearch,
  *                                         sourceGames, gamePlayersEventImport,
  *                                         sourceEvents, eventPlayersEventImport }
@@ -95,6 +100,8 @@
       busy:          false,
       existingGHINs: cfg.existingGHINs instanceof Set ? cfg.existingGHINs : new Set(),
       paths:         cfg.paths || {},
+      excludeGGID:   safe(cfg.excludeGGID || ""),
+      excludeEID:    safe(cfg.excludeEID || ""),
       onImportMany:  typeof cfg.onImportMany === "function" ? cfg.onImportMany : null,
       bodyEl:        cfg.bodyEl,
       footerEl:      cfg.footerEl,
@@ -170,8 +177,8 @@
     if (st.step === "entry") {
       const others = st.modes.filter(m => m !== st.activeMode);
       footerEl.innerHTML = others.map((m, idx) => `
-        <button type="button" class="btn btnPrimary" data-switch-mode="${esc(m)}"
-          style="width:100%; ${idx > 0 ? "margin-top:6px;" : ""} display:flex; align-items:center; justify-content:space-between;">
+        <button type="button" class="btn" data-switch-mode="${esc(m)}"
+          style="width:100%; ${idx > 0 ? "margin-top:6px;" : ""} display:flex; align-items:center; justify-content:space-between; background:var(--segmentSelectedBg); border-color:var(--segmentSelectedBg); color:var(--ink);">
           <span>Import from ${esc(MODE_LABELS[m] || m)}</span>
           ${ICON_CHEVRON_DOWN}
         </button>`).join("");
@@ -344,17 +351,21 @@
         : (Array.isArray(res?.payload?.events) ? res.payload.events : []);
 
       if (kind === "game") {
-        st.sourceGames = raw.map(g => ({
-          ggid:  safe(g.ggid),
-          title: safe(g.title || "Untitled Game"),
-          sub:   [safe(g.playDate), (g.playerCount != null ? `${g.playerCount} players` : "")].filter(Boolean).join(" · "),
-        }));
+        st.sourceGames = raw
+          .filter(g => safe(g.ggid) !== st.excludeGGID)
+          .map(g => ({
+            ggid:  safe(g.ggid),
+            title: safe(g.title || "Untitled Game"),
+            sub:   [safe(g.playDate), (g.playerCount != null ? `${g.playerCount} players` : "")].filter(Boolean).join(" · "),
+          }));
       } else {
-        st.sourceEvents = raw.map(e => ({
-          eid:   safe(e.eid),
-          title: safe(e.title || "Untitled Event"),
-          sub:   [safe(e.startDate), (e.rosterCount != null ? `${e.rosterCount} players` : "")].filter(Boolean).join(" · "),
-        }));
+        st.sourceEvents = raw
+          .filter(e => safe(e.eid) !== st.excludeEID)
+          .map(e => ({
+            eid:   safe(e.eid),
+            title: safe(e.title || "Untitled Event"),
+            sub:   [safe(e.startDate), (e.rosterCount != null ? `${e.rosterCount} players` : "")].filter(Boolean).join(" · "),
+          }));
       }
     } catch (e) {
       notify(`Unable to load ${kind === "game" ? "games" : "events"}.`, "warn");
@@ -576,6 +587,8 @@
       const st = _states.get(controlsEl);
       st.existingGHINs = existingGHINs;
       st.paths         = cfg.paths        || st.paths;
+      st.excludeGGID   = safe(cfg.excludeGGID || "") || st.excludeGGID;
+      st.excludeEID    = safe(cfg.excludeEID || "") || st.excludeEID;
       st.onImportMany  = typeof cfg.onImportMany === "function" ? cfg.onImportMany : st.onImportMany;
       st.footerEl      = cfg.footerEl     || st.footerEl;
       st.bodyEl        = bodyEl;

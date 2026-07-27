@@ -659,6 +659,7 @@
         bodyEl:        getTabPanel(el.trayBody, "import"),
         footerEl:      el.trayFtr,
         modes:         ["external", "game"],
+        excludeGGID:   ggid,
         existingGHINs: new Set(
           (state.players || []).map(p => safe(p.dbPlayers_PlayerGHIN))
         ),

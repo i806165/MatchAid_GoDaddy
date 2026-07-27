@@ -654,6 +654,7 @@
         bodyEl:        getTabPanel(el.trayBody, "import"),
         footerEl:      el.trayFtr,
         modes:         ["external", "game", "event"],
+        excludeEID:    eid,
         existingGHINs: enrolledGHINs(),
         paths: {
           resolveIdentifiers:     MA.paths.resolveImportIdentifiers,
