@@ -121,7 +121,7 @@
   --navBarHeight: 66px;
   --navBarBg: #ffffff;
   --navBarText: #4b5563;
-  --navBarTextSelected: var(--brandPrimary);
+  --navBarTextSelected: var(--ink);
   --navBarFontSize: 15px;
   --navBarIconBox: 34px;
   --navBarIconSize: 24px;
@@ -532,6 +532,7 @@ textarea {
    button's box size relative to the other — see .is-selected below,
    which uses outline (not border) for the same reason. */
 .maNavBtn {
+  position: relative;
   flex: 1 1 0;
   display: flex;
   flex-direction: column;
@@ -579,19 +580,44 @@ textarea {
 }
 
 .maNavBtn:disabled {
-  opacity: .55;
   transform: none;
   cursor: default;
 }
 
+/* The current page's button is always disabled too (you can't navigate to
+   where you already are), but it must NOT dim like a genuinely-unavailable
+   button — that would wash out the is-selected tint/outline meant to make
+   it stand out. Opacity only applies to disabled buttons that aren't also
+   the selected one. */
+.maNavBtn:disabled:not(.is-selected) {
+  opacity: .55;
+}
+
 /* Selected: current page. Outline (not border) so the box size never
-   changes between Normal and Selected. */
+   changes between Normal and Selected. Text/icon stay ink, not green —
+   green is reserved for the outline + chevron accent, keeping text at
+   full contrast for daylight readability (matches the mobile treatment). */
 .maNavBtn.is-selected {
   background: color-mix(in srgb, var(--brandPrimary) 12%, white);
   color: var(--navBarTextSelected);
   border-color: transparent;
   outline: 1.5px solid var(--brandPrimary);
   outline-offset: -1.5px;
+}
+
+/* Inset chevron — a second, shape-based "you are here" signal alongside
+   the tint/outline, sitting just inside the outline rather than breaking
+   through it (buttons sit edge-to-edge with no gap, so a chevron poking
+   past the edge would land on the neighboring button). */
+.maNavBtn.is-selected::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 10px;
+  bottom: 10px;
+  width: 11px;
+  background: var(--brandPrimary);
+  clip-path: polygon(0 0, 45% 0, 100% 50%, 45% 100%, 0 100%);
 }
 
 /* Root: this button exits the current object/page entirely (set per-page
@@ -925,6 +951,7 @@ textarea {
    background tint, a left accent bar, and indentation, never through
    muted or light-colored text. */
 .maHubRow {
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -949,6 +976,7 @@ textarea {
    row (guarded in JS so pages without a `root:` config render flush-left
    exactly as before, with no stray margin). */
 .maHubRow--indented {
+  width: calc(100% - var(--hubRowIndent));
   margin-left: var(--hubRowIndent);
 }
 
