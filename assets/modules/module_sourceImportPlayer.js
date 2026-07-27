@@ -14,7 +14,10 @@
  *   MA.importPlayerSource.mount(cfg)
  *
  * mount() cfg:
- *   controlsEl    {HTMLElement}         renders mode toggle + entry trigger
+ *   controlsEl    {HTMLElement}         unused for rendering — kept only as
+ *                                       the WeakMap state anchor, same slot
+ *                                       every sibling module keys state on.
+ *                                       Mode switching lives in the footer.
  *   bodyEl        {HTMLElement}         renders entry surface / review rows
  *   footerEl      {HTMLElement}         renders entry hint / Back+Import (required)
  *   modes         {string[]}            subset of ["external","game","event"],
@@ -68,7 +71,8 @@
   // ── SVG icons — same set as eventRosterSource/favoritesSource ────────────────
   const ICON_CHECK = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
   const ICON_ALERT = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><line x1="12" y1="8" x2="12" y2="13"></line><line x1="12" y1="16.5" x2="12" y2="16.51"></line></svg>`;
-  const ICON_CHEVRON = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>`;
+  const ICON_CHEVRON_RIGHT = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>`;
+  const ICON_CHEVRON_DOWN  = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>`;
 
   const MODE_LABELS = {
     external: "External List",
@@ -122,47 +126,35 @@
     return "";
   }
 
-  // ── Segmented mode toggle ──────────────────────────────────────────────────
-  function _segHtml(st) {
-    const buttons = st.modes.map(m => `
-      <button type="button" class="maSegBtn ${m === st.activeMode ? "is-active" : ""}" data-import-mode="${esc(m)}">${esc(MODE_LABELS[m] || m)}</button>
-    `).join("");
-    return `<div class="maSeg">${buttons}</div>`;
-  }
-
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDER — controls / body / footer
+  //
+  // controlsEl is unused for Import — no toggle lives there. Mode switching
+  // moved to the footer (two full-width buttons, excluding whichever mode
+  // is currently active) precisely because the controls-area toggle sat
+  // immediately adjacent to the host's own top-level tab strip and the two
+  // segmented bars visually blended into one. Footer has no such neighbor.
   // ═══════════════════════════════════════════════════════════════════════════
 
   function _renderControls(st) {
     const controlsEl = st._controlsEl;
 
     if (st.step === "review") {
-      // Controls hide entirely during review — Back (in the footer) is the
-      // only way back to entry. Matches the earlier design decision.
       controlsEl.innerHTML = "";
       controlsEl.style.display = "none";
       return;
     }
+
     controlsEl.style.display = "";
 
-    const evaluateBtn = st.activeMode === "external"
-      ? `<button type="button" class="btn btnSecondary" id="ipsEvaluateBtn" style="width:100%; margin-top:8px;">Evaluate</button>`
-      : "";
+    const HINTS = {
+      external: `<div class="maHelpText">Accepts golf network ID and email addresses.</div>
+                  <div class="maHelpText">Paste content using comma/semicolon separators.</div>`,
+      game:     `<div class="maHelpText">Select a Game to copy its roster.</div>`,
+      event:    `<div class="maHelpText">Select an Event to copy its roster.</div>`,
+    };
 
-    controlsEl.innerHTML = _segHtml(st) + evaluateBtn;
-
-    controlsEl.querySelectorAll("[data-import-mode]").forEach(btn => {
-      btn.addEventListener("click", () => {
-        st.activeMode = btn.getAttribute("data-import-mode");
-        st.step = "entry";
-        st.reviewRows = [];
-        _renderAll(st);
-      });
-    });
-
-    const evalBtn = controlsEl.querySelector("#ipsEvaluateBtn");
-    if (evalBtn) evalBtn.addEventListener("click", () => _evaluateExternal(st));
+    controlsEl.innerHTML = HINTS[st.activeMode] || "";
   }
 
   function _renderFooter(st) {
@@ -170,20 +162,27 @@
     if (!footerEl) return;
 
     if (st.step === "entry") {
-      let hint = "";
-      if (st.activeMode === "external") {
-        hint = `<div class="maHelpText">Accepts golf network ID and email addresses.</div>
-                <div class="maHelpText">Paste content using comma/semicolon separators.</div>`;
-      } else if (st.activeMode === "game") {
-        hint = `<div class="maHelpText">Select a Game to copy its roster.</div>`;
-      } else if (st.activeMode === "event") {
-        hint = `<div class="maHelpText">Select an Event to copy its roster.</div>`;
-      }
-      footerEl.innerHTML = hint;
+      const others = st.modes.filter(m => m !== st.activeMode);
+      footerEl.innerHTML = others.map((m, idx) => `
+        <button type="button" class="btn btnPrimary" data-switch-mode="${esc(m)}"
+          style="width:100%; ${idx > 0 ? "margin-top:6px;" : ""} display:flex; align-items:center; justify-content:space-between;">
+          <span>Import from ${esc(MODE_LABELS[m] || m)}</span>
+          ${ICON_CHEVRON_DOWN}
+        </button>`).join("");
+
+      footerEl.querySelectorAll("[data-switch-mode]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          st.activeMode = btn.getAttribute("data-switch-mode");
+          st.step = "entry";
+          st.reviewRows = [];
+          _renderAll(st);
+        });
+      });
       return;
     }
 
-    // Review step — Back / Import(N)
+    // Review step — Back / Import(N). No mode-switch buttons here; Back
+    // is the only way out, matching the earlier design decision.
     const checkedCount = _checkedRows(st).length;
     footerEl.innerHTML = `
       <div style="display:flex; justify-content:space-between; gap:10px;">
@@ -217,9 +216,15 @@
     }
 
     if (st.activeMode === "external") {
-      bodyEl.innerHTML = `<textarea id="ipsTextarea" class="maTextInput" style="width:100%; min-height:210px; resize:vertical;" placeholder="123456&#10;player@email.com&#10;987654">${esc(st.importText)}</textarea>`;
+      bodyEl.innerHTML = `
+        <textarea id="ipsTextarea" class="maTextInput" style="width:100%; min-height:180px; resize:vertical;" placeholder="123456&#10;player@email.com&#10;987654">${esc(st.importText)}</textarea>
+        <button type="button" class="btn btnSecondary" id="ipsEvaluateBtn" style="width:100%; margin-top:8px;">Evaluate</button>`;
+
       const ta = bodyEl.querySelector("#ipsTextarea");
       if (ta) ta.addEventListener("input", () => { st.importText = safe(ta.value); });
+
+      const evalBtn = bodyEl.querySelector("#ipsEvaluateBtn");
+      if (evalBtn) evalBtn.addEventListener("click", () => _evaluateExternal(st));
       return;
     }
 
@@ -256,7 +261,7 @@
           <div class="maListRow__col">${esc(r.title)}</div>
           <div class="maListRow__subline">${esc(r.sub)}</div>
         </div>
-        ${ICON_CHEVRON}
+        ${ICON_CHEVRON_RIGHT}
       </div>`).join("")}</div>`;
 
     bodyEl.querySelectorAll("[data-picker-idx]").forEach(row => {
