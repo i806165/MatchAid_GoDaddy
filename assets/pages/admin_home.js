@@ -568,6 +568,7 @@ function wireDoorwayControls() {
     // "both" — no class needed, default grid shows both panels
 
     updateChromeActionsForPanel(tab);
+    updateChromeBottomNav();
   }
 
   // Single-panel mode (games/events) moves Actions + "+ Add" to the chrome
@@ -1110,41 +1111,58 @@ function wireFiltersModal() {
 
 }
 
+  // Chrome bottom nav — varies by event mode, and (when not in event mode)
+  // by which doorway tab is showing. Keyed off state.activePanel, the same
+  // string setActiveTab() uses to toggle the tab UI itself — not a separate
+  // literal, so this can never drift out of sync with the actual tab.
+  function updateChromeBottomNav() {
+    if (!MA.chrome || typeof MA.chrome.setBottomNav !== "function") return;
+
+    const isEventMode = !!(window.__MA_INIT__?.eventContext || window.__INIT__?.eventContext);
+    const isEventsTab = !isEventMode && state.activePanel === "events";
+
+    const visible = isEventMode
+      ? ["eventhome", "eventedit", "eventroster", "eventrounds", "eventsummary"]
+      : isEventsTab
+        ? ["home"]
+        : ["home", "favorites", "import"];
+
+    MA.chrome.setBottomNav({
+      visible: visible,
+      root: isEventMode ? ["eventhome"] : ["home"],
+      active: isEventMode ? "eventrounds" : "admin",
+      onNavigate: (id) => {
+        try {
+          if (typeof MA.routerGo === "function") {
+            // "eventhome" now routes to this same adminhome.php (the retired
+            // standalone eventshome.php is gone) — pass mode=events so the
+            // doorway opens with the Events tab pre-selected instead of Games.
+            if (id === "eventhome") {
+              MA.routerGo(id, { mode: "events" });
+            } else {
+              MA.routerGo(id);
+            }
+            return;
+          }
+          const router = MA.paths?.routerApi || "/api/session/pageRouter.php";
+          const extra = (id === "eventhome") ? "&mode=events" : "";
+          window.location.assign(router + "?action=" + encodeURIComponent(id) + "&redirect=1" + extra);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    });
+  }
+
   // ---- Boot ----
   document.addEventListener("DOMContentLoaded", () => {
     const initPayload = window.__MA_INIT__ || window.__INIT__ || null;
 
-    // Chrome bottom nav — varies by event mode (set after applyInit)
-    if (MA.chrome && typeof MA.chrome.setBottomNav === "function") {
-      const isEventMode = !!(window.__MA_INIT__?.eventContext || window.__INIT__?.eventContext);
-      MA.chrome.setBottomNav({
-        visible: isEventMode
-          ? ["eventhome", "eventedit", "eventroster", "eventrounds", "eventsummary"]
-          : ["home", "player", "favorites", "import"],
-        root: isEventMode ? ["eventhome"] : ["home"],
-        active: isEventMode ? "eventrounds" : "admin",
-        onNavigate: (id) => {
-          try {
-            if (typeof MA.routerGo === "function") {
-              // "eventhome" now routes to this same adminhome.php (the retired
-              // standalone eventshome.php is gone) — pass mode=events so the
-              // doorway opens with the Events tab pre-selected instead of Games.
-              if (id === "eventhome") {
-                MA.routerGo(id, { mode: "events" });
-              } else {
-                MA.routerGo(id);
-              }
-              return;
-            }
-            const router = MA.paths?.routerApi || "/api/session/pageRouter.php";
-            const extra = (id === "eventhome") ? "&mode=events" : "";
-            window.location.assign(router + "?action=" + encodeURIComponent(id) + "&redirect=1" + extra);
-          } catch (e) {
-            console.error(e);
-          }
-        }
-      });
-    }
+    // Covers event-rounds mode immediately. In standalone mode,
+    // state.activePanel isn't set yet at this point — wireDoorwayControls()
+    // (called later in this same handler, during applyInit) calls
+    // setActiveTab(initialPanel), which calls this again with the real value.
+    updateChromeBottomNav();
 
     const adminSearch = document.getElementById("adminSearch");
     if (adminSearch) {
