@@ -306,7 +306,7 @@
 
     if (chrome && typeof chrome.setBottomNav === 'function') {
       chrome.setBottomNav({
-        visible: ['eventhome', 'eventedit', 'eventroster', 'eventrounds', 'eventsummary', 'eventscoring'],
+        visible: ['eventhome', 'eventedit', 'eventroster', 'eventrounds', 'eventsummary'],
         active: 'eventsummary',
         root: ["eventhome"],
         disabled: [],
