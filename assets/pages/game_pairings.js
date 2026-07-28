@@ -393,15 +393,16 @@
 
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
-    
+
     const items = [
-      { label: "Open Automated Pairing", action: onAutoPair },
-      { separator: true },
-      { separator: true },
-      { label: "Recalculate Handicaps", action: onRecalcHandicaps },
-      { separator: true },
-      { separator: true },
-      { label: "Reset Pairings and Matches to last Save", action: onResetPairings, danger: true }
+      { category: "Advanced Features" },
+      { label: "Open Automated Pairing", action: onAutoPair, indent: true },
+      { label: "Reset Pairings and Matches to last Save", action: onResetPairings, indent: true, danger: true },
+
+      { category: "Admin Services" },
+      { label: "Display Game Settings", action: () => MA.gameDetails.open(state.game), indent: true },
+      { label: "Recalculate Handicaps", action: onRecalcHandicaps, indent: true },
+      { label: "Add Game to Calendar",  action: downloadIcsForGame, indent: true },
     ];
     MA.ui.openActionsMenu("Actions", items);
   }
@@ -410,8 +411,21 @@
   // (ensureRecalculatedBeforeLeaving) runs automatically, but on demand.
   // Reuses runRecalculation() so a successful manual run also clears
   // needsRecalc, same as the automatic path — no separate bookkeeping.
-  function onRecalcHandicaps() {
-    runRecalculation();
+  async function onRecalcHandicaps() {
+    if (!MA.recalculateHandicaps) {
+      setStatus("Recalculate module not loaded.", "error");
+      return;
+    }
+    const ok = await runRecalculation();
+    if (ok) setStatus("Handicaps recalculated.", "success");
+  }
+
+  function downloadIcsForGame() {
+    if (MA.calendar && MA.calendar.addCalendarEventFromGame) {
+      MA.calendar.addCalendarEventFromGame(state.game);
+    } else {
+      setStatus("Calendar module not loaded.", "error");
+    }
   }
 
   /**
@@ -599,9 +613,10 @@
   // — it just stays owed for the next opportunity (next leave attempt, or
   // a manual recalculation elsewhere in the app).
   async function runRecalculation() {
-    if (!MA.recalculateHandicaps) return;
+    if (!MA.recalculateHandicaps) return false;
     const ok = await MA.recalculateHandicaps(apiGHIN);
     if (ok) state.needsRecalc = false;
+    return ok;
   }
 
   // Gate called by every way of leaving this page (Back, bottom nav).
