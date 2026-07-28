@@ -253,30 +253,7 @@
       visible: ["home", "admin", "favorites", "import"],
       active: "import",
       root: ["home"],
-      onNavigate: async (id) => {
-        try {
-          if (!routerGo) return;
-
-          if (id === "home") {
-            // Home landing (per your router contract)
-            await routerGo("home");
-            return;
-          }
-          if (id === "admin") {
-            // Admin landing / games list
-            await routerGo("admin");
-            return;
-          }
-          if (id === "import") {
-            // If you have a router action for Import, use it.
-            // If not, you can omit this (Import is current page) or route to its landing.
-            await routerGo("import");
-            return;
-          } 
-        } catch (e) {
-          setStatus(String(e?.message || e), "danger");
-        }
-      }
+      onNavigate: (id) => MA.routerGo(id)
     });
   }
 
