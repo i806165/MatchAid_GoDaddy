@@ -421,17 +421,57 @@
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     MA.ui.openActionsMenu("Actions", [
-      { category: "Roster Management" },
+      { category: "Admin Services" },
+      { label: "Display Game Settings", indent: true, action: () => MA.gameDetails.open(state.game) },
       { label: "Recalculate Handicaps",    indent: true, action: onRecalcHandicaps },
-      { separator: true },
-      { category: "Messaging" },
-      { label: "Send Message to Players", action: onNotify },
+      { category: "Messaging and Calendar" },
+      { label: "Send Message to Players", indent: true, action: onNotify },
+      { label: "Add Game to Calendar",  indent: true, action: downloadIcsForGame },
+      { category: "Advanced Features" },
+      { label: "Manage Teams",   indent: true, action: onManageTeams },
+      { label: "Define Flights", indent: true, action: onDefineFlights },
     ]);
+  }
+
+  // Teams/Flights modules are self-contained — they fetch their own
+  // context server-side, unlike Display Game Settings which needs the
+  // current game row handed to it. onDone refreshes the roster: this
+  // page displays team/flight assignments directly, so without this the
+  // roster would show stale data immediately after either modal closes.
+  // Matches the existing refreshPlayers()+render() sequence used
+  // elsewhere in this file (see boot()).
+  async function onTeamsOrFlightsDone() {
+    await refreshPlayers();
+    render();
+  }
+
+  function onManageTeams() {
+    if (!MA.manageTeams || typeof MA.manageTeams.open !== "function") {
+      MA.ui.notify("Manage Teams module not loaded.", "error");
+      return;
+    }
+    MA.manageTeams.open({ target: "game", onDone: onTeamsOrFlightsDone });
+  }
+
+  function onDefineFlights() {
+    if (!MA.defineFlights || typeof MA.defineFlights.open !== "function") {
+      MA.ui.notify("Define Flights module not loaded.", "error");
+      return;
+    }
+    MA.defineFlights.open({ target: "game", onDone: onTeamsOrFlightsDone });
   }
 
   function onRecalcHandicaps() {
     if (!ggid) return;
     MA.recalculateHandicaps(MA.paths?.apiGHIN);
+  }
+
+  function downloadIcsForGame() {
+    if (MA.calendar && MA.calendar.addCalendarEventFromGame) {
+      MA.calendar.addCalendarEventFromGame(state.game);
+    } else {
+      MA.ui.notify("Calendar module not loaded.", "error");
+    }
   }
 
   function onNotify() {

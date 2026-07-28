@@ -422,6 +422,7 @@ function renderGroup(group) {
       { category: "Admin Services" },
       { label: "Display Game Settings", action: () => MA.gameDetails.open(game), indent: true },
       { label: "Recalculate Handicaps", action: recalculateHandicaps, indent: true },
+      { category: "Messaging and Calendar" },
       { label: "Add Game to Calendar",  action: downloadIcsForGame,   indent: true },
     ];
 
