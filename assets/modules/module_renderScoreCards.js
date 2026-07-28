@@ -867,9 +867,16 @@
     if (!hostEl) return;
     const ggid = String(cfg.ggid || "");
     if (!ggid) return;
+    const mode = String(cfg.mode || "game").toLowerCase();
+    const scope = String(cfg.scope || "");
 
     let st = _states.get(hostEl);
-    const isNewGame = !st || st.ggid !== ggid;
+    // Compares the full (ggid, mode, scope) tuple, not ggid alone — a
+    // Player/Group/Game tab switch on the consolidated scorecardShared.php
+    // page keeps the same ggid but is still a genuine data change (a
+    // structurally different rows shape), and was previously being
+    // silently treated as "nothing changed."
+    const isNewView = !st || st.ggid !== ggid || st.mode !== mode || st.scope !== scope;
 
     if (!st) {
       st = _initState(hostEl, cfg);
@@ -879,7 +886,7 @@
       st.apiPath = cfg.apiPath || st.apiPath;
     }
 
-    if (isNewGame) {
+    if (isNewView) {
       _resetState(st, cfg);
       st.ggid = ggid;
       st.loading = true;
@@ -893,7 +900,26 @@
         st.game = payload.game || {};
         st.mode = String(payload.mode || st.mode || "game").toLowerCase();
         st.loading = false;
+
+        // Genuinely empty data (e.g. a round with no players enrolled yet)
+        // is a real state worth interrupting for, not just a quiet empty
+        // div — fired once here, on the data-load transition, NOT from
+        // inside renderBody() (which re-runs on every pill click/expand
+        // toggle/etc. and would otherwise re-trigger this on every
+        // unrelated interaction while rows stay empty).
+        const rowCount = (payload.scorecards?.rows || []).length;
+        if (rowCount === 0 && MA.ui && MA.ui.confirm) {
+          MA.ui.confirm({
+            title: "No Scorecards",
+            message: "No scorecards are available for this round yet.",
+            okOnly: true,
+          });
+        }
       } catch (e) {
+        // Round-switch fetch failures are rare and non-blocking — the
+        // .maEmptyState message below is enough for the user; this is
+        // just so the actual reason isn't lost for debugging.
+        console.error("[renderScoreCards] fetch failed", e);
         st.loading = false;
         st.error = true;
         renderBody(st);

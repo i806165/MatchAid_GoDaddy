@@ -77,9 +77,10 @@ $ROUTES = [
     "scorecard"   => "/app/game_scorecards/scorecards.php",
     "scorehome"   => "/app/score_home/scorehome.php",
     "scoreentry"    => "/app/score_entry/scoreentry.php",
-    "scorecardPlayer" => "/app/scorecardShared/scorecardPlayer.php",
-    "scorecardGroup" => "/app/scorecardShared/scorecardGroup.php",
-    "scorecardGame" => "/app/scorecardShared/scorecardGame.php",
+    //"scorecardPlayer" => "/app/scorecardShared/scorecardPlayer.php",
+    //"scorecardGroup" => "/app/scorecardShared/scorecardGroup.php",
+    //"scorecardGame" => "/app/scorecardShared/scorecardGame.php",
+    "scorecardShared" => "/app/scorecardShared/scorecardShared.php",
     "scoreskins" => "/app/score_skins/scoreskins.php",
     "scoresummary" => "/app/score_summary/scoresummary.php",
 

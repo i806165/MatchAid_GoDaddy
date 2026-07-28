@@ -265,25 +265,11 @@
       <span class="maNavLabel">Enter Scores</span>
     </button>
 
-    <button class="maNavBtn" data-nav="scorecardPlayer" aria-label="Player Scorecard">
-      <span class="maNavIcon" aria-hidden="true">
-        <img src="/assets/images/nav-scorecard.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
-      </span>
-      <span class="maNavLabel">Player Card</span>
-    </button>
-
-    <button class="maNavBtn" data-nav="scorecardGroup" aria-label="Group Scorecard">
-      <span class="maNavIcon" aria-hidden="true">
-        <img src="/assets/images/nav-scorecard-group.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
-      </span>
-      <span class="maNavLabel">Group Card</span>
-    </button>
-
-    <button class="maNavBtn" data-nav="scorecardGame" aria-label="Game Scorecards">
+    <button class="maNavBtn" data-nav="scorecardShared" aria-label="Score Cards">
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-scorecard-game.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
       </span>
-      <span class="maNavLabel">Game Cards</span>
+      <span class="maNavLabel">Score Cards</span>
     </button>
 
     <button type="button" class="maNavBtn" data-nav="scoreskins" aria-label="Skins">

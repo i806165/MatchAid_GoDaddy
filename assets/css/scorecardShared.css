@@ -1,37 +1,10 @@
-/* /assets/css/scorecardShared.css */
-.scHost--browser { gap: 12px; }
-
-.scBrowserControls{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  flex-wrap:wrap;
-}
-
-.scBrowserControls__group{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-}
-
-.scCtlBtn{
-  border:1px solid var(--borderSubtle);
-  background:#fff;
-  border-radius:999px;
-  padding:8px 12px;
-  font-weight:700;
-  cursor:pointer;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-}
-
-.scCtlBtn.is-active{
-  background:var(--brandPrimary);
-  color:#fff;
-  border-color:var(--brandPrimary);
-}
+/* /assets/css/scorecardShared.css
+ * Page-level CSS only — everything the module needs draws from
+ * ma_shared.css (§21 .maTable, §23 Scorecard Module). scHost--browser /
+ * scBrowserControls / scCtlBtn removed — the KPI pill row and controls
+ * strip they used to style are now .maChoiceChip/.maChoiceChips and
+ * .maCanvasControls, both already in ma_shared.css.
+ */
 
 .scGroupCard{
   border:1px solid var(--borderSubtle);
@@ -191,12 +164,6 @@
   color:rgba(0,0,0,.7);
 }
 
-@media (max-width: 820px){
-  .scBrowserControls{
-    align-items:flex-start;
-  }
-}
-
 /* Scorecard page only: hide shared chrome when mobile/touch device is in landscape.
    The JS toggles body.scChromeHiddenMode for reliability across devices. */
 body.scChromeHiddenMode .maChrome__hdr,
@@ -206,12 +173,14 @@ body.scChromeHiddenMode .maChrome__ftr{
 
 
 /* ==========================================================================
-   Transposed scorecard drawer
-   Shell reuses: maDrawerOverlay, maDrawer, maModal__hdr, maModal__title,
-   maModal__subtitle, maModal__controls, maModal__body--flush, maModal__ftr,
-   maModal__ftrActions, iconBtn, btnSecondary, scCtlBtn / scCtlBtn.is-active,
-   scCell shape classes, scCellVal, scCellMarks, scTotalRow.
-   Only the pieces below have no equivalent in the shared files.
+   Transposed scorecard drawer — DEAD CODE, see note below.
+   Original comment (now stale) claimed this shell reused maDrawerOverlay/
+   maDrawer, scCtlBtn, and scTotalRow — none of which are accurate anymore
+   (the drawer uses maModalOverlay/maModal, not maDrawer; scCtlBtn is
+   maChoiceChip; scTotalRow is maTable__totalRow). Flagged, not removed —
+   see chat: this whole block below is superseded by ma_shared.css §23 and
+   is candidate for full deletion, but that's a larger removal than this
+   pass's scope (stripping scBrowserControls/scCtlBtn/scHost--browser).
    ========================================================================== */
 
 /* Drag handle pill at the top of the drawer */

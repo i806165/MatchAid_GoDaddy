@@ -6,6 +6,7 @@ require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/scoring/service_ScoreCard.php";
 require_once MA_SERVICES . "/scoring/service_ScoreCardRotation.php";
+require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_SVC_DB . "/service_dbGames.php";
 require_once MA_SVC_DB . "/service_dbPlayers.php";
 
@@ -19,6 +20,14 @@ function hydrateSharedScoreCardContext(string $ggid): array {
   if (!$game) {
     return ["ok" => false, "error" => "game_not_found", "game" => [], "players" => []];
   }
+
+  // Merge event columns (dbEvents_*) onto the game record when
+  // dbGames_EID is set — the "full game context" both Game/Group/Player
+  // pages and Event Scorecards need. dbGames_*/dbEvents_* names never
+  // collide (see ServiceContextGame::hydrateForUi()'s own docblock), so
+  // this is additive: no existing field this function already returns
+  // is touched or renamed by it.
+  $game = ServiceContextGame::hydrateForUi($game);
 
   $players = ServiceDbPlayers::getScorecardPlayersByGGID($ggid);
 

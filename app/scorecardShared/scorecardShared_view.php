@@ -1,17 +1,27 @@
 <?php
-// shared view for Player / Group / Game Scorecards
+// /public_html/app/scorecardShared/scorecardShared_view.php
+// Pure markup only — no business logic.
+//
+// Player/Group/Game mode is a client-side .maSeg tab switch now (see
+// scorecardShared.js), rendered into #scControls (.maControlArea) above
+// this — not three separate pages.
+//
+// .maPanels wrapper is REQUIRED, not decorative — same fix Event
+// Scorecards needed. ma_shared.css Section 9's own CONTRACT comment is
+// explicit: ".maPanel__body is the ONLY scrollable region... do not apply
+// overflow directly to .maPanel." That only holds true when .maPanel sits
+// inside .maPanels, which supplies the bounded height (.maPanels {
+// height:100% }) .maPanel__body's overflow:auto needs to actually kick
+// in. Without it, .maPanel just grows with content and .maPage's own
+// overflow-y:auto becomes the real (and only) scroll container instead.
+//
+// No outer wrapping card (dropped along with the old #scHostCard/
+// #scHint band) — module renders directly into #scModuleHost.
 ?>
-<div class="maCards" id="scCards">
-  <section class="maCard" id="scHostCard" aria-label="<?= htmlspecialchars($pageCardTitle ?? 'Scorecards') ?>">
-    <header class="maCard__hdr">
-      <div class="maCard__title"><?= htmlspecialchars(strtoupper($pageCardTitle ?? 'Scorecards')) ?></div>
-      <div class="maCard__actions">
-        <span class="maHint" id="scHint">Toggle values and expand details below.</span>
-      </div>
-    </header>
-    <div class="maCard__body">
-      <div id="scHost" class="scHost scHost--browser" aria-label="Scorecard pages"></div>
-      <div id="scEmpty" class="maEmpty" style="display:none;">No scorecards available.</div>
-    </div>
+<div class="maPanels">
+  <section class="maPanel" id="scScorecardPanel" aria-label="Scorecards">
+    <div class="maPanel__controls" id="scModuleControls"></div>
+    <div class="maPanel__body"     id="scModuleHost"></div>
+    <div class="maPanel__ftr"      id="scModuleFooter"></div>
   </section>
 </div>

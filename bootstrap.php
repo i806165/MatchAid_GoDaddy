@@ -70,6 +70,12 @@ define('MA_ROUTE_API_GAME_SUMMARY', '/api/game_summary');
 define('MA_ROUTE_GAME_SLOTTING',    '/app/game_slotting/gameslotting.php');
 define('MA_ROUTE_API_FAVORITE_PLAYERS', '/api/favorite_players');
 define('MA_ROUTE_API_GAME_SCORECARD', '/api/game_scorecard');
+// Distinct from MA_ROUTE_API_GAME_SCORECARD above (that one is the
+// point-scorecard PDF export feature) — this is the actual
+// /api/scorecardShared folder initSharedScoreCard.php already lives in,
+// now also home to initScoreCardMode.php's client-fetch path for the
+// Player/Group/Game mode-switch tabs.
+define('MA_ROUTE_API_SCORECARD_SHARED', '/api/scorecardShared');
 define('MA_ROUTE_SCORE_HOME', '/app/score_home/scorehome.php');
 define('MA_ROUTE_API_SCORE_ENTRY', '/api/score_entry');
 define('MA_ROUTE_API_SCORE_HOME', '/api/score_home');
