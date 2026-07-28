@@ -1130,7 +1130,7 @@ function wireFiltersModal() {
     const navactive = isEventMode
       ? ["eventhome"]
       : isEventsTab
-        ? ["eventhome"]
+        ? ["eventrounds"]
         : ["admin"];
 
     MA.chrome.setBottomNav({
