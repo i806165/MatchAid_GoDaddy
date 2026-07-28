@@ -79,11 +79,11 @@
     </button>
 
 <!-- /////// EVENT SECTION ////// -->
-    <button type="button" class="maNavBtn" data-nav="eventhome" aria-label="Admin Portal">
+    <button type="button" class="maNavBtn" data-nav="eventhome" aria-label="Events Home">
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-event.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
       </span>
-      <span class="maNavLabel">Admin Portal</span>
+      <span class="maNavLabel">Events Home</span>
     </button>
 
     <button type="button" class="maNavBtn" data-nav="eventedit" aria-label="Edit">
