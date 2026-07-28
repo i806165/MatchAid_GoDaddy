@@ -2572,6 +2572,14 @@ textarea {
   margin-top: 6px;
 }
 
+/* Larger variant — for hints that stand alone as the primary guidance in
+   a controls band (e.g. "Use the Actions Menu to print"), rather than a
+   secondary annotation sitting next to a control. Same weight/color/
+   line-height as the base, just sized up. */
+.maHintText--lg {
+  font-size: 15px;
+}
+
 /* Empty/missing data subline — italic hint */
 .maListRow__subline--empty {
   font-size: 11px;

@@ -3,7 +3,7 @@
 ?>
 
 <div class="maControlArea" id="scControls">
-  <button class="btn btnSecondary" onclick="scShowPrintModal()">🖨 Print Scorecards</button>
+  <span class="maHintText maHintText--lg">Use the Actions Menu to print the scorecards.</span>
 </div>
 
 <div class="maCards" id="scCards">

@@ -1694,8 +1694,8 @@
 
       { category: "Admin Services" },
       { label: "Display Game Settings", action: () => MA.gameDetails.open(state.game), indent: true },
-      { label: "Add Game to Calendar",  action: downloadIcsForGame,   indent: true },
       { label: "Recalculate Handicaps", action: recalculateHandicaps, indent: true },
+      { label: "Add Game to Calendar",  action: downloadIcsForGame,   indent: true },
     ];
     MA.ui.openActionsMenu("Actions", items);
   }

@@ -77,6 +77,8 @@ $maChromeLogoUrl = null;
 <script src="<?= ma_asset('/assets/js/ma_SharedBusLogic.js') ?>"></script>
 
 <script src="<?= ma_asset('/assets/modules/module_menuGameSettings.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_DisplayGameFormat.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/addCalendar.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/module_setGameFormat.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/module_setGameSegments.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/module_setGameBlindPlayer.js') ?>"></script>

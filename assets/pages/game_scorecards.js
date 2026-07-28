@@ -3,7 +3,7 @@
  * - Reads INIT from window.__MA_INIT__/__INIT__
  * - Renders print-first scorecards into #scHost
  * - Two groups per printed page (top/bottom) w/ divider
- * - Print triggers window.print()
+ * - Print via Actions menu → PDF download (downloadScoreCardsPdf), not window.print()
  */
 (function () {
   "use strict";
@@ -389,6 +389,14 @@ function renderGroup(group) {
     }
   }
 
+  function downloadIcsForGame() {
+    if (MA.calendar && MA.calendar.addCalendarEventFromGame) {
+      MA.calendar.addCalendarEventFromGame(game);
+    } else {
+      setStatus("Calendar module not loaded.", "error");
+    }
+  }
+
   async function recalculateHandicaps() {
     if (!MA.recalculateHandicaps) {
       setStatus("Recalculate module not loaded.", "error");
@@ -405,54 +413,30 @@ function renderGroup(group) {
     }
 
     const items = [
-      { label: "Print ScoreCard (1 per Page)", action: () => downloadScoreCardsPdf("1up") },
-      { label: "Print ScoreCard (2 per Page)", action: () => downloadScoreCardsPdf("2up") },
+      { category: "Traditional Scorecards" },
+      { label: "Print ScoreCard (1 per Page)", indent: true,action: () => downloadScoreCardsPdf("1up") },
+      { label: "Print ScoreCard (2 per Page)", indent: true, action: () => downloadScoreCardsPdf("2up") },
+      { category: "Point Scorecards" },
       { label: "Download Point Scorecards (2x9)", action: () => downloadPointScorecards("2x9") },
       { label: "Download Point Scorecards (3x6)", action: () => downloadPointScorecards("3x6") },
-      { separator: true },
-      { separator: true },
-      { label: "Recalculate Handicaps", action: recalculateHandicaps }
+      { category: "Admin Services" },
+      { label: "Display Game Settings", action: () => MA.gameDetails.open(game), indent: true },
+      { label: "Recalculate Handicaps", action: recalculateHandicaps, indent: true },
+      { label: "Add Game to Calendar",  action: downloadIcsForGame,   indent: true },
     ];
 
     MA.ui.openActionsMenu("Actions", items);
   }
 
-  const PRINT_STEPS = [
-    { icon: "🖨", label: "Orientation",       detail: "Select Landscape" },
-    { icon: "📄", label: "Paper",             detail: "Select Letter size (8.5 × 11)" },
-    { icon: "☐",  label: "Headers & Footers", detail: 'Uncheck "Headers and Footers"' },
-    { icon: "🔍", label: "Zoom",             detail: "Adjust Zoom settings (~85%)" },
-  ];
-
-  // Genuinely an OK/Cancel decision (Cancel dismisses, "Print" confirms and
-  // triggers window.print()) rather than a plain informational modal, so
-  // this maps onto MA.ui.confirm rather than MA.ui's info/okOnly mode.
-  // window.scShowPrintModal keeps its name/signature — likely invoked via
-  // inline onclick in the PHP template.
-  async function scShowPrintModal() {
-    const stepsHtml = PRINT_STEPS.map(s => `
-      <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.08);">
-        <span style="font-size:18px;flex:0 0 24px;text-align:center;">${s.icon}</span>
-        <div>
-          <div style="font-weight:800;font-size:13px;">${s.label}</div>
-          <div style="font-size:12px;color:rgba(0,0,0,.60);margin-top:2px;">${s.detail}</div>
-        </div>
-      </div>`).join("");
-
-    const go = await MA.ui.confirm({
-      title: "Before you print",
-      message: "Verify these print setup settings:",
-      detail: stepsHtml,
-      confirmLabel: "🖨 Print scorecards",
-      cancelLabel: "Cancel"
-    });
-
-    if (go) {
-      setTimeout(function () { try { window.print(); } catch (e) {} }, 120);
-    }
-  }
-
-  function onPrint() { try { window.print(); } catch (e) {} }
+  // Browser-native print (window.print(), scShowPrintModal, PRINT_STEPS,
+  // and the ?autoprint=1 deep link) removed — superseded by the PDF-based
+  // "Print ScoreCard (1 per Page / 2 per Page)" items in the Actions menu
+  // above (downloadScoreCardsPdf), which give reliable, controllable
+  // output and have held up to extensive user testing. window.print()
+  // depended entirely on each user's own browser print settings and was
+  // a recurring source of user confusion. Repo-wide search confirmed no
+  // other file called scShowPrintModal/onPrint or linked here with
+  // ?autoprint=1, so this was safe to remove outright.
 
   function applyChrome() {
     const subtitle = [game.dbGames_CourseName, formatDate(game.dbGames_PlayDate)].filter(Boolean).join(" • ");
@@ -484,11 +468,7 @@ function renderGroup(group) {
   function initialize() {
     applyChrome();
     render();
-    if (qs("autoprint") === "1") setTimeout(onPrint, 250);
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize);
   else initialize();
-
-  // Expose print modal trigger for inline onclick in scorecards_view.php
-  window.scShowPrintModal = scShowPrintModal;
 })();
