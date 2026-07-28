@@ -47,18 +47,9 @@
   flex-wrap: wrap;
 }
 
-.gsScopeSeg{
-  width: auto;
-  flex: 0 0 auto;
-}
-.gsScopeSeg .maSegBtn{
-  flex: 0 0 auto;
-}
-
-.gsMetaPills{
-  justify-content: flex-end;
-  flex: 1 1 auto;
-}
+/* .gsScopeSeg intentionally has no width/flex overrides here anymore —
+   full width + evenly-split buttons now come from the base .maSeg /
+   .maSegBtn rules in ma_shared.css, same as #ahTabs on the admin page. */
 
 /* ===== Table ===== */
 .gsTableWrap{ width:100%; overflow:auto; border:1px solid var(--borderSubtle); border-radius: var(--controlRadius); background:#fff; }
