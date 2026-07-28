@@ -16,7 +16,7 @@
   <section class="maPanel maPanel--primary" aria-label="Games">
     <header class="maPanel__hdr">
       <div class="gpPanelHdr">
-        <div class="gpPanelHdr__title">Games</div>
+        <div class="gpPanelHdr__title">Manage Games</div>
       </div>
     </header>
 
@@ -43,7 +43,7 @@
   <section class="maPanel maPanel--secondary" aria-label="Events">
     <header class="maPanel__hdr">
       <div class="gpPanelHdr">
-        <div class="gpPanelHdr__title">Events</div>
+        <div class="gpPanelHdr__title">Manage Events</div>
       </div>
     </header>
 
