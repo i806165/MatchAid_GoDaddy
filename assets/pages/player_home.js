@@ -1117,9 +1117,10 @@ function getGameAdminMeta(g){
   // Re-populate sidebar lists — called after every reloadGames()
   function refreshSidebar() {
     syncSidebarDateFromState(); // Always reflect actual state.filters dates
-    buildSidebarCourses();
+    // COURSE FILTER DISABLED — see wireSidebar() below for full rationale.
+    // buildSidebarCourses();
     sbRenderAdminRows();
-    sbRenderCourseRows();
+    // sbRenderCourseRows();
   }
 
   // Client-side Show filter applied on top of state.games
@@ -1140,10 +1141,38 @@ function getGameAdminMeta(g){
     });
   }
 
+  // ================================================================
+  // COURSE FILTER — DISABLED (2026-07)
+  // ================================================================
+  // Why: the course checkbox list is derived from the CURRENT result set
+  // (see buildSidebarCourses(), still defined below but no longer called
+  // from refreshSidebar()), so the list of available courses reshuffles
+  // every time the date/admin filters change — not just which courses
+  // are checked. Even with correct check-state tracking, a picker whose
+  // OPTIONS move underneath the user on every action reads as broken/
+  // confusing rather than as a filter. That's a UX problem, not a bug,
+  // so it isn't fixable by better state-tracking alone.
+  //
+  // Re-enabling this requires a "fixed universe" redesign, matching how
+  // the Admins filter already works: Admins is populated by its own
+  // server query (see hydratePlayerGamesList.php's $sqlAdmins) scoped
+  // only to the date window — NOT derived from the already-filtered
+  // game list — so selecting/deselecting admins doesn't shrink or grow
+  // the admin list itself. Courses would need the same treatment: a
+  // dedicated query (date-scoped, independent of course selection) so
+  // the option set is stable and only checkmarks change.
+  //
+  // This is likely worth revisiting once the player base is larger —
+  // with more enrolled admins/games, a stable, date-scoped course list
+  // becomes a genuinely useful narrowing tool rather than a distraction.
+  // Until then: functions below are left intact (buildSidebarCourses,
+  // sbRenderCourseRows, sbApplyCourseFilter, sbState.checkedCourses/
+  // allCourses) but are no-ops because nothing calls them anymore.
+  // Sidebar UI markup is hidden — see playerhome_view.php Courses block.
+  // ================================================================
+
   // Client-side course filter applied on top of rendered cards.
-  // NOTE: relies on the Apply-button guard (see wireSidebar()) to prevent
-  // checkedCourses from ever being empty while allCourses is non-empty —
-  // this function no longer silently re-selects all courses as a fallback.
+  // DISABLED — see rationale block above. Left intact, unused.
   function sbApplyCourseFilter() {
     const allChecked = sbState.allCourses.every(c => sbState.checkedCourses.has(c.name));
     if (allChecked) return; // All selected — nothing to hide
@@ -1236,32 +1265,32 @@ function getGameAdminMeta(g){
       });
     }
 
-    // ---- COURSES: Select all ----
-    const courseSelectAll = document.getElementById('sbCourseSelectAll');
-    if (courseSelectAll) {
-      courseSelectAll.addEventListener('click', () => {
-        sbState.allCourses.forEach(c => sbState.checkedCourses.add(c.name));
-        sbRenderCourseRows();
-      });
-    }
-
-    // ---- COURSES: Clear all — uncheck everything so player can pick just one ----
-    const courseClearAll = document.getElementById('sbCourseClearAll');
-    if (courseClearAll) {
-      courseClearAll.addEventListener('click', () => {
-        sbState.checkedCourses.clear();
-        sbRenderCourseRows();
-      });
-    }
-
-    // ---- COURSES: Show more ----
-    const courseMore = document.getElementById('sbCourseMore');
-    if (courseMore) {
-      courseMore.addEventListener('click', () => {
-        sbState.courseExpanded = true;
-        sbRenderCourseRows();
-      });
-    }
+    // ---- COURSES: DISABLED — see rationale block above sbApplyCourseFilter() ----
+    // Select all / Clear all / Show more listeners left commented rather than
+    // deleted so re-enabling is a small diff once the fixed-universe redesign lands.
+    // const courseSelectAll = document.getElementById('sbCourseSelectAll');
+    // if (courseSelectAll) {
+    //   courseSelectAll.addEventListener('click', () => {
+    //     sbState.allCourses.forEach(c => sbState.checkedCourses.add(c.name));
+    //     sbRenderCourseRows();
+    //   });
+    // }
+    //
+    // const courseClearAll = document.getElementById('sbCourseClearAll');
+    // if (courseClearAll) {
+    //   courseClearAll.addEventListener('click', () => {
+    //     sbState.checkedCourses.clear();
+    //     sbRenderCourseRows();
+    //   });
+    // }
+    //
+    // const courseMore = document.getElementById('sbCourseMore');
+    // if (courseMore) {
+    //   courseMore.addEventListener('click', () => {
+    //     sbState.courseExpanded = true;
+    //     sbRenderCourseRows();
+    //   });
+    // }
 
     // ---- APPLY button ----
     // Admin selection → writes to state.filters.selectedAdminKeys (server-side filter)
@@ -1280,10 +1309,14 @@ function getGameAdminMeta(g){
 
         // Guard: same clamp for Courses — empty means "hide everything,"
         // which is never useful, so block it instead of silently selecting all.
-        if (sbState.checkedCourses.size === 0 && sbState.allCourses.length > 0) {
-          setStatus('Select at least one course before applying filters.', 'error');
-          return;
-        }
+        // DISABLED along with the rest of the course filter (see rationale
+        // above sbApplyCourseFilter()). Left commented, NOT deleted: if this
+        // stayed active while buildSidebarCourses() no longer populates
+        // allCourses/checkedCourses, "Apply filters" would silently break.
+        // if (sbState.checkedCourses.size === 0 && sbState.allCourses.length > 0) {
+        //   setStatus('Select at least one course before applying filters.', 'error');
+        //   return;
+        // }
 
         applyBtn.disabled = true;
         applyBtn.textContent = 'Applying…';
@@ -1308,7 +1341,7 @@ function getGameAdminMeta(g){
 
           // After reload, apply client-side filters (Show + Courses)
           sbApplyShowFilter();
-          sbApplyCourseFilter();
+          // sbApplyCourseFilter(); // DISABLED — see rationale above sbApplyCourseFilter()
         } finally {
           applyBtn.disabled = false;
           applyBtn.textContent = 'Apply filters';
@@ -1317,9 +1350,9 @@ function getGameAdminMeta(g){
     }
 
     // Initial population
-    buildSidebarCourses(true); // first load — check all by default
+    // buildSidebarCourses(true); // DISABLED — see rationale above sbApplyCourseFilter()
     sbRenderAdminRows();
-    sbRenderCourseRows();
+    // sbRenderCourseRows(); // DISABLED — see rationale above sbApplyCourseFilter()
 
     // Set launch defaults:
     // - Show: All games (already default in sbState)

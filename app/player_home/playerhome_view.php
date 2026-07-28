@@ -97,7 +97,26 @@
         <button class="phSidebar__moreLink" id="sbAdminMore" type="button" style="display:none;"></button>
       </div>
 
-      <!-- COURSES ----------------------------------------------- -->
+      <!--
+        COURSES SECTION — DISABLED (2026-07)
+
+        The option list here (#sbCourseRows) is populated client-side from
+        the CURRENT games result set (see buildSidebarCourses() in
+        player_home.js), so it reshuffles every time the Date/Admin
+        filters change, not just which courses are checked. That made the
+        filter feel broken rather than helpful, so it's been disabled.
+
+        Re-enabling requires giving Courses a fixed, date-scoped universe,
+        the same way the Admins section above is populated by its own
+        server query rather than derived from already-filtered results
+        (see hydratePlayerGamesList.php's $sqlAdmins). Likely worth
+        revisiting once more players/admins are enrolled and a stable
+        course list becomes genuinely useful rather than a distraction.
+
+        Markup left intact (commented, not deleted) to keep this a small
+        diff to restore. JS side is correspondingly disabled in
+        player_home.js — see the rationale block above sbApplyCourseFilter().
+
       <div class="phSidebar__section">
         <div class="phSidebar__sectionTitle">Courses</div>
         <div class="phSidebar__controls">
@@ -108,6 +127,7 @@
         <div class="phSidebar__rows" id="sbCourseRows"></div>
         <button class="phSidebar__moreLink" id="sbCourseMore" type="button" style="display:none;"></button>
       </div>
+      -->
 
     </div><!-- /.maPanel__body -->
 

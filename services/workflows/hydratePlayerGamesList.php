@@ -31,7 +31,15 @@ function playerGamesFetchBaseGames(
   }
 
   $params = [':df' => $dateFrom, ':dt' => $dateTo];
-  $where = ["(:df = '' OR g.dbGames_PlayDate >= :df)", "(:dt = '' OR g.dbGames_PlayDate <= :dt)"];
+  $where = [
+    "(:df = '' OR g.dbGames_PlayDate >= :df)",
+    "(:dt = '' OR g.dbGames_PlayDate <= :dt)",
+    // Event-associated games are not part of the player portal's general
+    // games list — they're only reachable via direct link (see
+    // playerGamesFetchBaseGames()'s directLinkMode branch above, which is
+    // intentionally exempt from this filter).
+    "(g.dbGames_EID IS NULL OR g.dbGames_EID = '')",
+  ];
 
   if (!empty($selectedAdminKeys)) {
     $inParts = [];
@@ -246,6 +254,7 @@ function hydratePlayerGamesList(string $userGHIN, array $filters, string $userCl
         AND (:dt = '' OR dbGames_PlayDate <= :dt)
         AND dbGames_AdminGHIN IS NOT NULL
         AND dbGames_AdminGHIN <> ''
+        AND (dbGames_EID IS NULL OR dbGames_EID = '')
       ORDER BY adminName ASC
       LIMIT 500
     ";

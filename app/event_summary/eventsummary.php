@@ -17,9 +17,14 @@ try {
     }
 
     $initPayload = buildEventSummaryInit([], $ec);
-    if (empty($initPayload["ok"])) {
-      throw new RuntimeException((string)($initPayload["message"] ?? "Unable to initialize event summary."));
-    }
+    // ok:false here (no roster / no rounds / no scoreable rounds) is now
+    // an expected, renderable state — NOT thrown/redirected. The page
+    // still renders with $initPayload intact; event_summary.js detects
+    // init.ok === false client-side and shows a dismissible MA.ui.confirm
+    // popup, routing to eventrounds on acknowledgment. Previously this
+    // threw here and hard-redirected via the catch block below before the
+    // page (and therefore that JS) ever loaded — silently bouncing the
+    // user away instead of explaining why.
 
     $initPayload["eid"] = (int)$eid;
   } catch (Throwable $e) {

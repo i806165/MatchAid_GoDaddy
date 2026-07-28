@@ -345,5 +345,23 @@
   }
 
   applyChrome();
-  render();
+
+  // initEventSummary.php returns { ok: false, message: '...' } (no
+  // 'summary' key at all) for every "nothing to show" case — no roster, no
+  // rounds, no scoreable rounds. Surface that as a dismissible popup rather
+  // than rendering an empty table, then route back to Event Rounds once
+  // acknowledged.
+  if (init.ok === false) {
+    (async () => {
+      await MA.ui.confirm({
+        title: 'No Scores Available',
+        message: esc(init.message || 'This event has no scores to display yet.'),
+        okOnly: true,
+        confirmLabel: 'OK',
+      });
+      MA.routerGo('eventrounds');
+    })();
+  } else {
+    render();
+  }
 })();
