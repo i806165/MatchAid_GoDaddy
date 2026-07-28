@@ -112,6 +112,13 @@
       <span class="maNavLabel">Event Rounds</span>
     </button>
 
+    <button class="maNavBtn" data-nav="eventscorecard" aria-label="Event Scorecards">
+      <span class="maNavIcon" aria-hidden="true">
+        <img src="/assets/images/nav-scorecard-game.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
+      </span>
+      <span class="maNavLabel">Event Scorecards</span>
+    </button>
+
     <button type="button" class="maNavBtn" data-nav="eventsummary" aria-label="Event Leaderboard">
       <span class="maNavIcon" aria-hidden="true">
         <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true">

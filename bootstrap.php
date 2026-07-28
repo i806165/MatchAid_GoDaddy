@@ -54,6 +54,7 @@ define('MA_ROUTE_ADMIN_GAMES',     '/app/admin_home/adminhome.php');
 define('MA_ROUTE_EVENTS_HOME', '/app/events_home/eventshome.php');
 define('MA_ROUTE_API_EVENTS_HOME', '/api/events_home');
 define('MA_ROUTE_API_EVENT_ROSTER', '/api/event_roster');
+define('MA_ROUTE_API_EVENT_SCORECARD', '/api/event_scorecard');
 define('MA_ROUTE_ADMIN_EVENTS',      '/app/events_home/eventshome.php');
 define('MA_ROUTE_PLAYER_HOME',    '/app/player_home/playerhome.php');
 define('MA_ROUTE_API_SESSION',     '/api/session');
