@@ -198,8 +198,8 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   <?php if (!$isEventMode): ?>
   <div id="ahTabs" class="maControlArea" role="region" aria-label="Portal panels">
     <div class="maSeg" role="tablist" aria-label="Switch panel">
-      <button class="maSegBtn<?= $initialPanel === 'games' ? ' is-active' : '' ?>" data-tab="games" type="button" role="tab" aria-selected="<?= $initialPanel === 'games' ? 'true' : 'false' ?>">Games</button>
-      <button class="maSegBtn<?= $initialPanel === 'events' ? ' is-active' : '' ?>" data-tab="events" type="button" role="tab" aria-selected="<?= $initialPanel === 'events' ? 'true' : 'false' ?>">Events</button>
+      <button class="maSegBtn<?= $initialPanel === 'games' ? ' is-active' : '' ?>" data-tab="games" type="button" role="tab" aria-selected="<?= $initialPanel === 'games' ? 'true' : 'false' ?>">Manage Games</button>
+      <button class="maSegBtn<?= $initialPanel === 'events' ? ' is-active' : '' ?>" data-tab="events" type="button" role="tab" aria-selected="<?= $initialPanel === 'events' ? 'true' : 'false' ?>">Manage Events</button>
       <button class="maSegBtn ahTabBoth<?= $initialPanel === 'both' ? ' is-active' : '' ?>" data-tab="both" type="button" role="tab" aria-selected="<?= $initialPanel === 'both' ? 'true' : 'false' ?>">Both</button>
     </div>
   </div>
