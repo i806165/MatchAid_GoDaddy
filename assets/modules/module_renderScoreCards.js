@@ -155,11 +155,15 @@
     ].concat(supportsPoints ? [["points", "Points"]] : []);
 
     st.controlsEl.innerHTML = `
-      <button id="scGlobalToggle" class="iconBtn btnSecondary" type="button" title="Toggle All Cards">${icon}</button>
-      <div class="maChoiceChips">
-        ${modes.map(([key, label]) =>
-          `<button class="maChoiceChip ${st.valueMode === key ? "is-selected" : ""}" type="button" data-mode="${key}">${label}</button>`
-        ).join("")}
+      <div class="maCanvasControls">
+        <button id="scGlobalToggle" class="iconBtn btnSecondary" type="button" title="Toggle All Cards">${icon}</button>
+        <div class="maCanvasControls__right">
+          <div class="maChoiceChips">
+            ${modes.map(([key, label]) =>
+              `<button class="maChoiceChip ${st.valueMode === key ? "is-selected" : ""}" type="button" data-mode="${key}">${label}</button>`
+            ).join("")}
+          </div>
+        </div>
       </div>`;
 
     st.controlsEl.querySelector("#scGlobalToggle")?.addEventListener("click", () => toggleAllCards(st));
@@ -174,7 +178,7 @@
 
   function renderFooter(st) {
     if (!st.footerEl) return;
-    st.footerEl.innerHTML = `<span class="maHint">Toggle values and expand details below.</span>`;
+    st.footerEl.innerHTML = `<span class="maHintText">Toggle values and expand details below.</span>`;
   }
 
   function toggleAllCards(st) {
@@ -782,15 +786,15 @@
     const rows = activeRows(st);
 
     if (st.loading) {
-      st.hostEl.innerHTML = `<div class="maEmpty">Loading scorecards…</div>`;
+      st.hostEl.innerHTML = `<div class="maEmptyState">Loading scorecards…</div>`;
       return;
     }
     if (st.error) {
-      st.hostEl.innerHTML = `<div class="maEmpty">Unable to load scorecards.</div>`;
+      st.hostEl.innerHTML = `<div class="maEmptyState">Unable to load scorecards.</div>`;
       return;
     }
     if (!rows.length) {
-      st.hostEl.innerHTML = `<div class="maEmpty">No scorecards available.</div>`;
+      st.hostEl.innerHTML = `<div class="maEmptyState">No scorecards available.</div>`;
       return;
     }
 
@@ -801,6 +805,14 @@
   // ── State lifecycle ──────────────────────────────────────────────────────
 
   function _initState(hostEl, cfg) {
+    // Make the host focusable so keyboard scroll (arrows, space, page
+    // up/down) actually targets it — browsers only route keyboard scroll
+    // to an element that is, or contains, the current focus. Done here
+    // once per instance rather than in CSS/markup, since hostEl is
+    // whatever container the host page created and handed in — this way
+    // it works regardless of which page mounts the module.
+    if (!hostEl.hasAttribute("tabindex")) hostEl.setAttribute("tabindex", "0");
+
     const st = {
       hostEl,
       controlsEl: cfg.controlsEl || null,
