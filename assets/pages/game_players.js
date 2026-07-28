@@ -421,26 +421,28 @@
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     MA.ui.openActionsMenu("Actions", [
-      { category: "Advanced Features" },
-      { label: "Manage Teams",   indent: true, action: onManageTeams },
-      { label: "Define Flights", indent: true, action: onDefineFlights },
       { category: "Admin Services" },
       { label: "Display Game Settings", indent: true, action: () => MA.gameDetails.open(state.game) },
       { label: "Recalculate Handicaps",    indent: true, action: onRecalcHandicaps },
       { category: "Messaging and Calendar" },
       { label: "Send Message to Players", indent: true, action: onNotify },
       { label: "Add Game to Calendar",  indent: true, action: downloadIcsForGame },
+      { category: "Advanced Features" },
+      { label: "Manage Teams",       indent: true, action: onManageTeams },
+      { label: "Define Flights",     indent: true, action: onDefineFlights },
+      { label: "Handicap Settings",  indent: true, action: onHandicapSettings },
     ]);
   }
 
-  // Teams/Flights modules are self-contained — they fetch their own
-  // context server-side, unlike Display Game Settings which needs the
-  // current game row handed to it. onDone refreshes the roster: this
-  // page displays team/flight assignments directly, so without this the
-  // roster would show stale data immediately after either modal closes.
-  // Matches the existing refreshPlayers()+render() sequence used
-  // elsewhere in this file (see boot()).
-  async function onTeamsOrFlightsDone() {
+  // Teams/Flights/Handicaps modules are all self-contained — they fetch
+  // their own context server-side, unlike Display Game Settings which
+  // needs the current game row handed to it. onDone refreshes the
+  // roster: this page displays team/flight assignments AND HI/CH/PH/SO
+  // directly, so without this the roster would show stale data
+  // immediately after any of the three modals closes. Matches the
+  // existing refreshPlayers()+render() sequence used elsewhere in this
+  // file (see boot()).
+  async function onAdvancedFeatureDone() {
     await refreshPlayers();
     render();
   }
@@ -450,7 +452,7 @@
       MA.ui.notify("Manage Teams module not loaded.", "error");
       return;
     }
-    MA.manageTeams.open({ target: "game", onDone: onTeamsOrFlightsDone });
+    MA.manageTeams.open({ target: "game", onDone: onAdvancedFeatureDone });
   }
 
   function onDefineFlights() {
@@ -458,7 +460,21 @@
       MA.ui.notify("Define Flights module not loaded.", "error");
       return;
     }
-    MA.defineFlights.open({ target: "game", onDone: onTeamsOrFlightsDone });
+    MA.defineFlights.open({ target: "game", onDone: onAdvancedFeatureDone });
+  }
+
+  // Wired to MA.setHandicapsGameEvent — the module the canonical Game
+  // Settings menu itself calls for its Handicaps row (see
+  // module_menuGameSettings.js's ROW_BEHAVIOR.handicaps). The similarly
+  // named module_defineHandicapSettings.js / MA.defineHandicapSettings is
+  // retired — nothing in the app calls it, including that canonical menu
+  // — so it is NOT used here.
+  function onHandicapSettings() {
+    if (!MA.setHandicapsGameEvent || typeof MA.setHandicapsGameEvent.open !== "function") {
+      MA.ui.notify("Handicap Settings module not loaded.", "error");
+      return;
+    }
+    MA.setHandicapsGameEvent.open({ target: "game", onDone: onAdvancedFeatureDone });
   }
 
   function onRecalcHandicaps() {
