@@ -31,7 +31,6 @@
   // ---- DOM ----
   const el = {
     // Controls band
-    cfgToggle: document.getElementById("gsCfgToggle"),
 
     scopeByPlayer: document.getElementById("scopeByPlayer"),
     scopeByPairing: document.getElementById("scopeByPairing"),
@@ -1663,12 +1662,6 @@
   }
 
   function wireEvents() {
-    if (el.cfgToggle) {
-      el.cfgToggle.addEventListener("click", () => {
-        MA.gameDetails.open(state.game);
-      });
-    }
-
     if (el.scopeByPlayer) el.scopeByPlayer.addEventListener("click", () => {
       state.scope = "byPlayer";
       renderScopeButtons();
@@ -1700,6 +1693,7 @@
       { label: "Copy View to Clipboard", action: copySummaryToClipboard, indent: true },
 
       { category: "Admin Services" },
+      { label: "Display Game Settings", action: () => MA.gameDetails.open(state.game), indent: true },
       { label: "Add Game to Calendar",  action: downloadIcsForGame,   indent: true },
       { label: "Recalculate Handicaps", action: recalculateHandicaps, indent: true },
     ];

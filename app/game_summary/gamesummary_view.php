@@ -5,15 +5,10 @@
 <!-- CONTROLS BAND (peer to body standard) -->
 <div class="maControlArea" id="gsControls" aria-label="Game Summary Controls">
 
-  <!-- Collapsible: Game Configuration -->
-  <button type="button" class="gsCfgToggle" id="gsCfgToggle">
-    <span class="gsCfgTitle">Game Settings</span>
-    <span class="gsCfgChevron" aria-hidden="true">▾</span>
-  </button>
-
-  <div class="gsCfgPanel" id="gsCfgPanel" hidden>
-    <div class="gsConfigGrid" id="configGrid"></div>
-  </div>
+  <!-- Game Settings moved to Actions menu → Admin Services →
+       "Display Game Settings" (calls MA.gameDetails.open(state.game)
+       directly, same as this button used to). No functional change to
+       downloads/copy — those never depended on this markup. -->
 
   <!-- Scope + Meta pills row -->
   <div class="gsControlsRow">

@@ -9,34 +9,11 @@
 
 .gsPillRow{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
 
-/* ===== Controls band layout ===== */
-.gsCfgToggle{
-  width:100%;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  padding: 10px 12px;
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--radiusLg);
-  background: #fff;
-  cursor: pointer;
-  font-family: var(--fontFamilyBase);
-  font-weight: 900;
-}
-
-.gsCfgToggle:focus{
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(0,0,0,.06);
-}
-
-.gsCfgTitle{ font-size: 14px; letter-spacing: .2px; color: var(--brandAccent); }
-.gsCfgChevron{
-  transition: transform .15s ease;
-  font-weight: 900;
-  opacity: .9;
-  color: var(--brandAccent);
-}
+/* ===== Controls band layout =====
+   .gsCfgToggle / .gsCfgPanel / .gsCfgTitle / .gsCfgChevron rules removed —
+   the Game Settings toggle button was removed from gamesummary_view.php;
+   its function moved to Actions menu → Admin Services → "Display Game
+   Settings" (module_DisplayGameFormat.js's MA.gameDetails.open()). */
 
 .gsControlsRow{
   margin-top: 12px;
