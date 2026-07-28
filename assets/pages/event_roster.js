@@ -496,32 +496,29 @@
   }
 
   // ── Define Handicaps ────────────────────────────────────────────────────────
-  // Read directly off state.event's own raw columns — same as onDefineFlights
-  // reads dbEvents_FlightConfig, but Method/Allowance/Effectivity/Date are
-  // plain scalar columns (not a JSON blob), so no parsing is needed here.
+  // module_setHandicapsGameEvent.js (MA.setHandicapsGameEvent) replaces the
+  // retired module_defineHandicapSettings.js (MA.defineHandicapSettings) —
+  // the latter is no longer referenced anywhere in the app. Same
+  // self-hydrating/self-saving contract as onManageTeams/onDefineFlights
+  // above: no method/allowance/effectivity/effDate/mode input, and
+  // onDone(wasSaved) hands back a boolean only (not the edited values), so
+  // this refreshes from the server the same way Teams/Flights already do
+  // on this page rather than patching state.event fields directly.
   function onDefineHandicapSettings() {
-    if (!MA.defineHandicapSettings || typeof MA.defineHandicapSettings.open !== "function") {
+    if (!MA.setHandicapsGameEvent || typeof MA.setHandicapsGameEvent.open !== "function") {
       MA.ui.notify("Define Handicaps module not loaded.", "warn");
       return;
     }
-    const ev = state.event || {};
 
-    MA.defineHandicapSettings.open({
-      method:         safe(ev.dbEvents_HCMethod || "CH"),
-      allowance:      Number(ev.dbEvents_Allowance ?? 100),
-      effectivity:    safe(ev.dbEvents_HCEffectivity || "PlayDate"),
-      effDate:        safe(ev.dbEvents_HCEffectivityDate || ""),
-      mode:           safe(ev.dbEvents_HandicapMode || "none"),
-      showModeToggle: true,
-      apiBase:        MA.paths?.apiEventRoster || "/api/event_roster",
-      saveEndpoint:   "saveEventHandicapSettings.php",
-      onApply: ({ method, allowance, effectivity, effDate, mode }) => {
-        if (state.event) {
-          state.event.dbEvents_HCMethod          = method;
-          state.event.dbEvents_Allowance         = allowance;
-          state.event.dbEvents_HCEffectivity     = effectivity;
-          state.event.dbEvents_HCEffectivityDate = effDate;
-          state.event.dbEvents_HandicapMode      = mode;
+    MA.setHandicapsGameEvent.open({
+      target: "event",
+      onDone: async (wasSaved) => {
+        if (!wasSaved) return;
+        try {
+          await refreshEventAndRoster();
+          renderRoster();
+        } catch (e) {
+          MA.ui.notify(e?.message || "Failed to refresh roster after saving handicap settings.", "warn");
         }
       }
     });
