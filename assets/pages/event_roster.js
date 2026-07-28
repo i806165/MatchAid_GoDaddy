@@ -727,6 +727,7 @@
       MA.chrome.setBottomNav({
         visible:    ["eventhome", "eventedit", "eventroster","eventrounds", "eventsummary", "eventscoring"],
         active:     "eventroster",
+        root: ["eventhome"],
         onNavigate: id => MA.routerGo(id),
       });
     }

@@ -378,6 +378,7 @@
       chrome.setBottomNav({
         visible: ["eventhome", "eventedit", "eventroster", "eventrounds", "eventsummary", "eventscoring"],
         active: "eventedit",
+        root: ["eventhome"],
         disabled: (state.mode === "add") ? ["eventroster", "eventrounds", "eventscoring"] : [],
         onNavigate: id => MA.routerGo(id)
       });

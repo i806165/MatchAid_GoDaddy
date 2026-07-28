@@ -98,6 +98,7 @@
       MA.chrome.setBottomNav({
         visible: ["home", "admin", "eventhome", "favorites"],
         active: "eventhome",
+        root: ["home"],
         onNavigate: id => {
           if (typeof MA.routerGo === "function") MA.routerGo(id);
         }
