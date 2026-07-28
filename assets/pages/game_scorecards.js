@@ -397,6 +397,19 @@ function renderGroup(group) {
     }
   }
 
+  function onNotify() {
+    const ggid = String(game.dbGames_GGID || game.dbGames_GGIDnum || "");
+    if (!ggid) return;
+    if (MA.notify && typeof MA.notify.open === "function") {
+      MA.notify.open({
+        ggid:    ggid,
+        apiPath: MA.paths?.apiNotify,
+      });
+    } else {
+      setStatus("Messaging module not loaded.", "error");
+    }
+  }
+
   async function recalculateHandicaps() {
     if (!MA.recalculateHandicaps) {
       setStatus("Recalculate module not loaded.", "error");
@@ -423,6 +436,7 @@ function renderGroup(group) {
       { label: "Display Game Settings", action: () => MA.gameDetails.open(game), indent: true },
       { label: "Recalculate Handicaps", action: recalculateHandicaps, indent: true },
       { category: "Messaging and Calendar" },
+      { label: "Send Message to Players", action: onNotify, indent: true },
       { label: "Add Game to Calendar",  action: downloadIcsForGame,   indent: true },
     ];
 

@@ -51,6 +51,7 @@ $paths = [
   "routerApi"  => MA_ROUTE_API_ROUTER,
   "apiGHIN"    => MA_ROUTE_API_GHIN,
   "apiSave"    => "/api/game_pairings/savePairings.php",
+  "apiNotify"  => MA_ROUTE_API_MESSAGING,
 ];
 
 $maChromeTitle    = "Game Slotting";
@@ -116,6 +117,7 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   <script src="<?= ma_asset('/assets/modules/module_DisplayGameFormat.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/addCalendar.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/recalculate_handicaps.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/player_notifications.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/module_setGameFormat.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/module_setGameSegments.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/module_setGameBlindPlayer.js') ?>"></script>

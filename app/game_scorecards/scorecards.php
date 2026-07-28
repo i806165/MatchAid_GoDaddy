@@ -66,7 +66,8 @@ $maChromeLogoUrl = null;
     routerApi: <?= json_encode(MA_ROUTE_API_ROUTER, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>,
     scoreEntry: <?= json_encode(MA_ROUTE_SCORE_ENTRY, JSON_UNESCAPED_SLASHES) ?>,
     scoreHome: <?= json_encode(MA_ROUTE_SCORE_HOME, JSON_UNESCAPED_SLASHES) ?>,
-    excelPointScorecards: <?= json_encode(MA_ROUTE_API_POINT_SCORECARD_EXPORT, JSON_UNESCAPED_SLASHES) ?>
+    excelPointScorecards: <?= json_encode(MA_ROUTE_API_POINT_SCORECARD_EXPORT, JSON_UNESCAPED_SLASHES) ?>,
+    apiNotify: <?= json_encode(MA_ROUTE_API_MESSAGING, JSON_UNESCAPED_SLASHES) ?>
   });
 
   window.__INIT__ = <?= json_encode($initPayload, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
@@ -88,6 +89,7 @@ $maChromeLogoUrl = null;
 <script src="<?= ma_asset('/assets/modules/module_defineFlightsGameEvent.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/module_defineTeamsGameEvent.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/recalculate_handicaps.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/player_notifications.js') ?>"></script>
 
 <script src="<?= ma_asset('/assets/pages/game_scorecards.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>

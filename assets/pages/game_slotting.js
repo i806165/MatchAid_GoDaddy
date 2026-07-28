@@ -1431,6 +1431,18 @@ async function onResetChanges() {
     }
   }
 
+  function onNotify() {
+    if (!state.ggid) return;
+    if (MA.notify && typeof MA.notify.open === "function") {
+      MA.notify.open({
+        ggid:    state.ggid,
+        apiPath: MA.paths?.apiNotify,
+      });
+    } else if (MA.ui && MA.ui.notify) {
+      MA.ui.notify("Messaging module not loaded.", "error");
+    }
+  }
+
   // Gate called by the one way of leaving this page today — the bottom
   // nav (see applyChrome()'s onNavigate below). Always resolves true
   // (safe to leave) except when there are unsaved edits and the save the
@@ -1682,6 +1694,9 @@ async function onResetChanges() {
       { category: "Admin Services" },
       { label: "Display Game Settings", action: () => MA.gameDetails.open(init.game), indent: true },
       { label: "Recalculate Handicaps", action: recalculateHandicaps, indent: true },
+
+      { category: "Messaging and Calendar" },
+      { label: "Send Message to Players", action: onNotify, indent: true },
       { label: "Add Game to Calendar",  action: downloadIcsForGame,   indent: true },
     ]);
   }

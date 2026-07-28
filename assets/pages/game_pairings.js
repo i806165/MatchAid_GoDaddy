@@ -401,6 +401,9 @@
       { category: "Admin Services" },
       { label: "Display Game Settings", action: () => MA.gameDetails.open(state.game), indent: true },
       { label: "Recalculate Handicaps", action: onRecalcHandicaps, indent: true },
+
+      { category: "Messaging and Calendar" },
+      { label: "Send Message to Players", action: onNotify, indent: true },
       { label: "Add Game to Calendar",  action: downloadIcsForGame, indent: true },
     ];
     MA.ui.openActionsMenu("Actions", items);
@@ -424,6 +427,18 @@
       MA.calendar.addCalendarEventFromGame(state.game);
     } else {
       setStatus("Calendar module not loaded.", "error");
+    }
+  }
+
+  function onNotify() {
+    if (!state.ggid) return;
+    if (MA.notify && typeof MA.notify.open === "function") {
+      MA.notify.open({
+        ggid:    state.ggid,
+        apiPath: MA.paths?.apiNotify,
+      });
+    } else {
+      setStatus("Messaging module not loaded.", "error");
     }
   }
 

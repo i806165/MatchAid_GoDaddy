@@ -63,6 +63,7 @@ $paths = [
   "apiSession"      => MA_ROUTE_API_SESSION,
   "routerApi"       => MA_ROUTE_API_ROUTER,
   "apiGamePairings" => defined("MA_ROUTE_API_GAME_PAIRINGS") ? MA_ROUTE_API_GAME_PAIRINGS : "/api/game_pairings",
+  "apiNotify"       => MA_ROUTE_API_MESSAGING,
 ];
 
 // Chrome values
@@ -132,6 +133,7 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   <script src="<?= ma_asset('/assets/js/ma_SharedBusLogic.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/recalculate_handicaps.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/player_notifications.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/pageHelp.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/module_runAutoPair.js') ?>"></script>
 
