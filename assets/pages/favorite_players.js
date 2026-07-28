@@ -149,9 +149,10 @@
     const nav = document.getElementById("chromeBottomNav");
     if (nav) nav.style.display = "";
     MA.chrome.setBottomNav({
-      visible:  ["home", "admin", "favorites"],
+      visible:  ["home", "admin", "favorites", "import"],
       disabled: ["favorites"],
       active:   "favorites",
+      root: ["home"],
       onNavigate: async (id) => {
         await MA.routerGo(id);
       }
