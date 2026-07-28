@@ -250,8 +250,9 @@
     if (!chrome || typeof chrome.setBottomNav !== "function") return;
 
     chrome.setBottomNav({
-      visible: ["home", "admin", "import"],
+      visible: ["home", "admin", "favorites", "import"],
       active: "import",
+      root: ["home"],
       onNavigate: async (id) => {
         try {
           if (!routerGo) return;
