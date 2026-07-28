@@ -202,12 +202,24 @@
   // into MA.ui.showBusy() (busy phase) and MA.ui.confirm({ okOnly: true })
   // (results-summary phase) instead.
 
+  // This menu is only ever reachable in true edit mode with no unsaved
+  // changes — see applyChrome()'s isTransactional gate below, which hides
+  // the Actions button entirely in add mode or while dirty (footer
+  // Save/Cancel takes over instead). So state.game/state.ggid are
+  // guaranteed populated for every action here; no add-mode guards needed.
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     MA.ui.openActionsMenu("Actions", [
-      { label: "Send Message to Players", action: onNotify },
-      { separator: true },
-      { label: "Delete Game",             action: onDeleteGame, danger: true }
+      { category: "Advanced Features" },
+      { label: "Delete Game", indent: true, action: onDeleteGame, danger: true },
+
+      { category: "Admin Services" },
+      { label: "Display Game Settings", indent: true, action: () => MA.gameDetails.open(state.game) },
+      { label: "Recalculate Handicaps", indent: true, action: doRefreshHandicaps },
+
+      { category: "Messaging and Calendar" },
+      { label: "Send Message to Players", indent: true, action: onNotify },
+      { label: "Add Game to Calendar",    indent: true, action: downloadIcsForGame },
     ]);
   }
 
@@ -247,6 +259,14 @@
       });
     } else {
       setStatus("Messaging module not loaded.", "error");
+    }
+  }
+
+  function downloadIcsForGame() {
+    if (MA.calendar && MA.calendar.addCalendarEventFromGame) {
+      MA.calendar.addCalendarEventFromGame(state.game);
+    } else {
+      setStatus("Calendar module not loaded.", "error");
     }
   }
 
