@@ -113,6 +113,9 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   <script src="<?= ma_asset('/assets/modules/pageHelp.js') ?>"></script>
 
   <script src="<?= ma_asset('/assets/modules/module_menuGameSettings.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_DisplayGameFormat.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/addCalendar.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/recalculate_handicaps.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/module_setGameFormat.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/module_setGameSegments.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/module_setGameBlindPlayer.js') ?>"></script>

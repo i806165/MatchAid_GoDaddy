@@ -1404,6 +1404,34 @@ async function onResetChanges() {
     if (ok) state.needsRecalc = false;
   }
 
+  // Explicit, user-triggered recalculation (Actions menu → Admin Services).
+  // Distinct from runRecalculation() above: that one fires silently as part
+  // of the leave-page gate, with no visible feedback, which is correct for
+  // an automatic background step. This one is a direct user action, so it
+  // reports success/failure — same pattern as the Admin Services item on
+  // Game Summary / Game Scorecards. Also clears state.needsRecalc on
+  // success, so it satisfies the leave-page gate too if the user then
+  // navigates away.
+  async function recalculateHandicaps() {
+    if (!MA.recalculateHandicaps) {
+      if (MA.ui && MA.ui.notify) MA.ui.notify("Recalculate module not loaded.", "error");
+      return;
+    }
+    const ok = await MA.recalculateHandicaps(null);
+    if (ok) {
+      state.needsRecalc = false;
+      if (MA.ui && MA.ui.notify) MA.ui.notify("Handicaps recalculated.", "success");
+    }
+  }
+
+  function downloadIcsForGame() {
+    if (MA.calendar && MA.calendar.addCalendarEventFromGame) {
+      MA.calendar.addCalendarEventFromGame(init.game);
+    } else if (MA.ui && MA.ui.notify) {
+      MA.ui.notify("Calendar module not loaded.", "error");
+    }
+  }
+
   // Gate called by the one way of leaving this page today — the bottom
   // nav (see applyChrome()'s onNavigate below). Always resolves true
   // (safe to leave) except when there are unsaved edits and the save the
@@ -1652,10 +1680,14 @@ async function onResetChanges() {
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     MA.ui.openActionsMenu("Actions", [
-      { label: "Open Automated Slotting", action: () => openAutoSlotModal() },
-      { separator: true },
-      { separator: true },
-      { label: "Reset Changes to Last Save", action: () => onResetChanges(), danger: true }
+      { category: "Advanced Features" },
+      { label: "Open Automated Slotting", action: () => openAutoSlotModal(), indent: true },
+      { label: "Reset Changes to Last Save", action: () => onResetChanges(), indent: true, danger: true },
+
+      { category: "Admin Services" },
+      { label: "Display Game Settings", action: () => MA.gameDetails.open(init.game), indent: true },
+      { label: "Recalculate Handicaps", action: recalculateHandicaps, indent: true },
+      { label: "Add Game to Calendar",  action: downloadIcsForGame,   indent: true },
     ]);
   }
 
