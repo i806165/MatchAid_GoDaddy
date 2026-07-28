@@ -421,16 +421,16 @@
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     MA.ui.openActionsMenu("Actions", [
+      { category: "Advanced Features" },
+      { label: "Manage Teams",       indent: true, action: onManageTeams },
+      { label: "Define Flights",     indent: true, action: onDefineFlights },
+      { label: "Handicap Settings",  indent: true, action: onHandicapSettings },
       { category: "Admin Services" },
       { label: "Display Game Settings", indent: true, action: () => MA.gameDetails.open(state.game) },
       { label: "Recalculate Handicaps",    indent: true, action: onRecalcHandicaps },
       { category: "Messaging and Calendar" },
       { label: "Send Message to Players", indent: true, action: onNotify },
       { label: "Add Game to Calendar",  indent: true, action: downloadIcsForGame },
-      { category: "Advanced Features" },
-      { label: "Manage Teams",       indent: true, action: onManageTeams },
-      { label: "Define Flights",     indent: true, action: onDefineFlights },
-      { label: "Handicap Settings",  indent: true, action: onHandicapSettings },
     ]);
   }
 
