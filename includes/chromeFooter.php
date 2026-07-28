@@ -179,11 +179,6 @@
     </button>
 
 <!-- /////// GAME ADMIN SECTION ////// -->
-    <button type="button" class="maNavBtn" data-nav="favorites" aria-label="Favorites">
-      <span class="maNavIcon" aria-hidden="true">★</span>
-      <span class="maNavLabel">Favorites</span>
-    </button>
-
     <button type="button" class="maNavBtn" data-nav="admin" aria-label="Admin">
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-admin-home.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
@@ -234,6 +229,11 @@
         <img src="/assets/images/nav-scorecard.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
       </span>
       <span class="maNavLabel">Game ScoreCard</span>
+    </button>
+
+    <button type="button" class="maNavBtn" data-nav="favorites" aria-label="Favorites">
+      <span class="maNavIcon" aria-hidden="true">★</span>
+      <span class="maNavLabel">Favorites</span>
     </button>
 
     <button class="maNavBtn" data-nav="import" aria-label="Import Games">
