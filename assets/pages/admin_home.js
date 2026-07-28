@@ -1124,13 +1124,19 @@ function wireFiltersModal() {
     const visible = isEventMode
       ? ["eventhome", "eventedit", "eventroster", "eventrounds", "eventsummary"]
       : isEventsTab
-        ? ["home"]
-        : ["home", "favorites", "import"];
+        ? ["home", "eventhome"]
+        : ["home", "admin", "favorites", "import"];
+    
+    const navactive = isEventMode
+      ? ["eventhome"]
+      : isEventsTab
+        ? ["eventhome"]
+        : ["admin"];
 
     MA.chrome.setBottomNav({
       visible: visible,
       root: isEventMode ? ["eventhome"] : ["home"],
-      active: isEventMode ? "eventrounds" : "admin",
+      active: navactive,
       onNavigate: (id) => {
         try {
           if (typeof MA.routerGo === "function") {
