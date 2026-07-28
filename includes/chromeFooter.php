@@ -233,7 +233,7 @@
 
     <button type="button" class="maNavBtn" data-nav="favorites" aria-label="Favorites">
       <span class="maNavIcon" aria-hidden="true">★</span>
-      <span class="maNavLabel">Favorites</span>
+      <span class="maNavLabel">Favorite Players</span>
     </button>
 
     <button class="maNavBtn" data-nav="import" aria-label="Import Games">
