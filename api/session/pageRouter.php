@@ -93,12 +93,12 @@ $ROUTES = [
 
     // Event Admininstration Routes
     "eventhome"    => "/app/admin_home/adminhome.php",
+    "eventroster"  => "/app/event_roster/eventroster.php",
     "eventedit"    => "/app/event_maintenance/eventmaint.php",
     "eventsummary"   => "/app/event_summary/eventsummary.php",
-    "eventroster"  => "/app/event_roster/eventroster.php",
     // Future placeholders:
     "eventgames"   => "/app/admin_home/adminhome.php",  //DEPRICATED
-    "eventscoring" => "/app/event_scoring/eventscoring.php",
+    "eventscoring" => "/app/event_summary/eventsummary.php",  //DEPRICATED
 ];
 
 
