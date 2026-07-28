@@ -1730,7 +1730,7 @@
       const homeRoute = isPlayerPortal ? "player" : "admin";
 
       const visible = isPlayerPortal
-        ? [homeRoute, "scoreentry", "scorecardPlayer", "scorecardGame", "scoreskins"]
+        ? ["player", "roster", "summary"]
         : isEventGame
           ? ["eventrounds", "roundedit", "roundsettings", "roundroster", "roundpairings", "roundteetimes", "roundsummary", "roundscorecard"]
           : [homeRoute, "edit", "settings", "roster", "pairings", "teetimes", "summary", "scorecard"];
