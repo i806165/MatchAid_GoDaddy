@@ -1128,14 +1128,20 @@ function wireFiltersModal() {
         : ["home", "admin", "favorites", "import"];
     
     const navactive = isEventMode
+      ? ["eventrounds"]
+      : isEventsTab
+        ? ["eventhome"]
+        : ["admin"];
+    
+    const navroot = isEventMode
       ? ["eventhome"]
       : isEventsTab
-        ? ["eventrounds"]
-        : ["admin"];
+        ? ["home"]
+        : ["home"];
 
     MA.chrome.setBottomNav({
       visible: visible,
-      root: isEventMode ? ["eventhome"] : ["home"],
+      root: navroot,
       active: navactive,
       onNavigate: (id) => {
         try {
