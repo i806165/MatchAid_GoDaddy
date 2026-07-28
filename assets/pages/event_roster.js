@@ -301,22 +301,11 @@
       ${sorts.map(s => `<button class="maSeg--sortBtn ${state.rosterSort === s.id ? "is-active" : ""}" type="button" data-roster-sort="${esc(s.id)}">${esc(s.label)}</button>`).join("")}
     </div>`;
 
-    const pairingsBtn = `<button id="erBtnManagePairings" class="btn btnSecondary" type="button">Manage Pairings</button>`;
-
     el.canvasControls.innerHTML = `
       <div class="gpCanvasControls">
         <div style="display:flex; align-items:center; gap:6px;">
           <span style="font-size:11px; font-weight:500; color:var(--mutedText); white-space:nowrap;">Sort:</span>
           ${sortStrip}
-        </div>
-        <div class="gpCanvasControls__right">
-          <div class="erDesktopActions" style="display:flex; align-items:center; gap:8px;">
-            <button id="erBtnRefreshHI" class="btn btnSecondary" type="button">Refresh Handicaps</button>
-            <button id="erBtnDefineHandicaps" class="btn btnSecondary" type="button">Define Handicaps</button>
-            <button id="erBtnManageTeams" class="btn btnSecondary" type="button">Define Teams</button>
-            <button id="erBtnDefineFlights" class="btn btnSecondary" type="button">Define Flights</button>
-            ${pairingsBtn}
-          </div>
         </div>
       </div>`;
 
@@ -327,21 +316,6 @@
         renderRoster();
       });
     });
-
-    const teamsBtn = document.getElementById("erBtnManageTeams");
-    if (teamsBtn) teamsBtn.onclick = onManageTeams;
-
-    const flightsBtn = document.getElementById("erBtnDefineFlights");
-    if (flightsBtn) flightsBtn.onclick = onDefineFlights;
-
-    const refreshBtn = document.getElementById("erBtnRefreshHI");
-    if (refreshBtn) refreshBtn.onclick = onRefreshHandicaps;
-
-    const handicapsBtn = document.getElementById("erBtnDefineHandicaps");
-    if (handicapsBtn) handicapsBtn.onclick = onDefineHandicapSettings;
-
-    const pairBtn = document.getElementById("erBtnManagePairings");
-    if (pairBtn) pairBtn.onclick = onManagePairings;
   }
 
   // ── Mobile tray toggle ───────────────────────────────────────────────────────
@@ -361,8 +335,6 @@
 
   // ── Refresh Handicaps ────────────────────────────────────────────────────────
   async function onRefreshHandicaps() {
-    const refreshBtn = document.getElementById("erBtnRefreshHI");
-    if (refreshBtn) refreshBtn.disabled = true;
     _showBusy("Refreshing handicaps — please wait...");
     MA.ui.notify("Refreshing handicaps…", "info");
     try {
@@ -378,7 +350,6 @@
       console.error(e);
       MA.ui.notify(String(e.message || e), "danger");
     } finally {
-      if (refreshBtn) refreshBtn.disabled = false;
       _hideBusy();
     }
   }
@@ -733,12 +704,13 @@
   function openActionsMenu() {
     if (!MA.ui || !MA.ui.openActionsMenu) return;
     MA.ui.openActionsMenu("Actions", [
-      { category: "Roster Management" },
-      { label: "Refresh Handicaps",         indent: true, action: onRefreshHandicaps },
-      { label: "Define Handicap Settings",  indent: true, action: onDefineHandicapSettings },
+      { category: "Advanced Features" },
       { label: "Define Teams",              indent: true, action: onManageTeams },
       { label: "Define Flights",            indent: true, action: onDefineFlights },
       { label: "Manage Pairings",           indent: true, action: onManagePairings },
+      { category: "Handicap Settings" },
+      { label: "Define Handicap Settings",  indent: true, action: onDefineHandicapSettings },
+      { label: "Refresh Handicaps",         indent: true, action: onRefreshHandicaps },
     ]);
   }
 

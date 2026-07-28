@@ -116,7 +116,6 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
             router:         window.MA.paths.routerApi,
             login:          <?= json_encode(MA_ROUTE_LOGIN) ?>,
             apiGHIN:        window.MA.paths.apiGHIN,
-            apiEventPlayers: window.MA.paths.apiEventPlayers,
         };
     </script>
     <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>

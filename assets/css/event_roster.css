@@ -145,23 +145,13 @@
    its own copy of this block scoped to .maPage--event-roster.is-tray-open
    — removed as redundant now that the generic version covers it. */
 
-/* Canvas action buttons — full row on desktop, single "Manage Roster"
-   trigger (opens the actions menu) on mobile. Both are always in the DOM;
-   visibility is CSS-only, same pattern as .maTrayOpenBtn. !important is
-   necessary here for the same reason it was needed there — .btn/.btnSecondary
-   are defined later in ma_shared.css than any page-scoped rule could be,
-   so equal-specificity source order would otherwise let their own
-   display:inline-flex silently win regardless of this media query. */
-.erMobileManageBtn {
-  display: none;
-}
-
-@media (max-width: 900px) {
-  .erDesktopActions {
-    display: none !important;
-  }
-
-  .erMobileManageBtn {
-    display: inline-flex !important;
-  }
-}
+/* Canvas action buttons (Refresh Handicaps / Define Handicaps / Define
+   Teams / Define Flights / Manage Pairings) were removed from this panel
+   entirely — they're redundant with the standard chrome "Actions" button
+   (top of page, always shown on both mobile and desktop — see
+   applyChrome()'s unconditional chrome.setActions({ right: {...} }) call
+   in event_roster.js), which already opens the identical menu. The
+   .erMobileManageBtn this block used to reference as a mobile substitute
+   was never actually built in the markup — dead CSS targeting a
+   non-existent element — and would have been redundant with the chrome
+   Actions button even if it had been. */
