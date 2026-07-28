@@ -10,14 +10,6 @@
       <section class="maPanel gsTrayPanel" id="gsTrayPanel">
         <header class="maPanel__hdr">
           <div class="gpPanelHdr">
-            <div class="gpPanelHdr__left gpMobileCloseBtn">
-              <button class="iconBtn btnSecondary" type="button" aria-label="Close Tray">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-            </div>
             <div class="gpPanelHdr__title">UNASSIGNED GROUPS</div>
             <div class="gpPanelHdr__actions">
               <div class="gpCount" id="gsTrayCount">0</div>
@@ -57,7 +49,6 @@
               </svg>
             </button>
             <div class="gpPanelHdr__title">ASSIGNED PLAYING GROUPS</div>
-            <div class="gpPanelHdr__actions">
             <div class="gpPanelHdr__actions"></div>
             </div>
           </div>

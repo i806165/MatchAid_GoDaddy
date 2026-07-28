@@ -66,6 +66,12 @@
   right: 10px;
 }
 
+/* NOTE: .gpPanelHdr__left / __right are no longer referenced anywhere in
+   gameslotting_view.php as of the mobile close-button removal (unlike
+   game_pairings.css, where .gpPanelHdr__left is still used by the
+   canvas panel's "Collapse All" button). Left in place as generic
+   left/right header-slot utilities in case something needs them again;
+   flag for removal if that doesn't happen. */
 .gpPanelHdr__left {
   display: none;
   position: absolute;
@@ -440,12 +446,6 @@
 
   .gsTrayPanel .gpPanelHdr__actions .btn {
     display: none;
-  }
-
-  .gsTrayPanel .gpPanelHdr__left {
-    display: flex;
-    left: auto;
-    right: 10px;
   }
 
   .gsTrayPanel .gpCount {

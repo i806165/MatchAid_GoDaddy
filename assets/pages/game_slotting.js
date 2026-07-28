@@ -17,7 +17,6 @@
     btnTrayOpen: document.getElementById("gsBtnTrayOpen"),
     btnToggleAll: document.getElementById("gsBtnToggleAll"),
     panelsWrap: document.querySelector("#gsTabPanels .gpTabPanel"),
-    mobileCloseBtns: document.querySelectorAll(".gpMobileCloseBtn"),
   };
 
   const state = {
@@ -1512,10 +1511,6 @@ async function onResetChanges() {
   function wireEvents() {
     el.btnAssign.onclick = assignSelection;
     el.btnTrayOpen.onclick = toggleMobileTray;
-    
-    el.mobileCloseBtns.forEach(btn => {
-      btn.onclick = toggleMobileTray;
-    });
 
     el.btnToggleAll.onclick = () => {
       state.allCollapsed = !state.allCollapsed;

@@ -19,14 +19,6 @@
               <button class="maBtn maBtn--sm" type="button" id="gpBtnAssignToPairing">Assign &gt;&gt;</button>
             </div>
             <div class="gpPanelHdr__title">Unpaired Players</div>
-            <div class="gpPanelHdr__left gpMobileCloseBtn">
-              <button class="iconBtn btnSecondary" type="button" aria-label="Close Tray">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-            </div>
           </div>
         </header>
         <div class="maPanel__controls">
@@ -100,14 +92,6 @@
               <button class="maBtn maBtn--sm" type="button" id="gpBtnAssignToFlight">Assign &gt;&gt;</button>
             </div>
             <div class="gpPanelHdr__title">Un-Matched Pairings</div>
-            <div class="gpPanelHdr__left gpMobileCloseBtn">
-              <button class="iconBtn btnSecondary" type="button" aria-label="Close Tray">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-            </div>
           </div>
         </header>
         <div class="maPanel__controls">

@@ -106,9 +106,12 @@
   right: 10px;
 }
 
-/* Mobile Close Button (Left) */
+/* Left-side header slot — used by the Pairings canvas panel's always-
+   visible "Collapse All" toggle. Previously also shared by the tray
+   panels' mobile close button, which was removed as redundant with the
+   footer "Cancel" button (both called the same toggleMobileTray()). */
 .gpPanelHdr__left {
-  display: flex; /* Was hidden on desktop */
+  display: flex;
   position: absolute;
   left: 10px;
 }
@@ -455,12 +458,6 @@
 
   .gpTrayPanel .gpPanelHdr__actions .maBtn--sm {
     display: none;
-  }
-
-  .gpTrayPanel .gpPanelHdr__left {
-    display: flex;
-    left: auto;
-    right: 10px;
   }
 
   .gpTrayPanel .gpCount {

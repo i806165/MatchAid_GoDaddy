@@ -47,7 +47,6 @@
     // Drawer
     btnTrayPair: document.getElementById("gpBtnTrayPair"),
     btnTrayMatch: document.getElementById("gpBtnTrayMatch"),
-    mobileCloseBtns: document.querySelectorAll(".gpMobileCloseBtn"),
   };
 
   // ---- State ----
@@ -1829,10 +1828,6 @@
 
     if (el.btnTrayPair) el.btnTrayPair.addEventListener("click", toggleMobileTray);
     if (el.btnTrayMatch) el.btnTrayMatch.addEventListener("click", toggleMobileTray);
-
-    if (el.mobileCloseBtns) {
-      el.mobileCloseBtns.forEach(btn => btn.addEventListener("click", toggleMobileTray));
-    }
 
     // Search fields
     if (el.unpairedSearch) {
