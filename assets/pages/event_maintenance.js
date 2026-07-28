@@ -379,7 +379,7 @@
         visible: ["eventhome", "eventedit", "eventroster", "eventrounds", "eventsummary"],
         active: "eventedit",
         root: ["eventhome"],
-        disabled: (state.mode === "add") ? ["eventroster", "eventrounds", "eventsummary"] : [],
+        disabled: (state.mode === "add") ? ["eventroster", "eventrounds", "eventscorecard", "eventsummary"] : [],
         onNavigate: id => MA.routerGo(id)
       });
     }

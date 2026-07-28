@@ -693,7 +693,7 @@
 
     if (MA.chrome && MA.chrome.setBottomNav) {
       MA.chrome.setBottomNav({
-        visible:    ["eventhome", "eventedit", "eventroster","eventrounds", "eventsummary"],
+        visible:    ["eventhome", "eventedit", "eventroster","eventrounds", "eventscorecard", "eventsummary"],
         active:     "eventroster",
         root: ["eventhome"],
         onNavigate: id => MA.routerGo(id),

@@ -1122,7 +1122,7 @@ function wireFiltersModal() {
     const isEventsTab = !isEventMode && state.activePanel === "events";
 
     const visible = isEventMode
-      ? ["eventhome", "eventedit", "eventroster", "eventrounds", "eventsummary"]
+      ? ["eventhome", "eventedit", "eventroster", "eventrounds","eventscorecard", "eventsummary"]
       : isEventsTab
         ? ["home", "eventhome"]
         : ["home", "admin", "favorites", "import"];
