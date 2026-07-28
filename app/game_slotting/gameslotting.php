@@ -117,6 +117,7 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   <script src="<?= ma_asset('/assets/modules/module_DisplayGameFormat.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/addCalendar.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/recalculate_handicaps.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/composeEmail.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/player_notifications.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/module_setGameFormat.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/module_setGameSegments.js') ?>"></script>

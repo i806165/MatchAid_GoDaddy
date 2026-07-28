@@ -162,6 +162,7 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
   <script src="<?= ma_asset('/assets/modules/module_defineTeamsGameEvent.js') ?>"></script>
   
   <script src="<?= ma_asset('/assets/modules/recalculate_handicaps.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/composeEmail.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/player_notifications.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/pageHelp.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/teesetSelection.js') ?>"></script>
