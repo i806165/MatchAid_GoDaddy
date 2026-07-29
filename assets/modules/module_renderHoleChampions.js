@@ -90,7 +90,12 @@
 
       grossList.push({ name: p.playerName, score: grossScore });
 
-      const dots = parseFloat(details.strokeMarks || 0);
+      // phStrokeMarks, not strokeMarks — initEventSkins.php always requests
+      // Playing Handicap for this data regardless of the game's own
+      // dbGames_HCMethod (see chat), and renames the field on output to
+      // make that explicit rather than reusing the shared, basis-dependent
+      // "strokeMarks" name every other scorecard consumer expects.
+      const dots = parseFloat(details.phStrokeMarks || 0);
       const netValue = grossScore - 0.5 * dots;
 
       netList.push({ name: p.playerName, score: netValue });

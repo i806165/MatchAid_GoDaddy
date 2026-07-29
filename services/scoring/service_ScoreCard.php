@@ -54,7 +54,7 @@ final class ServiceScoreCard {
   /**
    * Build all scored group cards for in-play/post-play game view.
    */
-  public static function buildGameScorecardsPayload(array $gameRow, array $players, bool $useBalancedStrokes = false): array {
+  public static function buildGameScorecardsPayload(array $gameRow, array $players, bool $useBalancedStrokes = false, ?string $handicapBasis = null): array {
     if (!$gameRow) {
       throw new RuntimeException("buildGameScorecardsPayload: missing gameRow");
     }
@@ -70,7 +70,7 @@ final class ServiceScoreCard {
         "dbGames_Competition" => (string)($gameRow["dbGames_Competition"] ?? "")
       ]), $groupsMap[$id] ?? []);
       $playersInGroup = self::sortPlayersForScorecard($playersInGroup);
-      $rows[] = self::buildScoredGroupRowPayload($gameRow, $playersInGroup, (string)$id, $groupingMode, null, $useBalancedStrokes);
+      $rows[] = self::buildScoredGroupRowPayload($gameRow, $playersInGroup, (string)$id, $groupingMode, null, $useBalancedStrokes, $handicapBasis);
     }
 
     return [
@@ -638,7 +638,7 @@ final class ServiceScoreCard {
   // 5. Player Scorecard Context Assembly
   // ==========================================================================
 
-  public static function buildGroupRowPayload(array $gameRow, array $players, $groupId, string $mode, bool $useBalancedStrokes = false): array {
+  public static function buildGroupRowPayload(array $gameRow, array $players, $groupId, string $mode, bool $useBalancedStrokes = false, ?string $handicapBasis = null): array {
     $first = $players[0] ?? [];
     $courseName = self::buildCourseName($gameRow);
     $teeSetIdsUsed = self::getTeeSetIdsUsed($players);
@@ -683,12 +683,12 @@ final class ServiceScoreCard {
       "teeTime" => (string)($first["dbPlayers_TeeTime"] ?? ""),
       "startHole" => (string)($first["dbPlayers_StartHole"] ?? ""),
       "courseInfo" => $courseRows,
-      "players" => self::buildPlayersArray($players, $gameRow, $useBalancedStrokes),
+      "players" => self::buildPlayersArray($players, $gameRow, $useBalancedStrokes, $handicapBasis),
       "gameHeader" => self::buildGameHeader($gameRow, $first, $courseName),
     ];
   }
 
-  public static function buildPlayersArray(array $playersInGroup, array $gameRow, bool $useBalancedStrokes = false): array {
+  public static function buildPlayersArray(array $playersInGroup, array $gameRow, bool $useBalancedStrokes = false, ?string $handicapBasis = null): array {
     $isAdjGross = (trim((string)($gameRow["dbGames_ScoringMethod"] ?? "NET")) === "ADJ GROSS");
 
     // Determine if dual handicap display (raw:effective) is needed.
@@ -704,7 +704,7 @@ final class ServiceScoreCard {
     $out = [];
 
     foreach ($playersInGroup as $player) {
-      $playerHC = self::calculateEffectiveHandicap($gameRow, $player);
+      $playerHC = self::calculateEffectiveHandicap($gameRow, $player, $handicapBasis);
       $strokes  = [];
       $allocMap = [];
 
@@ -758,9 +758,10 @@ final class ServiceScoreCard {
     string $groupId,
     string $mode,
     ?string $selectedPlayerId,
-    bool $useBalancedStrokes = false
+    bool $useBalancedStrokes = false,
+    ?string $handicapBasis = null
   ): array {
-    $base = self::buildGroupRowPayload($gameRow, $players, $groupId, $mode, $useBalancedStrokes);
+    $base = self::buildGroupRowPayload($gameRow, $players, $groupId, $mode, $useBalancedStrokes, $handicapBasis);
     $fullPlayers = self::decorateScoredPlayers($gameRow, $base["players"]);
 
     $base["players"] = self::filterSelectedPlayer($fullPlayers, $selectedPlayerId);
@@ -777,9 +778,25 @@ final class ServiceScoreCard {
   // 6. Handicap and Stroke Allocation
   // ==========================================================================
 
-  public static function calculateEffectiveHandicap(array $gameRow, array $playerRow): float {
+  /**
+   * @param ?string $handicapBasis  null (default): existing behavior — SO
+   *                                or PH chosen from dbGames_HCMethod,
+   *                                unchanged for every pre-existing caller.
+   *                                "PH": use Playing Handicap regardless of
+   *                                dbGames_HCMethod — the caller already
+   *                                knows which basis it needs (e.g. Hole
+   *                                Champions, which per club policy always
+   *                                uses PH independent of how the round
+   *                                itself is scored). ADJ GROSS still
+   *                                forces 0.0 either way — a gross-only
+   *                                game has no handicap concept for any
+   *                                caller.
+   */
+  public static function calculateEffectiveHandicap(array $gameRow, array $playerRow, ?string $handicapBasis = null): float {
     if (trim((string)($gameRow["dbGames_ScoringMethod"] ?? "")) === "ADJ GROSS") return 0.0;
-    $useSO = str_starts_with(trim((string)($gameRow["dbGames_HCMethod"] ?? "CH")), "SO");
+    $useSO = $handicapBasis !== null
+      ? (strtoupper($handicapBasis) === "SO")
+      : str_starts_with(trim((string)($gameRow["dbGames_HCMethod"] ?? "CH")), "SO");
     $raw = $useSO ? ($playerRow["dbPlayers_SO"] ?? 0) : ($playerRow["dbPlayers_PH"] ?? 0);
     return is_numeric($raw) ? (float)$raw : 0.0;
   }

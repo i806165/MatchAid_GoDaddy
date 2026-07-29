@@ -111,9 +111,31 @@ function buildHoleChampionsPayload(string $selection, int $eid, array $event): a
     $strokeDist  = trim((string)($game["dbGames_StrokeDistribution"] ?? "Standard"));
     $useBalanced = ($rotation !== "" && $rotation !== "NONE" && $strokeDist !== "Standard");
 
-    $built = ServiceScoreCard::buildGameScorecardsPayload($game, $players, $useBalanced);
+    // Hole Champions always uses Playing Handicap, per club policy,
+    // regardless of what this game's own dbGames_HCMethod says (which may
+    // be "SO" and would otherwise flow through as the shared strokeMarks
+    // field the real scorecard's Net column uses). See chat: the
+    // handicapBasis param on ServiceScoreCard::buildGameScorecardsPayload()
+    // (threaded down to calculateEffectiveHandicap()) makes the ENTIRE
+    // payload build PH-based when requested — not a second, parallel
+    // computation.
+    $built = ServiceScoreCard::buildGameScorecardsPayload($game, $players, $useBalanced, "PH");
     foreach (($built["rows"] ?? []) as $row) {
       foreach (($row["players"] ?? []) as $p) {
+        // Rename on output only, here — not in service_ScoreCard.php's own
+        // decorateScoredPlayers(), which every other consumer of
+        // buildGameScorecardsPayload() still expects to return
+        // "strokeMarks". This endpoint's response is the one place the
+        // value is guaranteed PH-based, so it gets a name that says so.
+        if (isset($p["holes"]) && is_array($p["holes"])) {
+          foreach ($p["holes"] as $holeKey => &$cell) {
+            if (is_array($cell) && array_key_exists("strokeMarks", $cell)) {
+              $cell["phStrokeMarks"] = $cell["strokeMarks"];
+              unset($cell["strokeMarks"]);
+            }
+          }
+          unset($cell);
+        }
         $allPlayers[] = $p;
       }
     }
