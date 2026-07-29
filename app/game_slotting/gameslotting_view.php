@@ -50,7 +50,6 @@
             </button>
             <div class="gpPanelHdr__title">ASSIGNED PLAYING GROUPS</div>
             <div class="gpPanelHdr__actions"></div>
-            </div>
           </div>
         </header>
 
