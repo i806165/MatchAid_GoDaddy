@@ -97,6 +97,7 @@ $ROUTES = [
     "eventroster"  => "/app/event_roster/eventroster.php",
     "eventedit"    => "/app/event_maintenance/eventmaint.php",
     "eventscorecard" => "/app/event_scorecard/eventscorecard.php",
+    "eventskins"    => "/app/event_skins/eventskins.php",
     "eventsummary"   => "/app/event_summary/eventsummary.php",
     // Future placeholders:
     "eventgames"   => "/app/admin_home/adminhome.php",  //DEPRICATED
