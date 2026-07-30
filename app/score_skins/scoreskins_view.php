@@ -1,27 +1,16 @@
 <?php
-// /app/score_skins/scoreskins_view.php
+// /public_html/app/score_skins/scoreskins_view.php
+// Pure markup only — no business logic.
+//
+// .maPanels wrapper required — same pattern established across every
+// other retrofit in this project: ma_shared.css's CONTRACT for
+// .maPanel__body being the only scrollable region only holds when
+// .maPanel sits inside .maPanels, which supplies the bounded height.
 ?>
-<div class="maCards">
-  <section class="maCard">
-    <header class="maCard__hdr">
-      <div class="maCard__title">SKINS GRID</div>
-      <div class="maCard__actions">
-        <span class="maHint">Hole-by-hole low gross and net winners.</span>
-      </div>
-    </header>
-    <div class="maCard__body" style="padding:0;">
-      <div class="scGroup">
-        <table class="scTable">
-          <thead>
-            <tr>
-              <th class="scName">HOLE / PAR</th>
-              <th class="scMeta">BEST GROSS</th>
-              <th class="scMeta">BEST NET</th>
-            </tr>
-          </thead>
-          <tbody id="frmHoleChampList"></tbody>
-        </table>
-      </div>
-    </div>
+<div class="maPanels">
+  <section class="maPanel" id="scSkinsPanel" aria-label="Hole Champions">
+    <div class="maPanel__controls" id="scModuleControls"></div>
+    <div class="maPanel__body"     id="scModuleHost"></div>
+    <div class="maPanel__ftr"      id="scModuleFooter"></div>
   </section>
 </div>

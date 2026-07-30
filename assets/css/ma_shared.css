@@ -2611,6 +2611,15 @@ textarea {
   font-size: 15px;
 }
 
+/* Right-aligned variant, margin reset — for hint text sitting as a
+   horizontal flex sibling (e.g. a card header's right-side note next to
+   the title) rather than stacked below something, where the base
+   margin-top would be wrong. First use: Hole Champions' card-header note. */
+.maHintText--right {
+  text-align: right;
+  margin-top: 0;
+}
+
 /* Empty/missing data subline — italic hint */
 .maListRow__subline--empty {
   font-size: 11px;
@@ -3380,7 +3389,15 @@ textarea {
 .maTable {
   border-collapse: collapse;
   width: 100%;
-  font-size: 12px;
+  font-size: var(--maTableFontSize, 12px);
+}
+
+/* Size modifier, independent of any structural modifier (e.g.
+   .maTable--transposed) — composes with it if a table ever needs both.
+   First use: Hole Champions, which needs larger text than the default
+   scorecard grid without affecting that grid's own font-size at all. */
+.maTable--fontLg {
+  --maTableFontSize: 15px;
 }
 
 .maTable td,

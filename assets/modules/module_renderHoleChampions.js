@@ -123,7 +123,7 @@
       return `<strong>${esc(displayName)} (${esc(displayScore)})</strong>`;
     }
 
-    return `<span class="scTied">${tied.length} Tied ${esc(displayScore)}</span>`;
+    return `${tied.length} Tied ${esc(displayScore)}`;
   }
 
   function buildRowsHtml(players, startHole, endHole) {
@@ -132,12 +132,9 @@
       const row = computeHoleResult(players, h);
       html += `
         <tr>
-          <td class="scName">
-            <span class="scHoleLabel">Hole ${row.hole}</span>
-            <span class="scPHC">Par ${esc(row.par)}</span>
-          </td>
-          <td class="scMetaCol">${row.grossHtml}</td>
-          <td class="scMetaCol">${row.netHtml}</td>
+          <td class="maTable__labelCol">Hole ${row.hole} Par ${esc(row.par)}</td>
+          <td class="maTable__valueCol">${row.grossHtml}</td>
+          <td class="maTable__valueCol">${row.netHtml}</td>
         </tr>`;
     }
     return html;
@@ -145,18 +142,18 @@
 
   function buildCardHtml(players, range) {
     return `
-      <section class="maCard scSplitCard" aria-label="${esc(range.title)}">
+      <section class="maCard" aria-label="${esc(range.title)}">
         <div class="maCard__hdr">
           <div class="maCard__title">${esc(range.title)}</div>
-          <div class="scCardNote">Hole-by-hole low gross and net winners.</div>
+          <div class="maHintText maHintText--right">Hole-by-hole low gross and net winners.</div>
         </div>
         <div class="maCard__body">
-          <table class="maTable scTable">
+          <table class="maTable maTable--fontLg">
             <thead>
               <tr>
-                <th class="scName">Hole / Par</th>
-                <th class="scMeta">Best Gross</th>
-                <th class="scMeta">Best Net</th>
+                <th class="maTable__labelCol">Hole / Par</th>
+                <th class="maTable__valueCol">Best Gross</th>
+                <th class="maTable__valueCol">Best Net</th>
               </tr>
             </thead>
             <tbody>${buildRowsHtml(players, range.start, range.end)}</tbody>
@@ -165,8 +162,11 @@
       </section>`;
   }
 
-  // ── Controls — flight selector, .maChoiceChip, same treatment as the
-  //    scorecard module's KPI pills. ─────────────────────────────────────
+  // ── Controls — flight selector, dropdown-style: a button showing the
+  //    current selection, opening MA.ui.openActionsMenu() on click — same
+  //    pattern as event_skins.js's own round selector, not the KPI-pill
+  //    treatment this used originally. Changed per explicit direction:
+  //    flight should read as a dropdown, not a row of pills. ─────────────
 
   function renderControls(st) {
     if (!st.controlsEl) return;
@@ -179,21 +179,30 @@
     const options = [{ id: "ALL", label: "All Game" }].concat(
       st.flights.map((f) => ({ id: f.id, label: f.name }))
     );
+    const current = options.find((o) => o.id === st.selectedFlight) || options[0];
 
     st.controlsEl.innerHTML = `
-      <div class="maChoiceChips">
-        ${options.map((o) =>
-          `<button class="maChoiceChip ${st.selectedFlight === o.id ? "is-selected" : ""}" type="button" data-flight="${esc(o.id)}">${esc(o.label)}</button>`
-        ).join("")}
-      </div>`;
+      <button type="button" data-flight-selector-btn class="btn btnSecondary"
+        style="width:100%; display:flex; align-items:center; justify-content:space-between;">
+        <span>${esc(current.label)}</span>
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+          stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"></polyline>
+        </svg>
+      </button>`;
 
-    st.controlsEl.querySelectorAll("[data-flight]").forEach((btn) =>
-      btn.addEventListener("click", () => {
-        st.selectedFlight = btn.dataset.flight;
-        renderControls(st);
-        renderBody(st);
-      })
-    );
+    st.controlsEl.querySelector("[data-flight-selector-btn]")?.addEventListener("click", () => {
+      if (!MA.ui || !MA.ui.openActionsMenu) return;
+      const items = options.map((o) => ({
+        label: o.label,
+        action: () => {
+          st.selectedFlight = o.id;
+          renderControls(st);
+          renderBody(st);
+        },
+      }));
+      MA.ui.openActionsMenu("Select Flight", items);
+    });
   }
 
   function renderBody(st) {
@@ -205,7 +214,7 @@
     }
 
     const filtered = playersForFlight(st.allPlayers, st.selectedFlight);
-    st.hostEl.innerHTML = `<div class="scCardsGrid">${st.cardRanges.map((r) => buildCardHtml(filtered, r)).join("")}</div>`;
+    st.hostEl.innerHTML = `<div class="maCards">${st.cardRanges.map((r) => buildCardHtml(filtered, r)).join("")}</div>`;
   }
 
   // ── Mount ────────────────────────────────────────────────────────────

@@ -28,6 +28,11 @@ declare(strict_types=1);
 // Same-course-across-rounds is assumed for pooled "ALL" results (Hole 5
 // in Round 1 is treated as the same hole as Hole 5 in Round 2) — a known,
 // deliberately deferred constraint (see chat), not enforced here.
+//
+// fetchHoleChampionsRound() and resolveHoleChampionsMeta() below are
+// shared with /api/score_skins/initScoreSkins.php (the standalone
+// game-level page) — one round's worth of work, reused by both the
+// pooling loop here and that page's single call.
 
 require_once __DIR__ . "/../../bootstrap.php";
 require_once MA_API_LIB . "/Logger.php";
@@ -72,6 +77,105 @@ function fetchSkinsPlayers(string $ggid): array {
 }
 
 /**
+ * fetchHoleChampionsRound($ggid)
+ *
+ * One round's worth of PH-forced, phStrokeMarks-renamed player data.
+ * Shared by the event-level pooling loop below AND
+ * initScoreSkins.php's single game-level call — the one place this
+ * logic exists.
+ *
+ * Returns null if the ggid doesn't resolve to a real game.
+ * Returns ["game" => array, "players" => array] otherwise — $game
+ * already carries event columns merged via hydrateForUi() when
+ * dbGames_EID is set (additive only), and $players is the flat,
+ * ungrouped list (pairing/group structure already flattened out) with
+ * each hole cell's "strokeMarks" renamed to "phStrokeMarks".
+ */
+function fetchHoleChampionsRound(string $ggid): ?array {
+  $game = ServiceDbGames::getGameByGGID((int)$ggid);
+  if (!$game) return null;
+  $game = ServiceContextGame::hydrateForUi($game); // event columns merged — additive only
+
+  $players = fetchSkinsPlayers($ggid);
+
+  $rotation    = strtoupper(trim((string)($game["dbGames_RotationMethod"] ?? "")));
+  $strokeDist  = trim((string)($game["dbGames_StrokeDistribution"] ?? "Standard"));
+  $useBalanced = ($rotation !== "" && $rotation !== "NONE" && $strokeDist !== "Standard");
+
+  // Hole Champions always uses Playing Handicap, per club policy,
+  // regardless of what this game's own dbGames_HCMethod says (which may
+  // be "SO" and would otherwise flow through as the shared strokeMarks
+  // field the real scorecard's Net column uses). See chat: the
+  // handicapBasis param on ServiceScoreCard::buildGameScorecardsPayload()
+  // (threaded down to calculateEffectiveHandicap()) makes the ENTIRE
+  // payload build PH-based when requested — not a second, parallel
+  // computation.
+  $built = ServiceScoreCard::buildGameScorecardsPayload($game, $players, $useBalanced, "PH");
+
+  $roundPlayers = [];
+  foreach (($built["rows"] ?? []) as $row) {
+    foreach (($row["players"] ?? []) as $p) {
+      // Rename on output only, here — not in service_ScoreCard.php's own
+      // decorateScoredPlayers(), which every other consumer of
+      // buildGameScorecardsPayload() still expects to return
+      // "strokeMarks". This is the one place the value is guaranteed
+      // PH-based, so it gets a name that says so.
+      if (isset($p["holes"]) && is_array($p["holes"])) {
+        foreach ($p["holes"] as $holeKey => &$cell) {
+          if (is_array($cell) && array_key_exists("strokeMarks", $cell)) {
+            $cell["phStrokeMarks"] = $cell["strokeMarks"];
+            unset($cell["strokeMarks"]);
+          }
+        }
+        unset($cell);
+      }
+      $roundPlayers[] = $p;
+    }
+  }
+
+  return ["game" => $game, "players" => $roundPlayers];
+}
+
+/**
+ * resolveHoleChampionsMeta($game, $event)
+ *
+ * {cardRanges, flightActive, flightConfig} for ONE round's own game
+ * record — used both for a single-round selection here and for the
+ * standalone game-level page, which only ever has one round. NOT used
+ * for pooled "ALL" (see buildHoleChampionsPayload() below, which has
+ * its own always-both-9s card-range rule since pooled rounds can have
+ * different hole windows).
+ *
+ * $event may be null (a flat game with no dbGames_EID) —
+ * ServiceDbEvents::isDimensionActive() already handles that.
+ */
+function resolveHoleChampionsMeta(array $game, ?array $event): array {
+  $holesStr = trim((string)($game["dbGames_Holes"] ?? "All 18"));
+  if ($holesStr === "F9") {
+    $cardRanges = [["start" => 1, "end" => 9, "title" => "Front 9 Champions"]];
+  } elseif ($holesStr === "B9") {
+    $cardRanges = [["start" => 10, "end" => 18, "title" => "Back 9 Champions"]];
+  } else {
+    $cardRanges = [
+      ["start" => 1, "end" => 9,  "title" => "Front 9 Champions"],
+      ["start" => 10, "end" => 18, "title" => "Back 9 Champions"],
+    ];
+  }
+
+  $flightActive = ServiceDbEvents::isDimensionActive("flight", $game, $event);
+  $flightConfig = null;
+  if ($flightActive) {
+    $raw = (string)(($event["dbEvents_FlightConfig"] ?? null) ?? ($game["dbGames_FlightConfig"] ?? ""));
+    if ($raw !== "" && strtoupper($raw) !== "NULL") {
+      $decoded = json_decode($raw, true);
+      if (is_array($decoded)) $flightConfig = $decoded;
+    }
+  }
+
+  return ["cardRanges" => $cardRanges, "flightActive" => $flightActive, "flightConfig" => $flightConfig];
+}
+
+/**
  * buildHoleChampionsPayload($selection, $eid, $event)
  *
  * $selection: "ALL" or a specific ggid (string). Caller is responsible
@@ -99,45 +203,11 @@ function buildHoleChampionsPayload(string $selection, int $eid, array $event): a
   $firstGame  = null;
 
   foreach ($ggidsToLoad as $ggid) {
-    $game = ServiceDbGames::getGameByGGID((int)$ggid);
-    if (!$game) continue;
-    $game = ServiceContextGame::hydrateForUi($game); // event columns merged — additive only
-
-    if ($firstGame === null) $firstGame = $game;
-
-    $players = fetchSkinsPlayers($ggid);
-
-    $rotation    = strtoupper(trim((string)($game["dbGames_RotationMethod"] ?? "")));
-    $strokeDist  = trim((string)($game["dbGames_StrokeDistribution"] ?? "Standard"));
-    $useBalanced = ($rotation !== "" && $rotation !== "NONE" && $strokeDist !== "Standard");
-
-    // Hole Champions always uses Playing Handicap, per club policy,
-    // regardless of what this game's own dbGames_HCMethod says (which may
-    // be "SO" and would otherwise flow through as the shared strokeMarks
-    // field the real scorecard's Net column uses). See chat: the
-    // handicapBasis param on ServiceScoreCard::buildGameScorecardsPayload()
-    // (threaded down to calculateEffectiveHandicap()) makes the ENTIRE
-    // payload build PH-based when requested — not a second, parallel
-    // computation.
-    $built = ServiceScoreCard::buildGameScorecardsPayload($game, $players, $useBalanced, "PH");
-    foreach (($built["rows"] ?? []) as $row) {
-      foreach (($row["players"] ?? []) as $p) {
-        // Rename on output only, here — not in service_ScoreCard.php's own
-        // decorateScoredPlayers(), which every other consumer of
-        // buildGameScorecardsPayload() still expects to return
-        // "strokeMarks". This endpoint's response is the one place the
-        // value is guaranteed PH-based, so it gets a name that says so.
-        if (isset($p["holes"]) && is_array($p["holes"])) {
-          foreach ($p["holes"] as $holeKey => &$cell) {
-            if (is_array($cell) && array_key_exists("strokeMarks", $cell)) {
-              $cell["phStrokeMarks"] = $cell["strokeMarks"];
-              unset($cell["strokeMarks"]);
-            }
-          }
-          unset($cell);
-        }
-        $allPlayers[] = $p;
-      }
+    $round = fetchHoleChampionsRound($ggid);
+    if (!$round) continue;
+    if ($firstGame === null) $firstGame = $round["game"];
+    foreach ($round["players"] as $p) {
+      $allPlayers[] = $p;
     }
   }
 
@@ -145,43 +215,27 @@ function buildHoleChampionsPayload(string $selection, int $eid, array $event): a
     return ["ok" => false, "error" => "no_rounds_found"];
   }
 
-  // Card ranges: a single round respects its own F9/B9/All-18 window;
-  // "ALL" always shows both — different rounds in an event can have
-  // different hole windows, so there's no one window to key off when
-  // pooling.
   if ($selection === "ALL") {
+    // Pooled: always both 9s — different rounds in an event can have
+    // different hole windows, so there's no one window to key off.
     $cardRanges = [
       ["start" => 1, "end" => 9,  "title" => "Front 9 Champions"],
       ["start" => 10, "end" => 18, "title" => "Back 9 Champions"],
     ];
+    $flightActive = ServiceDbEvents::isDimensionActive("flight", $firstGame, $event);
+    $flightConfig = null;
+    if ($flightActive) {
+      $raw = (string)($event["dbEvents_FlightConfig"] ?? $firstGame["dbGames_FlightConfig"] ?? "");
+      if ($raw !== "" && strtoupper($raw) !== "NULL") {
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) $flightConfig = $decoded;
+      }
+    }
   } else {
-    $holesStr = trim((string)($firstGame["dbGames_Holes"] ?? "All 18"));
-    if ($holesStr === "F9") {
-      $cardRanges = [["start" => 1, "end" => 9, "title" => "Front 9 Champions"]];
-    } elseif ($holesStr === "B9") {
-      $cardRanges = [["start" => 10, "end" => 18, "title" => "Back 9 Champions"]];
-    } else {
-      $cardRanges = [
-        ["start" => 1, "end" => 9,  "title" => "Front 9 Champions"],
-        ["start" => 10, "end" => 18, "title" => "Back 9 Champions"],
-      ];
-    }
-  }
-
-  // Flight determination — checked against the EVENT's own fields plus
-  // $firstGame's, mirroring ServiceDbEvents::isDimensionActive()'s
-  // event-then-round hierarchy. When pooling ("ALL"), the event's own
-  // FlightMode/FlightConfig is the one consistent source across
-  // potentially-differing per-round configs — a known simplification,
-  // deferred per the same reasoning as the same-course clamp (see chat).
-  $flightActive = ServiceDbEvents::isDimensionActive("flight", $firstGame, $event);
-  $flightConfig = null;
-  if ($flightActive) {
-    $raw = (string)($event["dbEvents_FlightConfig"] ?? $firstGame["dbGames_FlightConfig"] ?? "");
-    if ($raw !== "" && strtoupper($raw) !== "NULL") {
-      $decoded = json_decode($raw, true);
-      if (is_array($decoded)) $flightConfig = $decoded;
-    }
+    $meta = resolveHoleChampionsMeta($firstGame, $event);
+    $cardRanges   = $meta["cardRanges"];
+    $flightActive = $meta["flightActive"];
+    $flightConfig = $meta["flightConfig"];
   }
 
   return [
