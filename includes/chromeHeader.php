@@ -5,6 +5,7 @@
 // drives the navy brand color cascade via ma_shared.css without any JS.
 $_maIsEventContext = !empty($_SESSION['SessionStoredEID']);
 ?>
+<script>document.documentElement.classList.toggle('is-event-context', <?= $_maIsEventContext ? 'true' : 'false' ?>);</script>
 <header class="maChrome__hdr<?= $_maIsEventContext ? ' is-event-context' : '' ?>" role="banner">
   <div class="maChrome__hdrRow">
 

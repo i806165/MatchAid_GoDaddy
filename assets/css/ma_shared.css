@@ -52,6 +52,21 @@
   --warn: #f6d365;
   --success: #0aa45c;
 
+  /* --- Portal color layers (L0 chrome / L1 panel hdr / L2 outer card+modal /
+     L3 inner card) — Games portal is the default ramp. Each level is a
+     derived white-mix of the portal's own base color, not a hand-picked
+     value, so levels can never collide or go undefined. See
+     .is-event-context below for the Events-portal override of the same
+     four tokens. Percentages are tunable; 75/35/15 is the current pick. */
+  --layer0-bg: var(--brandPrimary);
+  --layer1-bg: color-mix(in srgb, var(--brandPrimary) 75%, white);
+  --layer2-bg: color-mix(in srgb, var(--brandPrimary) 35%, white);
+  --layer3-bg: color-mix(in srgb, var(--brandPrimary) 15%, white);
+  --layer0-text: var(--brandPrimaryText);
+  --layer1-text: var(--brandPrimaryText);
+  --layer2-text: var(--ink);
+  --layer3-text: var(--ink);
+
   /* --- Surfaces --- */
   --brandPrimaryBg: rgba(7,67,42,.08);
   --brandSecondaryBg: #ffffff;
@@ -218,8 +233,8 @@
   --modalViewportGap: 16px;
   --modalRadius: 18px;
   --modalShadow: 0 14px 34px rgba(0,0,0,.18);
-  --modalHeaderBg: var(--brandSecondary);
-  --modalHeaderText: var(--brandSecondaryText);
+  --modalHeaderBg: var(--layer2-bg);
+  --modalHeaderText: var(--layer2-text);
   --drawerRadius: var(--controlRadius);
   --drawerMaxW: 720px;
   --drawerTopRadius: 18px;
@@ -364,22 +379,36 @@ textarea {
 }
 
 /* ── Event context — navy chrome + panel/card headers ────────────────────
-   Applied server-side by chromeHeader.php when SessionStoredEID is set.
-   Cascades from the <header> down to any .maPanel__hdr and .maCard__hdr
-   on the page, so every event-context page (Event Rounds, Event Roster,
-   Event Edit, Event Scoring etc.) gets consistent navy coloring without
-   per-page CSS. The --chromeHdrBg token override drives the header itself;
-   the panel/card rules use --brandTertiary directly.
-   ──────────────────────────────────────────────────────────────────────── */
+   Applied on <html> (document.documentElement) by chromeHeader.php's
+   inline script — a real DOM ancestor of everything, including modals
+   appended straight to <body> — not just on <header>, so CSS variable
+   inheritance actually reaches every descendant. (The class also still
+   gets stamped on <header> itself below, for its own direct styling.)
+   Cascades to any element referencing the --layerN-* tokens: panels,
+   cards, and modals alike, with no per-page CSS needed. Same white-mix
+   formula as the Games default ramp, just anchored to brandTertiary. */
+.is-event-context {
+  --layer0-bg: var(--brandTertiary);
+  --layer1-bg: color-mix(in srgb, var(--brandTertiary) 75%, white);
+  --layer2-bg: color-mix(in srgb, var(--brandTertiary) 35%, white);
+  --layer3-bg: color-mix(in srgb, var(--brandTertiary) 15%, white);
+  --layer0-text: var(--brandTertiaryText);
+  --layer1-text: var(--brandTertiaryText);
+  --layer2-text: var(--ink);
+  --layer3-text: var(--ink);
+}
+
 .maChrome__hdr.is-event-context {
   background: var(--brandTertiary);
 }
 
-/* Panel and card headers on any event-context page */
+/* Panel and card headers on any event-context page — now reference the
+   layer tokens above rather than hardcoding --brandTertiary a second
+   time, so this stays in sync with the ramp automatically. */
 .is-event-context ~ main .maPanel__hdr,
 .is-event-context ~ main .maCard__hdr {
-  background: var(--brandTertiary);
-  color: var(--brandTertiaryText);
+  background: var(--layer1-bg);
+  color: var(--layer1-text);
   border-bottom-color: color-mix(in srgb, var(--brandTertiary) 70%, black);
 }
 
@@ -1112,8 +1141,8 @@ textarea {
 /* Panel regions */
 .maPanel__hdr {
   flex: 0 0 auto;
-  background: var(--panelHdrBg);
-  color: var(--panelHdrText);
+  background: var(--layer1-bg);
+  color: var(--layer1-text);
   padding: var(--panelPad);
   border-bottom: 1px solid var(--panelHdrBorder);
 }
@@ -1692,8 +1721,8 @@ textarea {
   justify-content: space-between;
   gap: 10px;
   padding: var(--cardHdrPadY) var(--cardHdrPadX);
-  background: var(--cardHdrBg);
-  color: var(--cardHdrText);
+  background: var(--layer2-bg);
+  color: var(--layer2-text);
   border-bottom: 1px solid var(--cardHdrBorder);
 }
 
@@ -3765,12 +3794,16 @@ th.maTable__totalRow {
   }
 }
 
-/* Event-context modal header — mirrors .maChrome__hdr.is-event-context
-   (Section 4) for modals. The existing rule can't cascade here: it relies
-   on a sibling combinator (~ main) that assumes page layout, which a
-   floating .maModal doesn't have. Same class name, same token, just
-   extended to a second element type — not a new visual language. */
+/* Event-context modal header — explicit escape hatch for modules that
+   self-determine portal from fetched data rather than ambient page
+   state (e.g. module_menuGameSettings.js keys off a specific game's own
+   dbGames_EID). In the common case this is now redundant with plain
+   .maModal__hdr inheriting --layer2-bg from an ancestor .is-event-context,
+   but it stays correct for the case where a module's own data disagrees
+   with the page's ambient context. Derives from the same layer2 token
+   rather than hardcoding brandTertiary a second time. */
 .maModal__hdr.is-event-context {
-  background: var(--brandTertiary);
+  background: color-mix(in srgb, var(--brandTertiary) 35%, white);
+  color: var(--ink);
 }
 

@@ -60,10 +60,10 @@
   min-height: var(--btnHeight);
   align-items: center;
   justify-content: center;
-  border: 1px dashed var(--brandPrimary);
+  border: 1px dashed var(--layer1-bg);
   border-radius: var(--radiusMd);
   background: transparent;
-  color: var(--brandPrimary);
+  color: var(--layer1-bg);
   font-family: var(--fontFamilyBase);
   font-size: 14px;
   font-weight: 900;
@@ -74,10 +74,9 @@
   transform: translateY(1px);
 }
 
-/* Panel header row */
+/* Panel header row — color now comes from the shared .maPanel__hdr
+   layer1 token in ma_shared.css; only the border stays page-specific. */
 .maPage--pairings .maPanel__hdr {
-  background: var(--brandSecondary);
-  color: var(--brandSecondaryText);
   border-bottom: 1px solid rgba(0,0,0,0.1);
 }
 
@@ -93,7 +92,7 @@
   font-size: 14px;
   font-weight: 950;
   letter-spacing: .2px;
-  color: var(--brandSecondaryText);
+  color: var(--layer1-text);
   flex: 1;
   text-align: center;
 }
@@ -177,7 +176,7 @@
   gap: 8px;
   padding: 6px 8px;
   border-bottom: 1px solid var(--borderSubtle);
-  background: rgba(7,67,42,.05);
+  background: var(--layer3-bg);
 }
 
 .gpGroupCard__title{

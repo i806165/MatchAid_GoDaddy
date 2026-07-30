@@ -3,10 +3,10 @@
 */
 
 .maListRow--hdr {
-  background: var(--brandSecondary);
-  color: var(--brandSecondaryText);
+  background: var(--layer1-bg);
+  color: var(--layer1-text);
   font-weight: 700;
-  border-bottom: 1px solid var(--brandSecondary);
+  border-bottom: 1px solid var(--layer1-bg);
 }
 .maListRow--hdr .maListRow__col,
 .maListRow--hdr 
@@ -15,7 +15,7 @@
 }
 .maListRow--hdr:hover,
 .maListRow--hdr:active{
-  background: var(--brandSecondary);
+  background: var(--layer1-bg);
 }
 
 .gpShell{
@@ -340,7 +340,7 @@
   gap: 10px;
   padding: 10px 12px;
   border-bottom: 1px solid var(--borderSubtle);
-  background: rgba(7,67,42,.04);
+  background: var(--layer3-bg);
 }
 
 .gpImportCard__label {
@@ -406,8 +406,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  background: var(--brandSecondary);
-  color: var(--brandSecondaryText);
+  background: var(--layer1-bg);
+  color: var(--layer1-text);
   font-size: 11px;
   font-weight: 700;
 }
@@ -425,17 +425,17 @@
 }
 
 .gpGameRow--selected {
-  background: color-mix(in srgb, var(--brandSecondary) 8%, white);
-  border-left: 3px solid var(--brandSecondary);
+  background: color-mix(in srgb, var(--layer1-bg) 8%, white);
+  border-left: 3px solid var(--layer1-bg);
   padding-left: 9px;
 }
 
 .gpGameRow--selected .gpGameRow__title {
-  color: var(--brandSecondary);
+  color: var(--layer1-bg);
 }
 
 .gpGameRow--selected .gpGameRow__countNum {
-  color: var(--brandSecondary);
+  color: var(--layer1-bg);
 }
 
 .gpGameRow__info {
@@ -473,7 +473,7 @@
 .gpGameRow__countNum {
   font-size: 18px;
   font-weight: 800;
-  color: var(--brandSecondary);
+  color: var(--layer1-bg);
   line-height: 1;
 }
 
@@ -549,10 +549,8 @@
   min-height: 0;
 }
 
-/* Panel header — brandSecondary background matching game_pairings */
+/* Panel header — color now comes from shared .maPanel__hdr layer1 token */
 .maPage--players .maPanel__hdr {
-  background: var(--brandSecondary);
-  color: var(--brandSecondaryText);
   border-bottom: 1px solid rgba(0,0,0,0.1);
 }
 
@@ -569,7 +567,7 @@
   font-size: 14px;
   font-weight: 950;
   letter-spacing: .2px;
-  color: var(--brandSecondaryText);
+  color: var(--layer1-text);
   flex: 1;
   text-align: center;
 }
@@ -620,10 +618,10 @@
   min-height: var(--btnHeight);
   align-items: center;
   justify-content: center;
-  border: 1px dashed var(--brandPrimary);
+  border: 1px dashed var(--layer1-bg);
   border-radius: var(--radiusMd);
   background: transparent;
-  color: var(--brandPrimary);
+  color: var(--layer1-bg);
   font-family: var(--fontFamilyBase);
   font-size: 14px;
   font-weight: 900;

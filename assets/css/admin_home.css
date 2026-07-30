@@ -5,27 +5,26 @@
 */
 
 /* ==========================================================================
-   1) Card header override (green header, white title)
+   1) Card header — color now comes from the shared .maCard__hdr layer2
+   token in ma_shared.css. The border-bottom stays a page-specific accent.
    ========================================================================== */
 .maCard__hdr{
-  color: var(--brandSecondaryText);
-  background: var(--brandSecondary);
-  border-bottom-color: color-mix(in srgb, var(--brandPrimary) 70%, black);
+  border-bottom-color: color-mix(in srgb, var(--layer2-bg) 70%, black);
 }
 
 .maCard__title{
-  color: var(--brandPrimaryText);
+  color: var(--layer2-text);
 }
 
 /* GGID after title (muted, no label) */
 .maCard__titleGgid{
   margin-left: 6px;
-  color: var(--brandPrimaryTextMuted); 
+  color: var(--mutedText);
   font-weight: 800;
 }
 
 .maGameCard__hdrAdmin{
-  color: var(--brandPrimaryTextMuted); /* same muted white token */
+  color: var(--mutedText); /* dark muted text — L2 card headers are a light tint now, not dark */
   font-weight: 800;
   white-space: nowrap;
   overflow: hidden;
@@ -217,17 +216,26 @@
    This creates clear hierarchy: panel = frame (light), card = content (dark). */
 .maPage--adminHome .maPanel__hdr{
   background: var(--brandSecondaryBg);
-  color: var(--brandSecondary);
+  color: var(--layer1-bg);
   border-bottom: 1px solid var(--borderSubtle);
 }
 
-/* Events panel card headers — navy (--brandTertiary) in doorway mode.
-   In Event Rounds mode the is-event-context cascade (ma_shared.css) handles
-   this globally, since EID is in session. In doorway mode there's no EID,
-   so we target the Events panel's cards directly. */
+/* Events panel, doorway mode — no SessionStoredEID in session here (both
+   portals show side by side), so the ambient .is-event-context class on
+   <html> doesn't apply. Redefine the layer tokens locally, scoped to just
+   this panel's subtree, using the same formula as .is-event-context in
+   ma_shared.css — everything inside (card headers, inner cards) then
+   picks up the Events ramp automatically via normal inheritance. */
+.maPage--adminHome .maPanel--secondary{
+  --layer1-bg: color-mix(in srgb, var(--brandTertiary) 75%, white);
+  --layer1-text: var(--brandTertiaryText);
+  --layer2-bg: color-mix(in srgb, var(--brandTertiary) 35%, white);
+  --layer2-text: var(--ink);
+  --layer3-bg: color-mix(in srgb, var(--brandTertiary) 15%, white);
+  --layer3-text: var(--ink);
+}
+
 .maPage--adminHome .maPanel--secondary .maCard__hdr{
-  background: var(--brandTertiary);
-  color: var(--brandTertiaryText);
   border-bottom-color: color-mix(in srgb, var(--brandTertiary) 70%, black);
 }
 
@@ -348,7 +356,7 @@
    ========================================================================== */
 
 .maEventCard__hdrAdmin{
-  color: var(--brandPrimaryTextMuted);
+  color: var(--mutedText);
   font-weight: 800;
   white-space: nowrap;
   overflow: hidden;

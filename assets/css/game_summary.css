@@ -38,8 +38,8 @@
   font-weight:900;
   position:sticky;
   top:0;
-  background: var(--brandSecondary);
-  color: var(--brandSecondaryText);
+  background: var(--layer3-bg);
+  color: var(--layer3-text);
   z-index:1;
 }
 
@@ -175,20 +175,19 @@
     border-radius: 6px;
   }
 
-  .gsMatchCard .maCard__hdr{
-    background: var(--brandSecondary);
-    color: var(--brandSecondaryText);
-  }
+  /* .gsMatchCard .maCard__hdr — no longer overridden here; base
+     .maCard__hdr in ma_shared.css already derives the correct portal
+     color via --layer2-bg. */
 
   .gsMatchCard .maCard__title,
   .gsMatchCard .maCard__actions{
-    color: var(--brandSecondaryText);
+    color: var(--layer2-text);
   }
 
   .gsScoreBadge{
     display: inline-block;
     background: #fff;
-    color: var(--brandSecondary);
+    color: var(--layer2-bg);
     font-weight: 900;
     font-size: 12px;
     line-height: 1;

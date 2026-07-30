@@ -5,12 +5,10 @@
 
 /* ==========================================================================
    Card chrome
+   Header color now comes from the shared .maCard__hdr layer2 token in
+   ma_shared.css automatically — no per-page override needed, and a
+   hardcoded one here would defeat the Events-portal color derivation.
    ========================================================================== */
-
-.maCard__hdr{
-  color: var(--brandSecondaryText);
-  background: var(--brandSecondary);
-}
 
 /* ==========================================================================
    Game card / course summary — picker style
