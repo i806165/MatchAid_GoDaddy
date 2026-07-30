@@ -233,8 +233,8 @@
   --modalViewportGap: 16px;
   --modalRadius: 18px;
   --modalShadow: 0 14px 34px rgba(0,0,0,.18);
-  --modalHeaderBg: var(--layer2-bg);
-  --modalHeaderText: var(--layer2-text);
+  --modalHeaderBg: var(--layer1-bg);
+  --modalHeaderText: var(--layer1-text);
   --drawerRadius: var(--controlRadius);
   --drawerMaxW: 720px;
   --drawerTopRadius: 18px;
@@ -3798,12 +3798,14 @@ th.maTable__totalRow {
    self-determine portal from fetched data rather than ambient page
    state (e.g. module_menuGameSettings.js keys off a specific game's own
    dbGames_EID). In the common case this is now redundant with plain
-   .maModal__hdr inheriting --layer2-bg from an ancestor .is-event-context,
+   .maModal__hdr inheriting --layer1-bg from an ancestor .is-event-context,
    but it stays correct for the case where a module's own data disagrees
-   with the page's ambient context. Derives from the same layer2 token
-   rather than hardcoding brandTertiary a second time. */
+   with the page's ambient context. Derives from the same layer1 formula
+   rather than hardcoding brandTertiary a second time. Modals sit at L1,
+   not L2 — a full-focus overlay reads closer to a panel header in
+   visual weight than a content card. */
 .maModal__hdr.is-event-context {
-  background: color-mix(in srgb, var(--brandTertiary) 35%, white);
-  color: var(--ink);
+  background: color-mix(in srgb, var(--brandTertiary) 75%, white);
+  color: #ffffff;
 }
 

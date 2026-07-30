@@ -160,12 +160,10 @@
       event:    `<div class="maHelpText">Select an Event to copy its roster.</div>`,
     };
 
-    // Mode title bar — same brandSecondary green as .maPanel__hdr on the
-    // Game Pairings page (game_pairings.css), applied here as its own
-    // element rather than restyling .maPanel__hdr itself, since that
-    // class is shared by every page's real panel header (this page's own
-    // "Add Players" bar included) and isn't scoped per-mode.
-    const titleBar = `<div style="width:100%; margin:-6px -8px 8px; padding:8px 12px; background:var(--brandSecondary); color:var(--brandSecondaryText); font-weight:800; font-size:13px;">${esc(MODE_LABELS[st.activeMode] || "")}</div>`;
+    // Mode title bar — rendered inside the panel's body/controls area, one
+    // level deeper than the panel header itself, so it uses L2 (same tier
+    // as an outer .maCard__hdr) rather than the panel's own L1.
+    const titleBar = `<div style="width:100%; margin:6px -8px 8px; padding:8px 12px; background:var(--layer2-bg); color:var(--layer2-text); font-weight:800; font-size:13px;">${esc(MODE_LABELS[st.activeMode] || "")}</div>`;
 
     controlsEl.innerHTML = titleBar + (HINTS[st.activeMode] || "");
   }
