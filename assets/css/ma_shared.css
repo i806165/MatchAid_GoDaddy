@@ -25,7 +25,6 @@
    19.  Misc (Empty State, Tab Panels)
    20.  Source Module Shared Vocabulary
    22.  MA.ui — Busy / Confirm Footer / Modal Notice / Toast
-   23.  Scorecard Module
    ========================================================================== */
 
 
@@ -1785,6 +1784,37 @@ textarea {
   min-width: 0;
 }
 
+/* ---------- Collapsible modifier — a .maCard that can expand/collapse.
+   First real consumer: Scorecard group cards. Also independently built
+   once before as .gpGroupCard (game_pairings.css, page-scoped) — same
+   structure, same mechanism, different prefix. This is the canonical
+   version both should eventually share; no new class family, only
+   modifiers on the classes that already exist.
+
+   Markup: two .maCard__hdr siblings (one --expanded, one --collapsed),
+   toggled by .is-collapsed on the card itself. Title sits as a direct
+   flex child of .maCard__hdr alongside its buttons — .maCard__hdr is
+   already display:flex + justify-content:space-between, and
+   .maCard__title already has flex:1 1 auto, so the title naturally
+   fills the middle and pushes a trailing button to the far right with
+   no extra wrapper needed. */
+
+.maCard--collapsible.is-collapsed .maCard__hdr--expanded,
+.maCard--collapsible.is-collapsed .maCard__body {
+  display: none;
+}
+
+.maCard--collapsible:not(.is-collapsed) .maCard__hdr--collapsed {
+  display: none;
+}
+
+/* Stable header color, expanded or collapsed alike — decided
+   explicitly, not swapped on toggle. Scoped to the modifier, not the
+   base .maCard__hdr, so it never affects any other card in the app. */
+.maCard--collapsible .maCard__hdr {
+  background: color-mix(in srgb, var(--brandColor3) 6%, white);
+}
+
 
 /* ==========================================================================
    13. PILLS & CHIPS
@@ -3425,6 +3455,159 @@ th.maTable__totalRow {
   background: color-mix(in srgb, var(--ControlAreaBorder) 85%, black);
 }
 
+/* ---------- 21j. Label/value column pair — the scorecard grid's shape
+   (one left-aligned label column, several centered value columns) —
+   confirmed unique to this table, no other table in the app has this
+   shape, so it lives here as its own real component rather than a
+   one-off page class. ------------------------------------------------- */
+
+.maTable__labelCol {
+  text-align: left;
+  white-space: normal;
+  cursor: pointer;
+}
+
+.maTable__labelCol:hover {
+  background: var(--pressedBg);
+}
+
+.maTable__valueCol {
+  text-align: center;
+  cursor: pointer;
+}
+
+.maTable__valueCol:hover {
+  background: var(--pressedBg);
+}
+
+.maTable__valueCol--minor {
+  font-size: 11px;
+  color: var(--ink);
+}
+
+/* ---------- 21k. Detail row — a secondary row nested under a primary
+   row, toggled via the existing .isHidden utility (no new toggle
+   mechanism needed). First use: stroke-marks row under each player. --- */
+
+.maTable__detailRow td {
+  background: var(--surfaceApp);
+  font-size: 10px;
+  color: var(--mutedText);
+}
+
+/* ---------- 21l. Frozen hole-label column — narrow-column specifics
+   layered on top of the generic .maTable__frozenCol sticky mechanic
+   (21i). Applied together: class="maTable__frozenCol maTable__holeCol". */
+
+.maTable__holeCol {
+  min-width: 68px;
+  width: 68px;
+}
+
+/* ---------- 21m. Total column header tint — a header COLUMN
+   identification tint (marking "this column is a pairing total"),
+   distinct in purpose from .maTable__totalRow (which tints a DATA row).
+   Not the same value as __totalRow on purpose — different concept. ---- */
+
+.maTable__totalColHeader {
+  background: color-mix(in srgb, var(--panelControlsBg) 91%, black);
+  white-space: normal;
+  min-width: 44px;
+}
+
+/* ---------- 21n. Transposed-table cell sizing — the pivoted/drawer
+   view uses larger score cells than the main scorecard grid. Scoped to
+   this modifier rather than bare .maCell, since both tables share
+   .maTable as a base and need different cell sizes. --------------------- */
+
+.maTable--transposed .maCell {
+  min-width: 24px;
+  min-height: 24px;
+}
+
+.maTable--transposed .maCell--birdie .maCellVal,
+.maTable--transposed .maCell--eagle .maCellVal,
+.maTable--transposed .maCell--bogey .maCellVal,
+.maTable--transposed .maCell--bogeyplus .maCellVal {
+  min-width: 20px;
+  height: 20px;
+}
+
+/* ---------- 21o. Score cell + shape indicators — an individual
+   scorecard cell carrying a status/shape indicator (birdie/eagle/bogey).
+   Confirmed genuinely novel — nothing else in the app needs "circle/box
+   around a number to indicate performance relative to par." Shape
+   borders stay hardcoded #000 on purpose — universal scorecard
+   convention, shouldn't move with brand color. ------------------------- */
+
+.maCell {
+  position: relative;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.maCellVal {
+  font-weight: 800;
+}
+
+.maCell--declared {
+  background: var(--rowBgSelected);
+}
+
+.maCell--birdie .maCellVal {
+  border-radius: 999px;
+  border: 1.8px solid #000;
+  display: inline-flex;
+  min-width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+}
+
+.maCell--eagle .maCellVal {
+  border-radius: 999px;
+  border: 1.8px double #000;
+  display: inline-flex;
+  min-width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+}
+
+.maCell--bogey .maCellVal {
+  border: 1.8px solid #000;
+  display: inline-flex;
+  min-width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+}
+
+.maCell--bogeyplus .maCellVal {
+  border: 2px solid #000;
+  display: inline-flex;
+  min-width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  box-shadow: inset 0 0 0 1px #000;
+}
+
+.maCellSuperscripts {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 7px;
+  font-weight: 700;
+  color: var(--mutedText);
+}
+
 /* ==========================================================================
    22. MA.ui — BUSY / CONFIRM FOOTER / MODAL NOTICE / TOAST
    Additive support for MA.ui.* (ma_shared.js). Reuses existing tokens only —
@@ -3572,277 +3755,3 @@ th.maTable__totalRow {
   background: var(--brandTertiary);
 }
 
-/* ==========================================================================
-   23. SCORECARD MODULE — module_renderScoreCards.js
-   No page CSS travels with this module (it can be mounted on the single-
-   game Scorecard pages OR the Event Scorecards page, which links only this
-   file) — so everything the module needs, including its own genuinely
-   domain-specific rules, has to live here rather than in scorecardShared.css
-   the way page-owned CSS normally would. scorecardShared.css itself is NOT
-   retired by this — it still supports whatever remains page-specific on the
-   single-game Scorecard pages (e.g. .scChromeHiddenMode, the mobile-
-   landscape chrome-hiding toggle, which is page chrome the module has no
-   business touching).
-
-   .maTable frozen-header/column MECHANICS live in Section 21 above,
-   promoted as generic reusable infrastructure. Everything below is the
-   golf-scorecard-specific layer on top of it: cell shapes, card collapse
-   behavior, hole/segment labeling.
-   ========================================================================== */
-
-/* ---------- Card shell — collapse behavior -------------------------------
-   .maCard (Section 12) supplies the shell (border/radius/shadow/background)
-   via the "maCard scGroupCard" class pair the module emits on every card —
-   these rules ONLY add the expand/collapsed dual-header swap .maCard
-   doesn't have. */
-
-.scGroupCard.is-collapsed .scGroupCard__hdr--expanded,
-.scGroupCard.is-collapsed .scGroupCard__body {
-  display: none;
-}
-
-.scGroupCard:not(.is-collapsed) .scGroupCard__hdr--collapsed {
-  display: none;
-}
-
-/* Header background — SAME color whether expanded or collapsed (decided
-   explicitly: one stable color, no swap on toggle). Light blue tint off
-   --brandColor3 ("button blue"), matching the existing .maTeamBadge--blue
-   light-tint pattern (Section 21) — same color family as the
-   iconBtn/btnSecondary action buttons this header also contains. */
-.scGroupCard__hdr {
-  background: color-mix(in srgb, var(--brandColor3) 6%, white);
-}
-
-.scGroupCard__titleRow {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  flex: 1;
-}
-
-.scGroupCard__title {
-  font-weight: 800;
-  font-size: 14px;
-  line-height: 1.2;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
-/* ---------- Scorecard grid — cells, rows, labels ------------------------- */
-
-.scTable td.scName,
-.scTable th.scMeta {
-  cursor: pointer;
-}
-
-.scTable td.scName:hover,
-.scTable th.scMeta:hover {
-  background: var(--pressedBg);
-}
-
-.scTable td.scName {
-  white-space: normal;
-  text-align: left;
-}
-
-.scMetaCol--minor {
-  font-size: 11px;
-  color: var(--mutedText);
-}
-
-.scPLine1 {
-  font-weight: 800;
-}
-
-.scPHC {
-  font-weight: 600;
-  color: var(--mutedText);
-}
-
-.scPLine2 {
-  font-size: 11px;
-  color: var(--mutedText);
-}
-
-.scDetailRow td {
-  background: var(--surfaceApp);
-  font-size: 10px;
-  color: var(--mutedText);
-}
-
-.scGroup {
-  overflow-x: auto;
-}
-
-/* ---------- Individual score cell + shape indicators ---------------------
-   Shape borders (birdie/eagle/bogey/bogeyplus) stay hardcoded #000 —
-   deliberate exception, universal scorecard convention, shouldn't move
-   with brand color. Everything else here draws from existing tokens. */
-
-.scCell {
-  position: relative;
-  min-height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.scCellVal {
-  font-weight: 800;
-}
-
-.scCell--declared {
-  background: var(--rowBgSelected);
-}
-
-.scCell--birdie .scCellVal {
-  border-radius: 999px;
-  border: 1.8px solid #000;
-  display: inline-flex;
-  min-width: 16px;
-  height: 16px;
-  align-items: center;
-  justify-content: center;
-  padding: 0 5px;
-}
-
-.scCell--eagle .scCellVal {
-  border-radius: 999px;
-  border: 1.8px double #000;
-  display: inline-flex;
-  min-width: 16px;
-  height: 16px;
-  align-items: center;
-  justify-content: center;
-  padding: 0 5px;
-}
-
-.scCell--bogey .scCellVal {
-  border: 1.8px solid #000;
-  display: inline-flex;
-  min-width: 16px;
-  height: 16px;
-  align-items: center;
-  justify-content: center;
-  padding: 0 5px;
-}
-
-.scCell--bogeyplus .scCellVal {
-  border: 2px solid #000;
-  display: inline-flex;
-  min-width: 16px;
-  height: 16px;
-  align-items: center;
-  justify-content: center;
-  padding: 0 5px;
-  box-shadow: inset 0 0 0 1px #000;
-}
-
-.scCellMarks {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  font-size: 7px;
-  font-weight: 700;
-  color: var(--mutedText);
-}
-
-/* ---------- Transposed drawer — pivoted view only -------------------------
-   Hole/meta labels and segment-boundary rows specific to the transposed
-   table. Frozen-column/header MECHANICS come from Section 21's .maTable —
-   these rules only add the golf-specific labeling layered on top of it. */
-
-.scTHoleCol {
-  /* Frozen-column mechanics folded in here directly rather than via the
-     generic .maTable__frozenCol class — module_renderScoreCards.js applies
-     this class to both the header cell and every body-row hole cell, and
-     never separately emits .maTable__frozenCol. Combined with Section 21's
-     generic ".maTable thead th" sticky-top rule, the header row's own
-     .scTHoleCol cell ends up sticky on both axes — no extra "corner" class
-     needed; the two rules' declarations simply merge on that one element. */
-  position: sticky;
-  left: 0;
-  z-index: 1;
-  background: var(--panelControlsBg);
-  border-right: 1.5px solid var(--borderSubtle);
-  min-width: 68px;
-  width: 68px;
-  text-align: left;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--mutedText);
-}
-
-/* The header row's own frozen-column cell needs to sit above every other
-   sticky cell (both the sticky header row behind it and the sticky
-   left-column body cells below it) — true "corner" stacking priority. */
-.maTable thead th.scTHoleCol {
-  z-index: 4;
-}
-
-.scTHdrSub {
-  display: block;
-  font-size: 9px;
-  font-weight: 600;
-  color: var(--mutedText);
-}
-
-.scTTotalCol {
-  background: color-mix(in srgb, var(--panelControlsBg) 91%, black);
-  white-space: normal;
-  min-width: 44px;
-}
-
-.scTHoleNum {
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--ink);
-  line-height: 1.3;
-}
-
-.scTHoleMeta {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--mutedText);
-  line-height: 1.4;
-}
-
-.scTSegTotal td {
-  background: var(--borderSubtle);
-  font-weight: 800;
-  font-size: 12px;
-  border-top: 1px solid var(--borderSubtle);
-  border-bottom: 1px solid var(--borderSubtle);
-  color: var(--ink);
-}
-
-.scTSegTotal td.scTHoleCol {
-  background: color-mix(in srgb, var(--borderSubtle) 85%, black);
-}
-
-.scTTable .scCell {
-  min-width: 24px;
-  min-height: 24px;
-}
-
-.scTTable .scCell--birdie .scCellVal,
-.scTTable .scCell--eagle .scCellVal,
-.scTTable .scCell--bogey .scCellVal,
-.scTTable .scCell--bogeyplus .scCellVal {
-  min-width: 20px;
-  height: 20px;
-}
-
-/* ---------- Mobile --------------------------------------------------------
-   .maChoiceChips (Section 13) is reused as-is for the KPI pill row — this
-   only adjusts its wrapping behavior at narrow widths for that specific
-   use, matching scorecardShared.css's original breakpoint. */
-@media (max-width: 820px) {
-  .maChoiceChips {
-    align-items: flex-start;
-  }
-}

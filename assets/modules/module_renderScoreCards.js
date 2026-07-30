@@ -48,12 +48,15 @@
  *
  * Dependencies:
  *   ma_shared.js loaded first (MA.postJson, MA.ui).
- *   All classes/tokens used here come from ma_shared.css — see the
- *   accompanying CSS pass (.maChoiceChip, .maCard, .maTable, .isHidden,
- *   .maModalOverlay/.maModal) plus this module's own small,
- *   scorecard-specific CSS (.scCell/.scCellVal/shape classes, .scTable
- *   row/column semantics) which has no shared equivalent and isn't
- *   expected to.
+ *   Every class emitted here lives in ma_shared.css as genuine shared
+ *   vocabulary — no scorecard-only "sc"-prefixed classes anymore. Card
+ *   shell/collapse: .maCard + .maCard--collapsible. Table structure:
+ *   .maTable + .maTable__labelCol/__valueCol/__detailRow/__frozenCol/
+ *   __holeCol/__totalColHeader/__subtotalRow/__totalRow. Cell shapes
+ *   (genuinely scorecard-specific, confirmed no equivalent elsewhere):
+ *   .maCell/.maCellVal/.maCellSuperscripts. Name + secondary line:
+ *   .maListRow__col/.maListRow__subline (same components game_players.js
+ *   already uses for its own name+meta rows).
  */
 (function () {
   "use strict";
@@ -194,8 +197,8 @@
   // ── Cell / row rendering ─────────────────────────────────────────────────
 
   function renderSummaryCell(st, cardState, rowData, key, segmentId, options = {}) {
-    const classes = ["scMeta", "scMetaCol"];
-    if (key !== "9c") classes.push("scMetaCol--minor");
+    const classes = ["maTable__valueCol"];
+    if (key !== "9c") classes.push("maTable__valueCol--minor");
 
     let val = "";
     if (options.isHeader) {
@@ -267,7 +270,7 @@
 
   function buildCourseRows(st, courseRows, cardState, row) {
     return (courseRows || []).map((r) => {
-      return `<tr><td class="scName" data-action="toggle-all-segments">${esc(r.label)}${r.tee && !["Par", "HCP"].includes(r.label) ? " — " + esc(r.tee) : ""}</td>
+      return `<tr><td class="maTable__labelCol" data-action="toggle-all-segments">${esc(r.label)}${r.tee && !["Par", "HCP"].includes(r.label) ? " — " + esc(r.tee) : ""}</td>
         ${renderUnifiedRow(st, cardState, r, { isCourse: true, row })}
       </tr>`;
     }).join("");
@@ -316,8 +319,9 @@
 
   function renderPlayerRows(st, players, cardState, row) {
     return (players || []).map((p) => {
-      const main = `<tr><td class="scName" data-action="toggle-all-segments"><div class="scPLine1">${esc(p.playerName)} <span class="scPHC">${esc(p.playerHC ? "(" + p.playerHC + ")" : "")}</span></div><div class="scPLine2">${esc(p.tee || "")}</div></td>${renderUnifiedRow(st, cardState, p, { isPlayer: true, isPlayerRow: true, row })}</tr>`;
-      const detail = `<tr class="scDetailRow ${cardState.teamExpanded ? "" : "isHidden"}"><td class="scName" data-action="toggle-all-segments">Stroke Marks</td>
+      const nameWithHC = [p.playerName, p.playerHC ? `(${p.playerHC})` : ""].filter(Boolean).join(" ");
+      const main = `<tr><td class="maTable__labelCol" data-action="toggle-all-segments"><div class="maListRow__col">${esc(nameWithHC)}</div><div class="maListRow__subline">${esc(p.tee || "")}</div></td>${renderUnifiedRow(st, cardState, p, { isPlayer: true, isPlayerRow: true, row })}</tr>`;
+      const detail = `<tr class="maTable__detailRow ${cardState.teamExpanded ? "" : "isHidden"}"><td class="maTable__labelCol" data-action="toggle-all-segments">Stroke Marks</td>
         ${renderUnifiedRow(st, cardState, p, { isStroke: true, row })}
       </tr>`;
       return main + detail;
@@ -334,20 +338,20 @@
       if (totalMode === "gross") totalMode = "grossDiff";
       if (totalMode === "net") totalMode = "netDiff";
       const val = (cell && typeof cell === "object") ? (cell.display?.[totalMode] ?? "-") : (cell ?? "-");
-      return `<td class="${furledCls}"><div class="scCell scCell--total"><span class="scCellVal">${esc(val)}</span></div></td>`;
+      return `<td class="${furledCls}"><div class="maCell maCell--total"><span class="maCellVal">${esc(val)}</span></div></td>`;
     }
 
     const cell = player?.holes?.["h" + holeNumber] || {};
-    const classes = ["scCell"];
-    if (cell.declared) classes.push("scCell--declared");
+    const classes = ["maCell"];
+    if (cell.declared) classes.push("maCell--declared");
 
     let sm = st.valueMode;
     if (sm === "grossDiff") sm = "gross";
     if (sm === "netDiff") sm = "net";
     const shape = cell.shapes?.[sm] || cell.shape;
-    if (shape && shape !== "par") classes.push("scCell--" + shape);
+    if (shape && shape !== "par") classes.push("maCell--" + shape);
 
-    return `<td class="${furledCls}"><div class="${classes.join(" ")}"><span class="scCellVal">${esc(valueForCell(st, cell))}</span>${cell.strokeMarks ? `<span class="scCellMarks">${esc(String(cell.strokeMarks))}</span>` : ""}</div></td>`;
+    return `<td class="${furledCls}"><div class="${classes.join(" ")}"><span class="maCellVal">${esc(valueForCell(st, cell))}</span>${cell.strokeMarks ? `<span class="maCellSuperscripts">${esc(String(cell.strokeMarks))}</span>` : ""}</div></td>`;
   }
 
   function renderTotalRows(st, totals, cardState, parentRow) {
@@ -361,7 +365,7 @@
     return (totals || []).map((row) => {
       const label = `${row.label} ${kpiLabel}`.trim();
       return `<tr class="maTable__totalRow">
-        <td class="scName" data-action="toggle-all-segments">${esc(label)}</td>
+        <td class="maTable__labelCol" data-action="toggle-all-segments">${esc(label)}</td>
         ${renderUnifiedRow(st, cardState, row.cells, { isTotal: true, row: parentRow })}
       </tr>`;
     }).join("");
@@ -375,7 +379,7 @@
   }
 
   function renderHeaderRow(st, cardState, row) {
-    return `<thead><tr><th class="scName" data-action="toggle-all-segments">HOLE</th>${renderUnifiedRow(st, cardState, {}, { isHeader: true, row })}</tr></thead>`;
+    return `<thead><tr><th class="maTable__labelCol" data-action="toggle-all-segments">HOLE</th>${renderUnifiedRow(st, cardState, {}, { isHeader: true, row })}</tr></thead>`;
   }
 
   function getCardSummaryTitle(row) {
@@ -434,27 +438,27 @@
     const iconPlus = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
     const iconZoom = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`;
 
-    // Card shell: .maCard tokens (border/radius/bg) apply via CSS; scGroupCard
-    // supplies only the dual expand/collapsed-header behavior maCard doesn't have.
-    return `<section class="maCard scGroupCard ${cardState.expanded ? "" : "is-collapsed"}" data-groupid="${esc(gid)}">
-      <div class="maCard__hdr scGroupCard__hdr scGroupCard__hdr--expanded">
-        <div class="scGroupCard__titleRow">
-          <button class="iconBtn btnSecondary" type="button" data-card-toggle="${esc(gid)}" title="Collapse Card">${iconMinus}</button>
-          <div class="scGroupCard__title">${esc(headerText)}</div>
-        </div>
+    // Card shell: plain .maCard tokens (border/radius/bg) via CSS.
+    // .maCard--collapsible adds only the dual expand/collapsed-header
+    // behavior — no scorecard-specific card class at all anymore. Title
+    // sits as a direct flex child alongside its buttons (no titleRow
+    // wrapper) — .maCard__hdr's own space-between + .maCard__title's own
+    // flex:1 already produce the right layout together.
+    return `<section class="maCard maCard--collapsible ${cardState.expanded ? "" : "is-collapsed"}" data-groupid="${esc(gid)}">
+      <div class="maCard__hdr maCard__hdr--expanded">
+        <button class="iconBtn btnSecondary" type="button" data-card-toggle="${esc(gid)}" title="Collapse Card">${iconMinus}</button>
+        <div class="maCard__title">${esc(headerText)}</div>
         <button class="iconBtn btnSecondary" type="button" data-drawer-open="${esc(gid)}" title="View transposed scorecard" aria-label="Open full scorecard drawer">${iconZoom}</button>
       </div>
 
-      <div class="maCard__hdr scGroupCard__hdr scGroupCard__hdr--collapsed">
-        <div class="scGroupCard__titleRow">
-          <button class="iconBtn btnSecondary" type="button" data-card-toggle="${esc(gid)}" title="Expand Card">${iconPlus}</button>
-          <div class="scGroupCard__title">${esc(summaryTitle)}</div>
-        </div>
+      <div class="maCard__hdr maCard__hdr--collapsed">
+        <button class="iconBtn btnSecondary" type="button" data-card-toggle="${esc(gid)}" title="Expand Card">${iconPlus}</button>
+        <div class="maCard__title">${esc(summaryTitle)}</div>
         <button class="iconBtn btnSecondary" type="button" data-drawer-open="${esc(gid)}" title="View transposed scorecard" aria-label="Open full scorecard drawer">${iconZoom}</button>
       </div>
 
-      <div class="maCard__body scGroupCard__body">
-        <div class="scGroup scDenseA"><table class="maTable scTable" role="table" aria-label="scorecard">${renderHeaderRow(st, cardState, row)}<tbody>${buildCourseRows(st, row.courseInfo, cardState, row)}${renderPlayerAndTotalRowsByPairing(st, row, cardState)}</tbody></table></div>
+      <div class="maCard__body">
+        <table class="maTable" role="table" aria-label="scorecard">${renderHeaderRow(st, cardState, row)}<tbody>${buildCourseRows(st, row.courseInfo, cardState, row)}${renderPlayerAndTotalRowsByPairing(st, row, cardState)}</tbody></table>
       </div>
     </section>`;
   }
@@ -499,16 +503,16 @@
 
   function transposedPlayerCell(st, player, h) {
     const cell = player?.holes?.["h" + h] || {};
-    const classes = ["scCell"];
-    if (cell.declared) classes.push("scCell--declared");
+    const classes = ["maCell"];
+    if (cell.declared) classes.push("maCell--declared");
     let sm = st.valueMode;
     if (sm === "grossDiff") sm = "gross";
     if (sm === "netDiff") sm = "net";
     const shape = cell.shapes?.[sm] || cell.shape;
-    if (shape && shape !== "par") classes.push("scCell--" + shape);
+    if (shape && shape !== "par") classes.push("maCell--" + shape);
     const val = valueForCell(st, cell);
-    const marks = cell.strokeMarks ? `<span class="scCellMarks">${esc(String(cell.strokeMarks))}</span>` : "";
-    return `<td><div class="${classes.join(" ")}"><span class="scCellVal">${esc(val)}</span>${marks}</div></td>`;
+    const marks = cell.strokeMarks ? `<span class="maCellSuperscripts">${esc(String(cell.strokeMarks))}</span>` : "";
+    return `<td><div class="${classes.join(" ")}"><span class="maCellVal">${esc(val)}</span>${marks}</div></td>`;
   }
 
   function transposedTotalCell(st, totalRow, h) {
@@ -550,7 +554,9 @@
     let headerCols = "";
     groups.forEach((group) => {
       group.players.forEach((p) => {
-        headerCols += `<th>${esc(p.playerName)}<span class="scTHdrSub">${esc(p.playerHC ? "(" + p.playerHC + ")" : "")} ${esc(p.tee || "")}</span></th>`;
+        // Tee/HI line under the player name removed entirely (per
+        // decision — see chat) — just the name now, no subline.
+        headerCols += `<th>${esc(p.playerName)}</th>`;
       });
       if (st.mode !== "player") {
         const pairingTotals = totalsForPairing(allColumnTotals, group.pairingId);
@@ -559,19 +565,21 @@
           const totalIdx = label.indexOf("TOTAL");
           const totalPre = totalIdx > 0 ? label.slice(0, totalIdx).trim() : "";
           const totalPost = label.slice(totalIdx + 5).trim();
-          headerCols += `<th class="scTTotalCol">${esc(totalPost)}<span class="scTHdrSub">${esc(totalPre)}</span></th>`;
+          headerCols += `<th class="maTable__totalColHeader">${esc(totalPost)}<span class="maListRow__subline">${esc(totalPre)}</span></th>`;
         });
       }
     });
 
-    const thead = `<thead><tr><th class="scTHoleCol">Hole</th>${headerCols}</tr></thead>`;
+    const thead = `<thead><tr><th class="maTable__frozenCol maTable__holeCol">Hole</th>${headerCols}</tr></thead>`;
 
     let tbodyRows = "";
     seg.holes.forEach((h, idx) => {
       const cm = courseMap[h] || {};
+      // Stroke allocation (per-hole handicap number) dropped from this
+      // line per decision — Par now renders alone, same treatment as
+      // the Hole number above it (both .maListRow__col, no separate
+      // smaller "meta" line anymore).
       const parVal = cm.par !== undefined ? `Par ${cm.par}` : "";
-      const hcpVal = cm.hcp !== undefined ? `(${cm.hcp})` : "";
-      const metaLine = [parVal, hcpVal].filter(Boolean).join(" · ");
 
       let holeCols = "";
       groups.forEach((group) => {
@@ -583,7 +591,7 @@
       });
 
       tbodyRows += `<tr>
-        <td class="scTHoleCol"><div class="scTHoleNum">${esc(String(h))}</div><div class="scTHoleMeta">${esc(metaLine)}</div></td>
+        <td class="maTable__frozenCol maTable__holeCol"><div class="maListRow__col">${esc(String(h))}</div><div class="maListRow__col">${esc(parVal)}</div></td>
         ${holeCols}
       </tr>`;
 
@@ -613,8 +621,8 @@
           }
         });
 
-        tbodyRows += `<tr class="scTSegTotal">
-          <td class="scTHoleCol"><div class="scTHoleNum">${esc(label)}</div><div class="scTHoleMeta">${esc(segPar)}</div></td>
+        tbodyRows += `<tr class="maTable__subtotalRow">
+          <td class="maTable__frozenCol maTable__holeCol"><div class="maListRow__col">${esc(label)}</div><div class="maListRow__col">${esc(segPar)}</div></td>
           ${segCols}
         </tr>`;
       }
@@ -639,8 +647,8 @@
         }
       });
 
-      tbodyRows += `<tr class="scTSegTotal">
-        <td class="scTHoleCol"><div class="scTHoleNum">Tot</div><div class="scTHoleMeta">${esc(totPar)}</div></td>
+      tbodyRows += `<tr class="maTable__subtotalRow">
+        <td class="maTable__frozenCol maTable__holeCol"><div class="maListRow__col">Tot</div><div class="maListRow__col">${esc(totPar)}</div></td>
         ${totCols}
       </tr>`;
     }
@@ -685,7 +693,7 @@
           <div class="maChoiceChips">${pillsHtml}</div>
         </div>
         <div class="maModal__body maModal__body--flush">
-          <table class="maTable scTTable" role="table" aria-label="Transposed scorecard">
+          <table class="maTable maTable--transposed" role="table" aria-label="Transposed scorecard">
             ${thead}
             <tbody>${tbodyRows}</tbody>
           </table>
@@ -752,7 +760,7 @@
       btn.addEventListener("click", () => openDrawer(st, btn.dataset.drawerOpen))
     );
 
-    st.hostEl.querySelectorAll(".scGroupCard").forEach((card) => {
+    st.hostEl.querySelectorAll(".maCard--collapsible").forEach((card) => {
       const gid = card.dataset.groupid;
       const s = ensureCardState(st, gid);
 
