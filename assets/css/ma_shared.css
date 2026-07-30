@@ -3461,13 +3461,15 @@ th.maTable__totalRow {
    shape, so it lives here as its own real component rather than a
    one-off page class. ------------------------------------------------- */
 
-.maTable__labelCol {
+.maTable td.maTable__labelCol,
+.maTable th.maTable__labelCol {
   text-align: left;
   white-space: normal;
   cursor: pointer;
 }
 
-.maTable__labelCol:hover {
+.maTable td.maTable__labelCol:hover,
+.maTable th.maTable__labelCol:hover {
   background: var(--pressedBg);
 }
 

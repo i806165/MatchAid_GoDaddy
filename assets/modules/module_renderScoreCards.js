@@ -563,9 +563,13 @@
         pairingTotals.forEach((t) => {
           const label = `${t.label} ${kpiLabel}`.trim();
           const totalIdx = label.indexOf("TOTAL");
-          const totalPre = totalIdx > 0 ? label.slice(0, totalIdx).trim() : "";
+          let totalPre = totalIdx > 0 ? label.slice(0, totalIdx).trim() : "";
+          // Pair identifier dropped entirely, and no longer split into a
+          // separate (smaller/muted) subline — per decision, this should
+          // read as one plain label, same style as the KPI name.
+          totalPre = totalPre.replace(/\s*[·•]\s*PAIR\s+\S+\s*$/i, "").trim();
           const totalPost = label.slice(totalIdx + 5).trim();
-          headerCols += `<th class="maTable__totalColHeader">${esc(totalPost)}<span class="maListRow__subline">${esc(totalPre)}</span></th>`;
+          headerCols += `<th class="maTable__totalColHeader"><div class="maListRow__col">${esc(totalPost)}</div><div class="maListRow__col">${esc(totalPre)}</div></th>`;
         });
       }
     });
