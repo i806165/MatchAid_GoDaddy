@@ -226,9 +226,15 @@
   font-family: var(--fontFamilyBase);
 }
 
+/* Fixed blue, not portal-tinted — matches the selection-checkbox
+   convention used by .gpRowCheck.is-selected / .gpMasterCheck.has-selection
+   in game_pairings.css / game_slotting.css. Was previously hardcoded to
+   brandSecondary (green) before this refactor touched it at all, which
+   was already inconsistent with that pattern — not something the
+   portal-color work introduced, just something it's now correcting. */
 .phSidebar__check.is-active {
-  background: var(--layer1-bg);
-  border-color: var(--layer1-bg);
+  background: var(--brandAccent);
+  border-color: var(--brandAccent);
 }
 
 .phSidebar__rowName {

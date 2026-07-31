@@ -43,9 +43,9 @@
   --brandSecondary: #3F7652;
   --brandTertiary: #073B4C;       /* Event-context navy — card/panel/chrome headers */
   --brandTertiaryText: #ffffff;   /* White text on navy — same as brandSecondaryText */
-  --brandQuaternary: #5C2A3D;     /* Player-context burgundy — chosen at 19.5deg hue,
-                                      well clear of Games (155deg) and Events (195deg) */
+  --brandQuaternary: #262339;     /* Player-context burgundy — chosen at 19.5deg hue,*/
   --brandQuaternaryText: #ffffff;
+  
   --brandColor3: #0066CC;
   --brandAccent: #0b5fff; /* 24a0ed or #0b5fff or 0066CC */
   --brandPrimaryText: #ffffff;
