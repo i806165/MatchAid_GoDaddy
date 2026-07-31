@@ -348,7 +348,7 @@ function getGameAdminMeta(g){
       }
 
       card.innerHTML = `
-        <header class="maCard__hdr">
+        <header class="maCard__hdr maCard__hdr--l1">
           <div class="maCard__title">
             <span class="maCard__titleText">${esc(title)}</span>
             <span class="maCard__titleGgid">#${esc(ggid)}</span>

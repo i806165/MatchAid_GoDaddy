@@ -120,7 +120,7 @@
 }
 
 .phSidebar__radioDot.is-active {
-  border-color: var(--brandSecondary);
+  border-color: var(--layer1-bg);
 }
 
 .phSidebar__radioDot.is-active::after {
@@ -129,7 +129,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--brandSecondary);
+  background: var(--layer1-bg);
 }
 
 .phSidebar__radioLbl {
@@ -227,8 +227,8 @@
 }
 
 .phSidebar__check.is-active {
-  background: var(--brandSecondary);
-  border-color: var(--brandSecondary);
+  background: var(--layer1-bg);
+  border-color: var(--layer1-bg);
 }
 
 .phSidebar__rowName {
@@ -253,7 +253,7 @@
 }
 
 .phSidebar__rowFav {
-  color: var(--brandSecondary);
+  color: var(--layer1-bg);
   font-size: 10px;
   flex-shrink: 0;
 }
@@ -276,15 +276,13 @@
 
 
 /* ==========================================================================
-   EXISTING CARD STYLES — UNCHANGED from original player_home.css
+   EXISTING CARD STYLES
+   Header background/title color now come from the shared .maCard__hdr--l1
+   modifier class (ma_shared.css), applied directly in player_home.js's
+   card markup — no override needed here. .maCard__titleGgid and
+   .maGameCard__hdrAdmin's white-based muted text was already correct for
+   an L1 (dark) header and needs no change.
    ========================================================================== */
-
-.maCard__hdr {
-  color: var(--brandSecondaryText);
-  background: var(--brandSecondary);
-  border-bottom-color: color-mix(in srgb, var(--brandPrimary) 70%, black);
-}
-.maCard__title { color: var(--brandPrimaryText); }
 
 .maCard__titleGgid {
   margin-left: 6px;

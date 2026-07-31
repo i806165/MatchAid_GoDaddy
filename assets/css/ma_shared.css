@@ -43,6 +43,9 @@
   --brandSecondary: #3F7652;
   --brandTertiary: #073B4C;       /* Event-context navy — card/panel/chrome headers */
   --brandTertiaryText: #ffffff;   /* White text on navy — same as brandSecondaryText */
+  --brandQuaternary: #5C2A3D;     /* Player-context burgundy — chosen at 19.5deg hue,
+                                      well clear of Games (155deg) and Events (195deg) */
+  --brandQuaternaryText: #ffffff;
   --brandColor3: #0066CC;
   --brandAccent: #0b5fff; /* 24a0ed or #0b5fff or 0066CC */
   --brandPrimaryText: #ffffff;
@@ -402,15 +405,44 @@ textarea {
   background: var(--brandTertiary);
 }
 
-/* Panel and card headers on any event-context page — now reference the
-   layer tokens above rather than hardcoding --brandTertiary a second
-   time, so this stays in sync with the ramp automatically. */
-.is-event-context ~ main .maPanel__hdr,
-.is-event-context ~ main .maCard__hdr {
-  background: var(--layer1-bg);
-  color: var(--layer1-text);
-  border-bottom-color: color-mix(in srgb, var(--brandTertiary) 70%, black);
+/* Player context — burgundy chrome + panel/card headers. Applied on
+   <html> by chromeHeader.php, driven by $_SESSION['SessionPortal'] ===
+   'PLAYER PORTAL' (set unconditionally by playerhome.php), mirroring the
+   is-event-context mechanism above exactly.
+
+   Uses html.is-player-context / header.maChrome__hdr.is-player-context
+   (element + class, not just class) rather than matching is-event-context's
+   bare-class specificity — deliberately, so Player always wins if a page
+   ever carries both classes at once (a player viewing a game that belongs
+   to an event). This mirrors the priority already established in
+   game_players.js / game_summary.js's setBottomNav logic, where isPlayer
+   is checked before isEvent. Determinism here doesn't depend on which
+   block happens to be declared later in this file. */
+html.is-player-context {
+  --layer0-bg: var(--brandQuaternary);
+  --layer1-bg: color-mix(in srgb, var(--brandQuaternary) 75%, white);
+  --layer2-bg: color-mix(in srgb, var(--brandQuaternary) 35%, white);
+  --layer3-bg: color-mix(in srgb, var(--brandQuaternary) 15%, white);
+  --layer0-text: var(--brandQuaternaryText);
+  --layer1-text: var(--brandQuaternaryText);
+  --layer2-text: var(--ink);
+  --layer3-text: var(--ink);
 }
+
+header.maChrome__hdr.is-player-context {
+  background: var(--brandQuaternary);
+}
+
+/* NOTE: the old ".is-event-context ~ main .maPanel__hdr, .maCard__hdr"
+   sibling-combinator rule that lived here has been removed. It predated
+   the base .maPanel__hdr / .maCard__hdr rules becoming token-aware
+   (they now reference --layer1-bg / --layer2-bg directly and inherit
+   correctly from either .is-event-context or .is-player-context on
+   <html> with no extra rule needed) — and it had crept out of sync with
+   that fix: at (0,2,1) specificity it was beating the base .maCard__hdr
+   rule's (0,1,0) and forcing card headers to the L1 value even where L2
+   was correct, on any real event-context page. Found and removed while
+   adding Player context, not something the Player work itself caused. */
 
 .maChrome__hdrRow {
   display: flex;
