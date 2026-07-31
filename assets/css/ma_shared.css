@@ -1726,6 +1726,21 @@ textarea {
   border-bottom: 1px solid var(--cardHdrBorder);
 }
 
+/* Alternate card header tier — L1 instead of the default L2. For one-off
+   cases where a card needs panel-level visual weight rather than content-
+   card weight (first use: Admin Home's Games/Events list cards; expected
+   for Player and Score portal list cards too). Apply this class directly
+   on .maCard__hdr in the module that builds the markup — don't reach for
+   it via page-CSS overrides targeting another file's output, which is
+   what caused the original inconsistency this class replaces. */
+.maCard__hdr--l1 {
+  background: var(--layer1-bg);
+  color: var(--layer1-text);
+}
+.maCard__hdr--l1 .maCard__title {
+  color: var(--layer1-text);
+}
+
 .maCard__title {
   min-width: 0;
   flex: 1 1 auto;

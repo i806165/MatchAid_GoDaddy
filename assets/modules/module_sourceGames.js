@@ -90,7 +90,7 @@
 
     return `
       <div class="maCard maGameCard" data-ggid="${esc(ggid)}">
-        <div class="maCard__hdr">
+        <div class="maCard__hdr maCard__hdr--l1">
           <div class="maCard__title">
             <span class="maCard__titleText">${esc(title)}</span>
             <span class="maCard__titleGgid">${esc(ggid)}</span>

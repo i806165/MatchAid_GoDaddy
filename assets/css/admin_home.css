@@ -5,26 +5,28 @@
 */
 
 /* ==========================================================================
-   1) Card header — color now comes from the shared .maCard__hdr layer2
-   token in ma_shared.css. The border-bottom stays a page-specific accent.
+   1) Card header — these cards use the shared .maCard__hdr--l1 modifier
+   (ma_shared.css) instead of the L2 default, since this page's own
+   .maPanel__hdr renders as a white frame with tinted text rather than a
+   filled block (see Section 6 below) — these cards are the only solid
+   color reference on the page, so they carry L1 weight instead of L2.
+   Background/title color come from that shared class; only the
+   border-bottom accent and the muted sub-labels stay page-specific here.
    ========================================================================== */
 .maCard__hdr{
-  border-bottom-color: color-mix(in srgb, var(--layer2-bg) 70%, black);
+  border-bottom-color: color-mix(in srgb, var(--layer1-bg) 70%, black);
 }
 
-.maCard__title{
-  color: var(--layer2-text);
-}
-
-/* GGID after title (muted, no label) */
+/* GGID after title (muted, no label) — white-based muted text, since L1
+   card headers are a dark fill again (opposite of the old L2 default). */
 .maCard__titleGgid{
   margin-left: 6px;
-  color: var(--mutedText);
+  color: var(--brandPrimaryTextMuted);
   font-weight: 800;
 }
 
 .maGameCard__hdrAdmin{
-  color: var(--mutedText); /* dark muted text — L2 card headers are a light tint now, not dark */
+  color: var(--brandPrimaryTextMuted); /* white-based muted text for the dark L1 header */
   font-weight: 800;
   white-space: nowrap;
   overflow: hidden;
@@ -356,7 +358,7 @@
    ========================================================================== */
 
 .maEventCard__hdrAdmin{
-  color: var(--mutedText);
+  color: var(--brandPrimaryTextMuted); /* white-based muted text for the dark L1 header */
   font-weight: 800;
   white-space: nowrap;
   overflow: hidden;
