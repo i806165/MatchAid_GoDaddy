@@ -119,8 +119,11 @@
   justify-content: center;
 }
 
+/* Fixed blue, same reasoning as .phSidebar__check.is-active above —
+   matches the app's selection-indicator convention rather than
+   portal-tinting. */
 .phSidebar__radioDot.is-active {
-  border-color: var(--layer1-bg);
+  border-color: var(--brandAccent);
 }
 
 .phSidebar__radioDot.is-active::after {
@@ -129,7 +132,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--layer1-bg);
+  background: var(--brandAccent);
 }
 
 .phSidebar__radioLbl {
@@ -258,8 +261,10 @@
   flex-shrink: 0;
 }
 
+/* Fixed blue — same reasoning as .phSidebar__check.is-active and
+   .phSidebar__radioDot.is-active above. */
 .phSidebar__rowFav {
-  color: var(--layer1-bg);
+  color: var(--brandAccent);
   font-size: 10px;
   flex-shrink: 0;
 }
