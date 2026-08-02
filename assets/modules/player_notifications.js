@@ -867,7 +867,7 @@
     const bodyOverride    = typeof _state.opts.body === "string" ? _state.opts.body : "";
 
     if (game) {
-      const venue = game.facilityName || game.courseName || "";
+      const venue = game.courseName || game.facilityName || "";
       const when  = formatDateShort(game.playDate, game.playTime);
       subject     = subjectOverride || [game.title, venue, when].filter(Boolean).join(" \u2014 ");
 
