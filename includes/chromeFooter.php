@@ -111,6 +111,13 @@
       </span>
       <span class="maNavLabel">Event Rounds</span>
     </button>
+    
+    <button type="button" class="maNavBtn" data-nav="eventsettings" aria-label="Event Settings">
+      <span class="maNavIcon" aria-hidden="true">
+        <img src="/assets/images/nav-settings.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
+      </span>
+      <span class="maNavLabel">Event Settings</span>
+    </button>
 
     <button class="maNavBtn" data-nav="eventscorecard" aria-label="Event Scorecards">
       <span class="maNavIcon" aria-hidden="true">
