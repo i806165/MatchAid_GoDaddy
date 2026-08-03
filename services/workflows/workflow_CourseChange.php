@@ -9,8 +9,14 @@ declare(strict_types=1);
 //
 // Resolution hierarchy (Tier 1 does not apply on course change):
 //   Tier 2 — Last tee the player played on the NEW course (db_Players history)
+//            Skipped for Non-Rated (NH) players — no persistent GHIN identity.
 //   Tier 3 — Preferred yardage match from dbUsers profile
-//   Tier 4 — Flag as "ReSelect Tee"; admin resolves manually on Game Players page
+//            Skipped for Non-Rated (NH) players — no dbUsers profile row.
+//   Tier 4 — Closest total yardage to the tee played on the OLD course
+//            (from dbPlayers_TeeSetDetails). Applies to NH players too —
+//            this tier has no GHIN-identity dependency.
+//   Tier 5 — No resolution found. Flag as "ReSelect Tee"; admin resolves
+//            manually on the Game Players page.
 
 require_once __DIR__ . "/workflow_TeeResolution.php";
 require_once __DIR__ . "/../database/service_dbPlayers.php";
@@ -28,9 +34,8 @@ require_once MA_SERVICES . "/GHIN/GHIN_API_Courses.php";
  * @return array {
  *   resolved: int,     // players successfully assigned a tee on the new course
  *   reselect: int,     // players flagged ReSelect Tee — need manual assignment
- *   skipped:  int,     // non-rated or players with no tee data to migrate
  *   total:    int,     // total players processed
- *   sources:  array    // breakdown by resolution source (last_played, preferred_yardage, reselect)
+ *   sources:  array    // breakdown by resolution source (last_played, preferred_yardage, closest_yardage, reselect)
  * }
  */
 function be_resolveCourseChange(string $ggid, array $game, string $token): array
@@ -44,6 +49,7 @@ function be_resolveCourseChange(string $ggid, array $game, string $token): array
         "sources"   => [
             "last_played"       => 0,
             "preferred_yardage" => 0,
+            "closest_yardage"   => 0,
             "reselect"          => 0,
         ],
     ];
@@ -59,18 +65,22 @@ function be_resolveCourseChange(string $ggid, array $game, string $token): array
         $ghin   = trim((string)($player["dbPlayers_PlayerGHIN"] ?? ""));
         $gender = trim((string)($player["dbPlayers_Gender"]     ?? ""));
 
-        // Non-rated players have no GHIN API identity —
-        // flag for manual tee re-selection.
-        if ($ghin === "" || str_starts_with($ghin, "NH")) {
+        // No GHIN identity at all — nothing to look up, not even locally.
+        // Flag for manual tee re-selection.
+        if ($ghin === "") {
             cc_stamp_reselect($ggid, $ghin);
             $summary["reselect"]++;
             $summary["sources"]["reselect"]++;
             continue;
         }
 
+        $isNonRated = str_starts_with($ghin, "NH");
+
         try {
             // Determine effective HI per the game's HC effectivity setting.
             // This mirrors the logic in upsertGamePlayers.php.
+            // tr_effective_hi() already has a non-rated branch (returns manualHi),
+            // so this is safe to call for NH players too.
             $manualHi    = trim((string)($player["dbPlayers_HI"] ?? ""));
             $effectiveHI = tr_effective_hi($ghin, $manualHi, $game, $token);
 
@@ -92,21 +102,24 @@ function be_resolveCourseChange(string $ggid, array $game, string $token): array
             $resolvedSource = null;
 
             // Tier 2 — Last tee played on the NEW course.
-            // Queries db_Players for the most recent TeeSetID this player
-            // used when their CourseID matched the new course.
-            $lastTeeId = ServiceDbPlayers::getLastPlayedTeeForCourse($ghin, $newCourseId, $ggid);
-            if ($lastTeeId !== null) {
-                foreach ($teeSets as $t) {
-                    if (trim((string)($t["teeSetID"] ?? $t["value"] ?? "")) === $lastTeeId) {
-                        $resolvedTee    = $t;
-                        $resolvedSource = "last_played";
-                        break;
+            // Skipped for NH players — no persistent GHIN identity to query
+            // play history against.
+            if (!$isNonRated) {
+                $lastTeeId = ServiceDbPlayers::getLastPlayedTeeForCourse($ghin, $newCourseId, $ggid);
+                if ($lastTeeId !== null) {
+                    foreach ($teeSets as $t) {
+                        if (trim((string)($t["teeSetID"] ?? $t["value"] ?? "")) === $lastTeeId) {
+                            $resolvedTee    = $t;
+                            $resolvedSource = "last_played";
+                            break;
+                        }
                     }
                 }
             }
 
             // Tier 3 — Preferred yardage match from player profile.
-            if ($resolvedTee === null) {
+            // Skipped for NH players — no dbUsers profile row keyed by GHIN.
+            if ($resolvedTee === null && !$isNonRated) {
                 $userRow        = ServiceUserContext::retrieveGHINUser($ghin);
                 $preferredYards = tr_decode_preference_yards(
                     $userRow["dbUser_PreferenceYards"] ?? null
@@ -120,7 +133,24 @@ function be_resolveCourseChange(string $ggid, array $game, string $token): array
                 }
             }
 
-            // Tier 4 — No resolution found. Flag for manual re-selection.
+            // Tier 4 — Closest total yardage to the tee played on the OLD course.
+            // Applies to rated AND non-rated (NH) players — this tier has no
+            // GHIN-identity dependency, only the player's own locally-stored
+            // dbPlayers_TeeSetDetails from before the course change.
+            // Gender filtering is already guaranteed upstream by
+            // be_buildTeeSetTags() — $teeSets does not need re-filtering here.
+            if ($resolvedTee === null) {
+                $oldYardage = cc_old_course_yardage($player["dbPlayers_TeeSetDetails"] ?? null);
+                if ($oldYardage !== null) {
+                    $matched = cc_find_closest_yardage_tee($teeSets, $oldYardage);
+                    if ($matched !== null) {
+                        $resolvedTee    = $matched;
+                        $resolvedSource = "closest_yardage";
+                    }
+                }
+            }
+
+            // Tier 5 — No resolution found. Flag for manual re-selection.
             if ($resolvedTee === null) {
                 cc_stamp_reselect($ggid, $ghin);
                 $summary["reselect"]++;
@@ -192,4 +222,68 @@ function cc_stamp_reselect(string $ggid, string $ghin): void
         "dbPlayers_PH"            => "0",
         "dbPlayers_SO"            => "0",
     ]);
+}
+
+/**
+ * Extract TotalYardage from a player's stored dbPlayers_TeeSetDetails
+ * (the full GHIN tee payload for the tee they played on the OLD course,
+ * as stored before the course change was applied).
+ *
+ * Returns null if the column is empty, unparseable, or has no yardage —
+ * callers should fall through to the next tier in that case.
+ */
+function cc_old_course_yardage(?string $teeSetDetailsJson): ?int
+{
+    if ($teeSetDetailsJson === null || trim($teeSetDetailsJson) === "") {
+        return null;
+    }
+
+    $decoded = json_decode($teeSetDetailsJson, true);
+    if (!is_array($decoded)) return null;
+
+    $yardage = $decoded["TotalYardage"] ?? null;
+    return is_numeric($yardage) ? (int)$yardage : null;
+}
+
+/**
+ * Extract a numeric yardage value from a compact tee-picker object
+ * (as returned by be_buildTeeSetTags()). Mirrors teeNumericYards()
+ * in teesetSelection.js and the yardage-parsing pattern used by
+ * tr_find_preferred_tee() — keep in sync.
+ */
+function cc_tee_yards(array $t): ?int
+{
+    $raw = $t["teeSetYards"] ?? $t["yards"] ?? null;
+    if ($raw === null) return null;
+
+    $digits = preg_replace('/[^\d]/', '', (string)$raw);
+    return ($digits !== "") ? (int)$digits : null;
+}
+
+/**
+ * Find the candidate tee whose total yardage is numerically closest to
+ * $oldYardage. Pure absolute-difference match, no directional preference.
+ * Ties resolve to whichever candidate is encountered first in $teeSets
+ * (i.e. GHIN's own return order) — no secondary tiebreak is applied.
+ *
+ * $teeSets is assumed to already be gender-filtered by the caller
+ * (guaranteed upstream by be_buildTeeSetTags()).
+ */
+function cc_find_closest_yardage_tee(array $teeSets, int $oldYardage): ?array
+{
+    $best     = null;
+    $bestDiff = null;
+
+    foreach ($teeSets as $t) {
+        $yards = cc_tee_yards($t);
+        if ($yards === null) continue;
+
+        $diff = abs($yards - $oldYardage);
+        if ($bestDiff === null || $diff < $bestDiff) {
+            $bestDiff = $diff;
+            $best     = $t;
+        }
+    }
+
+    return $best;
 }
