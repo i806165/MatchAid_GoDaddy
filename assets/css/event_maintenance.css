@@ -3,13 +3,18 @@
    Shared tokens/layout live in /assets/css/ma_shared.css.
 */
 
+/* This page has no .maPanel__hdr — no filled panel header exists, so the
+   card is the only solid color reference on the page. Same reasoning as
+   Admin Home / Player Home's cards: L1, not the L2 default. This page is
+   Events-only (unreachable without SessionStoredEID set), so it always
+   renders navy once is-event-context is ambient — no conditional needed. */
 .maCard__hdr {
-  color: var(--brandSecondaryText);
-  background: var(--brandSecondary);
+  background: var(--layer1-bg);
+  color: var(--layer1-text);
 }
 
 .maCard__title {
-  color: var(--brandPrimaryText);
+  color: var(--layer1-text);
 }
 
 #emEidLabel {

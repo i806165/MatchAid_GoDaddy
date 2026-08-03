@@ -17,11 +17,12 @@
   min-height: 0;
 }
 
-/* ── Panel headers — matches game_players brandSecondary pattern ─────────── */
+/* ── Panel headers — color comes from the shared .maPanel__hdr layer1
+   token in ma_shared.css. This page is Events-only (unreachable without
+   SessionStoredEID set), so it always renders navy once is-event-context
+   is ambient on <html> — no page-specific override needed. */
 
 .maPage--event-roster .maPanel__hdr {
-  background: var(--brandSecondary);
-  color: var(--brandSecondaryText);
   border-bottom: 1px solid rgba(0,0,0,0.1);
 }
 
@@ -38,7 +39,7 @@
   font-size: 14px;
   font-weight: 950;
   letter-spacing: .2px;
-  color: var(--brandSecondaryText);
+  color: var(--layer1-text);
   flex: 1;
   text-align: center;
 }
