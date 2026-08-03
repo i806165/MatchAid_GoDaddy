@@ -127,14 +127,21 @@
     const grossByHole = {};
     holeDetails.forEach((hd) => { grossByHole[hd?.hole_number] = hd?.raw_score; });
 
-    // 4. Minimum Played Holes Guard (USGA: Need 9 for a valid side)
+    // 4. Minimum Played Holes Guard
+    // 9-hole rounds (F9/B9): all 9 holes required.
+    // 18-hole rounds: minimum 10 of 18 required.
     const playedHoles = holeRange.filter(h => {
       const gross = grossByHole[h];
       return gross != null && !isNaN(gross) && Number(gross) > 0;
     });
 
-    if (playedHoles.length < 9) {
-      return "A minimum of 9 holes with scores are required to post.";
+    const isNineHoleRound = (holeScope === 'F9' || holeScope === 'B9');
+    const minRequired = isNineHoleRound ? 9 : 10;
+
+    if (playedHoles.length < minRequired) {
+      return isNineHoleRound
+        ? "All 9 holes must be played to post a 9-hole score."
+        : "A minimum of 10 holes with scores are required to post an 18-hole score.";
     }
 
     // 5. Total Score Sanity Check

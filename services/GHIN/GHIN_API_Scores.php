@@ -119,10 +119,15 @@ final class ServiceGHINScores
                 ];
                 $playedCount++;
             } else {
-                // USGA requirement: send x_hole=true for unplayed/blank holes
+                // USGA requirement: send x_hole=true for unplayed/blank holes.
+                // GHIN's schema requires raw_score to still be present on the
+                // object even though the value is disregarded for x_hole entries —
+                // an absent key produced an HTTP 400 (confirmed against production
+                // logs and GHIN's own app payload).
                 $payload["hole_details"][] = [
                     "hole_number" => $h,
-                    "x_hole" => true
+                    "raw_score"   => 0,
+                    "x_hole"      => true
                 ];
             }
         }
