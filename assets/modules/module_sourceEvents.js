@@ -96,17 +96,29 @@
 
     const fire = (action) => ctx.onAction(action, eid);
 
-    // No categories — confirmed too few items (6) for grouping to earn its
-    // keep the way it does on Games' 11-item menu. "Event Scoring" is
-    // deliberately absent here, not an oversight — confirmed when this
-    // arrangement was set.
+    // Categorized to match Game's per-card menu (module_sourceGames.js's
+    // buildGameMenu()) — GAME SETUP / GAME ADMINISTRATION / GAME SCORING
+    // grouping, same { category: "..." } item shape MA.ui.openActionsMenu
+    // already supports. "Event Settings" opens
+    // module_menuEventSettings.js directly (see admin_home.js's
+    // handleEventAction() — not a routerGo() page route, unlike every
+    // other item here). No "ADMIN SERVICES" category — no event-level
+    // equivalent to Game's View Players/Send Message/Add to Calendar
+    // exists yet; left out rather than padded.
     const items = [
-      { label: "Edit Event", action: () => fire("editEvent") },
-      { separator: true },
-      { label: "View/Maintain Rounds for the Event", action: () => fire("eventGames") },
-      { label: "View/Maintain Event Roster", action: () => fire("eventRoster") },
-      { separator: true },
-      { label: "Display Event Leaderboard", action: () => fire("eventLeaderboard") },
+      { category: "Event Setup" },
+      { label: "Edit Event", indent: true, action: () => fire("editEvent") },
+      { label: "Event Settings", indent: true,  action: () => fire("eventSettings") },
+
+      { category: "Event Administration" },
+      { label: "Manage Event Roster", indent: true, action: () => fire("eventRoster") },
+      { label: "Manage Rounds for the Event", indent: true, action: () => fire("eventGames") },
+
+      { category: "Event Scoring" },
+      { label: "Event Leaderboard", indent: true, action: () => fire("eventLeaderboard") },
+      { label: "Event Scorecards", indent: true, action: () => fire("eventScorecard") },
+      { label: "Event Skins", indent: true, action: () => fire("eventSkins") },
+
       { separator: true },
       { label: "Delete Event", action: () => fire("deleteEvent"), danger: true }
     ];

@@ -456,9 +456,25 @@ async function handleEventAction(args) {
   }
 
   // Routes that require event context to be set in session first
-  // (mirrors setGameSession before Games actions).
+  // (mirrors setGameSession before Games actions). Reused below for
+  // "eventSettings" too — module_menuEventSettings.js's context endpoint
+  // (initEventSettings.php) depends on SessionStoredEID the same way
+  // every routed page's ServiceContextEvent::getEventContext() call does.
   const ok = await setEventSession(eid);
   if (!ok) return;
+
+  // "eventSettings" is not a page route — it opens
+  // module_menuEventSettings.js as an overlay directly, same pattern
+  // module_menuGameSettings.js already uses on the Games side. Checked
+  // before routeMap below since it has no routerGo() equivalent.
+  if (action === "eventSettings") {
+    if (MA.menuEventSettings && typeof MA.menuEventSettings.open === "function") {
+      await MA.menuEventSettings.open();
+    } else {
+      setStatus("Event Settings module not loaded.", "warn");
+    }
+    return;
+  }
 
   // "eventGames" (Event Rounds) is the drill-in: it sets SessionStoredEID
   // server-side via setEventSession above, then this page (adminhome.php)
@@ -473,12 +489,18 @@ async function handleEventAction(args) {
   // was undefined) and conflated naming with pageRouter.php's separate,
   // still-unbuilt "eventscoring" route/page — a genuinely different page
   // from the leaderboard.
+  //
+  // eventScorecard / eventSkins added alongside the new Event Scorecards
+  // / Hole Champions menu items — route to the same eventscorecard.php /
+  // eventskins.php controllers wired up for the Event Settings menu.
   const routeMap = {
     openEvent: "event",
     editEvent: "eventedit",
     eventRoster: "eventroster",
     eventGames: "eventrounds",
-    eventLeaderboard: "eventsummary"
+    eventLeaderboard: "eventsummary",
+    eventScorecard: "eventscorecard",
+    eventSkins: "eventskins"
   };
 
   const route = routeMap[action];
