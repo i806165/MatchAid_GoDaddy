@@ -1,5 +1,12 @@
 /* /assets/pages/event_maintenance.js
    Event Maintenance page controller.
+
+   Event Competition (KPI/Placement Points), Handicaps, Teams, and
+   Flights are no longer staged or saved from this file — they moved to
+   module_menuEventSettings.js, opened from the nav bar, each saving
+   itself independently the moment its own Apply/Save fires. This page
+   now owns only Title/Type/Facility/Description/Schedule, bundled into
+   one Save via collectPatch()/doSave(), same as before.
 */
 (function () {
   "use strict";
@@ -42,10 +49,6 @@
     startDate: document.getElementById("emStartDate"),
     endDate: document.getElementById("emEndDate"),
     scheduleHint: document.getElementById("emScheduleHint"),
-    // EVENT COMPETITION
-    btnDefineKPI: document.getElementById("emBtnDefineKPI"),
-    kpiCountLabel: document.getElementById("emKPICountLabel"),
-    kpiHint: document.getElementById("emKPIHint"),
   };
 
   const init = window.__MA_INIT__ || window.__INIT__ || {};
@@ -54,17 +57,9 @@
     mode: String(init.mode || "edit"),
     eid: init.eid || null,
     event: init.event || {},
-    kpiConfig: null,   // parsed JSON object — set from event record or module onApply
     dirty: false,
     busy: false
   };
-
-  // Label lookup now comes from the KPI module's own hardcoded catalog
-  // (kpi_catalog.php is retired) rather than a page-level payload —
-  // falls back to the raw key if the module hasn't loaded yet.
-  function kpiLabel(key) {
-    return MA.defineEventKPI?.catalog?.[key]?.label || key;
-  }
 
   function setDirty(on) {
     state.dirty = !!on;
@@ -130,78 +125,6 @@
     }
   }
 
-  function defaultScoringConfig(method) {
-    switch (method) {
-      case "AggregatePoints":
-        return {
-          basis: "points",
-          roundsToCount: "all",
-          dropWorst: 0
-        };
-      case "PlacementPoints":
-        return {
-          pointsByPlace: { "1": 100, "2": 75, "3": 60, "4": 50, "5": 40 },
-          participationPoints: 10,
-          ties: "split"
-        };
-      case "MatchPoints":
-        return {
-          win: 1,
-          tie: 0.5,
-          loss: 0,
-          segments: { front: 1, back: 1, overall: 1 }
-        };
-      case "ManualPoints":
-        return {
-          entry: "manual"
-        };
-      default:
-        return {};
-    }
-  }
-
-  function defaultTiebreakConfig(method) {
-    switch (method) {
-      case "TotalEventPoints":
-        return { tieBreakers: ["bestFinalRound", "mostRoundsPlayed", "bestSingleRound"] };
-      case "TeamPoints":
-        return { tieBreakers: ["overallMatchesWon", "headToHead", "totalHolesWon"] };
-      case "BestFinalRound":
-        return { tieBreakers: ["bestFinalRound"] };
-      case "MostRoundsPlayed":
-        return { tieBreakers: ["mostRoundsPlayed"] };
-      case "ManualReview":
-        return { tieBreakers: ["manualReview"] };
-      default:
-        return {};
-    }
-  }
-
-  function renderKPIHint() {
-    if (!state.kpiConfig) {
-      if (el.kpiHint)       el.kpiHint.textContent = "No competitions configured for this event.";
-      if (el.kpiCountLabel) el.kpiCountLabel.textContent = "";
-      return;
-    }
-    // v?.state is "default"|"active"|"disabled" — only an explicit
-    // "disabled" means off, matching the module's own checkbox
-    // convention. (Previously checked a nonexistent boolean v?.active,
-    // which was always undefined — this hint never showed a count.)
-    const active = Object.entries(state.kpiConfig)
-      .filter(([, v]) => v?.state !== "disabled")
-      .map(([k]) => kpiLabel(k));
-    const count = active.length;
-    if (el.kpiCountLabel) el.kpiCountLabel.textContent = count ? `${count} active` : "";
-    if (el.kpiHint)       el.kpiHint.textContent = count
-      ? active.join(" · ")
-      : "No competitions configured for this event.";
-    if (el.btnDefineKPI)  el.btnDefineKPI.textContent = count
-      ? `Configure Competitions (${count} active)`
-      : "Configure Competitions";
-  }
-
-  function renderScoringPreview() { /* removed — replaced by KPI module */ }
-
   function renderScheduleHint() {
     const s = el.startDate.value || "";
     const e = el.endDate.value || "";
@@ -232,16 +155,7 @@
     el.startDate.value    = String(ev.dbEvents_StartDate || ev.startDateISO || todayYmd()).slice(0, 10);
     el.endDate.value      = String(ev.dbEvents_EndDate   || ev.endDateISO   || el.startDate.value || todayYmd()).slice(0, 10);
 
-    // KPI config
-    try {
-      const raw = ev.dbEvents_KPIConfig;
-      state.kpiConfig = raw ? JSON.parse(raw) : null;
-    } catch (_) {
-      state.kpiConfig = null;
-    }
-
     renderScheduleHint();
-    renderKPIHint();
   }
 
   function collectPatch() {
@@ -252,8 +166,6 @@
       dbEvents_EndDate:            el.endDate.value,
       dbEvents_Description:        el.description.value.trim(),
       dbEvents_FacilityName:       el.facilityName.value.trim(),
-      // KPI config — serialized from state
-      dbEvents_KPIConfig: state.kpiConfig ? JSON.stringify(state.kpiConfig) : "",
     };
   }
 
@@ -420,36 +332,6 @@
           renderScheduleHint();
           setDirty(true);
         }
-      });
-    }
-
-    // KPI Competition button
-    if (el.btnDefineKPI) {
-      el.btnDefineKPI.addEventListener("click", () => {
-        if (!MA.defineEventKPI || typeof MA.defineEventKPI.open !== "function") {
-          setStatus("Event KPI module not loaded.", "warn");
-          return;
-        }
-        // pairingFixed/teamFixed drive the module's Pairing/Team lock
-        // state — previously this passed an unused `hasTeams` flag the
-        // module never read, so those rows rendered permanently locked
-        // regardless of the event's actual mode.
-        const pairingFixed = String(state.event?.dbEvents_PairingMode || "") === "fixed";
-        const teamFixed     = String(state.event?.dbEvents_TeamMode || "")    === "fixed";
-        MA.defineEventKPI.open({
-          kpiConfig: state.kpiConfig,
-          pairingFixed,
-          teamFixed,
-          onApply(jsonStr) {
-            try {
-              state.kpiConfig = JSON.parse(jsonStr);
-            } catch (_) {
-              state.kpiConfig = null;
-            }
-            renderKPIHint();
-            setDirty(true);
-          }
-        });
       });
     }
   }

@@ -69,43 +69,12 @@
     </div>
   </section>
 
-  <!-- CARD 3 — EVENT SETTINGS -->
-  <section class="maCard" aria-label="Event Settings">
-    <header class="maCard__hdr">
-      <div class="maCard__title">EVENT SETTINGS</div>
-    </header>
-
-    <div class="maCard__body">
-
-      <!-- Pairing Mode removed — the on/off toggle now lives inside
-           module_createEventPairings.js itself (Event Roster → Manage
-           Pairings), bundled into that module's own Save. Team and
-           Flight's mode toggles live inside their own modules the same
-           way (Manage Teams / Define Flights). Event Maintenance no
-           longer owns any cascade-mode field.
-
-           HC Effectivity removed the same way — now owned by
-           module_defineHandicapSettings.js (Event Roster → Define
-           Handicaps), bundled with Method/Allowance/Mode into that
-           module's own Apply. Event Maintenance no longer owns any
-           handicap field at all. -->
-
-      <!-- Event Competition -->
-      <div class="maFieldRow">
-        <div class="maField">
-          <label class="maLabel">Event Competition</label>
-          <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
-            <button id="emBtnDefineKPI" class="btn btnSecondary" type="button">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:4px;vertical-align:-2px;"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>
-              Configure Competitions
-            </button>
-            <span id="emKPICountLabel" class="emHint" style="margin:0;"></span>
-          </div>
-          <div class="emHint" id="emKPIHint" style="margin-top:6px;">No competitions configured for this event.</div>
-        </div>
-      </div>
-
-    </div>
-  </section>
+  <!-- CARD 3 — EVENT SETTINGS removed. Event Competition (KPI/Placement
+       Points), Handicaps, Teams, and Flights are now reached exclusively
+       via the Event Settings menu (module_menuEventSettings.js), opened
+       from the nav bar. Pairing Mode and HC Effectivity had already been
+       relocated the same way, per this file's prior comment history —
+       Event Maintenance no longer owns any settings field at all, only
+       Title/Type/Facility/Description/Schedule. -->
 
 </div>
