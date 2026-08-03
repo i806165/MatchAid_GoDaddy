@@ -45,9 +45,6 @@ try {
     ? "Add New Event"
     : ("EID " . (string)$eid);
 
-  // kpi_catalog.php retired — module_defineEventKPI.js now owns its own
-  // hardcoded catalog and no longer needs one supplied via initPayload.
-
   $initPayload = [
     "ok"             => true,
     "mode"           => $mode,
@@ -98,6 +95,15 @@ $pageHelpKey = "event_maintenance";
 
   <?php include MA_INCLUDES . "/chromeFooter.php"; ?>
 
+  <?php
+  // Row catalog for module_menuEventSettings.js — same relationship
+  // gameSettingsMenuRows.php has to module_menuGameSettings.js on the
+  // Game side. Must be included on every page the Event Settings menu
+  // can be opened from, same requirement chromeFooter.php's nav already
+  // imposes.
+  require_once MA_INCLUDES . "/eventSettingsMenuRows.php";
+  ?>
+
 <script>
   window.MA = window.MA || {};
 
@@ -115,7 +121,18 @@ $pageHelpKey = "event_maintenance";
 
   <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>
-  <script src="<?= ma_asset('/assets/modules/module_defineEventKPI.js') ?>"></script>
+
+  <!-- Event Settings menu + its four rows. module_defineEventKPI.js
+       retired — replaced by module_setEventPlacementPoints.js, opened
+       exclusively through the menu below. Handicaps/Teams/Flights
+       modules are unchanged; only newly loaded on THIS page since
+       Event Maintenance never needed them before. -->
+  <script src="<?= ma_asset('/assets/modules/module_setEventPlacementPoints.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_setHandicapsGameEvent.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_defineTeamsGameEvent.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_defineFlightsGameEvent.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_menuEventSettings.js') ?>"></script>
+
   <script src="<?= ma_asset('/assets/pages/event_maintenance.js') ?>"></script>
 </body>
 </html>

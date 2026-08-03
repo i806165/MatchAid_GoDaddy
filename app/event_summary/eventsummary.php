@@ -58,6 +58,13 @@ $maChromeSubtitle = $initPayload["header"]["subtitle"] ?? "";
 </div>
 <main class="maPage" id="esMain"><?php require __DIR__ . '/eventsummary_view.php'; ?></main>
 <?php require_once MA_INCLUDES . '/chromeFooter.php'; ?>
+
+<?php
+// Row catalog for module_menuEventSettings.js — see eventmaint.php's
+// identical include for the full rationale.
+require_once MA_INCLUDES . '/eventSettingsMenuRows.php';
+?>
+
 <script>
   window.MA = window.MA || {};
   window.MA.paths = { routerApi: "<?= MA_ROUTE_API_ROUTER ?>" };
@@ -66,5 +73,17 @@ $maChromeSubtitle = $initPayload["header"]["subtitle"] ?? "";
   window.MA.routes = { router: window.MA.paths.routerApi };
 </script>
 <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
+
+<!-- Event Settings menu + its four rows. None of these were loaded on
+     this page before — Event Leaderboard had no prior settings access.
+     actions_menu.js was never loaded here either; not added, since none
+     of these five modules depend on it (confirmed against
+     module_menuGameSettings.js's own dependency list). -->
+<script src="<?= ma_asset('/assets/modules/module_setEventPlacementPoints.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_setHandicapsGameEvent.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_defineTeamsGameEvent.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_defineFlightsGameEvent.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_menuEventSettings.js') ?>"></script>
+
 <script src="<?= ma_asset('/assets/pages/event_summary.js') ?>"></script>
 </body></html>

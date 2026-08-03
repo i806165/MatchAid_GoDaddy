@@ -105,6 +105,12 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
 
 <?php if (!empty($pageHelpKey)) ServicePageHelp::renderByKey($pageHelpKey); ?>
 
+<?php
+// Row catalog for module_menuEventSettings.js — see eventmaint.php's
+// identical include for the full rationale.
+require_once MA_INCLUDES . '/eventSettingsMenuRows.php';
+?>
+
 <script>
   window.MA = window.MA || {};
   window.MA.paths = <?= json_encode($paths, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
@@ -118,6 +124,15 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
 <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/actions_menu.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/module_renderHoleChampions.js') ?>"></script>
+
+<!-- Event Settings menu + its four rows. None of these were loaded on
+     this page before — Event Skins had no prior settings access. -->
+<script src="<?= ma_asset('/assets/modules/module_setEventPlacementPoints.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_setHandicapsGameEvent.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_defineTeamsGameEvent.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_defineFlightsGameEvent.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_menuEventSettings.js') ?>"></script>
+
 <script src="<?= ma_asset('/assets/pages/event_skins.js') ?>"></script>
 </body>
 </html>

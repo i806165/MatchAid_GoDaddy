@@ -107,6 +107,12 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
 
     <?php if (!empty($pageHelpKey)) ServicePageHelp::renderByKey($pageHelpKey); ?>
 
+    <?php
+    // Row catalog for module_menuEventSettings.js — see
+    // eventmaint.php's identical include for the full rationale.
+    require_once __DIR__ . "/../../includes/eventSettingsMenuRows.php";
+    ?>
+
     <script>
         window.MA = window.MA || {};
         window.MA.paths = <?= json_encode($paths, JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
@@ -131,6 +137,14 @@ $pageHelpKey = ServicePageHelp::keyFromControllerFile(__FILE__);
     <script src="<?= ma_asset('/assets/modules/module_createEventPairings.js') ?>"></script>
     <script src="<?= ma_asset('/assets/modules/module_defineFlightsGameEvent.js') ?>"></script>
     <script src="<?= ma_asset('/assets/modules/module_setHandicapsGameEvent.js') ?>"></script>
+
+    <!-- Event Settings menu — the three dependency modules above
+         (Teams/Flights/Handicaps) were already loaded on this page for
+         Event Roster's own direct access to them; only Placement Points
+         and the menu itself are new here. -->
+    <script src="<?= ma_asset('/assets/modules/module_setEventPlacementPoints.js') ?>"></script>
+    <script src="<?= ma_asset('/assets/modules/module_menuEventSettings.js') ?>"></script>
+
     <script src="<?= ma_asset('/assets/pages/event_roster.js') ?>"></script>
 </body>
 </html>
