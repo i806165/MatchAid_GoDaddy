@@ -147,7 +147,7 @@
       // scheme once that's wired up elsewhere; not verified against a
       // source file the way the rest of this page's chrome calls are.
       MA.chrome.setBottomNav({
-        visible: ["eventhome", "eventedit", "eventroster", "eventrounds", "eventscorecard", "eventskins", "eventsummary"],
+        visible: ["eventhome", "eventedit", "eventroster", "eventrounds", "eventsettings",  "eventscorecard", "eventskins", "eventsummary"],
         active:  "eventscorecard",
         root:    ["eventhome"],
         onNavigate: (id) => MA.routerGo(id),

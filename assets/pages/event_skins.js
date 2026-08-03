@@ -161,7 +161,7 @@
       // active/visible nav id is assumed to match this app's event-level
       // nav set, not verified against a source file.
       MA.chrome.setBottomNav({
-        visible: ["eventhome", "eventedit", "eventroster", "eventrounds", "eventscorecard", "eventskins", "eventsummary"],
+        visible: ["eventhome", "eventedit", "eventroster", "eventrounds",  "eventsettings", "eventscorecard", "eventskins", "eventsummary"],
         active:  "eventskins",
         root:    ["eventhome"],
         onNavigate: (id) => MA.routerGo?.(id),

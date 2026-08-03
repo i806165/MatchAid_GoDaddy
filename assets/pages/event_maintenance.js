@@ -288,10 +288,10 @@
 
     if (chrome && typeof chrome.setBottomNav === "function") {
       chrome.setBottomNav({
-        visible: ["eventhome", "eventedit", "eventroster", "eventrounds", "eventscorecard", "eventskins", "eventsummary"],
+        visible: ["eventhome", "eventedit", "eventroster", "eventrounds",  "eventsettings", "eventscorecard", "eventskins", "eventsummary"],
         active: "eventedit",
         root: ["eventhome"],
-        disabled: (state.mode === "add") ? ["eventroster", "eventrounds", "eventscorecard", "eventskins", "eventsummary"] : [],
+        disabled: (state.mode === "add") ? ["eventroster", "eventrounds",  "eventsettings",  "eventscorecard", "eventskins", "eventsummary"] : [],
         onNavigate: id => MA.routerGo(id)
       });
     }
