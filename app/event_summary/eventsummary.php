@@ -27,6 +27,13 @@ try {
     // user away instead of explaining why.
 
     $initPayload["eid"] = (int)$eid;
+
+    // Matches gamesummary.php / eventscorecard.php / eventskins.php —
+    // every sibling page sets this explicitly rather than relying on its
+    // init-builder to inject it. buildEventSummaryInit() may already
+    // include "portal" internally (unconfirmed, not in hand) — this is
+    // deliberately redundant-safe either way, not a guess that it's missing.
+    $initPayload["portal"] = $_SESSION["SessionPortal"] ?? "ADMIN PORTAL";
   } catch (Throwable $e) {
     Logger::error("EVENTSUMMARY_INIT_FAIL", ["err" => $e->getMessage()]);
     // UNCONFIRMED — mirrors scoresummary.php's MA_ROUTE_ADMIN_GAMES

@@ -21,6 +21,12 @@
   const individualValid = individualGrossActive || individualNetActive;
   const rounds = Array.isArray(meta.rounds) ? meta.rounds : [];
 
+  // Same detection pattern as game_summary.js's state.portal /
+  // isPlayerPortal — gates the bottom-nav list below so a player-portal
+  // visitor only sees the three pages actually available to them.
+  const portal = init.portal || init.payload?.portal || "";
+  const isPlayerPortal = (portal === "PLAYER PORTAL");
+
   // Same four values as ServiceBuildEventSummary::NON_PERSONAL_SCORE_FORMATS
   // — a round in one of these formats has no personal per-player score, so
   // that day's score line is left empty (points still show). Kept in sync
@@ -305,10 +311,19 @@
     }
 
     if (chrome && typeof chrome.setBottomNav === 'function') {
+      // Matches game_summary.js's isPlayerPortal branch exactly: a
+      // player-portal visitor gets only eventscorecard/eventskins/
+      // eventsummary, rooted at "player" instead of "eventhome" — the
+      // full eight-item admin list (eventhome through eventsettings)
+      // never renders for them.
+      const visible = isPlayerPortal
+        ? ['eventscorecard', 'eventskins', 'eventsummary']
+        : ['eventhome', 'eventedit', 'eventroster', 'eventrounds', 'eventsettings', 'eventscorecard', 'eventskins', 'eventsummary'];
+
       chrome.setBottomNav({
-        visible: ['eventhome', 'eventedit', 'eventroster', 'eventrounds',  "eventsettings",  "eventscorecard", "eventskins", 'eventsummary'],
+        visible: visible,
         active: 'eventsummary',
-        root: ["eventhome"],
+        root: isPlayerPortal ? ['player'] : ['eventhome'],
         disabled: [],
         onNavigate: (id) => MA.routerGo(id),
       });

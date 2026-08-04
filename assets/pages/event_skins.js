@@ -157,13 +157,19 @@
     }
 
     if (MA.chrome && MA.chrome.setBottomNav) {
-      // NOTE: same caveat as event_scorecard.js — "eventskins" as the
-      // active/visible nav id is assumed to match this app's event-level
-      // nav set, not verified against a source file.
+      // Matches event_summary.js's isPlayerPortal branch: a player-portal
+      // visitor gets only the three player-facing pages, rooted at
+      // "player" instead of "eventhome" — the full admin list
+      // (eventhome through eventsettings) never renders for them.
+      const isPlayerPortal = (state.portal === "PLAYER PORTAL");
+      const visible = isPlayerPortal
+        ? ["eventscorecard", "eventskins", "eventsummary"]
+        : ["eventhome", "eventedit", "eventroster", "eventrounds", "eventsettings", "eventscorecard", "eventskins", "eventsummary"];
+
       MA.chrome.setBottomNav({
-        visible: ["eventhome", "eventedit", "eventroster", "eventrounds",  "eventsettings", "eventscorecard", "eventskins", "eventsummary"],
+        visible: visible,
         active:  "eventskins",
-        root:    ["eventhome"],
+        root:    isPlayerPortal ? ["player"] : ["eventhome"],
         onNavigate: (id) => MA.routerGo?.(id),
       });
     }
