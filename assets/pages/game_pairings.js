@@ -1594,11 +1594,19 @@
     }
 
     // Boundary clamp: the two pairings occupying a match's Side A / Side B
-    // must share the same flightKey. The "different team" half only
-    // applies when Team is actually active for this round right now
-    // (teamsActive() — see its own comment; driven by dbGames_TeamMode /
+    // must share the same flightKey — but ONLY when Flight is actually
+    // active for this round right now (flightsActive()). The "different
+    // team" half only applies when Team is actually active (teamsActive()
+    // — see its own comment; both driven by dbGames_{Team,Flight}Mode /
     // the shared isDimensionActive() hierarchy, not by whether assignment
-    // data happens to be present). Without an active Team dimension,
+    // data happens to be present). dbPlayers_FlightKey persists on a
+    // player row even after Flight is deactivated (deactivating doesn't
+    // clear stale values, by design), so comparing it unconditionally
+    // would false-positive a mismatch between two pairings that both just
+    // have leftover-but-now-irrelevant flight keys from before the
+    // dimension was turned off — the same reasoning
+    // assignSelectedPlayerToPairing's own clamp already applies to
+    // flightKey, now mirrored here. Without an active Team dimension,
     // MatchPos (Side A/B) IS the team distinction, assigned by which
     // pairing the user clicked first/second, not read from an independent
     // team fact. Checking team equality in that case would be circular
@@ -1611,19 +1619,21 @@
     const referenceFor = (pairingId) => playersInPairing(pairingId)[0] || null;
     const violatesBoundary = (a, b) => {
       if (!a || !b) return false; // nothing to compare yet — no violation possible
-      const sameFlight = (a.flightKey || "") === (b.flightKey || "");
-      if (!sameFlight) return true;
+      if (flightsActive()) {
+        const sameFlight = (a.flightKey || "") === (b.flightKey || "");
+        if (!sameFlight) return true;
+      }
       if (!teamsActive()) return false; // no active teams — MatchPos IS the team; nothing else to check
       const sameTeam = (a.team || "") === (b.team || "");
       return sameTeam;
     };
 
-    const boundaryMessageGroup = teamsActive()
-      ? "must share a flight and belong to different teams"
-      : "must share a flight";
-    const boundaryMessageSingle = teamsActive()
-      ? "must share a flight and belong to a different team than the other side"
-      : "must share a flight with the other side";
+    const boundaryMessageGroup = flightsActive()
+      ? (teamsActive() ? "must share a flight and belong to different teams" : "must share a flight")
+      : (teamsActive() ? "must belong to different teams" : "must match"); // last case is unreachable — violatesBoundary() can't fire with both dimensions inactive
+    const boundaryMessageSingle = flightsActive()
+      ? (teamsActive() ? "must share a flight and belong to a different team than the other side" : "must share a flight with the other side")
+      : (teamsActive() ? "must belong to a different team than the other side" : "must match"); // last case is unreachable, same as above
 
     if (isNew && pids.length === 2) {
       if (violatesBoundary(referenceFor(pids[0]), referenceFor(pids[1]))) {

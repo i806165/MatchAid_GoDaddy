@@ -73,7 +73,8 @@ final class WorkflowReconcilePairingBoundaries
     $rows = ServiceDbPlayers::getGamePlayers($ggid);
     if (!$rows) return [];
 
-    $teamsActive = self::teamsActive($ggid, $gameRow);
+    $teamsActive   = self::teamsActive($ggid, $gameRow);
+    $flightsActive = self::flightsActive($ggid, $gameRow);
 
     // Group by pairingId (skip 000/blank)
     $byPairing = [];
@@ -86,13 +87,14 @@ final class WorkflowReconcilePairingBoundaries
     $toReset = []; // ghin => row, deduped across both passes
     $report  = [];
 
-    // Pass 1 — pairing-level: every member of a pairing must share both
-    // team AND flightKey (mirrors assignSelectedPlayerToPairing's clamp).
-    // ma_pairingViolatesBoundary() is the shared implementation (also used
-    // by ServiceScoreSummary::checkTeamIntegrity()) — see its docblock in
+    // Pass 1 — pairing-level: every member of a pairing must share team
+    // and/or flightKey, whichever dimension(s) are actually active right
+    // now (mirrors assignSelectedPlayerToPairing's clamp). ma_pairingViolatesBoundary()
+    // is the shared implementation (also used by
+    // ServiceScoreSummary::checkTeamIntegrity()) — see its docblock in
     // ma_SharedBusLogic.php.
     foreach ($byPairing as $pid => $members) {
-      if (ma_pairingViolatesBoundary($members) !== '') {
+      if (ma_pairingViolatesBoundary($members, $teamsActive, $flightsActive) !== '') {
         $players = [];
         foreach ($members as $m) {
           $ghin = (string)($m["dbPlayers_PlayerGHIN"] ?? "");
@@ -110,10 +112,11 @@ final class WorkflowReconcilePairingBoundaries
     }
 
     // Pass 2 — match-level: the two pairings on a match's Side A / Side B
-    // must share flightKey, and (only when teams are actually active) must
-    // belong to different teams (mirrors assignSelectedPairingToFlight's
-    // clamp). Only pairings that survived Pass 1 are considered — a
-    // pairing already flagged doesn't need a second, redundant reason.
+    // must share flightKey (only when Flight is active), and must belong
+    // to different teams (only when Team is active) — mirrors
+    // assignSelectedPairingToFlight's clamp. Only pairings that survived
+    // Pass 1 are considered — a pairing already flagged doesn't need a
+    // second, redundant reason.
     $byMatch = [];
     foreach ($rows as $r) {
       $fid  = trim((string)($r["dbPlayers_MatchID"] ?? ""));
@@ -135,7 +138,7 @@ final class WorkflowReconcilePairingBoundaries
       // used by ServiceScoreSummary::checkTeamIntegrity() and mirrored by
       // game_pairings.js's own write-time clamp) — see its docblock in
       // ma_SharedBusLogic.php.
-      $violation = ma_matchSideViolatesBoundary($sideA, $sideB, $teamsActive);
+      $violation = ma_matchSideViolatesBoundary($sideA, $sideB, $teamsActive, $flightsActive);
 
       if ($violation !== '') {
         $pidA = (string)($sideA["dbPlayers_PairingID"] ?? "");
@@ -172,12 +175,37 @@ final class WorkflowReconcilePairingBoundaries
    * inference kept in sync only by hand. That mirror is retired; this is
    * now one of two callers of the single shared implementation (the
    * other being game_pairings.js's own teamsActive() replacement).
-   *
-   * Fetches the event only when the round is actually linked to one
-   * (dbGames_EID > 0) — a flat game never needs it, same guarded pattern
-   * used elsewhere (e.g. WorkflowProcessEventCascade::applyEventDataToGame()).
    */
   private static function teamsActive(string $ggid, ?array $gameRow = null): bool
+  {
+    return self::dimensionActive("team", $ggid, $gameRow);
+  }
+
+  /**
+   * Whether Flight is active for this round — mirrors teamsActive()
+   * exactly, one dimension apart. Previously reconcileGame() had no
+   * flight-activation check at all: ma_pairingViolatesBoundary() and
+   * ma_matchSideViolatesBoundary() compared dbPlayers_FlightKey
+   * unconditionally, so a round where Flight had been turned OFF (but
+   * whose player rows still carried differing, now-stale FlightKey
+   * values — deactivating a dimension deliberately doesn't clear old
+   * data) would have every mixed-flight pairing/match flagged as a
+   * "violation" and unpaired, even though nothing about Flight was
+   * actually wrong for that round anymore. This closes that gap the
+   * same way teamsActive() already closes it for Team.
+   */
+  private static function flightsActive(string $ggid, ?array $gameRow = null): bool
+  {
+    return self::dimensionActive("flight", $ggid, $gameRow);
+  }
+
+  /**
+   * Shared lookup behind teamsActive()/flightsActive() — fetches the
+   * event only when the round is actually linked to one (dbGames_EID > 0);
+   * a flat game never needs it, same guarded pattern used elsewhere
+   * (e.g. WorkflowProcessEventCascade::applyEventDataToGame()).
+   */
+  private static function dimensionActive(string $dimension, string $ggid, ?array $gameRow): bool
   {
     $game = $gameRow ?? ServiceDbGames::getGameByGGID((int)$ggid);
     if (!$game) return false;
@@ -188,6 +216,6 @@ final class WorkflowReconcilePairingBoundaries
       $event = ServiceDbEvents::getEventByEID($eid);
     }
 
-    return ServiceDbEvents::isDimensionActive("team", $game, $event);
+    return ServiceDbEvents::isDimensionActive($dimension, $game, $event);
   }
 }

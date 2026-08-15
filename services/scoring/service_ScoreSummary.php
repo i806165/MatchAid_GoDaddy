@@ -2105,9 +2105,14 @@ final class ServiceScoreSummary
         // in ma_SharedBusLogic.php. Only its 'team'/'team+flight' verdicts
         // matter here; this function has never checked flight agreement
         // and still doesn't — a pure 'flight' mismatch is left to other
-        // machinery. Unconditional on Team-active status, same as before:
-        // when Teams is off, this whole block simply never finds two
-        // team-tagged partners to disagree in the first place.
+        // machinery. Passed true/true below (not the real
+        // isDimensionActive() reads) to keep this call unconditional on
+        // Team-active status, same as before this function grew
+        // activation gating: when Teams is off, this whole block simply
+        // never finds two team-tagged partners to disagree in the first
+        // place, so the pinned true doesn't change behavior here — and
+        // the $flightsActive value is inert either way since only the
+        // 'team'/'team+flight' verdicts are consulted.
         foreach ($scorecardRows as $row) {
             $players = is_array($row['players'] ?? null) ? $row['players'] : [];
             if (!$players) continue;
@@ -2118,7 +2123,7 @@ final class ServiceScoreSummary
                     $sides = self::groupPlayersByFlightPos($matchPlayers);
                     foreach ($sides as $sidePlayers) {
                         if (count($sidePlayers) < 2) continue;
-                        $violation = ma_pairingViolatesBoundary($sidePlayers);
+                        $violation = ma_pairingViolatesBoundary($sidePlayers, true, true);
                         if ($violation === 'team' || $violation === 'team+flight') {
                             return 'Partners on the same side of a match are assigned to different teams. '
                                 . 'Check Team Configuration for this game.';
@@ -2129,7 +2134,7 @@ final class ServiceScoreSummary
                 $groups = self::groupPlayersByPairing($players);
                 foreach ($groups as $groupPlayers) {
                     if (count($groupPlayers) < 2) continue;
-                    $violation = ma_pairingViolatesBoundary($groupPlayers);
+                    $violation = ma_pairingViolatesBoundary($groupPlayers, true, true);
                     if ($violation === 'team' || $violation === 'team+flight') {
                         return 'The two players in a pairing are assigned to different teams. '
                             . 'Check Team Configuration for this game.';

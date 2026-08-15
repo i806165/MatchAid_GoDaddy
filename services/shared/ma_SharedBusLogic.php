@@ -119,16 +119,25 @@ function ma_resolveDefaultDateWindow(int $spanDays = 30): array {
  * verdict.
  *
  * Rules (mirrors game_pairings.js's violatesBoundary() exactly):
- *   - A pairing's members must always share both dbPlayers_TeamKey AND
- *     dbPlayers_FlightKey.
- *   - The two sides (Side A / Side B) of a match must always share
- *     dbPlayers_FlightKey.
+ *   - A pairing's members must share dbPlayers_TeamKey AND/OR
+ *     dbPlayers_FlightKey — but ONLY for whichever dimension is
+ *     actually active right now, per ServiceDbEvents::isDimensionActive().
+ *   - The two sides (Side A / Side B) of a match must share
+ *     dbPlayers_FlightKey — again, only when Flight is active.
  *   - The two sides of a match must belong to DIFFERENT teams — but
  *     ONLY when Team is actually active for the round (per
- *     ServiceDbEvents::isDimensionActive("team", ...)). When Team is
- *     inactive, dbPlayers_MatchPos (Side A/B) IS the team distinction —
- *     dbPlayers_TeamKey is not consulted at all in that case, since
- *     checking it would be circular (blank always "matches" blank).
+ *     ServiceDbEvents::isDimensionActive("team", ...)).
+ *   - When a dimension is inactive, its key is not consulted at all,
+ *     for either rule — dbPlayers_TeamKey/dbPlayers_FlightKey persist
+ *     on a player row even after that dimension is deactivated (by
+ *     design, deactivating doesn't clear stale values), so comparing
+ *     them unconditionally would false-positive a mismatch between two
+ *     players who both just have leftover-but-now-irrelevant keys from
+ *     before the dimension was turned off. Without an active Team
+ *     dimension, dbPlayers_MatchPos (Side A/B) IS the team distinction
+ *     for match sides — dbPlayers_TeamKey is not consulted at all in
+ *     that case, since checking it would be circular (blank always
+ *     "matches" blank).
  *
  * Each detection function returns a reason string rather than a bool —
  * '' means clean; otherwise one of 'team', 'flight', 'team+flight' — so
@@ -150,17 +159,30 @@ function ma_normFlightPos($v): string {
 }
 
 /**
- * ma_pairingViolatesBoundary(members)
+ * ma_pairingViolatesBoundary(members, teamsActive, flightsActive)
  *
  * True (non-empty reason) when the members of a single pairing disagree
  * on team and/or flight. Mirrors assignSelectedPlayerToPairing's clamp
  * and WorkflowReconcilePairingBoundaries::pairingViolates(). A pairing
  * of fewer than 2 members can't violate anything — trivially clean.
  *
- * @param  array  $members  Player rows for one pairingId.
+ * $teamsActive/$flightsActive gate each half independently — an
+ * inactive dimension's key is never compared, so stale
+ * dbPlayers_TeamKey/dbPlayers_FlightKey values left over from before
+ * that dimension was turned off can't produce a false-positive
+ * mismatch. Required (not defaulted) so every call site has to state
+ * its intent explicitly — see ServiceScoreSummary::checkTeamIntegrity()
+ * for the one caller that deliberately passes true/true to preserve its
+ * pre-existing unconditional-on-team behavior (it only ever consults
+ * the 'team'/'team+flight' verdicts anyway, so its own $flightsActive
+ * value is inert).
+ *
+ * @param  array  $members       Player rows for one pairingId.
+ * @param  bool   $teamsActive   From ServiceDbEvents::isDimensionActive("team", ...).
+ * @param  bool   $flightsActive From ServiceDbEvents::isDimensionActive("flight", ...).
  * @return string  '' | 'team' | 'flight' | 'team+flight'
  */
-function ma_pairingViolatesBoundary(array $members): string {
+function ma_pairingViolatesBoundary(array $members, bool $teamsActive, bool $flightsActive): string {
   if (count($members) < 2) return '';
 
   $ref       = $members[0];
@@ -170,8 +192,8 @@ function ma_pairingViolatesBoundary(array $members): string {
   $teamMismatch   = false;
   $flightMismatch = false;
   foreach ($members as $m) {
-    if (trim((string)($m['dbPlayers_TeamKey']   ?? '')) !== $refTeam)   $teamMismatch   = true;
-    if (trim((string)($m['dbPlayers_FlightKey'] ?? '')) !== $refFlight) $flightMismatch = true;
+    if ($teamsActive   && trim((string)($m['dbPlayers_TeamKey']   ?? '')) !== $refTeam)   $teamMismatch   = true;
+    if ($flightsActive && trim((string)($m['dbPlayers_FlightKey'] ?? '')) !== $refFlight) $flightMismatch = true;
   }
 
   if ($teamMismatch && $flightMismatch) return 'team+flight';
@@ -181,7 +203,7 @@ function ma_pairingViolatesBoundary(array $members): string {
 }
 
 /**
- * ma_matchSideViolatesBoundary(sideA, sideB, teamsActive)
+ * ma_matchSideViolatesBoundary(sideA, sideB, teamsActive, flightsActive)
  *
  * True (non-empty reason) when the two sides of a match break the
  * boundary invariant. Mirrors assignSelectedPairingToFlight's
@@ -190,17 +212,18 @@ function ma_pairingViolatesBoundary(array $members): string {
  * members are expected to already be homogeneous (verified separately
  * via ma_pairingViolatesBoundary() on each side's own pairing/group).
  *
- * @param  array $sideA        One representative player row, Side A.
- * @param  array $sideB        One representative player row, Side B.
- * @param  bool  $teamsActive  From ServiceDbEvents::isDimensionActive("team", ...).
+ * @param  array $sideA          One representative player row, Side A.
+ * @param  array $sideB          One representative player row, Side B.
+ * @param  bool  $teamsActive    From ServiceDbEvents::isDimensionActive("team", ...).
+ * @param  bool  $flightsActive  From ServiceDbEvents::isDimensionActive("flight", ...).
  * @return string  '' | 'team' | 'flight' | 'team+flight'
  */
-function ma_matchSideViolatesBoundary(array $sideA, array $sideB, bool $teamsActive): string {
+function ma_matchSideViolatesBoundary(array $sideA, array $sideB, bool $teamsActive, bool $flightsActive): string {
   $sameFlight = trim((string)($sideA['dbPlayers_FlightKey'] ?? '')) === trim((string)($sideB['dbPlayers_FlightKey'] ?? ''));
   $sameTeam   = trim((string)($sideA['dbPlayers_TeamKey']   ?? '')) === trim((string)($sideB['dbPlayers_TeamKey']   ?? ''));
 
-  $flightViolation = !$sameFlight;
-  $teamViolation   = $teamsActive && $sameTeam; // only meaningful when Team is active
+  $flightViolation = $flightsActive && !$sameFlight; // only meaningful when Flight is active
+  $teamViolation   = $teamsActive && $sameTeam;       // only meaningful when Team is active
 
   if ($flightViolation && $teamViolation) return 'team+flight';
   if ($teamViolation)   return 'team';
