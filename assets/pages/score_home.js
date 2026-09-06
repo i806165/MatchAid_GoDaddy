@@ -602,9 +602,16 @@
       state.players?.[0]?.playerKey || el.groupKeyText?.textContent || ''
     ).trim().toUpperCase();
 
-    try {
-      MA.ui.notify('Updating tee box…', 'info');
+    // Blocking overlay (MA.ui.showBusy/hideBusy — see ma_shared.js) instead of
+    // a transient notify(): the tee-picker modal (teesetSelection.js) closes
+    // itself immediately and fires onSave without awaiting it, so without a
+    // blocking lock here the user regains a fully interactive screen while
+    // the upsert + refetch below are still in flight — free to tap away
+    // before the re-render lands, which is what made the screen look stale
+    // on return. The finally block guarantees this comes down even on error.
+    MA.ui.showBusy({ title: 'Updating Tee Box', message: 'Please wait…' });
 
+    try {
       // Sending ghin + gender — NOT first_name/last_name. gender is a
       // real, directly-stored field (dbPlayers_Gender, already on this
       // player's normalized row), so there's no reason to withhold it —
@@ -665,6 +672,8 @@
     } catch (e) {
       console.error(e);
       MA.ui.notify(e.message || 'Unable to update tee box.', 'error');
+    } finally {
+      MA.ui.hideBusy();
     }
   }
 
