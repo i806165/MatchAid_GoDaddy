@@ -403,8 +403,8 @@
       { label: "Recalculate Handicaps", action: onRecalcHandicaps, indent: true },
 
       { category: "Messaging and Calendar" },
-      { label: "Send Invite",     action: onNotifyInvite,   indent: true },
-      { label: "Send Game Info",  action: onNotifyGameInfo, indent: true },
+      { label: "Send Invitation to Join Game",     action: onNotifyInvite,   indent: true },
+      { label: "Send Game Information to Players",  action: onNotifyGameInfo, indent: true },
       { label: "Add Game to Calendar",  action: downloadIcsForGame, indent: true },
     ];
     MA.ui.openActionsMenu("Actions", items);

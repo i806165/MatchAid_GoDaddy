@@ -1307,7 +1307,7 @@
     }
   }
 
-  // ── Send Invite ──────────────────────────────────────────────────────
+  // ── Send Invitation ──────────────────────────────────────────────────────
   // Brings Summary in line with the other four pages — always enabled,
   // readiness is a gameInfo-only concept and doesn't apply here.
   function inviteSelectedRecipients() {
@@ -1405,8 +1405,8 @@
       { label: "Recalculate Handicaps", action: recalculateHandicaps, indent: true },
 
       { category: "Messaging and Calendar" },
-      { label: "Send Invite",     action: inviteSelectedRecipients, indent: true },
-      { label: "Send Game Info",  action: emailSelectedRecipients,  indent: true },
+      { label: "Send Invitation to Join Game",     action: inviteSelectedRecipients, indent: true },
+      { label: "Send Game Information to Players",  action: emailSelectedRecipients,  indent: true },
       { label: "Add Game to Calendar",  action: downloadIcsForGame,   indent: true },
     ];
     MA.ui.openActionsMenu("Actions", items);

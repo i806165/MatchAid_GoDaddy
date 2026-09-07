@@ -218,8 +218,8 @@
       { label: "Recalculate Handicaps", indent: true, action: doRefreshHandicaps },
 
       { category: "Messaging and Calendar" },
-      { label: "Send Invite",     indent: true, action: onNotifyInvite },
-      { label: "Send Game Info",  indent: true, action: onNotifyGameInfo },
+      { label: "Send Invitation to Join Game",     indent: true, action: onNotifyInvite },
+      { label: "Send Game Information to Players",  indent: true, action: onNotifyGameInfo },
       { label: "Add Game to Calendar",    indent: true, action: downloadIcsForGame },
     ]);
   }
