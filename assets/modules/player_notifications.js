@@ -16,18 +16,36 @@
  *   {
  *     ggid      : string|number|null  — game ID; omit or null for favorites-only
  *     apiPath   : string              — URL to initPlayerNotifications.php
+ *     intent    : "invite"|"gameInfo" — default "gameInfo". "invite" opens
+ *                                        on the Favorites tab with nothing
+ *                                        pre-selected (both tabs still
+ *                                        reachable); "gameInfo" is gated on
+ *                                        server-side readiness (at least one
+ *                                        player slotted) — a busy spinner
+ *                                        covers the check, and a blocking
+ *                                        OK-only confirm explains it and
+ *                                        stops if the game isn't ready yet,
+ *                                        before this module's own panel is
+ *                                        ever created. When ready, opens on
+ *                                        the Game Players tab with every
+ *                                        contactable enrolled player
+ *                                        pre-selected (unchanged from the
+ *                                        original single-intent behavior).
  *     onClose   : function()          — optional callback when panel is dismissed
- *     subject   : string              — optional. Overrides the default
- *                                        "{title} — {venue} — {when}" subject.
+ *     subject   : string              — optional. Overrides the intent's
+ *                                        default subject line.
  *     body      : string              — optional. Prepended to the default
  *                                        "View or Register at {siteUrl}/game/{ggid}"
- *                                        link (the link always appears) —
- *                                        e.g. a caller-built tee-sheet
- *                                        summary (game_summary.js's
- *                                        buildPlayingGroupsText()) so the
- *                                        admin never has to copy/paste
- *                                        anything into the mail draft.
- *                                        Plain text — not escaped/altered.
+ *                                        link (the link always appears).
+ *                                        For "gameInfo", the default body
+ *                                        (when no override is given) is the
+ *                                        server-built tee-sheet text
+ *                                        (game.gameInfoBody, from
+ *                                        ma_buildTeeSheetText() in
+ *                                        ma_SharedBusLogic.php) — identical
+ *                                        regardless of which page triggered
+ *                                        the send. Plain text — not
+ *                                        escaped/altered.
  *   }
  *
  * Modal structure (all regions use ma_shared.css):
@@ -57,6 +75,7 @@
   // ── State ─────────────────────────────────────────────────────────────────
   let _state = {
     opts:         {},
+    intent:       "gameInfo",   // "invite" | "gameInfo"
     data:         null,
     activeTab:    "game",
     selected:     new Set(),
@@ -141,60 +160,165 @@
 
   // ── Public API ────────────────────────────────────────────────────────────
 
+  /**
+   * MA.notify.open(options)
+   *
+   * options.intent — "invite" | "gameInfo" (default "gameInfo" — matches
+   * pre-intent behavior for any caller that hasn't been updated yet).
+   *
+   *   "invite"   — reach out to favorites/players about enrolling. Always
+   *                opens immediately; the picker's own loading skeleton
+   *                covers the fetch, same as before this option existed.
+   *                Default tab: Favorites. Nothing pre-selected. Both
+   *                tabs stay available — this only changes the default
+   *                tab/preselection, nothing is hidden.
+   *
+   *   "gameInfo" — notify enrolled players of pairings/tee times. Gated
+   *                on the game being "ready" (at least one player
+   *                slotted — see ma_gameInfoReady() server-side). The
+   *                readiness check runs BEFORE the picker panel is ever
+   *                created: a busy spinner (MA.ui.showBusy) covers the
+   *                fetch, and if the game isn't ready, a blocking OK-only
+   *                confirm dialog (MA.ui.confirm) explains why and the
+   *                picker never opens. This intentionally avoids opening
+   *                and then closing MA.notify's own modal for the
+   *                not-ready case — that read as broken UI in testing.
+   *                Default tab: Game Players, all enrolled players with a
+   *                valid contact method pre-selected (unchanged from the
+   *                original single-intent behavior).
+   */
   MA.notify.open = async function (options) {
-    const opts        = options || {};
-    _state.opts       = opts;
-    _state.selected   = new Set();
-    _state.activeMethod = {};
-    _state.favFilter  = "all";
-    _state.outlookMode = false;
-    _state.ddOpen     = false;
+    const opts   = options || {};
+    const intent = opts.intent || "gameInfo";
 
+    _state.opts          = opts;
+    _state.intent         = intent;
+    _state.selected       = new Set();
+    _state.activeMethod   = {};
+    _state.favFilter       = "all";
+    _state.outlookMode     = false;
+    _state.ddOpen          = false;
+
+    const apiPath = opts.apiPath || (MA.paths && MA.paths.apiNotify) || "";
+    if (!apiPath) {
+      _notifyGate("apiPath not configured.", "error");
+      return;
+    }
+
+    const payload = {};
+    if (opts.ggid) payload.ggid = opts.ggid;
+
+    if (intent === "gameInfo") {
+      await _openGameInfo(apiPath, payload);
+      return;
+    }
+
+    await _openInvite(apiPath, payload);
+  };
+
+  // ── Ambient error helper — routes through MA.ui.notify so this module
+  // never invents its own toast/status pattern. Falls back to console if
+  // ma_shared.js's MA.ui.notify somehow isn't loaded (should never happen
+  // in practice, since this module already depends on MA.ui elsewhere).
+  function _notifyGate(message, level) {
+    if (MA.ui && typeof MA.ui.notify === "function") MA.ui.notify(message, level);
+    else console.error("[MA.notify]", message);
+  }
+
+  // ── Game Info: check readiness BEFORE any panel exists ───────────────
+  async function _openGameInfo(apiPath, payload) {
+    if (MA.ui && typeof MA.ui.showBusy === "function") {
+      MA.ui.showBusy({ message: "Checking game status\u2026" });
+    }
+
+    let data;
+    try {
+      data = await apiPost(apiPath, payload);
+    } catch (e) {
+      if (MA.ui && MA.ui.hideBusy) MA.ui.hideBusy();
+      console.error("[MA.notify]", e);
+      _notifyGate("Unexpected error loading game info.", "error");
+      return;
+    }
+
+    if (MA.ui && MA.ui.hideBusy) MA.ui.hideBusy();
+
+    if (!data || !data.ok) {
+      _notifyGate(data?.message || "Failed to load game info.", "error");
+      return;
+    }
+
+    if (!data.game || !data.game.readyForGameInfo) {
+      if (MA.ui && typeof MA.ui.confirm === "function") {
+        await MA.ui.confirm({
+          title:   "Not ready to send",
+          message: "This game doesn't have any players with tee times or pairings assigned yet.",
+          okOnly:  true,
+        });
+      } else {
+        _notifyGate("This game doesn't have any players with tee times or pairings assigned yet.", "warn");
+      }
+      return; // picker never opens
+    }
+
+    _state.data = data;
+    _openPanelWithData(); // data already in hand — paints once, no skeleton
+  }
+
+  // ── Invite: unchanged shape — open immediately, load in place ───────
+  async function _openInvite(apiPath, payload) {
     _destroyOverlay();
     _renderOverlay(_html_skeleton());
 
     try {
-      const payload = {};
-      if (opts.ggid) payload.ggid = opts.ggid;
-
-      const apiPath = opts.apiPath || (MA.paths && MA.paths.apiNotify) || "";
-      if (!apiPath) { _setModalHtml(_html_error("apiPath not configured.")); return; }
-
       const data = await apiPost(apiPath, payload);
       if (!data || !data.ok) {
         _setModalHtml(_html_error(data?.message || "Failed to load recipients."));
         return;
       }
-
-      _state.data     = data;
-      _state.activeTab = data.hasGameContext ? "game" : "favs";
-
-      if (data.hasGameContext && Array.isArray(data.gamePlayers)) {
-        data.gamePlayers.forEach(function (p) {
-          if (p.deliveryMethod !== null) {
-            _state.selected.add(p.ghin);
-            _state.activeMethod[p.ghin] = preferredMethodFor(p);
-          }
-        });
-      }
-
-      _setModalHtml(_html_panel());
-      _wireEvents();
-      _updateFooter();
-
+      _state.data = data;
+      _openPanelWithData();
     } catch (e) {
       console.error("[MA.notify]", e);
       _setModalHtml(_html_error("Unexpected error loading recipients."));
     }
-  };
+  }
+
+  // ── Shared panel-open logic — default tab + preselection differ by intent
+  function _openPanelWithData() {
+    const intent = _state.intent;
+    const data   = _state.data;
+
+    _state.activeTab = (intent === "invite")
+      ? "favs"
+      : (data.hasGameContext ? "game" : "favs");
+
+    if (intent === "gameInfo" && data.hasGameContext && Array.isArray(data.gamePlayers)) {
+      data.gamePlayers.forEach(function (p) {
+        if (p.deliveryMethod !== null) {
+          _state.selected.add(p.ghin);
+          _state.activeMethod[p.ghin] = preferredMethodFor(p);
+        }
+      });
+    }
+    // intent === "invite": nothing pre-selected — admin builds the list
+    // from scratch. Both tabs remain reachable either way; only the
+    // default tab and preselection differ.
+
+    _destroyOverlay();
+    _renderOverlay(_html_panel());
+    _wireEvents();
+    _updateFooter();
+  }
 
   MA.notify.close = function () {
     _destroyOverlay();
     _state.data         = null;
-    _state.selected     = new Set();
-    _state.activeMethod = {};
-    _state.outlookMode  = false;
-    _state.ddOpen       = false;
+    _state.intent        = "gameInfo";
+    _state.selected      = new Set();
+    _state.activeMethod  = {};
+    _state.outlookMode   = false;
+    _state.ddOpen        = false;
     document.documentElement.classList.remove("maOverlayOpen");
     if (typeof _state.opts.onClose === "function") _state.opts.onClose();
   };
@@ -859,6 +983,7 @@
     if (!recipients.length) return;
 
     const game    = _state.data.game;
+    const intent  = _state.intent || "gameInfo";
     const siteUrl = safeStr(_state.data.siteUrl) || "https://www.matchaid.org";
     let subject   = "";
     let body      = "";
@@ -869,17 +994,31 @@
     if (game) {
       const venue = game.courseName || game.facilityName || "";
       const when  = formatDateShort(game.playDate, game.playTime);
-      subject     = subjectOverride || [game.title, venue, when].filter(Boolean).join(" \u2014 ");
+      const link  = siteUrl + "/game/" + game.ggid;
 
-      const link = siteUrl + "/game/" + game.ggid;
-      // A caller-supplied body (e.g. game_summary.js's tee-sheet text)
-      // still gets the "View or Register" link appended — the two are
-      // complementary, not either/or. The link is the one piece every
-      // notification should carry regardless of how much other detail
-      // is in the body.
-      body = bodyOverride
-        ? (bodyOverride + "\n\nView or Register at " + link)
-        : link;
+      if (intent === "invite") {
+        subject = subjectOverride ||
+          ("You're invited to play \u2014 " + [game.title, venue, when].filter(Boolean).join(" \u2014 "));
+
+        const defaultInviteBody = "You're invited to play " + (game.title || "a game") +
+          (when ? (" on " + when) : "") + ".";
+
+        // Same link-always-appended contract as gameInfo below — a
+        // caller-supplied body and the default aren't either/or.
+        body = (bodyOverride || defaultInviteBody) + "\n\nView or Register at " + link;
+
+      } else { // "gameInfo"
+        subject = subjectOverride || [game.title, venue, when].filter(Boolean).join(" \u2014 ");
+
+        // Prefer the caller's override, then the server-built tee-sheet
+        // text (game.gameInfoBody, from ma_buildTeeSheetText() —
+        // identical output regardless of which page triggered the
+        // send), then bare link if neither is present.
+        const defaultBody = bodyOverride || safeStr(game.gameInfoBody);
+        body = defaultBody
+          ? (defaultBody + "\n\nView or Register at " + link)
+          : link;
+      }
     } else {
       subject = subjectOverride || "";
       body    = bodyOverride || "Attention players;";
@@ -934,4 +1073,4 @@
   })();
 
   window.MA = MA;
-})();
+})();

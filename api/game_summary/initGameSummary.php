@@ -8,6 +8,8 @@ require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/context/service_ContextGame.php";
 require_once MA_SVC_DB . "/service_dbPlayers.php";
 require_once MA_SVC_DB . "/service_dbFavPlayers.php";
+require_once MA_SVC_DB . "/service_dbEvents.php";
+require_once MA_SERVICES . "/roster/service_GameRosterViews.php";
 
 /**
  * buildSmsEmailAddress
@@ -119,11 +121,31 @@ function buildGameSummaryInit(array $ctx, array $gc): array {
   }
   unset($p);
 
+  // $game comes from ServiceContextGame::getGameContext(), which already
+  // merges the event's fields onto the game record (hydrateForUi()) when
+  // this game belongs to one — so, unlike initPlayerNotifications.php
+  // (which calls ServiceDbGames::getGameByGGID() directly and never gets
+  // that merge), passing $game for both params here is correct, not a
+  // shortcut taken on faith — same pattern game_summary.js's own
+  // teamsActive()/flightsActive() already rely on for the same reason.
+  $teamsActive   = ServiceDbEvents::isDimensionActive("team",   $game, $game);
+  $flightsActive = ServiceDbEvents::isDimensionActive("flight", $game, $game);
+
+  $views = [
+    "byPlayer"      => ServiceGameRosterViews::buildByPlayerView($roster),
+    "byPairing"     => ServiceGameRosterViews::buildByPairingView($roster, $game, $teamsActive, $flightsActive),
+    "byPlayingGroup" => ServiceGameRosterViews::buildByPlayingGroupView($roster, $game, $teamsActive, $flightsActive),
+  ];
+
   return [
     "ok"     => true,
     "ggid"   => $ggid,
     "game"   => $game,
-    "roster" => $roster,
+    "roster" => $roster, // kept for now — game_summary.js's render paths
+                          // haven't been rewritten to consume `views` yet;
+                          // removing this would break the page. Retire once
+                          // that rewrite lands.
+    "views"  => $views,
     "header" => [
       "subtitle" => "GGID " . $ggid,
     ],

@@ -403,7 +403,8 @@
       { label: "Recalculate Handicaps", action: onRecalcHandicaps, indent: true },
 
       { category: "Messaging and Calendar" },
-      { label: "Send Message to Players", action: onNotify, indent: true },
+      { label: "Send Invite",     action: onNotifyInvite,   indent: true },
+      { label: "Send Game Info",  action: onNotifyGameInfo, indent: true },
       { label: "Add Game to Calendar",  action: downloadIcsForGame, indent: true },
     ];
     MA.ui.openActionsMenu("Actions", items);
@@ -430,12 +431,29 @@
     }
   }
 
-  function onNotify() {
+  // Both items are always enabled — readiness for "Send Game Info" is
+  // checked inside MA.notify itself (behind a busy spinner, with a
+  // blocking confirm if the game isn't ready), not gated here.
+  function onNotifyInvite() {
     if (!state.ggid) return;
     if (MA.notify && typeof MA.notify.open === "function") {
       MA.notify.open({
         ggid:    state.ggid,
         apiPath: MA.paths?.apiNotify,
+        intent:  "invite",
+      });
+    } else {
+      setStatus("Messaging module not loaded.", "error");
+    }
+  }
+
+  function onNotifyGameInfo() {
+    if (!state.ggid) return;
+    if (MA.notify && typeof MA.notify.open === "function") {
+      MA.notify.open({
+        ggid:    state.ggid,
+        apiPath: MA.paths?.apiNotify,
+        intent:  "gameInfo",
       });
     } else {
       setStatus("Messaging module not loaded.", "error");

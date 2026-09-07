@@ -118,24 +118,10 @@
     el.actionHint.textContent = "";
   }
 
-  function normalizeRosterForPlayerDisplay(records) {
-    const copy = Array.isArray(records) ? records.slice() : [];
-
-    copy.sort((a, b) => {
-      const lnA = safeString(a.dbPlayers_LName).trim();
-      const lnB = safeString(b.dbPlayers_LName).trim();
-      if (lnA !== lnB) return lnA.localeCompare(lnB);
-
-      const nmA = safeString(a.dbPlayers_Name).trim();
-      const nmB = safeString(b.dbPlayers_Name).trim();
-      if (nmA !== nmB) return nmA.localeCompare(nmB);
-
-      const ghinA = safeString(a.dbPlayers_PlayerGHIN).trim();
-      const ghinB = safeString(b.dbPlayers_PlayerGHIN).trim();
-      return ghinA.localeCompare(ghinB);
-    });
-    return copy;
-  }
+  // normalizeRosterForPlayerDisplay() retired — its sort logic now lives
+  // server-side as ServiceGameRosterViews::buildByPlayerView(), consumed
+  // via state.views.byPlayer.players. Verified byte-identical render
+  // output against this function before removal (Node/jsdom diff test).
 
   function isPairPairCompetition() {
     return String(state.game?.dbGames_Competition || "").trim() === "PairPair";
@@ -225,221 +211,11 @@
     return String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: "base" });
   }
 
-  function normalizeRosterForPairingDisplay(records) {
-    const copy = Array.isArray(records) ? records.slice() : [];
-    const pairPair = isPairPairCompetition();
-    const useFlights = flightsActive();
-    const useTeams = teamsActive();
+  // normalizeRosterForPairingDisplay() retired — logic now lives in services/roster/service_GameRosterViews.php, consumed via state.views. Verified byte-identical render output before removal (Node/jsdom diff test).
 
-    copy.sort((a, b) => {
-      if (useFlights) {
-        const flA = flightSortValue(a);
-        const flB = flightSortValue(b);
-        if (flA !== flB) return flA.localeCompare(flB, undefined, { numeric: true });
-      }
+  // normalizeRosterForPlayingGroupDisplay() retired — logic now lives in services/roster/service_GameRosterViews.php, consumed via state.views. Verified byte-identical render output before removal (Node/jsdom diff test).
 
-      if (pairPair) {
-        // Match is the outer grouping — head to head. dbPlayers_MatchID /
-        // dbPlayers_MatchPos are the Match Pairings tab's Match / Side
-        // A-B container, unrelated to the real Flight/Team concepts
-        // sorted above.
-        const matchA = pairingSortValue(a.dbPlayers_MatchID) || "—";
-        const matchB = pairingSortValue(b.dbPlayers_MatchID) || "—";
-        if (matchA !== matchB) return matchA.localeCompare(matchB, undefined, { numeric: true });
-
-        // Within a Match: Team when active, else Side — mutually
-        // exclusive, not both — so every Match consistently renders
-        // Team-1 (or Side-A) above Team-2 (or Side-B).
-        if (useTeams) {
-          const tmA = teamSortValue(a);
-          const tmB = teamSortValue(b);
-          if (tmA !== tmB) return numericOrTextCompare(tmA, tmB);
-        } else {
-          const sideA = pairingSortValue(a.dbPlayers_MatchPos) || "—";
-          const sideB = pairingSortValue(b.dbPlayers_MatchPos) || "—";
-          if (sideA !== sideB) return numericOrTextCompare(sideA, sideB);
-        }
-
-        const lnA = pairingSortValue(a.dbPlayers_LName);
-        const lnB = pairingSortValue(b.dbPlayers_LName);
-        if (lnA !== lnB) return lnA.localeCompare(lnB);
-
-        const nmA = pairingSortValue(a.dbPlayers_Name);
-        const nmB = pairingSortValue(b.dbPlayers_Name);
-        return nmA.localeCompare(nmB);
-      }
-
-      // PairField — PairingID is an arbitrary/meaningless number on its
-      // own, so when Teams are active, Team orders the pairing groups
-      // first (so team order stays consistent regardless of what the
-      // underlying PairingID happens to be), with PairingID only as the
-      // tiebreak/grouping key beneath that.
-      if (useTeams) {
-        const tmA = teamSortValue(a);
-        const tmB = teamSortValue(b);
-        if (tmA !== tmB) return numericOrTextCompare(tmA, tmB);
-      }
-
-      const pairA = pairingSortValue(a.dbPlayers_PairingID) || "—";
-      const pairB = pairingSortValue(b.dbPlayers_PairingID) || "—";
-      if (pairA !== pairB) return pairA.localeCompare(pairB, undefined, { numeric: true });
-
-      const posA = pairingSortValue(a.dbPlayers_PairingPos) || "999";
-      const posB = pairingSortValue(b.dbPlayers_PairingPos) || "999";
-      if (posA !== posB) return numericOrTextCompare(posA, posB);
-
-      const lnA = pairingSortValue(a.dbPlayers_LName);
-      const lnB = pairingSortValue(b.dbPlayers_LName);
-      if (lnA !== lnB) return lnA.localeCompare(lnB);
-
-      const nmA = pairingSortValue(a.dbPlayers_Name);
-      const nmB = pairingSortValue(b.dbPlayers_Name);
-      return nmA.localeCompare(nmB);
-    });
-
-    return copy;
-  }
-
-  function normalizeRosterForPlayingGroupDisplay(records) {
-    const copy = Array.isArray(records) ? records.slice() : [];
-    const pairPair = isPairPairCompetition();
-    const toMethod = String(state.game?.dbGames_TOMethod || "").trim();
-    const isShotgun  = toMethod === "ShotGun";
-    const isTeeTimes = toMethod === "TeeTimes";
-
-    function parseTimeToMinutes(timeText) {
-      const raw = String(timeText || "").trim();
-      if (!raw) return null;
-      let m = raw.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*([AP]M)\b/i);
-      if (m) {
-        let hour = parseInt(m[1], 10);
-        const minute = parseInt(m[2], 10);
-        if (hour === 12) hour = 0;
-        if (m[3].toUpperCase() === "PM") hour += 12;
-        return hour * 60 + minute;
-      }
-      m = raw.match(/(?:^|\s)(\d{1,2}):(\d{2})(?::\d{2})?(?:$|\s)/);
-      if (m) {
-        const hour = parseInt(m[1], 10);
-        const minute = parseInt(m[2], 10);
-        if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) return hour * 60 + minute;
-      }
-      return null;
-    }
-
-    function holeSortValue(v) {
-      const n = Number(String(v ?? "").trim());
-      return Number.isFinite(n) ? n : 999;
-    }
-
-    function suffixSortValue(v) {
-      const s = String(v ?? "").trim().toUpperCase();
-      if (!s) return "ZZZ";
-      return s;
-    }
-
-    const useFlights = flightsActive();
-    const useTeams = teamsActive();
-
-    copy.sort((a, b) => {
-      // Flight is the outermost grouping across every scope view,
-      // including this one — it takes precedence even over physical
-      // tee-time/shotgun scheduling below.
-      if (useFlights) {
-        const flA = flightSortValue(a);
-        const flB = flightSortValue(b);
-        if (flA !== flB) return flA.localeCompare(flB, undefined, { numeric: true });
-      }
-
-      if (isTeeTimes) {
-        const tA = parseTimeToMinutes(a.dbPlayers_TeeTime) ?? 9999;
-        const tB = parseTimeToMinutes(b.dbPlayers_TeeTime) ?? 9999;
-        if (tA !== tB) return tA - tB;
-      }
-
-      if (isShotgun) {
-        const holeA = holeSortValue(a.dbPlayers_StartHole);
-        const holeB = holeSortValue(b.dbPlayers_StartHole);
-        if (holeA !== holeB) return holeA - holeB;
-
-        const suffixA = suffixSortValue(a.dbPlayers_StartHoleSuffix);
-        const suffixB = suffixSortValue(b.dbPlayers_StartHoleSuffix);
-        if (suffixA !== suffixB) return suffixA.localeCompare(suffixB);
-      }
-
-      const groupA = pairingSortValue(a.dbPlayers_PlayerKey) || "—";
-      const groupB = pairingSortValue(b.dbPlayers_PlayerKey) || "—";
-      if (groupA !== groupB) return groupA.localeCompare(groupB, undefined, { numeric: true });
-
-      if (pairPair) {
-        // dbPlayers_MatchID / dbPlayers_MatchPos — Match Pairings tab's
-        // Match / Side A-B container, not the real Flight/Team concepts.
-        // Previously named flightA/flightB/teamA/teamB here.
-        const matchA = pairingSortValue(a.dbPlayers_MatchID) || "—";
-        const matchB = pairingSortValue(b.dbPlayers_MatchID) || "—";
-        if (matchA !== matchB) return matchA.localeCompare(matchB, undefined, { numeric: true });
-
-        // Team when active, else Side — mutually exclusive, same rule
-        // as By Pairing, so Team consistently replaces Side rather than
-        // both being applied.
-        if (useTeams) {
-          const tmA = teamSortValue(a);
-          const tmB = teamSortValue(b);
-          if (tmA !== tmB) return numericOrTextCompare(tmA, tmB);
-        } else {
-          const sideA = pairingSortValue(a.dbPlayers_MatchPos) || "—";
-          const sideB = pairingSortValue(b.dbPlayers_MatchPos) || "—";
-          if (sideA !== sideB) return numericOrTextCompare(sideA, sideB);
-        }
-      }
-
-      const pairA = pairingSortValue(a.dbPlayers_PairingID) || "—";
-      const pairB = pairingSortValue(b.dbPlayers_PairingID) || "—";
-      if (pairA !== pairB) return pairA.localeCompare(pairB, undefined, { numeric: true });
-
-      const posA = pairingSortValue(a.dbPlayers_PairingPos) || "999";
-      const posB = pairingSortValue(b.dbPlayers_PairingPos) || "999";
-      if (posA !== posB) return numericOrTextCompare(posA, posB);
-
-      // PairField only — PairPair already applied Team above (as Side's
-      // replacement), so applying it again here would be a no-op at best.
-      if (!pairPair && useTeams) {
-        const tmA = teamSortValue(a);
-        const tmB = teamSortValue(b);
-        if (tmA !== tmB) return numericOrTextCompare(tmA, tmB);
-      }
-
-      const lnA = pairingSortValue(a.dbPlayers_LName);
-      const lnB = pairingSortValue(b.dbPlayers_LName);
-      if (lnA !== lnB) return lnA.localeCompare(lnB);
-
-      const nmA = pairingSortValue(a.dbPlayers_Name);
-      const nmB = pairingSortValue(b.dbPlayers_Name);
-      return nmA.localeCompare(nmB);
-    });
-
-    return copy;
-  }
-
-  function groupRosterForPlayingGroup(sortedRoster) {
-    const pairPair = isPairPairCompetition();
-    const groupMap = new Map();
-
-    sortedRoster.forEach((p) => {
-      const playerKey = pairingSortValue(p.dbPlayers_PlayerKey) || "—";
-      const matchId = pairPair ? (pairingSortValue(p.dbPlayers_MatchID) || "—") : "";
-      const matchPos = pairPair ? (pairingSortValue(p.dbPlayers_MatchPos) || "—") : "";
-      const pairingId = pairingSortValue(p.dbPlayers_PairingID) || "—";
-
-      if (!groupMap.has(playerKey)) {
-        groupMap.set(playerKey, { playerKey, matchId, matchPos, pairingId, players: [] });
-      }
-
-      groupMap.get(playerKey).players.push(p);
-    });
-
-    return Array.from(groupMap.values());
-  }
+  // groupRosterForPlayingGroup() retired — logic now lives in services/roster/service_GameRosterViews.php, consumed via state.views. Verified byte-identical render output before removal (Node/jsdom diff test).
 
   function buildPlayingGroupHeader(group) {
     return `<strong>Playing Group ${esc(group.playerKey)}</strong>`;
@@ -462,33 +238,7 @@
   // and no inter-pairing divider ever render for it (both are gated on
   // there being a matchId / more than one pairing, which naturally never
   // happens in PairField either way).
-  function buildPairingDesktopGroups(sortedRoster) {
-    const pairPair = isPairPairCompetition();
-    const groups = [];
-    let currentGroup = null;
-    let currentPairing = null;
-
-    sortedRoster.forEach((p) => {
-      const matchId = pairPair ? (pairingSortValue(p.dbPlayers_MatchID) || "—") : null;
-      const pairingId = pairingSortValue(p.dbPlayers_PairingID) || "—";
-      const groupKey = pairPair ? matchId : pairingId;
-
-      if (!currentGroup || currentGroup.key !== groupKey) {
-        currentGroup = { key: groupKey, matchId, pairings: [] };
-        groups.push(currentGroup);
-        currentPairing = null;
-      }
-
-      if (!currentPairing || currentPairing.pairingId !== pairingId) {
-        currentPairing = { pairingId, players: [] };
-        currentGroup.pairings.push(currentPairing);
-      }
-
-      currentPairing.players.push(p);
-    });
-
-    return groups;
-  }
+  // buildPairingDesktopGroups() retired — logic now lives in services/roster/service_GameRosterViews.php, consumed via state.views. Verified byte-identical render output before removal (Node/jsdom diff test).
 
   // Bare Match band — deliberately no metadata beyond the label itself;
   // all substantive content (Team/Side, Pair ID, averages) lives one
@@ -543,9 +293,11 @@
   }
 
   function buildPairingSummaryRow(pairing) {
-    const { avgHI, avgCH, avgPH } = computePairingAverages(pairing);
+    const avgHI = pairing.averages?.avgHI ?? "0.0";
+    const avgCH = pairing.averages?.avgCH ?? "0.0";
+    const avgPH = pairing.averages?.avgPH ?? "0.0";
 
-    const prefix = pairingLabelPrefix(pairing);
+    const prefix = pairing.labelPrefix || "";
     const label = prefix ? (prefix + ", Pair " + pairing.pairingId) : ("Pair " + pairing.pairingId);
 
     // One real <td> per column, in the exact same order and with the
@@ -678,29 +430,7 @@
   // single linear pass is enough to partition it into flight-ordered
   // runs. When Flight isn't active, this returns one pass-through group
   // so callers don't need a separate unflighted code path.
-  function partitionByFlight(sortedRoster) {
-    if (!flightsActive()) {
-      return [{ flightKey: "", flightLabel: "", players: sortedRoster }];
-    }
-
-    const groups = [];
-    let current = null;
-
-    sortedRoster.forEach((p) => {
-      const key = flightSortValue(p);
-      if (!current || current.flightKey !== key) {
-        current = {
-          flightKey: key,
-          flightLabel: key === "—" ? "Unassigned" : resolveFlightName(key),
-          players: []
-        };
-        groups.push(current);
-      }
-      current.players.push(p);
-    });
-
-    return groups;
-  }
+  // partitionByFlight() retired — logic now lives in services/roster/service_GameRosterViews.php, consumed via state.views. Verified byte-identical render output before removal (Node/jsdom diff test).
 
   // Collapse-toggle icons — reused verbatim from game_pairings.js's tray
   // group headers, per the request to match that interaction exactly.
@@ -930,18 +660,40 @@
     }
   }
 
-  function renderRoster() {
-    let sorted = [];
-
-    if (state.scope === "byPlayer") {
-      sorted = normalizeRosterForPlayerDisplay(state.roster || []);
-    } else if (state.scope === "byPairing") {
-      sorted = normalizeRosterForPairingDisplay(state.roster || []);
-    } else {
-      sorted = normalizeRosterForPlayingGroupDisplay(state.roster || []);
+  // Flat player rows for a view, regardless of scope's grouping shape —
+  // shared by the player-count helper below and by CSV export, which
+  // always wants a flat list no matter which scope tab is active.
+  function flattenViewRows(views, scope) {
+    if (!views) return [];
+    if (scope === "byPlayer") {
+      return views.byPlayer?.players || [];
     }
+    if (scope === "byPairing") {
+      const out = [];
+      (views.byPairing?.flightGroups || []).forEach(fg =>
+        (fg.groups || []).forEach(g =>
+          (g.pairings || []).forEach(pr => { out.push(...(pr.players || [])); })));
+      return out;
+    }
+    const out = [];
+    (views.byPlayingGroup?.flightGroups || []).forEach(fg =>
+      (fg.playingGroups || []).forEach(pg => { out.push(...(pg.players || [])); }));
+    return out;
+  }
 
-    if (el.emptyHint) el.emptyHint.style.display = sorted.length ? "none" : "block";
+  // Flat player count for a view, regardless of scope's grouping shape —
+  // used for the "(N)" count in the card title and the empty-state hint.
+  // byPlayer's view is already flat; byPairing/byPlayingGroup need
+  // flattening through their flightGroups→groups/playingGroups nesting.
+  function flatPlayerCountForScope(views, scope) {
+    return flattenViewRows(views, scope).length;
+  }
+
+  function renderRoster() {
+    const views = state.views || {};
+    const count = flatPlayerCountForScope(views, state.scope);
+
+    if (el.emptyHint) el.emptyHint.style.display = count ? "none" : "block";
 
     if (el.scoreIdHeader) el.scoreIdHeader.textContent = "PlayGroup";
 
@@ -968,17 +720,17 @@
       el.mobileList.classList.toggle("is-has-teams", hasTeams);
     }
 
-    const playerCount = sorted.length ? ' (' + sorted.length + ')' : '';
+    const playerCount = count ? ' (' + count + ')' : '';
 
     if (state.scope === "byPlayer") {
       if (el.cardTitle) el.cardTitle.textContent = "Players by Name" + playerCount;
-      renderRosterByPlayer(sorted);
+      renderRosterByPlayer(views.byPlayer?.players || []);
     } else if (state.scope === "byPairing") {
       if (el.cardTitle) el.cardTitle.textContent = "Players organized Competitively" + playerCount;
-      renderRosterByPairing(sorted);
+      renderRosterByPairing(views.byPairing || { flightGroups: [] });
     } else {
       if (el.cardTitle) el.cardTitle.textContent = "Players organized by Tee Assignments" + playerCount;
-      renderRosterByPlayingGroup(sorted);
+      renderRosterByPlayingGroup(views.byPlayingGroup || { flightGroups: [] });
     }
   }
 
@@ -1032,8 +784,8 @@
     wirePlayerRows(sorted);
   }
 
-  function renderRosterByPairing(sorted) {
-    const flightGroups = partitionByFlight(sorted);
+  function renderRosterByPairing(view) {
+    const flightGroups = view.flightGroups || [];
     const isPairPair = isPairPairCompetition();
     const useFlights = flightsActive();
     const colspan = isPairPair ? 15 : 13;
@@ -1048,7 +800,7 @@
       if (useFlights && state.collapsedFlights.has(fg.flightKey)) return;
 
       // ── Desktop: Match → Pairing(s), with per-pairing summary rows ──────
-      const desktopGroups = buildPairingDesktopGroups(fg.players);
+      const desktopGroups = fg.groups || [];
 
       desktopGroups.forEach((group) => {
         if (group.matchId) {
@@ -1183,8 +935,8 @@
     );
   }
 
-  function renderRosterByPlayingGroup(sorted) {
-    const flightGroups = partitionByFlight(sorted);
+  function renderRosterByPlayingGroup(view) {
+    const flightGroups = view.flightGroups || [];
     const isPairPair = isPairPairCompetition();
     const useFlights = flightsActive();
     const colspan = isPairPair ? 15 : 13;
@@ -1198,7 +950,7 @@
       }
       if (useFlights && state.collapsedFlights.has(fg.flightKey)) return;
 
-      const groups = groupRosterForPlayingGroup(fg.players);
+      const groups = fg.playingGroups || [];
 
       groups.forEach((group) => {
         desktopParts.push(
@@ -1292,11 +1044,7 @@
 
   // ---- actions ----
   function buildCsvText() {
-    const rows = (state.scope === "byPlayer")
-      ? normalizeRosterForPlayerDisplay(state.roster || [])
-      : (state.scope === "byPairing")
-        ? normalizeRosterForPairingDisplay(state.roster || [])
-        : normalizeRosterForPlayingGroupDisplay(state.roster || []);
+    const rows = flattenViewRows(state.views, state.scope);
 
     const header = ["Name","Tee","Flight","Team","Match","Side","Pair","Pos","HI","CH","PH","SO","Time","Start","PlayGroup"];
     const lines = [header.join(",")];
@@ -1354,11 +1102,7 @@
   }
 
   function buildHtmlSummary() {
-    const rows = (state.scope === "byPlayer")
-      ? normalizeRosterForPlayerDisplay(state.roster || [])
-      : (state.scope === "byPairing")
-        ? normalizeRosterForPairingDisplay(state.roster || [])
-        : normalizeRosterForPlayingGroupDisplay(state.roster || []);
+    const views = state.views || {};
 
     const g = state.game || {};
     const isPairPair = g.dbGames_Competition === 'PairPair';
@@ -1402,7 +1146,7 @@
     // colspan here is safe (unlike the live page, where col-flight/
     // col-team can be display:none'd out of the table entirely).
     if (state.scope === "byPairing") {
-      const flightGroups = partitionByFlight(rows);
+      const flightGroups = views.byPairing?.flightGroups || [];
       const showFlights = flightsActive();
 
       flightGroups.forEach((fg) => {
@@ -1410,12 +1154,11 @@
           html += `<tr style="background-color:#e5e5e5;"><td colspan="15"><strong>Flight ${esc(fg.flightLabel)}</strong></td></tr>`;
         }
 
-        const desktopGroups = buildPairingDesktopGroups(fg.players);
-        desktopGroups.forEach((group) => {
+        (fg.groups || []).forEach((group) => {
           if (group.matchId) {
             html += `<tr style="background-color:#eaf5ef;"><td colspan="15"><strong>Match ${esc(group.matchId)}</strong></td></tr>`;
           } else if (group.pairings.length === 1) {
-            const prefix = pairingLabelPrefix(group.pairings[0]);
+            const prefix = group.pairings[0].labelPrefix || "";
             const pid = group.pairings[0].pairingId;
             const label = prefix ? `${prefix}, Pairing ${pid}` : `Pairing ${pid}`;
             html += `<tr style="background-color:#eaf5ef;"><td colspan="15"><strong>${esc(label)}</strong></td></tr>`;
@@ -1424,8 +1167,10 @@
           group.pairings.forEach((pairing) => {
             pairing.players.forEach((p) => { html += buildRow(p); });
 
-            const { avgHI, avgCH, avgPH } = computePairingAverages(pairing);
-            const prefix = pairingLabelPrefix(pairing);
+            const avgHI = pairing.averages?.avgHI ?? "0.0";
+            const avgCH = pairing.averages?.avgCH ?? "0.0";
+            const avgPH = pairing.averages?.avgPH ?? "0.0";
+            const prefix = pairing.labelPrefix || "";
             const label = prefix ? `${prefix}, Pair ${pairing.pairingId}` : `Pair ${pairing.pairingId}`;
             html += `<tr>
               <td colspan="8" style="font-weight:bold; border-top:2px solid #333;">${esc(label)}</td>
@@ -1438,13 +1183,15 @@
         });
       });
     } else if (state.scope === "byPlayingGroup") {
-      const groups = groupRosterForPlayingGroup(rows);
-      groups.forEach((group) => {
-        html += `<tr style="background-color:#f9f9f9;"><td colspan="15">${buildPlayingGroupHeader(group)}</td></tr>`;
-        group.players.forEach((p) => { html += buildRow(p); });
+      const flightGroups = views.byPlayingGroup?.flightGroups || [];
+      flightGroups.forEach((fg) => {
+        (fg.playingGroups || []).forEach((group) => {
+          html += `<tr style="background-color:#f9f9f9;"><td colspan="15">${buildPlayingGroupHeader(group)}</td></tr>`;
+          group.players.forEach((p) => { html += buildRow(p); });
+        });
       });
     } else {
-      rows.forEach((p) => { html += buildRow(p); });
+      (views.byPlayer?.players || []).forEach((p) => { html += buildRow(p); });
     }
 
     html += `</tbody></table><br/>
@@ -1528,71 +1275,15 @@
     setStatus("CSV downloaded.", "ok");
   }
 
-  // ── Playing-groups tee sheet — plain text ──────────────────────────────
-  // Names grouped by tee time (or shotgun start hole), further organized
-  // by Match/Side (PairPair only) and Pairing — independent of
-  // state.scope, since this always describes the same playing-group
-  // structure regardless of which tab (By Player / By Pairing / By
-  // Playing Group) the admin happens to be viewing. This is what seeds
-  // the plain-text email body in emailSelectedRecipients() below, so an
-  // admin who can't copy/paste still gets a fully usable draft with zero
-  // extra steps. Game format/scoring description comes from the shared
-  // MA.describeGameFormat() (ma_SharedBusLogic.js) in its condensed
-  // form, so this matches the scorecard's own wording rather than
-  // inventing a separate phrasing.
-  function buildPlayingGroupsText() {
-    const g = state.game || {};
-    const sorted = normalizeRosterForPlayingGroupDisplay(state.roster || []);
-    const flightGroups = partitionByFlight(sorted);
-    const isPairPair = isPairPairCompetition();
-    const useFlights = flightsActive();
-
-    const fmt = (window.MA && typeof MA.describeGameFormat === "function")
-      ? MA.describeGameFormat(g, { condensed: true })
-      : { condensedLine: "" };
-
-    const lines = [];
-
-    if (fmt.condensedLine) lines.push(fmt.condensedLine);
-    if (lines.length) lines.push("");
-
-    flightGroups.forEach((fg) => {
-      if (useFlights) {
-        lines.push(`Flight ${fg.flightLabel}`);
-      }
-
-      const groups = groupRosterForPlayingGroup(fg.players);
-      groups.forEach((group) => {
-        const first = group.players[0] || {};
-        const time  = formatTimeAmPm(valueOrDash(first.dbPlayers_TeeTime));
-        const start = valueOrDash(getFormattedStartHole(first));
-        const when  = (time !== "\u2014") ? `${time} \u00b7 Hole ${start}` : `Hole ${start}`;
-
-        const label = isPairPair
-          ? `Match ${valueOrDash(group.matchId)}, Side ${valueOrDash(group.matchPos)}, Pairing ${valueOrDash(group.pairingId)}`
-          : `Pairing ${valueOrDash(group.pairingId)}`;
-
-        const names = group.players
-          .map(p => safeString(p.dbPlayers_Name).trim())
-          .filter(Boolean)
-          .join(", ");
-
-        lines.push(`${when} \u2014 ${label}: ${names}`);
-      });
-
-      lines.push("");
-    });
-
-    return lines.join("\n").trim();
-  }
-
-  // ── Email playing groups to selected recipients ───────────────────────
-  // Opens the recipient picker (MA.notify) seeded with the plain-text tee
-  // sheet above as the mailto body, so a non-technical admin can hit Send
-  // with no copy/paste required. The rich HTML table is still copied to
-  // the clipboard in the background (same as before) purely as an
-  // affordance for admins who do know how to paste — they can overlay it
-  // into the draft if they want the fuller table instead of the tee sheet.
+  // ── Send Game Info ──────────────────────────────────────────────────
+  // The plain-text tee sheet that used to be built here (buildPlayingGroupsText())
+  // now lives server-side as ma_buildTeeSheetText() in ma_SharedBusLogic.php,
+  // returned as game.gameInfoBody by initPlayerNotifications.php and used
+  // automatically as MA.notify's default "gameInfo" body — identical output,
+  // but now available from every page that sends game info, not just this one.
+  // This function's remaining job is purely the rich-HTML clipboard copy,
+  // which stays a summary-specific affordance layered on top of that
+  // standard message body for admins who know how to paste it in.
   async function emailSelectedRecipients() {
     if (!MA.notify || typeof MA.notify.open !== "function") {
       setStatus("Messaging module not loaded.", "error");
@@ -1605,7 +1296,7 @@
     MA.notify.open({
       ggid:    ggid,
       apiPath: MA.paths?.apiNotify,
-      body:    buildPlayingGroupsText(),
+      intent:  "gameInfo",
     });
 
     try {
@@ -1614,6 +1305,25 @@
       console.warn("[MA] Clipboard copy failed:", e);
       // modal still opens regardless
     }
+  }
+
+  // ── Send Invite ──────────────────────────────────────────────────────
+  // Brings Summary in line with the other four pages — always enabled,
+  // readiness is a gameInfo-only concept and doesn't apply here.
+  function inviteSelectedRecipients() {
+    if (!MA.notify || typeof MA.notify.open !== "function") {
+      setStatus("Messaging module not loaded.", "error");
+      return;
+    }
+
+    const g = state.game || {};
+    const ggid = String(g.dbGames_GGID || g.dbGames_GGIDnum || "").trim();
+
+    MA.notify.open({
+      ggid:    ggid,
+      apiPath: MA.paths?.apiNotify,
+      intent:  "invite",
+    });
   }
 
   function downloadIcsForGame() {
@@ -1658,6 +1368,7 @@
     if (!init || !init.ok) throw new Error(init?.message || "Init failed");
     state.game   = init.game   || init.payload?.game   || null;
     state.roster = init.roster || init.payload?.roster || [];
+    state.views  = init.views  || init.payload?.views  || null;
     state.portal = init.portal || init.payload?.portal || "";
   }
 
@@ -1685,9 +1396,6 @@
     if (!MA.ui || !MA.ui.openActionsMenu) return;
 
     const items = [
-      { category: "EMail" },
-      { label: "Email playing groups to selected recipients", action: emailSelectedRecipients, indent: true },
-
       { category: "Export" },
       { label: "Download View to CSV",   action: downloadCsv,            indent: true },
       { label: "Copy View to Clipboard", action: copySummaryToClipboard, indent: true },
@@ -1695,6 +1403,10 @@
       { category: "Admin Services" },
       { label: "Display Game Settings", action: () => MA.gameDetails.open(state.game), indent: true },
       { label: "Recalculate Handicaps", action: recalculateHandicaps, indent: true },
+
+      { category: "Messaging and Calendar" },
+      { label: "Send Invite",     action: inviteSelectedRecipients, indent: true },
+      { label: "Send Game Info",  action: emailSelectedRecipients,  indent: true },
       { label: "Add Game to Calendar",  action: downloadIcsForGame,   indent: true },
     ];
     MA.ui.openActionsMenu("Actions", items);

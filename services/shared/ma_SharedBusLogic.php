@@ -230,3 +230,169 @@ function ma_matchSideViolatesBoundary(array $sideA, array $sideB, bool $teamsAct
   if ($flightViolation) return 'flight';
   return '';
 }
+
+/**
+ * Messaging — Game Administration Status + Condensed Format Line
+ * -----------------------------------------------------------------
+ * ma_getGameAdministrationStatus() answers a general question — "how far
+ * along its administration path is this game" (Roster -> Pairing ->
+ * Slotting) — not a messaging-specific one; messaging (initPlayerNotifications.php)
+ * is just the first consumer, reading isSlottingReady as its "Send Game
+ * Info" gate. Any future caller wanting roster/pairing/slotting counts
+ * (e.g. a status badge) can use this directly rather than reinventing it.
+ *
+ * ma_describeGameFormatCondensed() is unrelated to the above — a small
+ * PHP port of the one piece of ma_SharedBusLogic.js's MA.describeGameFormat()
+ * that the "Send Game Info" plain-text body needs (its condensedLine).
+ * Lives here specifically because this file is documented as the PHP
+ * counterpart to ma_SharedBusLogic.js, where the JS original lives — a
+ * cross-language pair for a shared formatting concern belongs in the
+ * matching pair of files.
+ *
+ * NOTE: the large playing-group grouping/sorting logic that used to live
+ * in this section (ma_normalizeRosterForPlayingGroupDisplay(),
+ * ma_partitionByFlight(), ma_groupRosterForPlayingGroup(),
+ * ma_buildTeeSheetText()) has moved to its own service,
+ * services/roster/service_GameRosterViews.php (ServiceGameRosterViews) —
+ * that's genuinely large, domain-specific normalization logic, not a
+ * small stable cross-page rule, and deserves its own file the same way
+ * ServiceScoreCard has its own file rather than living in a general
+ * "shared logic" file.
+ */
+
+/**
+ * ma_getGameAdministrationStatus(players)
+ *
+ * The game's status along its administration path: Roster -> Pairing ->
+ * Slotting. Tiers nest in practice (slotted implies paired implies
+ * rostered), so each count is independent, no cross-tier consistency
+ * checking needed. "000" is the established sentinel for "unpaired" —
+ * matches ServiceDbPlayers::getCoPlayMatrix()'s existing
+ * `dbPlayers_PairingID != '000'` filter.
+ *
+ * @param  array $players  db_Players rows (e.g. ServiceDbPlayers::getGamePlayers()).
+ * @return array{
+ *   totalPlayers: int, isRosterReady: bool,
+ *   pairedCount: int, isPairingReady: bool,
+ *   slottedCount: int, isSlottingReady: bool
+ * }
+ */
+function ma_getGameAdministrationStatus(array $players): array {
+  $total   = count($players);
+  $paired  = 0;
+  $slotted = 0;
+
+  foreach ($players as $p) {
+    $pairingId = trim((string)($p['dbPlayers_PairingID'] ?? ''));
+    if ($pairingId !== '' && $pairingId !== '000') $paired++;
+
+    if (trim((string)($p['dbPlayers_PlayerKey'] ?? '')) !== '') $slotted++;
+  }
+
+  return [
+    'totalPlayers'    => $total,
+    'isRosterReady'   => $total > 0,
+    'pairedCount'     => $paired,
+    'isPairingReady'  => $paired > 0,
+    'slottedCount'    => $slotted,
+    'isSlottingReady' => $slotted > 0,
+  ];
+}
+
+/**
+ * ma_describeGameFormatCondensed(game)
+ *
+ * Faithful port of ma_SharedBusLogic.js's MA.describeGameFormat(game,
+ * {condensed:true}).condensedLine — the one piece of that function's
+ * output buildPlayingGroupsText() actually used to prefix the tee
+ * sheet. Only ports what condensedLine itself depends on (gameFormat +
+ * the full scoringSystemLine switch, since condensedLine derives from
+ * scoringSystemLine with its "Scoring System: " label stripped) —
+ * formatLine, hcLabel, allowanceLabel, strokeDistLabel, segmentLabel,
+ * and detailLine are the *client's* concern for the on-screen
+ * scorecard header and aren't used here, so they're intentionally not
+ * ported. If a future caller needs those too, port the rest of
+ * describeGameFormat() at that point rather than guessing they're
+ * unneeded forever.
+ *
+ * @param  array $game
+ * @return string
+ */
+function ma_describeGameFormatCondensed(array $game): string {
+  $g = $game;
+
+  $gameFormat = trim(ma__safeStr($g['dbGames_GameFormat'] ?? ''));
+  $sys        = trim(ma__safeStr($g['dbGames_ScoringSystem'] ?? ''));
+
+  $scoringSystemLine = '';
+
+  if ($sys === 'BestBall') {
+    $cnt = trim(ma__safeStr($g['dbGames_BestBallCnt'] ?? $g['dbGames_BestBall'] ?? ''));
+    $scoringSystemLine = $cnt !== ''
+      ? "Scoring System: Best {$cnt} Ball" . ($cnt === '1' ? '' : 's')
+      : 'Scoring System: Best Ball';
+
+  } elseif ($sys === 'DeclareHole') {
+    try {
+      $raw    = $g['dbGames_HoleDeclaration'] ?? null;
+      $parsed = is_string($raw)
+        ? (json_decode($raw !== '' ? $raw : '{}', true) ?? [])
+        : (is_array($raw) ? $raw : []);
+
+      $map = [];
+      $isList = $parsed !== [] && array_keys($parsed) === range(0, count($parsed) - 1);
+      if ($isList) {
+        foreach ($parsed as $r) {
+          if (is_array($r) && isset($r['hole']) && $r['hole'] !== null) {
+            $map[(string)$r['hole']] = $r['count'] ?? null;
+          }
+        }
+      } else {
+        foreach ($parsed as $k => $v) { $map[(string)$k] = $v; }
+      }
+
+      $pairs = [];
+      for ($h = 1; $h <= 18; $h++) {
+        $val = $map[(string)$h] ?? null;
+        if ($val !== null && $val !== '') $pairs[] = "H{$h}:{$val}";
+      }
+
+      $scoringSystemLine = $pairs
+        ? 'Scoring System: Declare by Hole (' . implode(" \u{2022} ", $pairs) . ')'
+        : 'Scoring System: Declare by Hole';
+    } catch (Throwable $e) {
+      $scoringSystemLine = 'Scoring System: Declare by Hole';
+    }
+
+  } elseif ($sys === 'DeclarePlayer') {
+    $perPlayer = trim(ma__safeStr($g['dbGames_PlayerDeclaration'] ?? '1'));
+    if ($perPlayer === '') $perPlayer = '1';
+    $scoringSystemLine = "Scoring System: Declare by Player ({$perPlayer}x per player)";
+
+  } elseif ($sys === 'DeclareManual') {
+    $scoringSystemLine = 'Scoring System: Declare Scores Discretionally';
+
+  } elseif ($sys === 'AllScores') {
+    $scoringSystemLine = 'Scoring System: Use All Scores';
+
+  } elseif ($sys !== '') {
+    $scoringSystemLine = "Scoring System: {$sys}";
+  }
+
+  $shortSys = preg_replace('/^Scoring System:\s*/', '', $scoringSystemLine);
+
+  $parts = array_values(array_filter([$gameFormat, $shortSys], fn($v) => $v !== '' && $v !== null));
+  return implode(" \u{2022} ", $parts);
+}
+
+/**
+ * ma__safeStr($v)
+ * Small local string helper, mirroring game_summary.js's safeString()
+ * exactly. Prefixed ma__ (double underscore) to signal "private to this
+ * file" — not part of the public cross-page API the other ma_*
+ * functions here represent. Its sibling ma__valueOrDash() and the rest
+ * of this file's former private helpers moved to
+ * services/roster/service_GameRosterViews.php along with the
+ * normalization logic that was their only caller.
+ */
+function ma__safeStr($v): string { return (string)($v ?? ''); }

@@ -7,6 +7,9 @@ require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/database/service_dbGames.php";
 require_once MA_SERVICES . "/database/service_dbPlayers.php";
 require_once MA_SERVICES . "/database/service_dbFavPlayers.php";
+require_once MA_SERVICES . "/shared/ma_SharedBusLogic.php";
+require_once MA_SERVICES . "/database/service_dbEvents.php";
+require_once MA_SERVICES . "/roster/service_GameRosterViews.php";
 
 $auth     = ma_api_require_auth();
 $userGhin = $auth["ghinId"];
@@ -160,16 +163,111 @@ $resolveContact = function (
     ];
 };
 
+/**
+ * renderTeeSheetPlainText($view, $game)
+ *
+ * Messaging's own thin rendering step — turns the shaped structure
+ * ServiceGameRosterViews::buildByPlayingGroupView() returns into plain
+ * text for the mailto body. Deliberately NOT part of that service (which
+ * stays renderer-agnostic — a future HTML renderer for game_summary.js's
+ * own By-Playing-Group view would consume the identical shaped structure
+ * without touching this function). Prefixed with the condensed
+ * format/scoring line via ma_describeGameFormatCondensed(), matching
+ * game_summary.js's original buildPlayingGroupsText() output exactly.
+ *
+ * @param  array $view  ServiceGameRosterViews::buildByPlayingGroupView()'s return.
+ * @param  array $game  Game row.
+ * @return string
+ */
+function renderTeeSheetPlainText(array $view, array $game): string {
+    $isPairPair = trim((string)($game["dbGames_Competition"] ?? "")) === "PairPair";
+    $lines = [];
+
+    $condensedLine = ma_describeGameFormatCondensed($game);
+    if ($condensedLine !== "") {
+        $lines[] = $condensedLine;
+        $lines[] = "";
+    }
+
+    $useFlights = false;
+    foreach ($view["flightGroups"] ?? [] as $fg) {
+        if (($fg["flightLabel"] ?? "") !== "") { $useFlights = true; break; }
+    }
+
+    foreach ($view["flightGroups"] ?? [] as $fg) {
+        if ($useFlights) {
+            $lines[] = "Flight " . $fg["flightLabel"];
+        }
+
+        foreach ($fg["playingGroups"] ?? [] as $pg) {
+            $time  = $pg["teeTimeDisplay"] ?? "—";
+            $start = $pg["startHoleDisplay"] ?? "—";
+            $when  = ($time !== "—") ? "{$time} \u{b7} Hole {$start}" : "Hole {$start}";
+
+            $label = $isPairPair
+                ? "Match " . ($pg["matchId"] ?: "—") . ", Side " . ($pg["matchPos"] ?: "—") . ", Pairing " . ($pg["pairingId"] ?: "—")
+                : "Pairing " . ($pg["pairingId"] ?: "—");
+
+            $names = implode(", ", array_values(array_filter(array_map(
+                fn($p) => trim((string)($p["dbPlayers_Name"] ?? "")),
+                $pg["players"] ?? []
+            ))));
+
+            $lines[] = "{$when} \u{2014} {$label}: {$names}";
+        }
+
+        $lines[] = "";
+    }
+
+    return trim(implode("\n", $lines));
+}
+
 try {
 
     // ── Game context ──────────────────────────────────────────────────────────
-    $game        = null;
-    $gamePlayers = null;
+    $game             = null;
+    $gamePlayers      = null;
+    $readyForGameInfo = false;
+    $gameInfoBody     = "";
 
     if ($ggid > 0) {
         $game = ServiceDbGames::getGameByGGID($ggid);
 
         if ($game) {
+            // Separate fetch from the contact-resolution join below — this one
+            // pulls full rows (PlayerKey, TeeTime, StartHole, PairingID,
+            // MatchID, MatchPos, TeamKey, FlightKey, etc.) via the existing
+            // service method, needed by both the status check and the
+            // shaped-view builder. A small extra query per open, but it
+            // keeps this endpoint's own contact-resolution SQL untouched
+            // rather than bolting unrelated columns onto it.
+            $fullPlayerRows = ServiceDbPlayers::getGamePlayers((string)$ggid);
+
+            $adminStatus      = ma_getGameAdministrationStatus($fullPlayerRows);
+            $readyForGameInfo = $adminStatus["isSlottingReady"];
+
+            if ($readyForGameInfo) {
+                // isDimensionActive()'s 3rd param must be the db_Events row
+                // (or null) — NOT the game row again. Passing $game as
+                // $event would silently misfire step 1 of its hierarchy
+                // (it reads $event['dbEvents_TeamMode']/'FlightMode',
+                // fields that don't exist on a game row), always falling
+                // through to the round-level check instead. For an
+                // event-linked game with TeamMode/FlightMode set to
+                // "fixed" at the EVENT level, that would incorrectly read
+                // as inactive.
+                $eid      = (int)($game["dbGames_EID"] ?? 0);
+                $eventRow = $eid > 0 ? ServiceDbEvents::getEventByEID($eid) : null;
+
+                $teamsActive   = ServiceDbEvents::isDimensionActive("team",   $game, $eventRow);
+                $flightsActive = ServiceDbEvents::isDimensionActive("flight", $game, $eventRow);
+
+                $playingGroupView = ServiceGameRosterViews::buildByPlayingGroupView(
+                    $fullPlayerRows, $game, $teamsActive, $flightsActive
+                );
+                $gameInfoBody = renderTeeSheetPlainText($playingGroupView, $game);
+            }
+
             $pdo = Db::pdo();
 
             // ← Added dbFav_PlayerMobile and dbFav_PlayerCarrier to the join
@@ -284,12 +382,14 @@ try {
         "siteUrl"        => $siteUrl,
         "hasGameContext" => $game !== null,
         "game"           => $game !== null ? [
-            "ggid"         => (int)($game["dbGames_GGID"]        ?? 0),
-            "title"        => (string)($game["dbGames_Title"]        ?? ""),
-            "playDate"     => (string)($game["dbGames_PlayDate"]     ?? ""),
-            "playTime"     => substr((string)($game["dbGames_PlayTime"] ?? ""), 0, 5),
-            "facilityName" => (string)($game["dbGames_FacilityName"] ?? ""),
-            "courseName"   => (string)($game["dbGames_CourseName"]   ?? ""),
+            "ggid"             => (int)($game["dbGames_GGID"]        ?? 0),
+            "title"            => (string)($game["dbGames_Title"]        ?? ""),
+            "playDate"         => (string)($game["dbGames_PlayDate"]     ?? ""),
+            "playTime"         => substr((string)($game["dbGames_PlayTime"] ?? ""), 0, 5),
+            "facilityName"     => (string)($game["dbGames_FacilityName"] ?? ""),
+            "courseName"       => (string)($game["dbGames_CourseName"]   ?? ""),
+            "readyForGameInfo" => $readyForGameInfo,
+            "gameInfoBody"     => $gameInfoBody,
         ] : null,
         "gamePlayers"    => $gamePlayers,
         "favorites"      => $favorites,
@@ -299,4 +399,4 @@ try {
 } catch (Throwable $e) {
     error_log("[initPlayerNotifications] " . $e->getMessage());
     ma_respond(500, ["ok" => false, "message" => "Server error."]);
-}
+}
