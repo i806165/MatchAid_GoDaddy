@@ -1419,7 +1419,7 @@
     const items = [
       { category: "Export" },
       { label: "Download View to CSV",   action: downloadCsv,            indent: true },
-      { label: "Copy View to Clipboard", action: copySummaryToClipboard, indent: true },
+      { label: "Copy View to Clipboard", action: copyRichTextToClipboard, indent: true },
 
       { category: "Admin Services" },
       { label: "Display Game Settings", action: () => MA.gameDetails.open(state.game), indent: true },
