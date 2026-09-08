@@ -30,7 +30,7 @@
    *   joined with ", " regardless of what callers (e.g. player_notifications.js's
    *   comma/semicolon toggle) passed in.
    */
-  MA.email.compose = function (options) {
+  MA.email.compose = async function (options) {
     const opts = options || {};
     
     // For now, we only support client-side mailto: (plain text)
@@ -65,16 +65,24 @@
     }
 
     // Check length limit heuristic (approx 2000 chars is a safe limit for
-    // some browsers/mail clients). Previously this was a console.warn
-    // only — invisible to the admin, who would see a draft that looked
-    // fine but silently dropped recipients past the cutoff. Now surfaced
-    // as a visible status message so the admin knows to split the group.
+    // some browsers/mail clients). Require acknowledgment before opening
+    // the draft so the admin has a chance to split the group.
     if (link.length > 2000) {
-      setStatus(
-        "This recipient list is long enough that some names may be cut off in the email draft. " +
-        "Consider selecting fewer recipients per email, or sending in smaller batches.",
-        "warn"
-      );
+      const warning =
+        "The email draft is long enough that your email app may truncate it. " +
+        "Consider shortening the message or sending it in smaller batches.";
+
+      if (MA.ui && typeof MA.ui.confirm === "function") {
+        await MA.ui.confirm({
+          title: "Long email draft",
+          message: warning,
+          confirmLabel: "OK",
+          okOnly: true,
+          dismissible: false,
+        });
+      } else {
+        setStatus(warning, "warn");
+      }
     }
 
     //window.location.href = link;  removed in favor of code below.
