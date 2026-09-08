@@ -176,7 +176,7 @@
       right:  { show: false },
       footer: {
         save:   { label: "Assign", onClick: assignSelection },
-        cancel: { label: "Cancel", onClick: toggleMobileTray }
+        cancel: { label: "Back", onClick: toggleMobileTray }
       }
     });
 

@@ -242,7 +242,7 @@
       right:  { show: false },
       footer: {
         save:   { label: "Assign", onClick: assignHandler },
-        cancel: { label: "Cancel", onClick: toggleMobileTray }
+        cancel: { label: "Back", onClick: toggleMobileTray }
       }
     });
 
