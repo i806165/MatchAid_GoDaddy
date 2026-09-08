@@ -773,7 +773,7 @@ function wireDoorwayControls() {
     }
 
     // 1) authorization for actions (server decides OK/NotOK)
-    const requiresAuth = new Set(["editGame", "deleteGame", "roster", "pairings", "teetimes", "settings", "summary", "scorecard", "calendar", "notify"]);
+    const requiresAuth = new Set(["editGame", "deleteGame", "roster", "pairings", "teetimes", "settings", "summary", "scorecard", "calendar", "notifyInvite", "notifyMessage"]);
     if (requiresAuth.has(action)) {
       const auth = await apiSession("getGameAuthorizations.php", { ggid, action });
       const ok = auth?.payload?.status === "Authorized" || auth?.payload?.status === "OK" || auth?.status === "OK";
@@ -846,17 +846,34 @@ function wireDoorwayControls() {
       return
     };
 
-    if (action === "notify") {
+    if (action === "notifyInvite") {
       if (MA.notify && typeof MA.notify.open === "function") {
         MA.notify.open({
           ggid:    ggid,
           apiPath: MA.paths.apiNotify,
+          intent:  "invite",
         });
       } else {
         setStatus("Messaging module not loaded.", "error");
       }
       return;
     }
+
+    if (action === "notifyMessage") {
+      if (MA.notify && typeof MA.notify.open === "function") {
+        MA.notify.open({
+          ggid:    ggid,
+          apiPath: MA.paths.apiNotify,
+          intent:  "message",
+        });
+      } else {
+        setStatus("Messaging module not loaded.", "error");
+      }
+      return;
+    }
+
+    // "gameInfo" (Tee Sheet) intentionally omitted here for now — this
+    // games-list menu only exposes Invitation and General Message.
 
     if (action === "deleteGame") {
       const approved = await MA.ui.confirm({
@@ -1275,4 +1292,4 @@ function wireFiltersModal() {
       }
     })();
   });
-})();
+})();

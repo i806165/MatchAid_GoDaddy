@@ -176,7 +176,8 @@
 
       { category: "ADMIN SERVICES" },
       { label: "View Players",             indent: true, action: () => fire("rosterView") },
-      { label: "Send Message to Players",  indent: true, action: () => fire("notify") },
+      { label: "Send Invitation",          indent: true, action: () => fire("notifyInvite") },
+      { label: "Send General Message",     indent: true, action: () => fire("notifyMessage") },
       { label: `Add ${gMode} to Calendar`, indent: true, action: () => fire("calendar") },
 
       { separator: true },
