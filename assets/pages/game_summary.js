@@ -1275,15 +1275,16 @@
     setStatus("CSV downloaded.", "ok");
   }
 
-  // ── Send Game Info ──────────────────────────────────────────────────
+  // ── Send Tee Sheet ───────────────────────────────────────────────────
   // The plain-text tee sheet that used to be built here (buildPlayingGroupsText())
-  // now lives server-side as ma_buildTeeSheetText() in ma_SharedBusLogic.php,
-  // returned as game.gameInfoBody by initPlayerNotifications.php and used
-  // automatically as MA.notify's default "gameInfo" body — identical output,
-  // but now available from every page that sends game info, not just this one.
-  // This function's remaining job is purely the rich-HTML clipboard copy,
-  // which stays a summary-specific affordance layered on top of that
-  // standard message body for admins who know how to paste it in.
+  // now lives server-side, in ServiceGameRosterViews::buildByPlayingGroupView()
+  // + renderTeeSheetPlainText() in initPlayerNotifications.php, returned as
+  // game.gameInfoBody and used automatically as MA.notify's default
+  // "gameInfo" body — identical output, but now available from every page
+  // that sends a tee sheet, not just this one. This function's remaining
+  // job is purely the rich-HTML clipboard copy, which stays a summary-
+  // specific affordance layered on top of that standard message body for
+  // admins who know how to paste it in.
   async function emailSelectedRecipients() {
     if (!MA.notify || typeof MA.notify.open !== "function") {
       setStatus("Messaging module not loaded.", "error");
@@ -1307,7 +1308,7 @@
     }
   }
 
-  // ── Send Invitation ──────────────────────────────────────────────────────
+  // ── Send Invitation ──────────────────────────────────────────────────
   // Brings Summary in line with the other four pages — always enabled,
   // readiness is a gameInfo-only concept and doesn't apply here.
   function inviteSelectedRecipients() {
@@ -1323,6 +1324,26 @@
       ggid:    ggid,
       apiPath: MA.paths?.apiNotify,
       intent:  "invite",
+    });
+  }
+
+  // ── Send General Message ─────────────────────────────────────────────
+  // Always enabled — deliberately ungated even when the game has zero
+  // enrolled players (a possible future isRosterReady gate was considered
+  // and not implemented; see player_notifications.js).
+  function messageSelectedRecipients() {
+    if (!MA.notify || typeof MA.notify.open !== "function") {
+      setStatus("Messaging module not loaded.", "error");
+      return;
+    }
+
+    const g = state.game || {};
+    const ggid = String(g.dbGames_GGID || g.dbGames_GGIDnum || "").trim();
+
+    MA.notify.open({
+      ggid:    ggid,
+      apiPath: MA.paths?.apiNotify,
+      intent:  "message",
     });
   }
 
@@ -1405,8 +1426,9 @@
       { label: "Recalculate Handicaps", action: recalculateHandicaps, indent: true },
 
       { category: "Messaging and Calendar" },
-      { label: "Send Invitation to Join Game",     action: inviteSelectedRecipients, indent: true },
-      { label: "Send Game Information to Players",  action: emailSelectedRecipients,  indent: true },
+      { label: "Send Invitation",       action: inviteSelectedRecipients,  indent: true },
+      { label: "Send Tee Sheet",        action: emailSelectedRecipients,   indent: true },
+      { label: "Send General Message",  action: messageSelectedRecipients, indent: true },
       { label: "Add Game to Calendar",  action: downloadIcsForGame,   indent: true },
     ];
     MA.ui.openActionsMenu("Actions", items);

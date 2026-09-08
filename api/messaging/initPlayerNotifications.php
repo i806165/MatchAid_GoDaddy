@@ -228,6 +228,14 @@ try {
     $game             = null;
     $gamePlayers      = null;
     $readyForGameInfo = false;
+    $readyForMessage  = false; // isRosterReady — computed and returned, but
+                                // NOT enforced as a gate for "message" intent
+                                // (deliberate: admins can message an empty
+                                // game). Kept for reference / a possible
+                                // future requirement, same as the tier it
+                                // reads from (ma_getGameAdministrationStatus()
+                                // was built with all three tiers from the
+                                // start, ahead of having a consumer for each).
     $gameInfoBody     = "";
 
     if ($ggid > 0) {
@@ -245,6 +253,7 @@ try {
 
             $adminStatus      = ma_getGameAdministrationStatus($fullPlayerRows);
             $readyForGameInfo = $adminStatus["isSlottingReady"];
+            $readyForMessage  = $adminStatus["isRosterReady"];
 
             if ($readyForGameInfo) {
                 // isDimensionActive()'s 3rd param must be the db_Events row
@@ -389,6 +398,7 @@ try {
             "facilityName"     => (string)($game["dbGames_FacilityName"] ?? ""),
             "courseName"       => (string)($game["dbGames_CourseName"]   ?? ""),
             "readyForGameInfo" => $readyForGameInfo,
+            "readyForMessage"  => $readyForMessage,
             "gameInfoBody"     => $gameInfoBody,
         ] : null,
         "gamePlayers"    => $gamePlayers,

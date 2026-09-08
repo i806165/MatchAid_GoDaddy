@@ -16,36 +16,75 @@
  *   {
  *     ggid      : string|number|null  — game ID; omit or null for favorites-only
  *     apiPath   : string              — URL to initPlayerNotifications.php
- *     intent    : "invite"|"gameInfo" — default "gameInfo". "invite" opens
- *                                        on the Favorites tab with nothing
- *                                        pre-selected (both tabs still
- *                                        reachable); "gameInfo" is gated on
- *                                        server-side readiness (at least one
- *                                        player slotted) — a busy spinner
- *                                        covers the check, and a blocking
- *                                        OK-only confirm explains it and
- *                                        stops if the game isn't ready yet,
- *                                        before this module's own panel is
- *                                        ever created. When ready, opens on
- *                                        the Game Players tab with every
- *                                        contactable enrolled player
- *                                        pre-selected (unchanged from the
- *                                        original single-intent behavior).
+ *     intent    : "invite"|"gameInfo"|"message" — default "gameInfo".
+ *
+ *                  "invite"   — opens on the Favorites tab, nothing
+ *                               pre-selected. Ungated — always available,
+ *                               even for a brand-new game with zero
+ *                               enrolled players.
+ *
+ *                  "gameInfo" — gated on server-side readiness
+ *                               (isSlottingReady — at least one player
+ *                               slotted). A busy spinner covers the
+ *                               check; a blocking OK-only confirm
+ *                               explains it and stops if the game isn't
+ *                               ready, before this module's own panel is
+ *                               ever created. When ready, opens on the
+ *                               Game Players tab with every contactable
+ *                               enrolled player pre-selected.
+ *
+ *                  "message"  — ungated, same as "invite" (a possible
+ *                               future requirement to gate this on
+ *                               isRosterReady was considered and
+ *                               deliberately not implemented — admins can
+ *                               message an empty game). Defaults to the
+ *                               Game Players tab with every contactable
+ *                               enrolled player pre-selected when the
+ *                               game actually has players; falls back to
+ *                               the Favorites tab when it doesn't (a real
+ *                               game can exist with zero players — that's
+ *                               a different condition than no game
+ *                               existing at all, hasGameContext alone
+ *                               doesn't distinguish the two).
+ *
+ *                  All three still expose both tabs regardless of
+ *                  default — nothing is ever hidden, only the starting
+ *                  tab and preselection differ.
+ *
  *     onClose   : function()          — optional callback when panel is dismissed
  *     subject   : string              — optional. Overrides the intent's
- *                                        default subject line.
- *     body      : string              — optional. Prepended to the default
- *                                        "View or Register at {siteUrl}/game/{ggid}"
- *                                        link (the link always appears).
- *                                        For "gameInfo", the default body
- *                                        (when no override is given) is the
- *                                        server-built tee-sheet text
+ *                                        default subject line. Default
+ *                                        format for all three: "{leadPhrase}
+ *                                        — {when} — {title} — {venue}"
+ *                                        ("You're invited to play" /
+ *                                        "Tee Sheet" / "Message from your
+ *                                        Game Admin"). {when} sits right
+ *                                        after the lead phrase (not last)
+ *                                        so it survives inbox-preview
+ *                                        truncation.
+ *     body      : string              — optional. Combined with the
+ *                                        intent's default body and a
+ *                                        trailing link line (the link
+ *                                        always appears) — "View or
+ *                                        Register at {link}" for "invite",
+ *                                        "View Game Details at {link}"
+ *                                        for "gameInfo"/"message". For
+ *                                        "gameInfo", the default body
+ *                                        (when no override is given) is
+ *                                        the server-built tee-sheet text
  *                                        (game.gameInfoBody, from
- *                                        ma_buildTeeSheetText() in
- *                                        ma_SharedBusLogic.php) — identical
- *                                        regardless of which page triggered
- *                                        the send. Plain text — not
- *                                        escaped/altered.
+ *                                        ServiceGameRosterViews::buildByPlayingGroupView()
+ *                                        + renderTeeSheetPlainText() in
+ *                                        initPlayerNotifications.php) —
+ *                                        identical regardless of which
+ *                                        page triggered the send. For
+ *                                        "message", there is no default
+ *                                        body at all — deliberately near-
+ *                                        blank, since General Message
+ *                                        covers anything ad hoc (course
+ *                                        change, rain delay, wagers) with
+ *                                        no single template that fits.
+ *                                        Plain text — not escaped/altered.
  *   }
  *
  * Modal structure (all regions use ma_shared.css):
@@ -213,7 +252,14 @@
       return;
     }
 
-    await _openInvite(apiPath, payload);
+    // "invite" and "message" are both ungated — open immediately, load in
+    // place. Only "gameInfo" is gated on readiness (isSlottingReady);
+    // "message" deliberately has no gate — an earlier design considered
+    // gating it on isRosterReady, but the decision was to let admins send
+    // to an empty game (readyForMessage/isRosterReady is still returned
+    // by the API for reference, just not enforced here — a possible
+    // future requirement, not dead weight).
+    await _openUngated(apiPath, payload);
   };
 
   // ── Ambient error helper — routes through MA.ui.notify so this module
@@ -265,8 +311,8 @@
     _openPanelWithData(); // data already in hand — paints once, no skeleton
   }
 
-  // ── Invite: unchanged shape — open immediately, load in place ───────
-  async function _openInvite(apiPath, payload) {
+  // ── Invite / Message: no gate — open immediately, load in place ─────
+  async function _openUngated(apiPath, payload) {
     _destroyOverlay();
     _renderOverlay(_html_skeleton());
 
@@ -289,11 +335,19 @@
     const intent = _state.intent;
     const data   = _state.data;
 
-    _state.activeTab = (intent === "invite")
-      ? "favs"
-      : (data.hasGameContext ? "game" : "favs");
+    if (intent === "invite") {
+      _state.activeTab = "favs";
+    } else if (intent === "message") {
+      // A real game can still have zero enrolled players (hasGameContext
+      // alone doesn't tell us that) — default to Favorites in that case
+      // rather than opening on an empty Game Players list.
+      const hasPlayers = data.hasGameContext && Array.isArray(data.gamePlayers) && data.gamePlayers.length > 0;
+      _state.activeTab = hasPlayers ? "game" : "favs";
+    } else { // gameInfo
+      _state.activeTab = data.hasGameContext ? "game" : "favs";
+    }
 
-    if (intent === "gameInfo" && data.hasGameContext && Array.isArray(data.gamePlayers)) {
+    if ((intent === "gameInfo" || intent === "message") && data.hasGameContext && Array.isArray(data.gamePlayers)) {
       data.gamePlayers.forEach(function (p) {
         if (p.deliveryMethod !== null) {
           _state.selected.add(p.ghin);
@@ -996,19 +1050,35 @@
       const when  = formatDateShort(game.playDate, game.playTime);
       const link  = siteUrl + "/game/" + game.ggid;
 
+      // Subject format, all three intents: "{leadPhrase} — {when} — {title}
+      // — {venue}". {when} sits right after the lead phrase (not last) so
+      // it survives inbox-preview truncation — the piece that actually
+      // disambiguates one occurrence of a recurring game from another,
+      // which matters more than title alone once a game repeats weekly.
+      const subjectTail = [when, game.title, venue].filter(Boolean).join(" \u2014 ");
+
       if (intent === "invite") {
-        subject = subjectOverride ||
-          ("You're invited to play \u2014 " + [game.title, venue, when].filter(Boolean).join(" \u2014 "));
+        subject = subjectOverride || ("You're invited to play \u2014 " + subjectTail);
 
         const defaultInviteBody = "You're invited to play " + (game.title || "a game") +
           (when ? (" on " + when) : "") + ".";
 
-        // Same link-always-appended contract as gameInfo below — a
-        // caller-supplied body and the default aren't either/or.
+        // Same link-always-appended contract as the other intents below —
+        // a caller-supplied body and the default aren't either/or.
         body = (bodyOverride || defaultInviteBody) + "\n\nView or Register at " + link;
 
+      } else if (intent === "message") {
+        subject = subjectOverride || ("Message from your Game Admin \u2014 " + subjectTail);
+
+        // Deliberately no default content — General Message covers
+        // anything ad hoc about the game (course change, rain delay,
+        // wagers, etc.) with no single template that fits all of it. The
+        // admin writes it themselves; this opens as close to blank as
+        // possible, just the link.
+        body = (bodyOverride || "") + (bodyOverride ? "\n\n" : "") + "View Game Details at " + link;
+
       } else { // "gameInfo"
-        subject = subjectOverride || [game.title, venue, when].filter(Boolean).join(" \u2014 ");
+        subject = subjectOverride || ("Tee Sheet \u2014 " + subjectTail);
 
         // Prefer the caller's override, then the server-built tee-sheet
         // text (game.gameInfoBody, from ma_buildTeeSheetText() —
@@ -1016,7 +1086,7 @@
         // send), then bare link if neither is present.
         const defaultBody = bodyOverride || safeStr(game.gameInfoBody);
         body = defaultBody
-          ? (defaultBody + "\n\nView or Register at " + link)
+          ? (defaultBody + "\n\nView Game Details at " + link)
           : link;
       }
     } else {

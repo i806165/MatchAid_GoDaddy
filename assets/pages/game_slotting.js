@@ -1431,14 +1431,15 @@ async function onResetChanges() {
     }
   }
 
-  // Both items are always enabled — readiness for "Send Game Info" is
+  // All three items are always enabled — readiness for "Send Tee Sheet" is
   // checked inside MA.notify itself (behind a busy spinner, with a
   // blocking confirm if the game isn't ready), not gated here. Note:
   // since slotting is the one page where a player can go from
   // un-carded to carded mid-session, MA.notify's own tap-time check
-  // (rather than any page-load snapshot) is what makes "Send Game Info"
+  // (rather than any page-load snapshot) is what makes "Send Tee Sheet"
   // correct here immediately after a save, with no extra wiring needed
-  // on this page's part.
+  // on this page's part. "Send General Message" is deliberately ungated
+  // entirely — admins can message an empty game.
   function onNotifyInvite() {
     if (!state.ggid) return;
     if (MA.notify && typeof MA.notify.open === "function") {
@@ -1459,6 +1460,19 @@ async function onResetChanges() {
         ggid:    state.ggid,
         apiPath: MA.paths?.apiNotify,
         intent:  "gameInfo",
+      });
+    } else if (MA.ui && MA.ui.notify) {
+      MA.ui.notify("Messaging module not loaded.", "error");
+    }
+  }
+
+  function onNotifyMessage() {
+    if (!state.ggid) return;
+    if (MA.notify && typeof MA.notify.open === "function") {
+      MA.notify.open({
+        ggid:    state.ggid,
+        apiPath: MA.paths?.apiNotify,
+        intent:  "message",
       });
     } else if (MA.ui && MA.ui.notify) {
       MA.ui.notify("Messaging module not loaded.", "error");
@@ -1718,8 +1732,9 @@ async function onResetChanges() {
       { label: "Recalculate Handicaps", action: recalculateHandicaps, indent: true },
 
       { category: "Messaging and Calendar" },
-      { label: "Send Invitation to Join Game",     action: onNotifyInvite,   indent: true },
-      { label: "Send Game Information to Players",  action: onNotifyGameInfo, indent: true },
+      { label: "Send Invitation",       action: onNotifyInvite,   indent: true },
+      { label: "Send Tee Sheet",        action: onNotifyGameInfo, indent: true },
+      { label: "Send General Message",  action: onNotifyMessage,  indent: true },
       { label: "Add Game to Calendar",  action: downloadIcsForGame,   indent: true },
     ]);
   }

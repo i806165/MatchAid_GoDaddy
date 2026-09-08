@@ -218,8 +218,9 @@
       { label: "Recalculate Handicaps", indent: true, action: doRefreshHandicaps },
 
       { category: "Messaging and Calendar" },
-      { label: "Send Invitation to Join Game",     indent: true, action: onNotifyInvite },
-      { label: "Send Game Information to Players",  indent: true, action: onNotifyGameInfo },
+      { label: "Send Invitation",       indent: true, action: onNotifyInvite },
+      { label: "Send Tee Sheet",        indent: true, action: onNotifyGameInfo },
+      { label: "Send General Message",  indent: true, action: onNotifyMessage },
       { label: "Add Game to Calendar",    indent: true, action: downloadIcsForGame },
     ]);
   }
@@ -251,9 +252,11 @@
     }
   }
 
-  // Both items are always enabled — readiness for "Send Game Info" is
+  // All three items are always enabled — readiness for "Send Tee Sheet" is
   // checked inside MA.notify itself (behind a busy spinner, with a
   // blocking confirm if the game isn't ready), not gated here.
+  // "Send General Message" is deliberately ungated entirely — admins can
+  // message an empty game.
   function onNotifyInvite() {
     if (!state.ggid) return;
     if (MA.notify && typeof MA.notify.open === "function") {
@@ -274,6 +277,19 @@
         ggid:    state.ggid,
         apiPath: MA.paths?.apiNotify,
         intent:  "gameInfo",
+      });
+    } else {
+      setStatus("Messaging module not loaded.", "error");
+    }
+  }
+
+  function onNotifyMessage() {
+    if (!state.ggid) return;
+    if (MA.notify && typeof MA.notify.open === "function") {
+      MA.notify.open({
+        ggid:    state.ggid,
+        apiPath: MA.paths?.apiNotify,
+        intent:  "message",
       });
     } else {
       setStatus("Messaging module not loaded.", "error");
