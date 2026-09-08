@@ -23,7 +23,7 @@
     courseTeePayload: init.courseTeePayload || null,
     batchFallbackTee: null,      // tee selected in the picker for batch flows
     batchForceAssign: false,     // when true hierarchy is skipped; fallback tee used for all
-    rosterSort: "name",  // name | team | hi | ch
+    rosterSort: "seq",  // seq | name | team | hi | ch
   };
 
   function isImportDesktopEnabled(){
@@ -247,8 +247,20 @@
     const favoriteSet = new Set((state.favorites || []).map((f) => safe(f.playerGHIN)));
     const teamConfig = (window.__MA_INIT__ || {}).teamConfig || null;
 
+    // Registration sequence — computed once from _createdDate, independent
+    // of whatever sort is currently active. This is the player's fixed
+    // "Seq" number (1..N by registration time); it must not shift when the
+    // canvas is re-sorted by Name/Team/HI/CH.
+    const byReg = [...state.players].sort((a, b) => {
+      const ta = a._createdDate ? new Date(String(a._createdDate).replace(" ", "T")).getTime() : 0;
+      const tb = b._createdDate ? new Date(String(b._createdDate).replace(" ", "T")).getTime() : 0;
+      return ta - tb;
+    });
+    const seqMap = new Map(byReg.map((p, i) => [safe(p.dbPlayers_PlayerGHIN), i + 1]));
+
     const sortedPlayers = [...state.players].sort((a, b) => {
       const s = state.rosterSort;
+      if (s === "seq") return seqMap.get(safe(a.dbPlayers_PlayerGHIN)) - seqMap.get(safe(b.dbPlayers_PlayerGHIN));
       if (s === "hi") return (parseFloat(a.dbPlayers_HI) || 999) - (parseFloat(b.dbPlayers_HI) || 999);
       if (s === "ch") return (parseFloat(a.dbPlayers_CH) || 999) - (parseFloat(b.dbPlayers_CH) || 999);
       if (s === "team") {
@@ -293,7 +305,10 @@
         ? `<svg viewBox="0 0 24 24" width="18" height="18" fill="#0066CC"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 2 7.5 2c1.74 0 3.41.81 4.5 2.09C13.09 2.81 14.76 2 16.5 2 19.58 2 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`
         : `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#0066CC" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l8.84-8.84 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>`;
 
+      const seq = seqMap.get(ghin) || "";
+
       const rowHtml = `<div class="maListRow gpRow gpRow--roster" data-ghin="${esc(ghin)}">
+        <div class="maListRow__col--muted maListRow__col--right">${esc(seq)}</div>
         <div class="maListRow__col">${esc(nameLine)}<div class="maListRow__col--muted gpSub">${esc(meta)}</div></div>
         <button class="iconBtn btnSecondary" data-act="fav" title="Favorites" aria-label="Favorites">${heartIcon}</button>
         <button class="iconBtn btnPrimary" data-act="del" title="Remove" aria-label="Remove"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
@@ -351,6 +366,7 @@
     }
 
     const sorts = [
+      { id: "seq",  label: "Seq"  },
       { id: "name", label: "Name" },
       { id: "team", label: "Team" },
       { id: "hi",   label: "HI"   },
