@@ -9,7 +9,6 @@
   const apiUrls = {
     scoreHome:            (paths.apiScoreHome || '/api/score_home') + '/initScoreHome.php',
     setScorerContext:     (paths.apiScoreHome || '/api/score_home') + '/setScorerContext.php',
-    getPlayersForRefresh: (paths.apiScoreHome || '/api/score_home') + '/getPlayersForRefresh.php',
     removePlayerFromGroup:(paths.apiScoreHome || '/api/score_home') + '/removePlayerFromGroup.php',
     scoreEntry:            paths.scoreEntry   || '/app/score_entry/scoreentry.php',
     scoreSummary:          paths.scoreSummary || '/app/score_summary/scoresummary.php',
@@ -518,20 +517,13 @@
       // scoring hasn't started yet.
       state.dirty = true;
 
-      // Re-fetch this scorecard's players so the row list (and, if this
-      // was the last/only remaining player, the whole group card) reflects
-      // the removal immediately.
-      const ggidStr = String(state.game?.dbGames_GGID || '');
-      const scorecardKey = String(el.groupKeyText?.textContent || '').trim().toUpperCase();
-      if (ggidStr && scorecardKey) {
-        const refreshed = await MA.postJson(apiUrls.getPlayersForRefresh, {
-          ggid: ggidStr,
-          scorecardKey,
-        });
-        if (refreshed && refreshed.ok) {
-          state.players = normalizePlayers(refreshed.players || []);
-        }
-      }
+      // removePlayerFromGroup.php already clears this player out of the
+      // pairing/slot server-side and hands back the cleared row — no need
+      // to re-fetch the whole scorecard just to see them gone. Dropping
+      // them from state.players locally reaches the same end state (and,
+      // if this was the last/only remaining player, the empty group list)
+      // with one network call instead of two.
+      state.players = state.players.filter(p => p.ghin !== player.ghin);
 
       renderPlayerRows();
       renderGroupContext();
@@ -597,18 +589,13 @@
       return;
     }
 
-    const ggidStr = String(state.game?.dbGames_GGID || '');
-    const scorecardKey = String(
-      state.players?.[0]?.playerKey || el.groupKeyText?.textContent || ''
-    ).trim().toUpperCase();
-
     // Blocking overlay (MA.ui.showBusy/hideBusy — see ma_shared.js) instead of
     // a transient notify(): the tee-picker modal (teesetSelection.js) closes
     // itself immediately and fires onSave without awaiting it, so without a
     // blocking lock here the user regains a fully interactive screen while
-    // the upsert + refetch below are still in flight — free to tap away
-    // before the re-render lands, which is what made the screen look stale
-    // on return. The finally block guarantees this comes down even on error.
+    // the upsert below is still in flight — free to tap away before the
+    // re-render lands. The finally block guarantees this comes down even
+    // on error.
     MA.ui.showBusy({ title: 'Updating Tee Box', message: 'Please wait…' });
 
     try {
@@ -630,29 +617,25 @@
         throw new Error(res?.message || 'Unable to update tee box.');
       }
 
-      // Pull fresh player rows for this Scorecard ID — read-only, so the
-      // tapped row's tee/HI/CH reflect the save immediately without
-      // triggering a recalc here. This fetch is independent of the
-      // retired refresh_scores.js/MA.refreshScores() — it's a plain
-      // display re-fetch, not declared reconciliation.
-      if (ggidStr && scorecardKey) {
-        const refreshed = await MA.postJson(apiUrls.getPlayersForRefresh, {
-          ggid: ggidStr,
-          scorecardKey,
-        });
-        if (refreshed && refreshed.ok) {
-          state.players = normalizePlayers(refreshed.players || []);
-        }
-
-        // Declared reconciliation for this tee change is NOT run
-        // immediately here anymore — MA.refreshScores() is retired.
-        // Strokes/net/declared for this group get rebuilt together, once,
-        // by the deferred recalc that state.dirty (below) forces on
-        // Go-to-Digital-Scoring — same "compute the whole chain together"
-        // principle as everywhere else in this workflow, rather than a
-        // separate declared-only pass disconnected from the strokes fix
-        // still pending in state.dirty.
+      // upsertGamePlayers.php already hands back the freshly-saved row
+      // (workflow_ProcessPlayers.php's return value from the same write) —
+      // no separate re-fetch needed to show the new tee/HI/CH. Splice it
+      // into state.players in place of the stale entry for this GHIN.
+      const savedRow = res.payload?.player;
+      if (savedRow) {
+        const updated = normalizePlayers([savedRow])[0];
+        const idx = state.players.findIndex(p => p.ghin === updated.ghin);
+        if (idx >= 0) state.players[idx] = updated;
       }
+
+      // Declared reconciliation for this tee change is NOT run
+      // immediately here anymore — MA.refreshScores() is retired.
+      // Strokes/net/declared for this group get rebuilt together, once,
+      // by the deferred recalc that state.dirty (below) forces on
+      // Go-to-Digital-Scoring — same "compute the whole chain together"
+      // principle as everywhere else in this workflow, rather than a
+      // separate declared-only pass disconnected from the strokes fix
+      // still pending in state.dirty.
 
       // The real handicap recalculation is deferred — it's a live GHIN
       // network call, and SO for every player in the group depends on
