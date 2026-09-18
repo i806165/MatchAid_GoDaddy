@@ -25,7 +25,7 @@
  * signals it's done. Never stacked (scroll-lock is a boolean toggle
  * elsewhere in this module family, not a reference count).
  *
- * ── Child module contracts — all eight rows, one shape ──────────────────
+ * ── Child module contracts — all nine rows, one shape ──────────────────
  * Every row's module self-hydrates (no data passed in) and takes only
  * { onDone } (plus { target: "game" } for the two dual-scope modules,
  * Handicaps and Teams/Flights — this menu only ever opens the game side).
@@ -82,6 +82,16 @@
     return named ? `Assigned · ${named.name || named.ghin}` : "Group-selected";
   }
 
+  // Side Bets: definitions live in dbGames_CustomScores ({ version, bets[] });
+  // "in scope" = bets whose status is "active".
+  function sideBetsSummary(raw) {
+    let o = raw;
+    if (typeof o === "string") { try { o = JSON.parse(o); } catch (e) { o = null; } }
+    const bets = (o && Array.isArray(o.bets)) ? o.bets : [];
+    const n = bets.filter(b => b && b.status === "active").length;
+    return n ? `${n} in scope` : "Off";
+  }
+
   // ── Row behavior — summary + open, keyed by id. Label/icon/order are
   // NOT here — they live in the DOM catalog (includes/gameSettingsMenuRows.php),
   // read at render time. This object only supplies what has to be code:
@@ -107,6 +117,10 @@
       summary: () => "Configured",
       open: (done) => MA.setGamePlacementPoints?.open({ onDone: done }),
     },
+    sideBets: {
+      summary: (g) => sideBetsSummary(g.dbGames_CustomScores),
+      open: (done) => MA.setGameSideBets?.open({ onDone: done }),
+    },
     handicaps: {
       summary: (g) => handicapSummary(g),
       open: (done) => MA.setHandicapsGameEvent?.open({target: "game", onDone: done}),
@@ -126,7 +140,7 @@
     if (typeof MA.postJson !== "function") throw new Error("ma_shared.js not loaded (MA.postJson missing).");
     const res = await MA.postJson(CONTEXT_ENDPOINT, {});
     if (!res || !res.ok) throw new Error(res?.message || "Failed to load game context.");
-    return res.payload; // { ggid, game, roster, coursePars, recallTemplates }
+    return res.payload; // { ggid, game, roster, coursePars }
   }
 
   // ── Overlay ──────────────────────────────────────────────────────────

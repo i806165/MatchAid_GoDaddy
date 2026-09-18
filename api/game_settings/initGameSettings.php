@@ -24,10 +24,6 @@ try {
   $ggid = $gameCtx["ggid"];
   $game = $gameCtx["game"];
 
-  // Fetch recall templates for the admin
-  $adminGHIN = (string)($game["dbGames_AdminGHIN"] ?? "");
-  $recallTemplates = ServiceDbGames::getRecallTemplates($adminGHIN);
-
   // 3. Get Roster
   $roster = ServiceDbPlayers::getGamePlayers((string)$ggid);
 
@@ -53,7 +49,6 @@ try {
     "game" => $game,
     "roster" => $roster,
     "coursePars" => $coursePars,
-    "recallTemplates" => $recallTemplates,
   ];
 
   echo json_encode(["ok" => true, "payload" => $payload], JSON_UNESCAPED_SLASHES);
