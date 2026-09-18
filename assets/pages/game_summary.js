@@ -16,7 +16,7 @@
   }
 
   const state = {
-    scope: "byPairing", // byPlayer | byPairing | byPlayingGroup
+    scope: "byPlayingGroup", // byPlayer | byPairing | byPlayingGroup
     game: null,
     roster: [],
     portal: "",

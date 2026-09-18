@@ -13,9 +13,9 @@
   <!-- Scope + Meta pills row -->
   <div class="gsControlsRow">
     <div class="maSeg gsScopeSeg" role="tablist" aria-label="Roster Scope">
-      <button type="button" class="maSegBtn is-active" id="scopeByPlayer" aria-selected="true">By Player</button>
+      <button type="button" class="maSegBtn" id="scopeByPlayer" aria-selected="false">By Player</button>
       <button type="button" class="maSegBtn" id="scopeByPairing" aria-selected="false">By Pairing</button>
-      <button type="button" class="maSegBtn" id="scopeByPlayingGroup" aria-selected="false">By Playing Group</button>
+      <button type="button" class="maSegBtn is-active" id="scopeByPlayingGroup" aria-selected="true">By Playing Group</button>
     </div>
   </div>
 </div>
