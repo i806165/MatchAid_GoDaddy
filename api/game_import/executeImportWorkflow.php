@@ -37,19 +37,30 @@ try {
     $adminGhin = trim((string)($admin["ghin"] ?? ""));
     if ($adminGhin === "") throw new RuntimeException("Missing admin.");
 
-    // 3) Resolve admin assoc metadata from favorites
-    $favs  = ServiceDbFavAdmins::getFavoriteAdmins([
-        "userGHIN" => strval($_SESSION["SessionGHINLogonID"] ?? "")
-    ]);
-    $match = null;
-    foreach ($favs as $fa) {
-        if (strval($fa["key"] ?? "") === $adminGhin) { $match = $fa; break; }
-    }
-    if (!$match) {
-        throw new RuntimeException("Selected admin is not a Favorite (missing assoc metadata).");
+    // 3) Resolve admin metadata. Self-import is the normal path and uses
+    // trusted session context. Non-self imports retain the existing Favorite
+    // Admin validation until the app has a concrete SITE_ADMIN session role.
+    $sessionGhin = trim((string)($_SESSION["SessionGHINLogonID"] ?? ""));
+    if ($adminGhin === $sessionGhin) {
+        $match = [
+            "name" => (string)($_SESSION["SessionUserName"] ?? $adminGhin),
+            "assocId" => (string)($_SESSION["SessionAdminAssocID"] ?? ""),
+            "assocName" => (string)($_SESSION["SessionAdminAssocName"] ?? ""),
+        ];
+    } else {
+        $favs = ServiceDbFavAdmins::getFavoriteAdmins(["userGHIN" => $sessionGhin]);
+        $match = null;
+        foreach ($favs as $fa) {
+            if ((string)($fa["key"] ?? "") === $adminGhin) {
+                $match = $fa;
+                break;
+            }
+        }
+        if (!$match) {
+            throw new RuntimeException("Selected admin is not a Favorite (missing assoc metadata).");
+        }
     }
 
-    // Name is sourced from the verified favorites record, not the request.
     $adminName = trim((string)($match["name"] ?? $adminGhin));
 
     $sessionCtx = [
