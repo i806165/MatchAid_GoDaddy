@@ -183,7 +183,7 @@ final class ServiceContextEvent
     // pattern as ServiceContextGame::defaultGameForAdd().
     $today = ma_resolveClientToday()->format("Y-m-d");
 
-    $facilityName = (string)($_SESSION["SessionFacilityName"] ?? $_SESSION["SessionGHINFacilityName"] ?? "");
+    $facilityName = (string)($_SESSION["SessionFacilityName"] ?? "");
 
     $record = [
       "dbEvents_EID" => null,
@@ -193,7 +193,7 @@ final class ServiceContextEvent
       "dbEvents_EndDate" => $today,
       "dbEvents_Description" => "",
 
-      "dbEvents_FacilityID" => (string)($_SESSION["SessionFacilityID"] ?? $_SESSION["SessionGHINFacilityID"] ?? ""),
+      "dbEvents_FacilityID" => (string)($_SESSION["SessionFacilityID"] ?? ""),
       "dbEvents_FacilityName" => $facilityName,
 
       "dbEvents_AdminGHIN" => (string)($_SESSION["SessionGHINLogonID"] ?? ""),

@@ -43,7 +43,10 @@ final class ServiceUserContext {
     public static function storeGHINUser(string $ghinId,
         string $name,
         $profileJson,
-        string $adminToken, ?string $userToken): bool {
+        string $adminToken, ?string $userToken,
+        ?string $activeClubId = null,
+        ?string $activeClubName = null,
+        ?array $clubMemberships = null): bool {
         $ghinId =trim($ghinId);
         if ($ghinId ==="") return false;
 
@@ -52,20 +55,28 @@ final class ServiceUserContext {
         $existing =self::retrieveGHINUser($ghinId);
 
         $profileStored =is_string($profileJson) ? $profileJson : json_encode($profileJson);
+        $membershipsStored = $clubMemberships === null
+            ? null
+            : json_encode($clubMemberships, JSON_UNESCAPED_SLASHES);
 
 if ($existing) {
     $sql = "UPDATE db_Users
             SET dbUser_Name = :name,
                 dbUser_Profile = :profile,
                 dbUser_UserToken = :utok,
-                dbUser_AdminToken = :atok
+                dbUser_AdminToken = :atok,
+                dbUser_ActiveClubID = COALESCE(:activeClubId, dbUser_ActiveClubID),
+                dbUser_ActiveClubName = COALESCE(:activeClubName, dbUser_ActiveClubName),
+                dbUser_ClubMemberships = COALESCE(:memberships, dbUser_ClubMemberships)
             WHERE dbUser_GHIN = :ghin
             LIMIT 1";
 } else {
     $sql = "INSERT INTO db_Users
-            (dbUser_GHIN, dbUser_Name, dbUser_Profile, dbUser_UserToken, dbUser_AdminToken)
+            (dbUser_GHIN, dbUser_Name, dbUser_Profile, dbUser_UserToken, dbUser_AdminToken,
+             dbUser_ActiveClubID, dbUser_ActiveClubName, dbUser_ClubMemberships)
             VALUES
-            (:ghin, :name, :profile, :utok, :atok)";
+            (:ghin, :name, :profile, :utok, :atok,
+             :activeClubId, :activeClubName, :memberships)";
 }
 
 
@@ -74,7 +85,10 @@ if ($existing) {
             ":name"=> $name,
             ":profile"=> $profileStored,
             ":utok"=> $userToken,
-            ":atok"=> $adminToken ]);
+            ":atok"=> $adminToken,
+            ":activeClubId" => $activeClubId,
+            ":activeClubName" => $activeClubName,
+            ":memberships" => $membershipsStored ]);
     }
 
     /**
@@ -106,9 +120,9 @@ public static function getUserContext(): ?array {
     // Decode profile JSON if needed
     $profile = self::decodeJsonIfNeeded($userRow["dbUser_Profile"] ?? null);
 
-    // Derive clubId / clubName safely
-    $clubId = "";
-    $clubName = "";
+    // The persisted active club is the single source of truth.
+    $clubId = trim((string)($userRow["dbUser_ActiveClubID"] ?? ""));
+    $clubName = trim((string)($userRow["dbUser_ActiveClubName"] ?? ""));
     $assocId = "";
     $assocName = "";
     $userState = "";
@@ -116,17 +130,15 @@ public static function getUserContext(): ?array {
     if (is_array($profile)) {
         // direct keys (cover multiple shapes)
         $userState   = (string)($profile["state"] ?? $profile["state"] ?? $profile["state"] ?? $profile["state"] ?? "");
-        $clubId   = (string)($profile["club_id"] ?? $profile["clubId"] ?? $profile["clubID"] ?? $profile["ClubID"] ?? "");
-        $clubName = (string)($profile["club_name"] ?? $profile["clubName"] ?? $profile["ClubName"] ?? "");
         $assocId   = (string)($profile["assoc_id"] ?? $profile["assocId"] ?? $profile["assocID"] ?? $profile["AssociationID"] ?? $profile["AssociationId"] ?? "");
         $assocName = (string)($profile["assoc_name"] ?? $profile["assocName"] ?? $profile["AssociationName"] ?? "");
 
         // nested GHIN-ish shape (if present)
-        if ($clubId === "" && isset($profile["profileJson"]["golfers"][0]) && is_array($profile["profileJson"]["golfers"][0])) {
-            $g0 = $profile["profileJson"]["golfers"][0];
+        $golfers = $profile["profileJson"]["golfers"] ?? [];
+        $g0 = self::findGolferForClub(is_array($golfers) ? $golfers : [], $clubId);
+        if ($g0 !== []) {
             $userState   = (string)($g0["state"] ?? "");
-            $clubId   = (string)($g0["club_id"] ?? "");
-            $clubName = (string)($g0["club_name"] ?? "");
+            if ($clubName === "") $clubName = (string)($g0["club_name"] ?? "");
             $assocId   = (string)($g0["association_id"] ?? $g0["assoc_id"] ?? $assocId);
             $assocName = (string)($g0["association_name"] ?? $g0["assoc_name"] ?? $assocName);
         }
@@ -143,22 +155,6 @@ public static function getUserContext(): ?array {
     if ($assocName !== "") $_SESSION["SessionAdminAssocName"] = $assocName;
     if ($clubId !== "")    $_SESSION["SessionAdminClubID"]    = $clubId;
     if ($clubName !== "")  $_SESSION["SessionAdminClubName"]  = $clubName;
-
-        // Extract default facility from profile
-    $facilityId   = "";
-    $facilityName = "";
-
-    $facilities = is_array($profile)
-        ? ($profile["facilityJson"]["facilities"] ?? null)
-        : null;
-
-    if (is_array($facilities) && !empty($facilities)) {
-        $facilityId   = trim(strval($facilities[0]["facility_id"] ?? ""));
-        $facilityName = trim(strval($facilities[0]["name"]        ?? ""));
-    }
-
-    if ($facilityId !== "") $_SESSION["SessionFacilityID"]   = $facilityId;
-    if ($facilityName !== "") $_SESSION["SessionFacilityName"] = $facilityName;
 
     $prefYards = self::decodePreferenceYards($userRow["dbUser_PreferenceYards"] ?? null);
     if ($prefYards !== null) $_SESSION["SessionPreferenceYards"] = $prefYards;
@@ -222,6 +218,61 @@ public static function retrieveGHINUser(string $ghinId): ?array {
         return (json_last_error()===JSON_ERROR_NONE) ? $decoded : $val;
     }
 
+public static function resolveClubFacility(string $clubId, string $adminToken): array {
+    require_once MA_SERVICES . "/GHIN/GHIN_API_Courses.php";
+
+    $raw = be_getClubFacility($clubId, $adminToken);
+    $rows = $raw["facilities"] ?? [];
+    if (!is_array($rows)) $rows = [];
+
+    $realRows = array_values(array_filter($rows, static function ($row): bool {
+        if (!is_array($row)) return false;
+        $name = trim((string)($row["name"] ?? ""));
+        $courses = $row["home_courses"] ?? [];
+        return !($name === "" && (!is_array($courses) || $courses === []));
+    }));
+
+    if ($realRows === []) {
+        return ["facilityId" => "", "facilityName" => "", "courses" => []];
+    }
+
+    $courses = [];
+    $seenCourseIds = [];
+    foreach ($realRows as $row) {
+        foreach (($row["home_courses"] ?? []) as $course) {
+            if (!is_array($course)) continue;
+            $key = (string)($course["course_id"] ?? $course["id"] ?? "");
+            if ($key !== "" && isset($seenCourseIds[$key])) continue;
+            if ($key !== "") $seenCourseIds[$key] = true;
+            $courses[] = $course;
+        }
+    }
+
+    return [
+        "facilityId" => (string)($realRows[0]["facility_id"] ?? ""),
+        "facilityName" => (string)($realRows[0]["name"] ?? ""),
+        "courses" => $courses,
+    ];
+}
+
+public static function hydrateSessionFacility(string $clubId, string $adminToken): array {
+    $facility = self::resolveClubFacility($clubId, $adminToken);
+    $_SESSION["SessionFacilityID"] = $facility["facilityId"];
+    $_SESSION["SessionFacilityName"] = $facility["facilityName"];
+    return $facility;
+}
+
+private static function findGolferForClub(array $golfers, string $clubId): array {
+    if ($clubId !== "") {
+        foreach ($golfers as $golfer) {
+            if (is_array($golfer) && (string)($golfer["club_id"] ?? "") === $clubId) {
+                return $golfer;
+            }
+        }
+    }
+    return isset($golfers[0]) && is_array($golfers[0]) ? $golfers[0] : [];
+}
+
 public static function buildUserSettingsPayload(string $ghinId): array {
     $row = self::retrieveGHINUser($ghinId);
     if (!$row) {
@@ -229,7 +280,12 @@ public static function buildUserSettingsPayload(string $ghinId): array {
     }
 
     $profile = self::decodeJsonIfNeeded($row["dbUser_Profile"] ?? null);
-    $g0 = self::extractPrimaryGolfer($profile);
+    $activeClubId = trim((string)($row["dbUser_ActiveClubID"] ?? ""));
+    $golfers = is_array($profile) ? ($profile["profileJson"]["golfers"] ?? $profile["golfers"] ?? []) : [];
+    $g0 = self::findGolferForClub(is_array($golfers) ? $golfers : [], $activeClubId);
+    if ($g0 === [] && is_array($profile)) $g0 = $profile;
+    $memberships = self::decodeJsonIfNeeded($row["dbUser_ClubMemberships"] ?? null);
+    if (!is_array($memberships)) $memberships = [];
 
     $ghinFName = trim((string)($g0["first_name"] ?? $g0["firstName"] ?? ""));
     $ghinLName = trim((string)($g0["last_name"] ?? $g0["lastName"] ?? ""));
@@ -258,6 +314,7 @@ public static function buildUserSettingsPayload(string $ghinId): array {
             "dbUser_MobileCarrier" => $effectiveCarrier,
             "dbUser_ContactMethod" => $effectiveMethod,
             "dbUser_PreferenceYards" => $storedPreferenceYards,
+            "dbUser_ActiveClubID" => $activeClubId,
         ],
         "sourceProfile" => [
             "ghinName" => $ghinName,
@@ -265,6 +322,10 @@ public static function buildUserSettingsPayload(string $ghinId): array {
             "ghinLName" => $ghinLName,
             "profile"   => $profile,
         ],
+        "clubOptions" => array_values(array_map(static fn(array $membership): array => [
+            "club_id" => (string)($membership["club_id"] ?? ""),
+            "club_name" => (string)($membership["club_name"] ?? ""),
+        ], array_filter($memberships, "is_array"))),
         "contactMethodOptions" => [
             [ "value" => "Email", "label" => "Email" ],
             [ "value" => "SMS",   "label" => "SMS" ],
@@ -312,6 +373,45 @@ public static function saveUserSettings(string $ghinId, array $patch): array
     $contactMethod        = trim((string)($patch["dbUser_ContactMethod"] ?? ""));
     $preferenceYardsPatch = $patch["dbUser_PreferenceYards"] ?? null;
     $preferenceYards      = null;
+    $currentClubId = trim((string)($existing["dbUser_ActiveClubID"] ?? ""));
+    $requestedClubId = trim((string)($patch["dbUser_ActiveClubID"] ?? $currentClubId));
+    $clubChanged = $requestedClubId !== $currentClubId;
+    $activeClubName = trim((string)($existing["dbUser_ActiveClubName"] ?? ""));
+    $newAccessLevel = null;
+
+    $memberships = self::decodeJsonIfNeeded($existing["dbUser_ClubMemberships"] ?? null);
+    if (!is_array($memberships)) $memberships = [];
+    $validMembership = null;
+    foreach ($memberships as $membership) {
+        if (!is_array($membership)) continue;
+        if ((string)($membership["club_id"] ?? "") === $requestedClubId
+            && strcasecmp(trim((string)($membership["status"] ?? "")), "Active") === 0) {
+            $validMembership = $membership;
+            break;
+        }
+    }
+    if ($requestedClubId === "" || $validMembership === null) {
+        throw new RuntimeException("Not an active club membership.");
+    }
+    $activeClubName = trim((string)($validMembership["club_name"] ?? ""));
+
+    if ($clubChanged) {
+        require_once MA_SERVICES . "/GHIN/GHIN_API_Login.php";
+        $adminCreds = be_getAdminCredentialsByClub($requestedClubId);
+        if ($adminCreds === null) {
+            $adminCreds = be_getAdminCredentialsByClub("MASTER");
+            if ($adminCreds === null) {
+                return [
+                    "ok" => false,
+                    "errCode" => "CLUB_NOT_ENROLLED",
+                    "message" => "That club is not enrolled in MatchAid.",
+                ];
+            }
+            $newAccessLevel = "GUEST";
+        } else {
+            $newAccessLevel = "MEMBER";
+        }
+    }
 
     if ($fName === "") throw new RuntimeException("First name is required.");
     if ($lName === "") throw new RuntimeException("Last name is required.");
@@ -373,7 +473,9 @@ public static function saveUserSettings(string $ghinId, array $patch): array
                 dbUser_MobilePhone     = :phone,
                 dbUser_MobileCarrier   = :carrier,
                 dbUser_ContactMethod   = :contactMethod,
-                dbUser_PreferenceYards = :preferenceYards
+                dbUser_PreferenceYards = :preferenceYards,
+                dbUser_ActiveClubID    = :activeClubId,
+                dbUser_ActiveClubName  = :activeClubName
             WHERE dbUser_GHIN = :ghin
             LIMIT 1";
 
@@ -387,9 +489,23 @@ public static function saveUserSettings(string $ghinId, array $patch): array
         ":carrier"         => $carrier !== "" ? $carrier : null,
         ":contactMethod"   => $contactMethod,
         ":preferenceYards" => $preferenceYards,
+        ":activeClubId"    => $requestedClubId,
+        ":activeClubName"  => $activeClubName !== "" ? $activeClubName : null,
     ]);
 
-    return self::buildUserSettingsPayload($ghinId);
+    $facility = null;
+    if ($clubChanged) {
+        $_SESSION["SessionAccessLevel"] = $newAccessLevel;
+        self::getUserContext();
+        $facility = self::hydrateSessionFacility(
+            $requestedClubId,
+            (string)($_SESSION["SessionAdminToken"] ?? "")
+        );
+    }
+
+    $result = self::buildUserSettingsPayload($ghinId);
+    if ($facility !== null) $result["facility"] = $facility;
+    return $result;
 }
 
 private static function decodePreferenceYards($val): ?array {

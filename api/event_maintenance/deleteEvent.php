@@ -24,7 +24,7 @@ if ($eid <= 0) {
 }
 
 $userGHIN = trim((string)($_SESSION["SessionGHINLogonID"] ?? ""));
-$userFacilityId = trim((string)($_SESSION["SessionFacilityID"] ?? $_SESSION["SessionGHINFacilityID"] ?? ""));
+$userFacilityId = trim((string)($_SESSION["SessionFacilityID"] ?? ""));
 
 $auth = ServiceContextEvent::computeEventAuthorizations([
   "userGHIN" => $userGHIN,

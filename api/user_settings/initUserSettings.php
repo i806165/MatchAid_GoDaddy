@@ -135,6 +135,13 @@ try {
     // Core user settings payload (existing)
     // -------------------------------------------------------------------
     $payload = ServiceUserContext::buildUserSettingsPayload($ghinId);
+    $activeClubId = trim((string)($payload['fields']['dbUser_ActiveClubID'] ?? ''));
+    $payload['facility'] = $activeClubId !== ''
+        ? ServiceUserContext::resolveClubFacility(
+            $activeClubId,
+            (string)($_SESSION['SessionAdminToken'] ?? '')
+        )
+        : ['facilityId' => '', 'facilityName' => '', 'courses' => []];
 
     // -------------------------------------------------------------------
     // Data Usage — service methods only, no raw SQL in this endpoint

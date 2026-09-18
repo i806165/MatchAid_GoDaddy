@@ -44,8 +44,8 @@ try {
     exit;
   }
 
-  // Used by the “Open game at same facility” rule (Wix SessionGHINFacilityID)
-  $userFacilityId = (string)($_SESSION["SessionGHINFacilityID"] ?? "");
+  // Used by the “Open game at same facility” rule.
+  $userFacilityId = (string)($_SESSION["SessionFacilityID"] ?? "");
 
   $auth = ServiceContextGame::computeGameAuthorizations([
     "userGHIN" => $userGHIN,

@@ -50,7 +50,7 @@
     contactMethod:  document.getElementById("usContactMethod"),
     preferenceYards:document.getElementById("usPreferenceYards"),
     smsHint:        document.getElementById("usSmsHint"),
-    hcClubName:     document.getElementById("hcClubName"),
+    hcClubSelect:   document.getElementById("hcClubSelect"),
     hcAssocName:    document.getElementById("hcAssocName"),
     hcLocation:     document.getElementById("hcLocation"),
     hcStatus:       document.getElementById("hcStatus"),
@@ -72,6 +72,7 @@
       dbUser_MobileCarrier:   "",
       dbUser_ContactMethod:   "",
       dbUser_PreferenceYards: null,
+      dbUser_ActiveClubID:    "",
     },
     // ── Twilio lookup cache ──────────────────────────────────────────────────
     // Populated on successful mobile validation during doSave().
@@ -80,6 +81,8 @@
     twilioResult: null,   // { phone, valid, carrier, gateway, type, error }
 
     contactMethodOptions:  [],
+    clubOptions:            [],
+    activeCourses:          [],
     sourceProfile:         {},
     dataUsage:             {},
     sessionInfo:           [],
@@ -238,15 +241,34 @@
 
   // ── Home Club section ───────────────────────────────────────────────────────
 
-  function renderHomeClub(profile) {
+  function populateClubOptions() {
+    if (!el.hcClubSelect) return;
+    el.hcClubSelect.innerHTML = "";
+    state.clubOptions.forEach(club => {
+      const option = document.createElement("option");
+      option.value = String(club.club_id || "");
+      option.textContent = String(club.club_name || club.club_id || "");
+      el.hcClubSelect.appendChild(option);
+    });
+    el.hcClubSelect.value = String(state.fields.dbUser_ActiveClubID || "");
+  }
+
+  function renderCourses(courses) {
+    state.activeCourses = Array.isArray(courses) ? courses : [];
+    const names = state.activeCourses.map(course => course?.name).filter(Boolean);
+    if (el.hcCourses) el.hcCourses.textContent = names.join(", ") || "—";
+  }
+
+  function renderHomeClub(profile, clubId) {
     if (!profile) return;
 
-    const g0         = profile?.profileJson?.golfers?.[0] ?? profile?.golfers?.[0] ?? profile;
-    const facilities = profile?.facilityJson?.facilities ?? [];
+    const golfers = profile?.profileJson?.golfers ?? profile?.golfers ?? [];
+    const g0 = golfers.find(golfer => String(golfer?.club_id ?? "") === String(clubId ?? ""))
+      ?? golfers[0]
+      ?? profile;
 
     const set = (node, val) => { if (node) node.textContent = val || "—"; };
 
-    set(el.hcClubName,  g0?.club_name);
     set(el.hcAssocName, g0?.association_name);
     set(el.hcStatus,    g0?.status);
     set(el.hcHandicap,  g0?.handicap_index ? `${g0.handicap_index}` : null);
@@ -264,14 +286,29 @@
         : d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
     }
 
-    const seen = new Set();
-    const courses = [];
-    facilities.forEach(f => {
-      (f.home_courses ?? []).forEach(c => {
-        if (c.name && !seen.has(c.name)) { seen.add(c.name); courses.push(c.name); }
-      });
-    });
-    set(el.hcCourses, courses.length ? courses.join(", ") : null);
+  }
+
+  async function onClubSelectChange() {
+    const clubId = String(el.hcClubSelect?.value || "");
+    if (!clubId || clubId === state.fields.dbUser_ActiveClubID) return;
+
+    state.fields.dbUser_ActiveClubID = clubId;
+    renderHomeClub(state.sourceProfile?.profile ?? null, clubId);
+    setDirty(true);
+    el.hcClubSelect.classList.add("is-loading");
+    el.hcCourses.classList.add("usCoursesLoading");
+    el.hcCourses.textContent = "Loading…";
+    try {
+      const res = await apiCall("previewClubFacility.php", { clubId });
+      if (!res?.ok) throw new Error(res?.message || "Could not load club courses.");
+      renderCourses(res.payload?.courses);
+    } catch (error) {
+      renderCourses([]);
+      setStatus(String(error?.message || error), "error");
+    } finally {
+      el.hcClubSelect.classList.remove("is-loading");
+      el.hcCourses.classList.remove("usCoursesLoading");
+    }
   }
 
   // ── Data Usage section ──────────────────────────────────────────────────────
@@ -332,7 +369,9 @@
     el.preferenceYards.value = preferenceYardsValueFromObject(state.fields.dbUser_PreferenceYards);
 
     renderSmsHint();
-    renderHomeClub(state.sourceProfile?.profile ?? null);
+    populateClubOptions();
+    renderHomeClub(state.sourceProfile?.profile ?? null, state.fields.dbUser_ActiveClubID);
+    renderCourses(state.activeCourses);
     renderDataUsage(state.dataUsage);
     renderSystemSettings(state.sessionInfo);
   }
@@ -366,6 +405,7 @@
         node.addEventListener("input",  markDirty);
         node.addEventListener("change", markDirty);
       });
+    el.hcClubSelect?.addEventListener("change", onClubSelectChange);
   }
 
   // ── Load context ────────────────────────────────────────────────────────────
@@ -387,6 +427,8 @@
 
       state.fields               = Object.assign({}, state.fields, payload.fields || {});
       state.contactMethodOptions = Array.isArray(payload.contactMethodOptions) ? payload.contactMethodOptions : [];
+      state.clubOptions          = Array.isArray(payload.clubOptions) ? payload.clubOptions : [];
+      state.activeCourses        = Array.isArray(payload.facility?.courses) ? payload.facility.courses : [];
       state.sourceProfile        = payload.sourceProfile || {};
       state.dataUsage            = payload.dataUsage     || {};
       state.sessionInfo          = Array.isArray(payload.sessionInfo) ? payload.sessionInfo : [];
@@ -428,6 +470,7 @@
       dbUser_MobileCarrier:   state.fields.dbUser_MobileCarrier || "",  // system-resolved
       dbUser_ContactMethod:   String(el.contactMethod.value  || "").trim(),
       dbUser_PreferenceYards: preferenceYardsObjectFromValue(el.preferenceYards.value),
+      dbUser_ActiveClubID:    String(el.hcClubSelect?.value || state.fields.dbUser_ActiveClubID || ""),
     };
   }
 
@@ -520,6 +563,9 @@
       state.contactMethodOptions = Array.isArray(payload.contactMethodOptions)
         ? payload.contactMethodOptions
         : state.contactMethodOptions;
+      if (Array.isArray(payload.facility?.courses)) {
+        state.activeCourses = payload.facility.courses;
+      }
 
       render();
       setDirty(false);

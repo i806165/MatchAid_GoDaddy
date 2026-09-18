@@ -58,6 +58,36 @@
   min-height: 1.2em;
 }
 
+.usClubSelect {
+  font-size: var(--fieldValueSize);
+  font-weight: 700;
+  color: var(--ink);
+  padding: 6px 30px 6px 8px;
+  min-height: 32px;
+  width: 100%;
+  border: 1px solid var(--cardBorder);
+  border-radius: 8px;
+  background-color: var(--cardBg);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.usClubSelect:focus {
+  border-color: var(--brandSecondary);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0,0,0,.06);
+}
+
+.usClubSelect.is-loading {
+  opacity: .6;
+  pointer-events: none;
+}
+
+.usCoursesLoading {
+  font-style: italic;
+  color: var(--mutedText);
+}
+
 
 /* ── Data Usage card ─────────────────────────────────────────────────────── */
 

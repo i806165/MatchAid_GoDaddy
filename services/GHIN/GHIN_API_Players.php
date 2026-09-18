@@ -13,7 +13,7 @@ require_once MA_API_LIB . "/HttpClient.php";
  * - Returns: { golfers: [...] } sorted so is_home_club:true comes first.
  * - On errors: returns { golfers: [] } (same resilience as Wix).
  */
-function be_getPlayersByID(string $parmGHIN, ?string $parmToken = null): array
+function be_getPlayersByID(string $parmGHIN, ?string $parmToken = null, bool $scrub = true): array
 {
     $myToken = (string)($parmToken ?? "");
     $parmGHIN = trim($parmGHIN);
@@ -46,7 +46,9 @@ function be_getPlayersByID(string $parmGHIN, ?string $parmToken = null): array
         if (!is_array($golfers)) $golfers = [];
 
         // Scrub memberships_home_club:true comes first (Wix logic)
+    if ($scrub) {
         $golfers = ghin_scrub_memberships($golfers);
+    }
 
         return ["golfers" => $golfers];
 

@@ -82,8 +82,8 @@
 
       <div class="maFieldRow">
         <div class="maField">
-          <div class="maLabel">Club</div>
-          <div class="usReadOnly" id="hcClubName">—</div>
+          <label class="maLabel" for="hcClubSelect">Club</label>
+          <select id="hcClubSelect" class="usClubSelect"></select>
         </div>
         <div class="maField">
           <div class="maLabel">Association</div>

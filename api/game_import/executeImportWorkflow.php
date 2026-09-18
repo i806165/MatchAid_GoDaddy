@@ -37,9 +37,6 @@ try {
     $adminGhin = trim((string)($admin["ghin"] ?? ""));
     if ($adminGhin === "") throw new RuntimeException("Missing admin.");
 
-    // Name is sourced from the verified favorites record, not the request
-    $adminName = trim((string)($match["name"] ?? $adminGhin));
-
     // 3) Resolve admin assoc metadata from favorites
     $favs  = ServiceDbFavAdmins::getFavoriteAdmins([
         "userGHIN" => strval($_SESSION["SessionGHINLogonID"] ?? "")
@@ -51,6 +48,9 @@ try {
     if (!$match) {
         throw new RuntimeException("Selected admin is not a Favorite (missing assoc metadata).");
     }
+
+    // Name is sourced from the verified favorites record, not the request.
+    $adminName = trim((string)($match["name"] ?? $adminGhin));
 
     $sessionCtx = [
         "adminGhin"      => $adminGhin,

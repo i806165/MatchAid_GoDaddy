@@ -8,7 +8,7 @@ require_once MA_API_LIB . "/Logger.php";
 require_once MA_SERVICES . "/context/service_ContextUser.php";
 require_once MA_SERVICES . "/GHIN/GHIN_API_Login.php";
 require_once MA_SERVICES . "/GHIN/GHIN_API_Players.php";
-require_once MA_SERVICES . "/GHIN/GHIN_API_Users.php";
+require_once MA_SERVICES . "/GHIN/GHIN_API_Courses.php";
 
 final class ServiceLogin
 {
@@ -43,14 +43,57 @@ final class ServiceLogin
                 $login["golfer_user"]["golfer_id"]
                 ?? ($login["golfer_user"]["golfers"][0]["ghin"] ?? "")
             );
-            $first    = (string)($login["golfer_user"]["golfers"][0]["first_name"] ?? "");
-            $last     = (string)($login["golfer_user"]["golfers"][0]["last_name"]  ?? "");
-            $clubId   = (string)($login["golfer_user"]["golfers"][0]["club_id"]    ?? "");
-            $clubName = (string)($login["golfer_user"]["golfers"][0]["club_name"]  ?? "");
+            $golfers = $login["golfer_user"]["golfers"] ?? [];
+            if (!is_array($golfers)) $golfers = [];
+            $activeMemberships = array_values(array_filter($golfers, static fn($golfer): bool =>
+                is_array($golfer)
+                && strcasecmp(trim((string)($golfer["status"] ?? "")), "Active") === 0
+            ));
 
             if ($ghinId === "" || $userToken === "") {
                 throw new RuntimeException("Invalid login response: missing GHIN ID or user token.");
             }
+
+            if ($activeMemberships === []) {
+                return [
+                    "ok" => false,
+                    "errCode" => "NO_ACTIVE_GHIN_MEMBERSHIP",
+                    "message" => "No Active GHIN Membership Found",
+                ];
+            }
+
+            $existingUser = ServiceUserContext::retrieveGHINUser($ghinId);
+            $savedClubId = trim((string)($existingUser["dbUser_ActiveClubID"] ?? ""));
+            $selectedMembership = null;
+            if ($savedClubId !== "") {
+                foreach ($activeMemberships as $membership) {
+                    if ((string)($membership["club_id"] ?? "") === $savedClubId) {
+                        $selectedMembership = $membership;
+                        break;
+                    }
+                }
+            }
+            if ($selectedMembership === null) {
+                foreach ($activeMemberships as $membership) {
+                    if ((string)($membership["club_id"] ?? "") === (string)($membership["primary_club_id"] ?? "")) {
+                        $selectedMembership = $membership;
+                        break;
+                    }
+                }
+            }
+            $selectedMembership ??= $activeMemberships[0];
+
+            $first    = (string)($selectedMembership["first_name"] ?? "");
+            $last     = (string)($selectedMembership["last_name"] ?? "");
+            $clubId   = trim((string)($selectedMembership["club_id"] ?? ""));
+            $clubName = trim((string)($selectedMembership["club_name"] ?? ""));
+
+            $membershipsForStorage = array_map(static fn(array $membership): array => [
+                "club_id" => (string)($membership["club_id"] ?? ""),
+                "club_name" => (string)($membership["club_name"] ?? ""),
+                "status" => (string)($membership["status"] ?? ""),
+                "primary_club_id" => (string)($membership["primary_club_id"] ?? ""),
+            ], $activeMemberships);
 
             // Rare GHIN data issue — blank club ID in profile
             if ($clubId === "") {
@@ -137,15 +180,18 @@ final class ServiceLogin
                 $userName,
                 ["loginTime" => $_SESSION["SessionLoginTime"]],
                 $adminToken,
-                $userToken
+                $userToken,
+                $clubId,
+                $clubName,
+                $membershipsForStorage
             );
 
             // Step 4: Secure GHIN calls (profile + facility) using admin token
             // If this fails the app cannot function, so we block entry and clean up the session.
             $errInd = "400";
 
-            $profile  = be_getPlayersByID($ghinId, $adminToken);
-            $facility = be_getUserFacility($ghinId, $adminToken);
+            $profile  = be_getPlayersByID($ghinId, $adminToken, false);
+            ServiceUserContext::hydrateSessionFacility($clubId, $adminToken);
 
             ServiceUserContext::storeGHINUser(
                 $ghinId,
@@ -153,10 +199,12 @@ final class ServiceLogin
                 [
                     "loginTime"    => $_SESSION["SessionLoginTime"],
                     "profileJson"  => $profile,
-                    "facilityJson" => $facility,
                 ],
                 $adminToken,
-                $userToken
+                $userToken,
+                $clubId,
+                $clubName,
+                $membershipsForStorage
             );
 
             // Step 5: Determine if user needs to complete settings

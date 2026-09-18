@@ -29,7 +29,7 @@ if ($eid <= 0) {
   ma_respond(200, ["ok" => true, "payload" => ["eid" => null]]);
 }
 
-$userFacilityId = trim((string)($_SESSION["SessionFacilityID"] ?? $_SESSION["SessionGHINFacilityID"] ?? ""));
+$userFacilityId = trim((string)($_SESSION["SessionFacilityID"] ?? ""));
 
 $auth = ServiceContextEvent::computeEventAuthorizations([
   "userGHIN" => $who,

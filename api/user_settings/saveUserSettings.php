@@ -25,6 +25,12 @@ try {
 
     $saved = ServiceUserContext::saveUserSettings($ghinId, $patch);
 
+    if (($saved["ok"] ?? true) === false) {
+        http_response_code(400);
+        echo json_encode($saved, JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
     echo json_encode([
         "ok" => true,
         "payload" => $saved

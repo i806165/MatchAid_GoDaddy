@@ -59,13 +59,10 @@ $adminOptions = array_values(array_filter($adminOptions, function($a) use (&$see
 
 
 
-  // --- Load user profile JSON (db_Users.dbUser_Profile) ---
-  $profileJson = null;
-  $userRow = ServiceUserContext::retrieveGHINUser($userGhin);
-  $profileJson = json_decode((string)($userRow["dbUser_Profile"] ?? ""), true);
-
-  // Build courseMap: lowercase courseName -> {facilityId, facilityName, courseId, courseName}
-  $courseMap = buildCourseMapFromProfile($profileJson);
+  $activeClubId = trim((string)($_SESSION["SessionClubID"] ?? ""));
+  $adminToken = trim((string)($_SESSION["SessionAdminToken"] ?? ""));
+  $facility = ServiceUserContext::resolveClubFacility($activeClubId, $adminToken);
+  $courseMap = buildCourseMapFromFacility($facility);
 
   echo json_encode([
     "ok" => true,
@@ -89,30 +86,15 @@ $adminOptions = array_values(array_filter($adminOptions, function($a) use (&$see
 // -------------------------------------------------------------------
 // Helpers
 // -------------------------------------------------------------------
-function buildCourseMapFromProfile($profile): array
+function buildCourseMapFromFacility(array $facility): array
 {
-  if (!is_array($profile)) return [];
-
-  // Flexible: accept facilityJson.facilities OR profileJson.facilityJson.facilities patterns
-  $facilities =
-    $profile["facilityJson"]["facilities"] ??   // common
-    $profile["profileJson"]["facilityJson"]["facilities"] ?? // legacy variant
-    $profile["facilities"] ?? null;
-
-  if (!is_array($facilities)) return [];
-
   $map = [];
+  $facilityId = (string)($facility["facilityId"] ?? "");
+  $facilityName = (string)($facility["facilityName"] ?? "");
+  $courses = $facility["courses"] ?? [];
+  if (!is_array($courses)) return [];
 
-  foreach ($facilities as $f) {
-    if (!is_array($f)) continue;
-
-    $facilityId = (string)($f["facility_id"] ?? $f["FacilityId"] ?? $f["FacilityID"] ?? "");
-    $facilityName = (string)($f["name"] ?? $f["FacilityName"] ?? "");
-
-    $homeCourses = $f["home_courses"] ?? $f["HomeCourses"] ?? [];
-    if (!is_array($homeCourses)) continue;
-
-    foreach ($homeCourses as $c) {
+  foreach ($courses as $c) {
       if (!is_array($c)) continue;
       $courseId = (string)($c["course_id"] ?? $c["CourseId"] ?? $c["CourseID"] ?? "");
       $courseName = (string)($c["name"] ?? $c["CourseName"] ?? "");
@@ -126,7 +108,6 @@ function buildCourseMapFromProfile($profile): array
         "courseId" => $courseId,
         "courseName" => $courseName
       ];
-    }
   }
 
   return $map;

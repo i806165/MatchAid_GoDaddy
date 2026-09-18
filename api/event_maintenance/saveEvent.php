@@ -30,8 +30,8 @@ try {
     "adminClubId" => (string)($_SESSION["SessionAdminClubID"] ?? $_SESSION["SessionClubID"] ?? ""),
     "adminClubName" => (string)($_SESSION["SessionAdminClubName"] ?? $_SESSION["SessionClubName"] ?? ""),
 
-    "facilityId" => (string)($_SESSION["SessionFacilityID"] ?? $_SESSION["SessionGHINFacilityID"] ?? ""),
-    "facilityName" => (string)($_SESSION["SessionFacilityName"] ?? $_SESSION["SessionGHINFacilityName"] ?? ""),
+    "facilityId" => (string)($_SESSION["SessionFacilityID"] ?? ""),
+    "facilityName" => (string)($_SESSION["SessionFacilityName"] ?? ""),
   ];
 
   $result = ServiceDbEvents::saveEvent($mode, $patch, $sessionCtx);
