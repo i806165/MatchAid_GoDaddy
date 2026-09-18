@@ -144,7 +144,8 @@
       });
       if (!ok) return;
     }
-    if (typeof MA.routerGo === "function") { MA.routerGo("home"); return; }
+    const backAction = (window.__MA_INIT__?.postSaveAction) || "home";
+    if (typeof MA.routerGo === "function") { MA.routerGo(backAction); return; }
     window.location.assign("/");
   }
 

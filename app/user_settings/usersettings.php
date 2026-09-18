@@ -20,6 +20,13 @@ $postSaveAction = match($portalLabel) {
     default         => "home",
 };
 
+// Caller-supplied return target (e.g. Admin Portal Games/Events menus, or
+// Event Rounds mode). Allow-listed so it can only ever be a known route.
+$returnTo = trim((string)($_GET["returnTo"] ?? ""));
+if (in_array($returnTo, ["admin", "eventrounds", "player", "home"], true)) {
+    $postSaveAction = $returnTo;
+}
+
 $initPayload = [
   "ok"             => true,
   "postSaveAction" => $postSaveAction,

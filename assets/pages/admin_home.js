@@ -521,7 +521,9 @@ function openEventsActionsMenu() {
     { label: "My Past Events", action: () => refreshEvents("past") },
     { label: "All My Events", action: () => refreshEvents("all") },
     { separator: true },
-    { label: "Refresh", action: () => refreshEvents(state.eventsFilters.mode) }
+    { label: "Refresh", action: () => refreshEvents(state.eventsFilters.mode) },
+    { separator: true },
+    { label: "User Settings", action: "usersettings", params: { returnTo: "admin" } }
   ];
   MA.ui.openActionsMenu("Actions", items, "Events");
 }
@@ -992,6 +994,8 @@ function applyPreset(presetKey) {
         { label: "Add Game to Event", action: () => handleGameAction({ action: "addGame" }) },
         { separator: true },
         { label: "Refresh", action: () => refreshGamesAndAdmins() },
+        { separator: true },
+        { label: "User Settings", action: "usersettings", params: { returnTo: "eventrounds" } },
       ];
       MA.ui.openActionsMenu("Actions", items, "Event Games");
       return;
@@ -1008,6 +1012,8 @@ function applyPreset(presetKey) {
       { label: "All Past Games", action: () => applyPreset("allPast") },
       { separator: true },
       { label: "Advanced Filters…", action: () => { if (typeof openFiltersModalFn === "function") openFiltersModalFn(); } },
+      { separator: true },
+      { label: "User Settings", action: "usersettings", params: { returnTo: "admin" } },
     ];
 
     MA.ui.openActionsMenu("Actions", items, "Admin Games List");
