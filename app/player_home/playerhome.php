@@ -17,12 +17,6 @@ if ($directLinkGgidFromUrl !== '' && ctype_digit($directLinkGgidFromUrl) && (int
 
 $context = ServiceUserContext::getUserContext();
 if (!$context || empty($context['ok'])) {
-  Logger::error("PLAYERGAMES_AUTH_FAIL", [
-    "msg" => "Redirecting to login",
-    "session_ghin" => $_SESSION["SessionGHINLogonID"] ?? "MISSING",
-    "session_time" => $_SESSION["SessionLoginTime"] ?? "MISSING",
-    "ctx_result" => $context
-  ]);
   header('Location: ' . MA_ROUTE_LOGIN);
   exit;
 }
