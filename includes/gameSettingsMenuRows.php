@@ -40,7 +40,7 @@
   </div>
 
   <div data-setting="sideBets" data-label="Setup Side Bets" data-category="setup">
-    <img src="/assets/images/nav-bullseye.png" alt="" width="34" height="34" style="display:block; object-fit:contain;">
+    <img src="/assets/images/nav-pokerchip.png" alt="" width="34" height="34" style="display:block; object-fit:contain;">
   </div>
 
   <div data-setting="blindPlayer" data-label="Setup Blind Player" data-category="roster">
