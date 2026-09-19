@@ -102,6 +102,14 @@
 
   const OVERLAY_ID = "maNotifyOverlay";
 
+  // SMS via carrier gateways is no longer reliable across carriers, so
+  // messaging is email-only for now. While false, every SMS address and
+  // "SMS" delivery preference the API returns is ignored, the SMS/email
+  // badges and the send-method dropdown are hidden, and a player is
+  // reachable only if they have an email on file. Flip to true to restore
+  // the previous behavior — the SMS code paths are guarded, not removed.
+  const SMS_ENABLED = false;
+
   // ── Icons ─────────────────────────────────────────────────────────────────
   const ICON_EMAIL = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>';
   const ICON_SMS   = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>';
@@ -143,6 +151,7 @@
 
   function formatContactLine(player) {
     const email = safeStr(player.email);
+    if (!SMS_ENABLED) return email ? esc(email) : "No email on file";
     const phone = safeStr(player.mobile) ? formatPhone(safeStr(player.mobile)) : "";
     if (email && phone) return esc(email) + " &middot; " + esc(phone);
     if (email)          return esc(email);
@@ -181,8 +190,21 @@
 
   // ── Contact resolution ────────────────────────────────────────────────────
 
+  function emailAddressFor(player) {
+    return safeStr(player.deliveryEmailAddress || player.email);
+  }
+
+  // Reachable = has a usable delivery address under the current channel
+  // rules. Email-only: an email on file. With SMS enabled: whatever the
+  // API resolved (deliveryMethod is null only when nothing is on file).
+  function isReachable(player) {
+    if (!SMS_ENABLED) return !!emailAddressFor(player);
+    return !!player.deliveryMethod;
+  }
+
   function preferredMethodFor(player) {
-    if (!player.deliveryMethod) return null;
+    if (!isReachable(player)) return null;
+    if (!SMS_ENABLED) return "email";
     return player.deliveryMethod === "SMS" ? "sms" : "email";
   }
 
@@ -191,6 +213,7 @@
   }
 
   function resolveDeliveryAddress(ghin, player) {
+    if (!SMS_ENABLED) return emailAddressFor(player);
     const method = activeMethodFor(ghin, player);
     if (method === "sms")   return safeStr(player.deliverySmsAddress);
     if (method === "email") return safeStr(player.deliveryEmailAddress || player.email);
@@ -309,7 +332,7 @@
 
     if ((intent === "gameInfo" || intent === "message") && data.hasGameContext && Array.isArray(data.gamePlayers)) {
       data.gamePlayers.forEach(function (p) {
-        if (p.deliveryMethod !== null) {
+        if (isReachable(p)) {
           _state.selected.add(p.ghin);
           _state.activeMethod[p.ghin] = preferredMethodFor(p);
         }
@@ -554,7 +577,7 @@
   // ── Player row ────────────────────────────────────────────────────────────
 
   function _html_playerRow(player, hidden) {
-    const unreachable = !player.deliveryMethod;
+    const unreachable = !isReachable(player);
     const selected    = _state.selected.has(player.ghin);
     const ghin        = safeStr(player.ghin);
 
@@ -593,6 +616,7 @@
   // ── Badges ────────────────────────────────────────────────────────────────
 
   function _html_badges(ghin, player) {
+    if (!SMS_ENABLED) return "";
     const hasEmail  = !!safeStr(player.deliveryEmailAddress || player.email);
     const hasSms    = !!safeStr(player.deliverySmsAddress);
     const current   = activeMethodFor(ghin, player);
@@ -696,12 +720,13 @@
                              padding:8px 14px; font-size:var(--fieldValueSize); font-weight:var(--btnFontWeight);
                              font-family:var(--fontFamilyBase); cursor:pointer; white-space:nowrap;"
                       disabled>
-                Send
+                ${SMS_ENABLED ? "Send" : "Send email"}
               </button>
               <button type="button" id="ma-notify-btn-arrow"
                       style="background:var(--btnSecondaryBg); color:var(--btnSecondaryText);
                              border:none; padding:8px 10px; font-size:13px;
-                             cursor:pointer; display:flex; align-items:center;"
+                             cursor:pointer; align-items:center;
+                             display:${SMS_ENABLED ? "flex" : "none"};"
                       aria-label="Choose send method" id="ma-notify-arrow-btn">
                 <span id="ma-notify-arrow-icon">${ICON_CHEVDOWN}</span>
               </button>
@@ -978,10 +1003,12 @@
 
     _state.selected.forEach(function (ghin) {
       const p = _allPlayers().find(x => x.ghin === ghin);
-      if (!p || !p.deliveryMethod) return;
+      if (!p || !isReachable(p)) return;
 
       let addr = "";
-      if (method === "email") {
+      if (!SMS_ENABLED) {
+        addr = emailAddressFor(p);
+      } else if (method === "email") {
         addr = safeStr(p.deliveryEmailAddress || p.email) || safeStr(p.deliverySmsAddress);
       } else if (method === "sms") {
         addr = safeStr(p.deliverySmsAddress) || safeStr(p.deliveryEmailAddress || p.email);
