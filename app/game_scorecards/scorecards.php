@@ -59,6 +59,7 @@ $maChromeLogoUrl = null;
 <?php require_once MA_INCLUDES . "/chromeFooter.php"; ?>
 
 <?php require_once MA_INCLUDES . "/gameSettingsMenuRows.php"; ?>
+<?php require_once MA_INCLUDES . "/sideBetsCatalog.php"; ?>
 
 <script>
   window.MA = window.MA || {};
@@ -85,6 +86,7 @@ $maChromeLogoUrl = null;
 <script src="<?= ma_asset('/assets/modules/module_setGameBlindPlayer.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/module_setGameScoring.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/module_setGamePlacementPoints.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_setGameSideBets.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/module_setHandicapsGameEvent.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/module_defineFlightsGameEvent.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/module_defineTeamsGameEvent.js') ?>"></script>
