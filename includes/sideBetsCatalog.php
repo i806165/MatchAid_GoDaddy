@@ -69,12 +69,13 @@
   </div>
 
   <div data-group="winner" data-label="Hole Winners">
+    <div data-bet="allswept" data-label="All Swept" data-type="competitive" data-unit="points" data-value="1" data-desc="Won every point available on the hole. Tap the player who swept it."></div>
     <div data-bet="prox"     data-label="Prox"      data-type="competitive" data-unit="points" data-value="1" data-desc="Closest to the pin on the green"></div>
+    <div data-bet="lowball"  data-label="Low Ball"  data-type="competitive" data-unit="points" data-value="2" data-desc="Lowest individual score on the hole. Tap the player who made it."></div>
+    <div data-bet="lowtotal" data-label="Low Total" data-type="competitive" data-unit="points" data-value="2" data-desc="Lowest combined team score on the hole. Tap either player on that team."></div>
     <div data-bet="bingo" data-label="Bingo" data-type="competitive" data-unit="points" data-value="1" data-desc="First ball on the green"></div>
     <div data-bet="bango" data-label="Bango" data-type="competitive" data-unit="points" data-value="1" data-desc="Closest to the pin once all balls are on the green"></div>
     <div data-bet="bongo" data-label="Bongo" data-type="competitive" data-unit="points" data-value="1" data-desc="First to hole out"></div>
-    <div data-bet="lowball"  data-label="Low Ball"  data-type="competitive" data-unit="points" data-value="2" data-desc="Lowest individual score on the hole. Tap the player who made it."></div>
-    <div data-bet="lowtotal" data-label="Low Total" data-type="competitive" data-unit="points" data-value="2" data-desc="Lowest combined team score on the hole. Tap either player on that team."></div>
   </div>
 
   <div data-group="cust" data-label="Custom Games">
