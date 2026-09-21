@@ -82,12 +82,14 @@
     return named ? `Assigned · ${named.name || named.ghin}` : "Group-selected";
   }
 
-  // Side Bets: definitions live in dbGames_CustomScores ({ version, bets[] });
-  // "in scope" = bets whose status is "active".
+  // Side Bets: definitions live in dbGames_CustomScores ({ version, status, bets[] });
+  // top-level status is the master switch — anything but "active" is Off, whatever
+  // the bets say. When on, "in scope" = bets whose status is "active".
   function sideBetsSummary(raw) {
     let o = raw;
     if (typeof o === "string") { try { o = JSON.parse(o); } catch (e) { o = null; } }
-    const bets = (o && Array.isArray(o.bets)) ? o.bets : [];
+    if (!o || o.status !== "active") return "Off";
+    const bets = Array.isArray(o.bets) ? o.bets : [];
     const n = bets.filter(b => b && b.status === "active").length;
     return n ? `${n} in scope` : "Off";
   }

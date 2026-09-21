@@ -2092,6 +2092,62 @@ header.maChrome__hdr.is-player-context {
   cursor: default;
 }
 
+/* ---------- Toggle (on/off switch) --------------------------------------
+   A compact Yes/No switch that sits beside its label — distinct from .maSeg,
+   which is a full-width view swap. Same border/radius/color tokens as .maSeg
+   so it reads as part of the same family.
+
+   Markup:
+     <div class="maToggleRow">
+       <span class="maListRow__col">Activate</span>
+       <div class="maToggle" role="group" aria-label="...">
+         <button type="button" class="maToggle__btn is-active" aria-pressed="true">Yes</button>
+         <button type="button" class="maToggle__btn" aria-pressed="false">No</button>
+       </div>
+     </div>
+     <div class="maHintText">What the current selection means.</div>
+   ------------------------------------------------------------------------- */
+.maToggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.maToggle {
+  display: flex;
+  flex: 0 0 auto;
+  border: 1px solid var(--segBorder);
+  border-radius: var(--segRadius);
+  overflow: hidden;
+  background: var(--segBg);
+}
+
+.maToggle__btn {
+  min-height: var(--segBtnHeight);
+  border: 0;
+  border-right: 1px solid var(--segBorder);
+  background: transparent;
+  font-size: var(--segBtnFontSize);
+  font-weight: var(--segBtnWeight);
+  cursor: pointer;
+  color: var(--segBtnText);
+  padding: var(--spaceSm) calc(var(--spaceMd) + 2px);
+  user-select: none;
+}
+
+.maToggle__btn:last-child { border-right: 0; }
+
+.maToggle__btn.is-active {
+  background: var(--brandColor3);
+  color: var(--brandPrimaryText);
+}
+
+.maToggle__btn:disabled {
+  opacity: .55;
+  cursor: default;
+}
+
 
 /* ==========================================================================
    14. BUTTONS

@@ -16,7 +16,7 @@ $ggid = (int)($_SESSION["SessionStoredGGID"] ?? 0);
 
 /*
  * Reject helper — every validation failure below is a plain 4xx with a
- * message the module shows in its notice slot.
+ * message the module shows in its OK dialog.
  */
 $reject = static function (int $status, string $message): void {
     ma_respond($status, [
@@ -38,6 +38,7 @@ try {
      *     "dbGames_GGID": 687,
      *     "dbGames_CustomScores": {
      *       "version": 1,
+     *       "status": "active",
      *       "bets": [
      *         {
      *           "key": "sandy",
@@ -55,6 +56,11 @@ try {
      * dbGames_CustomScores holds bet DEFINITIONS only. Claims live per
      * player in db_Players.dbPlayers_CustomScores and are never written
      * here.
+     *
+     * The top-level "status" is the master on/off switch: downstream code
+     * ignores the bets unless it is "active". While it is "disabled" the
+     * bets are stored as sent (the user's selections survive flip-flopping),
+     * so per-bet completeness rules only apply when it is "active".
      */
     $input   = ma_json_in();
     $payload = $input["payload"] ?? null;
@@ -111,6 +117,12 @@ try {
         $reject(400, "Side Bets has an unsupported version.");
     }
 
+    $gameStatus = trim((string)($submitted["status"] ?? ""));
+
+    if (!in_array($gameStatus, ["active", "disabled"], true)) {
+        $reject(400, "Side Bets status must be active or disabled.");
+    }
+
     $bets = $submitted["bets"] ?? null;
 
     if (!is_array($bets) || $bets === [] || count($bets) > 50) {
@@ -161,7 +173,8 @@ try {
         }
 
         // A bet in play needs a name — the scoring view has nothing else to show.
-        if ($status === "active" && $name === "") {
+        // Only enforced while side bets are on; a disabled game keeps drafts as-is.
+        if ($gameStatus === "active" && $status === "active" && $name === "") {
             $reject(400, "Every active bet needs a name.");
         }
 
@@ -201,6 +214,22 @@ try {
                 "value" => $value,
             ],
         ];
+    }
+
+    // Side bets switched on with nothing in play is not a valid state.
+    if ($gameStatus === "active") {
+        $anyActive = false;
+
+        foreach ($normalized as $bet) {
+            if ($bet["status"] === "active") {
+                $anyActive = true;
+                break;
+            }
+        }
+
+        if (!$anyActive) {
+            $reject(400, "Choose at least one side bet, or set Activate to No.");
+        }
     }
 
     // ── Compare against what is already stored ─────────────────────────
@@ -288,6 +317,7 @@ try {
     $patch = [
         "dbGames_CustomScores" => [
             "version" => 1,
+            "status"  => $gameStatus,
             "bets"    => $normalized,
         ],
     ];

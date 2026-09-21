@@ -253,38 +253,6 @@ public static function queryGames(array $args): array {
       return ($daysAfter >= $daysBefore) ? 'asc' : 'desc';
   }
 
-  /**
-   * Sourced from prior games for the current admin where dbGames_CustomScores is non-blank and valid.
-   * Deduplicates by templateName, keeping the most recent.
-   */
-  public static function getRecallTemplates(string $adminGHIN): array {
-    if ($adminGHIN === "") return [];
-    $pdo = Db::pdo();
-    $sql = "SELECT dbGames_CustomScores 
-            FROM db_Games 
-            WHERE dbGames_AdminGHIN = :admin 
-              AND dbGames_CustomScores IS NOT NULL 
-              AND TRIM(dbGames_CustomScores) <> '' 
-              AND TRIM(dbGames_CustomScores) <> '[]' 
-              AND TRIM(dbGames_CustomScores) <> '{}'
-            ORDER BY dbGames_PlayDate DESC";
-    $st = $pdo->prepare($sql);
-    $st->execute([':admin' => $adminGHIN]);
-    $rows = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
-
-    $templates = [];
-    foreach ($rows as $row) {
-        $data = json_decode($row['dbGames_CustomScores'], true);
-        if (!$data || empty($data['templateName'])) continue;
-
-        $key = strtolower(trim($data['templateName']));
-        if (!isset($templates[$key])) {
-            $templates[$key] = $data;
-        }
-    }
-    return array_values($templates);
-  }
-
   // -----------------------------
   // Game Maintenance Helpers
   // -----------------------------
@@ -690,7 +658,11 @@ public static function queryGames(array $args): array {
     $g["dbGames_HoleDeclaration"] = $g["dbGames_HoleDeclaration"] ?? "[]";
     $g["dbGames_PointsConfig"] = $g["dbGames_PointsConfig"] ?? "[]";
     $g["dbGames_TeeTimeList"] = $g["dbGames_TeeTimeList"] ?? "[]";
-    $g["dbGames_CustomScores"] = $g["dbGames_CustomScores"] ?? "[]";
+    // Side Bets: master switch starts off; module_setGameSideBets.js merges the catalog at open time.
+    $g["dbGames_CustomScores"] = $g["dbGames_CustomScores"] ?? json_encode(
+      ["version" => 1, "status" => "disabled", "bets" => []],
+      JSON_UNESCAPED_SLASHES
+    );
 
     // Handicap defaults (new contract)
     $g["dbGames_HCEffectivity"] = $g["dbGames_HCEffectivity"] ?? "PlayDate";

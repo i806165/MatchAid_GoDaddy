@@ -15,6 +15,7 @@
  * ── Stored shape ────────────────────────────────────────────────────────
  * {
  *   "version": 1,
+ *   "status": "active"|"disabled",          // master switch
  *   "bets": [
  *     { "key", "name", "description", "type": "achievement"|"competitive",
  *       "status": "active"|"disabled", "payout": { "unit": "points"|"dollars", "value": n } }
@@ -24,6 +25,22 @@
  * added to or removed from by toggling, only `status` changes. Each record
  * is a self-describing snapshot so the scoring portal and back-end reports
  * never need the catalog.
+ *
+ * ── Master switch (top-level status) ────────────────────────────────────
+ * "active" = side bets are in play for this game; anything else = off, and
+ * downstream code ignores the bets. New games are primed "disabled" by
+ * ServiceDbGames::applyDefaultsForAdd(). The switch changes ONLY this flag
+ * and the visibility of the bet list — it never resets a bet's status,
+ * payout or text, so a user can flip it off and on again and find their
+ * selections intact. Save is always allowed; the one blocked state is
+ * switch on with no bet active. While the switch is off, validation is
+ * skipped and the bets are saved as-is.
+ *
+ * ── Display order ───────────────────────────────────────────────────────
+ * Within each group, bets that are active when the modal opens are listed
+ * first, then the rest; each half keeps catalog order. Sorted once at open
+ * (rows do not jump while the user ticks them). Display order only — the
+ * saved array stays in catalog order.
  *
  * ── Merge rules (catalog + stored) ──────────────────────────────────────
  *   - Fixed template bets: name/description/type come from the catalog;
@@ -46,14 +63,20 @@
  *   MA.setGameSideBets.close()
  *
  * ── Save endpoint ───────────────────────────────────────────────────────
- * POST /api/game_settings/saveGameSideBets.php   (TODO — does not exist yet)
- *   { payload: { dbGames_GGID, dbGames_CustomScores: { version, bets } } }
- * Must reject a change of `type` on a bet that already has claims.
+ * POST /api/game_settings/saveGameSideBets.php
+ *   { payload: { dbGames_GGID, dbGames_CustomScores: { version, status, bets } } }
+ * Rejects a change of `type` on a bet that already has claims.
+ *
+ * ── Messages ────────────────────────────────────────────────────────────
+ * Every problem (validation, save failure, load failure) is an OK-only
+ * MA.ui.confirm dialog — see _showNotice(). The only inline text is the
+ * state hint under the switch.
  *
  * ── Styling ─────────────────────────────────────────────────────────────
- * ma_shared.css classes only; no injected stylesheet. Three small inline
- * styles (editor card margin, row text wrapper, payout value width) have no
- * shared-class equivalent.
+ * ma_shared.css classes only (maToggleRow / maToggle for the switch); no
+ * injected stylesheet. Four small inline styles (editor card margin, row
+ * text wrapper, payout value width, switch spacing in the controls band)
+ * have no shared-class equivalent.
  */
 (function () {
   "use strict";
@@ -63,10 +86,9 @@
   MA.setGameSideBets = MA.setGameSideBets || {};
 
   const OVERLAY_ID       = "maSetGameSideBetsOverlay";
-  const NOTICE_ID        = "sgsbNotice";
   const CATALOG_ID       = "sideBetsCatalog";
   const CONTEXT_ENDPOINT = "/api/game_settings/initGameSettings.php";
-  const SAVE_ENDPOINT    = "/api/game_settings/saveGameSideBets.php"; // TODO — does not exist yet
+  const SAVE_ENDPOINT    = "/api/game_settings/saveGameSideBets.php";
   const SCHEMA_VERSION   = 1;
 
   // ── Helpers ──────────────────────────────────────────────────────────
@@ -96,11 +118,30 @@
     document.documentElement.classList.toggle("maOverlayOpen", _lockDepth > 0);
   }
 
-  function _showModalNotice(message, level) {
-    const slot = document.getElementById(NOTICE_ID);
-    if (!slot) { MA.setStatus?.(message, level); return; }
-    MA.ui.showModalNotice(slot, { message, tone: level });
+  // One OK-only dialog for every problem this module reports. level "danger"
+  // (save/load failures) turns the OK button red; "warn" (fix-it-yourself
+  // validation) leaves it neutral. Messages are plain text — escaped here so
+  // bet names and server text can never inject markup. _busy is held while it
+  // is open so Escape / backdrop clicks can't also dismiss this modal.
+  async function _showNotice(message, level) {
+    if (typeof MA.ui?.confirm !== "function") { MA.setStatus?.(message, level); return; }
+    const wasBusy = _busy;
+    _busy = true;
+    try {
+      await MA.ui.confirm({
+        title: "Side Bets",
+        message: esc(message),
+        confirmLabel: "OK",
+        okOnly: true,
+        danger: level === "danger",
+      });
+    } finally {
+      _busy = wasBusy;
+    }
   }
+
+  const HINT_ON  = "Side bets are active for this game.";
+  const HINT_OFF = "Side bets are not active for this game. Activate to choose and edit them.";
 
   // ── Catalog + stored parsing ─────────────────────────────────────────
   function readCatalog() {
@@ -128,7 +169,8 @@
     const bets = (p && Array.isArray(p.bets))
       ? p.bets.filter(b => b && typeof b.key === "string" && b.key)
       : [];
-    return { bets };
+    const status = (p && p.status === "active") ? "active" : "disabled";
+    return { status, bets };
   }
 
   function buildState(game) {
@@ -141,7 +183,8 @@
     const rows     = [];
 
     const groups = catalog.map(g => {
-      const keys = [];
+      const activeKeys = [];
+      const otherKeys  = [];
       g.bets.forEach(c => {
         const s      = byKey.get(c.key);
         const status = (s && s.status === "active") ? "active" : "disabled";
@@ -163,13 +206,15 @@
           unit,
           value: String(pay.value != null ? pay.value : c.value),
         });
-        keys.push(c.key);
+        (status === "active" ? activeKeys : otherKeys).push(c.key);
       });
-      return { id: g.id, label: g.label, keys };
+      // Active-at-open first; each half keeps catalog order. Display only —
+      // rows[] (and so the saved array) stays in catalog order.
+      return { id: g.id, label: g.label, keys: activeKeys.concat(otherKeys) };
     });
 
     const extras = stored.bets.filter(b => !rendered.has(b.key));
-    return { groups, rows, extras };
+    return { status: stored.status, groups, rows, extras };
   }
 
   function rowOf(key) { return _state.rows.find(r => r.key === key); }
@@ -181,18 +226,26 @@
       description: r.desc.trim(),
       type: r.type,
       status: r.status,
-      payout: { unit: r.unit, value: numOr(r.value, 0) },
+      payout: { unit: r.unit, value: Math.max(0, numOr(r.value, 0)) },
     };
   }
 
   function collect() {
     return {
       version: SCHEMA_VERSION,
+      status: _state.status,
       bets: _state.rows.map(recordOf).concat(clone(_state.extras)),
     };
   }
 
+  // Only checked while the switch is on — while it is off the bet list is
+  // hidden, so a hidden draft must never block Save. The server relaxes the
+  // same rules for a disabled game.
   function validate() {
+    if (_state.status !== "active") return null;
+    if (!_state.rows.some(r => r.status === "active")) {
+      return { key: null, message: "Choose at least one side bet, or set Activate to No." };
+    }
     for (const r of _state.rows) {
       if (r.status !== "active") continue;
       if (r.custom && !r.name.trim()) {
@@ -313,10 +366,42 @@
     const line3 = g.dbGames_EID
       ? [g.dbEvents_Title, `EID ${g.dbGames_EID}`].filter(Boolean).join(" · ")
       : "";
+    const on = _state.status === "active";
     el.innerHTML = `
       <div class="maListRow__col">${esc(line1)}</div>
       <div class="maListRow__subline">${esc(line2)}</div>
-      ${line3 ? `<div class="maListRow__subline">${esc(line3)}</div>` : ""}`;
+      ${line3 ? `<div class="maListRow__subline">${esc(line3)}</div>` : ""}
+      <div style="margin-top:10px;">
+        <div class="maToggleRow">
+          <span class="maListRow__col">Activate</span>
+          <div class="maToggle" id="sgsbToggle" role="group" aria-label="Activate side bets for this game">
+            <button type="button" class="maToggle__btn${on ? " is-active" : ""}" data-status="active" aria-pressed="${on}">Yes</button>
+            <button type="button" class="maToggle__btn${!on ? " is-active" : ""}" data-status="disabled" aria-pressed="${!on}">No</button>
+          </div>
+        </div>
+        <div class="maHintText" id="sgsbHint">${esc(on ? HINT_ON : HINT_OFF)}</div>
+      </div>`;
+  }
+
+  // Master switch: visibility only. Never touches a bet's status/payout/text,
+  // so flipping off and on again keeps the user's selections.
+  function _applyStatusUi() {
+    const on = _state.status === "active";
+    document.querySelectorAll("#sgsbToggle [data-status]").forEach(btn => {
+      const sel = (btn.getAttribute("data-status") === "active") === on;
+      btn.classList.toggle("is-active", sel);
+      btn.setAttribute("aria-pressed", String(sel));
+    });
+    const hint = document.getElementById("sgsbHint");
+    if (hint) hint.textContent = on ? HINT_ON : HINT_OFF;
+    const body = document.getElementById("sgsbBody");
+    if (body) body.style.display = on ? "" : "none";
+  }
+
+  function setStatus(value) {
+    if (!_state || (value !== "active" && value !== "disabled") || _state.status === value) return;
+    _state.status = value;
+    _applyStatusUi();
   }
 
   // ── Interaction ──────────────────────────────────────────────────────
@@ -346,6 +431,13 @@
     else if (field === "type" && r.custom && (value === "achievement" || value === "competitive")) r.type = value;
     else return;
     renderBody();
+  }
+
+  function wireControls(controls) {
+    controls.addEventListener("click", e => {
+      const btn = e.target.closest("[data-status]");
+      if (btn) setStatus(btn.getAttribute("data-status"));
+    });
   }
 
   function wireBody(body) {
@@ -396,7 +488,6 @@
         </div>
 
         <div class="maModal__controls" id="sgsbControls"></div>
-        <div id="${NOTICE_ID}"></div>
 
         <div class="maModal__body maModal__body--flush" id="sgsbBody"></div>
 
@@ -413,6 +504,7 @@
     overlay.querySelector("#sgsbBtnCancel")?.addEventListener("click", () => { if (!_busy) _dismiss(); });
     overlay.querySelector("#sgsbBtnApply")?.addEventListener("click",  doApply);
     overlay.addEventListener("click", e => { if (e.target === overlay && !_busy) _dismiss(); });
+    wireControls(overlay.querySelector("#sgsbControls"));
     wireBody(overlay.querySelector("#sgsbBody"));
 
     return overlay;
@@ -430,11 +522,14 @@
 
     const problem = validate();
     if (problem) {
-      _state.rows.forEach(x => { x.open = false; });
-      const r = rowOf(problem.key);
-      if (r) r.open = true;
-      renderBody();
-      _showModalNotice(problem.message, "danger");
+      // Open the offending bet's editor so the user lands on the field to fix.
+      const r = problem.key ? rowOf(problem.key) : null;
+      if (r) {
+        _state.rows.forEach(x => { x.open = false; });
+        r.open = true;
+        renderBody();
+      }
+      await _showNotice(problem.message, "warn");
       return;
     }
 
@@ -444,18 +539,21 @@
     _busy = true;
     MA.ui?.showBusy?.({ title: "Side Bets", message: "Saving — please wait..." });
     let saved = false;
+    let failure = "";
     try {
       const payload = { dbGames_GGID: _ctx.ggid, dbGames_CustomScores: result };
       const res = await MA.postJson(SAVE_ENDPOINT, { payload });
-      if (!res?.ok) { _showModalNotice(res?.message || "Unable to save Side Bets.", "danger"); return; }
-      saved = true;
+      if (!res?.ok) failure = res?.message || "Unable to save Side Bets.";
+      else saved = true;
     } catch (e) {
       console.error("[MA.setGameSideBets]", e);
-      _showModalNotice("Error saving Side Bets.", "danger");
+      failure = "Error saving Side Bets.";
     } finally {
       MA.ui?.hideBusy?.();
       _busy = false;
     }
+    // Shown only after the busy overlay is gone, so the dialog is never stacked under it.
+    if (failure) { await _showNotice(failure, "danger"); return; }
     if (saved) _dismiss(true);
   }
 
@@ -473,7 +571,8 @@
       ctx = res.payload;
     } catch (e) {
       MA.ui?.hideBusy?.();
-      MA.setStatus?.(e.message || "Failed to load game context.", "error");
+      console.error("[MA.setGameSideBets]", e);
+      await _showNotice("Side Bets couldn't load this game's settings. Please try again.", "danger");
       if (typeof _onDone === "function") _onDone(false); // menu still needs to reopen
       return;
     }
@@ -481,7 +580,7 @@
 
     const state = buildState(ctx.game);
     if (!state) {
-      MA.setStatus?.("Side bets catalog not available on this page (includes/sideBetsCatalog.php).", "error");
+      await _showNotice("Side bets catalog not available on this page (includes/sideBetsCatalog.php).", "danger");
       if (typeof _onDone === "function") _onDone(false);
       return;
     }
@@ -496,6 +595,7 @@
 
     _renderControls();
     renderBody();
+    _applyStatusUi(); // collapses the bet list when the game opens with side bets off
 
     _onEsc = (e) => { if (e.key === "Escape" && !_busy) _dismiss(); };
     document.addEventListener("keydown", _onEsc);
