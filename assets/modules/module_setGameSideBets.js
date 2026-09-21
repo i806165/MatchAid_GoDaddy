@@ -42,6 +42,14 @@
  * (rows do not jump while the user ticks them). Display order only — the
  * saved array stays in catalog order.
  *
+ * ── Compact rows (phone height) ─────────────────────────────────────────
+ * The whole bet row is the tap target: an active bet's row toggles its
+ * editor (chevron shows the state); tapping an inactive bet's row acts like
+ * its checkbox. Custom slots appear only when in use (active, named, or just
+ * added); "+ Add custom bet" reveals the next free slot. All five slots are
+ * still written on save. The game title and course sit in the modal header
+ * subtitle, so the controls band holds only the switch.
+ *
  * ── Merge rules (catalog + stored) ──────────────────────────────────────
  *   - Fixed template bets: name/description/type come from the catalog;
  *     status and payout come from the stored record (catalog defaults when
@@ -74,9 +82,8 @@
  *
  * ── Styling ─────────────────────────────────────────────────────────────
  * ma_shared.css classes only (maToggleRow / maToggle for the switch); no
- * injected stylesheet. Four small inline styles (editor card margin, row
- * text wrapper, payout value width, switch spacing in the controls band)
- * have no shared-class equivalent.
+ * injected stylesheet. Three small inline styles (editor card margin, row
+ * text wrapper, payout value width) have no shared-class equivalent.
  */
 (function () {
   "use strict";
@@ -140,8 +147,8 @@
     }
   }
 
-  const HINT_ON  = "Side bets are active for this game.";
-  const HINT_OFF = "Side bets are not active for this game. Activate to choose and edit them.";
+  const HINT_ON  = "In play for this game.";
+  const HINT_OFF = "Off. Turn on to choose bets.";
 
   // ── Catalog + stored parsing ─────────────────────────────────────────
   function readCatalog() {
@@ -200,6 +207,7 @@
           custom: c.custom,
           status,
           open: false,
+          revealed: false,
           name: c.custom ? String(s?.name ?? "") : c.label,
           desc: c.custom ? String(s?.description ?? "") : c.desc,
           type: c.custom ? sType : c.type,
@@ -280,17 +288,39 @@
               data-key="${esc(key)}" data-chip="${field}:${value}">${text}</button>`;
   }
 
+  // Whole row is the tap target (data-tap on the text block, plus a row-level
+  // click fallback in wireBody). Active row: tap opens/closes its editor.
+  // Inactive row: tap behaves like the checkbox (turns it on and opens it).
   function rowHtml(r) {
     const on = r.status === "active";
+    const chevron = on ? `
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="${r.open ? "6 15 12 9 18 15" : "6 9 12 15 18 9"}"/>
+        </svg>` : "";
     return `
       <div class="maListRow" data-row="${esc(r.key)}">
         <div class="maCheckbox ${on ? "is-checked" : ""}" data-check="${esc(r.key)}"
              role="checkbox" aria-checked="${on}" tabindex="0" aria-label="${esc(labelOf(r))}"></div>
-        <div style="flex:1 1 auto; min-width:0;">
+        <div style="flex:1 1 auto; min-width:0; cursor:pointer;" data-tap="${esc(r.key)}"
+             role="button" tabindex="0"${on ? ` aria-expanded="${r.open}"` : ""}>
           <div class="maListRow__col" data-role="label">${esc(labelOf(r))}</div>
           <div class="maListRow__subline" data-role="sub">${esc(sublineOf(r))}</div>
-        </div>
-        ${on ? `<button class="btn btnLink" type="button" data-toggle="${esc(r.key)}">${r.open ? "Hide settings" : "Edit settings"}</button>` : ""}
+        </div>${chevron}
+      </div>`;
+  }
+
+  // Custom slots: shown only when in use (active, named, or just added) so
+  // five empty "Not in use" rows don't eat a phone's height. All five slots
+  // are still saved; "+ Add custom bet" reveals the next free one.
+  function isVisible(r) {
+    return !r.custom || r.status === "active" || r.name.trim() !== "" || r.revealed;
+  }
+
+  function addRowHtml(groupId) {
+    return `
+      <div class="maListRow">
+        <button class="btn btnLink" type="button" data-add="${esc(groupId)}">+ Add custom bet</button>
       </div>`;
   }
 
@@ -337,10 +367,12 @@
     if (!body || !_state) return;
     const scroll = body.scrollTop;
     body.innerHTML = _state.groups.map(g => {
-      const rows = g.keys.map(k => {
-        const r = rowOf(k);
-        return rowHtml(r) + (r.status === "active" && r.open ? cardHtml(r) : "");
-      }).join("");
+      const all    = g.keys.map(rowOf);
+      const shown  = all.filter(isVisible);
+      const hasFreeSlot = all.some(r => r.custom && !isVisible(r));
+      const rows = shown.map(r =>
+        rowHtml(r) + (r.status === "active" && r.open ? cardHtml(r) : "")
+      ).join("") + (hasFreeSlot ? addRowHtml(g.id) : "");
       return rows ? `<div class="actionMenu_category">${esc(g.label.toUpperCase())}</div>${rows}` : "";
     }).join("");
     body.scrollTop = scroll;
@@ -359,28 +391,28 @@
   function _renderControls() {
     const el = document.getElementById("sgsbControls");
     if (!el || !_ctx) return;
-    const g = _ctx.game;
-    const gameTitle = String(g.dbGames_Title || `GGID ${_ctx.ggid || ""}`).trim();
-    const line1 = [gameTitle, `GGID ${_ctx.ggid ?? ""}`].join(" · ");
-    const line2 = [g.dbGames_CourseName, g.dbGames_PlayDate].filter(Boolean).join(" • ");
-    const line3 = g.dbGames_EID
-      ? [g.dbEvents_Title, `EID ${g.dbGames_EID}`].filter(Boolean).join(" · ")
-      : "";
     const on = _state.status === "active";
+    // Game title/course live in the modal header, so the band is just the
+    // switch: label + state hint on the left (same two-line shape as a list
+    // row), Yes/No on the right.
     el.innerHTML = `
-      <div class="maListRow__col">${esc(line1)}</div>
-      <div class="maListRow__subline">${esc(line2)}</div>
-      ${line3 ? `<div class="maListRow__subline">${esc(line3)}</div>` : ""}
-      <div style="margin-top:10px;">
-        <div class="maToggleRow">
-          <span class="maListRow__col">Activate</span>
-          <div class="maToggle" id="sgsbToggle" role="group" aria-label="Activate side bets for this game">
-            <button type="button" class="maToggle__btn${on ? " is-active" : ""}" data-status="active" aria-pressed="${on}">Yes</button>
-            <button type="button" class="maToggle__btn${!on ? " is-active" : ""}" data-status="disabled" aria-pressed="${!on}">No</button>
-          </div>
+      <div class="maToggleRow">
+        <div style="flex:1 1 auto; min-width:0;">
+          <div class="maListRow__col">Activate</div>
+          <div class="maListRow__subline" id="sgsbHint">${esc(on ? HINT_ON : HINT_OFF)}</div>
         </div>
-        <div class="maHintText" id="sgsbHint">${esc(on ? HINT_ON : HINT_OFF)}</div>
+        <div class="maToggle" id="sgsbToggle" role="group" aria-label="Activate side bets for this game">
+          <button type="button" class="maToggle__btn${on ? " is-active" : ""}" data-status="active" aria-pressed="${on}">Yes</button>
+          <button type="button" class="maToggle__btn${!on ? " is-active" : ""}" data-status="disabled" aria-pressed="${!on}">No</button>
+        </div>
       </div>`;
+  }
+
+  // Header subtitle: which game this is (title · course).
+  function _subtitleText() {
+    const g = _ctx?.game || {};
+    const title = String(g.dbGames_Title || (_ctx?.ggid ? `GGID ${_ctx.ggid}` : "")).trim();
+    return [title, g.dbGames_CourseName].filter(Boolean).join(" · ") || "Choose which side bets are in play.";
   }
 
   // Master switch: visibility only. Never touches a bet's status/payout/text,
@@ -409,8 +441,32 @@
     const r = rowOf(key);
     if (!r) return;
     r.status = r.status === "active" ? "disabled" : "active";
+    // An unused custom slot the user just added and un-ticked goes back to hidden.
+    if (r.custom && r.status !== "active" && !r.name.trim()) r.revealed = false;
     _state.rows.forEach(x => { x.open = false; });
     r.open = r.status === "active";
+    renderBody();
+  }
+
+  // Row tap: editor on/off for an active bet; same as the checkbox otherwise.
+  function tapRow(key) {
+    const r = rowOf(key);
+    if (!r) return;
+    if (r.status === "active") toggleOpen(key); else toggleStatus(key);
+  }
+
+  // "+ Add custom bet": reveal the next free custom slot, on and open, at the
+  // bottom of its group, so the user lands on its name field.
+  function addCustom(groupId) {
+    const g = _state.groups.find(x => x.id === groupId);
+    if (!g) return;
+    const free = g.keys.map(rowOf).find(r => r.custom && !isVisible(r));
+    if (!free) return;
+    free.revealed = true;
+    free.status = "active";
+    g.keys = g.keys.filter(k => k !== free.key).concat(free.key);
+    _state.rows.forEach(x => { x.open = false; });
+    free.open = true;
     renderBody();
   }
 
@@ -444,15 +500,20 @@
     body.addEventListener("click", e => {
       const chk = e.target.closest("[data-check]");
       if (chk) { toggleStatus(chk.getAttribute("data-check")); return; }
-      const tg = e.target.closest("[data-toggle]");
-      if (tg) { toggleOpen(tg.getAttribute("data-toggle")); return; }
+      const add = e.target.closest("[data-add]");
+      if (add) { addCustom(add.getAttribute("data-add")); return; }
       const chip = e.target.closest("[data-chip]");
-      if (chip) setChip(chip.getAttribute("data-key"), chip.getAttribute("data-chip"));
+      if (chip) { setChip(chip.getAttribute("data-key"), chip.getAttribute("data-chip")); return; }
+      // Anywhere else on a bet row (text, chevron, padding) is the row tap.
+      const row = e.target.closest("[data-row]");
+      if (row) tapRow(row.getAttribute("data-row"));
     });
     body.addEventListener("keydown", e => {
       if (e.key !== "Enter" && e.key !== " ") return;
       const chk = e.target.closest("[data-check]");
-      if (chk) { e.preventDefault(); toggleStatus(chk.getAttribute("data-check")); }
+      if (chk) { e.preventDefault(); toggleStatus(chk.getAttribute("data-check")); return; }
+      const tap = e.target.closest("[data-tap]");
+      if (tap) { e.preventDefault(); tapRow(tap.getAttribute("data-tap")); }
     });
     body.addEventListener("input", e => {
       const f = e.target.closest("[data-f]");
@@ -476,7 +537,7 @@
         <div class="maModal__hdr${isEvent ? " is-event-context" : ""}">
           <div>
             <div class="maModal__title">Side Bets</div>
-            <div class="maModal__subtitle">Choose which side bets are in play, and what each is worth.</div>
+            <div class="maModal__subtitle">${esc(_subtitleText())}</div>
           </div>
           <button id="sgsbBtnClose" class="iconBtn btnSecondary" type="button" aria-label="Close">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
