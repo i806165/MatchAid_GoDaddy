@@ -39,7 +39,7 @@
       <img src="/assets/images/nav-event.png" alt="" width="34" height="34" style="display:block; object-fit:contain;">
   </div>
 
-  <div data-setting="sideBets" data-label="Setup Side Bets" data-category="setup">
+  <div data-setting="sideBets" data-label="Setup Side Games" data-category="setup">
     <img src="/assets/images/nav-pokerchip.png" alt="" width="34" height="34" style="display:block; object-fit:contain;">
   </div>
 

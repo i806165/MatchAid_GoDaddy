@@ -4,7 +4,7 @@ declare(strict_types=1);
 ?>
 
 <!-- CONTROLS BAND (pinned while the page body scrolls; hidden until launched).
-     Hole navigation, plus the Scores | Side Bets switch when the game has side
+     Hole navigation, plus the Scores | Side Games switch when the game has side
      bets on. The switch host is a plain wrapper so [hidden] wins — .maSeg sets
      display:flex and would override [hidden] on itself. -->
 <div class="maControlArea isHidden" id="scoreControlArea" role="region" aria-label="Score entry controls">
@@ -16,7 +16,7 @@ declare(strict_types=1);
   <div id="scoreViewTabsHost" class="scoreViewTabs" hidden>
     <div class="maSeg" id="scoreViewTabs" role="tablist" aria-label="Score entry view">
       <button class="maSegBtn is-active" type="button" role="tab" aria-selected="true" data-view="scores" id="scoreTabScores">Scores</button>
-      <button class="maSegBtn" type="button" role="tab" aria-selected="false" data-view="sidebets" id="scoreTabSideBets">Side Bets</button>
+      <button class="maSegBtn" type="button" role="tab" aria-selected="false" data-view="sidebets" id="scoreTabSideBets">Side Games</button>
     </div>
   </div>
 </div>

@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-// /public_html/api/score_skins/initScoreSkins.php
+// /public_html/api/score_sidegames/initScoreSidegames.php
 //
 // Game-level Hole Champions. Single ggid (session-derived, never
 // trusted from the client), no round selector — reuses
@@ -12,7 +12,7 @@ declare(strict_types=1);
 // style pages hydrate once server-side via the controller and never
 // re-fetch (no round to switch, flight filtering is entirely client-side
 // inside module_renderHoleChampions.js). This POST entrypoint exists so
-// scoreskins.php has one shared function to call for its own first-paint
+// scoresidegames.php has one shared function to call for its own first-paint
 // hydration, AND so a future config/criteria layer (flagged in chat,
 // deliberately deferred) has a real endpoint to extend rather than
 // retrofitting one in later.
@@ -26,7 +26,7 @@ require_once MA_API . "/event_skins/initEventSkins.php"; // fetchHoleChampionsRo
 /**
  * buildGameHoleChampionsPayload($ggid)
  *
- * Shared by the controller (scoreskins.php, first paint) and this
+ * Shared by the controller (scoresidegames.php, first paint) and this
  * file's own POST entrypoint below — same "one function, two entry
  * points" pattern as every other page in this project.
  *
@@ -57,7 +57,7 @@ function buildGameHoleChampionsPayload(string $ggid): array {
   ];
 }
 
-if (php_sapi_name() !== "cli" && basename($_SERVER["SCRIPT_NAME"] ?? "") === "initScoreSkins.php") {
+if (php_sapi_name() !== "cli" && basename($_SERVER["SCRIPT_NAME"] ?? "") === "initScoreSidegames.php") {
 
   header("Content-Type: application/json; charset=utf-8");
 
@@ -87,7 +87,7 @@ if (php_sapi_name() !== "cli" && basename($_SERVER["SCRIPT_NAME"] ?? "") === "in
     echo json_encode($out, JSON_UNESCAPED_SLASHES);
 
   } catch (Throwable $e) {
-    Logger::error("INIT_SCORE_SKINS_FAIL", ["err" => $e->getMessage()]);
+    Logger::error("INIT_SCORE_SIDEGAMES_FAIL", ["err" => $e->getMessage()]);
     http_response_code(500);
     echo json_encode(["ok" => false, "error" => "server_error"]);
   }

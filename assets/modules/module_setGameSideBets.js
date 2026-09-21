@@ -137,7 +137,7 @@
     _busy = true;
     try {
       await MA.ui.confirm({
-        title: "Side Bets",
+        title: "Side Games",
         message: esc(message),
         confirmLabel: "OK",
         okOnly: true,
@@ -149,7 +149,7 @@
   }
 
   const HINT_ON  = "In play for this game.";
-  const HINT_OFF = "Off. Turn on to choose bets.";
+  const HINT_OFF = "Off. Turn on to choose side games.";
 
   // ── Catalog + stored parsing ─────────────────────────────────────────
   function readCatalog() {
@@ -257,16 +257,16 @@
   function validate() {
     if (_state.status !== "active") return null;
     if (!_state.rows.some(r => r.status === "active")) {
-      return { key: null, message: "Choose at least one side bet, or set Activate to No." };
+      return { key: null, message: "Choose at least one side game, or set Activate to No." };
     }
     for (const r of _state.rows) {
       if (r.status !== "active") continue;
       if (r.custom && !r.name.trim()) {
-        return { key: r.key, message: "Give each custom bet a name before saving it as active." };
+        return { key: r.key, message: "Give each custom game a name before saving it as active." };
       }
       const v = parseFloat(r.value);
       if (!Number.isFinite(v) || v < 0) {
-        return { key: r.key, message: `Enter a payout of 0 or more for ${r.name.trim() || "this bet"}.` };
+        return { key: r.key, message: `Enter a payout of 0 or more for ${r.name.trim() || "this side game"}.` };
       }
     }
     return null;
@@ -274,7 +274,7 @@
 
   // ── Rendering (ma_shared.css classes only) ───────────────────────────
   function labelOf(r) {
-    return r.name.trim() || (r.custom ? `Custom bet ${r.key.replace(/\D+/g, "")}` : r.key);
+    return r.name.trim() || (r.custom ? `Custom game ${r.key.replace(/\D+/g, "")}` : r.key);
   }
 
   function payoutText(r) {
@@ -325,7 +325,7 @@
   function addRowHtml(groupId) {
     return `
       <div class="maListRow">
-        <button class="btn btnLink" type="button" data-add="${esc(groupId)}">+ Add custom bet</button>
+        <button class="btn btnLink" type="button" data-add="${esc(groupId)}">+ Add custom game</button>
       </div>`;
   }
 
@@ -333,7 +333,7 @@
     const k = esc(r.key);
     const nameField = r.custom ? `
         <div class="maField">
-          <input class="maTextInput" type="text" data-key="${k}" data-f="name" value="${esc(r.name)}" placeholder="Name (required)" aria-label="Bet name">
+          <input class="maTextInput" type="text" data-key="${k}" data-f="name" value="${esc(r.name)}" placeholder="Name (required)" aria-label="Side game name">
         </div>` : "";
     const descField = r.custom ? `
         <div class="maField">
@@ -341,7 +341,7 @@
         </div>` : "";
     const typeField = r.custom ? `
         <div class="maField">
-          <div class="maChoiceChips" role="group" aria-label="Bet type">
+          <div class="maChoiceChips" role="group" aria-label="Side game type">
             ${chipHtml(r.key, "type", "achievement", "Achievement", r.type === "achievement")}
             ${chipHtml(r.key, "type", "competitive", "Competitive", r.type === "competitive")}
           </div>
@@ -406,7 +406,7 @@
           <div class="maListRow__col">Activate</div>
           <div class="maListRow__subline" id="sgsbHint">${esc(on ? HINT_ON : HINT_OFF)}</div>
         </div>
-        <div class="maToggle" id="sgsbToggle" role="group" aria-label="Activate side bets for this game">
+        <div class="maToggle" id="sgsbToggle" role="group" aria-label="Activate side games">
           <button type="button" class="maToggle__btn${on ? " is-active" : ""}" data-status="active" aria-pressed="${on}">Yes</button>
           <button type="button" class="maToggle__btn${!on ? " is-active" : ""}" data-status="disabled" aria-pressed="${!on}">No</button>
         </div>
@@ -417,7 +417,7 @@
   function _subtitleText() {
     const g = _ctx?.game || {};
     const title = String(g.dbGames_Title || (_ctx?.ggid ? `GGID ${_ctx.ggid}` : "")).trim();
-    return [title, g.dbGames_CourseName].filter(Boolean).join(" · ") || "Choose which side bets are in play.";
+    return [title, g.dbGames_CourseName].filter(Boolean).join(" · ") || "Choose which side games are in play.";
   }
 
   // Master switch: visibility only. Never touches a bet's status/payout/text,
@@ -537,11 +537,11 @@
     overlay.className = "maModalOverlay is-open";
 
     overlay.innerHTML = `
-      <div class="maModal" role="dialog" aria-modal="true" aria-label="Side Bets">
+      <div class="maModal" role="dialog" aria-modal="true" aria-label="Side Games">
 
         <div class="maModal__hdr${isEvent ? " is-event-context" : ""}">
           <div>
-            <div class="maModal__title">Side Bets</div>
+            <div class="maModal__title">Side Games</div>
             <div class="maModal__subtitle">${esc(_subtitleText())}</div>
           </div>
           <button id="sgsbBtnClose" class="iconBtn btnSecondary" type="button" aria-label="Close">
@@ -603,17 +603,17 @@
     if (JSON.stringify(result) === _baseline) { _dismiss(false); return; } // nothing changed
 
     _busy = true;
-    MA.ui?.showBusy?.({ title: "Side Bets", message: "Saving — please wait..." });
+    MA.ui?.showBusy?.({ title: "Side Games", message: "Saving — please wait..." });
     let saved = false;
     let failure = "";
     try {
       const payload = { dbGames_GGID: _ctx.ggid, dbGames_CustomScores: result };
       const res = await MA.postJson(SAVE_ENDPOINT, { payload });
-      if (!res?.ok) failure = res?.message || "Unable to save Side Bets.";
+      if (!res?.ok) failure = res?.message || "Unable to save Side Games.";
       else saved = true;
     } catch (e) {
       console.error("[MA.setGameSideBets]", e);
-      failure = "Error saving Side Bets.";
+      failure = "Error saving Side Games.";
     } finally {
       MA.ui?.hideBusy?.();
       _busy = false;
@@ -629,7 +629,7 @@
     _onDone = options?.onDone || null;
     _busy = false;
 
-    MA.ui?.showBusy?.({ title: "Side Bets", message: "Loading..." });
+    MA.ui?.showBusy?.({ title: "Side Games", message: "Loading..." });
     let ctx;
     try {
       const res = await MA.postJson(CONTEXT_ENDPOINT, {});
@@ -638,7 +638,7 @@
     } catch (e) {
       MA.ui?.hideBusy?.();
       console.error("[MA.setGameSideBets]", e);
-      await _showNotice("Side Bets couldn't load this game's settings. Please try again.", "danger");
+      await _showNotice("Side Games couldn't load this game's settings. Please try again.", "danger");
       if (typeof _onDone === "function") _onDone(false); // menu still needs to reopen
       return;
     }
@@ -646,7 +646,7 @@
 
     const state = buildState(ctx.game);
     if (!state) {
-      await _showNotice("Side bets catalog not available on this page (includes/sideBetsCatalog.php).", "danger");
+      await _showNotice("Side games catalog not available on this page (includes/sideBetsCatalog.php).", "danger");
       if (typeof _onDone === "function") _onDone(false);
       return;
     }
@@ -661,7 +661,7 @@
 
     _renderControls();
     renderBody();
-    _applyStatusUi(); // collapses the bet list when the game opens with side bets off
+    _applyStatusUi(); // collapses the bet list when the game opens with side games off
 
     _onEsc = (e) => { if (e.key === "Escape" && !_busy) _dismiss(); };
     document.addEventListener("keydown", _onEsc);

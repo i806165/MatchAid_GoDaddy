@@ -6,7 +6,7 @@
  * — this module only ever filters an already-loaded flat player array by
  * flight and renders champion cards from it. The champion computation
  * itself (computeHoleResult/findChampion) is ported unchanged from the
- * original score_skins.js — it never cared where the player array came
+ * original game-level skins page script — it never cared where the player array came
  * from, so pooling multiple rounds' players into one array (the "All
  * Rounds" case) needs zero changes here, only a different array from the
  * host.
@@ -69,7 +69,7 @@
     );
   }
 
-  // ── Champion computation — ported unchanged from score_skins.js ───────
+  // ── Champion computation — ported unchanged from the original skins page script ───────
 
   function computeHoleResult(players, h) {
     let par = "—";

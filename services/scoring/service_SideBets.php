@@ -59,7 +59,7 @@ final class ServiceSideBets
 
         $submitted = $body['players'] ?? null;
         if (!is_array($submitted) || !$submitted) {
-            return self::fail(400, 'There are no side bets to save.');
+            return self::fail(400, 'There are no side games to save.');
         }
 
         // ── Pod + game, resolved from the session ───────────────────────
@@ -94,7 +94,7 @@ final class ServiceSideBets
         // off is still real data, and refusing it would strand the scorer.
         $bets = self::loadBets($game);
         if (!$bets) {
-            return self::fail(400, 'Side bets are not configured for this game.');
+            return self::fail(400, 'Side games are not configured for this game.');
         }
 
         [$minHole, $maxHole] = self::holeRange($game);
@@ -109,7 +109,7 @@ final class ServiceSideBets
         $seen = [];
         foreach ($submitted as $entry) {
             if (!is_array($entry)) {
-                return self::fail(400, 'Invalid side bets payload.');
+                return self::fail(400, 'Invalid side games payload.');
             }
 
             $ghin = trim((string)($entry['ghin'] ?? ''));
@@ -118,7 +118,7 @@ final class ServiceSideBets
                 return self::fail(400, 'One or more players are not on this scorecard.');
             }
             if (isset($seen[$ghin])) {
-                return self::fail(400, 'Invalid side bets payload.');
+                return self::fail(400, 'Invalid side games payload.');
             }
             $seen[$ghin] = true;
 
@@ -129,7 +129,7 @@ final class ServiceSideBets
                     'ok'       => false,
                     'conflict' => true,
                     'status'   => 409,
-                    'message'  => 'Side bets for this scorecard were updated elsewhere.',
+                    'message'  => 'Side games for this scorecard were updated elsewhere.',
                     'players'  => self::playersPayload($storedDocs),
                 ];
             }
@@ -147,10 +147,10 @@ final class ServiceSideBets
                 $customScores = json_decode($customScores, true);
             }
             if (!is_array($customScores) || !is_array($customScores['claims'] ?? null)) {
-                return self::fail(400, 'Invalid side bets claims.');
+                return self::fail(400, 'Invalid side games claims.');
             }
             if (count($customScores['claims']) > self::MAX_CLAIMS) {
-                return self::fail(400, 'There are too many side bet claims.');
+                return self::fail(400, 'There are too many side game claims.');
             }
 
             $result = self::normalizePlayerClaims($customScores['claims'], $storedDocs[$ghin], $bets, $minHole, $maxHole, $now);
@@ -201,7 +201,7 @@ final class ServiceSideBets
                 ]);
 
                 if (!$saved) {
-                    throw new RuntimeException('Unable to persist side bets for a player.');
+                    throw new RuntimeException('Unable to persist side games for a player.');
                 }
             }
 
@@ -211,7 +211,7 @@ final class ServiceSideBets
                 $pdo->rollBack();
             }
             Logger::error('SAVE_SIDE_BETS_FAIL', ['ggid' => $ggid, 'error' => $e->getMessage()]);
-            return self::fail(500, 'Unable to save side bets.');
+            return self::fail(500, 'Unable to save side games.');
         }
 
         return [
@@ -259,27 +259,27 @@ final class ServiceSideBets
 
         foreach ($claims as $claim) {
             if (!is_array($claim)) {
-                return ['error' => 'Side bets contains an invalid claim.'];
+                return ['error' => 'Side games contains an invalid claim.'];
             }
 
             $betKey = $claim['betKey'] ?? null;
             if (!is_string($betKey) || $betKey === '' || strlen($betKey) > 32) {
-                return ['error' => 'Side bets contains an invalid bet.'];
+                return ['error' => 'Side games contains an invalid side game.'];
             }
 
             $hole = self::asInt($claim['hole'] ?? null);
             if ($hole === null || $hole < 1 || $hole > 18) {
-                return ['error' => 'Side bets contains an invalid hole.'];
+                return ['error' => 'Side games contains an invalid hole.'];
             }
 
             $status = (string)($claim['status'] ?? '');
             if (!in_array($status, ['active', 'removed'], true)) {
-                return ['error' => 'Side bets contains an invalid claim status.'];
+                return ['error' => 'Side games contains an invalid claim status.'];
             }
 
             $key = $betKey . '|' . $hole;
             if (isset($seen[$key])) {
-                return ['error' => 'Side bets contains a duplicate claim.'];
+                return ['error' => 'Side games contains a duplicate claim.'];
             }
             $seen[$key] = true;
 
@@ -294,7 +294,7 @@ final class ServiceSideBets
             $unit = $claim['unit'] ?? null;
             if ($unit === '') $unit = null;
             if ($unit !== null && !in_array($unit, ['in', 'yd'], true)) {
-                return ['error' => 'Side bets contains an invalid distance unit.'];
+                return ['error' => 'Side games contains an invalid distance unit.'];
             }
 
             // A removed claim carries no distance; a unit only travels with one.
@@ -315,23 +315,23 @@ final class ServiceSideBets
             if ($status === 'active') {
                 $bet = $bets[$betKey] ?? null;
                 if ($bet === null) {
-                    return ['error' => 'Side bets contains an unknown bet.'];
+                    return ['error' => 'Side games contains an unknown side game.'];
                 }
                 if ($hole < $minHole || $hole > $maxHole) {
                     return ['error' => 'That hole is not part of this game.'];
                 }
                 if (($bet['status'] ?? '') !== 'active') {
-                    return ['error' => 'That side bet is not turned on for this game.'];
+                    return ['error' => 'That side game is not turned on for this game.'];
                 }
 
                 $measure = (string)($bet['measure'] ?? '');
                 if ($distance !== null) {
                     $expected = self::UNIT_BY_MEASURE[$measure] ?? null;
                     if ($expected === null) {
-                        return ['error' => 'That side bet does not record a distance.'];
+                        return ['error' => 'That side game does not record a distance.'];
                     }
                     if ($unit !== $expected) {
-                        return ['error' => 'The distance unit does not match this side bet.'];
+                        return ['error' => 'The distance unit does not match this side game.'];
                     }
                     [$lo, $hi] = self::DISTANCE_BOUNDS[$expected];
                     if ($distance < $lo || $distance > $hi) {

@@ -1,12 +1,12 @@
-/* /assets/pages/score_skins.js
-   Game-level Hole Champions page controller.
+/* /assets/pages/score_sidegames.js
+   Game-level Side Games page controller (Hole Champions + side games).
    No round selector — single ggid, nothing to switch between. First paint
-   is server-baked; initScoreSkins.php exists for future use (a
+   is server-baked; initScoreSidegames.php exists for future use (a
    config/criteria layer, deliberately deferred — see chat) rather than
    anything this page calls today.
 
    Views (control band): Hole Champions (module_renderHoleChampions.js,
-   unchanged) | By Bet | By Player (module_renderSideBets.js). The
+   unchanged) | By Side Game | By Player (module_renderSideBets.js). The
    view switch appears only while side bets are on for the game.
 
    Flight selection is host-owned and applies to every view: this page
@@ -185,7 +185,7 @@
       .filter(Boolean).join(" • ");
 
     if (MA.chrome && MA.chrome.setHeaderLines) {
-      MA.chrome.setHeaderLines(["Hole Champions", "Skins", subtitle]);
+      MA.chrome.setHeaderLines(["Side Games", String(game.dbGames_Title || ""), subtitle]);
     }
 
     if (MA.chrome && MA.chrome.setActions) {
@@ -197,8 +197,8 @@
 
     if (MA.chrome && MA.chrome.setBottomNav) {
       MA.chrome.setBottomNav({
-        visible: ["scorehome", "scoreentry", "scorecardShared", "scoresummary", "scoreskins"],
-        active:  "scoreskins",
+        visible: ["scorehome", "scoreentry", "scorecardShared", "scoresummary", "scoresidegames"],
+        active:  "scoresidegames",
         root:    ["scorehome"],
         onNavigate: (id) => MA.routerGo?.(id),
       });
@@ -249,7 +249,7 @@
   }
 
   boot().catch((err) => {
-    console.error("[SCORE_SKINS] boot error", err);
-    MA.ui.notify("Failed to initialize hole champions.", "danger");
+    console.error("[SCORE_SIDEGAMES] boot error", err);
+    MA.ui.notify("Failed to initialize side games.", "danger");
   });
 })();

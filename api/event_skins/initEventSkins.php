@@ -13,7 +13,7 @@ declare(strict_types=1);
 // and blind players are explicitly not part of Hole Champions. Rather
 // than fork that function or bolt on a skip-flag (touching a file that's
 // been deliberately left alone throughout this project), this hand-rolls
-// its own player fetch — same approach the original scoreskins.php used,
+// its own player fetch — same approach the original game-level skins page used,
 // but with the SAME broader JSON-field fallback the canonical hydrator
 // uses (checks dbPlayers_Scores/ScoreJson/ScoreJSON/ScoreCard, not just
 // the first) — closing that specific gap without touching the file it
@@ -30,7 +30,7 @@ declare(strict_types=1);
 // deliberately deferred constraint (see chat), not enforced here.
 //
 // fetchHoleChampionsRound() and resolveHoleChampionsMeta() below are
-// shared with /api/score_skins/initScoreSkins.php (the standalone
+// shared with /api/score_sidegames/initScoreSidegames.php (the standalone
 // game-level page) — one round's worth of work, reused by both the
 // pooling loop here and that page's single call.
 
@@ -81,7 +81,7 @@ function fetchSkinsPlayers(string $ggid): array {
  *
  * One round's worth of PH-forced, phStrokeMarks-renamed player data.
  * Shared by the event-level pooling loop below AND
- * initScoreSkins.php's single game-level call — the one place this
+ * initScoreSidegames.php's single game-level call — the one place this
  * logic exists.
  *
  * Returns null if the ggid doesn't resolve to a real game.

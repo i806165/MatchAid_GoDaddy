@@ -382,8 +382,8 @@
   async function notifySideBetsConflict() {
     hideSavingOverlay();
     await MA.ui.confirm({
-      title: 'Side Bets Updated',
-      message: 'Side bets were updated elsewhere and have been refreshed. Please re-enter your changes.',
+      title: 'Side Games Updated',
+      message: 'Side games were updated elsewhere and have been refreshed. Please re-enter your changes.',
       confirmLabel: 'OK',
       okOnly: true,
       dismissible: false
@@ -1045,7 +1045,7 @@ function markDirty(playerId, rawScore, declared) {
                       : (portal === "PLAYER PORTAL" ? "player" : "home");
 
       chrome.setBottomNav({
-        visible: ['scorehome','scoreentry', 'scorecardShared',  'scoresummary', 'scoreskins'],
+        visible: ['scorehome','scoreentry', 'scorecardShared',  'scoresummary', 'scoresidegames'],
         active: 'scoreentry',
         root: ['scorehome'],
         onNavigate: (id) => {

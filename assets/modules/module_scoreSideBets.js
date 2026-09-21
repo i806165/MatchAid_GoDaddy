@@ -55,7 +55,7 @@
   MA.scoreSideBets = MA.scoreSideBets || {};
 
   let _cfg      = null;
-  let _bets     = [];   // active, well-formed bets in stored order; [] when side bets are off
+  let _bets     = [];   // active, well-formed bets in stored order; [] when side games are off
   let _players  = {};   // ghin -> { claims, original, persisted:Set, loadedSig }
   let _dirty    = false;
   let _saving   = false;
@@ -212,7 +212,7 @@
     const btn = _cfg.tabsHost.querySelector('[data-view="sidebets"]');
     if (btn) {
       const n = claimCountForHole();
-      btn.textContent = n ? `Side Bets · ${n}` : "Side Bets";
+      btn.textContent = n ? `Side Games · ${n}` : "Side Games";
     }
   }
 
@@ -408,7 +408,7 @@
     });
   }
 
-  const GENERIC_FAIL = "Side bets couldn't be saved. Please try again.";
+  const GENERIC_FAIL = "Side games couldn't be saved. Please try again.";
 
   MA.scoreSideBets.save = async function () {
     if (!_cfg || !_dirty) return { ok: true };

@@ -1,10 +1,12 @@
 /* /assets/modules/module_renderSideBets.js
  *
- * MA.renderSideBets — read-only Side Bets results (By Bet / By Player).
+ * MA.renderSideBets — read-only Side Games results (By Side Game / By Player).
+ * (The feature is called "Side Games" on screen; "bet" is the internal name
+ * used in code, data keys and the stored JSON.)
  *
  * Nothing is declared or calculated beyond counting: results are the claims
  * scorers recorded on Score Entry, grouped and sorted for reading. Data
- * ACQUISITION is host-owned (score_skins.js): the host hands in the game row,
+ * ACQUISITION is host-owned (score_sidegames.js): the host hands in the game row,
  * which carries the bet definitions, and an already flight-filtered flat player
  * array, each row carrying its claims.
  *
@@ -323,13 +325,13 @@
     const data = buildData(cfg.game, players);
 
     if (!data.bets.length) {
-      hostEl.innerHTML = `<div class="maEmptyState">No side bets are set up for this game.</div>`;
+      hostEl.innerHTML = `<div class="maEmptyState">No side games are set up for this game.</div>`;
       return;
     }
 
     if (cfg.view === "player") {
       if (!data.withClaims.length) {
-        hostEl.innerHTML = `<div class="maEmptyState">No side bets recorded yet.</div>`;
+        hostEl.innerHTML = `<div class="maEmptyState">No side games recorded yet.</div>`;
         return;
       }
 

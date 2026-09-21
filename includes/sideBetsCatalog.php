@@ -53,7 +53,7 @@
     <div data-bet="ld"  data-label="Longest Drive"      data-type="competitive" data-unit="dollars" data-value="5" data-measure="yd" data-desc="Farthest tee shot in the fairway on the designated hole"></div>
   </div>
 
-  <div data-group="cust" data-label="Custom Bets">
+  <div data-group="cust" data-label="Custom Games">
     <div data-bet="custom1" data-custom="true" data-label="" data-desc="" data-type="achievement" data-unit="points" data-value="1"></div>
     <div data-bet="custom2" data-custom="true" data-label="" data-desc="" data-type="achievement" data-unit="points" data-value="1"></div>
     <div data-bet="custom3" data-custom="true" data-label="" data-desc="" data-type="achievement" data-unit="points" data-value="1"></div>

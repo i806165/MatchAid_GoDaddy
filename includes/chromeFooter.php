@@ -286,11 +286,11 @@
       <span class="maNavLabel">Score Cards</span>
     </button>
 
-    <button type="button" class="maNavBtn" data-nav="scoreskins" aria-label="Skins">
+    <button type="button" class="maNavBtn" data-nav="scoresidegames" aria-label="Side Games">
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-skins.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
       </span>
-      <span class="maNavLabel">Skins</span>
+      <span class="maNavLabel">Side Games</span>
     </button>
 
     <button type="button" class="maNavBtn" data-nav="scoresummary" aria-label="Leaders">

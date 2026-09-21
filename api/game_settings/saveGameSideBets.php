@@ -66,7 +66,7 @@ try {
     $payload = $input["payload"] ?? null;
 
     if (!is_array($payload)) {
-        $reject(400, "Invalid Side Bets payload.");
+        $reject(400, "Invalid Side Games payload.");
     }
 
     /*
@@ -81,11 +81,11 @@ try {
             "postedGGID"  => $postedGGID,
         ]);
 
-        $reject(409, "The active game changed. Please reopen Side Bets.");
+        $reject(409, "The active game changed. Please reopen Side Games.");
     }
 
     if (!array_key_exists("dbGames_CustomScores", $payload)) {
-        $reject(400, "Side Bets is missing a required setting.");
+        $reject(400, "Side Games is missing a required setting.");
     }
 
     $game = ServiceDbGames::getGameByGGID($ggid);
@@ -103,30 +103,30 @@ try {
         $decoded = json_decode($submitted, true);
 
         if (!is_array($decoded)) {
-            $reject(400, "Side Bets contains invalid JSON.");
+            $reject(400, "Side Games contains invalid JSON.");
         }
 
         $submitted = $decoded;
     }
 
     if (!is_array($submitted)) {
-        $reject(400, "Side Bets configuration must be an object.");
+        $reject(400, "Side Games configuration must be an object.");
     }
 
     if ((int)($submitted["version"] ?? 0) !== 1) {
-        $reject(400, "Side Bets has an unsupported version.");
+        $reject(400, "Side Games has an unsupported version.");
     }
 
     $gameStatus = trim((string)($submitted["status"] ?? ""));
 
     if (!in_array($gameStatus, ["active", "disabled"], true)) {
-        $reject(400, "Side Bets status must be active or disabled.");
+        $reject(400, "Side Games status must be active or disabled.");
     }
 
     $bets = $submitted["bets"] ?? null;
 
     if (!is_array($bets) || $bets === [] || count($bets) > 50) {
-        $reject(400, "Side Bets must contain between 1 and 50 bets.");
+        $reject(400, "Side Games must contain between 1 and 50 side games.");
     }
 
     // ── Validate and normalize each bet ────────────────────────────────
@@ -136,18 +136,18 @@ try {
 
     foreach ($bets as $bet) {
         if (!is_array($bet)) {
-            $reject(400, "Side Bets contains an invalid bet.");
+            $reject(400, "Side Games contains an invalid side game.");
         }
 
         $key = trim((string)($bet["key"] ?? ""));
 
         // Permanent identity. Letters, digits, underscore; starts with a letter.
         if (!preg_match('/^[A-Za-z][A-Za-z0-9_]{0,31}$/', $key)) {
-            $reject(400, "Side Bets contains an invalid bet key.");
+            $reject(400, "Side Games contains an invalid side game key.");
         }
 
         if (isset($seenKeys[$key])) {
-            $reject(400, "Side Bets contains a duplicate bet.");
+            $reject(400, "Side Games contains a duplicate side game.");
         }
         $seenKeys[$key] = true;
 
@@ -157,47 +157,47 @@ try {
         $status      = trim((string)($bet["status"] ?? ""));
 
         if (mb_strlen($name) > 60) {
-            $reject(400, "A bet name cannot be longer than 60 characters.");
+            $reject(400, "A side game name cannot be longer than 60 characters.");
         }
 
         if (mb_strlen($description) > 200) {
-            $reject(400, "A bet description cannot be longer than 200 characters.");
+            $reject(400, "A side game description cannot be longer than 200 characters.");
         }
 
         if (!in_array($type, ["achievement", "competitive"], true)) {
-            $reject(400, "Side Bets contains an invalid bet type.");
+            $reject(400, "Side Games contains an invalid side game type.");
         }
 
         if (!in_array($status, ["active", "disabled"], true)) {
-            $reject(400, "Side Bets contains an invalid bet status.");
+            $reject(400, "Side Games contains an invalid side game status.");
         }
 
         // A bet in play needs a name — the scoring view has nothing else to show.
         // Only enforced while side bets are on; a disabled game keeps drafts as-is.
         if ($gameStatus === "active" && $status === "active" && $name === "") {
-            $reject(400, "Every active bet needs a name.");
+            $reject(400, "Every active side game needs a name.");
         }
 
         $payout = $bet["payout"] ?? null;
 
         if (!is_array($payout)) {
-            $reject(400, "Side Bets contains an invalid payout.");
+            $reject(400, "Side Games contains an invalid payout.");
         }
 
         $unit = trim((string)($payout["unit"] ?? ""));
 
         if (!in_array($unit, ["points", "dollars"], true)) {
-            $reject(400, "Side Bets contains an invalid payout unit.");
+            $reject(400, "Side Games contains an invalid payout unit.");
         }
 
         if (!array_key_exists("value", $payout) || !is_numeric($payout["value"])) {
-            $reject(400, "Side Bets contains a non-numeric payout value.");
+            $reject(400, "Side Games contains a non-numeric payout value.");
         }
 
         $value = (float)$payout["value"];
 
         if ($value < 0 || $value > 100000) {
-            $reject(400, "Side Bets payout values must be between 0 and 100000.");
+            $reject(400, "Side Games payout values must be between 0 and 100000.");
         }
 
         // Whole numbers stay integers in the stored JSON (1, not 1.0).
@@ -208,11 +208,11 @@ try {
         $measure = trim((string)($bet["measure"] ?? ""));
 
         if ($measure !== "" && !in_array($measure, ["ftin", "yd"], true)) {
-            $reject(400, "Side Bets contains an invalid bet measure.");
+            $reject(400, "Side Games contains an invalid side game measure.");
         }
 
         if ($measure !== "" && $type !== "competitive") {
-            $reject(400, "Only a competitive bet can have a measure.");
+            $reject(400, "Only a competitive side game can have a measure.");
         }
 
         $record = [
@@ -246,7 +246,7 @@ try {
         }
 
         if (!$anyActive) {
-            $reject(400, "Choose at least one side bet, or set Activate to No.");
+            $reject(400, "Choose at least one side game, or set Activate to No.");
         }
     }
 
@@ -278,7 +278,7 @@ try {
      */
     foreach ($storedTypeByKey as $storedKey => $_storedType) {
         if (!isset($seenKeys[$storedKey])) {
-            $reject(400, "Side Bets cannot remove an existing bet. Disable it instead.");
+            $reject(400, "Side Games cannot remove an existing side game. Disable it instead.");
         }
     }
 
@@ -398,6 +398,6 @@ try {
 
     ma_respond(500, [
         "ok"      => false,
-        "message" => "Unable to save Side Bets.",
+        "message" => "Unable to save Side Games.",
     ]);
 }
