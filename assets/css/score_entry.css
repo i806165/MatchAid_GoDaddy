@@ -68,12 +68,7 @@
   min-width: 0;
 }
 
-/* Hole nav */
-.scoreHoleNavBody{
-  padding-top: 12px;
-  padding-bottom: 12px;
-}
-
+/* Hole nav (pinned in .maControlArea) */
 .scoreHoleNavInner{
   width: 100%;
   max-width: 360px;
@@ -111,6 +106,59 @@
   font-size: clamp(22px, 7vw, 32px) !important;
   font-weight: 900;
   box-sizing: border-box;
+}
+
+/* Scores | Side Bets switch, under the hole nav in the control area */
+.scoreViewTabs{
+  margin-top: 8px;
+}
+
+/* Side Bets view — player cards (shared .maCards / .maCard / .maCard__hdr--l3) */
+.scoreSbHdr{
+  cursor: pointer;
+}
+
+.scoreSbHdr__main{
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.scoreSbHdr .maCard__title{
+  font-size: 18px;
+}
+
+.scoreSbHdr__first{
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.scoreSbHdr[aria-expanded="true"] .maHubRow__arrow{
+  transform: rotate(90deg);
+}
+
+/* Distance popup — big numeric fields for a gloved/one-handed thumb */
+.scoreSbDistRow{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.scoreSbDistInput{
+  flex: 0 0 92px;
+  text-align: right;
+  min-height: 56px;
+  font-size: 24px !important;
+  font-weight: 800;
+}
+
+.scoreSbDistInput--wide{
+  flex-basis: 120px;
+}
+
+.scoreSbDistUnit{
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--ink);
 }
 
 /* Collector rows */

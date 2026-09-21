@@ -203,7 +203,19 @@ try {
         // Whole numbers stay integers in the stored JSON (1, not 1.0).
         $value = ($value == floor($value)) ? (int)$value : $value;
 
-        $normalized[] = [
+        // Optional distance unit for a competitive bet (score entry asks for a
+        // distance when it is set). Omitted entirely when the bet has none.
+        $measure = trim((string)($bet["measure"] ?? ""));
+
+        if ($measure !== "" && !in_array($measure, ["ftin", "yd"], true)) {
+            $reject(400, "Side Bets contains an invalid bet measure.");
+        }
+
+        if ($measure !== "" && $type !== "competitive") {
+            $reject(400, "Only a competitive bet can have a measure.");
+        }
+
+        $record = [
             "key"         => $key,
             "name"        => $name,
             "description" => $description,
@@ -214,6 +226,12 @@ try {
                 "value" => $value,
             ],
         ];
+
+        if ($measure !== "") {
+            $record["measure"] = $measure;
+        }
+
+        $normalized[] = $record;
     }
 
     // Side bets switched on with nothing in play is not a valid state.
@@ -244,11 +262,13 @@ try {
         ? $stored["bets"]
         : [];
 
-    $storedTypeByKey = [];
+    $storedTypeByKey    = [];
+    $storedMeasureByKey = [];
 
     foreach ($storedBets as $storedBet) {
         if (is_array($storedBet) && isset($storedBet["key"])) {
-            $storedTypeByKey[(string)$storedBet["key"]] = (string)($storedBet["type"] ?? "");
+            $storedTypeByKey[(string)$storedBet["key"]]    = (string)($storedBet["type"] ?? "");
+            $storedMeasureByKey[(string)$storedBet["key"]] = (string)($storedBet["measure"] ?? "");
         }
     }
 
@@ -277,8 +297,31 @@ try {
         }
     }
 
-    if ($typeChanged) {
-        $claimedKeys = [];
+    /*
+     * A bet's measure decides what a stored distance means (inches vs.
+     * yards). Changing it would silently change the meaning of distances
+     * already recorded, so it is locked once any active claim carries one.
+     * A bet with no recorded distances may still gain or lose a measure — a
+     * game saved before `measure` existed picks it up from the catalog.
+     */
+    $measureChanged = [];
+
+    foreach ($normalized as $bet) {
+        if (!array_key_exists($bet["key"], $storedMeasureByKey)) {
+            continue;
+        }
+
+        $measureBefore = $storedMeasureByKey[$bet["key"]];
+        $measureAfter  = (string)($bet["measure"] ?? "");
+
+        if ($measureBefore !== $measureAfter) {
+            $measureChanged[$bet["key"]] = $bet["name"] !== "" ? $bet["name"] : $bet["key"];
+        }
+    }
+
+    if ($typeChanged || $measureChanged) {
+        $claimedKeys  = [];
+        $distanceKeys = [];
 
         foreach (ServiceDbPlayers::getGamePlayers((string)$ggid) as $playerRow) {
             $raw = $playerRow["dbPlayers_CustomScores"] ?? null;
@@ -298,6 +341,10 @@ try {
                     isset($claim["betKey"])
                 ) {
                     $claimedKeys[(string)$claim["betKey"]] = true;
+
+                    if (($claim["distance"] ?? null) !== null) {
+                        $distanceKeys[(string)$claim["betKey"]] = true;
+                    }
                 }
             }
         }
@@ -307,6 +354,15 @@ try {
                 $reject(
                     409,
                     "The type of \"{$changedName}\" cannot be changed because claims have already been recorded for it."
+                );
+            }
+        }
+
+        foreach ($measureChanged as $changedKey => $changedName) {
+            if (isset($distanceKeys[$changedKey])) {
+                $reject(
+                    409,
+                    "The distance unit of \"{$changedName}\" cannot be changed because distances have already been recorded for it."
                 );
             }
         }

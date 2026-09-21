@@ -18,6 +18,9 @@
 //                "competitive" (single winner per hole).
 //   data-unit    Default payout unit: "points" or "dollars".
 //   data-value   Default payout value.
+//   data-measure Optional, competitive bets only: the distance score entry asks
+//                for when the bet is claimed — "ftin" (feet + inches) or "yd"
+//                (yards). Omit for bets with no distance (custom slots).
 //   data-custom  "true" = user-editable slot (name, description, type).
 //                Omit for fixed template bets.
 //   data-retired "true" = hide from games that don't already have it
@@ -46,8 +49,8 @@
   </div>
 
   <div data-group="comp" data-label="Competitive">
-    <div data-bet="ctp" data-label="Closest to the Pin" data-type="competitive" data-unit="dollars" data-value="5" data-desc="Nearest to the hole on a par 3, on the green"></div>
-    <div data-bet="ld"  data-label="Longest Drive"      data-type="competitive" data-unit="dollars" data-value="5" data-desc="Farthest tee shot in the fairway on the designated hole"></div>
+    <div data-bet="ctp" data-label="Closest to the Pin" data-type="competitive" data-unit="dollars" data-value="5" data-measure="ftin" data-desc="Nearest to the hole on a par 3, on the green"></div>
+    <div data-bet="ld"  data-label="Longest Drive"      data-type="competitive" data-unit="dollars" data-value="5" data-measure="yd" data-desc="Farthest tee shot in the fairway on the designated hole"></div>
   </div>
 
   <div data-group="cust" data-label="Custom Bets">

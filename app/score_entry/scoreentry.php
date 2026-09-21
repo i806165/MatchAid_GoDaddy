@@ -32,6 +32,7 @@ $paths = [
   "routerApi"       => MA_ROUTE_API_ROUTER,
   "apiScoreEntry"   => MA_ROUTE_API_SCORE_ENTRY,
   "apiScoreEntryLaunch" => MA_ROUTE_API_SCORE_ENTRY . "/launch.php",
+  "apiSideBets"     => MA_ROUTE_API_SCORE_ENTRY . "/saveSideBets.php",
   "apiScoreHome"    => MA_ROUTE_API_SCORE_HOME,
   "apiScoreCard"    => MA_ROUTE_API_GAME_SCORECARD,
   "apiAdminGames"   => MA_ROUTE_API_ADMIN_GAMES,
@@ -61,6 +62,11 @@ $maChromeLogoUrl = null;
 <body>
   <?php include MA_INCLUDES . "/chromeHeader.php"; ?>
 
+  <!-- Pinned while the page body scrolls. Hidden until score_entry.js has launched. -->
+  <div class="maControlArea isHidden" id="scoreControlArea" role="region" aria-label="Score entry controls">
+    <?php include __DIR__ . "/scoreentry_controls.php"; ?>
+  </div>
+
   <main class="maPage" role="main">
     <?php include __DIR__ . "/scoreentry_view.php"; ?>
   </main>
@@ -88,6 +94,8 @@ $maChromeLogoUrl = null;
   <script src="<?= ma_asset('/assets/modules/ghin_post_scores.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/module_enterScoresBatch.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/module_DisplayGameFormat.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_sideBetDistance.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_scoreSideBets.js') ?>"></script>
   <script src="<?= ma_asset('/assets/pages/score_entry.js') ?>"></script>
 </body>
 </html>

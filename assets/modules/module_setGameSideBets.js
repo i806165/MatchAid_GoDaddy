@@ -18,7 +18,8 @@
  *   "status": "active"|"disabled",          // master switch
  *   "bets": [
  *     { "key", "name", "description", "type": "achievement"|"competitive",
- *       "status": "active"|"disabled", "payout": { "unit": "points"|"dollars", "value": n } }
+ *       "status": "active"|"disabled", "payout": { "unit": "points"|"dollars", "value": n },
+ *       "measure"?: "ftin"|"yd" }   // competitive bets with a distance; taken from the catalog
  *   ]
  * }
  * Every catalog bet is written on save, active or not — the array is never
@@ -166,6 +167,7 @@
         type:    b.getAttribute("data-type") === "competitive" ? "competitive" : "achievement",
         unit:    b.getAttribute("data-unit") === "dollars" ? "dollars" : "points",
         value:   numOr(b.getAttribute("data-value"), 1),
+        measure: ["ftin", "yd"].includes(b.getAttribute("data-measure")) ? b.getAttribute("data-measure") : "",
       })),
     }));
   }
@@ -208,6 +210,7 @@
           status,
           open: false,
           revealed: false,
+          measure: c.measure, // from the catalog only — never stored-driven, never user-editable
           name: c.custom ? String(s?.name ?? "") : c.label,
           desc: c.custom ? String(s?.description ?? "") : c.desc,
           type: c.custom ? sType : c.type,
@@ -228,7 +231,7 @@
   function rowOf(key) { return _state.rows.find(r => r.key === key); }
 
   function recordOf(r) {
-    return {
+    const rec = {
       key: r.key,
       name: r.name.trim(),
       description: r.desc.trim(),
@@ -236,6 +239,8 @@
       status: r.status,
       payout: { unit: r.unit, value: Math.max(0, numOr(r.value, 0)) },
     };
+    if (r.measure) rec.measure = r.measure; // omitted entirely when the bet has no distance
+    return rec;
   }
 
   function collect() {

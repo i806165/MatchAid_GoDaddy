@@ -73,10 +73,15 @@ final class ServiceScoreEntry
             
             // Build or hydrate the canonical scores structure
             $scoresJson = self::buildOrHydratePlayerScores($gameRow, $playerRow);
+            // Side-bet claims ride along exactly like scores: hydrated in memory
+            // (never written here); ServiceSideBets is the only writer.
+            $customScoresJson = self::buildOrHydratePlayerCustomScores($playerRow);
             $players[] = [
                 'playerRow' => $playerRow,
                 'originalScoresJson' => $scoresJson,
                 'scoresJson' => $scoresJson,
+                'originalCustomScoresJson' => $customScoresJson,
+                'customScoresJson' => $customScoresJson,
                 'scoreEntryRow' => self::buildScoreEntryRow($gameRow, $playerRow, $scoresJson, $holeNumber),
             ];
         }
@@ -348,6 +353,33 @@ final class ServiceScoreEntry
 
         $recalculated = self::recalculateScoreSummary($gameRow, $playerRow, $hydratedSummary);
         return ['Scores' => [$recalculated]];
+    }
+
+    /**
+     * Side-bet claims for one player row, hydrated the same way scores are:
+     * a NULL / blank / empty column comes back as the canonical empty shape in
+     * memory only (nothing is written — the first claims save persists it).
+     * Decode only: individual claims are never dropped or rewritten here, so
+     * removed claims and claims for disabled bets always round-trip intact.
+     */
+    public static function buildOrHydratePlayerCustomScores(array $playerRow): array
+    {
+        $raw = $playerRow['dbPlayers_CustomScores'] ?? null;
+
+        if (is_string($raw)) {
+            $trimmed = trim($raw);
+            $raw = ($trimmed === '') ? null : json_decode($trimmed, true);
+        }
+
+        if (!is_array($raw)) {
+            return ['version' => 1, 'claims' => []];
+        }
+
+        $claims = (isset($raw['claims']) && is_array($raw['claims'])) ? array_values($raw['claims']) : [];
+        $raw['version'] = (int)($raw['version'] ?? 1) ?: 1;
+        $raw['claims'] = $claims;
+
+        return $raw;
     }
 
     public static function normalizeHoleDetails($holeDetails): array
@@ -1566,6 +1598,12 @@ final class ServiceScoreEntry
             $val = json_decode($row['dbPlayers_Scores'], true);
             if (is_array($val)) {
                 $row['dbPlayers_Scores'] = $val;
+            }
+        }
+        if (isset($row['dbPlayers_CustomScores']) && is_string($row['dbPlayers_CustomScores'])) {
+            $val = json_decode($row['dbPlayers_CustomScores'], true);
+            if (is_array($val)) {
+                $row['dbPlayers_CustomScores'] = $val;
             }
         }
         return $row;

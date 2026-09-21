@@ -14,6 +14,8 @@
       || (routes.apiScoreEntry ? routes.apiScoreEntry + '/launch.php' : '/api/score_entry/launch.php'),
     saveScores: paths.apiScoreEntrySaveScores
       || (routes.apiScoreEntry ? routes.apiScoreEntry + '/saveScores.php' : '/api/score_entry/saveScores.php'),
+    saveSideBets: paths.apiSideBets
+      || ((routes.apiScoreEntry || '/api/score_entry') + '/saveSideBets.php'),
     setScorerContext: (paths.apiScoreHome || '/api/score_home') + '/setScorerContext.php',
     setHole: (paths.apiScoreEntry || '/api/score_entry') + '/setHoleContext.php',
     clearContext: (paths.apiScoreEntry || '/api/score_entry') + '/clearContext.php',
@@ -29,12 +31,34 @@
     currentHole: boot.currentHole || 1,
     scorerGHIN: '',
     dirty: false,
+    view: 'scores', // 'scores' | 'sidebets' — every hole change returns to 'scores'
   };
 
   function init() {
+    // Side Bets view (MA.scoreSideBets). Its claims are read from the launch
+    // payload and saved separately from scores — see transitionHole().
+    if (MA.scoreSideBets && typeof MA.scoreSideBets.init === 'function') {
+      MA.scoreSideBets.init({
+        rootEl: el.sideBetsBody,
+        tabsHost: el.viewTabsHost,
+        getPayload: () => state.payload,
+        getPlayers: () => activePlayers(),
+        getHole: () => state.currentHole,
+        getPlayerKey: () => getBaselinePlayerKey(),
+        getScorerGhin: () => state.scorerGHIN,
+        getPairingId: (wrapper) => getEffectivePairingId(wrapper),
+        getSaveUrl: () => apiUrls.saveSideBets
+      });
+    }
+
     if (boot.scorecardKey) {
         launch();
     }
+
+    el.viewTabs?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-view]');
+      if (btn) setView(btn.dataset.view);
+    });
 
     el.prevHoleBtn?.addEventListener('click', () => moveHole(-1));
     el.nextHoleBtn?.addEventListener('click', () => moveHole(1));
@@ -52,6 +76,12 @@
   // ==========================================================================
 
   const el = {
+    controlArea: document.getElementById('scoreControlArea'),
+    viewTabsHost: document.getElementById('scoreViewTabsHost'),
+    viewTabs: document.getElementById('scoreViewTabs'),
+    scoresView: document.getElementById('scoreScoresView'),
+    sideBetsView: document.getElementById('scoreSideBetsView'),
+    sideBetsBody: document.getElementById('scoreSideBetsBody'),
     work: document.getElementById('scoreEntryWork'),
     holeSelect: document.getElementById('scoreHoleSelect'),
     prevHoleBtn: document.getElementById('scorePrevHoleBtn'),
@@ -129,6 +159,7 @@
       });
       state.currentHole = json.payload.currentHole || 1;
       state.dirty = false;
+      refreshSideBets();
       reconcileDeclaredState();
 
       const ggid = state.payload?.gameRow?.dbGames_GGID;
@@ -146,6 +177,7 @@
     renderRows();
     
     el.work.classList.remove('isHidden');
+    if (el.controlArea) el.controlArea.classList.remove('isHidden');
   }
 
   // ==========================================================================
@@ -192,6 +224,19 @@
     try {
       showSavingOverlay(`Saving Hole ${state.currentHole} scores...`);
 
+      // Side-bet claims first, then scores. A score conflict re-launches and
+      // replaces the payload; claims still unsaved at that point would be lost.
+      // A failed claims save leaves scores untouched (and still dirty).
+      if (MA.scoreSideBets && MA.scoreSideBets.isDirty()) {
+        const sb = await MA.scoreSideBets.save();
+        if (!sb.ok) {
+          el.holeSelect.value = String(state.currentHole);
+          if (sb.conflict) await notifySideBetsConflict();
+          else await showSaveFailure(sb.message);
+          return;
+        }
+      }
+
       if (state.dirty) {
         const saveResult = await saveScoresSilently(nextHole);
         if (!saveResult.ok) {
@@ -199,8 +244,8 @@
             await refreshHoleAfterConflict(state.currentHole, saveResult.message);
             return;
           }
-          setPageStatus(saveResult.message || 'Unable to save scores.', 'error');
           el.holeSelect.value = String(state.currentHole);
+          await showSaveFailure(saveResult.message || `Hole ${state.currentHole} couldn't be saved. Please try again.`);
           return;
         }
         patchReturnedScores(saveResult);
@@ -245,6 +290,10 @@
               wrapper.originalScoresJson = deepClone(wrapper.scoresJson || null);
             }
           });
+          // Re-read claims + definitions from the fresh payload and return to
+          // the Scores view (also picks up a side-bets on/off change made since
+          // the last hole).
+          refreshSideBets();
           holeDeclareRecalculated = reconcileDeclaredState();
         }
       }
@@ -257,11 +306,88 @@
         setPageStatus(`Moved to Hole ${nextHole}.`, 'info');
       }
     } catch (err) {
-      setPageStatus(err.message || 'Unable to change holes.', 'error');
+      console.error('[score_entry] hole change failed', err);
       el.holeSelect.value = String(state.currentHole);
+      await showSaveFailure("Couldn't change holes. Please try again.");
     } finally {
       hideSavingOverlay();
     }
+  }
+
+  // ==========================================================================
+  // 7.1 Scores | Side Bets view
+  // ==========================================================================
+
+  // Every hole change / launch / conflict refresh re-reads claims from the fresh
+  // payload and drops back to the Scores view, every player collapsed.
+  function refreshSideBets() {
+    if (MA.scoreSideBets && typeof MA.scoreSideBets.refreshFromPayload === 'function') {
+      MA.scoreSideBets.refreshFromPayload();
+    }
+    state.view = 'scores';
+    applyView();
+  }
+
+  function applyView() {
+    const sideBetsOn = !!(MA.scoreSideBets && MA.scoreSideBets.hasActiveBets && MA.scoreSideBets.hasActiveBets());
+    if (state.view === 'sidebets' && !sideBetsOn) state.view = 'scores';
+
+    if (el.scoresView) el.scoresView.hidden = state.view !== 'scores';
+    if (el.sideBetsView) el.sideBetsView.hidden = state.view !== 'sidebets';
+
+    if (el.viewTabs) {
+      el.viewTabs.querySelectorAll('[data-view]').forEach((btn) => {
+        const on = btn.dataset.view === state.view;
+        btn.classList.toggle('is-active', on);
+        btn.setAttribute('aria-selected', String(on));
+      });
+    }
+
+    if (state.view === 'sidebets') MA.scoreSideBets.render();
+  }
+
+  // Leaving the Side Bets tab saves its claims first; on failure stay put with
+  // the claims still dirty.
+  async function setView(view) {
+    if (view === state.view) return;
+
+    if (view === 'scores' && MA.scoreSideBets && MA.scoreSideBets.isDirty()) {
+      const sb = await MA.scoreSideBets.save();
+      if (!sb.ok) {
+        if (sb.conflict) await notifySideBetsConflict();
+        else await showSaveFailure(sb.message);
+        return;
+      }
+    }
+
+    state.view = view;
+    applyView();
+  }
+
+  // One OK-only "please try again" dialog for every failed save on this page,
+  // scores and side bets alike (a toast or the footer line is too easy to miss
+  // on a course). The scorer repeats the tap themselves; nothing retries. Closes
+  // the "Saving..." overlay first so the dialog never sits under it.
+  async function showSaveFailure(message) {
+    hideSavingOverlay();
+    await MA.ui.confirm({
+      title: 'Unable to Save',
+      message: escapeHtml(message || "Couldn't save. Please try again."),
+      confirmLabel: 'OK',
+      okOnly: true,
+      danger: true
+    });
+  }
+
+  async function notifySideBetsConflict() {
+    hideSavingOverlay();
+    await MA.ui.confirm({
+      title: 'Side Bets Updated',
+      message: 'Side bets were updated elsewhere and have been refreshed. Please re-enter your changes.',
+      confirmLabel: 'OK',
+      okOnly: true,
+      dismissible: false
+    });
   }
 
   // ==========================================================================
@@ -837,6 +963,7 @@ function markDirty(playerId, rawScore, declared) {
         activePlayers().forEach((wrapper) => {
           wrapper.originalScoresJson = deepClone(wrapper.scoresJson || null);
         });
+        refreshSideBets();
         reconcileDeclaredState();
       }
     }
@@ -922,7 +1049,9 @@ function markDirty(playerId, rawScore, declared) {
         active: 'scoreentry',
         root: ['scorehome'],
         onNavigate: (id) => {
-          if (!state.dirty) {
+          const sideBetsDirty = !!(MA.scoreSideBets && MA.scoreSideBets.isDirty && MA.scoreSideBets.isDirty());
+
+          if (!state.dirty && !sideBetsDirty) {
             if (typeof MA.routerGo === 'function') MA.routerGo(id);
             return;
           }
@@ -931,6 +1060,7 @@ function markDirty(playerId, rawScore, declared) {
             if (!leaveWithoutSaving) return;
 
             state.dirty = false;
+            if (sideBetsDirty) MA.scoreSideBets.discard();
             if (typeof MA.routerGo === 'function') MA.routerGo(id);
           });
         }

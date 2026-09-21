@@ -1773,6 +1773,19 @@ header.maChrome__hdr.is-player-context {
   color: var(--layer1-text);
 }
 
+/* Lighter card header tier — L3 (dark text on a pale tint), the same shade
+   Pairings' group cards use. Chosen where a header must stay readable in
+   direct sunlight (Score Entry's Side Bets player cards). Written as a
+   compound selector so it also wins on pages that restyle plain
+   .maCard__hdr (score_entry.css does), without needing !important. */
+.maCard__hdr.maCard__hdr--l3 {
+  background: var(--layer3-bg);
+  color: var(--layer3-text);
+}
+.maCard__hdr--l3 .maCard__title {
+  color: var(--layer3-text);
+}
+
 .maCard__title {
   min-width: 0;
   flex: 1 1 auto;
@@ -2045,6 +2058,46 @@ header.maChrome__hdr.is-player-context {
 .maChoiceChip.is-disabled {
   opacity: .55;
   cursor: default;
+}
+
+/* Touch-size chip — a full-width, 44px row for one-handed use outdoors
+   (Score Entry side bets). Same colours as a normal chip: tan when
+   .is-selected, white otherwise. Only size and layout change, plus a darker
+   unselected border for contrast in sunlight. Sits inside .maChoiceChips
+   (a wrapping flex row); flex-basis 100% makes each chip its own line.
+
+   Markup:
+     <button class="maChoiceChip maChoiceChip--touch is-selected" type="button">
+       <span class="maChoiceChip__label">✓ Sandy</span>
+       <span class="maChoiceChip__detail">Held by Bishop</span>   (optional)
+     </button> */
+.maChoiceChip--touch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex: 1 1 100%;
+  min-height: 44px;
+  padding: 6px 12px;
+  font-size: 16px;
+  line-height: 1.15;
+  text-align: left;
+  border-width: 2px;
+  border-color: var(--ink);
+}
+
+.maChoiceChip__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.maChoiceChip__detail {
+  flex: 0 0 auto;
+  max-width: 55%;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: right;
 }
 
 /* ---------- Segmented control (single-select tab switching) ------------- */
