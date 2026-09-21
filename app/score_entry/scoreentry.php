@@ -62,14 +62,7 @@ $maChromeLogoUrl = null;
 <body>
   <?php include MA_INCLUDES . "/chromeHeader.php"; ?>
 
-  <!-- Pinned while the page body scrolls. Hidden until score_entry.js has launched. -->
-  <div class="maControlArea isHidden" id="scoreControlArea" role="region" aria-label="Score entry controls">
-    <?php include __DIR__ . "/scoreentry_controls.php"; ?>
-  </div>
-
-  <main class="maPage" role="main">
-    <?php include __DIR__ . "/scoreentry_view.php"; ?>
-  </main>
+  <?php include __DIR__ . "/scoreentry_view.php"; ?>
 
   <?php include MA_INCLUDES . "/chromeFooter.php"; ?>
 
