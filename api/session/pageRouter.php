@@ -82,7 +82,6 @@ $ROUTES = [
     //"scorecardGame" => "/app/scorecardShared/scorecardGame.php",
     "scorecardShared" => "/app/scorecardShared/scorecardShared.php",
     "scoresidegames" => "/app/score_sidegames/scoresidegames.php",
-    "scoreskins" => "/app/score_sidegames/scoresidegames.php", // legacy id: keep until nothing references it
     "scoresummary" => "/app/score_summary/scoresummary.php",
 
     // Player Portal Routes
