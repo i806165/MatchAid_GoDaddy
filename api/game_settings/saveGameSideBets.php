@@ -215,6 +215,18 @@ try {
             $reject(400, "Only a competitive side game can have a measure.");
         }
 
+        // Optional display order for distances on the results page. Display
+        // only, so unlike `measure` it needs no lock once distances exist.
+        $sort = trim((string)($bet["sort"] ?? ""));
+
+        if ($sort !== "" && !in_array($sort, ["ascending", "descending"], true)) {
+            $reject(400, "Side Games contains an invalid side game sort order.");
+        }
+
+        if ($sort !== "" && $measure === "") {
+            $reject(400, "Only a side game with a measure can have a sort order.");
+        }
+
         $record = [
             "key"         => $key,
             "name"        => $name,
@@ -229,6 +241,10 @@ try {
 
         if ($measure !== "") {
             $record["measure"] = $measure;
+        }
+
+        if ($sort !== "") {
+            $record["sort"] = $sort;
         }
 
         $normalized[] = $record;

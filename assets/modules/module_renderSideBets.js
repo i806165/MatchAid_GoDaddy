@@ -23,8 +23,10 @@
  *   "bet"    one collapsible card per active bet, in catalog order. A bet with
  *            no claims is a header only. Expanded: hole-by-hole rows.
  *              achievement / no distance: Hole | Earned by (last-name order)
- *              measured competitive:      Hole | Player | Distance, best first
- *                (feet-inches ascending, yards descending, no distance last)
+ *              measured competitive:      Hole | Player | Distance, in the bet's
+ *                stored sort order (ascending = smallest first, descending =
+ *                largest first; older games: feet-inches ascending, yards
+ *                descending), no distance last
  *   "player" one collapsible card per player WITH claims, by last name.
  *            Expanded: Hole | what they earned.
  * Every card starts collapsed. Values are FACE value (claim count x payout),
@@ -58,8 +60,9 @@
     try { return JSON.parse(t); } catch (e) { return null; }
   }
 
-  const ICON_MINUS = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
-  const ICON_PLUS  = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
+  // Chevrons are only a visual cue; tapping anywhere on the header toggles.
+  const CHEVRON_DOWN = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
+  const CHEVRON_UP   = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 15 12 9 18 15"/></svg>';
 
   // ── Definitions ──────────────────────────────────────────────────────
   function parseDefs(game) {
@@ -77,6 +80,10 @@
       name: b.name.trim(),
       type: b.type,
       measure: (b.measure === "ftin" || b.measure === "yd") ? b.measure : "",
+      // Order distances are listed in. Older games have no stored sort: feet-inches
+      // lists closest (ascending) first, yards longest (descending) first.
+      sort: (b.sort === "ascending" || b.sort === "descending") ? b.sort
+        : (b.measure === "yd" ? "descending" : "ascending"),
       unit: (isObj(b.payout) && b.payout.unit === "dollars") ? "dollars" : "points",
       value: (isObj(b.payout) && Number.isFinite(Number(b.payout.value))) ? Number(b.payout.value) : 0,
     }));
@@ -180,21 +187,22 @@
   }
 
   // ── Card shell: the shared collapsible card, same markup as scorecards ─
-  function hdrInner(title, sub, icon, pill) {
-    return (icon ? `<button class="iconBtn btnSecondary" type="button" aria-label="Expand or collapse">${icon}</button>` : "") +
-      `<div class="maCard__title"><div>${esc(title)}</div><div class="maListRow__subline">${esc(sub)}</div></div>` +
-      (pill ? `<div class="maCard__actions"><span class="maPill">${esc(pill)}</span></div>` : "");
+  function hdrInner(title, sub, chevron, pill) {
+    return `<div class="maCard__title"><div>${esc(title)}</div><div class="maListRow__subline">${esc(sub)}</div></div>` +
+      ((pill || chevron)
+        ? `<div class="maCard__actions">${pill ? `<span class="maPill">${esc(pill)}</span>` : ""}${chevron || ""}</div>`
+        : "");
   }
 
   function cardHtml(o) {
     if (o.empty) {
-      // Header only: collapsed look, no toggle, nothing to open.
+      // Header only: collapsed look, no chevron, nothing to open.
       return `<section class="maCard maCard--collapsible is-collapsed"><div class="maCard__hdr maCard__hdr--collapsed">${hdrInner(o.title, o.sub, "", "")}</div></section>`;
     }
 
     return `<section class="maCard maCard--collapsible is-collapsed">
-      <div class="maCard__hdr maCard__hdr--expanded">${hdrInner(o.title, o.sub, ICON_MINUS, o.pill)}</div>
-      <div class="maCard__hdr maCard__hdr--collapsed">${hdrInner(o.title, o.sub, ICON_PLUS, o.pill)}</div>
+      <div class="maCard__hdr maCard__hdr--expanded" role="button" tabindex="0" aria-expanded="true">${hdrInner(o.title, o.sub, CHEVRON_UP, o.pill)}</div>
+      <div class="maCard__hdr maCard__hdr--collapsed" role="button" tabindex="0" aria-expanded="false">${hdrInner(o.title, o.sub, CHEVRON_DOWN, o.pill)}</div>
       <div class="maCard__body">${o.body}</div>
     </section>`;
   }
@@ -228,7 +236,7 @@
 
     if (bet.type === "competitive" && bet.measure) {
       heads = ["Hole / Par", "Player", "Distance"];
-      const dir = bet.measure === "ftin" ? 1 : -1; // closest first / longest first
+      const dir = bet.sort === "descending" ? -1 : 1; // smallest first / largest first
 
       holes.forEach((h) => {
         const list = byHole[h].slice().sort((a, b) => {
@@ -306,12 +314,21 @@
     if (hostEl._sbToggleBound) return;
     hostEl._sbToggleBound = true;
 
-    hostEl.addEventListener("click", (e) => {
-      const hdr = e.target.closest(".maCard--collapsible .maCard__hdr");
-      if (!hdr) return;
-
+    const toggle = (hdr) => {
       const card = hdr.closest(".maCard--collapsible");
       if (card && card.querySelector(".maCard__body")) card.classList.toggle("is-collapsed");
+    };
+
+    hostEl.addEventListener("click", (e) => {
+      const hdr = e.target.closest(".maCard--collapsible .maCard__hdr");
+      if (hdr) toggle(hdr);
+    });
+
+    // Keyboard: Enter / Space on a focused header toggles it, like a tap.
+    hostEl.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      const hdr = e.target.closest(".maCard--collapsible .maCard__hdr[role='button']");
+      if (hdr && e.target === hdr) { e.preventDefault(); toggle(hdr); }
     });
   }
 

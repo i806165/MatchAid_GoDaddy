@@ -43,6 +43,15 @@
  * (rows do not jump while the user ticks them). Display order only — the
  * saved array stays in catalog order.
  *
+ * ── Groups ──────────────────────────────────────────────────────────────
+ * The catalog's groups render as collapsible cards (the shared
+ * maCard--collapsible markup, as on the scorecards and Pairings): tapping the
+ * header toggles the card (the chevron is only a cue) and the header shows
+ * "N of M on". Every group starts
+ * collapsed, any number may be open at once, and a validation error opens the
+ * offending side game's group. Group order and membership come from the
+ * catalog (data-group / data-label).
+ *
  * ── Compact rows (phone height) ─────────────────────────────────────────
  * The whole bet row is the tap target: an active bet's row toggles its
  * editor (chevron shows the state); tapping an inactive bet's row acts like
@@ -168,6 +177,8 @@
         unit:    b.getAttribute("data-unit") === "dollars" ? "dollars" : "points",
         value:   numOr(b.getAttribute("data-value"), 1),
         measure: ["ftin", "yd"].includes(b.getAttribute("data-measure")) ? b.getAttribute("data-measure") : "",
+        // Display order of distance entries on the results page; only meaningful with a measure.
+        sort:    (["ftin", "yd"].includes(b.getAttribute("data-measure")) && ["ascending", "descending"].includes(b.getAttribute("data-sort"))) ? b.getAttribute("data-sort") : "",
       })),
     }));
   }
@@ -211,6 +222,7 @@
           open: false,
           revealed: false,
           measure: c.measure, // from the catalog only — never stored-driven, never user-editable
+          sort: c.sort,       // likewise: catalog-only, display order of distances
           name: c.custom ? String(s?.name ?? "") : c.label,
           desc: c.custom ? String(s?.description ?? "") : c.desc,
           type: c.custom ? sType : c.type,
@@ -220,8 +232,9 @@
         (status === "active" ? activeKeys : otherKeys).push(c.key);
       });
       // Active-at-open first; each half keeps catalog order. Display only —
-      // rows[] (and so the saved array) stays in catalog order.
-      return { id: g.id, label: g.label, keys: activeKeys.concat(otherKeys) };
+      // rows[] (and so the saved array) stays in catalog order. Every group
+      // starts collapsed.
+      return { id: g.id, label: g.label, open: false, keys: activeKeys.concat(otherKeys) };
     });
 
     const extras = stored.bets.filter(b => !rendered.has(b.key));
@@ -240,6 +253,7 @@
       payout: { unit: r.unit, value: Math.max(0, numOr(r.value, 0)) },
     };
     if (r.measure) rec.measure = r.measure; // omitted entirely when the bet has no distance
+    if (r.measure && r.sort) rec.sort = r.sort;
     return rec;
   }
 
@@ -367,20 +381,49 @@
       </div>`;
   }
 
+  // One collapsible card per catalog group, using the shared collapsible
+  // markup (the same two-header structure as the scorecards and Pairings). The
+  // whole header is the tap target; the chevron beside the "N of M on" pill is
+  // only a visual cue (down when collapsed, up when open). Any number of
+  // groups may be open at once.
+  const CHEVRON_DOWN = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>';
+  const CHEVRON_UP   = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 15 12 9 18 15"/></svg>';
+
+  function groupHtml(g) {
+    const all   = g.keys.map(rowOf);
+    const shown = all.filter(isVisible);
+    const hasFreeSlot = all.some(r => r.custom && !isVisible(r));
+    if (!all.length) return "";
+
+    const on = all.filter(r => r.status === "active").length;
+    const id = esc(g.id);
+    const head = (variant, chevron, expanded) => `
+        <div class="maCard__hdr maCard__hdr--${variant}" data-ghdr="${id}" role="button" tabindex="0" aria-expanded="${expanded}">
+          <div class="maCard__title">${esc(g.label)}</div>
+          <div class="maCard__actions"><span class="maPill">${on} of ${all.length} on</span>${chevron}</div>
+        </div>`;
+
+    const rows = g.open
+      ? shown.map(r => rowHtml(r) + (r.status === "active" && r.open ? cardHtml(r) : "")).join("") +
+        (hasFreeSlot ? addRowHtml(g.id) : "")
+      : "";
+
+    return `
+      <section class="maCard maCard--collapsible${g.open ? "" : " is-collapsed"}" data-group-card="${id}">${head("expanded", CHEVRON_UP, true)}${head("collapsed", CHEVRON_DOWN, false)}
+        <div class="maCard__body">${rows}</div>
+      </section>`;
+  }
+
   function renderBody() {
     const body = document.getElementById("sgsbBody");
     if (!body || !_state) return;
     const scroll = body.scrollTop;
-    body.innerHTML = _state.groups.map(g => {
-      const all    = g.keys.map(rowOf);
-      const shown  = all.filter(isVisible);
-      const hasFreeSlot = all.some(r => r.custom && !isVisible(r));
-      const rows = shown.map(r =>
-        rowHtml(r) + (r.status === "active" && r.open ? cardHtml(r) : "")
-      ).join("") + (hasFreeSlot ? addRowHtml(g.id) : "");
-      return rows ? `<div class="actionMenu_category">${esc(g.label.toUpperCase())}</div>${rows}` : "";
-    }).join("");
+    body.innerHTML = `<div class="maCards">${_state.groups.map(groupHtml).join("")}</div>`;
     body.scrollTop = scroll;
+  }
+
+  function groupOfKey(key) {
+    return _state.groups.find(g => g.keys.includes(key));
   }
 
   function updateRowText(key) {
@@ -453,6 +496,16 @@
     renderBody();
   }
 
+  function toggleGroup(id) {
+    const g = _state.groups.find(x => x.id === id);
+    if (!g) return;
+    g.open = !g.open;
+    renderBody();
+    // The header was re-rendered; keep keyboard focus on it (only the visible
+    // variant can take focus).
+    document.querySelectorAll(`#sgsbBody [data-ghdr="${CSS.escape(id)}"]`).forEach(h => h.focus());
+  }
+
   // Row tap: editor on/off for an active bet; same as the checkbox otherwise.
   function tapRow(key) {
     const r = rowOf(key);
@@ -509,7 +562,9 @@
       if (add) { addCustom(add.getAttribute("data-add")); return; }
       const chip = e.target.closest("[data-chip]");
       if (chip) { setChip(chip.getAttribute("data-key"), chip.getAttribute("data-chip")); return; }
-      // Anywhere else on a bet row (text, chevron, padding) is the row tap.
+      const ghdr = e.target.closest("[data-ghdr]");
+      if (ghdr) { toggleGroup(ghdr.getAttribute("data-ghdr")); return; }
+      // Anywhere else on a side game row (text, chevron, padding) is the row tap.
       const row = e.target.closest("[data-row]");
       if (row) tapRow(row.getAttribute("data-row"));
     });
@@ -517,6 +572,8 @@
       if (e.key !== "Enter" && e.key !== " ") return;
       const chk = e.target.closest("[data-check]");
       if (chk) { e.preventDefault(); toggleStatus(chk.getAttribute("data-check")); return; }
+      const ghdr = e.target.closest("[data-ghdr]");
+      if (ghdr) { e.preventDefault(); toggleGroup(ghdr.getAttribute("data-ghdr")); return; }
       const tap = e.target.closest("[data-tap]");
       if (tap) { e.preventDefault(); tapRow(tap.getAttribute("data-tap")); }
     });
@@ -555,7 +612,7 @@
 
         <div class="maModal__controls" id="sgsbControls"></div>
 
-        <div class="maModal__body maModal__body--flush" id="sgsbBody"></div>
+        <div class="maModal__body" id="sgsbBody"></div>
 
         <div class="maModal__ftr">
           <div class="maModal__ftrActions">
@@ -588,11 +645,14 @@
 
     const problem = validate();
     if (problem) {
-      // Open the offending bet's editor so the user lands on the field to fix.
+      // Open the offending side game's group and editor so the user lands on
+      // the field to fix.
       const r = problem.key ? rowOf(problem.key) : null;
       if (r) {
         _state.rows.forEach(x => { x.open = false; });
         r.open = true;
+        const grp = groupOfKey(r.key);
+        if (grp) grp.open = true;
         renderBody();
       }
       await _showNotice(problem.message, "warn");
