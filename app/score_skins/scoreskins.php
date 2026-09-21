@@ -57,11 +57,7 @@ $maChromeSubtitle = trim((string)($initPayload["game"]["dbGames_CourseName"] ?? 
 </head><body>
 <?php require_once MA_INCLUDES . '/chromeHeader.php'; ?>
 
-<div id="scControls" class="maControlArea"></div>
-
-<main class="maPage" id="scPage">
 <?php require __DIR__ . '/scoreskins_view.php'; ?>
-</main>
 
 <?php require_once MA_INCLUDES . '/chromeFooter.php'; ?>
 <script>
@@ -76,5 +72,6 @@ $maChromeSubtitle = trim((string)($initPayload["game"]["dbGames_CourseName"] ?? 
 <script src="<?= ma_asset('/assets/modules/ghin_post_scores.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/module_DisplayGameFormat.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/module_renderHoleChampions.js') ?>"></script>
+<script src="<?= ma_asset('/assets/modules/module_renderSideBets.js') ?>"></script>
 <script src="<?= ma_asset('/assets/pages/score_skins.js') ?>"></script>
 </body></html>
