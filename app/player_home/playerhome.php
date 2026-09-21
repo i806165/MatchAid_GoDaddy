@@ -25,7 +25,7 @@ if (!$context || empty($context['ok'])) {
 // — browser's local date when available, server time only as a
 // last-resort fallback. Mirrors the fix already applied to adminhome.php
 // for the same bug.
-$defaultWindow = ma_resolveDefaultDateWindow(30);
+$defaultWindow = ma_resolveDefaultDateWindow(45);
 
 // Hard-coded "fresh" defaults
 $defaultDateFrom = $defaultWindow['dateFrom'];

@@ -57,9 +57,9 @@
             <div class="phSidebar__radioDot"></div>
             <span class="phSidebar__radioLbl">Previous 30 days</span>
           </div>
-          <div class="phSidebar__radioRow is-active" data-d="next30">
+          <div class="phSidebar__radioRow is-active" data-d="next45">
             <div class="phSidebar__radioDot is-active"></div>
-            <span class="phSidebar__radioLbl">Next 30 days</span>
+            <span class="phSidebar__radioLbl">Next 45 days</span>
           </div>
           <div class="phSidebar__radioRow" data-d="today">
             <div class="phSidebar__radioDot"></div>

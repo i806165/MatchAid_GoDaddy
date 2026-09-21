@@ -62,6 +62,10 @@
   };
   state.uiFilters = cloneFilters(state.filters);
 
+  // Default "current games" window (today .. today+N). Keep in sync with
+  // ma_resolveDefaultDateWindow() calls in playerhome.php and hydratePlayerGamesList.php.
+  const DEFAULT_WINDOW_DAYS = 45;
+
   const FILTER_LABELS = {
     MYSCHEDULE: 'My Upcoming Games',
     HISTORY: 'My Past Games Played',
@@ -520,23 +524,23 @@ function getGameAdminMeta(g){
     const today = new Date();
     
     // Default ranges
-    const plus30 = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 30);
+    const plus45 = new Date(today.getFullYear(), today.getMonth(), today.getDate() + DEFAULT_WINDOW_DAYS);
     const plus365 = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 365);
     const minus30 = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30);
     const minus60 = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 60);
 
     const todayYmd = toYmdLocal(today);
-    const plus30Ymd = toYmdLocal(plus30);
+    const plus45Ymd = toYmdLocal(plus45);
     const plus365Ymd = toYmdLocal(plus365);
     const minus30Ymd = toYmdLocal(minus30);
     const minus60Ymd = toYmdLocal(minus60);
 
-    let dFrom = todayYmd, dTo = plus30Ymd;
+    let dFrom = todayYmd, dTo = plus45Ymd;
 
     // My Schedule: Look far ahead (1 year) to catch all commitments
     if (key === "MYSCHEDULE") { dFrom = todayYmd; dTo = plus365Ymd; }
-    else if (key === "FAVORITES") { dFrom = todayYmd; dTo = plus30Ymd; }
-    else if (key === "OPEN") { dFrom = todayYmd; dTo = plus30Ymd; }
+    else if (key === "FAVORITES") { dFrom = todayYmd; dTo = plus45Ymd; }
+    else if (key === "OPEN") { dFrom = todayYmd; dTo = plus45Ymd; }
     else if (key === "HISTORY") { dFrom = minus60Ymd; dTo = todayYmd; }
     
     state.filters.dateFrom = dFrom;
@@ -908,7 +912,7 @@ function getGameAdminMeta(g){
   // Sidebar local state — does not affect server-side filters
   const sbState = {
     showMine: false,              // Show: All games vs My registered
-    datePreset: 'next30',         // prev30 | next30 | custom
+    datePreset: 'next45',         // prev30 | next45 | custom
     adminExpanded: false,
     courseExpanded: false,
     // checkedCourses: Set of courseName strings (client-side only)
@@ -961,8 +965,8 @@ function getGameAdminMeta(g){
       toEl.value   = toYmd(today);
       fromEl.disabled = true;
       toEl.disabled   = true;
-    } else if (preset === 'next30') {
-      const t = new Date(today); t.setDate(t.getDate() + 30);
+    } else if (preset === 'next45') {
+      const t = new Date(today); t.setDate(t.getDate() + DEFAULT_WINDOW_DAYS);
       fromEl.value = toYmd(today);
       toEl.value   = toYmd(t);
       fromEl.disabled = true;
@@ -1089,12 +1093,12 @@ function getGameAdminMeta(g){
     const todayYmd   = toYmd(today);
     const prev30From = toYmd(new Date(today.getFullYear(), today.getMonth(), today.getDate() - 30));
     const prev30To   = todayYmd;
-    const next30From = todayYmd;
-    const next30To   = toYmd(new Date(today.getFullYear(), today.getMonth(), today.getDate() + 30));
+    const next45From = todayYmd;
+    const next45To   = toYmd(new Date(today.getFullYear(), today.getMonth(), today.getDate() + DEFAULT_WINDOW_DAYS));
 
     let matchedPreset = 'custom';
     if (df === prev30From && dt === prev30To)     matchedPreset = 'prev30';
-    else if (df === next30From && dt === next30To) matchedPreset = 'next30';
+    else if (df === next45From && dt === next45To) matchedPreset = 'next45';
     else if (df === todayYmd  && dt === todayYmd)  matchedPreset = 'today';
 
     // Update radio selection
@@ -1207,8 +1211,8 @@ function getGameAdminMeta(g){
     // ---- DATE radios ----
     const dateGroup = document.getElementById('sbDateGroup');
     if (dateGroup) {
-      // Set initial display from launch default (next30)
-      sbApplyDatePreset('next30');
+      // Set initial display from launch default (next45)
+      sbApplyDatePreset('next45');
 
       dateGroup.addEventListener('click', e => {
         const row = e.target.closest('[data-d]');
@@ -1356,7 +1360,7 @@ function getGameAdminMeta(g){
 
     // Set launch defaults:
     // - Show: All games (already default in sbState)
-    // - Date: Next 30d (already applied above)
+    // - Date: Next 45d (already applied above)
     // - Admins: favorites pre-selected
     const favKeys = (state.admins || [])
       .filter(a => a.isFavorite)

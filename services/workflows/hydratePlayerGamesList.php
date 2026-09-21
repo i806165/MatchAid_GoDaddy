@@ -228,7 +228,7 @@ function hydratePlayerGamesList(string $userGHIN, array $filters, string $userCl
   // "Today" resolved via ma_resolveClientToday() (see ma_SharedBusLogic.php)
   // — browser's local date when available, server time only as a
   // last-resort fallback.
-  $defaultWindow = ma_resolveDefaultDateWindow(30);
+  $defaultWindow = ma_resolveDefaultDateWindow(45);
   $defFrom = $defaultWindow['dateFrom'];
   $defTo = $defaultWindow['dateTo'];
 

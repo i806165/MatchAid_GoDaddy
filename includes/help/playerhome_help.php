@@ -114,7 +114,7 @@ return [
                         'My Upcoming Games — shows games you are registered for from today forward 30 days.',
                         'My Past Games Played — shows your recently played games in the last 30 days.',
                         'Games from Followed Administrators — shows upcoming games created by administrators you follow or have marked as a favorite.',
-                        'All Available Games — shows all available games for all golf administrators at the club ovr the next 30 days.',
+                        'All Available Games — shows all available games for all golf administrators at the club over the next 45 days.',
                         'Advanced List Filters — opens the custom filter so you may select and filter what shows in the list of games.',
                     ],
                 ],
