@@ -209,7 +209,7 @@
               <input id="gmSearchState" class="maTextInput" type="text" maxlength="2" placeholder="NY" autocomplete="off" />
             </div>
             <div class="gmSearchBtnWrap">
-              <button type="button" class="btn btnPrimary" id="gmSearchBtn">Search</button>
+              <button type="button" class="btn btnSecondary" id="gmSearchBtn">Search</button>
             </div>
           </div>
         </div>

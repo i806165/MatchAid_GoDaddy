@@ -37,7 +37,7 @@ function be_getFacilities(string $parmFacility, ?string $parmState, ?string $par
 
     $GHINurl =
         "https://api.ghin.com/api/v1/facilities/search.json" .
-        "?name=" . rawurlencode($name) .
+        "?name=%25" . rawurlencode($name) . "%25" .
         "&country=USA" .
         $txtState .
         "&course_status=Active" .

@@ -69,6 +69,9 @@ try {
     "playerCount"  => $playerCount,
     "availableTags" => $availableTags,
     "eventContext" => $eventContext,
+    "context" => [
+      "userState" => (string)($_SESSION["SessionUserState"] ?? ""),
+    ],
     "authorizations" => ($mode === "edit") ? ($gc["authorizations"] ?? []) : ServiceContextGame::getGameAuthorizations(),
     "header" => [
       "subtitle" => $subtitle
