@@ -272,6 +272,7 @@ final class ServiceContextGame
         "dbGames_FacilityName" => "",
         "dbGames_CourseID" => "",
         "dbGames_CourseName" => "",
+        "dbGames_CourseConfirmed" => 1,
 
         // admin identity (best effort from session)
         "dbGames_AdminGHIN" => (string)($_SESSION["SessionGHINLogonID"] ?? ""),

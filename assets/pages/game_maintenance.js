@@ -1004,6 +1004,7 @@
     if (!q) return setStatus("Enter a facility/course search string.", "warn");
 
     setStatus("Searching courses…", "info");
+    MA.ui.showBusy({ title: "Working", message: "Searching courses…" });
     try {
       const res = await apiGHIN("searchCourses.php", { q, state: st });
       if (!res || !res.ok) throw new Error(res?.message || "Course search failed.");
@@ -1013,6 +1014,8 @@
     } catch (e) {
       console.error(e);
       setStatus(String(e.message || e), "error");
+    } finally {
+      MA.ui.hideBusy();
     }
   }
 

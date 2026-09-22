@@ -680,9 +680,9 @@ public static function queryGames(array $args): array {
     $g["dbGames_TeamMode"]   = $g["dbGames_TeamMode"]   ?? "disabled";
     $g["dbGames_FlightMode"] = $g["dbGames_FlightMode"] ?? "disabled";
 
-    // New games start as tentative unless explicitly confirmed
+    // New games start as confirmed unless explicitly set otherwise
     if (!array_key_exists("dbGames_CourseConfirmed", $g)) {
-      $g["dbGames_CourseConfirmed"] = 0;
+      $g["dbGames_CourseConfirmed"] = 1;
     }
 
     // Comments should exist (avoid null surprises downstream)
