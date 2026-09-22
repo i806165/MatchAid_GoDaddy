@@ -69,6 +69,7 @@ $maChromeLogoUrl = null;
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 
+    <link rel="stylesheet" href="<?= ma_asset('/assets/vendor/leaflet/leaflet.css') ?>" />
     <link rel="stylesheet" href="<?= ma_asset('/assets/css/ma_shared.css') ?>" />
 </head>
 <body>
@@ -104,6 +105,7 @@ $maChromeLogoUrl = null;
 </script>
 
 <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
+<script src="<?= ma_asset('/assets/vendor/leaflet/leaflet.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/score_GISMap.js') ?>"></script>
 <script src="<?= ma_asset('/assets/pages/score_gis.js') ?>"></script>
 
