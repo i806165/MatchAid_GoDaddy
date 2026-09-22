@@ -22,6 +22,9 @@
 
     const _states = new WeakMap();
     const STYLE_ID = "maScoreGisMapStyles";
+    const MAP_W = 1000;
+    const MAP_H = 700;
+    const MAX_ZOOM_SCALE = 6;
 
     function esc(s) {
         return String(s ?? "").replace(/[&<>"']/g, (c) => ({
@@ -46,8 +49,13 @@
             .gisStat__value{margin-top:2px;font-size:16px;font-weight:900;color:var(--ink)}
             .gisHoleNav{display:flex;align-items:center;gap:10px;margin-bottom:10px}
             .gisHoleNav__title{flex:1 1 auto;text-align:center;font-size:18px;font-weight:900}
-            .gisViewport{width:100%;min-height:440px;border:1px solid var(--borderSubtle);border-radius:var(--radiusLg);background:#f4f4f1;overflow:hidden}
-            .gisViewport svg{display:block;width:100%;height:440px}
+            .gisViewport{position:relative;width:100%;min-height:440px;border:1px solid var(--borderSubtle);border-radius:var(--radiusLg);background:#f4f4f1;overflow:hidden}
+            .gisViewport svg{display:block;width:100%;height:440px;touch-action:none;cursor:grab}
+            .gisViewport svg.is-panning{cursor:grabbing}
+            .gisZoomCtrls{position:absolute;top:10px;right:10px;z-index:2;display:flex;flex-direction:column;gap:6px}
+            .gisZoomBtn{width:36px;height:36px;border-radius:50%;border:1px solid var(--borderSubtle);background:rgba(255,255,255,.92);color:var(--ink);font-size:20px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.25);padding:0}
+            .gisZoomBtn:active{background:#fff;transform:scale(.96)}
+            .gisZoomBtn--reset{font-size:14px}
             .gisDiag{margin-top:10px;font-size:12px;line-height:1.4}
             .gisDiag table{width:100%;border-collapse:collapse}
             .gisDiag td{padding:5px 6px;border-bottom:1px solid var(--borderSubtle);vertical-align:top}
@@ -243,7 +251,7 @@
         if (!latSpan) latSpan = 0.0001;
         if (!lonSpan) lonSpan = 0.0001;
 
-        const width = 1000, height = 700, pad = 45;
+        const width = MAP_W, height = MAP_H, pad = 45;
         return {
             width,
             height,
@@ -312,6 +320,8 @@
     }
 
     function mapHtml(st, ctx) {
+        st.view = null;
+
         if (!ctx.hole) {
             return `<div class="gisViewport"><div class="maEmptyState" style="padding:30px;">Hole ${st.selectedHole} was not found.</div></div>`;
         }
@@ -320,6 +330,8 @@
         if (!projector) {
             return `<div class="gisViewport"><div class="maEmptyState" style="padding:30px;">No geometry is available for this hole.</div></div>`;
         }
+
+        st.view = { x: 0, y: 0, w: projector.width, h: projector.height };
 
         let shapes = "";
         ctx.bunkers.forEach((x) => { shapes += polygon(x.feature, st, projector, "gisSvgBunker"); });
@@ -332,7 +344,7 @@
 
         return `
             <div class="gisViewport">
-                <svg viewBox="0 0 ${projector.width} ${projector.height}" role="img" aria-label="Hole ${st.selectedHole} GIS geometry">
+                <svg data-gis-svg viewBox="0 0 ${projector.width} ${projector.height}" role="img" aria-label="Hole ${st.selectedHole} GIS geometry">
                     <style>
                         .gisSvgHole{stroke:#111;stroke-width:7;stroke-linecap:round;stroke-linejoin:round}
                         .gisSvgGreen{fill:#9ccc65;stroke:#33691e;stroke-width:3;opacity:.9}
@@ -344,7 +356,141 @@
                     </style>
                     ${shapes}
                 </svg>
+                <div class="gisZoomCtrls">
+                    <button type="button" class="gisZoomBtn" data-gis-zoom-in aria-label="Zoom in">+</button>
+                    <button type="button" class="gisZoomBtn" data-gis-zoom-out aria-label="Zoom out">&minus;</button>
+                    <button type="button" class="gisZoomBtn gisZoomBtn--reset" data-gis-zoom-reset aria-label="Reset zoom">&#10021;</button>
+                </div>
             </div>`;
+    }
+
+    function clampView(view) {
+        const w = Math.min(Math.max(view.w, MAP_W / MAX_ZOOM_SCALE), MAP_W);
+        const h = w * (MAP_H / MAP_W);
+        const x = Math.min(Math.max(view.x, 0), MAP_W - w);
+        const y = Math.min(Math.max(view.y, 0), MAP_H - h);
+        return { x, y, w, h };
+    }
+
+    function zoomViewAt(view, ux, uy, factor) {
+        const newW = view.w / factor;
+        const newH = newW * (view.h / view.w);
+        const x = ux - (ux - view.x) * (newW / view.w);
+        const y = uy - (uy - view.y) * (newH / view.h);
+        return clampView({ x, y, w: newW, h: newH });
+    }
+
+    function applyViewBox(st) {
+        const svg = st.hostEl.querySelector("[data-gis-svg]");
+        if (!svg || !st.view) return;
+        svg.setAttribute("viewBox", `${st.view.x.toFixed(2)} ${st.view.y.toFixed(2)} ${st.view.w.toFixed(2)} ${st.view.h.toFixed(2)}`);
+    }
+
+    function wireZoomPan(st) {
+        const svg = st.hostEl.querySelector("[data-gis-svg]");
+        if (!svg || !st.view) return;
+
+        const pointers = new Map();
+        let dragLast = null;
+        let pinchLastDist = null;
+
+        function userPointFromClient(clientX, clientY) {
+            const rect = svg.getBoundingClientRect();
+            const relX = rect.width ? (clientX - rect.left) / rect.width : 0;
+            const relY = rect.height ? (clientY - rect.top) / rect.height : 0;
+            return {
+                x: st.view.x + relX * st.view.w,
+                y: st.view.y + relY * st.view.h
+            };
+        }
+
+        function centerZoom(factor) {
+            const cx = st.view.x + st.view.w / 2;
+            const cy = st.view.y + st.view.h / 2;
+            st.view = zoomViewAt(st.view, cx, cy, factor);
+            applyViewBox(st);
+        }
+
+        function onPointerDown(e) {
+            svg.setPointerCapture(e.pointerId);
+            pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            if (pointers.size === 1) {
+                dragLast = { x: e.clientX, y: e.clientY };
+                svg.classList.add("is-panning");
+            } else if (pointers.size === 2) {
+                const pts = Array.from(pointers.values());
+                pinchLastDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+                dragLast = null;
+            }
+        }
+
+        function onPointerMove(e) {
+            if (!pointers.has(e.pointerId)) return;
+            pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+            if (pointers.size === 2) {
+                const pts = Array.from(pointers.values());
+                const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+                if (pinchLastDist) {
+                    const factor = dist / pinchLastDist;
+                    const midX = (pts[0].x + pts[1].x) / 2;
+                    const midY = (pts[0].y + pts[1].y) / 2;
+                    const u = userPointFromClient(midX, midY);
+                    st.view = zoomViewAt(st.view, u.x, u.y, factor);
+                    applyViewBox(st);
+                }
+                pinchLastDist = dist;
+                return;
+            }
+
+            if (pointers.size === 1 && dragLast) {
+                const rect = svg.getBoundingClientRect();
+                const dxScreen = e.clientX - dragLast.x;
+                const dyScreen = e.clientY - dragLast.y;
+                const factorX = rect.width ? st.view.w / rect.width : 0;
+                const factorY = rect.height ? st.view.h / rect.height : 0;
+                st.view = clampView({
+                    x: st.view.x - dxScreen * factorX,
+                    y: st.view.y - dyScreen * factorY,
+                    w: st.view.w,
+                    h: st.view.h
+                });
+                applyViewBox(st);
+                dragLast = { x: e.clientX, y: e.clientY };
+            }
+        }
+
+        function onPointerUp(e) {
+            pointers.delete(e.pointerId);
+            if (pointers.size === 1) {
+                dragLast = Array.from(pointers.values())[0];
+                pinchLastDist = null;
+            } else if (pointers.size === 0) {
+                dragLast = null;
+                pinchLastDist = null;
+                svg.classList.remove("is-panning");
+            }
+        }
+
+        svg.addEventListener("pointerdown", onPointerDown);
+        svg.addEventListener("pointermove", onPointerMove);
+        svg.addEventListener("pointerup", onPointerUp);
+        svg.addEventListener("pointercancel", onPointerUp);
+
+        svg.addEventListener("wheel", (e) => {
+            e.preventDefault();
+            const factor = e.deltaY < 0 ? 1.15 : (1 / 1.15);
+            const u = userPointFromClient(e.clientX, e.clientY);
+            st.view = zoomViewAt(st.view, u.x, u.y, factor);
+            applyViewBox(st);
+        }, { passive: false });
+
+        st.hostEl.querySelector("[data-gis-zoom-in]")?.addEventListener("click", () => centerZoom(1.4));
+        st.hostEl.querySelector("[data-gis-zoom-out]")?.addEventListener("click", () => centerZoom(1 / 1.4));
+        st.hostEl.querySelector("[data-gis-zoom-reset]")?.addEventListener("click", () => {
+            st.view = { x: 0, y: 0, w: MAP_W, h: MAP_H };
+            applyViewBox(st);
+        });
     }
 
     function metersText(value) {
@@ -403,6 +549,7 @@
 
         st.hostEl.querySelector("[data-gis-prev]")?.addEventListener("click", () => previousHole(st));
         st.hostEl.querySelector("[data-gis-next]")?.addEventListener("click", () => nextHole(st));
+        wireZoomPan(st);
     }
 
     function mount(cfg) {
