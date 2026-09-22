@@ -83,6 +83,7 @@ $ROUTES = [
     "scorecardShared" => "/app/scorecardShared/scorecardShared.php",
     "scoresidegames" => "/app/score_sidegames/scoresidegames.php",
     "scoresummary" => "/app/score_summary/scoresummary.php",
+    "scoregis" => "/app/score_gis/scoregis.php",
 
     // Player Portal Routes
     "player"    => "/app/player_home/playerhome.php",

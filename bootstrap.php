@@ -85,6 +85,8 @@ define('MA_ROUTE_SCORE_ENTRY', '/app/score_entry/scoreentry.php');
 define('MA_ROUTE_SCORE_SIDEGAMES', '/app/score_sidegames/scoresidegames.php');
 define('MA_ROUTE_API_SCORE_SUMMARY', '/api/score_summary');
 define('MA_ROUTE_SCORE_SUMMARY', '/app/score_summary/scoresummary.php');
+define('MA_ROUTE_API_SCORE_GIS', '/api/score_gis');
+define('MA_ROUTE_SCORE_GIS', '/app/score_gis/scoregis.php');
 define('MA_ROUTE_API_USER_SETTINGS', '/api/user_settings');
 define('MA_ROUTE_USER_SETTINGS',     '/app/user_settings/usersettings.php');
 define('MA_ROUTE_CLUB_DEMAND', '/app/club_demand/clubdemand.php');

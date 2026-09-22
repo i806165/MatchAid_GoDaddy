@@ -1045,7 +1045,7 @@ function markDirty(playerId, rawScore, declared) {
                       : (portal === "PLAYER PORTAL" ? "player" : "home");
 
       chrome.setBottomNav({
-        visible: ['scorehome','scoreentry', 'scorecardShared',  'scoresummary', 'scoresidegames'],
+        visible: ['scorehome','scoreentry', 'scoregis', 'scorecardShared',  'scoresummary', 'scoresidegames'],
         active: 'scoreentry',
         root: ['scorehome'],
         onNavigate: (id) => {

@@ -279,6 +279,15 @@
       <span class="maNavLabel">Enter Scores</span>
     </button>
 
+    <button type="button" class="maNavBtn" data-nav="scoregis" aria-label="Course GPS">
+      <span class="maNavIcon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"></path>
+        </svg>
+      </span>
+      <span class="maNavLabel">Course GPS</span>
+    </button>
+
     <button class="maNavBtn" data-nav="scorecardShared" aria-label="Score Cards">
       <span class="maNavIcon" aria-hidden="true">
         <img src="/assets/images/nav-scorecard-game.png" alt="" width="26" height="26" style="display:block; object-fit:contain;">
