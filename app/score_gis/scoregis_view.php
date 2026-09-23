@@ -10,12 +10,6 @@
     </div>
 </div>
 
-<main class="maPage" role="main">
-    <div class="maCards">
-        <section class="maCard" aria-label="Course GPS">
-            <div class="maCard__body">
-                <div id="scoreGisModuleHost"></div>
-            </div>
-        </section>
-    </div>
+<main class="maPage gisPage" role="main" aria-label="Course GPS">
+    <div id="scoreGisModuleHost" class="gisModuleHost"></div>
 </main>

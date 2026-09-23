@@ -71,8 +71,9 @@ $maChromeLogoUrl = null;
 
     <link rel="stylesheet" href="<?= ma_asset('/assets/vendor/leaflet/leaflet.css') ?>" />
     <link rel="stylesheet" href="<?= ma_asset('/assets/css/ma_shared.css') ?>" />
+    <link rel="stylesheet" href="<?= ma_asset('/assets/css/score_gis.css') ?>" />
 </head>
-<body>
+<body class="gisNoHeader">
 
 <?php include __DIR__ . "/../../includes/chromeHeader.php"; ?>
 

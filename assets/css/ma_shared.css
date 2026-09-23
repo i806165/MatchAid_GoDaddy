@@ -1200,6 +1200,50 @@ header.maChrome__hdr.is-player-context {
 /* Save/Cancel overlay hides the entire nav (including Navigate button
    inside it) via the rule in section 7 above. No extra rule needed here. */
 
+/* Landscape-short phones ("peek" mode) -------------------------------------
+   A landscape phone is WIDE but SHORT, so the width-only breakpoints above
+   don't catch it — e.g. an iPhone in landscape comfortably exceeds 600px/
+   820px width while still being only ~380-430px tall, so it falls into the
+   "desktop" bucket above: full icon row instead of the compact Navigate
+   button, and the hub tray force-hidden by that same desktop rule.
+
+   Landscape on a phone is treated as a brief "peek" at content, not a place
+   to take action — so this also hides the chrome header outright (including
+   any page action buttons sitting in chromeBtnLeft/chromeBtnRight), on the
+   theory that a user who wants to act just rotates back to portrait, where
+   both the header and the normal nav re-appear automatically (pure media
+   query, no JS/class involved, so it's reactive to live rotation).
+
+   Unconditional and app-wide — no per-page opt-in/opt-out. If a page ever
+   needs an exception (e.g. it can't afford to lose a header action while
+   rotated), that's a deliberate follow-up, not a default to design around
+   now. Placed after the width-based rules above so it wins the cascade
+   whenever it matches, regardless of actual width. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .maChrome__hdr {
+    display: none;
+  }
+
+  .maChrome__bottomNav .maNavBtn {
+    display: none !important;
+  }
+
+  .maChrome__navHub {
+    display: flex !important;
+  }
+
+  /* Restates the hub tray's own two rules (base flex / [hidden]->none) so
+     it works normally again here, overriding the desktop rule's blanket
+     "display:none !important" above rather than forcing it always-open. */
+  .maChrome__hubTray {
+    display: flex !important;
+  }
+
+  .maChrome__hubTray[hidden] {
+    display: none !important;
+  }
+}
+
 
 /* ==========================================================================
    9. MULTI-PANEL LAYOUT

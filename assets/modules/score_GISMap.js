@@ -45,21 +45,21 @@
         const style = document.createElement("style");
         style.id = STYLE_ID;
         style.textContent = `
-            .gisControlsRow{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+            .gisControlsRow{display:flex;align-items:center;gap:10px;flex:0 0 auto;padding:4px var(--spaceMd) 0 var(--spaceMd);margin-bottom:8px;flex-wrap:wrap}
             .gisStatusText{font-size:13px;font-weight:700;color:var(--mutedText)}
-            .gisMapHost{width:100%;min-height:300px;border:1px solid var(--borderSubtle);border-radius:var(--radiusLg);overflow:hidden}
-            .gisMeasureIcon__dot{width:22px;height:22px;border-radius:50%;background:#ff8f00;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5);cursor:grab}
-            .gisMeasureLabel__text{display:inline-block;white-space:nowrap;background:#fff;padding:4px 12px;border-radius:14px;border:2px solid #ff8f00;font-weight:900;font-size:22px;color:#e65100;box-shadow:0 1px 4px rgba(0,0,0,.4)}
-            .gisMapRow{display:flex;gap:8px;align-items:stretch}
+            .gisMapRow{display:flex;gap:8px;align-items:stretch;flex:1 1 auto;min-height:0}
             .gisWaypointCol{display:flex;flex-direction:column;justify-content:space-between;flex:0 0 92px;max-width:92px}
             .gisWaypointRow{padding:6px 2px;border-bottom:1px solid var(--borderSubtle)}
             .gisWaypointRow:last-child{border-bottom:none}
             .gisWaypointLabel{font-size:10px;font-weight:700;color:var(--mutedText);text-transform:uppercase;letter-spacing:.03em}
             .gisWaypointValue{font-size:26px;font-weight:900;line-height:1.15;color:#111}
             .gisWaypointRow--primary .gisWaypointLabel,.gisWaypointRow--primary .gisWaypointValue{color:#2e7d32}
-            .gisMapWrap{position:relative;flex:1;min-width:0}
-            .gisRecenterBtn{position:absolute;right:10px;bottom:10px;z-index:1000;border:none;border-radius:999px;padding:8px 14px;font-weight:800;font-size:13px;background:#1565c0;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.35);cursor:pointer}
-            .gisRecenterBtn.isHidden{display:none}
+            .gisMapWrap{position:relative;flex:1;min-width:0;min-height:0}
+            .gisMapHost{width:100%;height:100%;min-height:300px;overflow:hidden}
+            .gisMeasureIcon__dot{width:22px;height:22px;border-radius:50%;background:#ff8f00;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5);cursor:grab}
+            .gisMeasureLabel__text{display:inline-block;white-space:nowrap;background:#fff;padding:4px 12px;border-radius:14px;border:2px solid #ff8f00;font-weight:900;font-size:22px;color:#e65100;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+            .gisRecenterCtl.isHidden{display:none}
+            .gisRecenterCtl__btn{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:#1565c0}
         `;
         document.head.appendChild(style);
     }
@@ -505,8 +505,7 @@
     }
 
     function setRecenterVisible(st, visible) {
-        const btn = st.hostEl.querySelector("[data-gis-recenter-btn]");
-        if (btn) btn.classList.toggle("isHidden", !visible);
+        if (st.recenterBtn) st.recenterBtn.classList.toggle("isHidden", !visible);
     }
 
     // Manual pan/rotate/zoom, or dragging the measure marker, drops follow
@@ -890,29 +889,48 @@
         selectHole(st, nums[i < 0 || i >= nums.length - 1 ? 0 : i + 1]);
     }
 
-    const MAP_BOTTOM_GAP = 16;
-    const MAP_MIN_HEIGHT = 300;
-
-    // Stretches the map container from wherever it sits down to near the
-    // bottom of the visible page, instead of a fixed height that leaves dead
-    // space below it (mainly a mobile-portrait problem — see MAP_BOTTOM_GAP).
-    // Measured against .maPage's own bottom edge, not window.innerHeight —
-    // the chrome footer is a normal flex sibling below .maPage (not
-    // position:fixed), so innerHeight would overshoot past it.
-    // Re-run on resize/orientation change since iOS Safari's toolbar
-    // show/hide changes the viewport height.
-    function sizeMapHost(st) {
-        const mapHost = st.hostEl.querySelector("[data-gis-map-host]");
-        if (!mapHost) return;
-
-        const scrollRegion = mapHost.closest(".maPage");
-        const bottom = scrollRegion ? scrollRegion.getBoundingClientRect().bottom : window.innerHeight;
-        const top = mapHost.getBoundingClientRect().top;
-        const available = bottom - top - MAP_BOTTOM_GAP;
-        mapHost.style.height = Math.max(MAP_MIN_HEIGHT, available) + "px";
-
+    // Leaflet caches its own pixel size and doesn't notice a CSS-driven
+    // container resize on its own. Sizing itself is now entirely CSS's job —
+    // #scoreGisModuleHost's flex-fill chain (score_gis.css) stretches
+    // .gisMapHost to fill the viewport down to the bottom nav — so this just
+    // has to nudge Leaflet to re-measure after that layout settles or
+    // changes (initial mount, window resize, orientation change).
+    function nudgeMapSize(st) {
         if (st.map) st.map.invalidateSize();
     }
+
+    // Docks under Leaflet's own zoom +/- control (same "topleft" corner —
+    // Leaflet stacks multiple controls added to one corner automatically,
+    // with its own default spacing, so no manual offset math is needed).
+    // Icon-only, reusing Leaflet's own leaflet-bar button chrome instead of
+    // a hand-styled floating button.
+    const GisRecenterControl = L.Control.extend({
+        options: { position: "topleft" },
+        onAdd: function (map) {
+            const container = L.DomUtil.create("div", "leaflet-bar gisRecenterCtl isHidden");
+            const link = L.DomUtil.create("a", "gisRecenterCtl__btn", container);
+            link.href = "#";
+            link.title = "Recenter on my position";
+            link.setAttribute("role", "button");
+            link.setAttribute("aria-label", "Recenter on my position");
+            link.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="7"></circle>
+                <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"></circle>
+                <line x1="12" y1="2" x2="12" y2="5"></line>
+                <line x1="12" y1="19" x2="12" y2="22"></line>
+                <line x1="2" y1="12" x2="5" y2="12"></line>
+                <line x1="19" y1="12" x2="22" y2="12"></line>
+            </svg>`;
+
+            L.DomEvent.disableClickPropagation(container);
+            L.DomEvent.on(link, "click", (e) => {
+                L.DomEvent.preventDefault(e);
+                resumeFollow(map._gisState);
+            });
+
+            return container;
+        }
+    });
 
     function renderShell(st) {
         if (st.map) {
@@ -937,17 +955,8 @@
                 <div class="gisWaypointCol" data-gis-waypoints></div>
                 <div class="gisMapWrap">
                     <div class="gisMapHost" data-gis-map-host></div>
-                    <button type="button" class="gisRecenterBtn isHidden" data-gis-recenter-btn aria-label="Recenter on my position">Recenter</button>
                 </div>
             </div>`;
-
-        st.hostEl.querySelector("[data-gis-recenter-btn]")?.addEventListener("click", () => resumeFollow(st));
-
-        // The map is the last element in the card, so it can be stretched
-        // down to the bottom of the viewport instead of leaving dead space
-        // there — everything else on the page is measured, then the map
-        // fills whatever's left.
-        sizeMapHost(st);
 
         const mapHost = st.hostEl.querySelector("[data-gis-map-host]");
         st.map = L.map(mapHost, {
@@ -958,6 +967,9 @@
             touchRotate: true,
             bearing: 0
         });
+        // The recenter control's onAdd (map-level, not st-level) needs a way
+        // back to this render's state.
+        st.map._gisState = st;
         // leaflet-rotate's fitBounds path needs the map to already have a
         // view (it calls getPixelOrigin(), which throws pre-setView) —
         // vanilla Leaflet tolerates fitBounds() on a viewless map, this
@@ -966,6 +978,10 @@
         st.map.setView([0, 0], 2);
         L.tileLayer(TILE_URL, { maxZoom: 21, attribution: TILE_ATTRIBUTION }).addTo(st.map);
         st.layerGroup = L.layerGroup().addTo(st.map);
+
+        const recenterControl = new GisRecenterControl().addTo(st.map);
+        st.recenterBtn = recenterControl.getContainer();
+
         st.map.on("click", (e) => onMeasureMapClick(st, e));
         st.map.on("rotate", () => onMapRotate(st));
 
@@ -983,11 +999,11 @@
         // Container isn't guaranteed to have final layout size on the same
         // tick it's inserted — re-measure and nudge Leaflet once fonts/layout
         // settle, or tiles render at the wrong size/offset.
-        requestAnimationFrame(() => sizeMapHost(st));
+        requestAnimationFrame(() => nudgeMapSize(st));
 
         if (!st._resizeBound) {
             st._resizeBound = true;
-            window.addEventListener("resize", () => sizeMapHost(st));
+            window.addEventListener("resize", () => nudgeMapSize(st));
         }
 
         renderHole(st);

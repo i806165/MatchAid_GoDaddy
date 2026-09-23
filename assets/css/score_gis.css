@@ -1,0 +1,32 @@
+/* /assets/css/score_gis.css */
+
+/* No chrome header on mobile — this page exists only for GPS play, so every
+   pixel goes to the map. Desktop keeps the normal header; this page opts in
+   via the gisNoHeader class scoregis.php puts directly on its own <body>.
+   Landscape-short phones are already covered unconditionally by the
+   app-wide rule in ma_shared.css regardless of width — this only has to add
+   the portrait case that rule doesn't reach. */
+@media (max-width: 820px) {
+  body.gisNoHeader .maChrome__hdr {
+    display: none;
+  }
+}
+
+/* Edge-to-edge map: no card wrapper, so .maPage itself becomes the flex-fill
+   chain that stretches #scoreGisModuleHost (and the Leaflet map inside it)
+   down to the bottom of the viewport via CSS — replacing the JS
+   height-measurement approach that previously had to approximate this.
+   Scoped to .gisPage so no other page's .maPage is affected. */
+.maPage.gisPage {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  min-height: 0;
+}
+
+.gisModuleHost {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
