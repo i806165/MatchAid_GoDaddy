@@ -153,6 +153,16 @@
         return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
     }
 
+    // leaflet-rotate applies setBearing(t) as a direct clockwise CSS rotation
+    // of the map content (traced through its rotateFrom()/setTransform()
+    // internals) — passing a world compass bearing straight in therefore
+    // points that direction at the BOTTOM of the screen, not the top. Every
+    // setBearing() call in this module goes through this so "point world
+    // direction X at the top of the screen" actually does that.
+    function screenBearing(worldBearingDeg) {
+        return (360 - (((worldBearingDeg % 360) + 360) % 360)) % 360;
+    }
+
     // Inverse of bearingDegrees — walks `distanceMeters` from `from` along
     // `bearingDeg` and returns the resulting lat/lon (standard great-circle
     // destination-point formula).
@@ -437,7 +447,7 @@
             || (ctx.green?.feature && featureCenter(ctx.green.feature, st.nodeIndex))
             || ctx.geometry?.end;
 
-        st.map.setBearing((from && to) ? bearingDegrees(from, to) : 0);
+        st.map.setBearing((from && to) ? screenBearing(bearingDegrees(from, to)) : 0);
     }
 
     // Player-anchored "you are here" framing: rotates so the live
@@ -485,7 +495,7 @@
         const virtualCenter = destinationPoint(st.myPosition, bearing, offsetMeters);
 
         st._programmaticUpdate = true;
-        st.map.setBearing(bearing);
+        st.map.setBearing(screenBearing(bearing));
         st.map.setView([virtualCenter.lat, virtualCenter.lon], zoom, { animate: false });
         requestAnimationFrame(() => { st._programmaticUpdate = false; });
 
