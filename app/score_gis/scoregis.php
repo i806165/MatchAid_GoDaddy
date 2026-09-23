@@ -106,6 +106,7 @@ $maChromeLogoUrl = null;
 
 <script src="<?= ma_asset('/assets/js/ma_shared.js') ?>"></script>
 <script src="<?= ma_asset('/assets/vendor/leaflet/leaflet.js') ?>"></script>
+<script src="<?= ma_asset('/assets/vendor/leaflet-rotate/leaflet-rotate.js') ?>"></script>
 <script src="<?= ma_asset('/assets/modules/score_GISMap.js') ?>"></script>
 <script src="<?= ma_asset('/assets/pages/score_gis.js') ?>"></script>
 

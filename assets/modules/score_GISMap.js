@@ -49,6 +49,7 @@
             .gisMeasureRow{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
             .gisMeasureRow__text{font-size:14px;font-weight:800;color:#e65100}
             .gisMeasureIcon__dot{width:22px;height:22px;border-radius:50%;background:#ff8f00;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5);cursor:grab}
+            .gisMeasureLabel__text{display:inline-block;white-space:nowrap;background:#fff;padding:2px 8px;border-radius:10px;border:1.5px solid #ff8f00;font-weight:900;font-size:12px;color:#e65100;box-shadow:0 1px 3px rgba(0,0,0,.35)}
             @media (max-width:600px){.gisMapHost{height:390px}}
         `;
         document.head.appendChild(style);
@@ -130,6 +131,17 @@
         const lat2 = toRad(b.lat);
         const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
         return 2 * R * Math.asin(Math.sqrt(h));
+    }
+
+    // Compass bearing (0-360, 0 = north) from point a to point b.
+    function bearingDegrees(a, b) {
+        const toRad = (x) => x * Math.PI / 180;
+        const lat1 = toRad(a.lat);
+        const lat2 = toRad(b.lat);
+        const dLon = toRad(b.lon - a.lon);
+        const y = Math.sin(dLon) * Math.cos(lat2);
+        const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+        return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
     }
 
     function indexFeatures(elements) {
@@ -241,6 +253,21 @@
         return points.map(llFromPoint);
     }
 
+    // Rotates the map so the tee→pin direction (falling back to tee→green,
+    // then tee→hole-end) points to the top of the screen, computed once per
+    // hole rather than continuously chasing the live GPS bearing — a fixed
+    // per-hole rotation avoids the map spinning/jittering as GPS updates.
+    function orientToPin(st, ctx) {
+        if (!st.map.setBearing) return;
+
+        const from = ctx.geometry?.start;
+        const to = (ctx.pin?.feature && featureCenter(ctx.pin.feature, st.nodeIndex))
+            || (ctx.green?.feature && featureCenter(ctx.green.feature, st.nodeIndex))
+            || ctx.geometry?.end;
+
+        st.map.setBearing((from && to) ? bearingDegrees(from, to) : 0);
+    }
+
     function renderHole(st) {
         const ctx = resolveHoleContext(st, st.selectedHole);
 
@@ -253,6 +280,9 @@
         st.layerGroup.clearLayers();
 
         if (!ctx.hole) return;
+
+        placeMeasureAtPin(st, ctx);
+        orientToPin(st, ctx);
 
         const boundsPts = [];
 
@@ -357,8 +387,7 @@
 
     function onPositionError(st, err) {
         if (err?.code === 1) {
-            // Permission denied — the watch will never succeed; fully reset
-            // rather than leaving the button stuck on "Stop Location".
+            // Permission denied — the watch will never succeed; fully reset.
             stopLocate(st);
             setYardageMessage(st, "Location permission denied. Enable location access for this site.");
             return;
@@ -379,25 +408,20 @@
         if (st.myMarker) { st.map.removeLayer(st.myMarker); st.myMarker = null; }
         if (st.myAccuracy) { st.map.removeLayer(st.myAccuracy); st.myAccuracy = null; }
         st.myPosition = null;
-
-        const btn = st.hostEl.querySelector("[data-gis-locate]");
-        if (btn) btn.textContent = "Locate Me";
-        setYardageMessage(st, "");
     }
 
-    function toggleLocate(st) {
-        if (st.watchId != null) {
-            stopLocate(st);
-            return;
-        }
+    // Auto-starts once on page load — this page exists specifically for
+    // GPS play, so there's no manual on/off control. A denied/failed
+    // permission just leaves the status message showing; refreshing the
+    // page is the retry path.
+    function startLocate(st) {
+        if (st.watchId != null) return;
 
         if (!navigator.geolocation) {
             setYardageMessage(st, "Geolocation is not supported on this device.");
             return;
         }
 
-        const btn = st.hostEl.querySelector("[data-gis-locate]");
-        if (btn) btn.textContent = "Stop Location";
         setYardageMessage(st, "Locating…");
 
         st.watchId = navigator.geolocation.watchPosition(
@@ -424,28 +448,76 @@
 
     function updateMeasureReadout(st) {
         const el = st.hostEl.querySelector("[data-gis-measure]");
-        if (!el) return;
 
         if (!st.measureMarker) {
-            el.textContent = "Tap the map to drop a measure point.";
+            if (el) el.textContent = "Tap the map to drop a measure point.";
+            updateMeasureVisuals(st);
             return;
         }
 
         const anchor = measureAnchor(st);
         if (!anchor) {
-            el.textContent = "No reference point available to measure from.";
+            if (el) el.textContent = "No reference point available to measure from.";
+            updateMeasureVisuals(st);
             return;
         }
 
         const ll = st.measureMarker.getLatLng();
         const dist = distanceMeters(anchor, { lat: ll.lat, lon: ll.lng });
         const from = st.myPosition ? "from you" : "from the tee";
-        el.textContent = `Measure: ${yardsText(dist)} (${from})`;
+        if (el) el.textContent = `Measure: ${yardsText(dist)} (${from})`;
+        updateMeasureVisuals(st);
     }
 
-    function onMeasureMapClick(st, e) {
+    // Draws a dashed line from the reference point to the measure marker, with
+    // a floating yardage label placed just short of the marker along that line.
+    function updateMeasureVisuals(st) {
+        const anchor = st.measureMarker ? measureAnchor(st) : null;
+
+        if (!st.measureMarker || !anchor) {
+            if (st.measureLine) { st.map.removeLayer(st.measureLine); st.measureLine = null; }
+            if (st.measureLabel) { st.map.removeLayer(st.measureLabel); st.measureLabel = null; }
+            return;
+        }
+
+        const anchorLL = L.latLng(anchor.lat, anchor.lon);
+        const targetLL = st.measureMarker.getLatLng();
+
+        if (!st.measureLine) {
+            st.measureLine = L.polyline([anchorLL, targetLL], { color: "#ff8f00", weight: 3, dashArray: "6 6" }).addTo(st.map);
+        } else {
+            st.measureLine.setLatLngs([anchorLL, targetLL]);
+        }
+
+        // 85% of the way from the anchor to the marker — "just short of" it.
+        const t = 0.85;
+        const labelLatLng = L.latLng(
+            anchorLL.lat + (targetLL.lat - anchorLL.lat) * t,
+            anchorLL.lng + (targetLL.lng - anchorLL.lng) * t
+        );
+        const text = yardsText(distanceMeters(anchor, { lat: targetLL.lat, lon: targetLL.lng }));
+
+        if (!st.measureLabel) {
+            st.measureLabel = L.marker(labelLatLng, {
+                icon: L.divIcon({
+                    className: "gisMeasureLabel",
+                    html: `<div class="gisMeasureLabel__text" data-gis-measure-label-text>${text}</div>`,
+                    iconSize: [60, 20],
+                    iconAnchor: [30, 10]
+                }),
+                interactive: false,
+                zIndexOffset: 1001
+            }).addTo(st.map);
+        } else {
+            st.measureLabel.setLatLng(labelLatLng);
+            const textEl = st.measureLabel.getElement()?.querySelector("[data-gis-measure-label-text]");
+            if (textEl) textEl.textContent = text;
+        }
+    }
+
+    function placeMeasureMarker(st, latlng) {
         if (!st.measureMarker) {
-            st.measureMarker = L.marker(e.latlng, {
+            st.measureMarker = L.marker(latlng, {
                 draggable: true,
                 icon: measureIcon(),
                 zIndexOffset: 1000
@@ -453,9 +525,28 @@
             st.measureMarker.on("drag", () => updateMeasureReadout(st));
             st.measureMarker.on("dragend", () => updateMeasureReadout(st));
         } else {
-            st.measureMarker.setLatLng(e.latlng);
+            st.measureMarker.setLatLng(latlng);
         }
+    }
+
+    function onMeasureMapClick(st, e) {
+        placeMeasureMarker(st, e.latlng);
         updateMeasureReadout(st);
+    }
+
+    // Pre-seeds the measure marker on the pin every time a hole loads, so the
+    // orange dot starts exactly on top of the red pin dot — the golfer then
+    // drags it off from there (e.g. to clear a bunker) instead of having to
+    // tap the map first.
+    function placeMeasureAtPin(st, ctx) {
+        const p = ctx.pin?.feature ? featureCenter(ctx.pin.feature, st.nodeIndex) : null;
+
+        if (!p) {
+            if (st.measureMarker) { st.map.removeLayer(st.measureMarker); st.measureMarker = null; }
+            return;
+        }
+
+        placeMeasureMarker(st, L.latLng(p.lat, p.lon));
     }
 
     function clearMeasure(st) {
@@ -491,17 +582,18 @@
             st.map = null;
         }
         // A remount tears down the Leaflet map (and any position layers tied
-        // to it) — drop the stale layer refs so the next GPS fix/toggle click
-        // rebuilds them cleanly against the new map instance.
+        // to it) — drop the stale layer refs so the next GPS fix rebuilds
+        // them cleanly against the new map instance.
         st.myMarker = null;
         st.myAccuracy = null;
         st.measureMarker = null;
+        st.measureLine = null;
+        st.measureLabel = null;
 
         st.hostEl.innerHTML = `
             ${holeNavHtml(st)}
             <div class="gisMapHost" data-gis-map-host></div>
             <div class="gisLocateRow">
-                <button type="button" class="btn btnSecondary" data-gis-locate>${st.watchId != null ? "Stop Location" : "Locate Me"}</button>
                 <div class="gisYardages" data-gis-yardages></div>
             </div>
             <div class="gisMeasureRow">
@@ -511,14 +603,22 @@
 
         st.hostEl.querySelector("[data-gis-prev]")?.addEventListener("click", () => previousHole(st));
         st.hostEl.querySelector("[data-gis-next]")?.addEventListener("click", () => nextHole(st));
-        st.hostEl.querySelector("[data-gis-locate]")?.addEventListener("click", () => toggleLocate(st));
         st.hostEl.querySelector("[data-gis-measure-clear]")?.addEventListener("click", () => clearMeasure(st));
 
         const mapHost = st.hostEl.querySelector("[data-gis-map-host]");
-        st.map = L.map(mapHost, { zoomControl: true, attributionControl: true });
+        st.map = L.map(mapHost, {
+            zoomControl: true,
+            attributionControl: true,
+            rotate: true,
+            rotateControl: false,
+            touchRotate: true,
+            bearing: 0
+        });
         L.tileLayer(TILE_URL, { maxZoom: 21, attribution: TILE_ATTRIBUTION }).addTo(st.map);
         st.layerGroup = L.layerGroup().addTo(st.map);
         st.map.on("click", (e) => onMeasureMapClick(st, e));
+
+        startLocate(st);
 
         // Container isn't guaranteed to have final layout size on the same
         // tick it's inserted — Leaflet needs an explicit nudge or tiles render
