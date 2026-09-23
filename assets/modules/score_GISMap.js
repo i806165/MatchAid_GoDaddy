@@ -28,12 +28,7 @@
     // Esri World Imagery — free, no API key required.
     const TILE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
     const TILE_ATTRIBUTION = "Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics";
-
-    function esc(s) {
-        return String(s ?? "").replace(/[&<>"']/g, (c) => ({
-            "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-        }[c]));
-    }
+    const METERS_TO_YARDS = 1.0936133;
 
     function n(v) {
         const x = Number(v);
@@ -46,19 +41,15 @@
         const style = document.createElement("style");
         style.id = STYLE_ID;
         style.textContent = `
-            .gisSummary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:10px}
-            .gisStat{padding:8px;border:1px solid var(--borderSubtle);border-radius:var(--radiusMd);background:var(--layer3-bg);text-align:center}
-            .gisStat__label{font-size:10px;font-weight:800;color:var(--mutedText)}
-            .gisStat__value{margin-top:2px;font-size:16px;font-weight:900;color:var(--ink)}
             .gisHoleNav{display:flex;align-items:center;gap:10px;margin-bottom:10px}
             .gisHoleNav__title{flex:1 1 auto;text-align:center;font-size:18px;font-weight:900}
             .gisMapHost{width:100%;height:440px;border:1px solid var(--borderSubtle);border-radius:var(--radiusLg);overflow:hidden}
-            .gisDiag{margin-top:10px;font-size:12px;line-height:1.4}
-            .gisDiag table{width:100%;border-collapse:collapse}
-            .gisDiag td{padding:5px 6px;border-bottom:1px solid var(--borderSubtle);vertical-align:top}
-            .gisDiag td:first-child{font-weight:800;width:45%}
-            .gisHint{margin-top:10px;font-size:11px;color:var(--mutedText)}
-            @media (max-width:600px){.gisSummary{grid-template-columns:repeat(2,minmax(0,1fr))}.gisMapHost{height:390px}}
+            .gisLocateRow{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
+            .gisYardages{font-size:14px;font-weight:800;color:var(--ink)}
+            .gisMeasureRow{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+            .gisMeasureRow__text{font-size:14px;font-weight:800;color:#e65100}
+            .gisMeasureIcon__dot{width:22px;height:22px;border-radius:50%;background:#ff8f00;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5);cursor:grab}
+            @media (max-width:600px){.gisMapHost{height:390px}}
         `;
         document.head.appendChild(style);
     }
@@ -225,27 +216,6 @@
         return { hole, geometry, green, pin, tees, bunkers };
     }
 
-    function bytesLabel(bytes) {
-        const x = Number(bytes || 0);
-        if (x < 1024) return `${x} B`;
-        if (x < 1024 * 1024) return `${(x / 1024).toFixed(1)} KB`;
-        return `${(x / 1024 / 1024).toFixed(2)} MB`;
-    }
-
-    function summaryHtml(st) {
-        const stats = [
-            ["Holes", st.features.holes.length],
-            ["Greens", st.features.greens.length],
-            ["Pins", st.features.pins.length],
-            ["Tees", st.features.tees.length],
-            ["Bunkers", st.features.bunkers.length],
-            ["JSON", bytesLabel(st.course.jsonBytes)]
-        ];
-        return `<div class="gisSummary">${stats.map(([label, value]) => `
-            <div class="gisStat"><div class="gisStat__label">${esc(label).toUpperCase()}</div><div class="gisStat__value">${esc(value)}</div></div>
-        `).join("")}</div>`;
-    }
-
     function holeNavHtml(st) {
         return `
             <div class="gisHoleNav">
@@ -255,26 +225,8 @@
             </div>`;
     }
 
-    function metersText(value) {
-        return Number.isFinite(value) ? `${Math.round(value)} m` : "—";
-    }
-
-    function diagnosticsHtml(st, ctx) {
-        return `
-            <div class="gisDiag">
-                <table><tbody>
-                    <tr><td>Facility</td><td>${esc(st.course.facilityName || "")}</td></tr>
-                    <tr><td>Course</td><td>${esc(st.course.courseName || "")}</td></tr>
-                    <tr><td>Selected Hole</td><td>${st.selectedHole}</td></tr>
-                    <tr><td>Hole OSM ID</td><td>${esc(ctx.hole?.id ?? "—")}</td></tr>
-                    <tr><td>Green OSM ID</td><td>${esc(ctx.green?.feature?.id ?? "—")}</td></tr>
-                    <tr><td>Green from hole end</td><td>${esc(metersText(ctx.green?.distanceMeters))}</td></tr>
-                    <tr><td>Pin OSM ID</td><td>${esc(ctx.pin?.feature?.id ?? "—")}</td></tr>
-                    <tr><td>Pin from hole end</td><td>${esc(metersText(ctx.pin?.distanceMeters))}</td></tr>
-                    <tr><td>Candidate tees</td><td>${ctx.tees.length}</td></tr>
-                    <tr><td>Nearby bunkers</td><td>${ctx.bunkers.length}</td></tr>
-                </tbody></table>
-            </div>`;
+    function yardsText(meters) {
+        return Number.isFinite(meters) ? `${Math.round(meters * METERS_TO_YARDS)} yds` : "—";
     }
 
     function availableHoleNumbers(st) {
@@ -297,9 +249,6 @@
             const par = ctx.hole ? tag(ctx.hole, "par") : "";
             titleEl.textContent = `Hole ${st.selectedHole}${par ? ` • Par ${par}` : ""}`;
         }
-
-        const diagEl = st.hostEl.querySelector("[data-gis-diag]");
-        if (diagEl) diagEl.outerHTML = diagnosticsHtml(st, ctx).replace('class="gisDiag"', 'class="gisDiag" data-gis-diag');
 
         st.layerGroup.clearLayers();
 
@@ -357,6 +306,164 @@
         if (boundsPts.length) {
             st.map.fitBounds(L.latLngBounds(llFromPoints(boundsPts)), { padding: [30, 30], maxZoom: 20 });
         }
+
+        updateYardages(st);
+        updateMeasureReadout(st);
+    }
+
+    function setYardageMessage(st, message) {
+        const el = st.hostEl.querySelector("[data-gis-yardages]");
+        if (el) el.textContent = message || "";
+    }
+
+    function updateYardages(st) {
+        if (!st.myPosition) {
+            setYardageMessage(st, "");
+            return;
+        }
+
+        const ctx = resolveHoleContext(st, st.selectedHole);
+        const parts = [];
+
+        if (ctx.pin?.feature) {
+            const p = featureCenter(ctx.pin.feature, st.nodeIndex);
+            if (p) parts.push(`Pin ${yardsText(distanceMeters(st.myPosition, p))}`);
+        }
+        if (ctx.green?.feature) {
+            const g = featureCenter(ctx.green.feature, st.nodeIndex);
+            if (g) parts.push(`Green ${yardsText(distanceMeters(st.myPosition, g))}`);
+        }
+
+        setYardageMessage(st, parts.length ? parts.join(" • ") : "No pin/green geometry for this hole.");
+    }
+
+    function onPosition(st, pos) {
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+        const accuracy = Number(pos.coords.accuracy) || 0;
+        st.myPosition = { lat, lon };
+
+        if (!st.myMarker) {
+            st.myMarker = L.circleMarker([lat, lon], { radius: 8, color: "#fff", weight: 2, fillColor: "#1e88e5", fillOpacity: 1 }).addTo(st.map);
+            st.myAccuracy = L.circle([lat, lon], { radius: accuracy, color: "#1e88e5", weight: 1, fillColor: "#1e88e5", fillOpacity: 0.12 }).addTo(st.map);
+        } else {
+            st.myMarker.setLatLng([lat, lon]);
+            st.myAccuracy.setLatLng([lat, lon]);
+            st.myAccuracy.setRadius(accuracy);
+        }
+
+        updateYardages(st);
+    }
+
+    function onPositionError(st, err) {
+        if (err?.code === 1) {
+            // Permission denied — the watch will never succeed; fully reset
+            // rather than leaving the button stuck on "Stop Location".
+            stopLocate(st);
+            setYardageMessage(st, "Location permission denied. Enable location access for this site.");
+            return;
+        }
+
+        const messages = {
+            2: "Location unavailable right now.",
+            3: "Location request timed out."
+        };
+        setYardageMessage(st, messages[err?.code] || "Unable to get your location.");
+    }
+
+    function stopLocate(st) {
+        if (st.watchId != null) {
+            navigator.geolocation.clearWatch(st.watchId);
+            st.watchId = null;
+        }
+        if (st.myMarker) { st.map.removeLayer(st.myMarker); st.myMarker = null; }
+        if (st.myAccuracy) { st.map.removeLayer(st.myAccuracy); st.myAccuracy = null; }
+        st.myPosition = null;
+
+        const btn = st.hostEl.querySelector("[data-gis-locate]");
+        if (btn) btn.textContent = "Locate Me";
+        setYardageMessage(st, "");
+    }
+
+    function toggleLocate(st) {
+        if (st.watchId != null) {
+            stopLocate(st);
+            return;
+        }
+
+        if (!navigator.geolocation) {
+            setYardageMessage(st, "Geolocation is not supported on this device.");
+            return;
+        }
+
+        const btn = st.hostEl.querySelector("[data-gis-locate]");
+        if (btn) btn.textContent = "Stop Location";
+        setYardageMessage(st, "Locating…");
+
+        st.watchId = navigator.geolocation.watchPosition(
+            (pos) => onPosition(st, pos),
+            (err) => onPositionError(st, err),
+            { enableHighAccuracy: true, maximumAge: 2000, timeout: 15000 }
+        );
+    }
+
+    function measureIcon() {
+        return L.divIcon({
+            className: "gisMeasureIcon",
+            html: '<div class="gisMeasureIcon__dot"></div>',
+            iconSize: [22, 22],
+            iconAnchor: [11, 11]
+        });
+    }
+
+    function measureAnchor(st) {
+        if (st.myPosition) return st.myPosition;
+        const ctx = resolveHoleContext(st, st.selectedHole);
+        return ctx.geometry?.start || null;
+    }
+
+    function updateMeasureReadout(st) {
+        const el = st.hostEl.querySelector("[data-gis-measure]");
+        if (!el) return;
+
+        if (!st.measureMarker) {
+            el.textContent = "Tap the map to drop a measure point.";
+            return;
+        }
+
+        const anchor = measureAnchor(st);
+        if (!anchor) {
+            el.textContent = "No reference point available to measure from.";
+            return;
+        }
+
+        const ll = st.measureMarker.getLatLng();
+        const dist = distanceMeters(anchor, { lat: ll.lat, lon: ll.lng });
+        const from = st.myPosition ? "from you" : "from the tee";
+        el.textContent = `Measure: ${yardsText(dist)} (${from})`;
+    }
+
+    function onMeasureMapClick(st, e) {
+        if (!st.measureMarker) {
+            st.measureMarker = L.marker(e.latlng, {
+                draggable: true,
+                icon: measureIcon(),
+                zIndexOffset: 1000
+            }).addTo(st.map);
+            st.measureMarker.on("drag", () => updateMeasureReadout(st));
+            st.measureMarker.on("dragend", () => updateMeasureReadout(st));
+        } else {
+            st.measureMarker.setLatLng(e.latlng);
+        }
+        updateMeasureReadout(st);
+    }
+
+    function clearMeasure(st) {
+        if (st.measureMarker) {
+            st.map.removeLayer(st.measureMarker);
+            st.measureMarker = null;
+        }
+        updateMeasureReadout(st);
     }
 
     function selectHole(st, holeNo) {
@@ -383,23 +490,35 @@
             st.map.remove();
             st.map = null;
         }
-
-        const ctx0 = resolveHoleContext(st, st.selectedHole);
+        // A remount tears down the Leaflet map (and any position layers tied
+        // to it) — drop the stale layer refs so the next GPS fix/toggle click
+        // rebuilds them cleanly against the new map instance.
+        st.myMarker = null;
+        st.myAccuracy = null;
+        st.measureMarker = null;
 
         st.hostEl.innerHTML = `
-            ${summaryHtml(st)}
             ${holeNavHtml(st)}
             <div class="gisMapHost" data-gis-map-host></div>
-            ${diagnosticsHtml(st, ctx0).replace('class="gisDiag"', 'class="gisDiag" data-gis-diag')}
-            <div class="gisHint">Stored OSM geometry only. Green/pin/tee associations are diagnostic heuristics at this stage.</div>`;
+            <div class="gisLocateRow">
+                <button type="button" class="btn btnSecondary" data-gis-locate>${st.watchId != null ? "Stop Location" : "Locate Me"}</button>
+                <div class="gisYardages" data-gis-yardages></div>
+            </div>
+            <div class="gisMeasureRow">
+                <button type="button" class="btn btnSecondary" data-gis-measure-clear>Clear Measure</button>
+                <div class="gisMeasureRow__text" data-gis-measure></div>
+            </div>`;
 
         st.hostEl.querySelector("[data-gis-prev]")?.addEventListener("click", () => previousHole(st));
         st.hostEl.querySelector("[data-gis-next]")?.addEventListener("click", () => nextHole(st));
+        st.hostEl.querySelector("[data-gis-locate]")?.addEventListener("click", () => toggleLocate(st));
+        st.hostEl.querySelector("[data-gis-measure-clear]")?.addEventListener("click", () => clearMeasure(st));
 
         const mapHost = st.hostEl.querySelector("[data-gis-map-host]");
         st.map = L.map(mapHost, { zoomControl: true, attributionControl: true });
         L.tileLayer(TILE_URL, { maxZoom: 21, attribution: TILE_ATTRIBUTION }).addTo(st.map);
         st.layerGroup = L.layerGroup().addTo(st.map);
+        st.map.on("click", (e) => onMeasureMapClick(st, e));
 
         // Container isn't guaranteed to have final layout size on the same
         // tick it's inserted — Leaflet needs an explicit nudge or tiles render
