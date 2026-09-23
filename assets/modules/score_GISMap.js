@@ -29,6 +29,7 @@
     const TILE_URL = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
     const TILE_ATTRIBUTION = "Tiles &copy; Esri &mdash; Source: Esri, Maxar, Earthstar Geographics";
     const METERS_TO_YARDS = 1.0936133;
+    const MAX_ON_COURSE_METERS = 750 / METERS_TO_YARDS;
 
     function n(v) {
         const x = Number(v);
@@ -41,16 +42,13 @@
         const style = document.createElement("style");
         style.id = STYLE_ID;
         style.textContent = `
-            .gisHoleNav{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+            .gisHoleNav{display:flex;align-items:center;gap:10px;margin-bottom:8px}
             .gisHoleNav__title{flex:1 1 auto;text-align:center;font-size:18px;font-weight:900}
-            .gisMapHost{width:100%;height:440px;border:1px solid var(--borderSubtle);border-radius:var(--radiusLg);overflow:hidden}
-            .gisLocateRow{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap}
-            .gisYardages{font-size:14px;font-weight:800;color:var(--ink)}
-            .gisMeasureRow{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
-            .gisMeasureRow__text{font-size:14px;font-weight:800;color:#e65100}
+            .gisControlsRow{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+            .gisStatusText{font-size:13px;font-weight:700;color:var(--mutedText)}
+            .gisMapHost{width:100%;min-height:300px;border:1px solid var(--borderSubtle);border-radius:var(--radiusLg);overflow:hidden}
             .gisMeasureIcon__dot{width:22px;height:22px;border-radius:50%;background:#ff8f00;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5);cursor:grab}
             .gisMeasureLabel__text{display:inline-block;white-space:nowrap;background:#fff;padding:2px 8px;border-radius:10px;border:1.5px solid #ff8f00;font-weight:900;font-size:12px;color:#e65100;box-shadow:0 1px 3px rgba(0,0,0,.35)}
-            @media (max-width:600px){.gisMapHost{height:390px}}
         `;
         document.head.appendChild(style);
     }
@@ -228,6 +226,21 @@
         return { hole, geometry, green, pin, tees, bunkers };
     }
 
+    // True when there's no way to know (GPS not active/denied, or the hole
+    // has no usable reference point) — in that case we don't block anything,
+    // since the tee-fallback measure tool works fine without GPS. Only
+    // returns false once we positively know the player is far from the hole.
+    function isWithinCourseRange(st, ctx) {
+        if (!st.myPosition) return true;
+
+        const ref = ctx.geometry?.start
+            || (ctx.pin?.feature && featureCenter(ctx.pin.feature, st.nodeIndex))
+            || (ctx.green?.feature && featureCenter(ctx.green.feature, st.nodeIndex));
+        if (!ref) return true;
+
+        return distanceMeters(st.myPosition, ref) <= MAX_ON_COURSE_METERS;
+    }
+
     function holeNavHtml(st) {
         return `
             <div class="gisHoleNav">
@@ -337,34 +350,15 @@
             st.map.fitBounds(L.latLngBounds(llFromPoints(boundsPts)), { padding: [30, 30], maxZoom: 20 });
         }
 
-        updateYardages(st);
-        updateMeasureReadout(st);
+        refreshMeasure(st);
     }
 
-    function setYardageMessage(st, message) {
-        const el = st.hostEl.querySelector("[data-gis-yardages]");
+    // Status line above the map — GPS state only (locating/denied/
+    // unsupported). Pin/green distances no longer live here now that the
+    // on-map measure marker (pre-seeded on the pin) shows that live.
+    function setLocationStatus(st, message) {
+        const el = st.hostEl.querySelector("[data-gis-status]");
         if (el) el.textContent = message || "";
-    }
-
-    function updateYardages(st) {
-        if (!st.myPosition) {
-            setYardageMessage(st, "");
-            return;
-        }
-
-        const ctx = resolveHoleContext(st, st.selectedHole);
-        const parts = [];
-
-        if (ctx.pin?.feature) {
-            const p = featureCenter(ctx.pin.feature, st.nodeIndex);
-            if (p) parts.push(`Pin ${yardsText(distanceMeters(st.myPosition, p))}`);
-        }
-        if (ctx.green?.feature) {
-            const g = featureCenter(ctx.green.feature, st.nodeIndex);
-            if (g) parts.push(`Green ${yardsText(distanceMeters(st.myPosition, g))}`);
-        }
-
-        setYardageMessage(st, parts.length ? parts.join(" • ") : "No pin/green geometry for this hole.");
     }
 
     function onPosition(st, pos) {
@@ -382,14 +376,22 @@
             st.myAccuracy.setRadius(accuracy);
         }
 
-        updateYardages(st);
+        // If GPS just brought the player within range and no measure point
+        // exists yet, seed it at the pin — same as on hole load. Only when
+        // no marker exists yet, so this never clobbers a manual drag.
+        const ctx = resolveHoleContext(st, st.selectedHole);
+        if (!st.measureMarker && isWithinCourseRange(st, ctx)) {
+            placeMeasureAtPin(st, ctx);
+        }
+
+        refreshMeasure(st);
     }
 
     function onPositionError(st, err) {
         if (err?.code === 1) {
             // Permission denied — the watch will never succeed; fully reset.
             stopLocate(st);
-            setYardageMessage(st, "Location permission denied. Enable location access for this site.");
+            setLocationStatus(st, "Location permission denied. Enable location access for this site.");
             return;
         }
 
@@ -397,7 +399,7 @@
             2: "Location unavailable right now.",
             3: "Location request timed out."
         };
-        setYardageMessage(st, messages[err?.code] || "Unable to get your location.");
+        setLocationStatus(st, messages[err?.code] || "Unable to get your location.");
     }
 
     function stopLocate(st) {
@@ -418,11 +420,11 @@
         if (st.watchId != null) return;
 
         if (!navigator.geolocation) {
-            setYardageMessage(st, "Geolocation is not supported on this device.");
+            setLocationStatus(st, "Geolocation is not supported on this device.");
             return;
         }
 
-        setYardageMessage(st, "Locating…");
+        setLocationStatus(st, "Locating…");
 
         st.watchId = navigator.geolocation.watchPosition(
             (pos) => onPosition(st, pos),
@@ -446,26 +448,16 @@
         return ctx.geometry?.start || null;
     }
 
-    function updateMeasureReadout(st) {
-        const el = st.hostEl.querySelector("[data-gis-measure]");
+    // Re-evaluates the range gate and redraws the on-map line/label. No text
+    // readout anymore — the on-map marker/line/label are the only feedback.
+    function refreshMeasure(st) {
+        const ctx = resolveHoleContext(st, st.selectedHole);
 
-        if (!st.measureMarker) {
-            if (el) el.textContent = "Tap the map to drop a measure point.";
-            updateMeasureVisuals(st);
-            return;
+        if (!isWithinCourseRange(st, ctx) && st.measureMarker) {
+            st.map.removeLayer(st.measureMarker);
+            st.measureMarker = null;
         }
 
-        const anchor = measureAnchor(st);
-        if (!anchor) {
-            if (el) el.textContent = "No reference point available to measure from.";
-            updateMeasureVisuals(st);
-            return;
-        }
-
-        const ll = st.measureMarker.getLatLng();
-        const dist = distanceMeters(anchor, { lat: ll.lat, lon: ll.lng });
-        const from = st.myPosition ? "from you" : "from the tee";
-        if (el) el.textContent = `Measure: ${yardsText(dist)} (${from})`;
         updateMeasureVisuals(st);
     }
 
@@ -522,24 +514,31 @@
                 icon: measureIcon(),
                 zIndexOffset: 1000
             }).addTo(st.map);
-            st.measureMarker.on("drag", () => updateMeasureReadout(st));
-            st.measureMarker.on("dragend", () => updateMeasureReadout(st));
+            st.measureMarker.on("drag", () => refreshMeasure(st));
+            st.measureMarker.on("dragend", () => refreshMeasure(st));
         } else {
             st.measureMarker.setLatLng(latlng);
         }
     }
 
     function onMeasureMapClick(st, e) {
+        const ctx = resolveHoleContext(st, st.selectedHole);
+        if (!isWithinCourseRange(st, ctx)) return;
+
         placeMeasureMarker(st, e.latlng);
-        updateMeasureReadout(st);
+        refreshMeasure(st);
     }
 
     // Pre-seeds the measure marker on the pin every time a hole loads, so the
     // orange dot starts exactly on top of the red pin dot — the golfer then
     // drags it off from there (e.g. to clear a bunker) instead of having to
-    // tap the map first.
+    // tap the map first. Skipped entirely when GPS shows the player is far
+    // from the hole (see MAX_ON_COURSE_METERS) — no point pre-seeding a
+    // measurement that's about to be hidden anyway.
     function placeMeasureAtPin(st, ctx) {
-        const p = ctx.pin?.feature ? featureCenter(ctx.pin.feature, st.nodeIndex) : null;
+        const p = (isWithinCourseRange(st, ctx) && ctx.pin?.feature)
+            ? featureCenter(ctx.pin.feature, st.nodeIndex)
+            : null;
 
         if (!p) {
             if (st.measureMarker) { st.map.removeLayer(st.measureMarker); st.measureMarker = null; }
@@ -547,14 +546,6 @@
         }
 
         placeMeasureMarker(st, L.latLng(p.lat, p.lon));
-    }
-
-    function clearMeasure(st) {
-        if (st.measureMarker) {
-            st.map.removeLayer(st.measureMarker);
-            st.measureMarker = null;
-        }
-        updateMeasureReadout(st);
     }
 
     function selectHole(st, holeNo) {
@@ -576,6 +567,30 @@
         selectHole(st, nums[i < 0 || i >= nums.length - 1 ? 0 : i + 1]);
     }
 
+    const MAP_BOTTOM_GAP = 16;
+    const MAP_MIN_HEIGHT = 300;
+
+    // Stretches the map container from wherever it sits down to near the
+    // bottom of the visible page, instead of a fixed height that leaves dead
+    // space below it (mainly a mobile-portrait problem — see MAP_BOTTOM_GAP).
+    // Measured against .maPage's own bottom edge, not window.innerHeight —
+    // the chrome footer is a normal flex sibling below .maPage (not
+    // position:fixed), so innerHeight would overshoot past it.
+    // Re-run on resize/orientation change since iOS Safari's toolbar
+    // show/hide changes the viewport height.
+    function sizeMapHost(st) {
+        const mapHost = st.hostEl.querySelector("[data-gis-map-host]");
+        if (!mapHost) return;
+
+        const scrollRegion = mapHost.closest(".maPage");
+        const bottom = scrollRegion ? scrollRegion.getBoundingClientRect().bottom : window.innerHeight;
+        const top = mapHost.getBoundingClientRect().top;
+        const available = bottom - top - MAP_BOTTOM_GAP;
+        mapHost.style.height = Math.max(MAP_MIN_HEIGHT, available) + "px";
+
+        if (st.map) st.map.invalidateSize();
+    }
+
     function renderShell(st) {
         if (st.map) {
             st.map.remove();
@@ -592,18 +607,19 @@
 
         st.hostEl.innerHTML = `
             ${holeNavHtml(st)}
-            <div class="gisMapHost" data-gis-map-host></div>
-            <div class="gisLocateRow">
-                <div class="gisYardages" data-gis-yardages></div>
+            <div class="gisControlsRow">
+                <div class="gisStatusText" data-gis-status></div>
             </div>
-            <div class="gisMeasureRow">
-                <button type="button" class="btn btnSecondary" data-gis-measure-clear>Clear Measure</button>
-                <div class="gisMeasureRow__text" data-gis-measure></div>
-            </div>`;
+            <div class="gisMapHost" data-gis-map-host></div>`;
 
         st.hostEl.querySelector("[data-gis-prev]")?.addEventListener("click", () => previousHole(st));
         st.hostEl.querySelector("[data-gis-next]")?.addEventListener("click", () => nextHole(st));
-        st.hostEl.querySelector("[data-gis-measure-clear]")?.addEventListener("click", () => clearMeasure(st));
+
+        // The map is the last element in the card, so it can be stretched
+        // down to the bottom of the viewport instead of leaving dead space
+        // there — everything else on the page is measured, then the map
+        // fills whatever's left.
+        sizeMapHost(st);
 
         const mapHost = st.hostEl.querySelector("[data-gis-map-host]");
         st.map = L.map(mapHost, {
@@ -627,13 +643,13 @@
         startLocate(st);
 
         // Container isn't guaranteed to have final layout size on the same
-        // tick it's inserted — Leaflet needs an explicit nudge or tiles render
-        // at the wrong size/offset.
-        requestAnimationFrame(() => st.map.invalidateSize());
+        // tick it's inserted — re-measure and nudge Leaflet once fonts/layout
+        // settle, or tiles render at the wrong size/offset.
+        requestAnimationFrame(() => sizeMapHost(st));
 
         if (!st._resizeBound) {
             st._resizeBound = true;
-            window.addEventListener("resize", () => st.map && st.map.invalidateSize());
+            window.addEventListener("resize", () => sizeMapHost(st));
         }
 
         renderHole(st);
