@@ -178,13 +178,20 @@
         };
     }
 
-    function nearestFeature(st, features, point) {
+    // Applied to every "find the feature that belongs to this hole" lookup
+    // below — without a cap, a hole with missing/mistagged green, pin, or
+    // tee data will silently snap to the globally-nearest one (possibly on
+    // the other side of the course), which then blows out fitBounds() to
+    // span the whole property instead of just this hole.
+    const MAX_LINK_METERS = 500;
+
+    function nearestFeature(st, features, point, maxDistanceMeters = Infinity) {
         let winner = null;
         let best = Infinity;
         features.forEach((feature) => {
             const center = featureCenter(feature, st.nodeIndex);
             const d = distanceMeters(point, center);
-            if (d < best) {
+            if (d < best && d <= maxDistanceMeters) {
                 best = d;
                 winner = feature;
             }
@@ -197,15 +204,15 @@
         if (!hole) return { hole: null, geometry: null, green: null, pin: null, tees: [], bunkers: [] };
 
         const geometry = holeGeometry(st, hole);
-        const green = nearestFeature(st, st.features.greens, geometry.end);
-        const pin = nearestFeature(st, st.features.pins, geometry.end);
+        const green = nearestFeature(st, st.features.greens, geometry.end, MAX_LINK_METERS);
+        const pin = nearestFeature(st, st.features.pins, geometry.end, MAX_LINK_METERS);
 
         const tees = st.features.tees
             .map((feature) => ({
                 feature,
                 distanceMeters: distanceMeters(geometry.start, featureCenter(feature, st.nodeIndex))
             }))
-            .filter((x) => Number.isFinite(x.distanceMeters))
+            .filter((x) => Number.isFinite(x.distanceMeters) && x.distanceMeters <= MAX_LINK_METERS)
             .sort((a, b) => a.distanceMeters - b.distanceMeters)
             .slice(0, 8);
 
@@ -220,7 +227,7 @@
                     )
                 };
             })
-            .filter((x) => Number.isFinite(x.distanceMeters) && x.distanceMeters <= 500)
+            .filter((x) => Number.isFinite(x.distanceMeters) && x.distanceMeters <= MAX_LINK_METERS)
             .sort((a, b) => a.distanceMeters - b.distanceMeters)
             .slice(0, 16);
 
