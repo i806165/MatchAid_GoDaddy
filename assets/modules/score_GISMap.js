@@ -49,7 +49,17 @@
             .gisStatusText{font-size:13px;font-weight:700;color:var(--mutedText)}
             .gisMapHost{width:100%;min-height:300px;border:1px solid var(--borderSubtle);border-radius:var(--radiusLg);overflow:hidden}
             .gisMeasureIcon__dot{width:22px;height:22px;border-radius:50%;background:#ff8f00;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5);cursor:grab}
-            .gisMeasureLabel__text{display:inline-block;white-space:nowrap;background:#fff;padding:2px 8px;border-radius:10px;border:1.5px solid #ff8f00;font-weight:900;font-size:12px;color:#e65100;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+            .gisMeasureLabel__text{display:inline-block;white-space:nowrap;background:#fff;padding:4px 12px;border-radius:14px;border:2px solid #ff8f00;font-weight:900;font-size:22px;color:#e65100;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+            .gisMapRow{display:flex;gap:8px;align-items:stretch}
+            .gisWaypointCol{display:flex;flex-direction:column;justify-content:space-between;flex:0 0 92px;max-width:92px}
+            .gisWaypointRow{padding:6px 2px;border-bottom:1px solid var(--borderSubtle)}
+            .gisWaypointRow:last-child{border-bottom:none}
+            .gisWaypointLabel{font-size:10px;font-weight:700;color:var(--mutedText);text-transform:uppercase;letter-spacing:.03em}
+            .gisWaypointValue{font-size:26px;font-weight:900;line-height:1.15;color:#111}
+            .gisWaypointRow--primary .gisWaypointLabel,.gisWaypointRow--primary .gisWaypointValue{color:#2e7d32}
+            .gisMapWrap{position:relative;flex:1;min-width:0}
+            .gisRecenterBtn{position:absolute;right:10px;bottom:10px;z-index:1000;border:none;border-radius:999px;padding:8px 14px;font-weight:800;font-size:13px;background:#1565c0;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.35);cursor:pointer}
+            .gisRecenterBtn.isHidden{display:none}
         `;
         document.head.appendChild(style);
     }
@@ -143,6 +153,77 @@
         return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
     }
 
+    // Inverse of bearingDegrees — walks `distanceMeters` from `from` along
+    // `bearingDeg` and returns the resulting lat/lon (standard great-circle
+    // destination-point formula).
+    function destinationPoint(from, bearingDeg, distanceMeters) {
+        const R = 6371000;
+        const brng = bearingDeg * Math.PI / 180;
+        const lat1 = from.lat * Math.PI / 180;
+        const lon1 = from.lon * Math.PI / 180;
+        const dr = distanceMeters / R;
+
+        const lat2 = Math.asin(Math.sin(lat1) * Math.cos(dr) + Math.cos(lat1) * Math.sin(dr) * Math.cos(brng));
+        const lon2 = lon1 + Math.atan2(
+            Math.sin(brng) * Math.sin(dr) * Math.cos(lat1),
+            Math.cos(dr) - Math.sin(lat1) * Math.sin(lat2)
+        );
+
+        return { lat: lat2 * 180 / Math.PI, lon: ((lon2 * 180 / Math.PI) + 540) % 360 - 180 };
+    }
+
+    // Perpendicular-distance-to-segment projection, in a local equirectangular
+    // approximation (fine at course scale) — used only to find *where* along
+    // the segment the closest point falls; the reported distance itself still
+    // goes through the accurate haversine distanceMeters().
+    function projectPointOnSegment(p, a, b) {
+        const kx = Math.cos(a.lat * Math.PI / 180);
+        const ax = a.lon * kx, ay = a.lat;
+        const bx = b.lon * kx, by = b.lat;
+        const px = p.lon * kx, py = p.lat;
+        const dx = bx - ax, dy = by - ay;
+        const lenSq = dx * dx + dy * dy;
+        const t = lenSq > 0 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lenSq)) : 0;
+        return { lat: a.lat + t * (b.lat - a.lat), lon: a.lon + t * (b.lon - a.lon) };
+    }
+
+    // Minimum distance from a point to a whole polyline (nearest point on any
+    // segment) — this is the "corridor" check: how far off the hole's own
+    // tee-to-green line a candidate feature sits, as opposed to how far it
+    // sits from a single endpoint.
+    function distanceToPolyline(point, points) {
+        if (!points || !points.length) return Infinity;
+        if (points.length === 1) return distanceMeters(point, points[0]);
+
+        let best = Infinity;
+        for (let i = 0; i < points.length - 1; i++) {
+            const proj = projectPointOnSegment(point, points[i], points[i + 1]);
+            const d = distanceMeters(point, proj);
+            if (d < best) best = d;
+        }
+        return best;
+    }
+
+    // Standard 2D segment/segment intersection, in the same local
+    // equirectangular approximation as projectPointOnSegment — returns the
+    // lat/lon intersection point (interpolated on the true geodesic segment)
+    // or null if the segments don't cross.
+    function segmentIntersection(a1, a2, b1, b2) {
+        const kx = Math.cos(a1.lat * Math.PI / 180);
+        const toXY = (p) => ({ x: p.lon * kx, y: p.lat });
+        const A = toXY(a1), B = toXY(a2), C = toXY(b1), D = toXY(b2);
+        const r = { x: B.x - A.x, y: B.y - A.y };
+        const s = { x: D.x - C.x, y: D.y - C.y };
+        const denom = r.x * s.y - r.y * s.x;
+        if (Math.abs(denom) < 1e-12) return null;
+
+        const t = ((C.x - A.x) * s.y - (C.y - A.y) * s.x) / denom;
+        const u = ((C.x - A.x) * r.y - (C.y - A.y) * r.x) / denom;
+        if (t < 0 || t > 1 || u < 0 || u > 1) return null;
+
+        return { lat: a1.lat + t * (a2.lat - a1.lat), lon: a1.lon + t * (a2.lon - a1.lon) };
+    }
+
     function indexFeatures(elements) {
         const out = { holes: [], greens: [], pins: [], tees: [], bunkers: [], otherGolf: [] };
         elements.forEach((feature) => {
@@ -179,24 +260,41 @@
     }
 
     // Applied to every "find the feature that belongs to this hole" lookup
-    // below — without a cap, a hole with missing/mistagged green, pin, or
-    // tee data will silently snap to the globally-nearest one (possibly on
-    // the other side of the course), which then blows out fitBounds() to
-    // span the whole property instead of just this hole.
-    const MAX_LINK_METERS = 500;
+    // below. This is a perpendicular-distance-to-the-hole's-own-line check
+    // (a corridor), not a radius from a single point — on courses with
+    // tight/parallel routing, a neighboring hole's bunker or tee can easily
+    // be the closest thing to *this* hole's endpoint, even though it sits
+    // well off to the side of this hole's actual line. Measuring against the
+    // whole polyline instead of one endpoint is what excludes it.
+    const MAX_CORRIDOR_METERS = 45;
 
-    function nearestFeature(st, features, point, maxDistanceMeters = Infinity) {
+    // Filters `features` down to those within the corridor of `holePoints`,
+    // annotated with each survivor's center point (reused by callers for a
+    // secondary nearest-to-reference-point tie-break).
+    function corridorFilter(st, features, holePoints, maxCorridorMeters = MAX_CORRIDOR_METERS) {
+        return features
+            .map((feature) => {
+                const center = featureCenter(feature, st.nodeIndex);
+                return {
+                    feature,
+                    center,
+                    corridorMeters: center ? distanceToPolyline(center, holePoints) : Infinity
+                };
+            })
+            .filter((x) => x.center && x.corridorMeters <= maxCorridorMeters);
+    }
+
+    function nearestTo(candidates, refPoint) {
         let winner = null;
         let best = Infinity;
-        features.forEach((feature) => {
-            const center = featureCenter(feature, st.nodeIndex);
-            const d = distanceMeters(point, center);
-            if (d < best && d <= maxDistanceMeters) {
+        candidates.forEach((x) => {
+            const d = distanceMeters(refPoint, x.center);
+            if (d < best) {
                 best = d;
-                winner = feature;
+                winner = { feature: x.feature, distanceMeters: d };
             }
         });
-        return winner ? { feature: winner, distanceMeters: best } : null;
+        return winner;
     }
 
     function resolveHoleContext(st, holeNo) {
@@ -204,30 +302,24 @@
         if (!hole) return { hole: null, geometry: null, green: null, pin: null, tees: [], bunkers: [] };
 
         const geometry = holeGeometry(st, hole);
-        const green = nearestFeature(st, st.features.greens, geometry.end, MAX_LINK_METERS);
-        const pin = nearestFeature(st, st.features.pins, geometry.end, MAX_LINK_METERS);
+        const corridorGreens = corridorFilter(st, st.features.greens, geometry.points);
+        const corridorPins = corridorFilter(st, st.features.pins, geometry.points);
+        const green = nearestTo(corridorGreens, geometry.end);
+        const pin = nearestTo(corridorPins, geometry.end);
 
-        const tees = st.features.tees
-            .map((feature) => ({
-                feature,
-                distanceMeters: distanceMeters(geometry.start, featureCenter(feature, st.nodeIndex))
-            }))
-            .filter((x) => Number.isFinite(x.distanceMeters) && x.distanceMeters <= MAX_LINK_METERS)
+        const tees = corridorFilter(st, st.features.tees, geometry.points)
+            .map((x) => ({ feature: x.feature, distanceMeters: distanceMeters(geometry.start, x.center) }))
             .sort((a, b) => a.distanceMeters - b.distanceMeters)
             .slice(0, 8);
 
-        const bunkers = st.features.bunkers
-            .map((feature) => {
-                const c = featureCenter(feature, st.nodeIndex);
-                return {
-                    feature,
-                    distanceMeters: Math.min(
-                        distanceMeters(geometry.start, c),
-                        distanceMeters(geometry.end, c)
-                    )
-                };
-            })
-            .filter((x) => Number.isFinite(x.distanceMeters) && x.distanceMeters <= MAX_LINK_METERS)
+        const bunkers = corridorFilter(st, st.features.bunkers, geometry.points)
+            .map((x) => ({
+                feature: x.feature,
+                distanceMeters: Math.min(
+                    distanceMeters(geometry.start, x.center),
+                    distanceMeters(geometry.end, x.center)
+                )
+            }))
             .sort((a, b) => a.distanceMeters - b.distanceMeters)
             .slice(0, 16);
 
@@ -251,6 +343,74 @@
 
     function yardsText(meters) {
         return Number.isFinite(meters) ? `${Math.round(meters * METERS_TO_YARDS)} yds` : "—";
+    }
+
+    // Same fallback chain as the old tee-based orientToPin, just reusable
+    // from any origin: pin, then green centroid, then the hole line's own
+    // end point. This is what both the live rotation bearing and the green
+    // waypoints aim at, so the on-map line and the F/M/B numbers always
+    // agree on what "the target" is.
+    function resolveAimTarget(st, ctx) {
+        if (ctx.pin?.feature) return featureCenter(ctx.pin.feature, st.nodeIndex);
+        if (ctx.green?.feature) return featureCenter(ctx.green.feature, st.nodeIndex);
+        return ctx.geometry?.end || null;
+    }
+
+    // Front/middle/back-of-green distances, measured along the same
+    // origin->target aim line as the live rotation — not the green's raw
+    // centroid, so the three numbers stay consistent with each other and
+    // with what's pointing "up" on screen. Extends the aim line a generous
+    // 80m past the target so it's guaranteed to clear the green's far edge
+    // even when the target (the pin) sits short of it.
+    function computeGreenWaypoints(st, ctx, origin) {
+        if (!origin || !ctx.green?.feature) return null;
+
+        const target = resolveAimTarget(st, ctx);
+        if (!target) return null;
+
+        const ring = geometryPoints(ctx.green.feature, st.nodeIndex);
+        if (ring.length < 3) return null;
+
+        const bearing = bearingDegrees(origin, target);
+        const reach = distanceMeters(origin, target) + 80;
+        const far = destinationPoint(origin, bearing, reach);
+
+        const closed = (ring[0].lat === ring[ring.length - 1].lat && ring[0].lon === ring[ring.length - 1].lon)
+            ? ring
+            : ring.concat([ring[0]]);
+
+        const hits = [];
+        for (let i = 0; i < closed.length - 1; i++) {
+            const hit = segmentIntersection(origin, far, closed[i], closed[i + 1]);
+            if (hit) hits.push(distanceMeters(origin, hit));
+        }
+        if (!hits.length) return null;
+
+        hits.sort((a, b) => a - b);
+        const front = hits[0];
+        const back = hits[hits.length - 1];
+        return { front, middle: (front + back) / 2, back };
+    }
+
+    // Renders the left-hand waypoint column. Back-on-top/front-on-bottom
+    // mirrors the on-screen spatial layout (target at the top of the
+    // rotated map, player at the bottom).
+    function renderWaypoints(st, wp) {
+        const col = st.hostEl.querySelector("[data-gis-waypoints]");
+        if (!col) return;
+
+        const rows = [
+            { label: "Green Back", value: wp?.back },
+            { label: "Green Center", value: wp?.middle, primary: true },
+            { label: "Green Front", value: wp?.front }
+        ];
+
+        col.innerHTML = rows.map((r) => `
+            <div class="gisWaypointRow${r.primary ? " gisWaypointRow--primary" : ""}">
+                <div class="gisWaypointLabel">${r.label}</div>
+                <div class="gisWaypointValue">${Number.isFinite(r.value) ? Math.round(r.value * METERS_TO_YARDS) : "—"}</div>
+            </div>
+        `).join("");
     }
 
     function availableHoleNumbers(st) {
@@ -280,15 +440,102 @@
         st.map.setBearing((from && to) ? bearingDegrees(from, to) : 0);
     }
 
+    // Player-anchored "you are here" framing: rotates so the live
+    // player->target bearing points up, and centers on a virtual point
+    // offset behind the player (along that same bearing) so the player lands
+    // near the bottom of the screen and the target near the top, instead of
+    // dead-center. Damped against GPS jitter via FRAME_MOVE_THRESHOLD_M /
+    // FRAME_BEARING_THRESHOLD_DEG unless `force` is set (hole just loaded,
+    // or the player tapped recenter).
+    const PLAYER_ANCHOR_FRAC = 0.82;
+    const TARGET_ANCHOR_FRAC = 0.15;
+    const MIN_FOLLOW_ZOOM = 15;
+    const MAX_FOLLOW_ZOOM = 20;
+    const FRAME_MOVE_THRESHOLD_M = 3;
+    const FRAME_BEARING_THRESHOLD_DEG = 4;
+
+    function applyFollowView(st, ctx, opts) {
+        const force = !!(opts && opts.force);
+        if (!st.myPosition || !st.map.setBearing) return false;
+
+        const target = resolveAimTarget(st, ctx);
+        if (!target) return false;
+
+        const bearing = bearingDegrees(st.myPosition, target);
+
+        if (!force && st._lastFramedPos) {
+            const moved = distanceMeters(st._lastFramedPos, st.myPosition);
+            const turned = Math.abs(((bearing - st._lastFramedBearing + 540) % 360) - 180);
+            if (moved < FRAME_MOVE_THRESHOLD_M && turned < FRAME_BEARING_THRESHOLD_DEG) return false;
+        }
+
+        const size = st.map.getSize();
+        const targetDistance = distanceMeters(st.myPosition, target);
+        const spanPx = size.y * (PLAYER_ANCHOR_FRAC - TARGET_ANCHOR_FRAC);
+
+        let zoom = MAX_FOLLOW_ZOOM;
+        if (targetDistance > 0 && spanPx > 0) {
+            const metersPerPixelAtZ0 = 156543.03392804097 * Math.cos(st.myPosition.lat * Math.PI / 180);
+            const neededZoom = Math.log2((spanPx * metersPerPixelAtZ0) / targetDistance);
+            zoom = Math.max(MIN_FOLLOW_ZOOM, Math.min(MAX_FOLLOW_ZOOM, neededZoom));
+        }
+
+        const metersPerPixel = 156543.03392804097 * Math.cos(st.myPosition.lat * Math.PI / 180) / Math.pow(2, zoom);
+        const offsetMeters = (size.y * PLAYER_ANCHOR_FRAC - size.y / 2) * metersPerPixel;
+        const virtualCenter = destinationPoint(st.myPosition, bearing, offsetMeters);
+
+        st._programmaticUpdate = true;
+        st.map.setBearing(bearing);
+        st.map.setView([virtualCenter.lat, virtualCenter.lon], zoom, { animate: false });
+        requestAnimationFrame(() => { st._programmaticUpdate = false; });
+
+        st._lastFramedPos = { lat: st.myPosition.lat, lon: st.myPosition.lon };
+        st._lastFramedBearing = bearing;
+        return true;
+    }
+
+    function setRecenterVisible(st, visible) {
+        const btn = st.hostEl.querySelector("[data-gis-recenter-btn]");
+        if (btn) btn.classList.toggle("isHidden", !visible);
+    }
+
+    // Manual pan/rotate/zoom, or dragging the measure marker, drops follow
+    // mode — otherwise the next GPS fix would yank the view out from under
+    // whatever the player was just doing. A recenter button reappears so
+    // they can explicitly opt back in, matching standard nav-app behavior.
+    function pauseFollow(st) {
+        if (!st.followMode) return;
+        st.followMode = false;
+        setRecenterVisible(st, true);
+    }
+
+    function resumeFollow(st) {
+        st.followMode = true;
+        setRecenterVisible(st, false);
+        st._lastFramedPos = null;
+        st._lastFramedBearing = null;
+        applyFollowView(st, resolveHoleContext(st, st.selectedHole), { force: true });
+    }
+
     function renderHole(st) {
         const ctx = resolveHoleContext(st, st.selectedHole);
 
         st.layerGroup.clearLayers();
 
-        if (!ctx.hole) return;
+        // A hole change always re-engages follow mode and forces a fresh
+        // frame — any pause left over from the previous hole shouldn't carry
+        // forward onto a view the player hasn't looked at yet.
+        st.followMode = true;
+        st._lastFramedPos = null;
+        st._lastFramedBearing = null;
+        setRecenterVisible(st, false);
+
+        if (!ctx.hole) {
+            renderWaypoints(st, null);
+            return;
+        }
 
         placeMeasureAtPin(st, ctx);
-        orientToPin(st, ctx);
 
         const boundsPts = [];
 
@@ -339,8 +586,19 @@
             }
         }
 
-        if (boundsPts.length) {
-            st.map.fitBounds(L.latLngBounds(llFromPoints(boundsPts)), { padding: [30, 30], maxZoom: 20 });
+        const origin = st.myPosition || ctx.geometry.start;
+        renderWaypoints(st, computeGreenWaypoints(st, ctx, origin));
+
+        // Live player-anchored/rotated view when GPS is already active
+        // (it usually is — geolocation stays running across hole changes);
+        // otherwise fall back to the old whole-hole overview until the
+        // first fix arrives, at which point onPosition() switches over.
+        const followed = st.myPosition && applyFollowView(st, ctx, { force: true });
+        if (!followed) {
+            orientToPin(st, ctx);
+            if (boundsPts.length) {
+                st.map.fitBounds(L.latLngBounds(llFromPoints(boundsPts)), { padding: [30, 30], maxZoom: 20 });
+            }
         }
 
         refreshMeasure(st);
@@ -376,6 +634,12 @@
         if (!st.measureMarker && isWithinCourseRange(st, ctx)) {
             placeMeasureAtPin(st, ctx);
         }
+
+        if (st.followMode) {
+            applyFollowView(st, ctx);
+        }
+
+        renderWaypoints(st, computeGreenWaypoints(st, ctx, st.myPosition));
 
         refreshMeasure(st);
     }
@@ -511,8 +775,8 @@
                 icon: L.divIcon({
                     className: "gisMeasureLabel",
                     html: `<div class="gisMeasureLabel__text" data-gis-measure-label-text>${text}</div>`,
-                    iconSize: [60, 20],
-                    iconAnchor: [30, 10]
+                    iconSize: [96, 36],
+                    iconAnchor: [48, 18]
                 }),
                 interactive: false,
                 zIndexOffset: 1001
@@ -531,6 +795,7 @@
                 icon: measureIcon(),
                 zIndexOffset: 1000
             }).addTo(st.map);
+            st.measureMarker.on("dragstart", () => pauseFollow(st));
             st.measureMarker.on("drag", () => refreshMeasure(st));
             st.measureMarker.on("dragend", () => refreshMeasure(st));
         } else {
@@ -658,7 +923,15 @@
             <div class="gisControlsRow">
                 <div class="gisStatusText" data-gis-status></div>
             </div>
-            <div class="gisMapHost" data-gis-map-host></div>`;
+            <div class="gisMapRow">
+                <div class="gisWaypointCol" data-gis-waypoints></div>
+                <div class="gisMapWrap">
+                    <div class="gisMapHost" data-gis-map-host></div>
+                    <button type="button" class="gisRecenterBtn isHidden" data-gis-recenter-btn aria-label="Recenter on my position">Recenter</button>
+                </div>
+            </div>`;
+
+        st.hostEl.querySelector("[data-gis-recenter-btn]")?.addEventListener("click", () => resumeFollow(st));
 
         // The map is the last element in the card, so it can be stretched
         // down to the bottom of the viewport instead of leaving dead space
@@ -685,6 +958,15 @@
         st.layerGroup = L.layerGroup().addTo(st.map);
         st.map.on("click", (e) => onMeasureMapClick(st, e));
         st.map.on("rotate", () => onMapRotate(st));
+
+        // Manual gestures pause auto-follow. "dragstart" only ever fires for
+        // a user-driven pan (Leaflet's Draggable), so it needs no extra
+        // guard; "rotate"/"zoomstart" fire for both user gestures and our
+        // own programmatic setBearing()/setView() calls, so those are
+        // gated on the _programmaticUpdate flag set around applyFollowView().
+        st.map.on("dragstart", () => pauseFollow(st));
+        st.map.on("rotate", () => { if (!st._programmaticUpdate) pauseFollow(st); });
+        st.map.on("zoomstart", () => { if (!st._programmaticUpdate) pauseFollow(st); });
 
         startLocate(st);
 
