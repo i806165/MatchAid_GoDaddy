@@ -1,18 +1,21 @@
 /* /assets/modules/score_GISMap.js
  * MA.scoreGISMap — Leaflet-based OSM course GIS renderer.
  *
- * Host-owned responsibilities:
+ * Host-owned responsibilities (same split as score_entry.js/scoreentry_view.php):
  *   - course/game context
  *   - database/API acquisition
  *   - page chrome/navigation
  *   - loading Leaflet (assets/vendor/leaflet) before this module runs
+ *   - declaring the static Prev/Next/hole-<select> controls in
+ *     scoregis_view.php's .maControlArea band, and passing them into
+ *     mount() — this module wires behavior to them, it doesn't build them
  *
  * Module responsibilities:
  *   - parse/index OSM features
  *   - associate a numbered hole with nearby green/pin/tee/bunker geometry
  *   - render hole/green/pin/tee/bunker geometry as Leaflet overlays on
  *     satellite imagery
- *   - previous/next hole navigation
+ *   - previous/next/jump-to hole navigation, via the host's controls
  *
  * No live OSM/Overpass request is made here.
  */
@@ -42,8 +45,6 @@
         const style = document.createElement("style");
         style.id = STYLE_ID;
         style.textContent = `
-            .gisHoleNav{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-            .gisHoleNav__title{flex:1 1 auto;text-align:center;font-size:18px;font-weight:900}
             .gisControlsRow{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
             .gisStatusText{font-size:13px;font-weight:700;color:var(--mutedText)}
             .gisMapHost{width:100%;min-height:300px;border:1px solid var(--borderSubtle);border-radius:var(--radiusLg);overflow:hidden}
@@ -241,15 +242,6 @@
         return distanceMeters(st.myPosition, ref) <= MAX_ON_COURSE_METERS;
     }
 
-    function holeNavHtml(st) {
-        return `
-            <div class="gisHoleNav">
-                <button type="button" class="btn btnSecondary" data-gis-prev aria-label="Previous hole">‹</button>
-                <div class="gisHoleNav__title" data-gis-title>Hole ${st.selectedHole}</div>
-                <button type="button" class="btn btnSecondary" data-gis-next aria-label="Next hole">›</button>
-            </div>`;
-    }
-
     function yardsText(meters) {
         return Number.isFinite(meters) ? `${Math.round(meters * METERS_TO_YARDS)} yds` : "—";
     }
@@ -283,12 +275,6 @@
 
     function renderHole(st) {
         const ctx = resolveHoleContext(st, st.selectedHole);
-
-        const titleEl = st.hostEl.querySelector("[data-gis-title]");
-        if (titleEl) {
-            const par = ctx.hole ? tag(ctx.hole, "par") : "";
-            titleEl.textContent = `Hole ${st.selectedHole}${par ? ` • Par ${par}` : ""}`;
-        }
 
         st.layerGroup.clearLayers();
 
@@ -574,7 +560,38 @@
 
     function selectHole(st, holeNo) {
         st.selectedHole = Number(holeNo);
+        if (st.holeSelect) st.holeSelect.value = String(st.selectedHole);
         renderHole(st);
+    }
+
+    // Fills the host page's <select> with this course's actual traced holes
+    // (from OSM data), not a fixed 1-18/F9/B9 range — a course trace can be
+    // missing holes or numbered differently than the game's format.
+    function populateHoleSelect(st) {
+        if (!st.holeSelect) return;
+
+        st.holeSelect.innerHTML = "";
+        availableHoleNumbers(st).forEach((h) => {
+            const opt = document.createElement("option");
+            opt.value = String(h);
+            opt.textContent = String(h);
+            if (h === st.selectedHole) opt.selected = true;
+            st.holeSelect.appendChild(opt);
+        });
+    }
+
+    // Binds the host page's Prev/Next buttons + hole <select> once — they're
+    // static elements owned by scoregis_view.php, not rebuilt per render.
+    function wireExternalControls(st) {
+        if (st._controlsBound) return;
+        st._controlsBound = true;
+
+        st.prevBtn?.addEventListener("click", () => previousHole(st));
+        st.nextBtn?.addEventListener("click", () => nextHole(st));
+        st.holeSelect?.addEventListener("change", (e) => {
+            const h = parseInt(e.target.value, 10);
+            if (Number.isInteger(h)) selectHole(st, h);
+        });
     }
 
     function previousHole(st) {
@@ -631,14 +648,10 @@
         clearTimeout(st._rotateSettleTimer);
 
         st.hostEl.innerHTML = `
-            ${holeNavHtml(st)}
             <div class="gisControlsRow">
                 <div class="gisStatusText" data-gis-status></div>
             </div>
             <div class="gisMapHost" data-gis-map-host></div>`;
-
-        st.hostEl.querySelector("[data-gis-prev]")?.addEventListener("click", () => previousHole(st));
-        st.hostEl.querySelector("[data-gis-next]")?.addEventListener("click", () => nextHole(st));
 
         // The map is the last element in the card, so it can be stretched
         // down to the bottom of the viewport instead of leaving dead space
@@ -701,11 +714,23 @@
         st.features = indexFeatures(st.osm.elements);
         st.holeIndex = buildHoleIndex(st.features.holes);
 
+        // Static controls owned by the host page (scoregis_view.php) — same
+        // split as score_entry.js: PHP declares the shell, this module wires
+        // behavior to it instead of building its own hole-nav markup.
+        st.controlArea = cfg.controlArea || null;
+        st.prevBtn = cfg.prevBtn || null;
+        st.nextBtn = cfg.nextBtn || null;
+        st.holeSelect = cfg.holeSelect || null;
+
         const requested = Number(cfg.hole || 1);
         const available = availableHoleNumbers(st);
         st.selectedHole = st.holeIndex.has(requested) ? requested : (available[0] || 1);
 
+        populateHoleSelect(st);
+        wireExternalControls(st);
         renderShell(st);
+
+        st.controlArea?.classList.remove("isHidden");
     }
 
     MA.scoreGISMap.mount = mount;

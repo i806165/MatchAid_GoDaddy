@@ -76,9 +76,7 @@ $maChromeLogoUrl = null;
 
 <?php include __DIR__ . "/../../includes/chromeHeader.php"; ?>
 
-<main class="maPage" role="main">
-    <?php include __DIR__ . "/scoregis_view.php"; ?>
-</main>
+<?php include __DIR__ . "/scoregis_view.php"; ?>
 
 <?php include __DIR__ . "/../../includes/chromeFooter.php"; ?>
 

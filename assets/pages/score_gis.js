@@ -11,7 +11,11 @@
     const postJson = typeof MA.postJson === "function" ? MA.postJson : null;
 
     const el = {
-        moduleHost: document.getElementById("scoreGisModuleHost")
+        moduleHost: document.getElementById("scoreGisModuleHost"),
+        controlArea: document.getElementById("gisControlArea"),
+        prevHoleBtn: document.getElementById("gisPrevHoleBtn"),
+        nextHoleBtn: document.getElementById("gisNextHoleBtn"),
+        holeSelect: document.getElementById("gisHoleSelect")
     };
 
     const state = {
@@ -105,7 +109,11 @@
             course: payload.course || {},
             game: state.game,
             osmData: payload.osmData,
-            hole: 1
+            hole: 1,
+            controlArea: el.controlArea,
+            prevBtn: el.prevHoleBtn,
+            nextBtn: el.nextHoleBtn,
+            holeSelect: el.holeSelect
         });
     }
 

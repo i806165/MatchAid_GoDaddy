@@ -358,6 +358,80 @@ textarea {
   border-radius: var(--radiusLg);
 }
 
+/* Bare modifier — same flex/positioning role as .maControlArea (pinned
+   above .maPage) without the bordered "panel" look, for pages like
+   score_gis where every pixel of vertical space matters and a single
+   hole-nav row doesn't need its own boxed chrome the way score_entry's
+   busier control area (with its Scores/Side Games tabs) does. */
+.maControlArea--bare {
+  padding: 6px 0 0 0;
+  margin: 0 var(--spaceMd) 6px var(--spaceMd);
+  background: transparent;
+  border: none;
+}
+
+/* Hole nav (pinned in .maControlArea) — shared by score_entry and score_gis. */
+.scoreHoleNavInner{
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(72px, 1fr) minmax(72px, 96px) minmax(72px, 1fr);
+  justify-content: center;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.scoreHoleNavInner > .btn{
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  height: 46px;
+  padding-left: 8px;
+  padding-right: 8px;
+  box-sizing: border-box;
+}
+
+.scoreHoleSelect{
+  width: 100%;
+  min-width: 0;
+  max-width: 96px;
+  min-height: 46px;
+  height: 46px;
+  padding-left: 8px;
+  padding-right: 24px;
+  text-align: center;
+  text-align-last: center;
+  justify-self: center;
+  font-size: clamp(22px, 7vw, 32px) !important;
+  font-weight: 900;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px){
+  .scoreHoleNavInner{
+    max-width: 100%;
+    grid-template-columns: minmax(58px, 1fr) minmax(64px, 106px) minmax(58px, 1fr);
+    gap: 8px;
+  }
+
+  .scoreHoleSelect{
+    max-width: 106px;
+    min-height: 48px;
+    height: 48px;
+    padding-left: 8px;
+    padding-right: 22px;
+    font-size: clamp(22px, 7vw, 32px) !important;
+  }
+
+  .scoreHoleNavInner > .btn{
+    min-height: 48px;
+    height: 48px;
+  }
+}
+
 /* Prevent underlying page scroll when an overlay is open */
 .maOverlayOpen .maPage {
   overflow: hidden;

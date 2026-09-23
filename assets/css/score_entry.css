@@ -68,45 +68,7 @@
   min-width: 0;
 }
 
-/* Hole nav (pinned in .maControlArea) */
-.scoreHoleNavInner{
-  width: 100%;
-  max-width: 360px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: minmax(72px, 1fr) minmax(72px, 96px) minmax(72px, 1fr);
-  justify-content: center;
-  gap: 8px;
-  align-items: center;
-  min-width: 0;
-  box-sizing: border-box;
-}
-
-.scoreHoleNavInner > .btn{
-  width: 100%;
-  min-width: 0;
-  min-height: 46px;
-  height: 46px;
-  padding-left: 8px;
-  padding-right: 8px;
-  box-sizing: border-box;
-}
-
-.scoreHoleSelect{
-  width: 100%;
-  min-width: 0;
-  max-width: 96px;
-  min-height: 46px;
-  height: 46px;
-  padding-left: 8px;
-  padding-right: 24px;
-  text-align: center;
-  text-align-last: center;
-  justify-self: center;
-  font-size: clamp(22px, 7vw, 32px) !important;
-  font-weight: 900;
-  box-sizing: border-box;
-}
+/* Hole nav base rules moved to ma_shared.css — shared with score_gis.js now. */
 
 /* Scores | Side Bets switch, under the hole nav in the control area */
 .scoreViewTabs{
@@ -413,25 +375,7 @@
     grid-template-columns: 1fr;
   }
 
-  .scoreHoleNavInner{
-    max-width: 100%;
-    grid-template-columns: minmax(58px, 1fr) minmax(64px, 106px) minmax(58px, 1fr);
-    gap: 8px;
-  }
-
-  .scoreHoleSelect{
-    max-width: 106px;
-    min-height: 48px;
-    height: 48px;
-    padding-left: 8px;
-    padding-right: 22px;
-    font-size: clamp(22px, 7vw, 32px) !important;
-  }
-
-  .scoreHoleNavInner > .btn{
-    min-height: 48px;
-    height: 48px;
-  }
+  /* Hole nav mobile overrides moved to ma_shared.css. */
 
   .scorePlayerRow{
     padding: 8px 10px 6px 6px;
