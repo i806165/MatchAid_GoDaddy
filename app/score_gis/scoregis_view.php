@@ -4,10 +4,6 @@
 
 <div class="maCards">
     <section class="maCard" aria-label="Course GPS">
-        <div class="maCard__hdr">
-            <div class="maCard__title">COURSE GPS</div>
-        </div>
-
         <div class="maCard__body">
             <div id="scoreGisModuleHost"></div>
         </div>
