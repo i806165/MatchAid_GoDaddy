@@ -450,23 +450,25 @@
 
     const ROTATE_SETTLE_MS = 150;
 
-    // leaflet-rotate keeps tiles + our polylines/polygons/circleMarker dots
-    // perfectly in sync during rotation (they share the rotated pane's CSS
-    // transform for free). Regular L.marker icons don't get that — they live
-    // in a separate non-rotating pane and are only repositioned when the
-    // plugin's "rotate" event fires, which can visibly lag a frame behind
-    // during a fast continuous twist gesture. The orange measure marker and
-    // its yardage label are the only L.marker-based layers we have, so hide
-    // just those while rotation is actively firing, and reveal them once the
-    // gesture settles (their position is already correct by then).
+    // In practice, every overlay we draw (hole outline, green/bunker/tee
+    // shapes, the position/pin/measure dots, and the measure line + label)
+    // visibly lags during an active rotate gesture and snaps to its correct
+    // spot once rotation stops — regardless of layer type. Rather than chase
+    // per-layer timing inside the plugin, hide the two whole Leaflet panes
+    // that hold all of it (overlayPane: paths/polygons/circleMarkers,
+    // markerPane: the L.marker-based measure dot + label) while "rotate"
+    // events are firing in a burst, and reveal both once the gesture
+    // settles, by which point everything has already snapped into place.
     function onMapRotate(st) {
-        st.measureMarker?.setOpacity(0);
-        st.measureLabel?.setOpacity(0);
+        const overlayPane = st.map.getPane("overlayPane");
+        const markerPane = st.map.getPane("markerPane");
+        if (overlayPane) overlayPane.style.opacity = "0";
+        if (markerPane) markerPane.style.opacity = "0";
 
         clearTimeout(st._rotateSettleTimer);
         st._rotateSettleTimer = setTimeout(() => {
-            st.measureMarker?.setOpacity(1);
-            st.measureLabel?.setOpacity(1);
+            if (overlayPane) overlayPane.style.opacity = "1";
+            if (markerPane) markerPane.style.opacity = "1";
         }, ROTATE_SETTLE_MS);
     }
 
