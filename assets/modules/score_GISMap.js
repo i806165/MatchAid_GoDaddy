@@ -448,7 +448,7 @@
         return ctx.geometry?.start || null;
     }
 
-    const ROTATE_SETTLE_MS = 150;
+    const ROTATE_SETTLE_MS = 250;
 
     // In practice, every overlay we draw (hole outline, green/bunker/tee
     // shapes, the position/pin/measure dots, and the measure line + label)
