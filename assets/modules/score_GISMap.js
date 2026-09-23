@@ -448,6 +448,28 @@
         return ctx.geometry?.start || null;
     }
 
+    const ROTATE_SETTLE_MS = 150;
+
+    // leaflet-rotate keeps tiles + our polylines/polygons/circleMarker dots
+    // perfectly in sync during rotation (they share the rotated pane's CSS
+    // transform for free). Regular L.marker icons don't get that — they live
+    // in a separate non-rotating pane and are only repositioned when the
+    // plugin's "rotate" event fires, which can visibly lag a frame behind
+    // during a fast continuous twist gesture. The orange measure marker and
+    // its yardage label are the only L.marker-based layers we have, so hide
+    // just those while rotation is actively firing, and reveal them once the
+    // gesture settles (their position is already correct by then).
+    function onMapRotate(st) {
+        st.measureMarker?.setOpacity(0);
+        st.measureLabel?.setOpacity(0);
+
+        clearTimeout(st._rotateSettleTimer);
+        st._rotateSettleTimer = setTimeout(() => {
+            st.measureMarker?.setOpacity(1);
+            st.measureLabel?.setOpacity(1);
+        }, ROTATE_SETTLE_MS);
+    }
+
     // Re-evaluates the range gate and redraws the on-map line/label. No text
     // readout anymore — the on-map marker/line/label are the only feedback.
     function refreshMeasure(st) {
@@ -604,6 +626,7 @@
         st.measureMarker = null;
         st.measureLine = null;
         st.measureLabel = null;
+        clearTimeout(st._rotateSettleTimer);
 
         st.hostEl.innerHTML = `
             ${holeNavHtml(st)}
@@ -639,6 +662,7 @@
         L.tileLayer(TILE_URL, { maxZoom: 21, attribution: TILE_ATTRIBUTION }).addTo(st.map);
         st.layerGroup = L.layerGroup().addTo(st.map);
         st.map.on("click", (e) => onMeasureMapClick(st, e));
+        st.map.on("rotate", () => onMapRotate(st));
 
         startLocate(st);
 
