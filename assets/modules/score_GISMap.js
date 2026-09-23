@@ -614,6 +614,12 @@
             touchRotate: true,
             bearing: 0
         });
+        // leaflet-rotate's fitBounds path needs the map to already have a
+        // view (it calls getPixelOrigin(), which throws pre-setView) —
+        // vanilla Leaflet tolerates fitBounds() on a viewless map, this
+        // plugin doesn't. This is overwritten by the real fitBounds() call
+        // in renderHole() before anything paints.
+        st.map.setView([0, 0], 2);
         L.tileLayer(TILE_URL, { maxZoom: 21, attribution: TILE_ATTRIBUTION }).addTo(st.map);
         st.layerGroup = L.layerGroup().addTo(st.map);
         st.map.on("click", (e) => onMeasureMapClick(st, e));
