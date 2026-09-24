@@ -133,6 +133,15 @@
     return "";
   }
 
+  function _isErrorRow(row) { return !row.selectable && row.status !== "enrolled"; }
+
+  // Visible reason under an unresolved row — the icon's aria-label alone
+  // leaves sighted users with no explanation.
+  function _rowError(row) {
+    if (!_isErrorRow(row) || !row.errorReason) return "";
+    return `<div class="maListRow__subline" style="color:var(--danger);">${esc(row.errorReason)}</div>`;
+  }
+
   // ═══════════════════════════════════════════════════════════════════════════
   // RENDER — controls / body / footer
   //
@@ -303,12 +312,24 @@
         <div class="maCheckbox maCheckbox--accent ${r.checked ? "is-checked" : ""} ${!r.selectable ? "is-disabled" : ""}"></div>
         <div style="min-width:0;">
           <div class="maListRow__col">${_rowLabel(r)}</div>
+          ${_rowError(r)}
         </div>
         <div></div>
         ${_rowIcon(r)}
       </div>`).join("");
 
     bodyEl.innerHTML = toggleBand + `<div class="maListRows">${rows || `<div class="maEmptyState">No rows evaluated.</div>`}</div>`;
+
+    // Summary band — re-applied on every render, since each checkbox click
+    // rewrites bodyEl.innerHTML and wipes it. Leaving review (Back, Import,
+    // tab-away) re-renders bodyEl the same way, so no explicit hide needed.
+    const errorCount = st.reviewRows.filter(_isErrorRow).length;
+    if (errorCount && MA.ui && typeof MA.ui.showModalNotice === "function") {
+      MA.ui.showModalNotice(bodyEl, {
+        message: `${okRows.length} ready · ${errorCount} couldn't be resolved`,
+        tone: "warn",
+      });
+    }
 
     const toggleAllBtn = bodyEl.querySelector("#ipsToggleAll");
     if (toggleAllBtn) toggleAllBtn.addEventListener("click", () => {
@@ -384,32 +405,23 @@
       return;
     }
 
-    const unknown    = parsed.filter(p => p.type === "unknown");
+    // Unrecognized tokens never reach the server — they become error rows on
+    // the review screen, in paste order, alongside every other failure.
     const actionable = parsed.filter(p => p.type === "ghin" || p.type === "email");
-
-    if (unknown.length) {
-      notify(`${unknown.length} unrecognized entr${unknown.length === 1 ? "y" : "ies"} will be skipped.`, "warn");
-    }
-    if (!actionable.length) {
-      notify("No valid Golf Network numbers or email addresses found.", "warn");
-      return;
-    }
 
     st.busy = true;
     _renderAll(st);
 
     try {
-      // Step 1 — Favorites-first resolution for BOTH token types.
-      let resolved = [];
-      if (st.paths.resolveIdentifiers) {
+      // Step 1 — Favorites-first resolution for BOTH token types. Results are
+      // keyed on the raw token (unique per parse — the parser dedups on value)
+      // so review rows can be rebuilt in the order the admin pasted them.
+      // Anything absent from "resolved" is treated as unresolved below.
+      const resolvedByRaw = new Map();
+      if (actionable.length && st.paths.resolveIdentifiers) {
         const res = await MA.postJson(st.paths.resolveIdentifiers, { identifiers: actionable });
-        if (res?.ok) {
-          resolved = res.resolved || [];
-          const unresolved = res.unresolved || [];
-          if (unresolved.length) {
-            notify(`${unresolved.length} entr${unresolved.length === 1 ? "y" : "ies"} could not be matched to a Favorites email.`, "warn");
-          }
-        }
+        if (!res?.ok) throw new Error(res?.message || "Resolve failed");
+        (res.resolved || []).forEach(item => resolvedByRaw.set(safe(item.input), item));
       }
 
       // Step 2 — live GHIN lookup fallback, only for rows Favorites had no name for.
@@ -419,18 +431,43 @@
       const seen = new Set();
       const rows = [];
 
-      for (const item of resolved) {
-        const ghin = safe(item.ghin);
+      for (const tok of parsed) {
+        const raw = safe(tok.raw);
         const row = {
-          ghin,
-          name: safe(item.name),
-          gender: safe(item.gender),
-          rawDisplay: item.type === "email" ? safe(item.input) : safe(ghin || item.input),
+          ghin: "",
+          name: "",
+          gender: "",
+          rawDisplay: raw,
           status: "",
           selectable: false,
           checked: false,
           errorReason: "",
         };
+
+        if (tok.type === "unknown") {
+          row.status = "invalid";
+          row.errorReason = "Not a Golf Network ID or email address";
+          rows.push(row);
+          continue;
+        }
+
+        // A GHIN token always has an identity even without a Favorites hit;
+        // an email token only has one if Favorites matched it.
+        const item = resolvedByRaw.get(raw)
+          || (tok.type === "ghin" ? { type: "ghin", ghin: tok.value } : null);
+
+        if (!item) {
+          row.status = "notfound";
+          row.errorReason = "Email not found in Favorites";
+          rows.push(row);
+          continue;
+        }
+
+        const ghin = safe(item.ghin);
+        row.ghin       = ghin;
+        row.name       = safe(item.name);
+        row.gender     = safe(item.gender);
+        row.rawDisplay = item.type === "email" ? raw : safe(ghin || raw);
 
         if (!ghin) {
           row.status = "notfound";
