@@ -70,8 +70,11 @@ final class ServiceWind
     // Centroid of every hole/tee/green node in the course's stored OSM data
     // — reuses data already collected for GIS play instead of a separate
     // geocode, and is specific to the actual course rather than a city-level
-    // approximation. Same golf=hole|tee|green filter score_GISMap.js applies
-    // client-side, done here server-side against the raw elements.
+    // approximation. Mirrors score_GISMap.js's geometryPoints() exactly,
+    // including the "nodes": [id,...] case (a way referencing separate
+    // "type":"node" elements elsewhere in the same response, rather than
+    // carrying inline geometry) — Overpass's default "out body" shape, and
+    // the one real course data has turned out to use.
     private static function resolveCourseCoordinate(string $courseId): ?array
     {
         $row = ServiceDbCourseOSM::getByCourseId($courseId);
@@ -80,6 +83,13 @@ final class ServiceWind
         $osm = json_decode((string)($row["dbCourseOSM_Data"] ?? ""), true);
         $elements = is_array($osm["elements"] ?? null) ? $osm["elements"] : [];
         if (!$elements) return null;
+
+        $nodeIndex = [];
+        foreach ($elements as $el) {
+            if (($el["type"] ?? "") === "node" && isset($el["id"], $el["lat"], $el["lon"])) {
+                $nodeIndex[(int)$el["id"]] = [(float)$el["lat"], (float)$el["lon"]];
+            }
+        }
 
         $latSum = 0.0;
         $lonSum = 0.0;
@@ -90,19 +100,23 @@ final class ServiceWind
             if (!in_array($golf, ["hole", "tee", "green"], true)) continue;
 
             $points = [];
-            if (isset($el["lat"], $el["lon"])) {
-                $points[] = [$el["lat"], $el["lon"]];
-            } elseif (is_array($el["geometry"] ?? null)) {
+            if (is_array($el["geometry"] ?? null)) {
                 foreach ($el["geometry"] as $p) {
-                    if (isset($p["lat"], $p["lon"])) $points[] = [$p["lat"], $p["lon"]];
+                    if (isset($p["lat"], $p["lon"])) $points[] = [(float)$p["lat"], (float)$p["lon"]];
                 }
+            } elseif (is_array($el["nodes"] ?? null)) {
+                foreach ($el["nodes"] as $nid) {
+                    if (isset($nodeIndex[(int)$nid])) $points[] = $nodeIndex[(int)$nid];
+                }
+            } elseif (($el["type"] ?? "") === "node" && isset($el["lat"], $el["lon"])) {
+                $points[] = [(float)$el["lat"], (float)$el["lon"]];
             } elseif (isset($el["center"]["lat"], $el["center"]["lon"])) {
-                $points[] = [$el["center"]["lat"], $el["center"]["lon"]];
+                $points[] = [(float)$el["center"]["lat"], (float)$el["center"]["lon"]];
             }
 
             foreach ($points as [$plat, $plon]) {
-                $latSum += (float)$plat;
-                $lonSum += (float)$plon;
+                $latSum += $plat;
+                $lonSum += $plon;
                 $count++;
             }
         }
