@@ -47,19 +47,24 @@
         style.textContent = `
             .gisControlsRow{display:flex;align-items:center;gap:10px;flex:0 0 auto;padding:4px var(--spaceMd) 0 var(--spaceMd);margin-bottom:8px;flex-wrap:wrap}
             .gisStatusText{font-size:13px;font-weight:700;color:var(--mutedText)}
-            .gisMapRow{display:flex;gap:8px;align-items:stretch;flex:1 1 auto;min-height:0}
-            .gisWaypointCol{display:flex;flex-direction:column;justify-content:space-between;flex:0 0 92px;max-width:92px}
-            .gisWaypointRow{padding:6px 2px;border-bottom:1px solid var(--borderSubtle)}
-            .gisWaypointRow:last-child{border-bottom:none}
+            .gisMapStack{display:flex;flex-direction:column;gap:6px;flex:1 1 auto;min-height:0}
+            .gisWaypointBar{display:flex;flex-direction:row;flex:0 0 auto;padding:0 var(--spaceMd)}
+            .gisWaypointCell{flex:1 1 0;padding:4px 6px;text-align:center;border-right:1px solid var(--borderSubtle)}
+            .gisWaypointCell:last-child{border-right:none}
             .gisWaypointLabel{font-size:10px;font-weight:700;color:var(--mutedText);text-transform:uppercase;letter-spacing:.03em}
             .gisWaypointValue{font-size:26px;font-weight:900;line-height:1.15;color:#111}
-            .gisWaypointRow--primary .gisWaypointLabel,.gisWaypointRow--primary .gisWaypointValue{color:#2e7d32}
+            .gisWaypointCell--primary .gisWaypointLabel,.gisWaypointCell--primary .gisWaypointValue{color:#2e7d32}
             .gisMapWrap{position:relative;flex:1;min-width:0;min-height:0}
             .gisMapHost{width:100%;height:100%;min-height:300px;overflow:hidden}
             .gisMeasureIcon__dot{width:22px;height:22px;border-radius:50%;background:#ff8f00;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5);cursor:grab}
             .gisMeasureLabel__text{display:inline-block;white-space:nowrap;background:#fff;padding:4px 12px;border-radius:14px;border:2px solid #ff8f00;font-weight:900;font-size:22px;color:#e65100;box-shadow:0 1px 4px rgba(0,0,0,.4)}
             .gisRecenterCtl.isHidden{display:none}
-            .gisRecenterCtl__btn{display:flex;align-items:center;justify-content:center;width:100%;height:100%;color:#1565c0}
+            /* !important beats Leaflet's own .leaflet-bar a / .leaflet-touch
+               .leaflet-bar a rules (higher specificity: class+element, and
+               class+class+element on touch devices) that would otherwise
+               force display:block and a fixed 26-30px box, leaving our icon
+               unstyled by the flex-centering below. */
+            .gisRecenterCtl__btn{display:flex !important;align-items:center;justify-content:center;width:30px !important;height:30px !important;color:#1565c0}
         `;
         document.head.appendChild(style);
     }
@@ -402,23 +407,21 @@
         return { front, middle: (front + back) / 2, back };
     }
 
-    // Renders the left-hand waypoint column. Back-on-top/front-on-bottom
-    // mirrors the on-screen spatial layout (target at the top of the
-    // rotated map, player at the bottom).
+    // Renders the horizontal waypoint bar above the map.
     function renderWaypoints(st, wp) {
-        const col = st.hostEl.querySelector("[data-gis-waypoints]");
-        if (!col) return;
+        const bar = st.hostEl.querySelector("[data-gis-waypoints]");
+        if (!bar) return;
 
-        const rows = [
+        const cells = [
             { label: "Green Back", value: wp?.back },
             { label: "Green Center", value: wp?.middle, primary: true },
             { label: "Green Front", value: wp?.front }
         ];
 
-        col.innerHTML = rows.map((r) => `
-            <div class="gisWaypointRow${r.primary ? " gisWaypointRow--primary" : ""}">
-                <div class="gisWaypointLabel">${r.label}</div>
-                <div class="gisWaypointValue">${Number.isFinite(r.value) ? Math.round(r.value * METERS_TO_YARDS) : "—"}</div>
+        bar.innerHTML = cells.map((c) => `
+            <div class="gisWaypointCell${c.primary ? " gisWaypointCell--primary" : ""}">
+                <div class="gisWaypointLabel">${c.label}</div>
+                <div class="gisWaypointValue">${Number.isFinite(c.value) ? Math.round(c.value * METERS_TO_YARDS) : "—"}</div>
             </div>
         `).join("");
     }
@@ -951,8 +954,8 @@
             <div class="gisControlsRow">
                 <div class="gisStatusText" data-gis-status></div>
             </div>
-            <div class="gisMapRow">
-                <div class="gisWaypointCol" data-gis-waypoints></div>
+            <div class="gisMapStack">
+                <div class="gisWaypointBar" data-gis-waypoints></div>
                 <div class="gisMapWrap">
                     <div class="gisMapHost" data-gis-map-host></div>
                 </div>
