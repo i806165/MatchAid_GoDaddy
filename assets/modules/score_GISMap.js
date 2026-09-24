@@ -421,9 +421,16 @@
     function renderWindBadge(st) {
         if (!st.windBadge || !st.wind) return;
 
+        // Reads the map's ACTUAL current bearing rather than whichever
+        // variable our own follow/orient code last set — that tracked value
+        // never gets updated by a manual touch-rotate gesture, since that
+        // goes straight through leaflet-rotate's own gesture handler.
+        // screenBearing() is its own inverse, so applying it to the map's
+        // (screen-convention) bearing recovers our world-bearing convention.
+        const liveBearing = st.map.getBearing ? screenBearing(st.map.getBearing()) : (st._lastFramedBearing || 0);
+
         const blowingToward = (st.wind.windDirectionDeg + 180) % 360;
-        const aimBearing = st._lastFramedBearing || 0;
-        const relative = ((blowingToward - aimBearing) % 360 + 360) % 360;
+        const relative = ((blowingToward - liveBearing) % 360 + 360) % 360;
 
         const arrow = st.windBadge.querySelector("[data-gis-wind-arrow]");
         if (arrow) arrow.style.transform = `rotate(${relative}deg)`;
@@ -508,13 +515,10 @@
             || ctx.geometry?.end;
 
         const bearing = (from && to) ? bearingDegrees(from, to) : 0;
+        // setBearing() fires the map's own "rotate" event synchronously,
+        // which re-renders the wind badge (onMapRotate) — no separate call
+        // needed here.
         st.map.setBearing(screenBearing(bearing));
-
-        // Shared with applyFollowView's own bearing bookkeeping — this is
-        // "whatever bearing currently means screen-up," used by the wind
-        // badge to draw its arrow relative to the shot line either way.
-        st._lastFramedBearing = bearing;
-        renderWindBadge(st);
     }
 
     // Player-anchored "you are here" framing: rotates so the live
@@ -568,7 +572,8 @@
 
         st._lastFramedPos = { lat: st.myPosition.lat, lon: st.myPosition.lon };
         st._lastFramedBearing = bearing;
-        renderWindBadge(st);
+        // setBearing() above already fired "rotate" synchronously, which
+        // re-renders the wind badge (onMapRotate) — no separate call needed.
         return true;
     }
 
@@ -802,6 +807,14 @@
             if (overlayPane) overlayPane.style.opacity = "1";
             if (markerPane) markerPane.style.opacity = "1";
         }, ROTATE_SETTLE_MS);
+
+        // "rotate" fires for every bearing change regardless of source —
+        // programmatic (applyFollowView/orientToPin) or a manual touch-rotate
+        // gesture, which never goes through our own code at all. Re-reading
+        // the map's live bearing here (rather than relying on whichever
+        // variable our own code last set) is what keeps the badge correct
+        // through a manual rotate.
+        renderWindBadge(st);
     }
 
     // Re-evaluates the range gate and redraws the on-map line/label. No text
