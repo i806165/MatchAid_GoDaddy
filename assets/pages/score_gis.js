@@ -117,6 +117,59 @@
         });
     }
 
+    // Wind is course-wide, not per-hole — polled independently of hole
+    // navigation on its own timer, matching the server's own short cache
+    // TTL (no point polling faster than the shared cache actually refreshes).
+    const WIND_POLL_MS = 4 * 60 * 1000;
+    let windTimer = null;
+
+    async function loadCourseWind() {
+        const apiUrl = MA.paths?.apiCourseWind || "/api/score_gis/getCourseWind.php";
+
+        if (postJson) {
+            return postJson(apiUrl, {
+                payload: { courseId: state.courseId }
+            });
+        }
+
+        const response = await fetch(`${apiUrl}?courseId=${encodeURIComponent(state.courseId)}`, {
+            credentials: "same-origin"
+        });
+        return response.json();
+    }
+
+    // Wind is a nice-to-have overlay, not core to the page — a failed or
+    // unavailable fetch just means the badge stays hidden, never a page
+    // error or a notification the golfer has to dismiss.
+    function pollWind() {
+        loadCourseWind()
+            .then((result) => {
+                if (result?.ok && MA.scoreGISMap?.updateWind) {
+                    MA.scoreGISMap.updateWind(el.moduleHost, result.wind);
+                }
+            })
+            .catch((err) => console.warn("[SCORE_GIS] wind poll failed", err));
+    }
+
+    // Phones lock screens constantly between shots — pausing the interval
+    // while the tab/page isn't visible avoids wasted battery/network for a
+    // page nobody's looking at, and refreshes immediately on waking up.
+    function onWindVisibilityChange() {
+        if (document.hidden) {
+            clearInterval(windTimer);
+            windTimer = null;
+            return;
+        }
+        pollWind();
+        if (!windTimer) windTimer = setInterval(pollWind, WIND_POLL_MS);
+    }
+
+    function startWindPolling() {
+        pollWind();
+        windTimer = setInterval(pollWind, WIND_POLL_MS);
+        document.addEventListener("visibilitychange", onWindVisibilityChange);
+    }
+
     async function boot() {
         applyChrome("");
 
@@ -139,6 +192,7 @@
         state.payload = payload;
         applyChrome(payload.course?.courseName || "");
         mountMap(payload);
+        startWindPolling();
     }
 
     boot().catch((err) => {

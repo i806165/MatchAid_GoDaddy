@@ -51,7 +51,8 @@ $initPayload = [
 
 $paths = [
     "routerApi" => MA_ROUTE_API_ROUTER,
-    "apiCourseOSM" => MA_ROUTE_API_SCORE_GIS . "/getCourseOSM.php"
+    "apiCourseOSM" => MA_ROUTE_API_SCORE_GIS . "/getCourseOSM.php",
+    "apiCourseWind" => MA_ROUTE_API_SCORE_GIS . "/getCourseWind.php"
 ];
 
 $maChromeTitle = "Play with GPS";

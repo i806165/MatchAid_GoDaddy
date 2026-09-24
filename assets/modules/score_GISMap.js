@@ -63,6 +63,11 @@
                force display:block and a fixed 26-30px box, leaving our icon
                unstyled by the flex-centering below. */
             .gisRecenterCtl__btn{display:flex !important;align-items:center;justify-content:center;width:30px !important;height:30px !important;color:#1565c0}
+            .gisWindBadge{position:absolute;top:16px;right:14px;z-index:1000;background:#fff;border-radius:14px;box-shadow:0 1px 5px rgba(0,0,0,.5);padding:8px 12px;display:flex;align-items:center;gap:8px}
+            .gisWindBadge.isHidden{display:none}
+            .gisWindBadge [data-gis-wind-arrow]{transition:transform .3s ease;flex:0 0 auto}
+            .gisWindBadge__speed{font-size:18px;font-weight:900;line-height:1;color:#111}
+            .gisWindBadge__unit{font-size:11px;font-weight:700;color:var(--mutedText);margin-left:2px}
         `;
         document.head.appendChild(style);
     }
@@ -405,6 +410,60 @@
         return { front, middle: (front + back) / 2, back };
     }
 
+    // Draws/updates the wind badge overlay (top-right of the map). The arrow
+    // is rotated relative to the CURRENT screen-up direction (whatever
+    // bearing orientToPin()/applyFollowView() last set), not true north —
+    // since the map itself is continuously re-rotated to point at the
+    // target, the badge is a plain fixed-position DOM overlay outside the
+    // rotated Leaflet panes, so it has to do its own counter-rotation to
+    // stay meaningful relative to the shot line (0deg = wind helping,
+    // 180deg = wind into, matching how a golfer actually thinks about it).
+    function renderWindBadge(st) {
+        if (!st.windBadge || !st.wind) return;
+
+        const blowingToward = (st.wind.windDirectionDeg + 180) % 360;
+        const aimBearing = st._lastFramedBearing || 0;
+        const relative = ((blowingToward - aimBearing) % 360 + 360) % 360;
+
+        const arrow = st.windBadge.querySelector("[data-gis-wind-arrow]");
+        if (arrow) arrow.style.transform = `rotate(${relative}deg)`;
+
+        const speedEl = st.windBadge.querySelector("[data-gis-wind-speed]");
+        if (speedEl) speedEl.textContent = Math.round(st.wind.windSpeedMph);
+    }
+
+    // Public: score_gis.js owns fetching (polling on its own timer,
+    // independent of hole changes — wind is course-wide, not per-hole) and
+    // hands the result here to render. A falsy `wind` hides the badge
+    // instead of showing a stale/placeholder value.
+    function updateWind(hostEl, wind) {
+        const st = _states.get(hostEl);
+        if (!st || !st.map) return;
+
+        st.wind = wind || null;
+
+        if (!st.wind) {
+            if (st.windBadge) st.windBadge.classList.add("isHidden");
+            return;
+        }
+
+        if (!st.windBadge) {
+            st.windBadge = document.createElement("div");
+            st.windBadge.className = "gisWindBadge";
+            st.windBadge.innerHTML = `
+                <svg viewBox="0 0 24 24" width="22" height="22" data-gis-wind-arrow>
+                    <path d="M12 2 L12 20 M12 2 L7 8 M12 2 L17 8" stroke="#1565c0" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+                <div class="gisWindBadge__speed"><span data-gis-wind-speed></span><span class="gisWindBadge__unit">mph</span></div>
+            `;
+            const mapWrap = st.hostEl.querySelector(".gisMapWrap");
+            (mapWrap || st.hostEl).appendChild(st.windBadge);
+        }
+
+        st.windBadge.classList.remove("isHidden");
+        renderWindBadge(st);
+    }
+
     // Renders the horizontal waypoint bar above the map.
     function renderWaypoints(st, wp) {
         const bar = st.hostEl.querySelector("[data-gis-waypoints]");
@@ -448,7 +507,14 @@
             || (ctx.green?.feature && featureCenter(ctx.green.feature, st.nodeIndex))
             || ctx.geometry?.end;
 
-        st.map.setBearing((from && to) ? screenBearing(bearingDegrees(from, to)) : 0);
+        const bearing = (from && to) ? bearingDegrees(from, to) : 0;
+        st.map.setBearing(screenBearing(bearing));
+
+        // Shared with applyFollowView's own bearing bookkeeping — this is
+        // "whatever bearing currently means screen-up," used by the wind
+        // badge to draw its arrow relative to the shot line either way.
+        st._lastFramedBearing = bearing;
+        renderWindBadge(st);
     }
 
     // Player-anchored "you are here" framing: rotates so the live
@@ -502,6 +568,7 @@
 
         st._lastFramedPos = { lat: st.myPosition.lat, lon: st.myPosition.lon };
         st._lastFramedBearing = bearing;
+        renderWindBadge(st);
         return true;
     }
 
@@ -1045,4 +1112,5 @@
     }
 
     MA.scoreGISMap.mount = mount;
+    MA.scoreGISMap.updateWind = updateWind;
 })();
