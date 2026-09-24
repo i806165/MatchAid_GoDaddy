@@ -45,8 +45,6 @@
         const style = document.createElement("style");
         style.id = STYLE_ID;
         style.textContent = `
-            .gisControlsRow{display:flex;align-items:center;gap:10px;flex:0 0 auto;padding:4px var(--spaceMd) 0 var(--spaceMd);margin-bottom:8px;flex-wrap:wrap}
-            .gisStatusText{font-size:13px;font-weight:700;color:var(--mutedText)}
             .gisMapStack{display:flex;flex-direction:column;gap:6px;flex:1 1 auto;min-height:0}
             .gisWaypointBar{display:flex;flex-direction:row;flex:0 0 auto;padding:0 var(--spaceMd)}
             .gisWaypointCell{flex:1 1 0;padding:4px 6px;text-align:center;border-right:1px solid var(--borderSubtle)}
@@ -616,15 +614,13 @@
         refreshMeasure(st);
     }
 
-    // Status line above the map — GPS state only (locating/denied/
-    // unsupported). Pin/green distances no longer live here now that the
-    // on-map measure marker (pre-seeded on the pin) shows that live.
-    function setLocationStatus(st, message) {
-        const el = st.hostEl.querySelector("[data-gis-status]");
-        if (el) el.textContent = message || "";
-    }
-
     function onPosition(st, pos) {
+        // startLocate() sets "Locating..." once and nothing else ever clears
+        // it on success — only onPositionError() touches this text again,
+        // for error cases. Without this, the message would sit there forever
+        // once GPS is actually working.
+        MA.setStatus("", "info");
+
         const lat = pos.coords.latitude;
         const lon = pos.coords.longitude;
         const accuracy = Number(pos.coords.accuracy) || 0;
@@ -660,7 +656,7 @@
         if (err?.code === 1) {
             // Permission denied — the watch will never succeed; fully reset.
             stopLocate(st);
-            setLocationStatus(st, "Location permission denied. Enable location access for this site.");
+            MA.setStatus("Location permission denied. Enable location access for this site.", "danger");
             return;
         }
 
@@ -668,7 +664,7 @@
             2: "Location unavailable right now.",
             3: "Location request timed out."
         };
-        setLocationStatus(st, messages[err?.code] || "Unable to get your location.");
+        MA.setStatus(messages[err?.code] || "Unable to get your location.", "warn");
     }
 
     function stopLocate(st) {
@@ -689,11 +685,11 @@
         if (st.watchId != null) return;
 
         if (!navigator.geolocation) {
-            setLocationStatus(st, "Geolocation is not supported on this device.");
+            MA.setStatus("Geolocation is not supported on this device.", "danger");
             return;
         }
 
-        setLocationStatus(st, "Locating…");
+        MA.setStatus("Locating…", "info");
 
         st.watchId = navigator.geolocation.watchPosition(
             (pos) => onPosition(st, pos),
@@ -951,9 +947,6 @@
         clearTimeout(st._rotateSettleTimer);
 
         st.hostEl.innerHTML = `
-            <div class="gisControlsRow">
-                <div class="gisStatusText" data-gis-status></div>
-            </div>
             <div class="gisMapStack">
                 <div class="gisWaypointBar" data-gis-waypoints></div>
                 <div class="gisMapWrap">
