@@ -137,10 +137,16 @@ final class ServiceWind
         $grid = self::cacheFetch($gridKey);
 
         if (!is_array($grid) || !isset($grid["gridId"], $grid["gridX"], $grid["gridY"])) {
+            // NOAA's /points endpoint expects ~4 decimal places of precision
+            // and 301-redirects to the canonical rounded URL if given more —
+            // our centroid comes straight from raw OSM node coordinates
+            // (6-7 decimals), and HttpClient::getJson() doesn't follow
+            // redirects, so this rounds before calling rather than relying
+            // on a redirect that never gets followed.
             $pointsUrl = sprintf(
                 "https://api.weather.gov/points/%s,%s",
-                rawurlencode((string)$coord["lat"]),
-                rawurlencode((string)$coord["lon"])
+                rawurlencode(number_format((float)$coord["lat"], 4, ".", "")),
+                rawurlencode(number_format((float)$coord["lon"], 4, ".", ""))
             );
             $points = HttpClient::getJson($pointsUrl, self::headers(), self::HTTP_TIMEOUT_SECONDS);
             $props = $points["properties"] ?? [];
