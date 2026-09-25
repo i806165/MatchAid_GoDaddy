@@ -99,6 +99,30 @@
         return data;
     }
 
+    // Persists this session's last-viewed GIS hole (setHoleContext.php),
+    // separate from score_entry's own current-hole — GIS's Prev/Next is a
+    // personal browsing action, never the group's official current hole.
+    // Best-effort: a failed save just means the next fresh page load falls
+    // back one step further (score_entry's hole, or hole 1), never a page
+    // error the player has to deal with.
+    async function saveGisHole(hole) {
+        const apiUrl = MA.paths?.apiSetGisHole || "/api/score_gis/setHoleContext.php";
+        try {
+            if (postJson) {
+                await postJson(apiUrl, { hole });
+            } else {
+                await fetch(apiUrl, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "same-origin",
+                    body: JSON.stringify({ hole })
+                });
+            }
+        } catch (err) {
+            console.warn("[SCORE_GIS] failed to persist GIS hole", err);
+        }
+    }
+
     function mountMap(payload) {
         if (!MA.scoreGISMap || typeof MA.scoreGISMap.mount !== "function") {
             throw new Error("score_GISMap.js is not loaded.");
@@ -109,11 +133,12 @@
             course: payload.course || {},
             game: state.game,
             osmData: payload.osmData,
-            hole: 1,
+            hole: Number(init.hole) || 1,
             controlArea: el.controlArea,
             prevBtn: el.prevHoleBtn,
             nextBtn: el.nextHoleBtn,
-            holeSelect: el.holeSelect
+            holeSelect: el.holeSelect,
+            onHoleChange: saveGisHole
         });
     }
 

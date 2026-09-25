@@ -41,18 +41,31 @@ if ($courseId === "") {
     $errorMessage = "No course was supplied and no active game course could be resolved.";
 }
 
+// Prefer score_entry's current hole (this session's real, scored progress
+// through the round) when it's set; otherwise fall back to this session's
+// own last-viewed GIS hole (a player who never touches score_entry — GIS is
+// all they use); otherwise hole 1. Neither variable is ever written by this
+// page directly — see api/score_gis/setHoleContext.php.
+$initialHole = (int)(
+    $_SESSION['SessionCurrentHole']
+    ?? $_SESSION['SessionGisCurrentHole']
+    ?? 1
+);
+
 $initPayload = [
     "ok" => ($courseId !== ""),
     "ggid" => $ggid,
     "game" => $game,
     "courseId" => $courseId,
+    "hole" => $initialHole,
     "error" => $errorMessage
 ];
 
 $paths = [
     "routerApi" => MA_ROUTE_API_ROUTER,
     "apiCourseOSM" => MA_ROUTE_API_SCORE_GIS . "/getCourseOSM.php",
-    "apiCourseWind" => MA_ROUTE_API_SCORE_GIS . "/getCourseWind.php"
+    "apiCourseWind" => MA_ROUTE_API_SCORE_GIS . "/getCourseWind.php",
+    "apiSetGisHole" => MA_ROUTE_API_SCORE_GIS . "/setHoleContext.php"
 ];
 
 $maChromeTitle = "Play with GPS";

@@ -922,6 +922,11 @@
         st.selectedHole = Number(holeNo);
         if (st.holeSelect) st.holeSelect.value = String(st.selectedHole);
         renderHole(st);
+
+        // Only fires on genuine player navigation (Prev/Next/select) — never
+        // on mount()'s own initial hole resolution, which sets
+        // st.selectedHole directly rather than going through here.
+        if (typeof st.onHoleChange === "function") st.onHoleChange(st.selectedHole);
     }
 
     // Fills the host page's <select> with this course's actual traced holes
@@ -1112,6 +1117,7 @@
         st.prevBtn = cfg.prevBtn || null;
         st.nextBtn = cfg.nextBtn || null;
         st.holeSelect = cfg.holeSelect || null;
+        st.onHoleChange = typeof cfg.onHoleChange === "function" ? cfg.onHoleChange : null;
 
         const requested = Number(cfg.hole || 1);
         const available = availableHoleNumbers(st);

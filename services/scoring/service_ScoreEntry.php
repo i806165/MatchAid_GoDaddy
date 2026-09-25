@@ -48,7 +48,10 @@ final class ServiceScoreEntry
     }
 
     public static function clearScoringSession(): void {
-        unset($_SESSION['SessionScorerGHIN'], $_SESSION['SessionScorecardKey'], $_SESSION['SessionCurrentHole'], $_SESSION['ScoringPodGGID']);
+        // SessionGisCurrentHole (api/score_gis/setHoleContext.php) cleared
+        // alongside SessionCurrentHole so a finished round's last-viewed GIS
+        // hole doesn't leak into this device's next scoring session.
+        unset($_SESSION['SessionScorerGHIN'], $_SESSION['SessionScorecardKey'], $_SESSION['SessionCurrentHole'], $_SESSION['ScoringPodGGID'], $_SESSION['SessionGisCurrentHole']);
     }
 
     public static function getEffectivePlayerGHIN(): ?string {
