@@ -22,37 +22,37 @@
  *     onClose      : function()  — optional callback when panel is dismissed
  *   }
  *
- * Expected API response:
+ * Request: { ggid, includeViews: true }
+ *
+ * Expected API response (api/game_players/getGamePlayers.php):
  *   { ok: true, payload: {
- *       players:     [...],   // db_Players rows
- *       playerCount: n,       // enrolled count
- *       totalSlots:  n,       // 0 = no tee times
- *       game:        { dbGames_TeamConfig, dbGames_Competition, ... }
+ *       players:      [...],   // db_Players rows
+ *       game:         { dbGames_TeamConfig, dbGames_Competition, ... }
+ *       views:        { byPlayer, byPairing, byPlayingGroup }  // ServiceGameRosterViews
+ *       status:       { totalPlayers, pairedCount, slottedCount, ... }
+ *       displayNames: { [ghin]: "Last, First" }
  *   }}
  *
- * Player row fields consumed:
- *   dbPlayers_Name       first name
- *   dbPlayers_LName      last name
+ * Sorting and grouping come from the server (services/roster/
+ * service_GameRosterViews.php) — the same views the Game Summary page and
+ * "Send Tee Sheet" use — so this modal can't drift from them. The one
+ * exception is the Team tab (team helpers are a separate, later cleanup).
+ *
+ * Player row fields consumed directly:
+ *   dbPlayers_Name       full name, "First Last" (display uses displayNames)
+ *   dbPlayers_LName      last name (letter dividers, avatar)
  *   dbPlayers_TeeSetName tee set display name
- *   dbPlayers_HI         handicap index
- *   dbPlayers_CH         CH value
- *   dbPlayers_SO         SO value
- *   dbPlayers_TeamKey     team key → resolved via dbGames_TeamConfig.teams[].id
- *   dbPlayers_PlayerKey  play-group key (grouping field for "Play Group" sort)
- *   dbPlayers_PairingID  pairing group number
- *   dbPlayers_PairingPos position within pairing
- *   dbPlayers_MatchID   flight/match group (PairPair mode only)
- *   dbPlayers_MatchPos  position within flight (PairPair mode only)
+ *   dbPlayers_HI / _CH / _SO
+ *   dbPlayers_TeamKey    team key → resolved via dbGames_TeamConfig.teams[].id
  *
  * Sort tab rules:
- *   "Name"       always shown   — alpha by LName/Name, letter dividers
+ *   "Name"       always shown   — views.byPlayer order, letter dividers
  *   "Team"       shown when dbGames_TeamConfig is not null
  *                               — grouped by team (team.sort order), LName within
- *   "Pairing"    shown when dbGames_Competition === "PairField"
- *                               — grouped by PairingID, subsort PairingPos
- *   "Match"      shown when dbGames_Competition === "PairPair"
- *                               — grouped by FlightID, subsort FlightPos→PairingID→PairingPos
- *   "Play Group" always shown   — grouped by PlayerKey, subsort PairingID→PairingPos
+ *   "Pairing"    PairField, shown once anyone is paired — views.byPairing
+ *   "Match"      PairPair,  shown once anyone is paired — views.byPairing
+ *   "Play Group" shown once anyone is slotted — views.byPlayingGroup
+ *                               (tee-time / hole order, unslotted last)
  *
  * Badge (right side of row):
  *   Resolved team name when TeamConfig is present; nothing otherwise.
@@ -227,7 +227,7 @@
         return;
       }
 
-      const res = await apiPost(apiPath, { ggid: opts.ggid });
+      const res = await apiPost(apiPath, { ggid: opts.ggid, includeViews: true });
 
       if (!res || !res.ok) {
         _setHtml(_html_error(res?.message || "Failed to load players."));
@@ -236,10 +236,13 @@
 
       const pl   = res.payload || res;
       _s.data    = {
-        players:     Array.isArray(pl.players) ? pl.players : [],
-        playerCount: Number(pl.playerCount ?? 0),
-        totalSlots:  Number(pl.totalSlots  ?? 0),
-        game:        pl.game || {},
+        players:      Array.isArray(pl.players) ? pl.players : [],
+        playerCount:  Number(pl.playerCount ?? 0),
+        totalSlots:   Number(pl.totalSlots  ?? 0),
+        game:         pl.game || {},
+        views:        pl.views || null,
+        status:       pl.status || null,
+        displayNames: pl.displayNames || {},
       };
 
       // Resolve game-level config from payload when not pre-supplied by caller
@@ -372,16 +375,23 @@
 
   // 3. SORT BAR — fixed peer, never scrolls
   function _buildTabs() {
+    const status = _s.data?.status || null;
+    // Without a status (shouldn't happen), fall back to showing the tabs.
+    const anyPaired  = status ? Number(status.pairedCount  || 0) > 0 : true;
+    const anySlotted = status ? Number(status.slottedCount || 0) > 0 : true;
+
     const tabs = [{ key: "name", label: "Name" }];
     if (_s.teamConfig) {
       tabs.push({ key: "team", label: "Team" });
     }
-    if (_s.pairingMode === "PairField") {
+    if (anyPaired && _s.pairingMode === "PairField") {
       tabs.push({ key: "pairing", label: "Pairing" });
-    } else if (_s.pairingMode === "PairPair") {
+    } else if (anyPaired && _s.pairingMode === "PairPair") {
       tabs.push({ key: "pairing", label: "Match" });
     }
-    tabs.push({ key: "playgroup", label: "Play Group" });
+    if (anySlotted) {
+      tabs.push({ key: "playgroup", label: "Play Group" });
+    }
     return tabs;
   }
 
@@ -415,33 +425,44 @@
   function _html_list() {
     const players = _filtered();
     if (!players.length) return `<div class="maEmptyState">No players found.</div>`;
+    let html;
     switch (_s.activeSort) {
-      case "team":      return _byTeam(players);
-      case "pairing":   return _byPairing(players);
-      case "playgroup": return _byPlayGroup(players);
-      default:          return _byName(players);
+      case "team":      html = _byTeam(players); break;
+      case "pairing":   html = _byPairing();     break;
+      case "playgroup": html = _byPlayGroup();   break;
+      default:          html = _byName();        break;
     }
+    return html || `<div class="maEmptyState">No players found.</div>`;
+  }
+
+  function _matchesSearch(p) {
+    const q = _s.search.toLowerCase().trim();
+    if (!q) return true;
+    const name = [safeStr(p.dbPlayers_LName), safeStr(p.dbPlayers_Name)]
+      .filter(Boolean).join(" ").toLowerCase();
+    return name.includes(q);
   }
 
   function _filtered() {
-    const q = _s.search.toLowerCase().trim();
-    return (_s.data?.players || []).filter(p => {
-      if (!q) return true;
-      const name = [safeStr(p.dbPlayers_LName), safeStr(p.dbPlayers_Name)]
-        .filter(Boolean).join(" ").toLowerCase();
-      return name.includes(q);
-    });
+    return (_s.data?.players || []).filter(_matchesSearch);
+  }
+
+  // "Last, First" from the server's shared rule (ServiceGameRosterViews::
+  // formatPlayerNameLastFirst); raw full name if it's missing.
+  function _displayName(p) {
+    const byGhin = _s.data?.displayNames || {};
+    return safeStr(byGhin[safeStr(p.dbPlayers_PlayerGHIN)]) || safeStr(p.dbPlayers_Name) || "—";
   }
 
   // ── Sort renderers ────────────────────────────────────────────────────────────
+  // Name / Pairing / Match / Play Group render the server's views
+  // (views.byPlayer / byPairing / byPlayingGroup) in the order given —
+  // no client-side sorting. Search filters players within that order.
 
-  function _byName(players) {
-    const sorted = players.slice().sort((a, b) =>
-      safeStr(a.dbPlayers_LName).localeCompare(safeStr(b.dbPlayers_LName)) ||
-      safeStr(a.dbPlayers_Name).localeCompare(safeStr(b.dbPlayers_Name))
-    );
+  function _byName() {
+    const ordered = (_s.data?.views?.byPlayer?.players || _s.data?.players || []).filter(_matchesSearch);
     let html = "", lastLetter = "";
-    for (const p of sorted) {
+    for (const p of ordered) {
       const L = (safeStr(p.dbPlayers_LName)[0] || "#").toUpperCase();
       if (L !== lastLetter) { html += _groupLabel(L); lastLetter = L; }
       html += _row(p);
@@ -469,49 +490,56 @@
     return html;
   }
 
-  function _byPairing(players) {
+  // Emits a group label only when the group has at least one player left
+  // after search filtering.
+  function _groupHtml(label, players) {
+    const shown = (players || []).filter(_matchesSearch);
+    if (!shown.length) return "";
+    return _groupLabel(label) + shown.map(_row).join("");
+  }
+
+  // views.byPairing: flightGroups → groups (Match for PairPair, Pairing for
+  // PairField) → pairings → players.
+  function _byPairing() {
+    const flightGroups = _s.data?.views?.byPairing?.flightGroups || [];
+    const isPairPair = _s.pairingMode === "PairPair";
     let html = "";
-    if (_s.pairingMode === "PairField") {
-      const sorted = players.slice().sort((a, b) =>
-        (Number(a.dbPlayers_PairingID)  || 0) - (Number(b.dbPlayers_PairingID)  || 0) ||
-        (Number(a.dbPlayers_PairingPos) || 0) - (Number(b.dbPlayers_PairingPos) || 0)
-      );
-      let lastId = null;
-      for (const p of sorted) {
-        const id = safeStr(p.dbPlayers_PairingID);
-        if (id !== lastId) { html += _groupLabel(`Pairing ${id || "—"}`); lastId = id; }
-        html += _row(p);
+    for (const fg of flightGroups) {
+      let fgHtml = "";
+      for (const group of (fg.groups || [])) {
+        const players = (group.pairings || []).flatMap(pr => pr.players || []);
+        const label = isPairPair
+          ? `Match ${safeStr(group.matchId) || "—"}`
+          : `Pairing ${safeStr(group.pairings?.[0]?.pairingId) || "—"}`;
+        fgHtml += _groupHtml(label, players);
       }
-    } else {
-      // PairPair → "Match" view
-      const sorted = players.slice().sort((a, b) =>
-        (Number(a.dbPlayers_MatchID)   || 0) - (Number(b.dbPlayers_MatchID)   || 0) ||
-        (Number(a.dbPlayers_MatchPos)  || 0) - (Number(b.dbPlayers_MatchPos)  || 0) ||
-        (Number(a.dbPlayers_PairingID)  || 0) - (Number(b.dbPlayers_PairingID)  || 0) ||
-        (Number(a.dbPlayers_PairingPos) || 0) - (Number(b.dbPlayers_PairingPos) || 0)
-      );
-      let lastFlight = null;
-      for (const p of sorted) {
-        const fid = safeStr(p.dbPlayers_MatchID);
-        if (fid !== lastFlight) { html += _groupLabel(`Match ${fid || "—"}`); lastFlight = fid; }
-        html += _row(p);
-      }
+      if (fgHtml && safeStr(fg.flightLabel)) fgHtml = _groupLabel(`Flight ${fg.flightLabel}`) + fgHtml;
+      html += fgHtml;
     }
     return html;
   }
 
-  function _byPlayGroup(players) {
-    // Group by dbPlayers_PlayerKey, subsort PairingID → PairingPos
-    const sorted = players.slice().sort((a, b) =>
-      safeStr(a.dbPlayers_PlayerKey).localeCompare(safeStr(b.dbPlayers_PlayerKey)) ||
-      (Number(a.dbPlayers_PairingID)  || 0) - (Number(b.dbPlayers_PairingID)  || 0) ||
-      (Number(a.dbPlayers_PairingPos) || 0) - (Number(b.dbPlayers_PairingPos) || 0)
-    );
-    let html = "", lastKey = null;
-    for (const p of sorted) {
-      const pk = safeStr(p.dbPlayers_PlayerKey);
-      if (pk !== lastKey) { html += _groupLabel(`Play Group: ${pk || "—"}`); lastKey = pk; }
-      html += _row(p);
+  // views.byPlayingGroup: flightGroups → playingGroups, in tee-time / hole
+  // order; the unslotted players come last under playerKey "—".
+  function _byPlayGroup() {
+    const flightGroups = _s.data?.views?.byPlayingGroup?.flightGroups || [];
+    let html = "";
+    for (const fg of flightGroups) {
+      let fgHtml = "";
+      for (const pg of (fg.playingGroups || [])) {
+        const key = safeStr(pg.playerKey);
+        let label;
+        if (!key || key === "—") {
+          label = "Not yet slotted";
+        } else {
+          const when = [safeStr(pg.teeTimeDisplay), pg.startHoleDisplay ? `Hole ${pg.startHoleDisplay}` : ""]
+            .filter(s => s && s !== "—" && s !== "Hole —");
+          label = [`Play Group: ${key}`, ...when].join(" · ");
+        }
+        fgHtml += _groupHtml(label, pg.players);
+      }
+      if (fgHtml && safeStr(fg.flightLabel)) fgHtml = _groupLabel(`Flight ${fg.flightLabel}`) + fgHtml;
+      html += fgHtml;
     }
     return html;
   }
@@ -549,10 +577,10 @@
                       border:1px solid ${esc(team.color)}55;">${esc(team.name)}</span>`
       : "";
 
-    // Name displayed as "Last, First"
-    const displayName = last
-      ? `${last}${first ? ", " + first : ""}`
-      : first || "—";
+    // Name displayed as "Last, First" — server's shared rule (see _displayName).
+    // `first` here is the FULL name (dbPlayers_Name is "First Last"); it's
+    // only used for the avatar initials below.
+    const displayName = _displayName(p);
 
     return `
       <div class="ma-rst-row">

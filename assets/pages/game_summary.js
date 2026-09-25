@@ -1365,6 +1365,16 @@
     if (ok) setStatus("Handicaps recalculated.", "success");
   }
 
+  // Game Tee Sheet (.xlsx) — shared module_exportGameTeeSheet.js. This page
+  // is read-only, so there are no unsaved changes to check first.
+  function printTeeSheet() {
+    if (typeof MA.exportGameTeeSheet !== "function") {
+      setStatus("Tee sheet module not loaded.", "error");
+      return;
+    }
+    MA.exportGameTeeSheet();
+  }
+
   function printScorecards() {
     if (typeof MA.routerGo === "function") {
       try { MA.routerGo("scorecard"); return; } catch (e) {}
@@ -1417,6 +1427,9 @@
     if (!MA.ui || !MA.ui.openActionsMenu) return;
 
     const items = [
+      { category: "Print" },
+      { label: "Print Tee Sheet", action: printTeeSheet, indent: true },
+
       { category: "Export" },
       { label: "Download View to CSV",   action: downloadCsv,            indent: true },
       { label: "Copy View to Clipboard", action: copyRichTextToClipboard, indent: true },

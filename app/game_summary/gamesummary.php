@@ -48,7 +48,8 @@ $paths = [
   "routerApi"      => MA_ROUTE_API_ROUTER,
   "apiGHIN"        => MA_ROUTE_API_GHIN,
   "apiGameSummary" => "/api/game_summary/initGameSummary.php",
-  "apiNotify"      => MA_ROUTE_API_MESSAGING,  
+  "apiNotify"      => MA_ROUTE_API_MESSAGING,
+  "apiGameTeeSheet" => MA_ROUTE_API_GAME_TEE_SHEET,
 ];
 
 // Chrome values
@@ -102,6 +103,7 @@ $maChromeLogoUrl  = null;
   <script src="<?= ma_asset('/assets/modules/player_notifications.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/recalculate_handicaps.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/module_DisplayGameFormat.js') ?>"></script>
+  <script src="<?= ma_asset('/assets/modules/module_exportGameTeeSheet.js') ?>"></script>
 
   <script src="<?= ma_asset('/assets/modules/module_menuGameSettings.js') ?>"></script>
   <script src="<?= ma_asset('/assets/modules/module_setGameFormat.js') ?>"></script>

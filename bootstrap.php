@@ -67,7 +67,6 @@ define('MA_ROUTE_API_GAME_PAIRINGS', '/api/game_pairings');
 define('MA_ROUTE_API_GAME_SETTINGS', '/api/game_settings');
 define('MA_ROUTE_API_GAME_PLAYERS',  '/api/game_players');
 define('MA_ROUTE_API_ROSTER_VIEW',   '/api/game_players/getGamePlayers.php');
-define('MA_ROUTE_API_GAME_TIMES',  '/api/game_times');
 define('MA_ROUTE_API_GAME_SUMMARY', '/api/game_summary');
 define('MA_ROUTE_GAME_SLOTTING',    '/app/game_slotting/gameslotting.php');
 define('MA_ROUTE_API_FAVORITE_PLAYERS', '/api/favorite_players');
@@ -101,6 +100,9 @@ define(
     'MA_ROUTE_API_POINT_SCORECARD_EXPORT',
     '/api/game_scorecard/exportPointScorecards.php'
 );
+// api/shared/ holds APIs behind modules called from multiple pages
+// (sharedapi_ prefix). Game Tee Sheet export: module_exportGameTeeSheet.js.
+define('MA_ROUTE_API_GAME_TEE_SHEET', '/api/shared/sharedapi_exportGameTeeSheet.php');
 
 function ma_asset(string $relativePath): string {
     $full = MA_ROOT . $relativePath;

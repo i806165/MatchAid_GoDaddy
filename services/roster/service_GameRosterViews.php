@@ -9,13 +9,11 @@ declare(strict_types=1);
 // display-ready structure, never raw rows. Rendering (HTML, plain text,
 // CSV — whatever a given caller needs) stays the caller's own concern.
 //
-// Currently exposes only buildByPlayingGroupView() — the one view
-// messaging (initPlayerNotifications.php) actually consumes today.
-// buildByPlayerView() / buildByPairingView() are intentionally not yet
-// built here: their consumer is game_summary.js's own rendering, which
-// hasn't been rewritten yet, and guessing their output shape ahead of
-// that rewrite risks designing it wrong. They belong in this same file
-// when that work happens, not before.
+// Exposes buildByPlayerView() / buildByPairingView() / buildByPlayingGroupView()
+// (Game Summary page + "Send Tee Sheet" messaging) and buildGameTeeSheetView()
+// (Game Tee Sheet Excel export, via workflow_TeeSheet.php). The tee sheet
+// view is built on the same sort/grouping as buildByPlayingGroupView(), so
+// all of these stay in agreement.
 //
 // Ported faithfully from game_summary.js's normalizeRosterForPlayingGroupDisplay(),
 // partitionByFlight(), and groupRosterForPlayingGroup() — same sort
@@ -42,20 +40,25 @@ final class ServiceGameRosterViews
     return $s !== '' ? $s : '—';
   }
 
+  // Always parse, then re-format to the zero-padded "07:36 AM" form —
+  // stored tee times vary ("07:36 AM" from slotting, "7:36 AM" on older
+  // rows, "08:30:00" for dbGames_PlayTime), and passing AM/PM text through
+  // unchanged let the same game display two styles. Unparseable text is
+  // returned as-is; empty / "—" still yields "—".
   private static function formatTimeAmPm(string $str): string {
     $s = trim($str);
-    if ($s === '' || $s === '—' || str_contains($s, 'AM') || str_contains($s, 'PM')) {
-      return $s !== '' ? $s : '—';
-    }
-    $parts = explode(':', $s);
-    if (count($parts) < 2) return $s;
-    if (!is_numeric($parts[0])) return $s;
-    $h = (int)$parts[0];
-    $m = $parts[1];
+    if ($s === '' || $s === '—') return '—';
+    $mins = self::parseTimeToMinutes($s);
+    return $mins === null ? $s : self::formatMinutesAmPm($mins);
+  }
+
+  private static function formatMinutesAmPm(int $mins): string {
+    $h = intdiv($mins, 60) % 24;
+    $m = $mins % 60;
     $ampm = $h >= 12 ? 'PM' : 'AM';
     $h = $h % 12;
     if ($h === 0) $h = 12;
-    return sprintf('%02d:%s %s', $h, $m, $ampm);
+    return sprintf('%02d:%02d %s', $h, $m, $ampm);
   }
 
   private static function getFormattedStartHole(array $player, array $game): string {
@@ -136,6 +139,14 @@ final class ServiceGameRosterViews
         $tA = self::parseTimeToMinutes(self::safeStr($a['dbPlayers_TeeTime'] ?? '')) ?? 9999;
         $tB = self::parseTimeToMinutes(self::safeStr($b['dbPlayers_TeeTime'] ?? '')) ?? 9999;
         if ($tA !== $tB) return $tA <=> $tB;
+
+        // Split tees: same time on holes 1 and 10 — order by hole, then
+        // suffix, rather than falling through to the (random) PlayerKey.
+        // Matches game_slotting.js's compareSlotMeta().
+        $holeA = $holeSortValue($a['dbPlayers_StartHole'] ?? ''); $holeB = $holeSortValue($b['dbPlayers_StartHole'] ?? '');
+        if ($holeA !== $holeB) return $holeA <=> $holeB;
+        $sufA = $suffixSortValue($a['dbPlayers_StartHoleSuffix'] ?? ''); $sufB = $suffixSortValue($b['dbPlayers_StartHoleSuffix'] ?? '');
+        if ($sufA !== $sufB) return strcmp($sufA, $sufB);
       }
 
       if ($isShotgun) {
@@ -562,5 +573,215 @@ final class ServiceGameRosterViews
     }
 
     return ['flightGroups' => $out];
+  }
+
+  // ── Player name — "Last, First" ─────────────────────────────────────
+  //
+  // dbPlayers_Name holds "First Last"; dbPlayers_LName holds the last name
+  // only. The first-name part is whatever precedes a trailing LName (case-
+  // insensitive, on a word boundary), so "C. Ryan Haffey" / "Haffey" →
+  // "Haffey, C. Ryan". When Name doesn't end with LName (e.g. "Bob Smith
+  // Jr."), Name is displayed unchanged rather than guessed at.
+
+  /** @return array{first: string, last: string, display: string} */
+  private static function splitPlayerName(array $player): array {
+    $name = trim(self::safeStr($player['dbPlayers_Name'] ?? ''));
+    $last = trim(self::safeStr($player['dbPlayers_LName'] ?? ''));
+
+    if ($last === '') return ['first' => '', 'last' => $name, 'display' => $name];
+    if ($name === '') return ['first' => '', 'last' => $last, 'display' => $last];
+
+    $nameLen = mb_strlen($name);
+    $lastLen = mb_strlen($last);
+    if ($nameLen >= $lastLen && mb_strtolower(mb_substr($name, $nameLen - $lastLen)) === mb_strtolower($last)) {
+      $prefix = mb_substr($name, 0, $nameLen - $lastLen);
+      if ($prefix === '' || preg_match('/\s$/u', $prefix)) {
+        $first = trim($prefix);
+        return ['first' => $first, 'last' => $last, 'display' => $first === '' ? $last : ($last . ', ' . $first)];
+      }
+    }
+
+    return ['first' => '', 'last' => $last, 'display' => $name];
+  }
+
+  /**
+   * formatPlayerNameLastFirst(player)
+   *
+   * Shared "Last, First" display name for a db_Players row. Public so any
+   * renderer (tee sheet export today; roster modal later) uses the same
+   * rule instead of re-deriving it.
+   */
+  public static function formatPlayerNameLastFirst(array $player): string {
+    return self::splitPlayerName($player)['display'];
+  }
+
+  private static function formatPlayDate($raw): string {
+    $s = trim(self::safeStr($raw));
+    if ($s === '') return '';
+    $d = DateTime::createFromFormat('!Y-m-d', substr($s, 0, 10));
+    return $d ? $d->format('D m/d/y') : $s;   // "Sat 10/03/26" — same as the scorecards
+  }
+
+  // Physical cart number. Planned column, not in db_Players yet — reads
+  // as '' until it exists, which keeps the Cart columns hidden (showCart).
+  // If the column lands under a different name, change it here only.
+  private const CART_FIELD = 'dbPlayers_CartID';
+
+  /**
+   * buildGameTeeSheetView(players, game, teamsActive, flightsActive)
+   *
+   * Data for the Game Tee Sheet (templates/excel/MatchAid_GameTeeSheet_
+   * Template_Spec.md §3). Built ON the same sortForPlayingGroup() /
+   * groupByPlayerKey() as buildByPlayingGroupView(), so the printed tee
+   * sheet, the Summary page and the "Send Tee Sheet" email can't drift
+   * apart. The sort is run with flights OFF: flight is a column on the tee
+   * sheet, not a section. Game stage comes from ma_getGameAdministration
+   * Status() — the same definition messaging uses. No rendering here.
+   *
+   * Shape:
+   *   [
+   *     'title'           => string,
+   *     'course'          => string,
+   *     'playDateDisplay' => string,   // "Sat 10/03/26"
+   *     'startInfo'       => string,   // "Tee Times from 07:36 AM" | "Shotgun Start 08:30 AM"
+   *     'isShotgun'       => bool,
+   *     'isPartial'       => bool,     // slottedCount < totalPlayers
+   *     'status'          => array,    // ma_getGameAdministrationStatus()
+   *     'showCart'        => bool,
+   *     'showFlight'      => bool,
+   *     'groups' => [                  // slotted groups only, shared sort order
+   *       [ 'playerKey' => string, 'teeTime' => string, 'hole' => string,
+   *         'players'   => [ ['display' => 'Last, First', 'cart' => string], ... ] ],
+   *     ],
+   *     'individuals' => [             // everyone, by last name; '' time/hole when unslotted
+   *       [ 'display', 'teeTime', 'hole', 'tee', 'cart', 'flight', 'otherPlayers' ],
+   *     ],
+   *   ]
+   *
+   * @param  array $players       db_Players rows for this game.
+   * @param  array $game          Game row.
+   * @param  bool  $teamsActive   From ServiceDbEvents::isDimensionActive("team", ...).
+   * @param  bool  $flightsActive From ServiceDbEvents::isDimensionActive("flight", ...).
+   * @return array
+   */
+  public static function buildGameTeeSheetView(array $players, array $game, bool $teamsActive, bool $flightsActive): array {
+    $pairPair  = self::safeStr($game['dbGames_Competition'] ?? '') === 'PairPair';
+    $isShotgun = self::safeStr($game['dbGames_TOMethod'] ?? '') === 'ShotGun';
+    $status    = ma_getGameAdministrationStatus($players);
+
+    $cartOf = fn(array $p): string => trim(self::safeStr($p[self::CART_FIELD] ?? ''));
+    $timeOf = function (array $p): string {
+      $t = trim(self::safeStr($p['dbPlayers_TeeTime'] ?? ''));
+      return $t === '' ? '' : self::formatTimeAmPm($t);
+    };
+
+    // ── Playing groups: shared sort, flights off; drop the unslotted "—" group
+    $sorted = self::sortForPlayingGroup($players, $game, $teamsActive, false);
+    $groups = [];
+    $membersByKey = [];
+    foreach (self::groupByPlayerKey($sorted, $pairPair) as $group) {
+      if ($group['playerKey'] === '—') continue;
+      $first = $group['players'][0] ?? [];
+      $groups[] = [
+        'playerKey' => $group['playerKey'],
+        'teeTime'   => $timeOf($first),
+        'hole'      => self::getFormattedStartHole($first, $game),
+        'players'   => array_map(
+          fn(array $p) => ['display' => self::formatPlayerNameLastFirst($p), 'cart' => $cartOf($p)],
+          $group['players']
+        ),
+      ];
+      $membersByKey[$group['playerKey']] = $group['players'];
+    }
+
+    // ── Heading: start info
+    $playTime = trim(self::safeStr($game['dbGames_PlayTime'] ?? ''));
+    if ($isShotgun) {
+      $startInfo = 'Shotgun Start' . ($playTime !== '' ? ' ' . self::formatTimeAmPm($playTime) : '');
+    } else {
+      $earliest = null;
+      foreach ($players as $p) {
+        if (trim(self::safeStr($p['dbPlayers_PlayerKey'] ?? '')) === '') continue;
+        $m = self::parseTimeToMinutes(self::safeStr($p['dbPlayers_TeeTime'] ?? ''));
+        if ($m !== null && ($earliest === null || $m < $earliest)) $earliest = $m;
+      }
+      $from = $earliest !== null
+        ? self::formatMinutesAmPm($earliest)
+        : ($playTime !== '' ? self::formatTimeAmPm($playTime) : '');
+      $startInfo = 'Tee Times' . ($from !== '' ? ' from ' . $from : '');
+    }
+
+    // ── Flight column only when flights are active AND someone has one
+    $showFlight = false;
+    if ($flightsActive) {
+      foreach ($players as $p) {
+        if (trim(self::safeStr($p['dbPlayers_FlightKey'] ?? '')) !== '') { $showFlight = true; break; }
+      }
+    }
+
+    $showCart = false;
+    foreach ($players as $p) {
+      if ($cartOf($p) !== '') { $showCart = true; break; }
+    }
+
+    // ── Individuals: everyone, by last name → first name → GHIN
+    $rows = [];
+    foreach ($players as $p) {
+      $n   = self::splitPlayerName($p);
+      $key = trim(self::safeStr($p['dbPlayers_PlayerKey'] ?? ''));
+
+      $others = [];
+      if ($key !== '' && isset($membersByKey[$key])) {
+        $ghin = self::safeStr($p['dbPlayers_PlayerGHIN'] ?? '');
+        $mates = array_values(array_filter(
+          $membersByKey[$key],
+          fn(array $m) => self::safeStr($m['dbPlayers_PlayerGHIN'] ?? '') !== $ghin
+        ));
+        usort($mates, function (array $a, array $b): int {
+          $na = self::splitPlayerName($a); $nb = self::splitPlayerName($b);
+          return strcasecmp($na['last'], $nb['last']) ?: strcasecmp($na['first'], $nb['first']);
+        });
+        $others = array_map(fn(array $m) => self::formatPlayerNameLastFirst($m), $mates);
+      }
+
+      $flightKey = trim(self::safeStr($p['dbPlayers_FlightKey'] ?? ''));
+      $rows[] = [
+        '_last'  => $n['last'],
+        '_first' => $n['first'],
+        '_ghin'  => self::safeStr($p['dbPlayers_PlayerGHIN'] ?? ''),
+        'display'      => $n['display'],
+        'teeTime'      => $key !== '' ? $timeOf($p) : '',
+        'hole'         => $key !== '' ? self::getFormattedStartHole($p, $game) : '',
+        'tee'          => trim(self::safeStr($p['dbPlayers_TeeSetName'] ?? '')),
+        'cart'         => $cartOf($p),
+        'flight'       => $flightKey !== '' ? self::resolveFlightName($flightKey, $game) : '',
+        'otherPlayers' => implode(' + ', $others),
+      ];
+    }
+
+    usort($rows, function (array $a, array $b): int {
+      return strcasecmp($a['_last'], $b['_last'])
+        ?: strcasecmp($a['_first'], $b['_first'])
+        ?: strcmp($a['_ghin'], $b['_ghin']);
+    });
+
+    $individuals = array_map(function (array $r): array {
+      unset($r['_last'], $r['_first'], $r['_ghin']);
+      return $r;
+    }, $rows);
+
+    return [
+      'title'           => trim(self::safeStr($game['dbGames_Title'] ?? '')),
+      'course'          => trim(self::safeStr($game['dbGames_CourseName'] ?? '')),
+      'playDateDisplay' => self::formatPlayDate($game['dbGames_PlayDate'] ?? ''),
+      'startInfo'       => $startInfo,
+      'isShotgun'       => $isShotgun,
+      'isPartial'       => $status['totalPlayers'] > 0 && $status['slottedCount'] < $status['totalPlayers'],
+      'status'          => $status,
+      'showCart'        => $showCart,
+      'showFlight'      => $showFlight,
+      'groups'          => $groups,
+      'individuals'     => $individuals,
+    ];
   }
 }
