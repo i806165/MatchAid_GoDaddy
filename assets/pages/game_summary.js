@@ -1427,12 +1427,10 @@
     if (!MA.ui || !MA.ui.openActionsMenu) return;
 
     const items = [
-      { category: "Print" },
-      { label: "Print Tee Sheet", action: printTeeSheet, indent: true },
-
-      { category: "Export" },
-      { label: "Download View to CSV",   action: downloadCsv,            indent: true },
-      { label: "Copy View to Clipboard", action: copyRichTextToClipboard, indent: true },
+      { category: "Copy-Export-Print Services" },
+      { label: "Download this Screen View to CSV",   action: downloadCsv,            indent: true },
+      { label: "Copy this Screen View to Clipboard", action: copyRichTextToClipboard, indent: true },
+      { label: "Download Detailed Tee Sheet", action: printTeeSheet, indent: true },
 
       { category: "Admin Services" },
       { label: "Display Game Settings", action: () => MA.gameDetails.open(state.game), indent: true },

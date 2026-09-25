@@ -630,8 +630,8 @@ final class ServiceGameRosterViews
   /**
    * buildGameTeeSheetView(players, game, teamsActive, flightsActive)
    *
-   * Data for the Game Tee Sheet (templates/excel/MatchAid_GameTeeSheet_
-   * Template_Spec.md §3). Built ON the same sortForPlayingGroup() /
+   * Data for the Game Tee Sheet export (workflow_TeeSheet.php →
+   * exportGameTeeSheet()). Built ON the same sortForPlayingGroup() /
    * groupByPlayerKey() as buildByPlayingGroupView(), so the printed tee
    * sheet, the Summary page and the "Send Tee Sheet" email can't drift
    * apart. The sort is run with flights OFF: flight is a column on the tee

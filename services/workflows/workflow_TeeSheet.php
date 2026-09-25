@@ -9,7 +9,8 @@ declare(strict_types=1);
 //   - other future actions (email attachment, HTML view, PDF) go here too,
 //     each built on ServiceGameRosterViews::buildGameTeeSheetView().
 //
-// Spec: templates/excel/MatchAid_GameTeeSheet_Template_Spec.md
+// Template: templates/excel/MatchAid_GameTeeSheet_Template.xlsx (its
+// "Template Config" sheet explains the layout; removed from the download).
 //
 // Template contract (fixed capacity): every band/row up to capacity is
 // pre-built and pre-styled in the workbook. This code only writes values

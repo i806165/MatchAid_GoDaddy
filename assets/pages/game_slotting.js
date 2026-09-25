@@ -1423,6 +1423,18 @@ async function onResetChanges() {
     }
   }
 
+  // Game Tee Sheet (.xlsx) — shared module_exportGameTeeSheet.js. No
+  // unsaved-changes check needed here: applyChrome() hides the Actions
+  // button while state.dirty is non-empty, so this can only run once the
+  // saved data matches the screen.
+  function printTeeSheet() {
+    if (typeof MA.exportGameTeeSheet === "function") {
+      MA.exportGameTeeSheet();
+    } else if (MA.ui && MA.ui.notify) {
+      MA.ui.notify("Tee sheet module not loaded.", "error");
+    }
+  }
+
   function downloadIcsForGame() {
     if (MA.calendar && MA.calendar.addCalendarEventFromGame) {
       MA.calendar.addCalendarEventFromGame(init.game);
@@ -1726,6 +1738,9 @@ async function onResetChanges() {
       { category: "Advanced Features" },
       { label: "Open Automated Slotting", action: () => openAutoSlotModal(), indent: true },
       { label: "Reset Changes to Last Save", action: () => onResetChanges(), indent: true, danger: true },
+      
+      { category: "Copy-Export-Print Services" },
+      { label: "Download Detailed Tee Sheet", action: printTeeSheet, indent: true },
 
       { category: "Admin Services" },
       { label: "Display Game Settings", action: () => MA.gameDetails.open(init.game), indent: true },

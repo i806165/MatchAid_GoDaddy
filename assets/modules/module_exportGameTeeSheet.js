@@ -14,7 +14,7 @@
  *   - No completeness gate or prompt: an incomplete game still exports,
  *     labelled "*Partial Tee Sheet" in the sheet's own heading.
  *
- * Spec: templates/excel/MatchAid_GameTeeSheet_Template_Spec.md
+ * Server side: services/workflows/workflow_TeeSheet.php (exportGameTeeSheet()).
  *
  * Returns Promise<boolean> — true when the file was downloaded.
  */
