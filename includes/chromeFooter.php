@@ -172,9 +172,9 @@
       <span class="maNavLabel">Round Pairings</span>
     </button>
 
-    <button type="button" class="maNavBtn" data-nav="roundteetimes" aria-label="Round TeeTimes">
+    <button type="button" class="maNavBtn" data-nav="roundteetimes" aria-label="Round TeeSheet">
       <span class="maNavIcon" aria-hidden="true">⏱</span>
-      <span class="maNavLabel">Round TeeTimes</span>
+      <span class="maNavLabel">Round TeeSheet</span>
     </button>
 
     <button type="button" class="maNavBtn" data-nav="roundsummary" aria-label="Round Summary">
