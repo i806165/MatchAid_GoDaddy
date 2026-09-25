@@ -233,7 +233,7 @@
       <span class="maNavLabel">Game Pairings</span>
     </button>
 
-    <button type="button" class="maNavBtn" data-nav="teetimes" aria-label="Tee Times">
+    <button type="button" class="maNavBtn" data-nav="teetimes" aria-label="Tee Sheet">
       <span class="maNavIcon" aria-hidden="true">⏱</span>
       <span class="maNavLabel">Game TeeTimes</span>
     </button>
