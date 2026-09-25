@@ -35,6 +35,17 @@ final class ExcelTemplate
     throw new RuntimeException("Template is missing named range {$name} on sheet " . $sheet->getTitle());
   }
 
+  /** True when $sheet has a sheet-scoped name (for optional template names). */
+  public static function hasName(Spreadsheet $spreadsheet, Worksheet $sheet, string $name): bool
+  {
+    foreach ($spreadsheet->getDefinedNames() as $candidate) {
+      if ($candidate->getName() === $name && $candidate->getScope() === $sheet) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /** Address of a sheet-scoped name, without sheet prefix or "$": e.g. "A5:I8" or "B5". */
   public static function address(Spreadsheet $spreadsheet, Worksheet $sheet, string $name): string
   {

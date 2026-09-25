@@ -150,10 +150,19 @@ function fillGameTeeSheetGroupTab(Spreadsheet $spreadsheet, Worksheet $sheet, ar
   for ($i = 1; $i <= 4; $i++) { $fields[] = "Player{$i}"; $fields[] = "Cart{$i}"; }
 
   $cells = [];
+  $halfSpan = [];   // side => [firstCol, lastCol] of that half, for blanking an unused right half
   foreach (['L', 'R'] as $side) {
     foreach ($fields as $field) {
       $b = ExcelTemplate::bounds($spreadsheet, $sheet, "Band_{$side}_{$field}");
       $cells[$side][$field] = [$b['colFrom'], $b['rowFrom'] - $bandTop];
+    }
+    $cols = array_map(fn($c) => $c[0], $cells[$side]);
+    $halfSpan[$side] = [min($cols), max($cols)];
+
+    // Write-in columns (e.g. Bag #) carry no data but belong to the half.
+    if (ExcelTemplate::hasName($spreadsheet, $sheet, "Col_{$side}_Bag")) {
+      $bag = ExcelTemplate::bounds($spreadsheet, $sheet, "Col_{$side}_Bag");
+      $halfSpan[$side] = [min($halfSpan[$side][0], $bag['colFrom']), max($halfSpan[$side][1], $bag['colTo'])];
     }
   }
 
@@ -165,11 +174,10 @@ function fillGameTeeSheetGroupTab(Spreadsheet $spreadsheet, Worksheet $sheet, ar
 
       if ($group === null) {
         // Odd group count: blank right half with no borders, so it reads as empty space.
-        $cols = array_map(fn($c) => $c[0], $cells[$side]);
         foreach ($cells[$side] as [$col, $rowOff]) {
           ExcelTemplate::setValueAt($sheet, $col, $rowBase + $rowOff, null);
         }
-        ExcelTemplate::clearBorders($sheet, min($cols), $rowBase, max($cols), $rowBase + $bandHeight - 1);
+        ExcelTemplate::clearBorders($sheet, $halfSpan[$side][0], $rowBase, $halfSpan[$side][1], $rowBase + $bandHeight - 1);
         continue;
       }
 
@@ -207,10 +215,8 @@ function fillGameTeeSheetGroupTab(Spreadsheet $spreadsheet, Worksheet $sheet, ar
     ExcelTemplate::hideNamedColumns($spreadsheet, $sheet, 'Col_L_Time');
     ExcelTemplate::hideNamedColumns($spreadsheet, $sheet, 'Col_R_Time');
   }
-  if (empty($view['showCart'])) {
-    ExcelTemplate::hideNamedColumns($spreadsheet, $sheet, 'Col_L_Cart');
-    ExcelTemplate::hideNamedColumns($spreadsheet, $sheet, 'Col_R_Cart');
-  }
+  // Cart # and Bag # are write-in columns on this tab: never hidden. Cart #
+  // is filled when cart data exists (showCart); otherwise left blank to type in.
 
   // Print area ends at the last used band (heading only when there are no
   // groups). The template's page breaks stay; any past the print area have
