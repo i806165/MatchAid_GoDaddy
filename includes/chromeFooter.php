@@ -235,7 +235,7 @@
 
     <button type="button" class="maNavBtn" data-nav="teetimes" aria-label="Tee Sheet">
       <span class="maNavIcon" aria-hidden="true">⏱</span>
-      <span class="maNavLabel">Game TeeTimes</span>
+      <span class="maNavLabel">Game TeeSheet</span>
     </button>
 
     <button type="button" class="maNavBtn" data-nav="summary" aria-label="Summary">
