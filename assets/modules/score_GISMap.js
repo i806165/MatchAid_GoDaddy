@@ -883,8 +883,8 @@
             st.remainingLine.setLatLngs([fromLL, greenLL]);
         }
 
-        // 15% of the way from the marker toward the green — close to the dot.
-        const t = 0.15;
+        // Midpoint of the marker->green leg.
+        const t = 0.5;
         const labelLatLng = L.latLng(
             fromLL.lat + (greenLL.lat - fromLL.lat) * t,
             fromLL.lng + (greenLL.lng - fromLL.lng) * t
@@ -932,8 +932,9 @@
             st.measureLine.setLatLngs([anchorLL, targetLL]);
         }
 
-        // 85% of the way from the anchor to the marker — "just short of" it.
-        const t = 0.85;
+        // 75% of the way from the anchor to the marker — close to it without
+        // the (now larger, 26px) label crowding the dot itself.
+        const t = 0.75;
         const labelLatLng = L.latLng(
             anchorLL.lat + (targetLL.lat - anchorLL.lat) * t,
             anchorLL.lng + (targetLL.lng - anchorLL.lng) * t
