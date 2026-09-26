@@ -58,6 +58,7 @@ $initPayload = [
     "game" => $game,
     "courseId" => $courseId,
     "hole" => $initialHole,
+    "portal" => $_SESSION["SessionPortal"] ?? "",
     "error" => $errorMessage
 ];
 

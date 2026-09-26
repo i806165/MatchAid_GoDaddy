@@ -1045,9 +1045,9 @@ function markDirty(playerId, rawScore, declared) {
                       : (portal === "PLAYER PORTAL" ? "player" : "home");
 
       chrome.setBottomNav({
-        visible: ['scorehome','scoreentry', 'scoregis', 'scorecardShared',  'scoresummary', 'scoresidegames'],
+        visible: [homeRoute, 'scorehome','scoreentry', 'scoregis', 'scorecardShared',  'scoresummary', 'scoresidegames'],
         active: 'scoreentry',
-        root: ['scorehome'],
+        root: [homeRoute, 'scorehome'],
         onNavigate: (id) => {
           const sideBetsDirty = !!(MA.scoreSideBets && MA.scoreSideBets.isDirty && MA.scoreSideBets.isDirty());
 

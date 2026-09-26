@@ -124,10 +124,14 @@
     }
 
     if (MA.chrome && MA.chrome.setBottomNav) {
+      const homeRoute = state.portal === "ADMIN PORTAL"  ? "admin"
+                      : state.portal === "PLAYER PORTAL" ? "player"
+                      : "home";
+
       MA.chrome.setBottomNav({
-        visible: ["scorehome", "scoreentry", "scoregis", 'scorecardShared',  "scoresummary", "scoresidegames"],
+        visible: [homeRoute, "scorehome", "scoreentry", "scoregis", 'scorecardShared',  "scoresummary", "scoresidegames"],
         active:  "scorecardShared",
-        root:    ["scorehome"],
+        root:    [homeRoute, "scorehome"],
         onNavigate: (id) => MA.routerGo?.(id),
       });
     }
