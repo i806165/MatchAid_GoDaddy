@@ -458,18 +458,19 @@
                       data-size="${size}" aria-pressed="${_selSizes.has(size)}">${size}</button>
             `).join("")}
           </div>
-          <div id="apSizeStatus" style="margin-top:10px;">${_renderSizeStatus()}</div>
+          <div id="apSizeStatus">${_renderSizeStatus()}</div>
         </div>
         ${_renderComboSelect()}
       </div>`;
   }
 
+  // Only speaks up when the chosen sizes can't pair everyone — a working
+  // selection needs no confirmation (the enabled Arrangement says so).
   function _renderSizeStatus() {
     const n = subgroupUnitCount();
-    const combos = combosForSizes(n, _selSizes);
-    const ok = combos.length > 0;
-    return `<div class="maInlineStatus ${ok ? "status-success" : "status-danger"}">
-      These pairing sizes ${ok ? "work" : "do not work"} for ${n} player${n !== 1 ? "s" : ""}.
+    if (combosForSizes(n, _selSizes).length) return "";
+    return `<div class="maInlineStatus status-danger" style="margin-top:10px;">
+      These pairing sizes do not work for ${n} player${n !== 1 ? "s" : ""}.
     </div>`;
   }
 
