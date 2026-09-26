@@ -65,6 +65,20 @@
   const SIZES_ALL        = [4, 3, 2, 1];
   const SIZES_PAIRPAIR   = [2, 1];
 
+  // Pairing Strategy choices, in display order. Descriptions describe what
+  // _draft() actually does for each key — change the wording, not the
+  // algorithm, if they ever drift. "stackedHighFirst" is intentionally not
+  // offered: it currently runs the same _draftInOrder() as "inOrder"
+  // (identical pairings), so listing both would present one algorithm as
+  // two choices. Its _draft() case is left in place, untouched.
+  const STRATEGIES = [
+    { key: "balanced",    label: "Competitive Balance",   detail: "Mix low and high handicaps so each pairing has a similar total." },
+    { key: "abcdDraw",    label: "ABCD Draw",             detail: "Split players into handicap tiers and take one player from each tier per pairing." },
+    { key: "inOrder",     label: "Ranked",                detail: "Group players in handicap order — lowest handicaps together, highest handicaps together." },
+    { key: "random",      label: "Random",                detail: "Randomly assign players without considering handicap." },
+    { key: "leastPlayed", label: "Least Played Together", detail: "Group players who have played together least often; ties go to the closest handicaps." },
+  ];
+
   // ── Module state ─────────────────────────────────────────────────────────────
   let _opts        = {};
   let _flights      = [];      // [{ id, name, sort }] — [] means no flight config on this game
@@ -80,7 +94,7 @@
 
   let _busy            = false;
   let _mode             = "setup"; // "setup" | "review"
-  let _previewGroups    = [];  // [{ teamId, players:[] }] — populated by Run, cleared by Retry/Apply
+  let _previewGroups    = [];  // [{ teamId, players:[] }] — populated by Run, cleared by review Cancel/Apply
 
   // ── Helpers — formatting / safety ───────────────────────────────────────────
 
@@ -272,6 +286,15 @@
       el.className = "maModalOverlay";
       el.setAttribute("aria-hidden", "true");
       el.addEventListener("click", e => { if (e.target === el && !_busy) MA.runAutoPair.close(); });
+      // Strategy rows are delegated here, once, rather than bound in
+      // _wireEvents() — that runs repeatedly against elements that aren't
+      // re-rendered, which would stack listeners and make arrow keys jump
+      // more than one row per press.
+      el.addEventListener("click", e => {
+        const btn = e.target.closest("[data-strategy]");
+        if (btn) _selectStrategy(btn.dataset.strategy, false);
+      });
+      el.addEventListener("keydown", _onStrategyKeydown);
       document.body.appendChild(el);
     }
     return el;
@@ -338,16 +361,24 @@
     return `
       <section class="maModal" role="dialog" aria-modal="true" aria-label="Auto-Pair">
         ${_renderHeader()}
-        <div class="maModal__controls" id="apControls" style="display:${_mode === "setup" ? "" : "none"};">
-          ${_renderScopeSection()}
-          ${_renderSizeSection()}
-          ${_renderOutcomeField()}
-        </div>
+        ${_renderSetupBody()}
         <div class="maModal__body" id="apReview" style="display:${_mode === "review" ? "" : "none"}; padding:0;">
           <div class="maCards" id="apPreviewCards">${_renderPreviewCards()}</div>
         </div>
         ${_renderFooter()}
       </section>`;
+  }
+
+  // Setup lives in a .maModal__body (not .maModal__controls, which is
+  // overflow:hidden and non-shrinking) so on a phone the header and footer
+  // stay put and this region scrolls to reach every strategy.
+  function _renderSetupBody() {
+    return `
+        <div class="maModal__body" id="apControls" style="display:${_mode === "setup" ? "" : "none"};">
+          ${_renderScopeSection()}
+          ${_renderSizeSection()}
+          ${_renderStrategyField()}
+        </div>`;
   }
 
   function _renderHeader() {
@@ -378,7 +409,7 @@
       <div class="maFieldRow" style="margin-top:0;">
         <div class="maField" style="flex:1;">
           <label class="maLabel">Flight</label>
-          <div class="maFieldHint" style="font-size:11px; color:var(--mutedText); margin-bottom:4px;">Which flight do you want to pair?</div>
+          <div class="maHintText" style="margin:0 0 6px;">Which flight do you want to pair?</div>
           <select id="apFlight" class="maTextInput">
             ${flights.map(f => `<option value="${esc(f.id)}"${f.id === _selFlightId ? " selected" : ""}>${esc(f.name)}</option>`).join("")}
           </select>
@@ -408,23 +439,27 @@
       </div>`;
   }
 
-  // ── Render — acceptable sizes + live status + combination dropdown ─────────
+  // ── Render — Pairing Sizes + live status, then Pairing Arrangement ─────────
+  // Both sections share the #apSizeRow wrapper because a size toggle
+  // re-renders the arrangement list too (_refreshSizeSection).
 
   function _renderSizeSection() {
-    const n = subgroupUnitCount();
     return `
-      <div class="maFieldRow" id="apSizeRow">
-        <div class="maField" style="flex:1;">
-          <label class="maLabel" id="apSizeLabel">Acceptable pairing sizes for ${n} player${n !== 1 ? "s" : ""}</label>
-          <div class="maChoiceChips" id="apSizeChips" role="group" aria-label="Acceptable pairing sizes">
-            ${_allowedSizes.slice().sort((a, b) => a - b).map(size => `
-              <button type="button" class="maChoiceChip${_selSizes.has(size) ? " is-selected-accent" : ""}"
-                      data-size="${size}" aria-pressed="${_selSizes.has(size)}">${size}</button>
-            `).join("")}
+      <div id="apSizeRow">
+        <div class="maFieldRow">
+          <div class="maField" style="flex:1;">
+            <label class="maLabel" id="apSizeLabel">Pairing Sizes</label>
+            <div class="maHintText" style="margin:0 0 6px;">Select the group sizes Auto-Pair may use.</div>
+            <div class="maChoiceChips" id="apSizeChips" role="group" aria-labelledby="apSizeLabel">
+              ${_allowedSizes.slice().sort((a, b) => a - b).map(size => `
+                <button type="button" class="maChoiceChip${_selSizes.has(size) ? " is-selected-accent" : ""}"
+                        data-size="${size}" aria-pressed="${_selSizes.has(size)}">${size}</button>
+              `).join("")}
+            </div>
+            <div id="apSizeStatus" style="margin-top:8px;">${_renderSizeStatus()}</div>
           </div>
-          <div id="apSizeStatus" style="margin-top:8px;">${_renderSizeStatus()}</div>
-          <div id="apComboWrap">${_renderComboSelect()}</div>
         </div>
+        <div id="apComboWrap">${_renderComboSelect()}</div>
       </div>`;
   }
 
@@ -443,27 +478,79 @@
     if (!combos.length) return "";
     const idx = Math.min(_selComboIdx, combos.length - 1);
     return `
-      <select id="apCombo" class="maTextInput" style="margin-top:8px;">
-        ${combos.map((c, i) => `<option value="${i}"${i === idx ? " selected" : ""}>${esc(mixVerbose(c.fours, c.threes, c.twos, c.singles))}</option>`).join("")}
-      </select>`;
-  }
-
-  function _renderOutcomeField() {
-    return `
-      <div class="maFieldRow" id="apCoreRow2">
+      <div class="maFieldRow">
         <div class="maField" style="flex:1;">
-          <label class="maLabel">Pairing Outcome</label>
-          <div class="maFieldHint" style="font-size:11px; color:var(--mutedText); margin-bottom:4px;">What result are you looking to achieve?</div>
-          <select id="apOutcome" class="maTextInput">
-            <option value="balanced"${_outcome === "balanced" ? " selected" : ""}>Competitive balance — spread handicaps evenly across pairings</option>
-            <option value="abcdDraw"${_outcome === "abcdDraw" ? " selected" : ""}>ABCD Draw — one player from each handicap tier</option>
-            <option value="inOrder"${_outcome === "inOrder" ? " selected" : ""}>Ranked — pair strongest players together</option>
-            <option value="stackedHighFirst"${_outcome === "stackedHighFirst" ? " selected" : ""}>Stacked — pair highest handicaps together</option>
-            <option value="random"${_outcome === "random" ? " selected" : ""}>Random — ignore handicaps entirely</option>
-            <option value="leastPlayed"${_outcome === "leastPlayed" ? " selected" : ""}>Least Played Together — prioritize players with least shared history</option>
+          <label class="maLabel" for="apCombo">Pairing Arrangement</label>
+          <div class="maHintText" style="margin:0 0 6px;">Choose the mix of group sizes to create.</div>
+          <select id="apCombo" class="maTextInput">
+            ${combos.map((c, i) => `<option value="${i}"${i === idx ? " selected" : ""}>${esc(mixVerbose(c.fours, c.threes, c.twos, c.singles))}</option>`).join("")}
           </select>
+          <div class="maHintText" id="apComboSummary">${esc(_comboSummary(combos[idx]))}</div>
         </div>
       </div>`;
+  }
+
+  // Plain-language result of one arrangement. Combinations are computed per
+  // team subgroup (subgroupUnitCount), so with two teams checked the counts
+  // are per team — say so rather than understate the total.
+  function _comboSummary(c) {
+    if (!c) return "";
+    const parts = [[c.fours, 4], [c.threes, 3], [c.twos, 2], [c.singles, 1]]
+      .filter(([count]) => count > 0)
+      .map(([count, size]) => `${count} group${count !== 1 ? "s" : ""} of ${size}`);
+    const list = parts.length > 1 ? `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}` : parts[0];
+    const total = c.fours + c.threes + c.twos + c.singles;
+    const prefix = currentSubgroups().length > 1 ? "For each team, this" : "This";
+    return `${prefix} will create ${total} pairing${total !== 1 ? "s" : ""}: ${list}.`;
+  }
+
+  // ── Render / behavior — Pairing Strategy (single-select touch rows) ─────────
+
+  function _renderStrategyField() {
+    return `
+      <div class="maFieldRow" id="apStrategyRow">
+        <div class="maField" style="flex:1;">
+          <label class="maLabel" id="apStrategyLabel">Pairing Strategy</label>
+          <div class="maHintText" style="margin:0 0 6px;">Choose how you want MatchAid to build the pairings.</div>
+          <div class="maChoiceChips" role="radiogroup" aria-labelledby="apStrategyLabel">
+            ${STRATEGIES.map(s => {
+              const on = s.key === _outcome;
+              return `
+              <button type="button" class="maChoiceChip maChoiceChip--touch${on ? " is-selected" : ""}"
+                      data-strategy="${s.key}" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}">
+                <span class="maChoiceChip__label">${esc(s.label)}</span>
+                <span class="maChoiceChip__detail">${esc(s.detail)}</span>
+              </button>`;
+            }).join("")}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // Updates the rows in place (no re-render) so focus stays put.
+  function _selectStrategy(key, focus) {
+    if (!STRATEGIES.some(s => s.key === key)) return;
+    _outcome = key;
+    const overlay = document.getElementById(OVERLAY_ID);
+    overlay?.querySelectorAll("[data-strategy]").forEach(btn => {
+      const on = btn.dataset.strategy === key;
+      btn.classList.toggle("is-selected", on);
+      btn.setAttribute("aria-checked", String(on));
+      btn.tabIndex = on ? 0 : -1;
+      if (on && focus) btn.focus();
+    });
+  }
+
+  // Standard radiogroup keys: arrows move (and select), wrapping at the ends.
+  function _onStrategyKeydown(e) {
+    const btn = e.target.closest?.("[data-strategy]");
+    if (!btn) return;
+    const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    const i = STRATEGIES.findIndex(s => s.key === btn.dataset.strategy);
+    const next = STRATEGIES[(i + step + STRATEGIES.length) % STRATEGIES.length];
+    _selectStrategy(next.key, true);
   }
 
   // ── Render — preview (Review mode) ──────────────────────────────────────────
@@ -504,7 +591,7 @@
       <footer class="maModal__ftr" style="justify-content:flex-end;">
         <div class="maModal__ftrActions">
           <button type="button" class="maFtrBtn maFtrBtn--cancel" id="apBtnCancel" style="display:${_mode === "setup" ? "" : "none"};">Cancel</button>
-          <button type="button" class="maFtrBtn maFtrBtn--cancel" id="apBtnRetry" style="display:${_mode === "review" ? "" : "none"};">Retry</button>
+          <button type="button" class="maFtrBtn maFtrBtn--cancel" id="apBtnRetry" style="display:${_mode === "review" ? "" : "none"};">Cancel</button>
           <button type="button" class="maFtrBtn maFtrBtn--save" id="apBtnRun" style="display:${_mode === "setup" ? "" : "none"};" ${runDisabled ? "disabled" : ""}>Run</button>
           <button type="button" class="maFtrBtn maFtrBtn--save" id="apBtnApply" style="display:${_mode === "review" ? "" : "none"};">Apply</button>
         </div>
@@ -596,8 +683,13 @@
       });
     });
 
-    overlay.querySelector("#apOutcome")?.addEventListener("change", (e) => { _outcome = e.target.value; });
-    overlay.querySelector("#apCombo")?.addEventListener("change", (e) => { _selComboIdx = Number(e.target.value); });
+    // Strategy rows are delegated once in _ensureOverlay(), not bound here.
+    overlay.querySelector("#apCombo")?.addEventListener("change", (e) => {
+      _selComboIdx = Number(e.target.value);
+      const combos = combosForSizes(subgroupUnitCount(), _selSizes);
+      const summary = overlay.querySelector("#apComboSummary");
+      if (summary) summary.textContent = _comboSummary(combos[Math.min(_selComboIdx, combos.length - 1)]);
+    });
 
     overlay.querySelector("#apBtnCancel")?.addEventListener("click", () => { if (!_busy) MA.runAutoPair.close(); });
     overlay.querySelector("#apBtnRun")?.addEventListener("click", _onRun);
@@ -632,7 +724,7 @@
     _refreshAfterSelectionChange();
   }
 
-  // ── Run / Retry / Apply ──────────────────────────────────────────────────────
+  // ── Run / review Cancel / Apply ──────────────────────────────────────────────
 
   async function _onRun() {
     const n = subgroupUnitCount();
@@ -690,6 +782,9 @@
     _wireEvents();
   }
 
+  // Review-screen "Cancel" (formerly labelled Retry): discard this preview
+  // and return to Setup with the same selections. Does not close the modal
+  // or re-run — pressing Run again is what produces a fresh result.
   function _onRetry() {
     _mode = "setup";
     _previewGroups = [];
@@ -730,12 +825,7 @@
 
     const overlay = document.getElementById(OVERLAY_ID);
     if (!overlay) return;
-    overlay.querySelector("#apControls").outerHTML = `
-      <div class="maModal__controls" id="apControls">
-        ${_renderScopeSection()}
-        ${_renderSizeSection()}
-        ${_renderOutcomeField()}
-      </div>`;
+    overlay.querySelector("#apControls").outerHTML = _renderSetupBody();
     overlay.querySelector("#apReview").style.display = "none";
     overlay.querySelector("#apControls").style.display = "";
     _refreshFooter();

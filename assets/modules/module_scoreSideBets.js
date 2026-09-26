@@ -246,7 +246,7 @@
 
     return `<button type="button" class="maChoiceChip maChoiceChip--touch${mine ? " is-selected" : ""}"
               data-chip="${esc(bet.key)}" data-player="${esc(ghin)}" aria-pressed="${mine}">
-              <span class="maChoiceChip__label">${mine ? "✓ " : ""}${esc(bet.name)}</span>${detail ? `<span class="maChoiceChip__detail">${esc(detail)}</span>` : ""}
+              <span class="maChoiceChip__label">${esc(bet.name)}</span>${detail ? `<span class="maChoiceChip__detail">${esc(detail)}</span>` : ""}
             </button>`;
   }
 

@@ -2178,44 +2178,72 @@ header.maChrome__hdr.is-player-context {
   cursor: default;
 }
 
-/* Touch-size chip — a full-width, 44px row for one-handed use outdoors
-   (Score Entry side bets). Same colours as a normal chip: tan when
-   .is-selected, white otherwise. Only size and layout change, plus a darker
-   unselected border for contrast in sunlight. Sits inside .maChoiceChips
-   (a wrapping flex row); flex-basis 100% makes each chip its own line.
+/* Touch-size chip — THE canonical large selectable row (Auto-Pair Pairing
+   Strategy, Score Entry side bets). Full-width, 44px+ for one-handed use
+   outdoors. Same colours as a normal chip: tan when .is-selected, white
+   otherwise. The 2px --ink unselected border is deliberate — contrast in
+   bright sunlight — don't soften it. Selection shows three ways: filled
+   dot, tan background, selected border. The dot is drawn by ::before, so
+   every consumer renders it identically and it's never its own tap
+   target — the whole row is the button. Sits inside .maChoiceChips (a
+   wrapping flex row); flex-basis 100% makes each chip its own line.
+
+   Semantics are the consumer's job, since the look is the same either way:
+   single-select → role="radio" + aria-checked inside role="radiogroup";
+   multi-select  → aria-pressed.
 
    Markup:
      <button class="maChoiceChip maChoiceChip--touch is-selected" type="button">
-       <span class="maChoiceChip__label">✓ Sandy</span>
+       <span class="maChoiceChip__label">Sandy</span>
        <span class="maChoiceChip__detail">Held by Bishop</span>   (optional)
      </button> */
 .maChoiceChip--touch {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 10px;
+  row-gap: 2px;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
   flex: 1 1 100%;
+  min-width: 0;
   min-height: 44px;
-  padding: 6px 12px;
+  padding: 8px 12px;
   font-size: 16px;
-  line-height: 1.15;
+  line-height: 1.2;
   text-align: left;
   border-width: 2px;
   border-color: var(--ink);
 }
 
+.maChoiceChip--touch::before {
+  content: "";
+  grid-column: 1;
+  grid-row: 1;
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+
+.maChoiceChip--touch.is-selected::before {
+  background: currentColor;
+}
+
 .maChoiceChip__label {
-  flex: 1 1 auto;
+  grid-column: 2;
+  grid-row: 1;
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
 .maChoiceChip__detail {
-  flex: 0 0 auto;
-  max-width: 55%;
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
   font-size: 13px;
-  font-weight: 700;
-  text-align: right;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
 /* ---------- Segmented control (single-select tab switching) ------------- */
