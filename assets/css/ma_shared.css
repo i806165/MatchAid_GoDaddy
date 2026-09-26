@@ -758,10 +758,12 @@ header.maChrome__hdr.is-player-context {
 /* Root: this button exits the current object/page entirely (set per-page
    via MA.chrome.setBottomNav({ root: [...] }) — see ma_shared.js).
    Solid fill is the strongest step in the same brandPrimary ramp Selected
-   uses, so Normal -> Selected -> Root reads as one continuous signal. */
+   uses, so Normal -> Selected -> Root reads as one continuous signal.
+   Light border (not brandPrimary) so adjacent roots — e.g. Player Home +
+   Score Home — show a seam instead of merging into one dark block. */
 .maNavBtn--root {
   background: var(--brandPrimary);
-  border-color: var(--brandPrimary);
+  border-color: rgba(255,255,255,.5);
   color: var(--brandPrimaryText);
 }
 
@@ -770,11 +772,19 @@ header.maChrome__hdr.is-player-context {
 }
 
 /* Root + Selected (rare — e.g. standing on the page a root button points
-   to). A dark outline would vanish against the dark fill, so this uses a
-   light outline instead. */
+   to). Restates fill/border because .maNavBtn.is-selected out-specifies
+   .maNavBtn--root. The light border already sits on the edge, so the
+   outline is inset further to read as a distinct ring, and the chevron
+   flips to white so it shows against the dark fill. */
 .maNavBtn--root.is-selected {
-  outline: 1.5px solid rgba(255,255,255,.7);
-  outline-offset: -1.5px;
+  background: var(--brandPrimary);
+  border-color: rgba(255,255,255,.5);
+  outline: 1.5px solid rgba(255,255,255,.85);
+  outline-offset: -4px;
+}
+
+.maNavBtn--root.is-selected::before {
+  background: var(--brandPrimaryText);
 }
 
 /* Divider marking a scope change among the currently-visible buttons —
