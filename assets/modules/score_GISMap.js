@@ -55,7 +55,7 @@
             .gisMapWrap{position:relative;flex:1;min-width:0;min-height:0}
             .gisMapHost{width:100%;height:100%;min-height:300px;overflow:hidden}
             .gisMeasureIcon__dot{width:22px;height:22px;border-radius:50%;background:#ff8f00;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5);cursor:grab}
-            .gisMeasureLabel__text{display:inline-block;white-space:nowrap;background:#fff;padding:4px 12px;border-radius:14px;border:2px solid #ff8f00;font-weight:900;font-size:22px;color:#e65100;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+            .gisMeasureLabel__text{display:inline-block;white-space:nowrap;background:#fff;padding:4px 14px;border-radius:14px;border:2px solid #ff8f00;font-weight:900;font-size:26px;color:#e65100;box-shadow:0 1px 4px rgba(0,0,0,.4)}
             .gisRecenterCtl.isHidden{display:none}
             /* !important beats Leaflet's own .leaflet-bar a / .leaflet-touch
                .leaflet-bar a rules (higher specificity: class+element, and
@@ -359,8 +359,11 @@
         return distanceMeters(st.myPosition, ref) <= MAX_ON_COURSE_METERS;
     }
 
+    // Bare number, no unit suffix — matches the waypoint bar's own
+    // convention (everything on this screen is yards; context already
+    // establishes that without repeating it on every label).
     function yardsText(meters) {
-        return Number.isFinite(meters) ? `${Math.round(meters * METERS_TO_YARDS)} yds` : "—";
+        return Number.isFinite(meters) ? `${Math.round(meters * METERS_TO_YARDS)}` : "—";
     }
 
     // Same fallback chain as the old tee-based orientToPin, just reusable
@@ -612,6 +615,11 @@
         st._lastFramedBearing = null;
         setRecenterVisible(st, false);
 
+        // Fresh hole, fresh read on the remaining-to-green line — don't
+        // carry over whichever side of the show/hide hysteresis the
+        // previous hole last landed on.
+        st._showRemainingLine = false;
+
         if (!ctx.hole) {
             renderWaypoints(st, null);
             return;
@@ -817,8 +825,17 @@
         renderWindBadge(st);
     }
 
-    // Re-evaluates the range gate and redraws the on-map line/label. No text
-    // readout anymore — the on-map marker/line/label are the only feedback.
+    // Second-leg "to green" line only earns its keep as a full-shot planning
+    // aid — inside this range you're already chipping/pitching, where exact
+    // yardage stops being decision-relevant and the line is just noise.
+    // Two thresholds rather than one cutoff give it hysteresis, so dragging
+    // the marker back and forth near 50 yards doesn't flicker the line
+    // on/off; between the two, it just keeps whatever state it was already in.
+    const REMAINING_HIDE_BELOW_METERS = 45 / METERS_TO_YARDS;
+    const REMAINING_SHOW_ABOVE_METERS = 55 / METERS_TO_YARDS;
+
+    // Re-evaluates the range gate and redraws the on-map lines/labels. No text
+    // readout anymore — the on-map marker/lines/labels are the only feedback.
     function refreshMeasure(st) {
         const ctx = resolveHoleContext(st, st.selectedHole);
 
@@ -827,17 +844,82 @@
             st.measureMarker = null;
         }
 
-        updateMeasureVisuals(st);
+        updateMeasureVisuals(st, ctx);
     }
 
-    // Draws a dashed line from the reference point to the measure marker, with
-    // a floating yardage label placed just short of the marker along that line.
-    function updateMeasureVisuals(st) {
+    function removeRemainingVisuals(st) {
+        if (st.remainingLine) { st.map.removeLayer(st.remainingLine); st.remainingLine = null; }
+        if (st.remainingLabel) { st.map.removeLayer(st.remainingLabel); st.remainingLabel = null; }
+    }
+
+    // The dashed marker->green-center leg — shown only once there's enough
+    // remaining distance for it to be a meaningful next-shot number (see
+    // REMAINING_HIDE_BELOW_METERS/REMAINING_SHOW_ABOVE_METERS above). Label
+    // sits close to the marker end, not the green end, since that's where
+    // attention actually is while dragging the marker around.
+    function updateRemainingVisuals(st, ctx, fromLL) {
+        const greenPoint = ctx.green?.feature ? featureCenter(ctx.green.feature, st.nodeIndex) : null;
+        if (!greenPoint) {
+            removeRemainingVisuals(st);
+            return;
+        }
+
+        const remainingMeters = distanceMeters({ lat: fromLL.lat, lon: fromLL.lng }, greenPoint);
+
+        if (st._showRemainingLine === undefined) st._showRemainingLine = false;
+        if (remainingMeters < REMAINING_HIDE_BELOW_METERS) st._showRemainingLine = false;
+        else if (remainingMeters > REMAINING_SHOW_ABOVE_METERS) st._showRemainingLine = true;
+
+        if (!st._showRemainingLine) {
+            removeRemainingVisuals(st);
+            return;
+        }
+
+        const greenLL = L.latLng(greenPoint.lat, greenPoint.lon);
+
+        if (!st.remainingLine) {
+            st.remainingLine = L.polyline([fromLL, greenLL], { color: "#ff8f00", weight: 3, dashArray: "6 6" }).addTo(st.map);
+        } else {
+            st.remainingLine.setLatLngs([fromLL, greenLL]);
+        }
+
+        // 15% of the way from the marker toward the green — close to the dot.
+        const t = 0.15;
+        const labelLatLng = L.latLng(
+            fromLL.lat + (greenLL.lat - fromLL.lat) * t,
+            fromLL.lng + (greenLL.lng - fromLL.lng) * t
+        );
+        const text = yardsText(remainingMeters);
+
+        if (!st.remainingLabel) {
+            st.remainingLabel = L.marker(labelLatLng, {
+                icon: L.divIcon({
+                    className: "gisMeasureLabel",
+                    html: `<div class="gisMeasureLabel__text" data-gis-measure-label-text>${text}</div>`,
+                    iconSize: [96, 36],
+                    iconAnchor: [48, 18]
+                }),
+                interactive: false,
+                zIndexOffset: 1001
+            }).addTo(st.map);
+        } else {
+            st.remainingLabel.setLatLng(labelLatLng);
+            const textEl = st.remainingLabel.getElement()?.querySelector("[data-gis-measure-label-text]");
+            if (textEl) textEl.textContent = text;
+        }
+    }
+
+    // Draws a solid line from the reference point to the measure marker (the
+    // shot about to be hit) with its own floating yardage label, then hands
+    // off to updateRemainingVisuals() for the second, dashed marker->green
+    // leg.
+    function updateMeasureVisuals(st, ctx) {
         const anchor = st.measureMarker ? measureAnchor(st) : null;
 
         if (!st.measureMarker || !anchor) {
             if (st.measureLine) { st.map.removeLayer(st.measureLine); st.measureLine = null; }
             if (st.measureLabel) { st.map.removeLayer(st.measureLabel); st.measureLabel = null; }
+            removeRemainingVisuals(st);
             return;
         }
 
@@ -845,7 +927,7 @@
         const targetLL = st.measureMarker.getLatLng();
 
         if (!st.measureLine) {
-            st.measureLine = L.polyline([anchorLL, targetLL], { color: "#ff8f00", weight: 3, dashArray: "6 6" }).addTo(st.map);
+            st.measureLine = L.polyline([anchorLL, targetLL], { color: "#ff8f00", weight: 3 }).addTo(st.map);
         } else {
             st.measureLine.setLatLngs([anchorLL, targetLL]);
         }
@@ -874,6 +956,8 @@
             const textEl = st.measureLabel.getElement()?.querySelector("[data-gis-measure-label-text]");
             if (textEl) textEl.textContent = text;
         }
+
+        updateRemainingVisuals(st, ctx, targetLL);
     }
 
     function placeMeasureMarker(st, latlng) {
@@ -1029,6 +1113,9 @@
         st.measureMarker = null;
         st.measureLine = null;
         st.measureLabel = null;
+        st.remainingLine = null;
+        st.remainingLabel = null;
+        st._showRemainingLine = false;
         clearTimeout(st._rotateSettleTimer);
 
         st.hostEl.innerHTML = `
