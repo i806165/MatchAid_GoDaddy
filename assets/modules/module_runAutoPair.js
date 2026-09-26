@@ -372,12 +372,18 @@
   // Setup lives in a .maModal__body (not .maModal__controls, which is
   // overflow:hidden and non-shrinking) so on a phone the header and footer
   // stay put and this region scrolls to reach every strategy.
+  // Layout follows the sibling game-setup modals (Scoring, Segments, Blind
+  // Player): one .maCard, each section an .actionMenu_category heading band
+  // (its borders are the section divider) over a padded block with a
+  // .maHintText line and the control.
   function _renderSetupBody() {
     return `
         <div class="maModal__body" id="apControls" style="display:${_mode === "setup" ? "" : "none"};">
-          ${_renderScopeSection()}
-          ${_renderSizeSection()}
-          ${_renderStrategyField()}
+          <div class="maCard">
+            ${_renderScopeSection()}
+            ${_renderSizeSection()}
+            ${_renderStrategyField()}
+          </div>
         </div>`;
   }
 
@@ -402,18 +408,17 @@
   }
 
   // ── Render — scope (Flight dropdown + Team checklist) ───────────────────────
+  // Only present on games with flights / two teams; each is its own section.
 
   function _renderScopeSection() {
     const flights = flightsWithUnpaired();
     const flightField = flights.length ? `
-      <div class="maFieldRow" style="margin-top:0;">
-        <div class="maField" style="flex:1;">
-          <label class="maLabel">Flight</label>
-          <div class="maHintText" style="margin:0 0 6px;">Which flight do you want to pair?</div>
-          <select id="apFlight" class="maTextInput">
-            ${flights.map(f => `<option value="${esc(f.id)}"${f.id === _selFlightId ? " selected" : ""}>${esc(f.name)}</option>`).join("")}
-          </select>
-        </div>
+      <div class="actionMenu_category">Flight</div>
+      <div style="padding:14px;">
+        <div class="maHintText" style="margin:0 0 10px;">Which flight do you want to pair?</div>
+        <select id="apFlight" class="maTextInput">
+          ${flights.map(f => `<option value="${esc(f.id)}"${f.id === _selFlightId ? " selected" : ""}>${esc(f.name)}</option>`).join("")}
+        </select>
       </div>` : "";
 
     return `<div id="apScopeSection">${flightField}${_renderTeamChecklist()}</div>`;
@@ -424,17 +429,15 @@
     if (teams.length <= 1) return "";
     const flightName = _flights.length ? (_flights.find(f => f.id === _selFlightId)?.name || "") : "";
     return `
-      <div class="maFieldRow" id="apTeamRow">
-        <div class="maField" style="flex:1;">
-          <label class="maLabel">${flightName ? `Teams in ${esc(flightName)}` : "Teams"}</label>
-          <div class="maListRows" id="apTeamList" style="border:1px solid var(--borderSubtle); border-radius:var(--radiusLg); overflow:hidden;">
-            ${teams.map(t => `
-              <div class="maListRow" data-team-row="${esc(t.id)}" style="cursor:pointer;">
-                <div class="maCheckbox${_selTeamIds.has(t.id) ? " is-checked" : ""}" data-team-check="${esc(t.id)}"></div>
-                <div class="maListRow__col" style="flex:1;">${esc(t.name)}</div>
-                <div class="maListRow__col maListRow__col--muted maListRow__col--right" style="flex:0 0 auto;">${t.count} unpaired</div>
-              </div>`).join("")}
-          </div>
+      <div class="actionMenu_category">${flightName ? `Teams in ${esc(flightName)}` : "Teams"}</div>
+      <div style="padding:14px;">
+        <div class="maListRows" id="apTeamList" style="border:1px solid var(--borderSubtle); border-radius:var(--radiusLg); overflow:hidden;">
+          ${teams.map(t => `
+            <div class="maListRow" data-team-row="${esc(t.id)}" style="cursor:pointer;">
+              <div class="maCheckbox${_selTeamIds.has(t.id) ? " is-checked" : ""}" data-team-check="${esc(t.id)}"></div>
+              <div class="maListRow__col" style="flex:1;">${esc(t.name)}</div>
+              <div class="maListRow__col maListRow__col--muted maListRow__col--right" style="flex:0 0 auto;">${t.count} unpaired</div>
+            </div>`).join("")}
         </div>
       </div>`;
   }
@@ -446,20 +449,18 @@
   function _renderSizeSection() {
     return `
       <div id="apSizeRow">
-        <div class="maFieldRow">
-          <div class="maField" style="flex:1;">
-            <label class="maLabel" id="apSizeLabel">Pairing Sizes</label>
-            <div class="maHintText" style="margin:0 0 6px;">Select the group sizes Auto-Pair may use.</div>
-            <div class="maChoiceChips" id="apSizeChips" role="group" aria-labelledby="apSizeLabel">
-              ${_allowedSizes.slice().sort((a, b) => a - b).map(size => `
-                <button type="button" class="maChoiceChip${_selSizes.has(size) ? " is-selected-accent" : ""}"
-                        data-size="${size}" aria-pressed="${_selSizes.has(size)}">${size}</button>
-              `).join("")}
-            </div>
-            <div id="apSizeStatus" style="margin-top:8px;">${_renderSizeStatus()}</div>
+        <div class="actionMenu_category" id="apSizeLabel">Pairing Sizes</div>
+        <div style="padding:14px;">
+          <div class="maHintText" style="margin:0 0 10px;">Select the group sizes Auto-Pair may use.</div>
+          <div class="maChoiceChips" id="apSizeChips" role="group" aria-labelledby="apSizeLabel">
+            ${_allowedSizes.slice().sort((a, b) => a - b).map(size => `
+              <button type="button" class="maChoiceChip${_selSizes.has(size) ? " is-selected-accent" : ""}"
+                      data-size="${size}" aria-pressed="${_selSizes.has(size)}">${size}</button>
+            `).join("")}
           </div>
+          <div id="apSizeStatus" style="margin-top:10px;">${_renderSizeStatus()}</div>
         </div>
-        <div id="apComboWrap">${_renderComboSelect()}</div>
+        ${_renderComboSelect()}
       </div>`;
   }
 
@@ -467,26 +468,27 @@
     const n = subgroupUnitCount();
     const combos = combosForSizes(n, _selSizes);
     const ok = combos.length > 0;
-    return `<div class="maInlineStatus" style="color:${ok ? "var(--success)" : "var(--danger)"};">
+    return `<div class="maInlineStatus ${ok ? "status-success" : "status-danger"}">
       These pairing sizes ${ok ? "work" : "do not work"} for ${n} player${n !== 1 ? "s" : ""}.
     </div>`;
   }
 
+  // Always rendered so the section never appears/disappears. When the
+  // chosen sizes yield no arrangement the dropdown is simply disabled —
+  // Pairing Sizes' status line already tells the user why.
   function _renderComboSelect() {
     const n = subgroupUnitCount();
     const combos = combosForSizes(n, _selSizes);
-    if (!combos.length) return "";
-    const idx = Math.min(_selComboIdx, combos.length - 1);
+    const idx = Math.min(_selComboIdx, Math.max(combos.length - 1, 0));
+    const options = combos.length
+      ? combos.map((c, i) => `<option value="${i}"${i === idx ? " selected" : ""}>${esc(mixVerbose(c.fours, c.threes, c.twos, c.singles))}</option>`).join("")
+      : `<option>—</option>`;
     return `
-      <div class="maFieldRow">
-        <div class="maField" style="flex:1;">
-          <label class="maLabel" for="apCombo">Pairing Arrangement</label>
-          <div class="maHintText" style="margin:0 0 6px;">Choose the mix of group sizes to create.</div>
-          <select id="apCombo" class="maTextInput">
-            ${combos.map((c, i) => `<option value="${i}"${i === idx ? " selected" : ""}>${esc(mixVerbose(c.fours, c.threes, c.twos, c.singles))}</option>`).join("")}
-          </select>
-          <div class="maHintText" id="apComboSummary">${esc(_comboSummary(combos[idx]))}</div>
-        </div>
+      <div class="actionMenu_category">Pairing Arrangement</div>
+      <div style="padding:14px;">
+        <div class="maHintText" style="margin:0 0 10px;">Choose the mix of group sizes to create.</div>
+        <select id="apCombo" class="maTextInput" aria-label="Pairing Arrangement"${combos.length ? "" : " disabled"}>${options}</select>
+        ${combos.length ? `<div class="maHintText" id="apComboSummary">${esc(_comboSummary(combos[idx]))}</div>` : ""}
       </div>`;
   }
 
@@ -508,21 +510,19 @@
 
   function _renderStrategyField() {
     return `
-      <div class="maFieldRow" id="apStrategyRow">
-        <div class="maField" style="flex:1;">
-          <label class="maLabel" id="apStrategyLabel">Pairing Strategy</label>
-          <div class="maHintText" style="margin:0 0 6px;">Choose how you want MatchAid to build the pairings.</div>
-          <div class="maChoiceChips" role="radiogroup" aria-labelledby="apStrategyLabel">
-            ${STRATEGIES.map(s => {
-              const on = s.key === _outcome;
-              return `
-              <button type="button" class="maChoiceChip maChoiceChip--touch${on ? " is-selected" : ""}"
-                      data-strategy="${s.key}" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}">
-                <span class="maChoiceChip__label">${esc(s.label)}</span>
-                <span class="maChoiceChip__detail">${esc(s.detail)}</span>
-              </button>`;
-            }).join("")}
-          </div>
+      <div class="actionMenu_category" id="apStrategyLabel">Pairing Strategy</div>
+      <div style="padding:14px;">
+        <div class="maHintText" style="margin:0 0 10px;">Choose how you want MatchAid to build the pairings.</div>
+        <div class="maChoiceChips" role="radiogroup" aria-labelledby="apStrategyLabel">
+          ${STRATEGIES.map(s => {
+            const on = s.key === _outcome;
+            return `
+            <button type="button" class="maChoiceChip maChoiceChip--touch${on ? " is-selected" : ""}"
+                    data-strategy="${s.key}" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}">
+              <span class="maChoiceChip__label">${esc(s.label)}</span>
+              <span class="maChoiceChip__detail">${esc(s.detail)}</span>
+            </button>`;
+          }).join("")}
         </div>
       </div>`;
   }
